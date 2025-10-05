@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant shared (&:is(.shared *));
+
+@layer base {
+  :root {
+    --background: hsl(260 40% 98%);
+    --foreground:hsl(0, 0%, 0%);
+    --sidebar: hsl(260 40% 96%);
+    --sidebar-foreground: hsl(260 47% 11%);
+    --sidebar-primary: hsl(260 70% 55%);
+    --sidebar-primary-foreground: hsl(260 40% 98%);
+    --sidebar-accent: hsl(260 80% 93%);
+    --sidebar-accent-foreground: hsl(260 47% 11%);
+    --sidebar-border: hsl(260 32% 91%);
+    --sidebar-ring: hsl(260 70% 55%);
+  }
+
+  .dark {
+    --background: hsl(260 30% 10%);
+    --foreground: hsl(260 40% 98%);
+    --sidebar: hsl(260 35% 15%);
+    --sidebar-foreground: hsl(260 40% 96%);
+    --sidebar-primary: hsl(260 70% 55%);
+    --sidebar-primary-foreground: hsl(260 40% 98%);
+    --sidebar-accent: hsl(260 40% 20%);
+    --sidebar-accent-foreground: hsl(260 40% 96%);
+    --sidebar-border: hsl(260 35% 22%);
+    --sidebar-ring: hsl(260 70% 55%);
+  }
+}
+
+/* Define custom utilities */
+@utility bg-background {
+  background-color: var(--background);
+}
+
+@utility text-foreground {
+  color: var(--foreground);
+}
+
+@utility border-sidebar-border {
+  border-color: var(--sidebar-border);
+}
+
+@utility ring-sidebar-ring {
+  --tw-ring-color: var(--sidebar-ring);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-sidebar-border ring-sidebar-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+:root {
+  --sidebar: hsl(260 40% 96%);
+  --sidebar-foreground: hsl(260 47% 11%);
+  --sidebar-primary: hsl(260 70% 55%);
+  --sidebar-primary-foreground: hsl(260 40% 98%);
+  --sidebar-accent: hsl(260 80% 93%);
+  --sidebar-accent-foreground: hsl(260 47% 11%);
+  --sidebar-border: hsl(260 32% 91%);
+  --sidebar-ring: hsl(260 70% 55%);
+}
+
+.dark {
+  --sidebar: hsl(260 35% 15%);
+  --sidebar-foreground: hsl(260 40% 96%);
+  --sidebar-primary: hsl(260 70% 55%);
+  --sidebar-primary-foreground: hsl(260 40% 98%);
+  --sidebar-accent: hsl(260 40% 20%);
+  --sidebar-accent-foreground: hsl(260 40% 96%);
+  --sidebar-border: hsl(260 35% 22%);
+  --sidebar-ring: hsl(260 70% 55%);
+}
