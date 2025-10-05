@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +11,8 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2 } from "lucide-react"
 
-export default function SettingsPage() {
+// Extract the component that uses useSearchParams
+function SettingsContent() {
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") || "integrations"
   const [integrationStatus, setIntegrationStatus] = useState(null)
@@ -544,5 +545,18 @@ export default function SettingsPage() {
         </Tabs>
       </div>
     </div>
+  )
+}
+
+// Main component wrapped with Suspense
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-dvh bg-background rounded-tl-2xl ring-1 ring-purple-100 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <SettingsContent />
+    </Suspense>
   )
 }
