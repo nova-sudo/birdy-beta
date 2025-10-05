@@ -338,11 +338,11 @@ export default function ContactPage() {
 
       let response
       if (isGhl) {
-        response = await fetch(`http://localhost:5000/api/location/${actualId}/contacts?limit=100`, {
+        response = await fetch(`https://birdy-backend.vercel.app/api/location/${actualId}/contacts?limit=100`, {
           credentials: "include",
         })
       } else {
-        response = await fetch(`http://localhost:5000/api/facebook/adaccounts/${actualId}/leads`, {
+        response = await fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${actualId}/leads`, {
           credentials: "include",
         })
       }

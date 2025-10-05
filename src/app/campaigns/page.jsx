@@ -65,7 +65,7 @@ const Campaigns = () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch("http://localhost:5000/api/facebook/adaccounts", { credentials: "include" })
+      const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", { credentials: "include" })
       if (!response.ok) {
         const errorData = await response.json()
         throw new Error(`HTTP ${response.status}: ${errorData.detail || "Failed to fetch ad accounts"}`)
@@ -90,7 +90,7 @@ const Campaigns = () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`http://localhost:5000/api/facebook/adaccounts/${accountId}/data`, {
+      const response = await fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${accountId}/data`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -192,7 +192,7 @@ const Campaigns = () => {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await fetch(`http://localhost:5000/api/facebook/adaccounts/${accountId}/leads`, {
+      const response = await fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${accountId}/leads`, {
         credentials: "include",
       })
       if (!response.ok) {

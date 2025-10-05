@@ -26,7 +26,7 @@ export default function LoginPage() {
     setError("")
 
     try {
-      const response = await fetch("http://localhost:5000/api/login", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -38,7 +38,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok && data.message === "Login successful") {
-        router.push("/clients")
+        router.push("/dashboard")
       } else {
         setError(data.detail || "Login failed. Please try again.")
       }

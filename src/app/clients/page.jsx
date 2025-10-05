@@ -44,7 +44,7 @@ export default function ClientsPage() {
 
     try {
       // Fetch GHL locations
-      const ghlResponse = await fetch("http://localhost:5000/api/location-data", {
+      const ghlResponse = await fetch("https://birdy-backend.vercel.app/api/location-data", {
         credentials: "include",
       })
 
@@ -61,7 +61,7 @@ export default function ClientsPage() {
       }
 
       // Fetch Meta ad accounts
-      const metaResponse = await fetch("http://localhost:5000/api/facebook/adaccounts", {
+      const metaResponse = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
         credentials: "include",
       })
 
@@ -84,7 +84,7 @@ export default function ClientsPage() {
 
   const fetchAvailableLocations = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/subaccount/locations", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/subaccount/locations", {
         credentials: "include",
       })
 
@@ -114,7 +114,7 @@ export default function ClientsPage() {
 
     setAddingClient(true)
     try {
-      const response = await fetch("http://localhost:5000/api/add-subaccount", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/add-subaccount", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

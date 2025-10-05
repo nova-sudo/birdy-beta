@@ -173,7 +173,7 @@ function SettingsContent() {
 
         // Fetch status from backend
         console.log("Fetching status from backend")
-        const response = await fetch("http://localhost:5000/api/status", {
+        const response = await fetch("https://birdy-backend.vercel.app/api/status", {
           credentials: "include",
         })
         if (!response.ok) {
@@ -232,7 +232,7 @@ function SettingsContent() {
       setError(null)
       const endpoint = integrationType === "gohighlevel" ? "/api/connect" : "/api/connect/facebook"
       console.log(`Initiating ${integrationType} connect request`)
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -265,7 +265,7 @@ function SettingsContent() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch("http://localhost:5000/disconnect", {
+      const response = await fetch("https://birdy-backend.vercel.app/disconnect", {
         credentials: "include",
       })
       if (!response.ok) {
@@ -299,7 +299,7 @@ function SettingsContent() {
       setError(null)
       console.log(`Initiating ${integrationType} test API request`)
       const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
