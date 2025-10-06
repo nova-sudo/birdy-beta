@@ -420,7 +420,7 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-background flex items-center justify-center">
+      <div className="min-h-dvh  flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg font-semibold text-muted-foreground">Loading contacts...</p>
@@ -430,7 +430,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background rounded-t-2xl ring-1 ring-purple-100 mx-auto max-w-7xl">
+    <div className="min-h-dvh  rounded-t-2xl ring-1 ring-purple-100 mx-auto max-w-7xl">
       <div className="flex flex-col gap-8 p-6 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">

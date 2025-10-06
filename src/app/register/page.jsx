@@ -50,7 +50,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-dvh flex rounded-tl-2xl ring-1 ring-purple-100 items-center justify-center bg-gradient-to-br from-purple-50 via-white to-purple-50 p-4">
+    <div className="min-h-dvh flex  items-center justify-center bg-gradient-to-br from-purple-50 via-white to-purple-50 p-4">
       <div className="w-full max-w-md">
         <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
           <CardHeader className="space-y-1 text-center pb-8">

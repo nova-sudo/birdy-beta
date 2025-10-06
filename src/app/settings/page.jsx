@@ -395,10 +395,10 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen ">
       <div className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
-          <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
         </div>
       </div>
 

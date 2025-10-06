@@ -27,8 +27,15 @@ export default function RootLayout({ children }) {
         <SidebarProvider>
           {!hideSidebar && <AppSidebar />}
           <main className="w-full">
-            {!hideSidebar && <SidebarTrigger />}
-            {children}
+            {!hideSidebar && (
+              <SidebarTrigger
+                className="absolute z-10 bg-purple-600/20 mt-2 rounded-tl-2xl rounded-br-2xl rounded-bl-none rounded-tr-none"
+                // Adds full radius to top-left and bottom-left corners
+              />
+            )}
+            <div className={`bg-zinc-50 mt-2 rounded-tl-2xl drop-shadow-sm drop-shadow-purple-200 ${geistSans.variable} ${geistMono.variable}`}>
+              {children}
+            </div>
           </main>
         </SidebarProvider>
       </body>

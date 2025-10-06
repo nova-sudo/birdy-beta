@@ -359,7 +359,7 @@ const Campaigns = () => {
   }
 
   return (
-    <div className="min-h-dvh bg-background rounded-tl-2xl ring-1 ring-purple-100">
+    <div className="min-h-dvh  ">
 
       <div className="flex flex-col gap-8 p-6 md:p-8">
         {/* Header */}
@@ -504,7 +504,7 @@ const Campaigns = () => {
                         <Input
                           type="search"
                           placeholder={`Search ${activeTab}...`}
-                          className="w-full md:w-[320px] pl-9 bg-background"
+                          className="w-full md:w-[320px] pl-9 "
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -573,7 +573,7 @@ const Campaigns = () => {
                               value={condition.field}
                               onValueChange={(value) => updateFilterCondition(index, "field", value)}
                             >
-                              <SelectTrigger className="w-[160px] h-9 bg-background">
+                              <SelectTrigger className="w-[160px] h-9 ">
                                 <SelectValue placeholder="Select field" />
                               </SelectTrigger>
                               <SelectContent>
@@ -600,7 +600,7 @@ const Campaigns = () => {
                               value={condition.operator}
                               onValueChange={(value) => updateFilterCondition(index, "operator", value)}
                             >
-                              <SelectTrigger className="w-[140px] h-9 bg-background">
+                              <SelectTrigger className="w-[140px] h-9 ">
                                 <SelectValue placeholder="Operator" />
                               </SelectTrigger>
                               <SelectContent>
@@ -615,7 +615,7 @@ const Campaigns = () => {
                               placeholder="Value"
                               value={condition.value}
                               onChange={(e) => updateFilterCondition(index, "value", e.target.value)}
-                              className="flex-1 h-9 bg-background"
+                              className="flex-1 h-9 "
                             />
                             <Button
                               variant="ghost"

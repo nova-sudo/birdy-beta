@@ -96,7 +96,7 @@ export default function dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh bg-background rounded-t-2xl ring-1 ring-purple-100 p-6">
+      <div className="min-h-dvh  p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <Skeleton className="h-12 w-64" />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -110,8 +110,11 @@ export default function dashboard() {
     )
   }
 
+
+
+      
   return (
-    <div className="min-h-dvh bg-background rounded-t-2xl ring-1 ring-purple-100">
+    <div className="min-h-dvh ">
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
@@ -125,7 +128,7 @@ export default function dashboard() {
               </Button>
               <Button onClick={() => router.push("/clients")}>
                 View All Clients
-                <ArrowRight className="ml-2 h-4 w-4" />
+                <ArrowRight className="ml-2 h-4 w-4 " />
               </Button>
             </div>
           </div>

@@ -163,7 +163,7 @@ const fetchGroupLeads = async (groupId) => {
   )
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen ">
       <div className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -172,7 +172,7 @@ const fetchGroupLeads = async (groupId) => {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-2xl font-semibold text-foreground">Call Center</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">Call Center</h1>
                 <p className="text-sm text-muted-foreground">Manage your HotProspector groups and leads</p>
               </div>
             </div>
@@ -185,7 +185,7 @@ const fetchGroupLeads = async (groupId) => {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className="rounded-tl-2xl ring-1 ring-zinc-100 bg-card">
+        <div className=" bg-card">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 border-b border-border">
             <Card>

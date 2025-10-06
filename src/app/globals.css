@@ -32,9 +32,7 @@
 }
 
 /* Define custom utilities */
-@utility bg-background {
-  background-color: var(--background);
-}
+
 
 @utility text-foreground {
   color: var(--foreground);
@@ -65,7 +63,7 @@
     @apply border-sidebar-border ring-sidebar-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply  text-foreground;
   }
 }
 

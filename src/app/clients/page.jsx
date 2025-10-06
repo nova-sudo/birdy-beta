@@ -247,7 +247,7 @@ export default function ClientsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <div className="min-h-screen  p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-32" />
@@ -258,7 +258,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background rounded-tl-3xl ring-1 ring-purple-100">
+    <div className="min-h-dvh ">
       <div className=" bg-card">
         <div className="w-full mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
@@ -267,7 +267,7 @@ export default function ClientsPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Clients Dashboard</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">Clients Dashboard</h1>
                 <p className="text-muted-foreground mt-1">GHL locations and Meta ad accounts</p>
               </div>
             </div>
@@ -301,7 +301,7 @@ export default function ClientsPage() {
                         placeholder="Search locations by name or ID..."
                         value={locationSearchQuery}
                         onChange={(e) => setLocationSearchQuery(e.target.value)}
-                        className="pl-10 pr-4 py-3 border-input focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-muted/50 focus:bg-background"
+                        className="pl-10 pr-4 py-3 border-input focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-muted/50 focus:"
                       />
                     </div>
 
@@ -432,7 +432,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6 rounded-tl-2xl ring-1 ring-purple-100">
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

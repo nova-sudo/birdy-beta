@@ -96,7 +96,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
+      <div className="min-h-screen  p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           <Skeleton className="h-12 w-64" />
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -111,7 +111,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen ">
       <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
