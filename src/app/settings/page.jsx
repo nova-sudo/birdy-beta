@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect } from "react"
 import { useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,15 +8,28 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
-import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2 } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
 
-// Extract the component that uses useSearchParams
-function SettingsContent() {
+export default function SettingsPage() {
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") || "integrations"
   const [integrationStatus, setIntegrationStatus] = useState(null)
   const [facebookIntegrationStatus, setFacebookIntegrationStatus] = useState(null)
+  const [hotprospectorStatus, setHotprospectorStatus] = useState(null)
+  const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
+  const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -173,7 +186,7 @@ function SettingsContent() {
 
         // Fetch status from backend
         console.log("Fetching status from backend")
-        const response = await fetch("https://birdy-backend.vercel.app/api/status", {
+        const response = await fetch("http://localhost:5000/api/status", {
           credentials: "include",
         })
         if (!response.ok) {
@@ -209,6 +222,16 @@ function SettingsContent() {
         } else {
           saveIntegrationStatus("facebook", { connected: false })
         }
+
+        // Check HotProspector status
+        const hpResponse = await fetch("http://localhost:5000/api/hotprospector/status", {
+          credentials: "include",
+        })
+        if (hpResponse.ok) {
+          const hpData = await hpResponse.json()
+          setHotprospectorStatus(hpData)
+          console.log("HotProspector status:", hpData)
+        }
       } catch (err) {
         console.error("Error in checkIntegrationStatus:", err)
         const errorMessage = `Failed to fetch integration status: ${err.message}`
@@ -232,7 +255,7 @@ function SettingsContent() {
       setError(null)
       const endpoint = integrationType === "gohighlevel" ? "/api/connect" : "/api/connect/facebook"
       console.log(`Initiating ${integrationType} connect request`)
-      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -265,7 +288,7 @@ function SettingsContent() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch("https://birdy-backend.vercel.app/disconnect", {
+      const response = await fetch("http://localhost:5000/disconnect", {
         credentials: "include",
       })
       if (!response.ok) {
@@ -299,7 +322,7 @@ function SettingsContent() {
       setError(null)
       console.log(`Initiating ${integrationType} test API request`)
       const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
-      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
+      const response = await fetch(`http://localhost:5000${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -325,8 +348,53 @@ function SettingsContent() {
     }
   }
 
+  // Handle HotProspector connect handler
+  const handleHotprospectorConnect = async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      const response = await fetch("http://localhost:5000/api/hotprospector/connect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(hotprospectorCredentials),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.detail || "Failed to connect HotProspector")
+      }
+
+      const data = await response.json()
+      console.log("HotProspector connect response:", data)
+
+      setHotprospectorStatus({ connected: true, api_uid: hotprospectorCredentials.api_uid })
+      setHotprospectorDialogOpen(false)
+      setHotprospectorCredentials({ api_uid: "", api_key: "" })
+
+      toast({
+        title: "Connection Successful",
+        description: `HotProspector connected successfully. Found ${data.groups_count} groups.`,
+      })
+    } catch (err) {
+      console.error("HotProspector connect error:", err)
+      const errorMessage = `Failed to connect HotProspector: ${err.message}`
+      setError(errorMessage)
+      toast({
+        title: "Connection Failed",
+        description: errorMessage,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-dvh bg-background rounded-tl-2xl ring-1 ring-purple-100 ">
+    <div className="min-h-screen bg-background">
       <div className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
           <h1 className="text-2xl font-semibold text-foreground">Settings</h1>
@@ -528,6 +596,112 @@ function SettingsContent() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* HotProspector Integration */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                        <Phone className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <CardTitle className="text-base">HotProspector</CardTitle>
+                          {hotprospectorStatus?.connected && (
+                            <Badge variant="default" className="text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Connected
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="text-sm">
+                          Lead generation and call center management platform
+                        </CardDescription>
+                        {hotprospectorStatus?.connected && hotprospectorStatus.api_uid && (
+                          <p className="text-xs text-muted-foreground mt-2">API UID: {hotprospectorStatus.api_uid}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    {hotprospectorStatus?.connected ? (
+                      <Button variant="outline" size="sm" disabled>
+                        Connected
+                      </Button>
+                    ) : (
+                      <Dialog open={hotprospectorDialogOpen} onOpenChange={setHotprospectorDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" disabled={isLoading}>
+                            {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                            Connect
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Connect HotProspector</DialogTitle>
+                            <DialogDescription>
+                              Enter your HotProspector API credentials to connect your account.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="api_uid">API UID</Label>
+                              <Input
+                                id="api_uid"
+                                placeholder="Enter your API UID"
+                                value={hotprospectorCredentials.api_uid}
+                                onChange={(e) =>
+                                  setHotprospectorCredentials((prev) => ({ ...prev, api_uid: e.target.value }))
+                                }
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="api_key">API Key</Label>
+                              <Input
+                                id="api_key"
+                                type="password"
+                                placeholder="Enter your API Key"
+                                value={hotprospectorCredentials.api_key}
+                                onChange={(e) =>
+                                  setHotprospectorCredentials((prev) => ({ ...prev, api_key: e.target.value }))
+                                }
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setHotprospectorDialogOpen(false)
+                                setHotprospectorCredentials({ api_uid: "", api_key: "" })
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              onClick={handleHotprospectorConnect}
+                              disabled={
+                                isLoading || !hotprospectorCredentials.api_uid || !hotprospectorCredentials.api_key
+                              }
+                            >
+                              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                              Connect
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href="https://hotprospector.com" target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -545,18 +719,5 @@ function SettingsContent() {
         </Tabs>
       </div>
     </div>
-  )
-}
-
-// Main component wrapped with Suspense
-export default function SettingsPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-dvh bg-background rounded-tl-2xl ring-1 ring-purple-100 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    }>
-      <SettingsContent />
-    </Suspense>
   )
 }
