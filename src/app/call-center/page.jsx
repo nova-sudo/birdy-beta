@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, Search, Users, FolderOpen, Phone, Eye, Settings2, AlertCircle, ArrowLeft } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/hooks/use-toast"
 
 export default function CallCenterPage() {
   const router = useRouter()
@@ -32,8 +32,7 @@ export default function CallCenterPage() {
     name: true,
     email: true,
     phone: true,
-    company: true,
-    location: true,
+    extension: true,
     status: true,
   })
 
@@ -54,7 +53,14 @@ export default function CallCenterPage() {
         throw new Error("Failed to fetch groups")
       }
       const data = await response.json()
-      setGroups(data.data || [])
+      const mappedGroups = (data.data || []).map((group) => ({
+        id: group.GroupId,
+        name: group.GroupTitle,
+        teamId: group.TeamId,
+        addedBy: group.Added_by,
+      }))
+      setGroups(mappedGroups)
+      console.log("[v0] Fetched groups:", mappedGroups)
     } catch (err) {
       console.error("Error fetching groups:", err)
       setError(err.message)
@@ -103,7 +109,19 @@ export default function CallCenterPage() {
         throw new Error("Failed to fetch members")
       }
       const data = await response.json()
-      setMembers(data.data || [])
+      const mappedMembers = (data.data || []).map((member) => ({
+        id: member.memberId,
+        name: `${member.first_name} ${member.last_name}`.trim(),
+        email: member.email,
+        phone: member.outbound_phone || member.inbound_phone || "N/A",
+        extension: member.phone_extension,
+        status: member.member_status,
+        title: member.title,
+        company: member.company,
+        country: member.country,
+      }))
+      setMembers(mappedMembers)
+      console.log("[v0] Fetched members:", mappedMembers)
     } catch (err) {
       console.error("Error fetching members:", err)
     }
@@ -220,7 +238,7 @@ export default function CallCenterPage() {
                     className="pl-9 w-64"
                   />
                 </div>
-                {activeTab === "leads" && (
+                {activeTab === "members" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
@@ -342,31 +360,35 @@ export default function CallCenterPage() {
                   <p className="text-muted-foreground">No team members found</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredMembers.map((member, index) => (
-                    <Card key={member.id || index}>
-                      <CardHeader>
-                        <CardTitle className="text-base">{member.name || "N/A"}</CardTitle>
-                        <CardDescription>{member.email || "N/A"}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          {member.role && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Role:</span>
-                              <Badge variant="outline">{member.role}</Badge>
-                            </div>
+                <div className="rounded-lg border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/50">
+                        {visibleColumns.name && <TableHead>Name</TableHead>}
+                        {visibleColumns.email && <TableHead>Email</TableHead>}
+                        {visibleColumns.phone && <TableHead>Phone</TableHead>}
+                        {visibleColumns.extension && <TableHead>Extension</TableHead>}
+                        {visibleColumns.status && <TableHead>Status</TableHead>}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMembers.map((member) => (
+                        <TableRow key={member.id} className="hover:bg-muted/50">
+                          {visibleColumns.name && <TableCell className="font-medium">{member.name}</TableCell>}
+                          {visibleColumns.email && <TableCell>{member.email}</TableCell>}
+                          {visibleColumns.phone && <TableCell>{member.phone}</TableCell>}
+                          {visibleColumns.extension && <TableCell>{member.extension}</TableCell>}
+                          {visibleColumns.status && (
+                            <TableCell>
+                              <Badge variant={member.status === "Active" ? "default" : "secondary"}>
+                                {member.status}
+                              </Badge>
+                            </TableCell>
                           )}
-                          {member.phone && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Phone:</span>
-                              <span>{member.phone}</span>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </TabsContent>
