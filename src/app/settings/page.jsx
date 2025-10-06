@@ -21,8 +21,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Suspense } from "react"
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") || "integrations"
   const [integrationStatus, setIntegrationStatus] = useState(null)
@@ -721,3 +722,11 @@ export default function SettingsPage() {
     </div>
   )
 }
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+      <SettingsPageContent />
+    </Suspense>
+  );
+} 
