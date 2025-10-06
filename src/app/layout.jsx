@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
           <main className="w-full">
             {!hideSidebar && (
               <SidebarTrigger
-                className="absolute z-10 bg-purple-600/20 mt-2 rounded-tl-2xl rounded-br-2xl rounded-bl-none rounded-tr-none"
+                className="absolute z-10 bg-gray-900/10 mt-2 shadow rounded-tl-2xl rounded-br-2xl rounded-bl-none rounded-tr-none"
                 // Adds full radius to top-left and bottom-left corners
               />
             )}
