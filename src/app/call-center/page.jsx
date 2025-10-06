@@ -128,7 +128,7 @@ const fetchGroupLeads = async (groupId) => {
         id: member.memberId,
         name: `${member.first_name} ${member.last_name}`.trim(),
         email: member.email,
-        phone: member.outbound_phone || member.inbound_phone || "N/A",
+        phone: member.mobile || member.inbound_phone || "N/A",
         extension: member.phone_extension,
         status: member.member_status,
         title: member.title,
