@@ -47,7 +47,7 @@ export default function CallCenterPage() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch("http://localhost:5000/api/hotprospector/groups", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/groups", {
         credentials: "include",
       })
       if (!response.ok) {
@@ -72,7 +72,7 @@ export default function CallCenterPage() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch(`http://localhost:5000/api/hotprospector/groups/${groupId}/leads`, {
+      const response = await fetch(`https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -96,7 +96,7 @@ export default function CallCenterPage() {
 
   const fetchMembers = async () => {
     try {
-      const response = await fetch("http://localhost:5000/api/hotprospector/members", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/members", {
         credentials: "include",
       })
       if (!response.ok) {
