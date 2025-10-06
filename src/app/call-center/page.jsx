@@ -74,31 +74,46 @@ export default function CallCenterPage() {
     }
   }
 
-  const fetchGroupLeads = async (groupId) => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const response = await fetch(`https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads`, {
-        credentials: "include",
-      })
-      if (!response.ok) {
-        throw new Error("Failed to fetch leads")
-      }
-      const data = await response.json()
-      setLeads(data.data || [])
-      setActiveTab("leads")
-    } catch (err) {
-      console.error("Error fetching leads:", err)
-      setError(err.message)
-      toast({
-        title: "Error",
-        description: "Failed to fetch leads for this group.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+const fetchGroupLeads = async (groupId) => {
+  try {
+    setIsLoading(true);
+    setError(null);
+    const response = await fetch(`https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads`, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new Error("Failed to fetch leads");
     }
+    const data = await response.json();
+    
+    // Transform the lead data to match the expected structure
+    const mappedLeads = (data.data || []).map((lead) => ({
+      id: lead.id,
+      name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
+      email: lead.email || "N/A",
+      phone: lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || ""}`.trim() : "N/A",
+      company: lead.company || "N/A",
+      location: [lead.city, lead.state, lead.country_code]
+        .filter(Boolean)
+        .join(", ") || "N/A",
+      status: lead.status || "Active", // Default to "Active" if no status field exists
+    }));
+    
+    setLeads(mappedLeads);
+    setActiveTab("leads");
+    console.log("[v0] Fetched and mapped leads:", mappedLeads);
+  } catch (err) {
+    console.error("Error fetching leads:", err);
+    setError(err.message);
+    toast({
+      title: "Error",
+      description: "Failed to fetch leads for this group.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
   }
+};
 
   const fetchMembers = async () => {
     try {
