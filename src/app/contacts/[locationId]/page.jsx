@@ -332,8 +332,11 @@ export default function ContactPage() {
         return
       }
 
-      const groupId = locationId.replace("group-", "")
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${groupId}/contacts`, {
+      const decodedLocationId = decodeURIComponent(locationId)
+      const groupId = decodedLocationId.replace("group-", "")
+      console.log("[v0] Fetching contacts for groupId:", groupId)
+      console.log("[v0] Final URL:", `https://birdy-backend.vercel.app/api/client-groups/${encodeURIComponent(groupId)}/contacts`)
+      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${encodeURIComponent(groupId)}/contacts`, {
         credentials: "include",
       })
 
@@ -389,8 +392,8 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-dvh rounded-t-2xl ring-1 ring-purple-100 mx-auto max-w-7xl">
-      <div className="flex flex-col gap-8 p-6 md:p-8">
+    <div className="min-h-dvh  mx-auto max-w-7xl">
+      <div className="flex flex-col gap-8 p-4 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => router.push("/clients")} className="gap-2">
