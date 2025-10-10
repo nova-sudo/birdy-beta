@@ -278,7 +278,7 @@ export default function ClientsPage() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add GHL Location
                 </Button>
-                <DialogContent className="sm:max-w-2xl p-0 overflow-hidden border-0 shadow-2xl">
+                <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
                   {/* Header with purple gradient */}
                   <div className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
                     <div className="flex items-center gap-3">
@@ -292,7 +292,7 @@ export default function ClientsPage() {
                     </div>
                   </div>
 
-                  <div className="p-6">
+                  <div className="p-6 ">
                     {/* Search Bar */}
                     <div className="relative mb-4">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -306,7 +306,7 @@ export default function ClientsPage() {
                     </div>
 
                     {/* Location List */}
-                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                    <div className="space-y-2 max-h-80 overflow-y-auto  ">
                       {filteredAvailableLocations.length > 0 ? (
                         filteredAvailableLocations.map((location) => (
                           <div

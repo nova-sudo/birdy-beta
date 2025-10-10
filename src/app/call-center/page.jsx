@@ -15,7 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Search, Users, FolderOpen, Phone, Eye, Settings2, AlertCircle, ArrowLeft } from "lucide-react"
+import { Loader2, Search, Users, FolderOpen, Phone, Eye, Settings2, AlertCircle, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import { toast } from "sonner"
 
 export default function CallCenterPage() {
@@ -32,9 +32,16 @@ export default function CallCenterPage() {
     name: true,
     email: true,
     phone: true,
-    extension: true,
+    company: true,
+    location: true,
     status: true,
   })
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalLeads, setTotalLeads] = useState(0)
+  const [leadsPerPage] = useState(100)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Fetch groups on mount
   useEffect(() => {
@@ -64,56 +71,73 @@ export default function CallCenterPage() {
     } catch (err) {
       console.error("Error fetching groups:", err)
       setError(err.message)
-      toast({
-        title: "Error",
-        description: "Failed to fetch groups. Please check your HotProspector connection.",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch groups. Please check your HotProspector connection.")
     } finally {
       setIsLoading(false)
     }
   }
 
-const fetchGroupLeads = async (groupId) => {
-  try {
-    setIsLoading(true);
-    setError(null);
-    const response = await fetch(`https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads`, {
-      credentials: "include",
-    });
-    if (!response.ok) {
-      throw new Error("Failed to fetch leads");
+  const fetchGroupLeads = async (groupId, page = 1) => {
+    try {
+      setIsLoadingMore(page > 1)
+      if (page === 1) {
+        setIsLoading(true)
+        setLeads([])
+      }
+      setError(null)
+      
+      const skip = (page - 1) * leadsPerPage
+      const response = await fetch(
+        `https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads?skip=${skip}&limit=${leadsPerPage}`,
+        {
+          credentials: "include",
+        }
+      )
+      if (!response.ok) {
+        throw new Error("Failed to fetch leads")
+      }
+      const data = await response.json()
+      
+      // Transform the lead data to match the expected structure
+      const mappedLeads = (data.data || []).map((lead) => ({
+        id: lead.id,
+        name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
+        email: lead.email || "N/A",
+        phone: lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
+        company: lead.company || "N/A",
+        location: [lead.city, lead.state, lead.country_code]
+          .filter(Boolean)
+          .join(", ") || "N/A",
+        status: "Active",
+      }))
+      
+      // If paginating, append to existing leads, otherwise replace
+      if (page === 1) {
+        setLeads(mappedLeads)
+        setActiveTab("leads")
+      } else {
+        setLeads(prev => [...prev, ...mappedLeads])
+      }
+      
+      setTotalLeads(data.meta?.total || 0)
+      setCurrentPage(page)
+      
+      console.log("[v0] Fetched leads:", {
+        page,
+        returned: mappedLeads.length,
+        total: data.meta?.total,
+        skip: data.meta?.skip,
+        limit: data.meta?.limit
+      })
+    } catch (err) {
+      console.error("Error fetching leads:", err)
+      setError(err.message)
+      toast.error("Failed to fetch leads for this group.")
+    } finally {
+      setIsLoading(false)
+      setIsLoadingMore(false)
     }
-    const data = await response.json();
-    
-    // Transform the lead data to match the expected structure
-    const mappedLeads = (data.data || []).map((lead) => ({
-      id: lead.id,
-      name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
-      email: lead.email || "N/A",
-      phone: lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || ""}`.trim() : "N/A",
-      company: lead.company || "N/A",
-      location: [lead.city, lead.state, lead.country_code]
-        .filter(Boolean)
-        .join(", ") || "N/A",
-      status: lead.status || "Active", // Default to "Active" if no status field exists
-    }));
-    
-    setLeads(mappedLeads);
-    setActiveTab("leads");
-    console.log("[v0] Fetched and mapped leads:", mappedLeads);
-  } catch (err) {
-    console.error("Error fetching leads:", err);
-    setError(err.message);
-    toast({
-      title: "Error",
-      description: "Failed to fetch leads for this group.",
-      variant: "destructive",
-    });
-  } finally {
-    setIsLoading(false);
   }
-};
 
   const fetchMembers = async () => {
     try {
@@ -144,7 +168,30 @@ const fetchGroupLeads = async (groupId) => {
 
   const handleGroupClick = (group) => {
     setSelectedGroup(group)
-    fetchGroupLeads(group.id)
+    setCurrentPage(1)
+    fetchGroupLeads(group.id, 1)
+  }
+
+  const handleLoadMore = () => {
+    if (selectedGroup && !isLoadingMore) {
+      fetchGroupLeads(selectedGroup.id, currentPage + 1)
+    }
+  }
+
+  const handlePreviousPage = () => {
+    if (currentPage > 1 && selectedGroup) {
+      const newPage = currentPage - 1
+      setCurrentPage(newPage)
+      fetchGroupLeads(selectedGroup.id, newPage)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentPage * leadsPerPage < totalLeads && selectedGroup) {
+      const newPage = currentPage + 1
+      setCurrentPage(newPage)
+      fetchGroupLeads(selectedGroup.id, newPage)
+    }
   }
 
   const filteredGroups = groups.filter((group) => group.name?.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -162,8 +209,11 @@ const fetchGroupLeads = async (groupId) => {
       member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
+  const totalPages = Math.ceil(totalLeads / leadsPerPage)
+  const hasMoreLeads = currentPage * leadsPerPage < totalLeads
+
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       <div className="border-b border-border">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -185,7 +235,7 @@ const fetchGroupLeads = async (groupId) => {
       </div>
 
       <div className="container mx-auto px-6 py-8">
-        <div className=" bg-card">
+        <div className="bg-card">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 border-b border-border">
             <Card>
@@ -203,7 +253,7 @@ const fetchGroupLeads = async (groupId) => {
                 <Phone className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{leads.length}</div>
+                <div className="text-2xl font-bold">{totalLeads || leads.length}</div>
               </CardContent>
             </Card>
             <Card>
@@ -253,7 +303,7 @@ const fetchGroupLeads = async (groupId) => {
                     className="pl-9 w-64"
                   />
                 </div>
-                {activeTab === "members" && (
+                {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm">
@@ -313,9 +363,12 @@ const fetchGroupLeads = async (groupId) => {
 
             <TabsContent value="leads" className="mt-0">
               {selectedGroup && (
-                <div className="mb-4 p-4 bg-muted/50 rounded-lg">
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex items-center justify-between">
                   <p className="text-sm text-muted-foreground">
                     Showing leads from: <span className="font-medium text-foreground">{selectedGroup.name}</span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages} ({totalLeads} total leads)
                   </p>
                 </div>
               )}
@@ -331,36 +384,74 @@ const fetchGroupLeads = async (groupId) => {
                   </p>
                 </div>
               ) : (
-                <div className="rounded-lg border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        {visibleColumns.name && <TableHead>Name</TableHead>}
-                        {visibleColumns.email && <TableHead>Email</TableHead>}
-                        {visibleColumns.phone && <TableHead>Phone</TableHead>}
-                        {visibleColumns.company && <TableHead>Company</TableHead>}
-                        {visibleColumns.location && <TableHead>Location</TableHead>}
-                        {visibleColumns.status && <TableHead>Status</TableHead>}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredLeads.map((lead, index) => (
-                        <TableRow key={lead.id || index} className="hover:bg-muted/50">
-                          {visibleColumns.name && <TableCell className="font-medium">{lead.name || "N/A"}</TableCell>}
-                          {visibleColumns.email && <TableCell>{lead.email || "N/A"}</TableCell>}
-                          {visibleColumns.phone && <TableCell>{lead.phone || "N/A"}</TableCell>}
-                          {visibleColumns.company && <TableCell>{lead.company || "N/A"}</TableCell>}
-                          {visibleColumns.location && <TableCell>{lead.location || "N/A"}</TableCell>}
-                          {visibleColumns.status && (
-                            <TableCell>
-                              <Badge variant="outline">{lead.status || "Active"}</Badge>
-                            </TableCell>
-                          )}
+                <>
+                  <div className="rounded-lg border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-muted/50">
+                          {visibleColumns.name && <TableHead>Name</TableHead>}
+                          {visibleColumns.email && <TableHead>Email</TableHead>}
+                          {visibleColumns.phone && <TableHead>Phone</TableHead>}
+                          {visibleColumns.company && <TableHead>Company</TableHead>}
+                          {visibleColumns.location && <TableHead>Location</TableHead>}
+                          {visibleColumns.status && <TableHead>Status</TableHead>}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredLeads.map((lead, index) => (
+                          <TableRow key={lead.id || index} className="hover:bg-muted/50">
+                            {visibleColumns.name && <TableCell className="font-medium">{lead.name || "N/A"}</TableCell>}
+                            {visibleColumns.email && <TableCell>{lead.email || "N/A"}</TableCell>}
+                            {visibleColumns.phone && <TableCell>{lead.phone || "N/A"}</TableCell>}
+                            {visibleColumns.company && <TableCell>{lead.company || "N/A"}</TableCell>}
+                            {visibleColumns.location && <TableCell>{lead.location || "N/A"}</TableCell>}
+                            {visibleColumns.status && (
+                              <TableCell>
+                                <Badge variant="outline">{lead.status || "Active"}</Badge>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Pagination Controls */}
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {((currentPage - 1) * leadsPerPage) + 1} to {Math.min(currentPage * leadsPerPage, totalLeads)} of {totalLeads} leads
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handlePreviousPage}
+                        disabled={currentPage === 1 || isLoadingMore}
+                      >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Previous
+                      </Button>
+                      <div className="text-sm font-medium px-4">
+                        Page {currentPage} of {totalPages}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleNextPage}
+                        disabled={!hasMoreLeads || isLoadingMore}
+                      >
+                        {isLoadingMore ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <>
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </>
               )}
             </TabsContent>
 
@@ -379,27 +470,25 @@ const fetchGroupLeads = async (groupId) => {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        {visibleColumns.name && <TableHead>Name</TableHead>}
-                        {visibleColumns.email && <TableHead>Email</TableHead>}
-                        {visibleColumns.phone && <TableHead>Phone</TableHead>}
-                        {visibleColumns.extension && <TableHead>Extension</TableHead>}
-                        {visibleColumns.status && <TableHead>Status</TableHead>}
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Extension</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredMembers.map((member) => (
                         <TableRow key={member.id} className="hover:bg-muted/50">
-                          {visibleColumns.name && <TableCell className="font-medium">{member.name}</TableCell>}
-                          {visibleColumns.email && <TableCell>{member.email}</TableCell>}
-                          {visibleColumns.phone && <TableCell>{member.phone}</TableCell>}
-                          {visibleColumns.extension && <TableCell>{member.extension}</TableCell>}
-                          {visibleColumns.status && (
-                            <TableCell>
-                              <Badge variant={member.status === "Active" ? "default" : "secondary"}>
-                                {member.status}
-                              </Badge>
-                            </TableCell>
-                          )}
+                          <TableCell className="font-medium">{member.name}</TableCell>
+                          <TableCell>{member.email}</TableCell>
+                          <TableCell>{member.phone}</TableCell>
+                          <TableCell>{member.extension}</TableCell>
+                          <TableCell>
+                            <Badge variant={member.status === "Active" ? "default" : "secondary"}>
+                              {member.status}
+                            </Badge>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
