@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import {
   Loader2,
@@ -17,10 +17,14 @@ import {
   Calendar,
   Tag,
   Building,
+  Search,
+  X,
+  Filter,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -29,6 +33,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, icon: User, sortable: true, width: "min-w-[200px]" },
@@ -50,14 +61,10 @@ const contactColumns = [
   { id: "country", label: "Country", defaultVisible: false, sortable: true, width: "min-w-[120px]" },
 ]
 
-const ContactsTable = ({ contacts, visibleColumns }) => {
-  const [sortColumn, setSortColumn] = useState("")
-  const [sortDirection, setSortDirection] = useState("asc")
-
+const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
   const handleSort = (columnId) => {
     const newDirection = sortColumn === columnId && sortDirection === "asc" ? "desc" : "asc"
-    setSortColumn(columnId)
-    setSortDirection(newDirection)
+    onSort(columnId, newDirection)
   }
 
   const renderCellContent = (contact, col) => {
@@ -207,7 +214,7 @@ const ContactsTable = ({ contacts, visibleColumns }) => {
         </div>
         <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Get started by adding your first contact or check back later.
+          Try adjusting your filters or search criteria.
         </p>
       </div>
     )
@@ -264,16 +271,18 @@ const ContactsTable = ({ contacts, visibleColumns }) => {
   )
 }
 
-const DashboardStats = ({ contacts }) => {
+const DashboardStats = ({ contacts, filteredContacts }) => {
   const totalContacts = contacts.length
-  const contactsWithEmail = contacts.filter((c) => c.email).length
-  const contactsWithPhone = contacts.filter((c) => c.phone).length
-  const contactsWithWebsite = contacts.filter((c) => c.website).length
+  const filteredTotal = filteredContacts.length
+  const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
+  const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
+  const contactsWithWebsite = filteredContacts.filter((c) => c.website).length
 
   const stats = [
     {
       title: "Total Contacts",
-      value: totalContacts,
+      value: filteredTotal,
+      subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null,
       icon: Users,
     },
     {
@@ -303,6 +312,7 @@ const DashboardStats = ({ contacts }) => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
+            {stat.subtitle && <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>}
           </CardContent>
         </Card>
       ))}
@@ -320,6 +330,14 @@ export default function ContactPage() {
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id),
   )
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedSource, setSelectedSource] = useState("all")
+  const [selectedType, setSelectedType] = useState("all")
+  const [selectedDateRange, setSelectedDateRange] = useState("all")
+  const [sortColumn, setSortColumn] = useState("")
+  const [sortDirection, setSortDirection] = useState("asc")
 
   const fetchContacts = async () => {
     setLoading(true)
@@ -334,14 +352,11 @@ export default function ContactPage() {
 
       const decodedLocationId = decodeURIComponent(locationId)
       const groupId = decodedLocationId.replace("group-", "")
-      console.log("[v0] Fetching contacts for groupId:", groupId)
-      console.log("[v0] Final URL:", `https://birdy-backend.vercel.app/api/client-groups/${encodeURIComponent(groupId)}/contacts`)
       const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${encodeURIComponent(groupId)}/contacts`, {
         credentials: "include",
       })
 
       if (response.status === 401) {
-        console.error("[v0] Unauthorized - redirecting to login")
         router.push("/login")
         return
       }
@@ -351,17 +366,8 @@ export default function ContactPage() {
       }
 
       const data = await response.json()
-      console.log("[v0] API Response:", JSON.stringify(data, null, 2))
-
       const contactsData = data.contacts || []
-      if (contactsData.length === 0) {
-        console.log("[v0] No contacts found for this group")
-        setContacts([])
-        return
-      }
-
       setContacts(contactsData)
-      console.log(`[v0] Successfully loaded ${contactsData.length} contacts`)
     } catch (error) {
       console.error("[v0] Error fetching contacts:", error)
       setContacts([])
@@ -374,11 +380,123 @@ export default function ContactPage() {
     fetchContacts()
   }, [locationId])
 
+  // Get unique sources and types for filters
+  const sources = useMemo(() => {
+    const uniqueSources = [...new Set(contacts.map(c => c.source).filter(Boolean))]
+    return uniqueSources.sort()
+  }, [contacts])
+
+  const types = useMemo(() => {
+    const uniqueTypes = [...new Set(contacts.map(c => c.contactType || c.type).filter(Boolean))]
+    return uniqueTypes.sort()
+  }, [contacts])
+
+  // Apply filters and sorting
+  const filteredAndSortedContacts = useMemo(() => {
+    let filtered = [...contacts]
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(contact => {
+        return (
+          contact.contactName?.toLowerCase().includes(query) ||
+          contact.email?.toLowerCase().includes(query) ||
+          contact.phone?.toLowerCase().includes(query) ||
+          contact.website?.toLowerCase().includes(query) ||
+          contact.address1?.toLowerCase().includes(query) ||
+          contact.country?.toLowerCase().includes(query) ||
+          contact.tags?.some(tag => tag.toLowerCase().includes(query))
+        )
+      })
+    }
+
+    // Source filter
+    if (selectedSource !== "all") {
+      filtered = filtered.filter(contact => contact.source === selectedSource)
+    }
+
+    // Type filter
+    if (selectedType !== "all") {
+      filtered = filtered.filter(contact => {
+        const type = contact.contactType || contact.type
+        return type === selectedType
+      })
+    }
+
+    // Date range filter
+    if (selectedDateRange !== "all") {
+      const now = new Date()
+      filtered = filtered.filter(contact => {
+        if (!contact.dateAdded) return false
+        const contactDate = new Date(contact.dateAdded)
+        
+        switch (selectedDateRange) {
+          case "today":
+            return contactDate.toDateString() === now.toDateString()
+          case "week":
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            return contactDate >= weekAgo
+          case "month":
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            return contactDate >= monthAgo
+          case "year":
+            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+            return contactDate >= yearAgo
+          default:
+            return true
+        }
+      })
+    }
+
+    // Sorting
+    if (sortColumn) {
+      filtered.sort((a, b) => {
+        let aVal = a[sortColumn]
+        let bVal = b[sortColumn]
+
+        // Handle special cases
+        if (sortColumn === "dateAdded") {
+          aVal = aVal ? new Date(aVal).getTime() : 0
+          bVal = bVal ? new Date(bVal).getTime() : 0
+        } else if (sortColumn === "contactType") {
+          aVal = a.contactType || a.type || ""
+          bVal = b.contactType || b.type || ""
+        } else {
+          aVal = aVal || ""
+          bVal = bVal || ""
+        }
+
+        if (typeof aVal === "string") {
+          aVal = aVal.toLowerCase()
+          bVal = bVal.toLowerCase()
+        }
+
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+        return 0
+      })
+    }
+
+    return filtered
+  }, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection])
+
   const toggleColumn = (columnId) => {
     setVisibleColumns((current) =>
       current.includes(columnId) ? current.filter((id) => id !== columnId) : [...current, columnId],
     )
   }
+
+  const clearAllFilters = () => {
+    setSearchQuery("")
+    setSelectedSource("all")
+    setSelectedType("all")
+    setSelectedDateRange("all")
+    setSortColumn("")
+    setSortDirection("asc")
+  }
+
+  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || selectedDateRange !== "all"
 
   if (loading) {
     return (
@@ -392,7 +510,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-dvh  mx-auto max-w-7xl">
+    <div className="min-h-dvh mx-auto max-w-7xl">
       <div className="flex flex-col gap-8 p-4 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
@@ -412,14 +530,103 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <DashboardStats contacts={contacts} />
+        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} />
+
+        {/* Filters Section */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Filters</span>
+                  {hasActiveFilters && (
+                    <Badge variant="secondary" className="ml-2">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+                {hasActiveFilters && (
+                  <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-8 gap-2">
+                    <X className="h-3 w-3" />
+                    Clear All
+                  </Button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search contacts..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Source Filter */}
+                <Select value={selectedSource} onValueChange={setSelectedSource}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Sources" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sources</SelectItem>
+                    {sources.map(source => (
+                      <SelectItem key={source} value={source}>{source}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Type Filter */}
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {types.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Date Range Filter */}
+                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Time" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Time</SelectItem>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">Last 7 Days</SelectItem>
+                    <SelectItem value="month">Last 30 Days</SelectItem>
+                    <SelectItem value="year">Last Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="flex flex-col gap-4 p-4 rounded-lg border bg-card">
           <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
             <div>
               <h2 className="text-lg font-semibold text-foreground">Contact List</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {contacts.length} {contacts.length === 1 ? "contact" : "contacts"} found
+                {filteredAndSortedContacts.length} {filteredAndSortedContacts.length === 1 ? "contact" : "contacts"} found
+                {hasActiveFilters && ` (filtered from ${contacts.length})`}
               </p>
             </div>
             <DropdownMenu>
@@ -446,7 +653,16 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <ContactsTable contacts={contacts} visibleColumns={visibleColumns} />
+        <ContactsTable 
+          contacts={filteredAndSortedContacts} 
+          visibleColumns={visibleColumns}
+          sortColumn={sortColumn}
+          sortDirection={sortDirection}
+          onSort={(col, dir) => {
+            setSortColumn(col)
+            setSortDirection(dir)
+          }}
+        />
       </div>
     </div>
   )
