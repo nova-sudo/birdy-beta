@@ -324,28 +324,18 @@ export default function ContactPage() {
   const fetchContacts = async () => {
     setLoading(true)
     try {
-      const isGhl = locationId.startsWith("ghl-")
-      const isMeta = locationId.startsWith("meta-")
-
-      if (!isGhl && !isMeta) {
+      const isGroup = locationId.startsWith("group-")
+      if (!isGroup) {
         console.error("[v0] Invalid locationId format:", locationId)
         setContacts([])
         setLoading(false)
         return
       }
 
-      const actualId = locationId.replace(/^(ghl-|meta-)/, "")
-
-      let response
-      if (isGhl) {
-        response = await fetch(`https://birdy-backend.vercel.app/api/location/${actualId}/contacts`, {
-          credentials: "include",
-        })
-      } else {
-        response = await fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${actualId}/leads`, {
-          credentials: "include",
-        })
-      }
+      const groupId = locationId.replace("group-", "")
+      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${groupId}/contacts`, {
+        credentials: "include",
+      })
 
       if (response.status === 401) {
         console.error("[v0] Unauthorized - redirecting to login")
@@ -358,42 +348,11 @@ export default function ContactPage() {
       }
 
       const data = await response.json()
-
       console.log("[v0] API Response:", JSON.stringify(data, null, 2))
 
-      let contactsData = []
-      if (isGhl) {
-        contactsData = data.contacts || []
-        contactsData = contactsData.map((contact) => ({
-          ...contact,
-          contactName:
-            contact.contactName ||
-            contact.name ||
-            (contact.firstName && contact.lastName
-              ? `${contact.firstName} ${contact.lastName}`.trim()
-              : contact.firstName || contact.lastName || ""),
-          phone: contact.phone || contact.phoneNumber || "",
-          email: contact.email || "",
-        }))
-      } else {
-        contactsData = data.data || []
-        contactsData = contactsData.map((lead) => ({
-          id: lead.id,
-          contactName: lead.full_name || "",
-          email: lead.email || "",
-          phone: lead.phone_number || "",
-          source: lead.platform || "Meta",
-          dateAdded: lead.created_time || "",
-          tags: [],
-          contactType: "Lead",
-          website: "",
-          address1: "",
-          country: "",
-        }))
-      }
-
+      const contactsData = data.contacts || []
       if (contactsData.length === 0) {
-        console.log("[v0] No contacts found for this client")
+        console.log("[v0] No contacts found for this group")
         setContacts([])
         return
       }
@@ -420,7 +379,7 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh  flex items-center justify-center">
+      <div className="min-h-dvh flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg font-semibold text-muted-foreground">Loading contacts...</p>
@@ -430,7 +389,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-dvh  rounded-t-2xl ring-1 ring-purple-100 mx-auto max-w-7xl">
+    <div className="min-h-dvh rounded-t-2xl ring-1 ring-purple-100 mx-auto max-w-7xl">
       <div className="flex flex-col gap-8 p-6 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
