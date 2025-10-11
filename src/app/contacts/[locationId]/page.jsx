@@ -321,6 +321,7 @@ const DashboardStats = ({ contacts, filteredContacts }) => {
 }
 
 export default function ContactPage() {
+  
   const params = useParams()
   const router = useRouter()
   const locationId = params.locationId
@@ -510,7 +511,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="min-h-dvh mx-auto max-w-7xl">
+    <div className=" mx-auto max-w-7xl">
       <div className="flex flex-col gap-8 p-4 md:p-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
@@ -519,7 +520,7 @@ export default function ContactPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">Contact Dashboard</h1>
+              <h1 className="text-3xl font-bold  text-foreground">Contact Dashboard</h1>
               <p className="text-sm text-muted-foreground mt-1">Manage and view all your contacts</p>
             </div>
           </div>
