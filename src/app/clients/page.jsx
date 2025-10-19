@@ -3,23 +3,80 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { Search, AlertCircle, ArrowLeft, Building2, MapPin, Facebook, Plus, Check, ChevronRight, Users } from "lucide-react"
+import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
+import { ClientGroupsTable } from "@/components/client-groups-table"
+import { Input } from "@/components/ui/input"
+import { Search } from "lucide-react"
+
+const CACHE_DURATION = {
+  clientGroups: 5 * 60 * 1000,
+  ghlLocations: 10 * 60 * 1000,
+  metaAdAccounts: 10 * 60 * 1000,
+  hotProspectorGroups: 10 * 60 * 1000,
+}
+
+const getCachedData = (key) => {
+  try {
+    const cached = localStorage.getItem(key)
+    if (!cached) return null
+
+    const { data, timestamp } = JSON.parse(cached)
+    const now = Date.now()
+    const maxAge = CACHE_DURATION[key] || 5 * 60 * 1000
+
+    if (now - timestamp < maxAge) {
+      console.log(`✅ Cache hit for ${key} (age: ${Math.round((now - timestamp) / 1000)}s)`)
+      return data
+    }
+
+    console.log(`⏰ Cache expired for ${key}`)
+    localStorage.removeItem(key)
+    return null
+  } catch (error) {
+    console.error("Cache read error:", error)
+    return null
+  }
+}
+
+const setCachedData = (key, data) => {
+  try {
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        data,
+        timestamp: Date.now(),
+      }),
+    )
+    console.log(`💾 Cached ${key}`)
+  } catch (error) {
+    console.error("Cache write error:", error)
+  }
+}
+
+const clearCache = (pattern) => {
+  try {
+    const keys = Object.keys(localStorage)
+    keys.forEach((key) => {
+      if (key.includes(pattern)) {
+        localStorage.removeItem(key)
+      }
+    })
+    console.log(`🗑️ Cleared cache for pattern: ${pattern}`)
+  } catch (error) {
+    console.error("Cache clear error:", error)
+  }
+}
 
 export default function ClientsPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [activeTab, setActiveTab] = useState("all")
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [clientGroupName, setClientGroupName] = useState("")
@@ -34,6 +91,7 @@ export default function ClientsPage() {
   const [metaSearchQuery, setMetaSearchQuery] = useState("")
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   useEffect(() => {
     fetchClientGroups()
@@ -47,156 +105,186 @@ export default function ClientsPage() {
     }
   }, [wizardOpen, wizardStep])
 
-  const fetchClientGroups = async () => {
-    setLoading(true)
-    setError("")
+  const fetchClientGroups = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh) {
+        const cached = getCachedData("clientGroups")
+        if (cached) {
+          setClientGroups(cached)
+          setLoading(false)
+          console.log("[v0] Using cached client groups:", cached.length)
+          return
+        }
+      }
+
+      setLoading(true)
+      setError("")
+
       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         credentials: "include",
       })
+
       if (response.status === 401) {
         router.push("/login")
         return
       }
+
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
       }
+
       const data = await response.json()
-      setClientGroups(data.client_groups || [])
+      const groups = data.client_groups || []
+
+      setClientGroups(groups)
+      setCachedData("clientGroups", groups)
+
+      if (forceRefresh) {
+        toast.success("Client groups refreshed")
+      }
+
+      console.log("[v0] Fetched fresh client groups:", groups.length)
     } catch (err) {
       console.error("[v0] Error fetching client groups:", err)
       setError(err.message)
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }
 
-  const fetchGhlLocations = async () => {
+  const fetchGhlLocations = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh) {
+        const cached = getCachedData("ghlLocations")
+        if (cached) {
+          setGhlLocations(cached)
+          console.log("[v0] Using cached GHL locations:", cached.length)
+          return
+        }
+      }
+
       const response = await fetch("https://birdy-backend.vercel.app/api/subaccount/locations", {
         credentials: "include",
       })
+
       if (response.status === 401) {
         router.push("/login")
         return
       }
+
       if (response.ok) {
         const data = await response.json()
-        console.log("[v0] GHL Locations Response:", data)
         const locations = data.locations || []
+
         setGhlLocations(locations)
+        setCachedData("ghlLocations", locations)
+
+        console.log("[v0] Fetched fresh GHL locations:", locations.length)
+
         if (locations.length === 0) {
-          toast({
-            title: "Warning",
-            description: "No GHL locations found. Please enter a location ID or skip this step.",
-            variant: "warning",
-          })
+          toast.warning("No GHL locations found. Please enter a location ID or skip this step.")
         }
       } else {
         const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.detail || "Failed to fetch GHL locations",
-          variant: "destructive",
-        })
+        toast.error(errorData.detail || "Failed to fetch GHL locations")
       }
     } catch (err) {
       console.error("[v0] Error fetching GHL locations:", err)
-      toast({
-        title: "Error",
-        description: "Failed to fetch GHL locations",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch GHL locations")
     }
   }
 
-  const fetchMetaAdAccounts = async () => {
+  const fetchMetaAdAccounts = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh) {
+        const cached = getCachedData("metaAdAccounts")
+        if (cached) {
+          setMetaAdAccounts(cached)
+          console.log("[v0] Using cached Meta ad accounts:", cached.length)
+          return
+        }
+      }
+
       const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
         credentials: "include",
       })
+
       if (response.ok) {
         const data = await response.json()
-        setMetaAdAccounts(data.data?.data || [])
+        const accounts = data.data?.data || []
+
+        setMetaAdAccounts(accounts)
+        setCachedData("metaAdAccounts", accounts)
+
+        console.log("[v0] Fetched fresh Meta ad accounts:", accounts.length)
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch Meta ad accounts",
-          variant: "destructive",
-        })
+        toast.error("Failed to fetch Meta ad accounts")
       }
     } catch (err) {
       console.error("[v0] Error fetching Meta ad accounts:", err)
-      toast({
-        title: "Error",
-        description: "Failed to fetch Meta ad accounts",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch Meta ad accounts")
     }
   }
 
-  const fetchHotProspectorGroups = async () => {
+  const fetchHotProspectorGroups = async (forceRefresh = false) => {
     try {
+      if (!forceRefresh) {
+        const cached = getCachedData("hotProspectorGroups")
+        if (cached) {
+          setHotProspectorGroups(cached)
+          console.log("[v0] Using cached Hot Prospector groups:", cached.length)
+          return
+        }
+      }
+
       const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/groups", {
         credentials: "include",
       })
+
       if (response.ok) {
         const data = await response.json()
-        const normalizedGroups = (data.data || []).map(group => ({
+        const normalizedGroups = (data.data || []).map((group) => ({
           id: group.GroupId,
           name: group.GroupTitle,
           teamId: group.TeamId,
-          addedBy: group.Added_by
+          addedBy: group.Added_by,
         }))
+
         setHotProspectorGroups(normalizedGroups)
+        setCachedData("hotProspectorGroups", normalizedGroups)
+
+        console.log("[v0] Fetched fresh Hot Prospector groups:", normalizedGroups.length)
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch Hot Prospector groups",
-          variant: "destructive",
-        })
+        toast.error("Failed to fetch Hot Prospector groups")
       }
     } catch (err) {
       console.error("[v0] Error fetching Hot Prospector groups:", err)
-      toast({
-        title: "Error",
-        description: "Failed to fetch Hot Prospector groups",
-        variant: "destructive",
-      })
+      toast.error("Failed to fetch Hot Prospector groups")
     }
+  }
+
+  const handleRefresh = () => {
+    setIsRefreshing(true)
+    clearCache("clientGroups")
+    fetchClientGroups(true)
   }
 
   const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
-      toast({
-        title: "Error",
-        description: "Please enter a client group name",
-        variant: "destructive",
-      })
+      toast.error("Please enter a client group name")
       return
     }
     if (wizardStep === 2 && !selectedGhlLocation && !newGhlLocationId && ghlLocations.length > 0) {
-      toast({
-        title: "Error",
-        description: "Please select a GHL location, enter a location ID, or skip this step",
-        variant: "destructive",
-      })
+      toast.error("Please select a GHL location, enter a location ID, or skip this step")
       return
     }
     if (wizardStep === 3 && !selectedMetaAdAccount && metaAdAccounts.length > 0) {
-      toast({
-        title: "Error",
-        description: "Please select a Meta ad account or skip this step",
-        variant: "destructive",
-      })
+      toast.error("Please select a Meta ad account or skip this step")
       return
     }
     if (wizardStep === 4 && !selectedHotProspectorGroup && hotProspectorGroups.length > 0) {
-      toast({
-        title: "Error",
-        description: "Please select a Hot Prospector group or skip this step",
-        variant: "destructive",
-      })
+      toast.error("Please select a Hot Prospector group or skip this step")
       return
     }
 
@@ -209,10 +297,11 @@ export default function ClientsPage() {
       clientGroupName,
       ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId,
       meta_ad_account_id: selectedMetaAdAccount?.id,
-      hotprospector_group_id: selectedHotProspectorGroup?.id
+      hotprospector_group_id: selectedHotProspectorGroup?.id,
     })
 
     setAddingClientGroup(true)
+
     try {
       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         method: "POST",
@@ -225,11 +314,10 @@ export default function ClientsPage() {
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
         }),
       })
+
       if (response.ok) {
-        toast({
-          title: "Success",
-          description: "Client group created successfully",
-        })
+        toast.success("Client group created successfully")
+
         setWizardOpen(false)
         setWizardStep(1)
         setClientGroupName("")
@@ -240,106 +328,44 @@ export default function ClientsPage() {
         setLocationSearchQuery("")
         setMetaSearchQuery("")
         setHotProspectorSearchQuery("")
-        fetchClientGroups()
-        fetchGhlLocations() // Refresh locations to include new subaccount
+
+        clearCache("clientGroups")
+        clearCache("ghlLocations")
+        fetchClientGroups(true)
+        fetchGhlLocations(true)
       } else {
         const data = await response.json()
-        toast({
-          title: "Error",
-          description: data.detail || "Failed to create client group",
-          variant: "destructive",
-        })
+        toast.error(data.detail || "Failed to create client group")
       }
     } catch (err) {
       console.error("[v0] Error creating client group:", err)
-      toast({
-        title: "Error",
-        description: "Failed to create client group",
-        variant: "destructive",
-      })
+      toast.error("Failed to create client group")
     } finally {
       setAddingClientGroup(false)
     }
   }
-
-  const filterClientGroups = (groups) => {
-    if (!searchQuery) return groups
-    const query = searchQuery.toLowerCase()
-    return groups.filter((group) => group.name?.toLowerCase().includes(query))
-  }
-
-  const filteredClientGroups = filterClientGroups(clientGroups)
 
   const handleClientGroupClick = (group) => {
     console.log("[v0] Navigating to client group:", group.id)
     router.push(`/contacts/group-${group.id}`)
   }
 
-  const renderClientGroupCard = (group) => (
-    <Card
-      key={`group-${group.id}`}
-      className="cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]"
-      onClick={() => handleClientGroupClick(group)}
-    >
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-muted">
-              <Building2 className="w-5 h-5 text-foreground" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{group.name || "Unnamed Group"}</CardTitle>
-              <CardDescription className="text-xs font-mono mt-1">{group.id}</CardDescription>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {group.ghl_location_id && <Badge variant="secondary">GHL</Badge>}
-            {group.meta_ad_account_id && <Badge variant="default">Meta</Badge>}
-            {group.hotprospector_group_id && <Badge variant="outline">Hot Prospector</Badge>}
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          {group.ghl_location_id && (
-            <p className="flex items-center gap-2">
-              <MapPin className="w-4 h-4" />
-              GHL Location: {group.ghl_location_name || group.ghl_location_id}
-            </p>
-          )}
-          {group.meta_ad_account_id && (
-            <p className="flex items-center gap-2">
-              <Facebook className="w-4 h-4" />
-              Meta Ad Account: {group.meta_ad_account_name || group.meta_ad_account_id}
-            </p>
-          )}
-          {group.hotprospector_group_id && (
-            <p className="flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Hot Prospector Group: {group.hotprospector_group_name || group.hotprospector_group_id}
-            </p>
-          )}
-        </div>
-      </CardContent>
-    </Card>
-  )
-
   const filteredGhlLocations = ghlLocations.filter(
     (loc) =>
       loc.name?.toLowerCase().includes(locationSearchQuery.toLowerCase()) ||
-      loc.locationId?.toLowerCase().includes(locationSearchQuery.toLowerCase())
+      loc.locationId?.toLowerCase().includes(locationSearchQuery.toLowerCase()),
   )
 
   const filteredMetaAdAccounts = metaAdAccounts.filter(
     (acc) =>
       acc.name?.toLowerCase().includes(metaSearchQuery.toLowerCase()) ||
-      acc.id?.toLowerCase().includes(metaSearchQuery.toLowerCase())
+      acc.id?.toLowerCase().includes(metaSearchQuery.toLowerCase()),
   )
 
   const filteredHotProspectorGroups = hotProspectorGroups.filter(
     (group) =>
       group.name?.toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()) ||
-      String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase())
+      String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()),
   )
 
   if (loading) {
@@ -355,8 +381,8 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh">
-      <div className="bg-card">
+    <div className="min-h-dvh bg-background">
+      <div className="bg-card border-b border-border">
         <div className="w-full mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -364,25 +390,32 @@ export default function ClientsPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-3xl font-bold  text-foreground">Clients Dashboard</h1>
-                <p className="text-muted-foreground mt-1">Manage client groups</p>
+                <h1 className="text-3xl font-bold text-foreground">Clients Dashboard</h1>
+                <p className="text-muted-foreground mt-1">Advanced data table with filtering and column management</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Dialog open={wizardOpen} onOpenChange={(open) => {
-                setWizardOpen(open)
-                if (!open) {
-                  setWizardStep(1)
-                  setClientGroupName("")
-                  setSelectedGhlLocation(null)
-                  setNewGhlLocationId("")
-                  setSelectedMetaAdAccount(null)
-                  setSelectedHotProspectorGroup(null)
-                  setLocationSearchQuery("")
-                  setMetaSearchQuery("")
-                  setHotProspectorSearchQuery("")
-                }
-              }}>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Dialog
+                open={wizardOpen}
+                onOpenChange={(open) => {
+                  setWizardOpen(open)
+                  if (!open) {
+                    setWizardStep(1)
+                    setClientGroupName("")
+                    setSelectedGhlLocation(null)
+                    setNewGhlLocationId("")
+                    setSelectedMetaAdAccount(null)
+                    setSelectedHotProspectorGroup(null)
+                    setLocationSearchQuery("")
+                    setMetaSearchQuery("")
+                    setHotProspectorSearchQuery("")
+                  }
+                }}
+              >
                 <Button onClick={() => setWizardOpen(true)} className="bg-purple-900 text-white rounded-lg">
                   <Plus className="h-4 w-4 mr-2" />
                   Add Client
@@ -395,12 +428,17 @@ export default function ClientsPage() {
                       </div>
                       <div>
                         <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
-                        <p className="text-purple-100 text-sm">Step {wizardStep} of 4: {[
-                          "Name your client group",
-                          "Select or add GHL subaccount",
-                          "Select Meta ad account",
-                          "Select Hot Prospector group"
-                        ][wizardStep - 1]}</p>
+                        <p className="text-purple-100 text-sm">
+                          Step {wizardStep} of 4:{" "}
+                          {
+                            [
+                              "Name your client group",
+                              "Select or add GHL subaccount",
+                              "Select Meta ad account",
+                              "Select Hot Prospector group",
+                            ][wizardStep - 1]
+                          }
+                        </p>
                       </div>
                     </div>
                   </DialogHeader>
@@ -415,6 +453,7 @@ export default function ClientsPage() {
                             value={clientGroupName}
                             onChange={(e) => setClientGroupName(e.target.value)}
                             className="mt-1"
+                            autoFocus
                           />
                         </div>
                       </div>
@@ -448,7 +487,7 @@ export default function ClientsPage() {
                                 key={location.locationId}
                                 onClick={() => {
                                   setSelectedGhlLocation(location)
-                                  setNewGhlLocationId("") // Clear manual input if selecting existing
+                                  setNewGhlLocationId("")
                                 }}
                                 className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
                                   selectedGhlLocation?.locationId === location.locationId
@@ -459,13 +498,6 @@ export default function ClientsPage() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <MapPin
-                                        className={`w-4 h-4 flex-shrink-0 ${
-                                          selectedGhlLocation?.locationId === location.locationId
-                                            ? "text-purple-600"
-                                            : "text-muted-foreground"
-                                        }`}
-                                      />
                                       <h3
                                         className={`font-semibold truncate ${
                                           selectedGhlLocation?.locationId === location.locationId
@@ -547,13 +579,6 @@ export default function ClientsPage() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <Facebook
-                                        className={`w-4 h-4 flex-shrink-0 ${
-                                          selectedMetaAdAccount?.id === account.id
-                                            ? "text-purple-600"
-                                            : "text-muted-foreground"
-                                        }`}
-                                      />
                                       <h3
                                         className={`font-semibold truncate ${
                                           selectedMetaAdAccount?.id === account.id
@@ -590,7 +615,7 @@ export default function ClientsPage() {
                             ))
                           ) : (
                             <div className="text-center py-12 text-muted-foreground">
-                              <Facebook className="w-12 h-12 mx-auto mb-3 text-muted" />
+                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
                               <p>No Meta ad accounts found</p>
                               <p className="text-sm">Try adjusting your search terms</p>
                             </div>
@@ -635,13 +660,6 @@ export default function ClientsPage() {
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-2">
-                                      <Users
-                                        className={`w-4 h-4 flex-shrink-0 ${
-                                          selectedHotProspectorGroup?.id === group.id
-                                            ? "text-purple-600"
-                                            : "text-muted-foreground"
-                                        }`}
-                                      />
                                       <h3
                                         className={`font-semibold truncate ${
                                           selectedHotProspectorGroup?.id === group.id
@@ -678,7 +696,7 @@ export default function ClientsPage() {
                             ))
                           ) : (
                             <div className="text-center py-12 text-muted-foreground">
-                              <Users className="w-12 h-12 mx-auto mb-3 text-muted" />
+                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
                               <p>No Hot Prospector groups found</p>
                               <p className="text-sm">Try adjusting your search terms</p>
                             </div>
@@ -699,9 +717,12 @@ export default function ClientsPage() {
                   </div>
                   <div className="bg-muted/50 px-6 py-4 flex items-center justify-between border-t border-border">
                     <p className="text-sm text-muted-foreground">
-                      {wizardStep === 2 && `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
-                      {wizardStep === 3 && `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
-                      {wizardStep === 4 && `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`}
+                      {wizardStep === 2 &&
+                        `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
+                      {wizardStep === 3 &&
+                        `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
+                      {wizardStep === 4 &&
+                        `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`}
                     </p>
                     <div className="flex items-center gap-3">
                       {wizardStep > 1 && (
@@ -747,9 +768,6 @@ export default function ClientsPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <Button variant="outline" onClick={fetchClientGroups}>
-                Refresh
-              </Button>
             </div>
           </div>
         </div>
@@ -763,59 +781,17 @@ export default function ClientsPage() {
           </Alert>
         )}
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Client Groups</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{clientGroups.length}</div>
-              <p className="text-xs text-muted-foreground mt-1">All groups</p>
-            </CardContent>
-          </Card>
-        </div>
-
         <Card>
           <CardHeader>
-            <CardTitle>Search Client Groups</CardTitle>
-            <CardDescription>Find client groups by name</CardDescription>
+            <CardTitle>Client Groups</CardTitle>
+            <CardDescription>
+              Manage and view all your client groups with advanced filtering and column customization
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+            <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} />
           </CardContent>
         </Card>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-1">
-            <TabsTrigger value="all">All Client Groups ({filteredClientGroups.length})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="all" className="mt-6">
-            {filteredClientGroups.length === 0 ? (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
-                  <h3 className="mt-4 text-lg font-medium text-foreground">No client groups found</h3>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {searchQuery ? "Try adjusting your search" : "Create a client group to get started"}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredClientGroups.map((group) => renderClientGroupCard(group))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
       </div>
     </div>
   )

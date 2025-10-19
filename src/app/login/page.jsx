@@ -38,7 +38,7 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok && data.message === "Login successful") {
-        router.push("/dashboard")
+        router.push("/clients")
       } else {
         setError(data.detail || "Login failed. Please try again.")
       }

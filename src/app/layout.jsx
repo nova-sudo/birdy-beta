@@ -19,14 +19,14 @@ const geistMono = Geist_Mono({
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/login" || pathname === "/register";
+  const hideSidebar = pathname === "/login" || pathname === "/register" || pathname === "/";
 
   return (
     <html>
       <body>
         <SidebarProvider>
           {!hideSidebar && <AppSidebar />}
-          <main className="w-full">
+          <main className="w-full min-h-dvh">
             {!hideSidebar && (
               <SidebarTrigger
                 className="absolute z-10 bg-gray-900/10 mt-2 shadow rounded-tl-2xl rounded-br-2xl rounded-bl-none rounded-tr-none"
