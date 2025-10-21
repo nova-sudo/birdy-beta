@@ -6,6 +6,8 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
+import { Bell } from 'lucide-react';
+import { UserRound } from 'lucide-react';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -25,6 +27,15 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const App = () => {
+  return (
+    <Bell />,
+    <UserRound />
+  );
+};
+
+
 
 export default function RootLayout({ children }) {
   const pathname = typeof window !== "undefined" ? usePathname() : null;
@@ -48,7 +59,8 @@ export default function RootLayout({ children }) {
                   <BreadcrumbList>
                     <BreadcrumbItem className="hidden md:block">
                       <BreadcrumbLink href="#">
-Birdy Ai                       </BreadcrumbLink>
+                      Birdy Ai
+                      </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator className="hidden md:block" />
                     <BreadcrumbItem>
@@ -56,6 +68,10 @@ Birdy Ai                       </BreadcrumbLink>
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
+                <div className="flex ml-auto mr-5 item-center gap-3">
+                  <Bell className="size-6"/>
+                  <UserRound className="size-6"/>
+                </div>
               </header>
             )}
             <div className="flex flex-1 flex-col gap-4 p-4">
