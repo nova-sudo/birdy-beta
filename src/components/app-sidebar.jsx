@@ -42,12 +42,12 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon" variant="inset" side="left">
+    <Sidebar collapsible="icon" variant="sidebar" side="left">
       <SidebarContent>
         <SidebarGroup>
             <SidebarMenuButton size="lg" asChild >
               <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground  flex aspect-square size-8 items-center justify-center rounded-lg">
+          <div className="bg-sidebar-primary text-sidebar-primary-foreground  flex aspect-square size-8 items-center justify-center ">
                     <Bird className="size-6" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
