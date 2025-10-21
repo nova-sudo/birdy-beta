@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 const DEFAULT_COLUMNS = [
-  { id: "name", label: "Group Name", visible: true, sortable: true },
-  { id: "ghl_contacts", label: "GHL Contacts", visible: true, sortable: true },
+  { id: "name", label: "Business Name", visible: true, sortable: true },
+  { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true },
   { id: "meta_campaigns", label: "Meta Campaigns", visible: true, sortable: true },
   { id: "meta_spend", label: "Meta Spend", visible: true, sortable: true },
   { id: "meta_ctr", label: "Meta CTR (%)", visible: true, sortable: true },

@@ -124,10 +124,6 @@ export default function ClientsPage() {
         credentials: "include",
       })
 
-      if (response.status === 401) {
-        router.push("/login")
-        return
-      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
@@ -168,10 +164,6 @@ export default function ClientsPage() {
         credentials: "include",
       })
 
-      if (response.status === 401) {
-        router.push("/login")
-        return
-      }
 
       if (response.ok) {
         const data = await response.json()

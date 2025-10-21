@@ -357,10 +357,6 @@ export default function ContactPage() {
         credentials: "include",
       })
 
-      if (response.status === 401) {
-        router.push("/login")
-        return
-      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch contacts: ${response.status}`)
