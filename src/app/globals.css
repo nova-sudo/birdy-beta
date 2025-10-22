@@ -32,7 +32,6 @@
 
 /* Define custom utilities */
 
-
 @utility text-foreground {
   color: var(--foreground);
 }
@@ -87,3 +86,14 @@
   --sidebar-border: hsl(260 35% 22%);
   --sidebar-ring: hsl(260 70% 55%);
 }
+
+
+@layer base {
+  * {
+    border-color: var(--sidebar-border)
+  }
+  body {
+    background-color: var(--background);
+  }
+}
+
