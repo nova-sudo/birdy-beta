@@ -13,11 +13,7 @@ import {
 
 // Menu items.
 const items = [
-{
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
+,
   {
     title: "Clients",
     url: "/clients",
@@ -42,13 +38,13 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon" variant="inset" side="left">
+    <Sidebar collapsible="icon" variant="sidebar" side="left">
       <SidebarContent>
         <SidebarGroup>
             <SidebarMenuButton size="lg" asChild >
               <a href="#">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground  flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <Bird className="size-6" />
+          <div className="bg-sidebar-primary text-sidebar-primary-foreground rounded-md  flex aspect-square size-8 items-center justify-center ">
+                    <Bird className="size-6 " />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
                   <span className="font-bold">Birdy Ai</span>
@@ -60,12 +56,10 @@ export function AppSidebar() {
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                    
                   <SidebarMenuButton asChild>
-                    <a href={item.url}>
+                    <a href={item.url} className="font-semibold text-lg">
                       <item.icon />
                       <span>{item.title}</span>
                     </a>
