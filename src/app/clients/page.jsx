@@ -338,8 +338,7 @@ export default function ClientsPage() {
   }
 
   const handleClientGroupClick = (group) => {
-    console.log("[v0] Navigating to client group:", group.id)
-    router.push(`/contacts/group-${group.id}`)
+     //here is going to be the internal page for the client with reports graphs and stuff
   }
 
   const filteredGhlLocations = ghlLocations.filter(

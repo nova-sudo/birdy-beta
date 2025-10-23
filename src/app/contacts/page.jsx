@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useRouter, useParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
   Loader2,
   ArrowLeft,
@@ -20,6 +20,9 @@ import {
   Search,
   X,
   Filter,
+  Megaphone,
+  Layers,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -40,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, icon: User, sortable: true, width: "min-w-[200px]" },
@@ -56,9 +60,13 @@ const contactColumns = [
   },
   { id: "tags", label: "Tags", defaultVisible: true, icon: Tag, width: "min-w-[150px]" },
   { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "website", label: "Website", defaultVisible: true, icon: Globe, sortable: true, width: "min-w-[200px]" },
-  { id: "address1", label: "Address", defaultVisible: true, icon: MapPin, sortable: true, width: "min-w-[200px]" },
-  { id: "country", label: "Country", defaultVisible: false, sortable: true, width: "min-w-[120px]" },
+  { id: "website", label: "Website", defaultVisible: false, icon: Globe, sortable: true, width: "min-w-[200px]" },
+  { id: "address1", label: "Address", defaultVisible: false, icon: MapPin, sortable: true, width: "min-w-[200px]" },
+  { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
+  { id: "campaignName", label: "Campaign", defaultVisible: true, icon: Megaphone, sortable: true, width: "min-w-[200px]" },
+  { id: "adName", label: "Ad Name", defaultVisible: true, icon: Megaphone, sortable: true, width: "min-w-[200px]" },
+  { id: "platform", label: "Platform", defaultVisible: true, icon: Layers, sortable: true, width: "min-w-[120px]" },
+  { id: "groupName", label: "Group", defaultVisible: true, icon: Users, sortable: true, width: "min-w-[200px]" },
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
@@ -121,7 +129,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         )
 
       case "email":
-        if (!contact[col.id]) {
+        if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
           return <span className="text-muted-foreground text-sm">-</span>
         }
         return (
@@ -149,7 +157,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         )
 
       case "contactName":
-        if (!contact[col.id]) {
+        if (!contact[col.id] || contact[col.id] === "Unknown") {
           return <span className="text-muted-foreground text-sm">-</span>
         }
         return (
@@ -190,6 +198,10 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         )
 
       case "country":
+      case "campaignName":
+      case "adName":
+      case "platform":
+      case "groupName":
         if (!contact[col.id]) {
           return <span className="text-muted-foreground text-sm">-</span>
         }
@@ -214,7 +226,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         </div>
         <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Try adjusting your filters or search criteria.
+          Try adjusting your filters or search criteria, or verify your integration settings.
         </p>
       </div>
     )
@@ -254,7 +266,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           <tbody className="divide-y">
             {contacts.map((contact, index) => (
               <tr
-                key={contact.id || index}
+                key={contact.contactId || index}
                 className="hover:bg-muted/50 transition-colors duration-150 cursor-pointer group"
               >
                 {visibleColumnsData.map((col) => (
@@ -271,12 +283,12 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   )
 }
 
-const DashboardStats = ({ contacts, filteredContacts }) => {
+const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const totalContacts = contacts.length
   const filteredTotal = filteredContacts.length
   const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
   const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithWebsite = filteredContacts.filter((c) => c.website).length
+  const contactsWithCountry = filteredContacts.filter((c) => c.country).length
 
   const stats = [
     {
@@ -296,8 +308,8 @@ const DashboardStats = ({ contacts, filteredContacts }) => {
       icon: Phone,
     },
     {
-      title: "With Website",
-      value: contactsWithWebsite,
+      title: "With Country",
+      value: contactsWithCountry,
       icon: Globe,
     },
   ]
@@ -316,22 +328,36 @@ const DashboardStats = ({ contacts, filteredContacts }) => {
           </CardContent>
         </Card>
       ))}
+      {metaData && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Source Breakdown</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm">
+              <p>GHL: {metaData.ghl_contacts_count}</p>
+              <p>Meta: {metaData.meta_leads_count}</p>
+              <p>Hot Prospector: {metaData.hotprospector_leads_count}</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
 
 export default function ContactPage() {
-  
-  const params = useParams()
   const router = useRouter()
-  const locationId = params.locationId
 
   const [contacts, setContacts] = useState([])
+  const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id),
   )
-  
+
   // Filter states
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSource, setSelectedSource] = useState("all")
@@ -342,32 +368,24 @@ export default function ContactPage() {
 
   const fetchContacts = async () => {
     setLoading(true)
+    setError(null)
     try {
-      const isGroup = locationId.startsWith("group-")
-      if (!isGroup) {
-        console.error("[v0] Invalid locationId format:", locationId)
-        setContacts([])
-        setLoading(false)
-        return
-      }
-
-      const decodedLocationId = decodeURIComponent(locationId)
-      const groupId = decodedLocationId.replace("group-", "")
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${encodeURIComponent(groupId)}/contacts`, {
+      const response = await fetch(`https://birdy-backend.vercel.app/api/contacts/all`, {
         credentials: "include",
       })
 
-
       if (!response.ok) {
-        throw new Error(`Failed to fetch contacts: ${response.status}`)
+        throw new Error(`Failed to fetch contacts: ${response.status} ${response.statusText}`)
       }
 
       const data = await response.json()
-      const contactsData = data.contacts || []
-      setContacts(contactsData)
+      setContacts(data.contacts || [])
+      setMetaData(data.meta || null)
     } catch (error) {
-      console.error("[v0] Error fetching contacts:", error)
+      console.error("Error fetching contacts:", error)
+      setError(error.message)
       setContacts([])
+      setMetaData(null)
     } finally {
       setLoading(false)
     }
@@ -375,18 +393,27 @@ export default function ContactPage() {
 
   useEffect(() => {
     fetchContacts()
-  }, [locationId])
+  }, [])
 
   // Get unique sources and types for filters
   const sources = useMemo(() => {
-    const uniqueSources = [...new Set(contacts.map(c => c.source).filter(Boolean))]
-    return uniqueSources.sort()
+    const uniqueSources = new Set()
+    contacts.forEach(c => {
+      if (c.source) {
+        c.source.split(",").forEach(s => uniqueSources.add(s.trim()))
+      }
+    })
+    return [...uniqueSources].sort()
   }, [contacts])
 
   const types = useMemo(() => {
     const uniqueTypes = [...new Set(contacts.map(c => c.contactType || c.type).filter(Boolean))]
     return uniqueTypes.sort()
   }, [contacts])
+
+  // Check if only one source or no sources are present
+  const isSingleSource = sources.length === 1
+  const noSources = sources.length === 0 && metaData && metaData.total_contacts === 0
 
   // Apply filters and sorting
   const filteredAndSortedContacts = useMemo(() => {
@@ -403,6 +430,10 @@ export default function ContactPage() {
           contact.website?.toLowerCase().includes(query) ||
           contact.address1?.toLowerCase().includes(query) ||
           contact.country?.toLowerCase().includes(query) ||
+          contact.campaignName?.toLowerCase().includes(query) ||
+          contact.adName?.toLowerCase().includes(query) ||
+          contact.platform?.toLowerCase().includes(query) ||
+          contact.groupName?.toLowerCase().includes(query) ||
           contact.tags?.some(tag => tag.toLowerCase().includes(query))
         )
       })
@@ -410,7 +441,7 @@ export default function ContactPage() {
 
     // Source filter
     if (selectedSource !== "all") {
-      filtered = filtered.filter(contact => contact.source === selectedSource)
+      filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
     }
 
     // Type filter
@@ -452,7 +483,6 @@ export default function ContactPage() {
         let aVal = a[sortColumn]
         let bVal = b[sortColumn]
 
-        // Handle special cases
         if (sortColumn === "dateAdded") {
           aVal = aVal ? new Date(aVal).getTime() : 0
           bVal = bVal ? new Date(bVal).getTime() : 0
@@ -507,8 +537,32 @@ export default function ContactPage() {
   }
 
   return (
-    <div className=" mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl">
       <div className="flex flex-col gap-8 p-4 md:p-8">
+        {error && (
+          <Alert variant="destructive">
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {noSources && (
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>No Contacts Available</AlertTitle>
+            <AlertDescription>
+              No contacts were retrieved from GHL, Meta, or Hot Prospector. Please verify your integration settings (GHL: {metaData.ghl_contacts_count}, Meta: {metaData.meta_leads_count}, Hot Prospector: {metaData.hotprospector_leads_count}).
+            </AlertDescription>
+          </Alert>
+        )}
+        {isSingleSource && !noSources && (
+          <Alert variant="warning">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Single Source Detected</AlertTitle>
+            <AlertDescription>
+              All contacts are sourced from {sources[0]}. Please verify Meta and Hot Prospector integrations in your account settings.
+            </AlertDescription>
+          </Alert>
+        )}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <Button variant="outline" onClick={() => router.push("/clients")} className="gap-2">
@@ -516,8 +570,8 @@ export default function ContactPage() {
               Back
             </Button>
             <div>
-              <h1 className="text-3xl font-bold  text-foreground">Contact Dashboard</h1>
-              <p className="text-sm text-muted-foreground mt-1">Manage and view all your contacts</p>
+              <h1 className="text-3xl font-bold text-foreground">All Contacts</h1>
+              <p className="text-sm text-muted-foreground mt-1">View all contacts from GHL, Meta, and Hot Prospector</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -527,7 +581,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} />
+        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
 
         {/* Filters Section */}
         <Card>

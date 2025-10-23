@@ -1,4 +1,4 @@
-import { LayoutDashboard ,SquareUserRound , Boxes, Phone, Settings, Bird  } from "lucide-react"
+import { LayoutDashboard ,SquareUserRound , Boxes, Phone,List, Settings, Bird  } from "lucide-react"
 
 import {
   Sidebar,
@@ -28,6 +28,11 @@ const items = [
     title: "Call Center",
     url: "/call-center",
     icon: Phone,
+  },
+    {
+    title: "Leads",
+    url: "/contacts",
+    icon: List,
   },
   {
     title: "Settings",

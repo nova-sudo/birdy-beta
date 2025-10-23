@@ -68,9 +68,9 @@ export default function RootLayout({ children }) {
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <div className="flex ml-auto mr-5 item-center gap-3">
-                  <Bell className="size-6"/>
-                  <UserRound className="size-6"/>
+                <div className="flex ml-auto px-4 item-center gap-6">
+                  <Bell className="size-4"/>
+                  <UserRound className="size-4"/>
                 </div>
               </header>
             )}
