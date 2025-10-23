@@ -37,10 +37,7 @@ export default function dashboard() {
         credentials: "include",
       })
 
-      if (clientsRes.status === 401) {
-        router.push("/login")
-        return
-      }
+
 
       if (!clientsRes.ok) {
         throw new Error("Failed to fetch clients data")
