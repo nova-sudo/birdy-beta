@@ -13,6 +13,7 @@ import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react"
 
+
 const CACHE_DURATION = {
   clientGroups: 5 * 60 * 1000,
   ghlLocations: 10 * 60 * 1000,
@@ -92,6 +93,7 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     fetchClientGroups()
@@ -382,11 +384,11 @@ export default function ClientsPage() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Clients Dashboard</h1>
-                <p className="text-muted-foreground mt-1">Advanced data table with filtering and column management</p>
+                <h1 className="text-3xl font-bold text-foreground">Client Hub</h1>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
+              </div>
+            <div className="flex items-center gap-2 bg-purple-100 border padding-4px rounded-lg">
+              
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
@@ -408,9 +410,11 @@ export default function ClientsPage() {
                   }
                 }}
               >
-                <Button onClick={() => setWizardOpen(true)} className="bg-purple-900 text-white rounded-lg">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Client
+                <Button
+                  onClick={() => setWizardOpen(true)}
+                  className="bg-purple-900 inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
+                >
+                   <Plus className="h-4 w-4 border rounded-full border-2" />
                 </Button>
                 <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
                   <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">

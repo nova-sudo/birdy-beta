@@ -10,20 +10,29 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { FaMeta } from "react-icons/fa6";
+import { Item } from "@radix-ui/react-dropdown-menu"
+import { ImLab } from "react-icons/im";
+import { MdDriveFileRenameOutline } from "react-icons/md";
+import { FaFire } from "react-icons/fa";
+import ghl from "../../public/ghl_icon.png"
+
+
+
 
 const DEFAULT_COLUMNS = [
-  { id: "name", label: "Business Name", visible: true, sortable: true },
-  { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true },
-  { id: "meta_campaigns", label: "Meta Campaigns", visible: true, sortable: true },
-  { id: "meta_spend", label: "Meta Spend", visible: true, sortable: true },
-  { id: "meta_ctr", label: "Meta CTR (%)", visible: true, sortable: true },
-  { id: "meta_cpc", label: "Meta CPC", visible: true, sortable: true },
-  { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true },
-  { id: "hp_leads", label: "HP Leads", visible: true, sortable: true },
-  { id: "meta_impressions", label: "Meta Impressions", visible: true, sortable: true },
-  { id: "meta_clicks", label: "Meta Clicks", visible: true, sortable: true },
-  { id: "meta_reach", label: "Meta Reach", visible: true, sortable: true },
-  { id: "meta_cpm", label: "Meta CPM", visible: true, sortable: true },
+  { id: "name", label: "Business Name", visible: true, sortable: true, icons: MdDriveFileRenameOutline},
+  { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
+  { id: "meta_campaigns", label: "Meta Campaigns", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_spend", label: "Meta Spend", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_ctr", label: "Meta CTR (%)", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_cpc", label: "Meta CPC", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true , icons: FaMeta},
+  { id: "hp_leads", label: "HP Leads", visible: true, sortable: true , icons: FaFire},
+  { id: "meta_impressions", label: "Meta Impressions", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_clicks", label: "Meta Clicks", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_reach", label: "Meta Reach", visible: true, sortable: true , icons: FaMeta},
+  { id: "meta_cpm", label: "Meta CPM", visible: true, sortable: true , icons: FaMeta},
 ]
 
 export function ClientGroupsTable({ data, onRowClick }) {
@@ -158,15 +167,13 @@ export function ClientGroupsTable({ data, onRowClick }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by group name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search clients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white pl-10"
+              />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -176,7 +183,7 @@ export function ClientGroupsTable({ data, onRowClick }) {
               <ChevronDown className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 bg-white">
             {columns.map((column) => (
               <DropdownMenuCheckboxItem
                 key={column.id}
@@ -190,11 +197,39 @@ export function ClientGroupsTable({ data, onRowClick }) {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
+      <div className="flex bg-purple-100 rounded border h-auto item-center justify-between mx-auto  p-2 overflow-x-auto">
+        <button
+        data-filter="all"
+        className="tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium"
+        >All Clients
+        </button>
+        <button 
+        data-filter="healthy" 
+        className="tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium">
+        Healthy
+        </button>
+        <button 
+        data-filter="warning"
+        className=" tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium" >
+        Warning
+        </button>
+        <button
+        data-filter="critical"
+        className="tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium"
+        >Critical</button>
+        <button  
+        data-filter="active" 
+        className="tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium"
+        >Active</button>
+        <button  
+        data-filter="inactive"
+        className="tab justify-center flex items-center h-full px-4 rounded bg-purple-100 text-purple-900 font-medium"
+        >Inactive</button>
+      </div>
       <div className="overflow-x-auto border rounded-lg">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b bg-muted/50">
+          <thead className="border-b top-0 z-20">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
@@ -202,30 +237,51 @@ export function ClientGroupsTable({ data, onRowClick }) {
                   onDragStart={(e) => handleDragStart(e, column.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, column.id)}
-                  className={`px-4 py-3 text-left font-semibold text-foreground cursor-move hover:bg-muted/70 transition-colors ${
-                    draggedColumn === column.id ? "opacity-50 bg-muted" : ""
-                  }`}
+                  className={`  [&:has([role=checkbox])]:pr-2 border-r-muted/20 border-1 h-12    font-medium 
+                    text-muted-foreground  min-w-[200px] px-4 select-none   
+                     left-0    cursor-default`}
                 >
-                  <div className="flex items-center gap-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <button
-                      onClick={() => column.sortable && handleSort(column.id)}
-                      className={`flex items-center gap-1 ${column.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"}`}
-                    >
-                      {column.label}
-                      {column.sortable && sortConfig.key === column.id && (
-                        <span className="text-xs">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => column.sortable && handleSort(column.id)}
+                        className={`flex align-middle text-left items-center gap-1 ${
+                          column.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                        }`}
+                      >
+                        {column.label}
+                        {column.sortable && sortConfig.key === column.id && (
+                          <span className="text-xs">{sortConfig.direction === "asc" ? "↑" : "↓"}</span>
+                        )}
+                      </button>
+                    </div>
+                    <div>
+                      {column.icons ? (
+                        typeof column.icons === "function" ? (
+                          (() => {
+                            const Icon = column.icons;
+                            return <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />;
+                          })()
+                        ) : (
+                          <img
+                            src={column.icons.src ? column.icons.src : column.icons}
+                            alt={`${column.label} icon`}
+                            className="h-4 w-4 text-muted-foreground flex-shrink-0 object-contain"
+                          />
+                        )
+                      ) : (
+                        <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                       )}
-                    </button>
+                    </div>
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="text-center ">
             {sortedData.length === 0 ? (
               <tr>
-                <td colSpan={visibleColumns.length} className="px-4 py-8 text-center text-muted-foreground">
+                <td colSpan={visibleColumns.length} className="px-4 py-8  text-muted-foreground">
                   No client groups found
                 </td>
               </tr>
