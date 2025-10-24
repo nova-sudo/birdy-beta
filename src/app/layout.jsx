@@ -52,7 +52,7 @@ export default function RootLayout({ children }) {
           {!hideSidebar && <AppSidebar />}
           <SidebarInset>
             {!hideSidebar && (
-              <header className="bg-background sticky top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4">
+              <header className=" bg-white w-full z-50 top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4">
                 <SidebarTrigger className="-ml-1" />
                 <Separator orientation="vertical" className="mr-2 h-4" />
                 <Breadcrumb>
@@ -68,9 +68,9 @@ export default function RootLayout({ children }) {
                     </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
-                <div className="flex ml-auto mr-5 item-center gap-3">
-                  <Bell className="size-6"/>
-                  <UserRound className="size-6"/>
+                <div className="flex ml-auto px-4 item-center gap-6">
+                  <Bell className="size-4"/>
+                  <UserRound className="size-4"/>
                 </div>
               </header>
             )}
