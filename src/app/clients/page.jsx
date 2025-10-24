@@ -372,7 +372,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="min-h-dvh w-full bg-background">
       <div className="bg-card border-b border-border">
         <div className="w-full mx-auto px-6 py-8">
           <div className="flex items-center justify-between">
@@ -764,7 +764,7 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="w-full mx-auto p-6 space-y-6">
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />

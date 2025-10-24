@@ -220,7 +220,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   if (contacts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
+      <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
         <div className="rounded-full bg-muted p-3 mb-4">
           <Users className="h-6 w-6 text-muted-foreground" />
         </div>
@@ -233,7 +233,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className="rounded-lg border bg-card overflow-hidden">
+    <div className="rounded-lg  border bg-card overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
@@ -527,7 +527,7 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh flex items-center justify-center">
+      <div className="min-h-dvh w-full flex items-center justify-center">
         <div className="flex flex-col items-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="text-lg font-semibold text-muted-foreground">Loading contacts...</p>
@@ -537,7 +537,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto w-full">
       <div className="flex flex-col gap-8 p-4 md:p-8">
         {error && (
           <Alert variant="destructive">

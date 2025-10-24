@@ -43,8 +43,8 @@ const items = [
 
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="icon" variant="sidebar" side="left">
-      <SidebarContent>
+    <Sidebar collapsible="icon"  variant="sidebar" side="left">
+      <SidebarContent >
         <SidebarGroup>
             <SidebarMenuButton size="lg" asChild >
               <a href="#">
@@ -64,7 +64,7 @@ export function AppSidebar() {
               {items.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <a href={item.url} className="font-semibold text-lg">
+                    <a href={item.url} className="font-semibold text-[12px]">
                       <item.icon />
                       <span>{item.title}</span>
                     </a>
