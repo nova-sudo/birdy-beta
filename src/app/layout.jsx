@@ -3,12 +3,12 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Bell } from 'lucide-react';
 import { UserRound } from 'lucide-react';
-import {AuthProvider} from "../components/AuthProvider";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -49,39 +49,40 @@ export default function RootLayout({ children }) {
         <Script src="https://example.com/script.js" strategy="afterInteractive" />
       </head>
       <body suppressHydrationWarning>
-        <AuthProvider>
-        <SidebarProvider>
-          {!hideSidebar && <AppSidebar />}
-          <SidebarInset>
-            {!hideSidebar && (
-              <header className=" bg-white w-full z-50 top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-4" />
-                <Breadcrumb>
-                  <BreadcrumbList>
-                    <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink href="#">
-                      Birdy Ai
-                      </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator className="hidden md:block" />
-                    <BreadcrumbItem>
-                      <BreadcrumbPage>Page</BreadcrumbPage>
-                    </BreadcrumbItem>
-                  </BreadcrumbList>
-                </Breadcrumb>
-                <div className="flex ml-auto px-4 item-center gap-6">
-                  <Bell className="size-4"/>
-                  <UserRound className="size-4"/>
+          <ProtectedLayout>
+
+            <SidebarProvider>
+              {!hideSidebar && <AppSidebar />}
+              <SidebarInset>
+                {!hideSidebar && (
+                  <header className=" bg-white w-full z-50 top-0 flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                    <SidebarTrigger className="-ml-1" />
+                    <Separator orientation="vertical" className="mr-2 h-4" />
+                    <Breadcrumb>
+                      <BreadcrumbList>
+                        <BreadcrumbItem className="hidden md:block">
+                          <BreadcrumbLink href="#">
+                          Birdy Ai
+                          </BreadcrumbLink>
+                        </BreadcrumbItem>
+                        <BreadcrumbSeparator className="hidden md:block" />
+                        <BreadcrumbItem>
+                          <BreadcrumbPage>Page</BreadcrumbPage>
+                        </BreadcrumbItem>
+                      </BreadcrumbList>
+                    </Breadcrumb>
+                    <div className="flex ml-auto px-4 item-center gap-6">
+                      <Bell className="size-4"/>
+                      <UserRound className="size-4"/>
+                    </div>
+                  </header>
+                )}
+                <div className="flex flex-1 flex-col gap-4 p-4">
+                  {children}
                 </div>
-              </header>
-            )}
-            <div className="flex flex-1 flex-col gap-4 p-4">
-              {children}
-            </div>
-          </SidebarInset>
-        </SidebarProvider>
-        </AuthProvider>
+              </SidebarInset>
+            </SidebarProvider>
+          </ProtectedLayout>
       </body>
     </html>
   );
