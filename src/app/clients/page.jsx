@@ -340,8 +340,7 @@ export default function ClientsPage() {
   }
 
   const handleClientGroupClick = (group) => {
-    console.log("[v0] Navigating to client group:", group.id)
-    router.push(`/contacts/group-${group.id}`)
+     //here is going to be the internal page for the client with reports graphs and stuff
   }
 
   const filteredGhlLocations = ghlLocations.filter(
@@ -375,22 +374,19 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="w-full mx-auto px-6 py-8">
+    <div className="min-h-dvh max-w-7xl mx-auto bg-background gap-6">
+      <div className="bg-card">
+        <div className="w-full h-auto mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+            <div className="flex items-center gap-4 px-8">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Client Hub</h1>
               </div>
               </div>
-            <div className="flex items-center gap-2 bg-purple-100 border padding-4px rounded-lg">
+            <div className="flex items-center gap-2 bg-purple-100 border padding-4px rounded-lg py-1 px-1">
               
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              <Button variant="outline" className=" text-gray-900/50 font-semibold  bg-purple-50 ring-1 ring-inset ring-purple-200 h-11" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={` ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
               <Dialog
@@ -647,7 +643,7 @@ export default function ClientsPage() {
                               <div
                                 key={group.id}
                                 onClick={() => setSelectedHotProspectorGroup(group)}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                className={`relative p-4 rounded-xl  cursor-pointer transition-all duration-200 hover:shadow-md group ${
                                   selectedHotProspectorGroup?.id === group.id
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-border hover:border-muted-foreground bg-card"
@@ -769,25 +765,15 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
+      <div className="w-full mx-auto p-6 space-y-6">
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Client Groups</CardTitle>
-            <CardDescription>
-              Manage and view all your client groups with advanced filtering and column customization
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
             <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} />
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   )
