@@ -23,7 +23,7 @@ import { LoadingScreen } from "@/components/loading-screen"
 // ✅ CACHE UTILITY FUNCTIONS
 const CACHE_DURATION = {
   groups: 60 * 60 * 1000, // 1 hour
-  leads: 5 * 60 * 1000,   // 5 minutes
+  leads: 60 * 60 * 1000,   // 1 minutes
   members: 60 * 60 * 1000 // 1 hour
 }
 
@@ -34,7 +34,7 @@ const getCachedData = (key) => {
     
     const { data, timestamp } = JSON.parse(cached)
     const now = Date.now()
-    const maxAge = CACHE_DURATION[key.split('_')[0]] || 5 * 60 * 1000
+    const maxAge = CACHE_DURATION[key.split('_')[0]] || 60 * 60 * 1000
     
     if (now - timestamp < maxAge) {
       console.log(`✅ Cache hit for ${key} (age: ${Math.round((now - timestamp) / 1000)}s)`)

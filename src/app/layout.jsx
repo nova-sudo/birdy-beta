@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Bell } from 'lucide-react';
 import { UserRound } from 'lucide-react';
+import {AuthProvider} from "../components/AuthProvider";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -48,6 +49,7 @@ export default function RootLayout({ children }) {
         <Script src="https://example.com/script.js" strategy="afterInteractive" />
       </head>
       <body suppressHydrationWarning>
+        <AuthProvider>
         <SidebarProvider>
           {!hideSidebar && <AppSidebar />}
           <SidebarInset>
@@ -79,6 +81,7 @@ export default function RootLayout({ children }) {
             </div>
           </SidebarInset>
         </SidebarProvider>
+        </AuthProvider>
       </body>
     </html>
   );

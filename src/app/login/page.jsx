@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -15,6 +15,21 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Check if already logged in on mount only (not on every render)
+  useEffect(() => {
+    // Only check once on mount
+    const token = localStorage.getItem('auth_token')
+    if (token) {
+      // Set cookie before checking
+      document.cookie = `client_auth_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`
+      
+      const redirectTo = searchParams.get('redirect') || '/clients'
+      router.push(redirectTo)
+    }
+  }, []) // Empty dependency array - run only once
+
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value })
@@ -38,11 +53,37 @@ export default function LoginPage() {
       const data = await response.json()
 
       if (response.ok && data.message === "Login successful") {
-        router.push("/clients")
+        // Backend sets httpOnly cookies, but we need to create a client-readable one
+        // for middleware to work (since backend is on different domain)
+        
+        // Use a dummy token since we can't access httpOnly cookies
+        // The real auth will happen via the backend's httpOnly cookie
+        const dummyToken = `logged_in_${Date.now()}`
+        
+        // Store in localStorage
+        localStorage.setItem('auth_token', dummyToken)
+        localStorage.setItem('user', JSON.stringify(data.user))
+        
+        // Set client-side cookie immediately BEFORE redirect
+        document.cookie = `client_auth_token=${dummyToken}; path=/; max-age=${60 * 60 * 24 * 7}; samesite=lax`
+        
+        // Get redirect URL
+        const redirectTo = searchParams.get('redirect') || '/clients'
+        
+        // Wait for cookie to be set
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Verify cookie was set
+        const cookieSet = document.cookie.includes('client_auth_token')
+        console.log('Cookie set before redirect:', cookieSet)
+        
+        // Force full page reload
+        window.location.href = redirectTo
       } else {
         setError(data.detail || "Login failed. Please try again.")
       }
     } catch (err) {
+      console.error('Login error:', err)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -50,7 +91,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center  p-4">
+    <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <Card className="shadow-md border bg-white">
           <CardHeader className="space-y-1 text-center pb-8">

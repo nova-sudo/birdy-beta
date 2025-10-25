@@ -11,13 +11,13 @@ import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw
 import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react"
+import { Search } from "lucide-react" 
 
 const CACHE_DURATION = {
-  clientGroups: 5 * 60 * 1000,
-  ghlLocations: 10 * 60 * 1000,
-  metaAdAccounts: 10 * 60 * 1000,
-  hotProspectorGroups: 10 * 60 * 1000,
+  clientGroups: 120 * 60 * 1000,
+  ghlLocations: 60 * 60 * 1000,
+  metaAdAccounts: 60 * 60 * 1000,
+  hotProspectorGroups: 60 * 60 * 1000,
 }
 
 const getCachedData = (key) => {
