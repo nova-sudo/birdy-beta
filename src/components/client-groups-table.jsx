@@ -8,23 +8,23 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FaMeta } from "react-icons/fa6";
 import { FaFire } from "react-icons/fa";
 import ghl from "../../public/ghl_icon.png";
+import metaa from "../../public/meta-icon-DH8jUhnM.png";
 
 const DEFAULT_COLUMNS = [
   { id: "name", label: "Business Name", visible: true, sortable: true},
   { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
-  { id: "meta_campaigns", label: "Meta Campaigns", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_spend", label: "Meta Spend", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_ctr", label: "Meta CTR (%)", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_cpc", label: "Meta CPC", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: FaMeta },
+  { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa },
+  { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa },
+  { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa },
+  { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa },
+  { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa },
   { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: FaFire },
-  { id: "meta_impressions", label: "Meta Impressions", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_clicks", label: "Meta Clicks", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_reach", label: "Meta Reach", visible: true, sortable: true, icons: FaMeta },
-  { id: "meta_cpm", label: "Meta CPM", visible: true, sortable: true, icons: FaMeta },
+  { id: "meta_impressions", label: " Impressions", visible: true, sortable: true, icons: metaa },
+  { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa },
+  { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa },
+  { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa },
 ];
 
 export function ClientGroupsTable({ data, onRowClick }) {
@@ -164,11 +164,11 @@ export function ClientGroupsTable({ data, onRowClick }) {
           position: sticky;
           left: 0;
           border-right: 1px solid #e4e4e7;
+          background: white;
           z-index: 20;
-          background: inherit;
-          min-width: 150px;
-          width: 150px;
+          min-width: 243px;
           font-weight: 600;
+
         }
         .fixed-header {
           position: sticky;
@@ -215,8 +215,8 @@ export function ClientGroupsTable({ data, onRowClick }) {
         </DropdownMenu>
       </div>
       <div className="table-container border">
-        <table className="w-full text-sm">
-          <thead className="border-b top-0 z-20">
+        <table className=" text-sm">
+          <thead className="border-b top-0 z-40">
             <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumns.map((column) => (
                 <th
@@ -225,16 +225,16 @@ export function ClientGroupsTable({ data, onRowClick }) {
                   onDragStart={(e) => handleDragStart(e, column.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, column.id)}
-                  className={`h-12 font-semibold text-gray-900/78 px-4 select-none cursor-default ${
-                    column.id === "name" ? "fixed-header" : "min-w-[200px] border-r-muted/20 border-1"
+                  className={`h-12 font-semibold text-gray-900/78  px-4 select-none cursor-default ${
+                    column.id === "name" ? "fixed-header" : " min-w-[135px] w-max whitspace-nowrap text-nowrap border-r-muted/20 border-1"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => column.sortable && handleSort(column.id)}
-                        className={`flex align-middle text-left items-center gap-1 ${
-                          column.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                        className={`b align-middle text-left items-center gap-1 ${
+                          column.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default  "
                         }`}
                       >
                         {column.label}
@@ -254,7 +254,7 @@ export function ClientGroupsTable({ data, onRowClick }) {
                           <img
                             src={column.icons.src ? column.icons.src : column.icons}
                             alt={`${column.label} icon`}
-                            className="h-4 w-4 text-muted-foreground flex-shrink-0 object-contain"
+                            className=" text-muted-foreground object-scale-down size-4"
                           />
                         )
                       ) : (
@@ -266,7 +266,8 @@ export function ClientGroupsTable({ data, onRowClick }) {
               ))}
             </tr>
           </thead>
-          <tbody className="text-center">
+          <tbody 
+          className="text-center">
             {sortedData.length === 0 ? (
               <tr>
                 <td colSpan={visibleColumns.length} className="px-4 py-8 text-muted-foreground">
@@ -279,14 +280,14 @@ export function ClientGroupsTable({ data, onRowClick }) {
                   key={row.id}
                   onClick={() => onRowClick(row.original)}
                   className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
-                    index % 2 === 0 ? "bg-purple-50" : "bg-white"
+                    index % 2 === 0 ? "bg-muted/20  " : "bg-white"
                   }`}
                 >
                   {visibleColumns.map((column) => (
                     <td
                       key={`${row.id}-${column.id}`}
                       className={`px-4 py-3 text-foreground ${
-                        column.id === "name" ? "fixed-column" : "w-full"
+                        column.id === "name" ? "fixed-column " : "w-full"
                       }`}
                     >
                       {getCellValue(row, column.id)}
