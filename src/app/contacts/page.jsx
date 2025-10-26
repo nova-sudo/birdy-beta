@@ -328,7 +328,9 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
           </CardContent>
         </Card>
       ))}
-      {metaData && (
+
+      
+      {/* TODO: figure out why these are wrong ? Abdelrahman Mohamed (NOVA) {metaData && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Source Breakdown</CardTitle>
@@ -342,7 +344,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
             </div>
           </CardContent>
         </Card>
-      )}
+      )} */}
     </div>
   )
 }
