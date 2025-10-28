@@ -235,7 +235,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   return (
     <div className="rounded-lg  border bg-card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="max-w-11/12">
           <thead>
             <tr className="bg-muted/50 border-b">
               {visibleColumnsData.map((col) => (
@@ -539,7 +539,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-full">
+    <div className="mx-auto max-w-11/12">
       <div className="flex flex-col gap-8 p-4 md:p-8">
         {error && (
           <Alert variant="destructive">
