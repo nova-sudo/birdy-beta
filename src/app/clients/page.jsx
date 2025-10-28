@@ -13,6 +13,7 @@ import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
 
+
 const CACHE_DURATION = {
   clientGroups: 120 * 60 * 1000,
   ghlLocations: 60 * 60 * 1000,
@@ -92,6 +93,7 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState("")
 
   useEffect(() => {
     fetchClientGroups()
@@ -372,22 +374,19 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh w-full bg-background">
-      <div className="bg-card border-b border-border">
-        <div className="w-full mx-auto px-6 py-8">
+    <div className="min-h-dvh max-w-7xl mx-auto bg-background gap-6">
+      <div className="bg-card">
+        <div className="w-full h-auto mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
+            <div className="flex items-center gap-4 px-8">
               <div>
-                <h1 className="text-3xl font-bold text-foreground">Clients Dashboard</h1>
-                <p className="text-muted-foreground mt-1">Advanced data table with filtering and column management</p>
+                <h1 className="text-3xl font-bold text-foreground">Client Hub</h1>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+              </div>
+            <div className="flex items-center gap-2 bg-purple-100 border padding-4px rounded-lg py-1 px-1">
+              
+              <Button variant="outline" className=" text-gray-900/50 font-semibold  bg-purple-50 ring-1 ring-inset ring-purple-200 h-11" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+                <RefreshCw className={` ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
               <Dialog
@@ -407,9 +406,11 @@ export default function ClientsPage() {
                   }
                 }}
               >
-                <Button onClick={() => setWizardOpen(true)} className="bg-purple-900 text-white rounded-lg">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Client
+                <Button
+                  onClick={() => setWizardOpen(true)}
+                  className="bg-purple-900 inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
+                >
+                   <Plus className="h-4 w-4 border rounded-full border-2" />
                 </Button>
                 <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
                   <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
@@ -642,7 +643,7 @@ export default function ClientsPage() {
                               <div
                                 key={group.id}
                                 onClick={() => setSelectedHotProspectorGroup(group)}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                className={`relative p-4 rounded-xl  cursor-pointer transition-all duration-200 hover:shadow-md group ${
                                   selectedHotProspectorGroup?.id === group.id
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-border hover:border-muted-foreground bg-card"
@@ -771,18 +772,8 @@ export default function ClientsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Client Groups</CardTitle>
-            <CardDescription>
-              Manage and view all your client groups with advanced filtering and column customization
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
             <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} />
-          </CardContent>
-        </Card>
+
       </div>
     </div>
   )
