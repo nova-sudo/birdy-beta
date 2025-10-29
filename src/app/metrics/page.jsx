@@ -514,6 +514,7 @@ const MetricsHub = () => {
                                   onClick={() => handleDeleteMetric(metric.id)}
                                   tooltip="Delete Metric"
                                 >
+                                    
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
