@@ -1,51 +1,19 @@
 // src/components/client-groups-table.jsx
 import { useState, useMemo, useEffect } from "react";
-import { ChevronDown, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import {
   loadCustomMetrics,
   evaluateFormula,
   formatMetricValue,
 } from "@/lib/metrics";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { FaFire } from "react-icons/fa";
-import ghl from "../../public/ghl_icon.png";
-import metaa from "../../public/meta-icon-DH8jUhnM.png";
 
-const DEFAULT_COLUMNS = [
-  { id: "name", label: "Business Name", visible: true, sortable: true },
-  { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
-  { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa },
-  { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa },
-  { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa },
-  { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa },
-  { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa },
-  { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: FaFire },
-  { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa },
-  { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa },
-  { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa },
-  { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa },
-];
 
-export function ClientGroupsTable({ data, onRowClick }) {
+
+
+export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility, searchQuery , customMetrics , setCustomMetrics}) {
   /* ---------- STATE ---------- */
-  const [customMetrics, setCustomMetrics] = useState([]);
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
-  const [searchQuery, setSearchQuery] = useState("");
   const [draggedColumn, setDraggedColumn] = useState(null);
-
-  // Visibility map (default columns keep their original `visible` flag)
-  const [columnVisibility, setColumnVisibility] = useState(() => {
-    const map = {};
-    DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
-    return map;
-  });
 
   // Drag-and-drop order
   const [columnOrder, setColumnOrder] = useState([]);
@@ -57,26 +25,7 @@ export function ClientGroupsTable({ data, onRowClick }) {
   }, []);
 
   /* ---------- DERIVED COLUMNS (no duplicates) ---------- */
-  const columns = useMemo(() => {
-    const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
 
-    const custom = customMetrics
-      .filter((m) => m.enabled && m.dashboard === "Clients")
-      .map((m) => ({
-        id: m.id,
-        label: m.name,
-        visible: true,
-        sortable: true,
-      }));
-
-    const seen = new Set();
-    const all = [...base, ...custom];
-    return all.filter((col) => {
-      if (seen.has(col.id)) return false;
-      seen.add(col.id);
-      return true;
-    });
-  }, [customMetrics]);
 
   /* ---------- VISIBLE + ORDERED COLUMNS ---------- */
   const visibleColumns = useMemo(() => {
@@ -163,13 +112,7 @@ export function ClientGroupsTable({ data, onRowClick }) {
   }, [filteredData, sortConfig]);
 
   /* ---------- COLUMN VISIBILITY TOGGLE ---------- */
-  const toggleColumnVisibility = (columnId) => {
-    if (columnId === "name") return;
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [columnId]: !(prev[columnId] ?? true),
-    }));
-  };
+
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
@@ -236,11 +179,21 @@ export function ClientGroupsTable({ data, onRowClick }) {
   return (
     <div className="space-y-4">
       <style jsx>{`
-        .fixed-column {
+
+        .fixed-column-even {
           position: sticky;
           left: 0;
           border-right: 1px solid #e4e4e7;
           background: white;
+          z-index: 20;
+          min-width: 243px;
+          font-weight: 600;
+        }
+        .fixed-column-odd {
+          position: sticky;
+          left: 0;
+          border-right: 1px solid #e4e4e7;
+          background: #faf9fbf8;
           z-index: 20;
           min-width: 243px;
           font-weight: 600;
@@ -252,55 +205,18 @@ export function ClientGroupsTable({ data, onRowClick }) {
           background: white;
           border-right: 1px solid #e4e4e7;
           min-width: 150px;
-          width: 150px;
+          width: full;
         }
         .table-container {
           position: relative;
-          overflow-x: auto;
+          overflow: auto
         }
       `}</style>
-
-      {/* Search + Column Picker */}
-      <div className="flex items-center gap-2">
-        <Input
-          placeholder="Search clients..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white pl-10"
-        />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2 bg-transparent">
-              <Eye className="h-4 w-4" />
-              Columns
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56 bg-white">
-            {columns.map((col) => (
-              <DropdownMenuCheckboxItem
-                key={col.id}
-                checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
-                onCheckedChange={() => toggleColumnVisibility(col.id)}
-                disabled={col.id === "name"}
-              >
-                {columnVisibility[col.id] ?? col.visible ? (
-                  <Eye className="h-4 w-4 mr-2" />
-                ) : (
-                  <EyeOff className="h-4 w-4 mr-2" />
-                )}
-                {col.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       {/* Table */}
       <div className="table-container border">
-        <table className="text-sm w-full">
+        <table className="text-sm ">
           <thead className="border-b top-0 z-40">
-            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
@@ -311,7 +227,7 @@ export function ClientGroupsTable({ data, onRowClick }) {
                   className={`h-12 font-semibold text-gray-900/78 px-4 select-none cursor-default ${
                     column.id === "name"
                       ? "fixed-header"
-                      : "min-w-[135px] w-max whitespace-nowrap border-r-muted/20 border-1"
+                      : "min-w-[135px]  whitespace-nowrap border-r-muted/20 border-1"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -324,8 +240,8 @@ export function ClientGroupsTable({ data, onRowClick }) {
                       >
                         {column.label}
                         {column.sortable && sortConfig.key === column.id && (
-                          <span className="text-sm text-right">
-                            {sortConfig.direction === "asc" ? "up arrow" : "down arrow"}
+                          <span className="text-sm px-2 text-right">
+                            {sortConfig.direction === "asc" ? "↑" : "↓ "}
                           </span>
                         )}
                       </button>
@@ -368,16 +284,20 @@ export function ClientGroupsTable({ data, onRowClick }) {
                     idx % 2 === 0 ? "bg-muted/20" : "bg-white"
                   }`}
                 >
-                  {visibleColumns.map((column) => (
-                    <td
-                      key={`${row.id}-${column.id}`}
-                      className={`px-4 py-3 text-foreground ${
-                        column.id === "name" ? "fixed-column" : "w-full"
-                      }`}
-                    >
-                      {getCellValue(row, column.id)}
-                    </td>
-                  ))}
+                    {visibleColumns.map((column) => (
+                      <td
+                        key={`${row.id}-${column.id}`}
+                        className={`px-4 py-3 text-foreground ${
+                          column.id === "name"
+                            ? idx % 2 === 0
+                              ? "fixed-column-odd"
+                              : "fixed-column-even"
+                            : ""
+                        }`}
+                      >
+                        {getCellValue(row, column.id)}
+                      </td>
+                    ))}
                 </tr>
               ))
             )}

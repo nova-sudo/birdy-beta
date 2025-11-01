@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
+import { TiTag } from "react-icons/ti";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -42,29 +43,34 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import ghl from "../../../public/ghl_icon.png";
 
 const contactColumns = [
-  { id: "contactName", label: "Name", defaultVisible: true, icon: User, sortable: true, width: "min-w-[200px]" },
-  { id: "email", label: "Email", defaultVisible: true, icon: Mail, sortable: true, width: "min-w-[250px]" },
-  { id: "phone", label: "Phone", defaultVisible: true, icon: Phone, sortable: true, width: "min-w-[150px]" },
-  { id: "source", label: "Source", defaultVisible: true, icon: Building, sortable: true, width: "min-w-[120px]" },
+  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
+  { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]" },
+  { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]" },
+  { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
   {
     id: "dateAdded",
     label: "Date Added",
     defaultVisible: true,
-    icon: Calendar,
     sortable: true,
     width: "min-w-[130px]",
   },
-  { id: "tags", label: "Tags", defaultVisible: true, icon: Tag, width: "min-w-[150px]" },
+  { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]" },
   { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "website", label: "Website", defaultVisible: false, icon: Globe, sortable: true, width: "min-w-[200px]" },
-  { id: "address1", label: "Address", defaultVisible: false, icon: MapPin, sortable: true, width: "min-w-[200px]" },
+  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" },
+  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" },
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, icon: Megaphone, sortable: true, width: "min-w-[200px]" },
-  { id: "adName", label: "Ad Name", defaultVisible: true, icon: Megaphone, sortable: true, width: "min-w-[200px]" },
-  { id: "platform", label: "Platform", defaultVisible: true, icon: Layers, sortable: true, width: "min-w-[120px]" },
-  { id: "groupName", label: "Group", defaultVisible: true, icon: Users, sortable: true, width: "min-w-[200px]" },
+  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
+  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
+  { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
+  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
@@ -81,12 +87,25 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         }
         return (
           <div className="flex flex-wrap gap-1.5 max-w-xs">
-            {contact[col.id].slice(0, 3).map((tag, tagIndex) => (
-              <Badge key={`${tag}-${tagIndex}`} variant="secondary" >
-                {tag}
+            {contact[col.id].slice(0, 1).map((tag, tagIndex) => (
+              <Badge key={`${tag}-${tagIndex}`} variant="secondary" className="flex items-center gap-1">
+          <TiTag /> {tag}
               </Badge>
             ))}
-            {contact[col.id].length > 3 && <Badge variant="outline">+{contact[col.id].length - 3}</Badge>}
+            {contact[col.id].length > 3 && 
+            <Tooltip>
+              <TooltipTrigger asChild>
+          <Badge variant="outline">+{contact[col.id].length - 1}</Badge>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
+          {contact[col.id].slice(1).map((tag, tagIndex) => (
+            <span key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm">
+              <TiTag /> {tag}
+            </span>
+          ))}
+              </TooltipContent>
+            </Tooltip>
+            }
           </div>
         )
 
@@ -218,7 +237,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   if (contacts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
+      <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20">
         <div className="rounded-full bg-muted p-3 mb-4">
           <Users className="h-6 w-6 text-muted-foreground" />
         </div>
@@ -232,23 +251,59 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   return (
     <div className=" border bg-card overflow-hidden">
+      <style jsx>{`
+
+        .fixed-column-even {
+          position: sticky;
+          left: 0;
+          border-right: 1px solid #e4e4e7;
+          background: white;
+          z-index: 20;
+          min-width: 243px;
+          font-weight: 600;
+        }
+        .fixed-column-odd {
+          position: sticky;
+          left: 0;
+          border-right: 1px solid #e4e4e7;
+          background: #faf9fbf8;
+          z-index: 20;
+          min-width: 243px;
+          font-weight: 600;
+        }
+        .fixed-header {
+          position: sticky;
+          left: 0;
+          z-index: 30;
+          background: white;
+          border-right: 1px solid #e4e4e7;
+          min-width: 150px;
+          width: full;
+        }
+        .table-container {
+          position: relative;
+          overflow: auto
+      }
+          `}</style>
       <div className="overflow-x-auto">
-        <table className="">
-          <thead>
-            <tr className="bg-muted/50 border-b">
+        <table className="text-sm w-full table-auto">
+          <thead className="border-b top-0 z-40">
+            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`px-4 py-3 text-left text-sm font-medium text-foreground ${col.width || ""} ${
-                    col.sortable ? "cursor-pointer hover:bg-muted transition-colors select-none" : ""
+                  className={`h-12 font-semibold bg-white text-gray-900/78 px-4 select-none cursor-default ${
+                    col.id === "contactName"
+                      ? "fixed-header"
+                      : "min-w-[135px]  whitespace-nowrap border-r-muted/20 border-1"
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-between gap-2">
                     {col.icon && <col.icon size={14} className="text-muted-foreground" />}
                     <span>{col.label}</span>
                     {col.sortable && sortColumn === col.id && (
-                      <div className="ml-1">
+                      <div className="flex item-center gap-1">
                         {sortDirection === "asc" ? (
                           <ChevronUp size={14} className="text-foreground" />
                         ) : (
@@ -261,15 +316,28 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y text-center">
             {contacts.map((contact, index) => (
               <tr
                 key={contact.contactId || index}
-                className="hover:bg-muted/50 transition-colors duration-150 cursor-pointer group"
+                className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
+                    index % 2 === 0 ? "bg-muted/20" : "bg-white"
+                  }`}
               >
                 {visibleColumnsData.map((col) => (
-                  <td key={col.id} className="px-4 py-3 align-top">
-                    {renderCellContent(contact, col)}
+                  <td 
+                  key={col.id} 
+                  className={`px-4 py-3 text-foreground truncate ${
+                          col.id === "contactName"
+                            ? index % 2 === 0
+                              ? "fixed-column-odd"
+                              : "fixed-column-even"
+                            : ""
+                        }`}
+                  title={renderCellContent(contact, col).props.children}>
+                    <span className="truncate block">
+                      {renderCellContent(contact, col)}
+                    </span>
                   </td>
                 ))}
               </tr>
@@ -521,8 +589,8 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl py-6 w-full">
-      <div className="flex flex-col gap-8 p-4 md:p-8">
+    <div className="mx-auto   w-full">
+      <div className="flex flex-col gap-8 ">
         {error && (
           <Alert variant="destructive">
             <AlertTitle>Error</AlertTitle>
@@ -553,13 +621,13 @@ export default function ContactPage() {
               <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex item-center gap-2 p-1 bg-purple-100 rounded-lg">
+          <div className="flex items-center gap-2 bg-gray-200/37 ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search contacts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white rounded-lg"
+                    className="pl-9 bg-white rounded-lg font-bold"
                   />
                   {searchQuery && (
                     <Button
@@ -573,7 +641,7 @@ export default function ContactPage() {
                   )}
                   {/* Source Filter */}
                 <Select value={selectedSource} onValueChange={setSelectedSource}>
-                  <SelectTrigger className="bg-white">
+                  <SelectTrigger className="bg-white font-semibold">
                     <SelectValue placeholder="All Sources" />
                   </SelectTrigger>
                   <SelectContent >
@@ -586,11 +654,11 @@ export default function ContactPage() {
 
                 {/* Type Filter */}
                 <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="bg-white hover:bg-purble-200">
+                  <SelectTrigger className="bg-white font-semibold hover:bg-purble-200">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="all" >All Types</SelectItem>
                     {types.map(type => (
                       <SelectItem key={type} value={type}>{type}</SelectItem>
                     ))}
@@ -620,7 +688,7 @@ export default function ContactPage() {
 
                    {/* Date Range Filter */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white hover:bg-purble-100/75">
+                  <SelectTrigger className="bg-white font-semibold hover:bg-purble-100/75">
                     <SelectValue placeholder="All Time" />
                   </SelectTrigger>
                 <SelectContent className="bg-white">
@@ -642,6 +710,7 @@ export default function ContactPage() {
         
         {/*table */}
         <ContactsTable 
+          
           contacts={filteredAndSortedContacts} 
           visibleColumns={visibleColumns}
           sortColumn={sortColumn}
