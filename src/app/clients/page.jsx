@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,19 @@ import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ghl from "../../../public/ghl_icon.png";
+import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
+import { ChevronDown, Eye, EyeOff } from "lucide-react";
+
+
+
 
 
 const CACHE_DURATION = {
@@ -93,7 +106,61 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+
+  
+  const [customMetrics, setCustomMetrics] = useState([]);
+  const DEFAULT_COLUMNS = [
+    { id: "name", label: "Business Name", visible: true, sortable: true },
+    { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
+    { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa },
+    { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa },
+    { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa },
+    { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa },
+    { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa },
+    { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP },
+    { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa },
+    { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa },
+    { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa },
+    { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa },
+  ];
+    const columns = useMemo(() => {
+      const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
+  
+      const custom = customMetrics
+        .filter((m) => m.enabled && m.dashboard === "Clients")
+        .map((m) => ({
+          id: m.id,
+          label: m.name,
+          visible: true,
+          sortable: true,
+        }));
+  
+      const seen = new Set();
+      const all = [...base, ...custom];
+      return all.filter((col) => {
+        if (seen.has(col.id)) return false;
+        seen.add(col.id);
+        return true;
+      });
+    }, [customMetrics]);
+  const [columnVisibility, setColumnVisibility] = useState(() => {
+    const map = {};
+    DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
+    return map;
+  });
   const [searchQuery, setSearchQuery] = useState("")
+  const toggleColumnVisibility = (columnId) => {
+    if (columnId === "name") return;
+    setColumnVisibility((prev) => ({
+      ...prev,
+      [columnId]: !(prev[columnId] ?? true),
+    }));
+  };
+    
+
+
+
 
   useEffect(() => {
     fetchClientGroups()
@@ -364,7 +431,7 @@ export default function ClientsPage() {
   if (loading) {
     return (
       <div className="min-h-screen p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+        <div className=" w-full mx-auto space-y-6">
           <Skeleton className="h-12 w-64" />
           <Skeleton className="h-32" />
           <Skeleton className="h-96" />
@@ -374,18 +441,52 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh max-w-7xl mx-auto bg-background gap-6">
+    <div className="min-h-dvh w-full mx-auto bg-background gap-6">
       <div className="bg-card">
         <div className="w-full h-auto mx-auto">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 px-8">
+            <div className="flex items-center gap-4 ">
               <div>
                 <h1 className="text-3xl font-bold text-foreground">Client Hub</h1>
               </div>
               </div>
-            <div className="flex items-center gap-2 bg-purple-100 border padding-4px rounded-lg py-1 px-1">
+            <div className="flex items-center gap-2 bg-gray-200/37 ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+              <div className="flex items-center gap-2">
+        <Input
+          placeholder="Search clients..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="text-gray-900 font-bold  bg-white h-11"
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="font-semibold  bg-white h-11">
+              <Eye className="h-4 w-4" />
+              Columns
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56 bg-white">
+            {columns.map((col) => (
+              <DropdownMenuCheckboxItem
+                key={col.id}
+                checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
+                onCheckedChange={() => toggleColumnVisibility(col.id)}
+                disabled={col.id === "name"}
+              >
+                {columnVisibility[col.id] ?? col.visible ? (
+                  <Eye className="h-4 w-4 mr-2" />
+                ) : (
+                  <EyeOff className="h-4 w-4 mr-2" />
+                )}
+                {col.label}
+              </DropdownMenuCheckboxItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
               
-              <Button variant="outline" className=" text-gray-900/50 font-semibold  bg-purple-50 ring-1 ring-inset ring-purple-200 h-11" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+              <Button variant="outline" className="font-semibold  bg-white h-11" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={` ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
@@ -408,7 +509,7 @@ export default function ClientsPage() {
               >
                 <Button
                   onClick={() => setWizardOpen(true)}
-                  className="bg-purple-900 inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
+                  className="bg-purple-700 inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
                 >
                    <Plus className="h-4 w-4 border rounded-full border-2" />
                 </Button>
@@ -451,7 +552,7 @@ export default function ClientsPage() {
                       </div>
                     )}
                     {wizardStep === 2 && (
-                      <div className="space-y-4">
+                      <div className="space-y-4 p-8">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                           <Input
@@ -707,7 +808,7 @@ export default function ClientsPage() {
                       </div>
                     )}
                   </div>
-                  <div className="bg-muted/50 px-6 py-4 flex items-center justify-between border-t border-border">
+                  <div className="bg-muted/50 py-4 flex items-center justify-between border-t border-border">
                     <p className="text-sm text-muted-foreground">
                       {wizardStep === 2 &&
                         `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
@@ -765,14 +866,15 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      <div className="w-full mx-auto p-6 space-y-6">
+      <div className="w-full mx-auto py-6 space-y-6">
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-            <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} />
+            <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} columns={columns} searchQuery={searchQuery}
+             columnVisibility={ columnVisibility} customMetrics={customMetrics} setCustomMetrics={setCustomMetrics}/>
 
       </div>
     </div>
