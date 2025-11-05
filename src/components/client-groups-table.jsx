@@ -111,8 +111,6 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
     return copy;
   }, [filteredData, sortConfig]);
 
-  /* ---------- COLUMN VISIBILITY TOGGLE ---------- */
-
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
@@ -181,27 +179,29 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
       <style jsx>{`
 
         .fixed-column-even {
+          text-align: left;
           position: sticky;
           left: 0;
           border-right: 1px solid #e4e4e7;
           background: white;
-          z-index: 20;
+          z-index: 50;
           min-width: 243px;
           font-weight: 600;
         }
         .fixed-column-odd {
+          text-align: left;
           position: sticky;
           left: 0;
-          border-right: 1px solid #e4e4e7;
-          background: #faf9fbf8;
-          z-index: 20;
+          border-right: 1px solid  #e4e4e7;
+          background: #F4F3F9;
+          z-index: 50;
           min-width: 243px;
           font-weight: 600;
         }
         .fixed-header {
           position: sticky;
           left: 0;
-          z-index: 30;
+          z-index: 50;
           background: white;
           border-right: 1px solid #e4e4e7;
           min-width: 150px;
@@ -281,7 +281,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                   key={row.id}
                   onClick={() => onRowClick(row.original)}
                   className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
-                    idx % 2 === 0 ? "bg-muted/20" : "bg-white"
+                    idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
                   }`}
                 >
                     {visibleColumns.map((column) => (
@@ -291,7 +291,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                           column.id === "name"
                             ? idx % 2 === 0
                               ? "fixed-column-odd"
-                              : "fixed-column-even"
+                              : "fixed-column-even "
                             : ""
                         }`}
                       >

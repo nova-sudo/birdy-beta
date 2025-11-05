@@ -12,6 +12,14 @@ import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
+import { CiCalendar } from "react-icons/ci";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,6 +114,7 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [selectedDateRange, setSelectedDateRange] = useState("all")
 
 
   
@@ -450,7 +459,7 @@ export default function ClientsPage() {
                 <h1 className="text-3xl font-bold text-foreground">Client Hub</h1>
               </div>
               </div>
-            <div className="flex items-center gap-2 bg-gray-200/37 ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+            <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
               <div className="flex items-center gap-2">
         <Input
           placeholder="Search clients..."
@@ -507,9 +516,23 @@ export default function ClientsPage() {
                   }
                 }}
               >
+                 {/* Date Range Filter */}
+                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                  <SelectTrigger className="bg-white font-semibold">
+                    <CiCalendar/>
+                    <SelectValue placeholder="All Time" />
+                  </SelectTrigger>
+                <SelectContent className="bg-white">
+                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
+                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Button
                   onClick={() => setWizardOpen(true)}
-                  className="bg-purple-700 inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
+                  className="bg-[#713CDD] inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
                 >
                    <Plus className="h-4 w-4 border rounded-full border-2" />
                 </Button>

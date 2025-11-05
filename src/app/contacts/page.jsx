@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { TiTag } from "react-icons/ti";
+import { CiCalendar } from "react-icons/ci";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -689,14 +690,15 @@ export default function ContactPage() {
                    {/* Date Range Filter */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
                   <SelectTrigger className="bg-white font-semibold hover:bg-purble-100/75">
+                    <CiCalendar/>
                     <SelectValue placeholder="All Time" />
                   </SelectTrigger>
                 <SelectContent className="bg-white">
-                    <SelectItem value="all">All Time</SelectItem> 
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">Last 7 Days</SelectItem>
-                    <SelectItem value="month">Last 30 Days</SelectItem>
-                    <SelectItem value="year">Last Year</SelectItem>
+                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
+                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
                   </SelectContent>
                 </Select>
           </div>
