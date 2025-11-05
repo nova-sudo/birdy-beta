@@ -21,6 +21,7 @@ import {
   Megaphone,
   Layers,
   AlertTriangle,
+  icons,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,28 +51,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import ghl from "../../../public/ghl_icon.png";
+import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import lab from "../../../public/lab.png";
 
 const contactColumns = [
-  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
-  { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]" },
-  { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]" },
-  { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  {
-    id: "dateAdded",
-    label: "Date Added",
-    defaultVisible: true,
-    sortable: true,
-    width: "min-w-[130px]",
-  },
-  { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]" },
-  { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" },
-  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" },
-  { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
-  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
-  { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" },
-  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
+  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px] " },
+  { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
+  { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: lab },
+  { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl},
+  { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]", icons: ghl },
+  { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
+  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
+  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
+  { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
+  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
+  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: ghl},
+  { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
+  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
@@ -267,7 +264,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           position: sticky;
           left: 0;
           border-right: 1px solid #e4e4e7;
-          background: #faf9fbf8;
+          background: #F4F3F9;
           z-index: 20;
           min-width: 243px;
           font-weight: 600;
@@ -301,8 +298,8 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    {col.icon && <col.icon size={14} className="text-muted-foreground" />}
                     <span>{col.label}</span>
+                    {col.icons && <img src={col.icons.src} alt="" className="w-4 h-4 text-muted-foreground" />}
                     {col.sortable && sortColumn === col.id && (
                       <div className="flex item-center gap-1">
                         {sortDirection === "asc" ? (
@@ -322,7 +319,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               <tr
                 key={contact.contactId || index}
                 className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
-                    index % 2 === 0 ? "bg-muted/20" : "bg-white"
+                    index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
                   }`}
               >
                 {visibleColumnsData.map((col) => (
@@ -628,7 +625,7 @@ export default function ContactPage() {
                     placeholder="Search contacts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white rounded-lg font-bold"
+                    className="pl-9 bg-white rounded-lg "
                   />
                   {searchQuery && (
                     <Button
@@ -667,7 +664,7 @@ export default function ContactPage() {
                 </Select>
                   <DropdownMenu >
                   <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 bg-white hover:bg-purble-100/75">
+                  <Button variant="outline" size="sm" className="h-9 bg-white hover:bg-purble-100/75 font-semibold">
                   <SlidersHorizontal className="h-4 w-4" />
                   Columns
                   </Button>
