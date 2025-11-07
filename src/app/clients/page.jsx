@@ -465,11 +465,11 @@ export default function ClientsPage() {
           placeholder="Search clients..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="text-gray-900 font-bold  bg-white h-11"
+          className="text-gray-900 font-bold  bg-white h-10"
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="font-semibold  bg-white h-11">
+            <Button variant="outline" size="sm" className="font-semibold  bg-white h-10">
               <Eye className="h-4 w-4" />
               Columns
               <ChevronDown className="h-4 w-4" />
@@ -495,7 +495,7 @@ export default function ClientsPage() {
         </DropdownMenu>
       </div>
               
-              <Button variant="outline" className="font-semibold  bg-white h-11" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
+              <Button variant="outline" className="font-semibold  bg-white h-10" size="sm" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={` ${isRefreshing ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
@@ -518,7 +518,7 @@ export default function ClientsPage() {
               >
                  {/* Date Range Filter */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white font-semibold h-11">
+                  <SelectTrigger className="bg-white font-semibold h-10">
                     <CiCalendar/>
                     <SelectValue placeholder="All Time" />
                   </SelectTrigger>

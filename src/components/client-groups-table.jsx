@@ -221,7 +221,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                   onDragStart={(e) => handleDragStart(e, column.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, column.id)}
-                  className={`h-12 font-semibold text-gray-900/78 px-4 select-none cursor-default ${
+                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
                     column.id === "name"
                       ? "fixed-header"
                       : "min-w-[135px]  whitespace-nowrap "
@@ -284,7 +284,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                     {visibleColumns.map((column) => (
                       <td
                         key={`${row.id}-${column.id}`}
-                        className={`px-4 py-3 text-foreground ${
+                        className={`   text-foreground ${
                           column.id === "name"
                             ? idx % 2 === 0
                               ? "fixed-column-odd"

@@ -390,12 +390,12 @@ const MetricsHub = () => {
               <Input
                 type="search"
                 placeholder="Search metrics..."
-                className="w-[280px] pl-9"
+                className="w-[280px] pl-9 bg-white h-10 font-semibold"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
             </Button>
             <Button
@@ -404,7 +404,7 @@ const MetricsHub = () => {
                 resetForm()
                 setIsCreateDialogOpen(true)
               }}
-              className="bg-purple-600 hover:bg-purple-700 gap-2"
+              className=" h-10 bg-purple-600 hover:bg-purple-700 gap-2"
             >
               <Plus className="h-4 text-white w-4 border-2 rounded-xl " />
             </Button>

@@ -641,12 +641,12 @@ export default function ContactPage() {
               <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-gray-200/37 ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
                   <Input
                     placeholder="Search contacts..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white rounded-lg "
+                    className="pl-9 bg-white rounded-lg h-10"
                   />
                   {searchQuery && (
                     <Button
@@ -660,7 +660,7 @@ export default function ContactPage() {
                   )}
                   {/* Source Filter */}
                 <Select value={selectedSource} onValueChange={setSelectedSource}>
-                  <SelectTrigger className="bg-white font-semibold">
+                  <SelectTrigger className="bg-white font-semibold h-10">
                     <SelectValue placeholder="All Sources" />
                   </SelectTrigger>
                   <SelectContent >
@@ -673,7 +673,7 @@ export default function ContactPage() {
 
                 {/* Type Filter */}
                 <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="bg-white font-semibold hover:bg-purble-200">
+                  <SelectTrigger className="bg-white font-semibold h-10 hover:bg-purble-200">
                     <SelectValue placeholder="All Types" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
@@ -685,7 +685,7 @@ export default function ContactPage() {
                 </Select>
                   <DropdownMenu >
                   <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 bg-white hover:bg-purble-100/75 font-semibold">
+                  <Button variant="outline" size="sm" className="h-10 bg-white hover:bg-purble-100/75 font-semibold">
                   <SlidersHorizontal className="h-4 w-4" />
                   Columns
                   </Button>
@@ -707,7 +707,7 @@ export default function ContactPage() {
 
                    {/* Date Range Filter */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white font-semibold hover:bg-purble-100/75">
+                  <SelectTrigger className=" h-10 bg-white font-semibold hover:bg-purble-100/75">
                     <CiCalendar/>
                     <SelectValue placeholder="All Time" />
                   </SelectTrigger>
