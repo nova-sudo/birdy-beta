@@ -518,7 +518,7 @@ export default function ClientsPage() {
               >
                  {/* Date Range Filter */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white font-semibold">
+                  <SelectTrigger className="bg-white font-semibold h-11">
                     <CiCalendar/>
                     <SelectValue placeholder="All Time" />
                   </SelectTrigger>

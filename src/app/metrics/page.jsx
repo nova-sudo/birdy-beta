@@ -375,7 +375,7 @@ const MetricsHub = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-6 md:p-8 space-y-6">
+      <div className="w-full  md:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
@@ -384,7 +384,7 @@ const MetricsHub = () => {
               View, create and manage metrics to track important KPIs
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1"><div className="flex items-center gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -406,9 +406,11 @@ const MetricsHub = () => {
               }}
               className="bg-purple-600 hover:bg-purple-700 gap-2"
             >
-              <Plus className="h-4 text-white w-4" />
+              <Plus className="h-4 text-white w-4 border-2 rounded-xl " />
             </Button>
           </div>
+          </div>
+          
         </div>
 
         {/* Stats Cards */}
@@ -416,7 +418,10 @@ const MetricsHub = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
-              <PieChart className="h-4 w-4 text-muted-foreground" />
+              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <PieChart className="h-4 w-4 text-muted-foreground text-purple-500" />
+                </div>
+              
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{allMetrics.length}</div>
@@ -425,7 +430,9 @@ const MetricsHub = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Standard Metrics</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <BarChart3 className="h-4 w-4 text-muted-foreground text-purple-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{standardMetrics.length + metaMetrics.length}</div>
@@ -434,7 +441,9 @@ const MetricsHub = () => {
           <Card> 
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Webhook Metrics</CardTitle>
-              <Webhook className="h-4 w-4 text-muted-foreground" />
+              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <Webhook className="h-4 w-4 text-muted-foreground text-purple-500" />
+              </div>
             </CardHeader>
             {/* <CardContent>
               <div className="text-2xl font-bold">{webhookMetrics.length}</div>
@@ -443,7 +452,9 @@ const MetricsHub = () => {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Custom Formulas</CardTitle>
-              <Calculator className="h-4 w-4 text-muted-foreground" />
+              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <Calculator className="h-4 w-4 text-muted-foreground text-purple-500" />
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{customMetrics.length}</div>
@@ -453,16 +464,16 @@ const MetricsHub = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start bg-muted/50 p-1">
-            <TabsTrigger value="all">All Metrics</TabsTrigger>
-            <TabsTrigger value="standard">Standard Metrics</TabsTrigger>
-            <TabsTrigger disabled className="disabled:opacity-50 disabled:pointer-events-none disabled:bg-gray-50 disabled:cursor-not-allowed" value="webhook">Webhook Metrics</TabsTrigger>
-            <TabsTrigger value="custom">Custom Formulas</TabsTrigger>
+          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger className="hover:bg-white" value="all">All Metrics</TabsTrigger>
+            <TabsTrigger className="hover:bg-white" value="standard">Standard Metrics</TabsTrigger>
+            <TabsTrigger disabled className="disabled:opacity-50 disabled:pointer-events-none disabled:bg-gray-50 disabled:cursor-not-allowed hover:bg-white" value="webhook">Webhook Metrics</TabsTrigger>
+            <TabsTrigger className="hover:bg-white" value="custom">Custom Formulas</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
             {/* Metrics Table */}
-            <div className="rounded-lg border bg-card overflow-hidden">
+            <div className=" border bg-card overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted/50 border-b">

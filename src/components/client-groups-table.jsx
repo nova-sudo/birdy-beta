@@ -182,7 +182,6 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
           text-align: left;
           position: sticky;
           left: 0;
-          border-right: 1px solid #e4e4e7;
           background: white;
           z-index: 50;
           min-width: 243px;
@@ -192,7 +191,6 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
           text-align: left;
           position: sticky;
           left: 0;
-          border-right: 1px solid  #e4e4e7;
           background: #F4F3F9;
           z-index: 50;
           min-width: 243px;
@@ -203,7 +201,6 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
           left: 0;
           z-index: 50;
           background: white;
-          border-right: 1px solid #e4e4e7;
           min-width: 150px;
           width: full;
         }
@@ -215,8 +212,8 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
       {/* Table */}
       <div className="table-container border">
         <table className="text-sm ">
-          <thead className="border-b top-0 z-40">
-            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
+          <thead className="top-0 z-40">
+            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((column) => (
                 <th
                   key={column.id}
@@ -227,10 +224,10 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                   className={`h-12 font-semibold text-gray-900/78 px-4 select-none cursor-default ${
                     column.id === "name"
                       ? "fixed-header"
-                      : "min-w-[135px]  whitespace-nowrap border-r-muted/20 border-1"
+                      : "min-w-[135px]  whitespace-nowrap "
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => column.sortable && handleSort(column.id)}
@@ -295,7 +292,16 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                             : ""
                         }`}
                       >
+                        <div 
+                     key={`${row.id}-${column.id}`}    
+                     className={
+                        column.id === "name" ? " py-3 px-4  border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]" :
+                           ""
+                        }>
+                      <span>
                         {getCellValue(row, column.id)}
+                    </span>
+                    </div>
                       </td>
                     ))}
                 </tr>

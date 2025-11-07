@@ -394,64 +394,74 @@ export default function CallCenterPage() {
   const hasMoreLeads = currentPage * leadsPerPage < totalLeads
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="border-b border-border bg-card">
-        <div className="container mx-auto px-6 py-4">
+    <div className="  ">
+      <div className=" ">
+        <div className="">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => router.push("/")}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Call Center</h1>
-                <p className="text-sm text-muted-foreground">Manage your HotProspector groups and leads</p>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">Call Center Hub</h1>
               </div>
             </div>
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
             <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Search..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9 w-64 bg-white"
+                  />
               <Button 
                 variant="outline" 
-                size="sm"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
+                className="bg-white text-semibold"
               >
                 <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button variant="outline" onClick={() => router.push("/settings?tab=integrations")}>
+              <Button className="bg-white text-semibold" variant="outline" onClick={() => router.push("/settings?tab=integrations")}>
                 <Settings2 className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-            </div>
+            </div></div>
+            
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-6 py-8">
-        <div className="bg-card rounded-lg shadow-sm border border-border">
+      <div className="">
+        <div className="bg-card rounded-lg mt-6 mb-12">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6 border-b border-border">
-            <Card className="border-0 shadow-none">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border rounded-lg shadow-sm ">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Groups</CardTitle>
-                <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <FolderOpen className="h-5 w-5 text-muted-foreground  text-purple-500" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{groups.length}</div>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-none">
+            <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                <Phone className="h-4 w-4 text-muted-foreground" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-muted-foreground  text-purple-500 " />
+                  </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalLeads || leads.length}</div>
               </CardContent>
             </Card>
-            <Card className="border-0 shadow-none">
+            <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Team Members</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Users className="h-5 w-5 text-muted-foreground  text-purple-500 " />
+                  </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{members.length}</div>
@@ -491,15 +501,7 @@ export default function CallCenterPage() {
               </TabsList>
 
               <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-64"
-                  />
-                </div>
+                
                 {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -657,7 +659,7 @@ export default function CallCenterPage() {
 
             <TabsContent value="members" className="mt-0">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex items-center  justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredMembers.length === 0 ? (

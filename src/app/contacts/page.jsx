@@ -51,7 +51,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import ghl from "../../../public/ghl_icon.png";
-import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import lab from "../../../public/lab.png";
 
 const contactColumns = [
@@ -79,34 +78,51 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   const renderCellContent = (contact, col) => {
     switch (col.id) {
-      case "tags":
-        if (!contact[col.id] || contact[col.id].length === 0) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <div className="flex flex-wrap gap-1.5 max-w-xs">
-            {contact[col.id].slice(0, 1).map((tag, tagIndex) => (
-              <Badge key={`${tag}-${tagIndex}`} variant="secondary" className="flex items-center gap-1">
-          <TiTag /> {tag}
-              </Badge>
-            ))}
-            {contact[col.id].length > 3 && 
-            <Tooltip>
-              <TooltipTrigger asChild>
-          <Badge variant="outline">+{contact[col.id].length - 1}</Badge>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
-          {contact[col.id].slice(1).map((tag, tagIndex) => (
-            <span key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm">
-              <TiTag /> {tag}
-            </span>
-          ))}
-              </TooltipContent>
-            </Tooltip>
-            }
-          </div>
-        )
+     case "tags":
+  if (!contact[col.id] || contact[col.id].length === 0) {
+    return <span className="text-muted-foreground text-sm">-</span>;
+  }
 
+  const tags = contact[col.id];
+  const mainTag = tags[0];
+  const hasMoreTags = tags.length > 1;
+  const score = contact.score ? `+${contact.score}` : null;
+
+  return (
+    <div className="flex items-center justify-center gap-2 max-w-xs">
+      {/* Main Tag */}
+      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+        <TiTag className="w-3 h-3" />
+        {mainTag}
+      </Badge>
+
+      {/* Score Badge */}
+      {score && (
+        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+          {score}
+        </span>
+      )}
+
+      {/* Hidden Tags Tooltip (+N) */}
+      {hasMoreTags && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="text-xs">
+              +{tags.length - 1}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
+            {tags.slice(1).map((tag, tagIndex) => (
+              <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
+                <TiTag className="w-3 h-3" />
+                {tag}
+              </div>
+            ))}
+          </TooltipContent>
+        </Tooltip>
+      )}
+    </div>
+  );
       case "dateAdded":
         if (!contact[col.id]) {
           return <span className="text-muted-foreground text-sm">-</span>
@@ -176,12 +192,9 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           return <span className="text-muted-foreground text-sm">-</span>
         }
         return (
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-semibold">
-              {contact[col.id].charAt(0).toUpperCase()}
-            </div>
-            <span className="font-semibold text-foreground">{contact[col.id]}</span>
-          </div>
+          <span className="text-sm text-foreground text-left block">
+        {contact[col.id]}
+          </span>
         )
 
       case "website":
@@ -254,7 +267,6 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         .fixed-column-even {
           position: sticky;
           left: 0;
-          border-right: 1px solid #e4e4e7;
           background: white;
           z-index: 20;
           min-width: 243px;
@@ -263,7 +275,6 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
         .fixed-column-odd {
           position: sticky;
           left: 0;
-          border-right: 1px solid #e4e4e7;
           background: #F4F3F9;
           z-index: 20;
           min-width: 243px;
@@ -274,7 +285,6 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           left: 0;
           z-index: 30;
           background: white;
-          border-right: 1px solid #e4e4e7;
           min-width: 150px;
           width: full;
         }
@@ -285,21 +295,23 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           `}</style>
       <div className="overflow-x-auto">
         <table className="text-sm w-full table-auto">
-          <thead className="border-b top-0 z-40">
-            <tr className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
+          <thead className="  top-0 z-40">
+            <tr className=" transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`h-12 font-semibold bg-white text-gray-900/78 px-4 select-none cursor-default ${
+                  className={`h-12 font-semibold bg-white text-gray-900/78   select-none cursor-default ${
                     col.id === "contactName"
                       ? "fixed-header"
-                      : "min-w-[135px]  whitespace-nowrap border-r-muted/20 border-1"
+                      : "min-w-[135px]  whitespace-nowrap "
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span>{col.label}</span>
-                    {col.icons && <img src={col.icons.src} alt="" className="w-4 h-4 text-muted-foreground" />}
+                >           
+
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
+                    
+                    <span className=" px-1 ">{col.label}</span>
+                    {col.icons && <img src={col.icons.src} alt="" className="w-4   h-4 text-muted-foreground" />}
                     {col.sortable && sortColumn === col.id && (
                       <div className="flex item-center gap-1">
                         {sortDirection === "asc" ? (
@@ -318,14 +330,14 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             {contacts.map((contact, index) => (
               <tr
                 key={contact.contactId || index}
-                className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
+                className={` hover:bg-muted/50 cursor-pointer transition-colors ${
                     index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
                   }`}
               >
                 {visibleColumnsData.map((col) => (
                   <td 
                   key={col.id} 
-                  className={`px-4 py-3 text-foreground truncate ${
+                  className={` text-foreground  truncate ${
                           col.id === "contactName"
                             ? index % 2 === 0
                               ? "fixed-column-odd"
@@ -333,9 +345,19 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                             : ""
                         }`}
                   title={renderCellContent(contact, col).props.children}>
-                    <span className="truncate block">
+                    <div 
+                     key={col.id}    
+                     className={
+                        col.id === "contactName" ? " py-3 px-4  border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]" :
+                           ""
+                        }>
+                      <span
+                      
+                       >
                       {renderCellContent(contact, col)}
                     </span>
+                    </div>
+                    
                   </td>
                 ))}
               </tr>
@@ -620,7 +642,6 @@ export default function ContactPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 bg-gray-200/37 ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     placeholder="Search contacts..."
                     value={searchQuery}
@@ -703,9 +724,11 @@ export default function ContactPage() {
 
         {/*cards row */}
         <DashboardStats
+        className="bg-white"
         contacts={contacts} 
         filteredContacts={filteredAndSortedContacts} 
-        metaData={metaData} /> 
+        metaData={metaData} 
+        /> 
         
         {/*table */}
         <ContactsTable 
