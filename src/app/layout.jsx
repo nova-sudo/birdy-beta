@@ -51,7 +51,7 @@ export default function RootLayout({ children }) {
       <body suppressHydrationWarning>
           <ProtectedLayout>
 
-            <SidebarProvider open={false}>
+            <SidebarProvider open={false} >
               {!hideSidebar && <AppSidebar />}
               <SidebarInset>
                 {!hideSidebar && (
@@ -76,7 +76,7 @@ export default function RootLayout({ children }) {
                     </div>
                   </header>
                 )}
-                <div className="flex overflow-x-hidden flex-1 flex-col gap-4 p-4">
+                <div id="do not change the width" className="mx-auto flex w-[1400px] mx-auto flex-1 flex-col gap-4 p-4 overflow-x-clip">
                   {children}
                 </div>
               </SidebarInset>

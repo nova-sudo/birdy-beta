@@ -296,12 +296,11 @@ const Campaigns = () => {
 
   return (
     <div className="min-h-dvh">
-      <div className="flex flex-col gap-8 p-6 md:p-8">
+      <div className="flex flex-col gap-8">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Marketing Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">Manage and analyze your advertising campaigns</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Marketing Hub</h1>
           </div>
           <Select value={selectedAccountId || ""} onValueChange={(v) => setSelectedAccountId(v || null)}>
             <SelectTrigger className="w-[280px]">
