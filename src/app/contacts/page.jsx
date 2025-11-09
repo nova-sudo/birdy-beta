@@ -1,5 +1,5 @@
 "use client"
-
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import {
@@ -52,9 +52,11 @@ import {
 } from "@/components/ui/tooltip"
 import ghl from "../../../public/ghl_icon.png";
 import lab from "../../../public/lab.png";
+import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import { Progress } from "@/components/ui/progress"
 
 const contactColumns = [
-  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px] " },
+  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: lab },
   { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
   { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
   { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: lab },
@@ -64,8 +66,8 @@ const contactColumns = [
   { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
-  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: ghl},
+  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: metaa },
+  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: metaa},
   { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
 ]
@@ -308,20 +310,33 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                   onClick={() => col.sortable && handleSort(col.id)}
                 >           
 
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
-                    
-                    <span className=" px-1 ">{col.label}</span>
-                    {col.icons && <img src={col.icons.src} alt="" className="w-4   h-4 text-muted-foreground" />}
-                    {col.sortable && sortColumn === col.id && (
-                      <div className="flex item-center gap-1">
-                        {sortDirection === "asc" ? (
-                          <ChevronUp size={14} className="text-foreground" />
-                        ) : (
-                          <ChevronDown size={14} className="text-foreground" />
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between">
+                        {/* Left side: label + sorting arrow */}
+                        <div className="flex items-center gap-2">
+                          <span className="px-1">{col.label}</span>
+
+                          {col.sortable && sortColumn === col.id && (
+                            <span>
+                              {sortDirection === "asc" ? (
+                                <ChevronUp size={14} className="text-foreground" />
+                              ) : (
+                                <ChevronDown size={14} className="text-foreground" />
+                              )}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Right side: logo */}
+                        {col.icons && (
+                          <img
+                            src={col.icons.src}
+                            alt=""
+                            className="w-4 h-4 text-muted-foreground"
+                          />
                         )}
-                      </div>
-                    )}
                   </div>
+ 
+
                 </th>
               ))}
             </tr>
@@ -426,6 +441,9 @@ export default function ContactPage() {
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [progress, setProgress] = useState(13)
+  const [currentPage, setCurrentPage] = useState(1)
+  const PAGE_SIZE = 15
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id),
   )
@@ -437,6 +455,7 @@ export default function ContactPage() {
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
+  
 
   const fetchContacts = async () => {
     setLoading(true)
@@ -467,6 +486,22 @@ export default function ContactPage() {
     fetchContacts()
   }, [])
 
+  useEffect(() => {
+    const intervals = [33, 50, 66, 80, 90];
+    let step = 0;
+
+    const timer = setInterval(() => {
+      setProgress(intervals[step]);
+      step += 1;
+      if (step >= intervals.length) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+
   // Get unique sources and types for filters
   const sources = useMemo(() => {
     const uniqueSources = new Set()
@@ -488,97 +523,188 @@ export default function ContactPage() {
   const noSources = sources.length === 0 && metaData && metaData.total_contacts === 0
 
   // Apply filters and sorting
+  const paginatedContacts = useMemo(() => {
+  let filtered = [...contacts]
+
+  // === ALL YOUR EXISTING FILTERS (search, source, type, date) ===
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase()
+    filtered = filtered.filter(contact => {
+      return (
+        contact.contactName?.toLowerCase().includes(query) ||
+        contact.email?.toLowerCase().includes(query) ||
+        contact.phone?.toLowerCase().includes(query) ||
+        contact.website?.toLowerCase().includes(query) ||
+        contact.address1?.toLowerCase().includes(query) ||
+        contact.country?.toLowerCase().includes(query) ||
+        contact.campaignName?.toLowerCase().includes(query) ||
+        contact.adName?.toLowerCase().includes(query) ||
+        contact.platform?.toLowerCase().includes(query) ||
+        contact.groupName?.toLowerCase().includes(query) ||
+        contact.tags?.some(tag => tag.toLowerCase().includes(query))
+      )
+    })
+  }
+
+  if (selectedSource !== "all") {
+    filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
+  }
+
+  if (selectedType !== "all") {
+    filtered = filtered.filter(contact => {
+      const type = contact.contactType || contact.type
+      return type === selectedType
+    })
+  }
+
+  if (selectedDateRange !== "all") {
+    const now = new Date()
+    filtered = filtered.filter(contact => {
+      if (!contact.dateAdded) return false
+      const contactDate = new Date(contact.dateAdded)
+      
+      switch (selectedDateRange) {
+        case "today":
+          return contactDate.toDateString() === now.toDateString()
+        case "week":
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          return contactDate >= weekAgo
+        case "month":
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          return contactDate >= monthAgo
+        case "year":
+          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+          return contactDate >= yearAgo
+        default:
+          return true
+      }
+    })
+  }
+
+  // === SORTING ===
+  if (sortColumn) {
+    filtered.sort((a, b) => {
+      let aVal = a[sortColumn]
+      let bVal = b[sortColumn]
+
+      if (sortColumn === "dateAdded") {
+        aVal = aVal ? new Date(aVal).getTime() : 0
+        bVal = bVal ? new Date(bVal).getTime() : 0
+      } else if (sortColumn === "contactType") {
+        aVal = a.contactType || a.type || ""
+        bVal = b.contactType || b.type || ""
+      } else {
+        aVal = aVal || ""
+        bVal = bVal || ""
+      }
+
+      if (typeof aVal === "string") {
+        aVal = aVal.toLowerCase()
+        bVal = bVal.toLowerCase()
+      }
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+      return 0
+    })
+  }
+
+  // === PAGINATION ===
+  const start = (currentPage - 1) * PAGE_SIZE
+  const end = start + PAGE_SIZE
+  return filtered.slice(start, end)
+}, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection, currentPage])
+
   const filteredAndSortedContacts = useMemo(() => {
-    let filtered = [...contacts]
+  let filtered = [...contacts]
 
-    // Search filter
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(contact => {
-        return (
-          contact.contactName?.toLowerCase().includes(query) ||
-          contact.email?.toLowerCase().includes(query) ||
-          contact.phone?.toLowerCase().includes(query) ||
-          contact.website?.toLowerCase().includes(query) ||
-          contact.address1?.toLowerCase().includes(query) ||
-          contact.country?.toLowerCase().includes(query) ||
-          contact.campaignName?.toLowerCase().includes(query) ||
-          contact.adName?.toLowerCase().includes(query) ||
-          contact.platform?.toLowerCase().includes(query) ||
-          contact.groupName?.toLowerCase().includes(query) ||
-          contact.tags?.some(tag => tag.toLowerCase().includes(query))
-        )
-      })
-    }
+  // === ALL YOUR EXISTING FILTERS (search, source, type, date) ===
+  if (searchQuery) {
+    const query = searchQuery.toLowerCase()
+    filtered = filtered.filter(contact => {
+      return (
+        contact.contactName?.toLowerCase().includes(query) ||
+        contact.email?.toLowerCase().includes(query) ||
+        contact.phone?.toLowerCase().includes(query) ||
+        contact.website?.toLowerCase().includes(query) ||
+        contact.address1?.toLowerCase().includes(query) ||
+        contact.country?.toLowerCase().includes(query) ||
+        contact.campaignName?.toLowerCase().includes(query) ||
+        contact.adName?.toLowerCase().includes(query) ||
+        contact.platform?.toLowerCase().includes(query) ||
+        contact.groupName?.toLowerCase().includes(query) ||
+        contact.tags?.some(tag => tag.toLowerCase().includes(query))
+      )
+    })
+  }
 
-    // Source filter
-    if (selectedSource !== "all") {
-      filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
-    }
+  if (selectedSource !== "all") {
+    filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
+  }
 
-    // Type filter
-    if (selectedType !== "all") {
-      filtered = filtered.filter(contact => {
-        const type = contact.contactType || contact.type
-        return type === selectedType
-      })
-    }
+  if (selectedType !== "all") {
+    filtered = filtered.filter(contact => {
+      const type = contact.contactType || contact.type
+      return type === selectedType
+    })
+  }
 
-    // Date range filter
-    if (selectedDateRange !== "all") {
-      const now = new Date()
-      filtered = filtered.filter(contact => {
-        if (!contact.dateAdded) return false
-        const contactDate = new Date(contact.dateAdded)
-        
-        switch (selectedDateRange) {
-          case "today":
-            return contactDate.toDateString() === now.toDateString()
-          case "week":
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            return contactDate >= weekAgo
-          case "month":
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            return contactDate >= monthAgo
-          case "year":
-            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-            return contactDate >= yearAgo
-          default:
-            return true
-        }
-      })
-    }
+  if (selectedDateRange !== "all") {
+    const now = new Date()
+    filtered = filtered.filter(contact => {
+      if (!contact.dateAdded) return false
+      const contactDate = new Date(contact.dateAdded)
+      
+      switch (selectedDateRange) {
+        case "today":
+          return contactDate.toDateString() === now.toDateString()
+        case "week":
+          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          return contactDate >= weekAgo
+        case "month":
+          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          return contactDate >= monthAgo
+        case "year":
+          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+          return contactDate >= yearAgo
+        default:
+          return true
+      }
+    })
+  }
 
-    // Sorting
-    if (sortColumn) {
-      filtered.sort((a, b) => {
-        let aVal = a[sortColumn]
-        let bVal = b[sortColumn]
+  // === SORTING ===
+  if (sortColumn) {
+    filtered.sort((a, b) => {
+      let aVal = a[sortColumn]
+      let bVal = b[sortColumn]
 
-        if (sortColumn === "dateAdded") {
-          aVal = aVal ? new Date(aVal).getTime() : 0
-          bVal = bVal ? new Date(bVal).getTime() : 0
-        } else if (sortColumn === "contactType") {
-          aVal = a.contactType || a.type || ""
-          bVal = b.contactType || b.type || ""
-        } else {
-          aVal = aVal || ""
-          bVal = bVal || ""
-        }
+      if (sortColumn === "dateAdded") {
+        aVal = aVal ? new Date(aVal).getTime() : 0
+        bVal = bVal ? new Date(bVal).getTime() : 0
+      } else if (sortColumn === "contactType") {
+        aVal = a.contactType || a.type || ""
+        bVal = b.contactType || b.type || ""
+      } else {
+        aVal = aVal || ""
+        bVal = bVal || ""
+      }
 
-        if (typeof aVal === "string") {
-          aVal = aVal.toLowerCase()
-          bVal = bVal.toLowerCase()
-        }
+      if (typeof aVal === "string") {
+        aVal = aVal.toLowerCase()
+        bVal = bVal.toLowerCase()
+      }
 
-        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
-        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
-        return 0
-      })
-    }
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+      return 0
+    })
+  }
 
-    return filtered
-  }, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection])
+  // === NO PAGINATION — return full list ===
+  return filtered
+}, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection])
+
 
   const toggleColumn = (columnId) => {
     setVisibleColumns((current) =>
@@ -599,18 +725,94 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <div className="min-h-dvh w-full flex items-center justify-center">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin text-primary" />
-          <p className="text-lg font-semibold text-muted-foreground">Loading contacts...</p>
+    <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+      <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+        {/* Animated logo/icon */}
+          <div className="w-16 h-16 flex items-center justify-center">
+          <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <style>{`
+            @keyframes fly {
+              0%, 100% { transform: translateY(0px); }
+              50% { transform: translateY(-8px); }
+            }
+            @keyframes wingFlap {
+              0%, 100% { transform: rotateZ(0deg); }
+              50% { transform: rotateZ(15deg); }
+            }
+            .bird-body {
+              animation: fly 2s ease-in-out infinite;
+            }
+            .bird-wing-left {
+              animation: wingFlap 0.6s ease-in-out infinite;
+              transform-origin: 35px 40px;
+            }
+            .bird-wing-right {
+              animation: wingFlap 0.6s ease-in-out infinite;
+              transform-origin: 65px 40px;
+            }
+              `}</style>
+            </defs>
+
+            {/* Body */}
+            <g className="bird-body">
+              <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+              {/* Head */}
+              <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+              {/* Eye */}
+              <circle cx="53" cy="30" r="2" fill="white" />
+              {/* Beak */}
+              <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+              {/* Tail */}
+              <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+            </g>
+
+            {/* Left Wing */}
+            <g className="bird-wing-left">
+              <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+            </g>
+
+            {/* Right Wing */}
+            <g className="bird-wing-right">
+              <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+            </g>
+          </svg>
+            </div>
+
+            {/* Main text */}
+        <div className="flex flex-col gap-3 text-center">
+          <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Preparing your data. This should only take a moment.
+          </p>
+        </div>
+
+        {/* Progress bar container */}
+        <div className="w-full flex flex-col gap-2">
+          <Progress value={progress} className="w-full h-2" showLabel={false} />
+          <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+        </div>
+
+        {/* Loading dots animation */}
+        <div className="flex gap-1">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+            style={{ animationDelay: "0.2s" }}
+          />
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+            style={{ animationDelay: "0.4s" }}
+          />
         </div>
       </div>
+    </div>
     )
   }
 
   return (
-    <div className="mx-auto   w-full">
-      <div className="flex flex-col gap-8 ">
+    <div className="mx-auto w-full">
+      <div className="flex flex-col gap-8">
         {error && (
           <Alert variant="destructive">
             <AlertTitle>Error</AlertTitle>
@@ -641,59 +843,63 @@ export default function ContactPage() {
               <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-                  <Input
-                    placeholder="Search contacts..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 bg-white rounded-lg h-10"
-                  />
-                  {searchQuery && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                      onClick={() => setSearchQuery("")}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                  {/* Source Filter */}
-                <Select value={selectedSource} onValueChange={setSelectedSource}>
-                  <SelectTrigger className="bg-white font-semibold h-10">
-                    <SelectValue placeholder="All Sources" />
-                  </SelectTrigger>
-                  <SelectContent >
-                    <SelectItem value="all">All Sources</SelectItem>
-                    {sources.map(source => (
-                      <SelectItem key={source} value={source}>{source}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+            <Input
+              placeholder="Search contacts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white rounded-lg h-10 gap-2"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+            {/* Source Filter */}
+            <Select value={selectedSource} onValueChange={setSelectedSource}>
+              <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
+                <SelectValue placeholder="All Sources" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Sources</SelectItem>
+                {sources.map((source) => (
+                  <SelectItem key={source} value={source}>
+                    {source}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-                {/* Type Filter */}
-                <Select value={selectedType} onValueChange={setSelectedType}>
-                  <SelectTrigger className="bg-white font-semibold h-10 hover:bg-purble-200">
-                    <SelectValue placeholder="All Types" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all" >All Types</SelectItem>
-                    {types.map(type => (
-                      <SelectItem key={type} value={type}>{type}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                  <DropdownMenu >
-                  <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10 bg-white hover:bg-purble-100/75 font-semibold">
+            {/* Type Filter */}
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="gap-2 bg-white font-semibold h-10 hover:bg-purple-100/75">
+                <SelectValue placeholder="All Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Types</SelectItem>
+                {types.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 h-10 bg-white hover:bg-purple-100/75 font-semibold">
                   <SlidersHorizontal className="h-4 w-4" />
                   Columns
-                  </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white">
-                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {contactColumns.map((col) => (
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-white">
+                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {contactColumns.map((col) => (
                   <DropdownMenuCheckboxItem
                     key={col.id}
                     checked={visibleColumns.includes(col.id)}
@@ -701,48 +907,89 @@ export default function ContactPage() {
                   >
                     {col.label}
                   </DropdownMenuCheckboxItem>
-                  ))}
-                  </DropdownMenuContent>
-                  </DropdownMenu>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                   {/* Date Range Filter */}
-                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className=" h-10 bg-white font-semibold hover:bg-purble-100/75">
-                    <CiCalendar/>
-                    <SelectValue placeholder="All Time" />
-                  </SelectTrigger>
-                <SelectContent className="bg-white">
-                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
-                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
-                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
-                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
-                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
-                  </SelectContent>
-                </Select>
+            {/* Date Range Filter */}
+            <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+              <SelectTrigger className="gap-2 hover:bg-purple-100/75 h-10 bg-white font-semibold  ">
+                <CiCalendar />
+                <SelectValue placeholder="All Time" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all" className="hover:bg-[#E8DFFB]">
+                  All Time
+                </SelectItem>
+                <SelectItem value="today" className="hover:bg-[#E8DFFB]">
+                  Today
+                </SelectItem>
+                <SelectItem value="week" className="hover:bg-[#E8DFFB]">
+                  Last 7 Days
+                </SelectItem>
+                <SelectItem value="month" className="hover:bg-[#E8DFFB]">
+                  Last 30 Days
+                </SelectItem>
+                <SelectItem value="year" className="hover:bg-[#E8DFFB]">
+                  Last Year
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        </div> 
+        </div>
 
         {/*cards row */}
         <DashboardStats
-        className="bg-white"
-        contacts={contacts} 
-        filteredContacts={filteredAndSortedContacts} 
-        metaData={metaData} 
-        /> 
-        
+          className="bg-white"
+          contacts={contacts}
+          filteredContacts={filteredAndSortedContacts}
+          metaData={metaData}
+        />
+
         {/*table */}
-        <ContactsTable 
-          
-          contacts={filteredAndSortedContacts} 
+        <ContactsTable
+          contacts={paginatedContacts}
           visibleColumns={visibleColumns}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           onSort={(col, dir) => {
             setSortColumn(col)
             setSortDirection(dir)
+            setCurrentPage(1) // Reset to page 1 on sort
           }}
         />
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-center">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            disabled={currentPage === 1}
+            className="hover:bg-purple-200 gap-2"
+          >
+             <ChevronLeft size={14} className="text-foreground" />Previous
+          </Button>
+
+          <span className="text-sm font-medium gap-2">
+            {currentPage} ... {Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+          </span>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCurrentPage(prev => 
+              Math.min(Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE), prev + 1)
+            )}
+            disabled={currentPage >= Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+            className="hover:bg-purple-200 gap-2"
+          >
+              Next<ChevronRight size={14} className="text-foreground" />
+          </Button>
+        </div>
+      </div>
       </div>
     </div>
-  )
+  );
 }
