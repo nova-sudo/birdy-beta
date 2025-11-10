@@ -32,6 +32,7 @@ import {
   Play,
   Download,
   User,
+  Mail,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -46,83 +47,151 @@ function CallLogsDialog({ lead }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 bg-white">
+        <Button variant="outline" size="sm" className="gap-2 bg-transparent hover:bg-muted/50 transition-colors">
           <Phone className="h-4 w-4" />
           {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh] bg-white overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Call Logs - {lead.name}</DialogTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            {lead.email} • {lead.phone}
-          </p>
-        </DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white from-background via-background to-muted/10">
+        {/* Header Section */}
+        <div className="pb-6 border-b">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-2xl font-bold text-foreground">{lead.name}</DialogTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4 text-purple-500" />
+                <span>{lead.email}</span>
+              </div>
+              <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Phone className="h-4 w-4 text-purple-500" />
+                <span>{lead.phone}</span>
+              </div>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <Badge
+                className={`${
+                  lead.call_logs_count > 0
+                    ? "bg-purple-50/80 text-purple-700 border-purple-200"
+                    : "bg-gray-100/80 text-gray-700 border-gray-200"
+                } border text-xs font-medium`}
+                variant="outline"
+              >
+                {lead.call_logs_count > 0
+                  ? `${lead.call_logs_count} ${lead.call_logs_count === 1 ? "call" : "calls"}`
+                  : "No calls"}
+              </Badge>
+            </div>
+          </DialogHeader>
+        </div>
 
+        {/* Main Content */}
         {lead.call_logs.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <Phone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No call logs found for this lead</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Phone className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Call Logs Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              No recorded calls for this lead. Once calls are made, they will appear here.
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 mt-6">
             {lead.call_logs.map((callLog, index) => (
-              <div key={index} className="p-4 border rounded-lg space-y-3 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{callLog.caller_name}</span>
-                    <Badge variant={callLog.call_status === "outbound" ? "default" : "secondary"}>
-                      {callLog.call_status}
+              <div
+                key={index}
+                className="group relative p-5 rounded-lg border border-border bg-card hover:border-purple-200 hover:shadow-md hover:bg-card/95 transition-all duration-200"
+              >
+                {/* Call Header */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-purple-100/80 flex items-center justify-center">
+                      <User className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground text-sm">{callLog.caller_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        {callLog.call_time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge
+                      className={`${
+                        callLog.call_status === "outbound"
+                          ? "bg-blue-100/80 text-blue-700 border-blue-200"
+                          : "bg-green-100/80 text-green-700 border-green-200"
+                      } border text-xs font-medium`}
+                      variant="outline"
+                    >
+                      {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
                     </Badge>
                     {callLog.transfer && (
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        Transferred
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-100/80 text-amber-700 border-amber-200 text-xs font-medium"
+                      >
+                        ↗ Transferred
                       </Badge>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    {callLog.call_time}
+                </div>
+
+                {/* Call Details Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-lg bg-muted/30">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Duration</p>
+                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.duration)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Speed to Lead</p>
+                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.speed_to_lead)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Group</p>
+                    <p className="text-sm font-semibold text-foreground">{callLog.group}</p>
+                  </div>
+                  <div className="space-y-1 col-span-2 md:col-span-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{callLog.location_name}</p>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">From:</span>
-                    <span className="ml-2 font-mono">{callLog.from_number}</span>
+                {/* Phone Numbers */}
+                <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-muted/40 border border-border/50">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">From</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.from_number}</p>
                   </div>
-                  <div>
-                    <span className="text-muted-foreground">To:</span>
-                    <span className="ml-2 font-mono">{callLog.to_number}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="ml-2 font-medium">{formatDuration(callLog.duration)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Speed to Lead:</span>
-                    <span className="ml-2 font-medium">{formatDuration(callLog.speed_to_lead)}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Group:</span>
-                    <span className="ml-2">{callLog.group}</span>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Location:</span>
-                    <span className="ml-2">{callLog.location_name}</span>
+                  <div className="text-muted-foreground/30">→</div>
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">To</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.to_number}</p>
                   </div>
                 </div>
 
+                {/* Recording Controls */}
                 {callLog.recording_url && (
-                  <div className="flex gap-2 pt-2 border-t">
-                    <Button variant="outline" size="sm" asChild>
+                  <div className="flex gap-2 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
+                    >
                       <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
                         <Play className="h-4 w-4 mr-2" />
                         Play Recording
                       </a>
                     </Button>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
+                    >
                       <a href={callLog.recording_url} download>
                         <Download className="h-4 w-4 mr-2" />
                         Download
