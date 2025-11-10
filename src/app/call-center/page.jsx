@@ -35,6 +35,7 @@ import {
   Mail,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Progress } from "@/components/ui/progress"
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
@@ -215,6 +216,7 @@ export default function CallCenterPage() {
   const [members, setMembers] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [progress, setProgress] = useState(13)
   const [error, setError] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
     client: true,
@@ -239,6 +241,11 @@ export default function CallCenterPage() {
   useEffect(() => {
     fetchAllLeads()
     fetchMembers()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setProgress(66), 500)
+    return () => clearTimeout(timer)
   }, [])
 
   // Save active tab to sessionStorage
@@ -432,19 +439,46 @@ export default function CallCenterPage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64 bg-white"
+                  className="pl-9 w-64 bg-white h-10"
                 />
+
+                {activeTab === "leads" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="bg-white h-10 font-semibold" variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Columns
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {Object.keys(visibleColumns).map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column}
+                          checked={visibleColumns[column]}
+                          onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
+                        >
+                          {column === "ghlLocation"
+                            ? "GHL Location"
+                            : column === "calls"
+                              ? "Call Logs"
+                              : column.charAt(0).toUpperCase() + column.slice(1)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="bg-white text-semibold"
+                  className="bg-white font-semibold h-10"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
                 <Button
-                  className="bg-white text-semibold"
+                  className="bg-white font-semibold h-10"
                   variant="outline"
                   onClick={() => router.push("/settings?tab=integrations")}
                 >
@@ -520,10 +554,17 @@ export default function CallCenterPage() {
             </div>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <TabsList>
-                <TabsTrigger value="leads">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6 w-full">
+              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="leads"
+                  className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700" >
                   <Phone className="h-4 w-4 mr-2" />
                   Leads
                   {totalLeads > 0 && (
@@ -532,7 +573,14 @@ export default function CallCenterPage() {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="members">
+                <TabsTrigger value="members" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700" >
                   <Users className="h-4 w-4 mr-2" />
                   Members
                   {members.length > 0 && (
@@ -542,36 +590,6 @@ export default function CallCenterPage() {
                   )}
                 </TabsTrigger>
               </TabsList>
-
-              <div className="flex items-center gap-2">
-                {activeTab === "leads" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Columns
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {Object.keys(visibleColumns).map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={column}
-                          checked={visibleColumns[column]}
-                          onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
-                        >
-                          {column === "ghlLocation"
-                            ? "GHL Location"
-                            : column === "calls"
-                              ? "Call Logs"
-                              : column.charAt(0).toUpperCase() + column.slice(1)}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
-
             <TabsContent value="leads" className="mt-0">
               {/* Client breakdown summary */}
               {Object.keys(locationStats).length > 0 && (
@@ -589,7 +607,7 @@ export default function CallCenterPage() {
 
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
+                  <Progress value={33} />
                   <p className="text-sm text-muted-foreground">Loading leads with call logs from all clients...</p>
                 </div>
               ) : filteredLeads.length === 0 ? (
@@ -625,7 +643,8 @@ export default function CallCenterPage() {
                       </TableHeader>
                       <TableBody>
                         {filteredLeads.map((lead, index) => (
-                          <TableRow key={lead.id || index} className="hover:bg-muted/50">
+                          <TableRow key={lead.id || index} 
+                            className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
                             {visibleColumns.client && (
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2">
@@ -658,7 +677,7 @@ export default function CallCenterPage() {
                             )}
                             {visibleColumns.status && (
                               <TableCell>
-                                <Badge variant="outline">{lead.status || "Active"}</Badge>
+                                <Badge variant="outline" className="bg-[#DCFCE7] border-0 rounded-full text-[#166534] font-semibold">{lead.status || "Active"}</Badge>
                               </TableCell>
                             )}
                           </TableRow>
@@ -668,17 +687,14 @@ export default function CallCenterPage() {
                   </div>
 
                   {/* Pagination Controls */}
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {(currentPage - 1) * leadsPerPage + 1} to{" "}
-                      {Math.min(currentPage * leadsPerPage, totalLeads)} of {totalLeads} leads
-                    </div>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center p-4">
+                    <div className="flex items-center gap-4">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={handlePreviousPage}
                         disabled={currentPage === 1 || isLoading}
+                        className="hover:bg-purple-200 gap-2"
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Previous
@@ -687,13 +703,14 @@ export default function CallCenterPage() {
                         Page {currentPage} of {totalPages}
                       </div>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={handleNextPage}
                         disabled={!hasMoreLeads || isLoading}
+                        className="hover:bg-purple-200 gap-2"
                       >
                         {isLoading ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          <Progress value={33} />
                         ) : (
                           <>
                             Next
