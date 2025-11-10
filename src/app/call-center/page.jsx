@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -15,83 +16,215 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Loader2, Search, Users, FolderOpen, Phone, Eye, Settings2, AlertCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react"
+import {
+  Loader2,
+  Users,
+  Phone,
+  Eye,
+  Settings2,
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Building2,
+  MapPin,
+  Clock,
+  Play,
+  Download,
+  User,
+  Mail,
+} from "lucide-react"
 import { toast } from "sonner"
-import { LoadingScreen } from "@/components/loading-screen"
 
-
-// ✅ CACHE UTILITY FUNCTIONS
-const CACHE_DURATION = {
-  groups: 60 * 60 * 1000, // 1 hour
-  leads: 60 * 60 * 1000,   // 1 minutes
-  members: 60 * 60 * 1000 // 1 hour
-}
-
-const getCachedData = (key) => {
-  try {
-    const cached = localStorage.getItem(key)
-    if (!cached) return null
-    
-    const { data, timestamp } = JSON.parse(cached)
-    const now = Date.now()
-    const maxAge = CACHE_DURATION[key.split('_')[0]] || 60 * 60 * 1000
-    
-    if (now - timestamp < maxAge) {
-      console.log(`✅ Cache hit for ${key} (age: ${Math.round((now - timestamp) / 1000)}s)`)
-      return data
-    }
-    
-    console.log(`⏰ Cache expired for ${key}`)
-    localStorage.removeItem(key)
-    return null
-  } catch (error) {
-    console.error('Cache read error:', error)
-    return null
+// Call Logs Dialog Component
+function CallLogsDialog({ lead }) {
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}m ${secs}s`
   }
-}
 
-const setCachedData = (key, data) => {
-  try {
-    localStorage.setItem(key, JSON.stringify({
-      data,
-      timestamp: Date.now()
-    }))
-    console.log(`💾 Cached ${key}`)
-  } catch (error) {
-    console.error('Cache write error:', error)
-  }
-}
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-2 bg-transparent hover:bg-muted/50 transition-colors">
+          <Phone className="h-4 w-4" />
+          {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white from-background via-background to-muted/10">
+        {/* Header Section */}
+        <div className="pb-6 border-b">
+          <DialogHeader className="space-y-3">
+            <DialogTitle className="text-2xl font-bold text-foreground">{lead.name}</DialogTitle>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Mail className="h-4 w-4 text-purple-500" />
+                <span>{lead.email}</span>
+              </div>
+              <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                <Phone className="h-4 w-4 text-purple-500" />
+                <span>{lead.phone}</span>
+              </div>
+            </div>
+            <div className="pt-2 flex items-center gap-2">
+              <Badge
+                className={`${
+                  lead.call_logs_count > 0
+                    ? "bg-purple-50/80 text-purple-700 border-purple-200"
+                    : "bg-gray-100/80 text-gray-700 border-gray-200"
+                } border text-xs font-medium`}
+                variant="outline"
+              >
+                {lead.call_logs_count > 0
+                  ? `${lead.call_logs_count} ${lead.call_logs_count === 1 ? "call" : "calls"}`
+                  : "No calls"}
+              </Badge>
+            </div>
+          </DialogHeader>
+        </div>
 
-const clearCache = (pattern) => {
-  try {
-    const keys = Object.keys(localStorage)
-    keys.forEach(key => {
-      if (key.includes(pattern)) {
-        localStorage.removeItem(key)
-      }
-    })
-    console.log(`🗑️ Cleared cache for pattern: ${pattern}`)
-  } catch (error) {
-    console.error('Cache clear error:', error)
-  }
+        {/* Main Content */}
+        {lead.call_logs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              <Phone className="h-8 w-8 text-muted-foreground/50" />
+            </div>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Call Logs Yet</h3>
+            <p className="text-sm text-muted-foreground max-w-xs">
+              No recorded calls for this lead. Once calls are made, they will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 mt-6">
+            {lead.call_logs.map((callLog, index) => (
+              <div
+                key={index}
+                className="group relative p-5 rounded-lg border border-border bg-card hover:border-purple-200 hover:shadow-md hover:bg-card/95 transition-all duration-200"
+              >
+                {/* Call Header */}
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="w-10 h-10 rounded-full bg-purple-100/80 flex items-center justify-center">
+                      <User className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-foreground text-sm">{callLog.caller_name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        <Clock className="h-3 w-3 inline mr-1" />
+                        {callLog.call_time}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Badge
+                      className={`${
+                        callLog.call_status === "outbound"
+                          ? "bg-blue-100/80 text-blue-700 border-blue-200"
+                          : "bg-green-100/80 text-green-700 border-green-200"
+                      } border text-xs font-medium`}
+                      variant="outline"
+                    >
+                      {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
+                    </Badge>
+                    {callLog.transfer && (
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-100/80 text-amber-700 border-amber-200 text-xs font-medium"
+                      >
+                        ↗ Transferred
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+
+                {/* Call Details Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-lg bg-muted/30">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Duration</p>
+                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.duration)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Speed to Lead</p>
+                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.speed_to_lead)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Group</p>
+                    <p className="text-sm font-semibold text-foreground">{callLog.group}</p>
+                  </div>
+                  <div className="space-y-1 col-span-2 md:col-span-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{callLog.location_name}</p>
+                  </div>
+                </div>
+
+                {/* Phone Numbers */}
+                <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-muted/40 border border-border/50">
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">From</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.from_number}</p>
+                  </div>
+                  <div className="text-muted-foreground/30">→</div>
+                  <div className="flex-1">
+                    <p className="text-xs text-muted-foreground mb-1">To</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.to_number}</p>
+                  </div>
+                </div>
+
+                {/* Recording Controls */}
+                {callLog.recording_url && (
+                  <div className="flex gap-2 pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
+                    >
+                      <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
+                        <Play className="h-4 w-4 mr-2" />
+                        Play Recording
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
+                    >
+                      <a href={callLog.recording_url} download>
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
 }
 
 export default function CallCenterPage() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("groups")
-  const [groups, setGroups] = useState([])
-  const [selectedGroup, setSelectedGroup] = useState(null)
+  const [activeTab, setActiveTab] = useState("leads")
   const [leads, setLeads] = useState([])
   const [members, setMembers] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
+    client: true,
+    ghlLocation: true,
     name: true,
     email: true,
     phone: true,
     company: true,
     location: true,
+    calls: true,
     status: true,
   })
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -100,208 +233,110 @@ export default function CallCenterPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [totalLeads, setTotalLeads] = useState(0)
   const [leadsPerPage] = useState(100)
-  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const [locationStats, setLocationStats] = useState({})
 
-  // ✅ OPTIMIZED: Restore selected group from sessionStorage
+  // Fetch leads on mount
   useEffect(() => {
-    const savedGroup = sessionStorage.getItem('selectedGroup')
-    const savedTab = sessionStorage.getItem('activeTab')
-    
-    if (savedGroup) {
-      try {
-        const group = JSON.parse(savedGroup)
-        setSelectedGroup(group)
-        console.log('📌 Restored selected group:', group.name)
-      } catch (e) {
-        console.error('Failed to restore group:', e)
-      }
-    }
-    
-    if (savedTab) {
-      setActiveTab(savedTab)
-    }
-  }, [])
-
-  // ✅ OPTIMIZED: Fetch groups on mount with cache
-  useEffect(() => {
-    fetchGroups()
+    fetchAllLeads()
     fetchMembers()
   }, [])
 
-  // ✅ OPTIMIZED: Auto-restore leads when group is selected
+  // Save active tab to sessionStorage
   useEffect(() => {
-    if (selectedGroup && activeTab === 'leads' && leads.length === 0) {
-      fetchGroupLeads(selectedGroup.id, 1)
-    }
-  }, [selectedGroup, activeTab])
+    sessionStorage.setItem("activeTab", activeTab)
+  }, [activeTab])
 
-  const fetchGroups = async (forceRefresh = false) => {
+  const fetchAllLeads = async (page = 1, forceRefresh = false) => {
     try {
-      // Check cache first
-      if (!forceRefresh) {
-        const cached = getCachedData('groups')
-        if (cached) {
-          setGroups(cached)
-          console.log('[v0] Using cached groups:', cached.length)
-          return
-        }
-      }
-
       setIsLoading(true)
       setError(null)
-      
-      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/groups", {
+
+      const skip = (page - 1) * leadsPerPage
+
+      if (page === 1) {
+        toast.loading("Loading leads with call logs from all clients...", { id: "fetch-leads" })
+      }
+
+      // Use refresh endpoint if force refresh
+      const endpoint = forceRefresh
+        ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
+        : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
+
+      const response = await fetch(endpoint, {
         credentials: "include",
       })
-      
-      if (!response.ok) {
-        throw new Error("Failed to fetch groups")
-      }
-      
-      const data = await response.json()
-      const mappedGroups = (data.data || []).map((group) => ({
-        id: group.GroupId,
-        name: group.GroupTitle,
-        teamId: group.TeamId,
-        addedBy: group.Added_by,
-      }))
-      
-      setGroups(mappedGroups)
-      setCachedData('groups', mappedGroups)
-      
-      if (forceRefresh) {
-        toast.success('Groups refreshed')
-      }
-      
-      console.log('[v0] Fetched fresh groups:', mappedGroups.length)
-    } catch (err) {
-      console.error("Error fetching groups:", err)
-      setError(err.message)
-      toast.error("Failed to fetch groups. Please check your HotProspector connection.")
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
-  const fetchGroupLeads = async (groupId, page = 1, forceRefresh = false) => {
-    try {
-      const cacheKey = `leads_${groupId}_${page}`
-      
-      // Check cache first
-      if (!forceRefresh) {
-        const cached = getCachedData(cacheKey)
-        if (cached) {
-          if (page === 1) {
-            setLeads(cached.leads)
-            setTotalLeads(cached.total)
-            setCurrentPage(page)
-            setActiveTab("leads")
-            console.log('[v0] Using cached leads:', cached.leads.length)
-          } else {
-            setLeads(prev => [...prev, ...cached.leads])
-            setCurrentPage(page)
-          }
-          return
-        }
-      }
-
-      setIsLoadingMore(page > 1)
-      if (page === 1) {
-        setIsLoading(true)
-        setLeads([])
-      }
-      setError(null)
-      
-      const skip = (page - 1) * leadsPerPage
-      
-      // Show optimistic loading state
-      if (page === 1) {
-        toast.loading('Loading leads...', { id: 'fetch-leads' })
-      }
-      
-      const response = await fetch(
-        `https://birdy-backend.vercel.app/api/hotprospector/groups/${groupId}/leads?skip=${skip}&limit=${leadsPerPage}`,
-        {
-          credentials: "include",
-        }
-      )
-      
       if (!response.ok) {
         throw new Error("Failed to fetch leads")
       }
-      
+
       const data = await response.json()
-      
+
       // Transform the lead data
       const mappedLeads = (data.data || []).map((lead) => ({
         id: lead.id,
+        client: lead.client_name || "Unknown Client",
+        ghlLocation: lead.ghl_location_name || "Unknown Location",
+        ghlLocationId: lead.ghl_location_id,
         name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
         email: lead.email || "N/A",
-        phone: lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
+        phone:
+          lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
         company: lead.company || "N/A",
-        location: [lead.city, lead.state, lead.country_code]
-          .filter(Boolean)
-          .join(", ") || "N/A",
+        location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
+        tags: lead.tags || [],
         status: "Active",
+        call_logs_count: lead.call_logs_count || 0,
+        call_logs: lead.call_logs || [],
       }))
-      
-      // Cache the results
-      setCachedData(cacheKey, {
-        leads: mappedLeads,
-        total: data.meta?.total || 0
-      })
-      
-      // Update state
-      if (page === 1) {
-        setLeads(mappedLeads)
-        setActiveTab("leads")
-        toast.success(`Loaded ${mappedLeads.length} leads`, { id: 'fetch-leads' })
-      } else {
-        setLeads(prev => [...prev, ...mappedLeads])
-        toast.success(`Loaded ${mappedLeads.length} more leads`)
-      }
-      
+
+      setLeads(mappedLeads)
       setTotalLeads(data.meta?.total || 0)
       setCurrentPage(page)
-      
-      console.log('[v0] Fetched fresh leads:', {
+      setLocationStats(data.meta?.location_stats || {})
+
+      const totalCalls = data.meta?.total_calls || 0
+
+      if (forceRefresh) {
+        toast.success(
+          `Refreshed ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
+          { id: "fetch-leads" },
+        )
+      } else {
+        toast.success(
+          `Loaded ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
+          { id: "fetch-leads" },
+        )
+      }
+
+      console.log("[HotProspector] Fetched leads:", {
         page,
         returned: mappedLeads.length,
         total: data.meta?.total,
-        cached: data.meta?.cached
+        locations: data.meta?.locations_processed,
+        locationStats: data.meta?.location_stats,
+        totalCalls,
       })
     } catch (err) {
       console.error("Error fetching leads:", err)
       setError(err.message)
-      toast.error("Failed to fetch leads for this group.", { id: 'fetch-leads' })
+      toast.error("Failed to fetch leads. Please check your HotProspector connection.", { id: "fetch-leads" })
     } finally {
       setIsLoading(false)
-      setIsLoadingMore(false)
       setIsRefreshing(false)
     }
   }
 
   const fetchMembers = async (forceRefresh = false) => {
     try {
-      // Check cache first
-      if (!forceRefresh) {
-        const cached = getCachedData('members')
-        if (cached) {
-          setMembers(cached)
-          console.log('[v0] Using cached members:', cached.length)
-          return
-        }
-      }
-
       const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/members", {
         credentials: "include",
       })
-      
+
       if (!response.ok) {
         throw new Error("Failed to fetch members")
       }
-      
+
       const data = await response.json()
       const mappedMembers = (data.data || []).map((member) => ({
         id: member.memberId,
@@ -314,74 +349,55 @@ export default function CallCenterPage() {
         company: member.company,
         country: member.country,
       }))
-      
+
       setMembers(mappedMembers)
-      setCachedData('members', mappedMembers)
-      
+
       if (forceRefresh) {
-        toast.success('Members refreshed')
+        toast.success("Members refreshed")
       }
-      
-      console.log('[v0] Fetched fresh members:', mappedMembers.length)
+
+      console.log("[HotProspector] Fetched fresh members:", mappedMembers.length)
     } catch (err) {
       console.error("Error fetching members:", err)
       if (forceRefresh) {
-        toast.error('Failed to refresh members')
+        toast.error("Failed to refresh members")
       }
     }
   }
 
-  const handleGroupClick = useCallback((group) => {
-    setSelectedGroup(group)
-    setCurrentPage(1)
-    
-    // Save to sessionStorage for persistence
-    sessionStorage.setItem('selectedGroup', JSON.stringify(group))
-    
-    fetchGroupLeads(group.id, 1)
-  }, [])
-
   const handleRefresh = () => {
     setIsRefreshing(true)
-    
-    if (activeTab === 'groups') {
-      clearCache('groups')
-      fetchGroups(true)
-    } else if (activeTab === 'leads' && selectedGroup) {
-      clearCache(`leads_${selectedGroup.id}`)
-      fetchGroupLeads(selectedGroup.id, currentPage, true)
-    } else if (activeTab === 'members') {
-      clearCache('members')
+
+    if (activeTab === "leads") {
+      // Force refresh from API (clears cache)
+      fetchAllLeads(1, true)
+    } else if (activeTab === "members") {
       fetchMembers(true)
     }
   }
 
   const handlePreviousPage = () => {
-    if (currentPage > 1 && selectedGroup) {
+    if (currentPage > 1) {
       const newPage = currentPage - 1
-      fetchGroupLeads(selectedGroup.id, newPage)
+      fetchAllLeads(newPage)
     }
   }
 
   const handleNextPage = () => {
-    if (currentPage * leadsPerPage < totalLeads && selectedGroup) {
+    if (currentPage * leadsPerPage < totalLeads) {
       const newPage = currentPage + 1
-      fetchGroupLeads(selectedGroup.id, newPage)
+      fetchAllLeads(newPage)
     }
   }
-
-  // Save active tab to sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem('activeTab', activeTab)
-  }, [activeTab])
-
-  const filteredGroups = groups.filter((group) => group.name?.toLowerCase().includes(searchQuery.toLowerCase()))
 
   const filteredLeads = leads.filter(
     (lead) =>
       lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()),
+      lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.ghlLocation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lead.company?.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const filteredMembers = members.filter(
@@ -393,39 +409,50 @@ export default function CallCenterPage() {
   const totalPages = Math.ceil(totalLeads / leadsPerPage)
   const hasMoreLeads = currentPage * leadsPerPage < totalLeads
 
+  // Calculate total clients
+  const totalClients = Object.keys(locationStats).length
+
+  // Calculate total calls across all leads
+  const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
+
   return (
-    <div className="  ">
-      <div className=" ">
+    <div className="">
+      <div className="">
         <div className="">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>
                 <h1 className="text-3xl font-bold tracking-tight text-foreground">Call Center Hub</h1>
+                <p className="text-sm text-muted-foreground mt-1">Manage leads and team members from HotProspector</p>
               </div>
             </div>
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="Search..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9 w-64 bg-white"
-                  />
-              <Button 
-                variant="outline" 
-                onClick={handleRefresh}
-                disabled={isRefreshing}
-                className="bg-white text-semibold"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button className="bg-white text-semibold" variant="outline" onClick={() => router.push("/settings?tab=integrations")}>
-                <Settings2 className="h-4 w-4 mr-2" />
-                Settings
-              </Button>
-            </div></div>
-            
+            <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 w-64 bg-white"
+                />
+                <Button
+                  variant="outline"
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className="bg-white text-semibold"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button>
+                <Button
+                  className="bg-white text-semibold"
+                  variant="outline"
+                  onClick={() => router.push("/settings?tab=integrations")}
+                >
+                  <Settings2 className="h-4 w-4 mr-2" />
+                  Settings
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -433,38 +460,53 @@ export default function CallCenterPage() {
       <div className="">
         <div className="bg-card rounded-lg mt-6 mb-12">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border rounded-lg shadow-sm ">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Groups</CardTitle>
+                <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <FolderOpen className="h-5 w-5 text-muted-foreground  text-purple-500" />
+                  <Building2 className="h-5 w-5 text-muted-foreground text-purple-500" />
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{groups.length}</div>
+                <div className="text-2xl font-bold">{totalClients}</div>
+                <p className="text-xs text-muted-foreground mt-1">GHL locations connected</p>
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Phone className="h-5 w-5 text-muted-foreground  text-purple-500 " />
-                  </div>
+                  <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
+                </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalLeads || leads.length}</div>
+                <div className="text-2xl font-bold">{totalLeads}</div>
+                <p className="text-xs text-muted-foreground mt-1">Across all clients</p>
+              </CardContent>
+            </Card>
+            <Card className="border rounded-lg shadow-sm">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{totalCalls}</div>
+                <p className="text-xs text-muted-foreground mt-1">Call logs recorded</p>
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Team Members</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Users className="h-5 w-5 text-muted-foreground  text-purple-500 " />
-                  </div>
+                  <Users className="h-5 w-5 text-muted-foreground text-purple-500" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{members.length}</div>
+                <p className="text-xs text-muted-foreground mt-1">Active call center agents</p>
               </CardContent>
             </Card>
           </div>
@@ -481,27 +523,27 @@ export default function CallCenterPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
             <div className="flex items-center justify-between mb-6">
               <TabsList>
-                <TabsTrigger value="groups">
-                  <FolderOpen className="h-4 w-4 mr-2" />
-                  Groups
-                </TabsTrigger>
                 <TabsTrigger value="leads">
                   <Phone className="h-4 w-4 mr-2" />
                   Leads
-                  {selectedGroup && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-1 text-xs">
-                      {selectedGroup.name.slice(0, 10)}
+                  {totalLeads > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-2 text-xs">
+                      {totalLeads}
                     </Badge>
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="members">
                   <Users className="h-4 w-4 mr-2" />
                   Members
+                  {members.length > 0 && (
+                    <Badge variant="secondary" className="ml-2 h-5 px-2 text-xs">
+                      {members.length}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               </TabsList>
 
               <div className="flex items-center gap-2">
-                
                 {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -517,7 +559,11 @@ export default function CallCenterPage() {
                           checked={visibleColumns[column]}
                           onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
                         >
-                          {column.charAt(0).toUpperCase() + column.slice(1)}
+                          {column === "ghlLocation"
+                            ? "GHL Location"
+                            : column === "calls"
+                              ? "Call Logs"
+                              : column.charAt(0).toUpperCase() + column.slice(1)}
                         </DropdownMenuCheckboxItem>
                       ))}
                     </DropdownMenuContent>
@@ -526,64 +572,39 @@ export default function CallCenterPage() {
               </div>
             </div>
 
-            <TabsContent value="groups" className="mt-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredGroups.length === 0 ? (
-                <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                  <FolderOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">No groups found</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {filteredGroups.map((group) => (
-                    <Card
-                      key={group.id}
-                      className={`cursor-pointer hover:bg-muted/50 transition-colors ${
-                        selectedGroup?.id === group.id ? 'ring-2 ring-primary' : ''
-                      }`}
-                      onClick={() => handleGroupClick(group)}
-                    >
-                      <CardHeader>
-                        <CardTitle className="text-base">{group.name}</CardTitle>
-                        <CardDescription>ID: {group.id}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <Button variant="outline" size="sm" className="w-full bg-transparent">
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Leads
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-
             <TabsContent value="leads" className="mt-0">
-              {selectedGroup && (
-                <div className="mb-4 p-4 bg-muted/50 rounded-lg flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Showing leads from: <span className="font-medium text-foreground">{selectedGroup.name}</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Page {currentPage} of {totalPages} ({totalLeads} total leads)
-                  </p>
+              {/* Client breakdown summary */}
+              {Object.keys(locationStats).length > 0 && (
+                <div className="mb-4 p-4 bg-muted/50 rounded-lg">
+                  <h3 className="text-sm font-medium mb-2">Leads by Location:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(locationStats).map(([locationId, stats]) => (
+                      <Badge key={locationId} variant="outline" className="text-xs">
+                        {stats.client_group_name || stats.name}: {stats.count} leads {stats.cached && "🟢"}
+                      </Badge>
+                    ))}
+                  </div>
                 </div>
               )}
+
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">Loading leads...</p>
+                  <p className="text-sm text-muted-foreground">Loading leads with call logs from all clients...</p>
                 </div>
               ) : filteredLeads.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">
-                    {selectedGroup ? "No leads found in this group" : "Select a group to view leads"}
+                    No leads found. Make sure you have HotProspector connected and GHL locations configured.
                   </p>
+                  <Button
+                    variant="outline"
+                    className="mt-4 bg-transparent"
+                    onClick={() => router.push("/settings?tab=integrations")}
+                  >
+                    Go to Settings
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -591,22 +612,50 @@ export default function CallCenterPage() {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50">
+                          {visibleColumns.client && <TableHead>Client</TableHead>}
+                          {visibleColumns.ghlLocation && <TableHead>GHL Location</TableHead>}
                           {visibleColumns.name && <TableHead>Name</TableHead>}
                           {visibleColumns.email && <TableHead>Email</TableHead>}
                           {visibleColumns.phone && <TableHead>Phone</TableHead>}
                           {visibleColumns.company && <TableHead>Company</TableHead>}
                           {visibleColumns.location && <TableHead>Location</TableHead>}
+                          {visibleColumns.calls && <TableHead>Call Logs</TableHead>}
                           {visibleColumns.status && <TableHead>Status</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredLeads.map((lead, index) => (
                           <TableRow key={lead.id || index} className="hover:bg-muted/50">
+                            {visibleColumns.client && (
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  {lead.client || "Unknown"}
+                                </div>
+                              </TableCell>
+                            )}
+                            {visibleColumns.ghlLocation && (
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <MapPin className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">{lead.ghlLocation || "Unknown"}</span>
+                                </div>
+                              </TableCell>
+                            )}
                             {visibleColumns.name && <TableCell className="font-medium">{lead.name || "N/A"}</TableCell>}
                             {visibleColumns.email && <TableCell>{lead.email || "N/A"}</TableCell>}
                             {visibleColumns.phone && <TableCell>{lead.phone || "N/A"}</TableCell>}
                             {visibleColumns.company && <TableCell>{lead.company || "N/A"}</TableCell>}
                             {visibleColumns.location && <TableCell>{lead.location || "N/A"}</TableCell>}
+                            {visibleColumns.calls && (
+                              <TableCell>
+                                {lead.call_logs_count > 0 ? (
+                                  <CallLogsDialog lead={lead} />
+                                ) : (
+                                  <span className="text-sm text-muted-foreground">No calls</span>
+                                )}
+                              </TableCell>
+                            )}
                             {visibleColumns.status && (
                               <TableCell>
                                 <Badge variant="outline">{lead.status || "Active"}</Badge>
@@ -621,14 +670,15 @@ export default function CallCenterPage() {
                   {/* Pagination Controls */}
                   <div className="mt-4 flex items-center justify-between">
                     <div className="text-sm text-muted-foreground">
-                      Showing {((currentPage - 1) * leadsPerPage) + 1} to {Math.min(currentPage * leadsPerPage, totalLeads)} of {totalLeads} leads
+                      Showing {(currentPage - 1) * leadsPerPage + 1} to{" "}
+                      {Math.min(currentPage * leadsPerPage, totalLeads)} of {totalLeads} leads
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={handlePreviousPage}
-                        disabled={currentPage === 1 || isLoadingMore}
+                        disabled={currentPage === 1 || isLoading}
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Previous
@@ -640,9 +690,9 @@ export default function CallCenterPage() {
                         variant="outline"
                         size="sm"
                         onClick={handleNextPage}
-                        disabled={!hasMoreLeads || isLoadingMore}
+                        disabled={!hasMoreLeads || isLoading}
                       >
-                        {isLoadingMore ? (
+                        {isLoading ? (
                           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                         ) : (
                           <>
@@ -659,7 +709,7 @@ export default function CallCenterPage() {
 
             <TabsContent value="members" className="mt-0">
               {isLoading ? (
-                <div className="flex items-center  justify-center py-12">
+                <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : filteredMembers.length === 0 ? (
