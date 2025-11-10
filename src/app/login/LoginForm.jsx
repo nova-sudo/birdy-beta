@@ -133,25 +133,6 @@ export default function LoginForm() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="rememberMe"
-                    checked={formData.rememberMe}
-                    onChange={handleChange}
-                    className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-600/20"
-                  />
-                  <span className="text-gray-600">Remember me</span>
-                </label>
-                <a
-                  href="/forgot-password"
-                  className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
-                >
-                  Forgot password?
-                </a>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
