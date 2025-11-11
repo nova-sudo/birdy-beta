@@ -35,6 +35,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import ghl from "../../../public/ghl_icon.png";
+import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([]);
@@ -327,13 +329,16 @@ const Campaigns = () => {
                 { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
               ].map((c, i) => (
                 <Card key={i}>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">{c.label}</CardTitle>
-                    <c.icon className="h-4 w-4 text-muted-foreground" />
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                    <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <c.icon className="h-5 w-5 text-muted-foreground text-purple-500" />
+                    </div>
+                    
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{c.value}</div>
-                    <p className="text-xs text-muted-foreground">Across all {activeTab}</p>
+                    <p className="text-xs text-muted-foreground text-[#71658B]">Across all {activeTab}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -341,11 +346,39 @@ const Campaigns = () => {
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full justify-start bg-muted/100 p-1">
-                <TabsTrigger value="campaigns" className="gap-2"><LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
-                <TabsTrigger value="adsets" className="gap-2"><Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
-                <TabsTrigger value="ads" className="gap-2"><FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
-                <TabsTrigger value="leads" className="gap-2"><Users className="h-4 w-4" />Leads</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="campaigns" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700"><LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
+                <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700"><Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
+                <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700"><FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
+                <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700"><Users className="h-4 w-4" />Leads</TabsTrigger>
               </TabsList>
 
               <TabsContent value={activeTab} className="mt-6">
