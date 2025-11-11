@@ -416,7 +416,7 @@ export default function ClientsPage() {
   }
 
   const handleClientGroupClick = (group) => {
-     //here is going to be the internal page for the client with reports graphs and stuff
+     router.push(`/clients/${group.id}`)
   }
 
   const filteredGhlLocations = ghlLocations.filter(
