@@ -416,7 +416,7 @@ const MetricsHub = () => {
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <PieChart className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -428,7 +428,7 @@ const MetricsHub = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Standard Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <BarChart3 className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -439,7 +439,7 @@ const MetricsHub = () => {
             </CardContent>
           </Card>
           <Card> 
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Webhook Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <Webhook className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -450,7 +450,7 @@ const MetricsHub = () => {
             </CardContent> */}
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Custom Formulas</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <Calculator className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -465,10 +465,42 @@ const MetricsHub = () => {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
-            <TabsTrigger className="hover:bg-white" value="all">All Metrics</TabsTrigger>
-            <TabsTrigger className="hover:bg-white" value="standard">Standard Metrics</TabsTrigger>
-            <TabsTrigger disabled className="disabled:opacity-50 disabled:pointer-events-none disabled:bg-gray-50 disabled:cursor-not-allowed hover:bg-white" value="webhook">Webhook Metrics</TabsTrigger>
-            <TabsTrigger className="hover:bg-white" value="custom">Custom Formulas</TabsTrigger>
+            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700" 
+            value="all">All Metrics</TabsTrigger>
+            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700" 
+             value="standard">Standard Metrics</TabsTrigger>
+            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700" 
+             value="webhook">Webhook Metrics</TabsTrigger>
+            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700" 
+             value="custom">Custom Formulas</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
@@ -512,7 +544,7 @@ const MetricsHub = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-9 px-3 bg-purple-600 disabled:bg-gray-700 text-white  hover:bg-purple-700"
+                                  className="h-9 px-3 bg-purple-600 disabled:bg-purple-600/50 text-white  hover:bg-purple-700"
                                   onClick={() => handleEditMetric(metric)}
                                   
                                 >
@@ -521,7 +553,7 @@ const MetricsHub = () => {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-9 w-9 text-destructive disabled:bg-gray-700 hover:bg-destructive/10"
+                                  className="h-9 w-9 text-destructive disabled:bg-purple-600/50 hover:bg-destructive/10"
                                   onClick={() => handleDeleteMetric(metric.id)}
                                   tooltip="Delete Metric"
                                 >
@@ -534,7 +566,7 @@ const MetricsHub = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 px-3 bg-purple-600 text-white disabled:bg-gray-700 hover:bg-purple-700"
+                                className="h-9 px-3 bg-[#7854EA] text-white disabled:bg-[#7854EA]/70 hover:bg-purple-700"
                                 disabled
                                 tooltip="Editing standard/webhook metrics is not allowed"
                               >

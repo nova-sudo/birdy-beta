@@ -35,6 +35,7 @@ import {
   Mail,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Progress } from "@/components/ui/progress"
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
@@ -215,6 +216,7 @@ export default function CallCenterPage() {
   const [members, setMembers] = useState([])
   const [searchQuery, setSearchQuery] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [progress, setProgress] = useState(13)
   const [error, setError] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
     client: true,
@@ -239,6 +241,11 @@ export default function CallCenterPage() {
   useEffect(() => {
     fetchAllLeads()
     fetchMembers()
+  }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setProgress(66), 500)
+    return () => clearTimeout(timer)
   }, [])
 
   // Save active tab to sessionStorage
@@ -432,19 +439,46 @@ export default function CallCenterPage() {
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64 bg-white"
+                  className="pl-9 w-64 bg-white h-10"
                 />
+
+                {activeTab === "leads" && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button className="bg-white h-10 font-semibold" variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Columns
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white">
+                      {Object.keys(visibleColumns).map((column) => (
+                        <DropdownMenuCheckboxItem
+                          key={column}
+                          checked={visibleColumns[column]}
+                          onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
+                        >
+                          {column === "ghlLocation"
+                            ? "GHL Location"
+                            : column === "calls"
+                              ? "Call Logs"
+                              : column.charAt(0).toUpperCase() + column.slice(1)}
+                        </DropdownMenuCheckboxItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
                 <Button
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="bg-white text-semibold"
+                  className="bg-white font-semibold h-10"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
                 <Button
-                  className="bg-white text-semibold"
+                  className="bg-white font-semibold h-10"
                   variant="outline"
                   onClick={() => router.push("/settings?tab=integrations")}
                 >
@@ -457,7 +491,7 @@ export default function CallCenterPage() {
         </div>
       </div>
 
-      <div className="">
+      <div>
         <div className="bg-card rounded-lg mt-6 mb-12">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -520,10 +554,17 @@ export default function CallCenterPage() {
             </div>
           )}
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <TabsList>
-                <TabsTrigger value="leads">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
+              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="leads"
+                  className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700" >
                   <Phone className="h-4 w-4 mr-2" />
                   Leads
                   {totalLeads > 0 && (
@@ -532,7 +573,14 @@ export default function CallCenterPage() {
                     </Badge>
                   )}
                 </TabsTrigger>
-                <TabsTrigger value="members">
+                <TabsTrigger value="members" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700" >
                   <Users className="h-4 w-4 mr-2" />
                   Members
                   {members.length > 0 && (
@@ -542,36 +590,6 @@ export default function CallCenterPage() {
                   )}
                 </TabsTrigger>
               </TabsList>
-
-              <div className="flex items-center gap-2">
-                {activeTab === "leads" && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Columns
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {Object.keys(visibleColumns).map((column) => (
-                        <DropdownMenuCheckboxItem
-                          key={column}
-                          checked={visibleColumns[column]}
-                          onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
-                        >
-                          {column === "ghlLocation"
-                            ? "GHL Location"
-                            : column === "calls"
-                              ? "Call Logs"
-                              : column.charAt(0).toUpperCase() + column.slice(1)}
-                        </DropdownMenuCheckboxItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
-
             <TabsContent value="leads" className="mt-0">
               {/* Client breakdown summary */}
               {Object.keys(locationStats).length > 0 && (
@@ -588,10 +606,88 @@ export default function CallCenterPage() {
               )}
 
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-4" />
-                  <p className="text-sm text-muted-foreground">Loading leads with call logs from all clients...</p>
-                </div>
+                <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+                  <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+              {/* Animated logo/icon */}
+                <div className="w-16 h-16 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <style>{`
+                  @keyframes fly {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-8px); }
+                  }
+                  @keyframes wingFlap {
+                    0%, 100% { transform: rotateZ(0deg); }
+                    50% { transform: rotateZ(15deg); }
+                  }
+                  .bird-body {
+                    animation: fly 2s ease-in-out infinite;
+                  }
+                  .bird-wing-left {
+                    animation: wingFlap 0.6s ease-in-out infinite;
+                    transform-origin: 35px 40px;
+                  }
+                  .bird-wing-right {
+                    animation: wingFlap 0.6s ease-in-out infinite;
+                    transform-origin: 65px 40px;
+                  }
+                    `}</style>
+                  </defs>
+      
+                  {/* Body */}
+                  <g className="bird-body">
+                    <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+                    {/* Head */}
+                    <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+                    {/* Eye */}
+                    <circle cx="53" cy="30" r="2" fill="white" />
+                    {/* Beak */}
+                    <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+                    {/* Tail */}
+                    <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+                  </g>
+      
+                  {/* Left Wing */}
+                  <g className="bird-wing-left">
+                    <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+                  </g>
+      
+                  {/* Right Wing */}
+                  <g className="bird-wing-right">
+                    <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+                  </g>
+                </svg>
+                  </div>
+      
+                  {/* Main text */}
+              <div className="flex flex-col gap-3 text-center">
+                <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Preparing your data. This should only take a moment.
+                </p>
+              </div>
+      
+          {/* Progress bar container */}
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
+  
+          {/* Loading dots animation */}
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            />
+              </div>
+            </div>
+          </div>
               ) : filteredLeads.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -608,24 +704,25 @@ export default function CallCenterPage() {
                 </div>
               ) : (
                 <>
-                  <div className="rounded-lg border">
+                  <div className="border">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          {visibleColumns.client && <TableHead>Client</TableHead>}
-                          {visibleColumns.ghlLocation && <TableHead>GHL Location</TableHead>}
-                          {visibleColumns.name && <TableHead>Name</TableHead>}
-                          {visibleColumns.email && <TableHead>Email</TableHead>}
-                          {visibleColumns.phone && <TableHead>Phone</TableHead>}
-                          {visibleColumns.company && <TableHead>Company</TableHead>}
-                          {visibleColumns.location && <TableHead>Location</TableHead>}
-                          {visibleColumns.calls && <TableHead>Call Logs</TableHead>}
-                          {visibleColumns.status && <TableHead>Status</TableHead>}
+                        <TableRow className="bg-muted/50 border-r border-border">
+                          {visibleColumns.client && <TableHead className="border-r border-border">Client</TableHead>}
+                          {visibleColumns.ghlLocation && <TableHead className="border-r border-border">GHL Location</TableHead>}
+                          {visibleColumns.name && <TableHead className="border-r border-border">Name</TableHead>}
+                          {visibleColumns.email && <TableHead className="border-r border-border">Email</TableHead>}
+                          {visibleColumns.phone && <TableHead className="border-r border-border">Phone</TableHead>}
+                          {visibleColumns.company && <TableHead className="border-r border-border">Company</TableHead>}
+                          {visibleColumns.location && <TableHead className="border-r border-border">Location</TableHead>}
+                          {visibleColumns.calls && <TableHead className="border-r border-border">Call Logs</TableHead>}
+                          {visibleColumns.status && <TableHead className="border-r border-border">Status</TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredLeads.map((lead, index) => (
-                          <TableRow key={lead.id || index} className="hover:bg-muted/50">
+                          <TableRow key={lead.id || index} 
+                            className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
                             {visibleColumns.client && (
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2">
@@ -658,7 +755,7 @@ export default function CallCenterPage() {
                             )}
                             {visibleColumns.status && (
                               <TableCell>
-                                <Badge variant="outline">{lead.status || "Active"}</Badge>
+                                <Badge variant="outline" className="bg-[#DCFCE7] border-0 rounded-full text-[#166534] font-semibold">{lead.status || "Active"}</Badge>
                               </TableCell>
                             )}
                           </TableRow>
@@ -668,17 +765,14 @@ export default function CallCenterPage() {
                   </div>
 
                   {/* Pagination Controls */}
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {(currentPage - 1) * leadsPerPage + 1} to{" "}
-                      {Math.min(currentPage * leadsPerPage, totalLeads)} of {totalLeads} leads
-                    </div>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center justify-center p-4">
+                    <div className="flex items-center gap-4">
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={handlePreviousPage}
                         disabled={currentPage === 1 || isLoading}
+                        className="hover:bg-purple-200 gap-2"
                       >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Previous
@@ -687,13 +781,14 @@ export default function CallCenterPage() {
                         Page {currentPage} of {totalPages}
                       </div>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={handleNextPage}
                         disabled={!hasMoreLeads || isLoading}
+                        className="hover:bg-purple-200 gap-2"
                       >
                         {isLoading ? (
-                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          <Progress value={33} />
                         ) : (
                           <>
                             Next
@@ -707,31 +802,110 @@ export default function CallCenterPage() {
               )}
             </TabsContent>
 
-            <TabsContent value="members" className="mt-0">
+            <TabsContent value="members" className="mt-5">
               {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
+                <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+          {/* Animated logo/icon */}
+            <div className="w-16 h-16 flex items-center justify-center">
+            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <style>{`
+              @keyframes fly {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+              }
+              @keyframes wingFlap {
+                0%, 100% { transform: rotateZ(0deg); }
+                50% { transform: rotateZ(15deg); }
+              }
+              .bird-body {
+                animation: fly 2s ease-in-out infinite;
+              }
+              .bird-wing-left {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 35px 40px;
+              }
+              .bird-wing-right {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 65px 40px;
+              }
+                `}</style>
+              </defs>
+  
+              {/* Body */}
+              <g className="bird-body">
+                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+                {/* Head */}
+                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+                {/* Eye */}
+                <circle cx="53" cy="30" r="2" fill="white" />
+                {/* Beak */}
+                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+                {/* Tail */}
+                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+              </g>
+  
+              {/* Left Wing */}
+              <g className="bird-wing-left">
+                <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+  
+              {/* Right Wing */}
+              <g className="bird-wing-right">
+                <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+            </svg>
+              </div>
+  
+              {/* Main text */}
+          <div className="flex flex-col gap-3 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Preparing your data. This should only take a moment.
+            </p>
+          </div>
+  
+          {/* Progress bar container */}
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
+  
+          {/* Loading dots animation */}
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            />
+          </div>
+        </div>
+      </div>
               ) : filteredMembers.length === 0 ? (
                 <div className="text-center py-12 border-2 border-dashed rounded-lg">
                   <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                   <p className="text-muted-foreground">No team members found</p>
                 </div>
               ) : (
-                <div className="rounded-lg border">
+                <div className=" border">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Extension</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="border-r border-border">Name</TableHead>
+                        <TableHead className="border-r border-border">Email</TableHead>
+                        <TableHead className="border-r border-border">Phone</TableHead>
+                        <TableHead className="border-r border-border">Extension</TableHead>
+                        <TableHead className="border-r border-border">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredMembers.map((member) => (
-                        <TableRow key={member.id} className="hover:bg-muted/50">
+                        <TableRow key={member.id} className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
                           <TableCell className="font-medium">{member.name}</TableCell>
                           <TableCell>{member.email}</TableCell>
                           <TableCell>{member.phone}</TableCell>
