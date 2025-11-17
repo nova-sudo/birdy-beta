@@ -416,7 +416,7 @@ const MetricsHub = () => {
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <PieChart className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -428,7 +428,7 @@ const MetricsHub = () => {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Standard Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <BarChart3 className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -439,7 +439,7 @@ const MetricsHub = () => {
             </CardContent>
           </Card>
           <Card> 
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Webhook Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <Webhook className="h-4 w-4 text-muted-foreground text-purple-500" />
@@ -450,7 +450,7 @@ const MetricsHub = () => {
             </CardContent> */}
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Custom Formulas</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <Calculator className="h-4 w-4 text-muted-foreground text-purple-500" />

@@ -379,73 +379,23 @@ const Campaigns = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Marketing Hub</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Viewing data from {clientGroups.length} client groups
-            </p>
           </div>
-          <Button onClick={fetchAllData} variant="outline">
-            Refresh Data
-          </Button>
-        </div>
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+            <Input
+              type="search"
+              placeholder={`Search ${activeTab}...`}
+              className="w-64 md:w-[320px] pl-9 h-10 bg-white"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
 
-        {/* Metrics Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Total Spend", icon: DollarSign, value: `$${metrics.totalSpend.toFixed(2)}` },
-            { label: "Total Leads", icon: Target, value: metrics.totalLeads },
-            { label: "Avg CPL", icon: TrendingUp, value: `$${metrics.avgCPL.toFixed(2)}` },
-            { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
-          ].map((c, i) => (
-            <Card key={i}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{c.label}</CardTitle>
-                <c.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{c.value}</div>
-                <p className="text-xs text-muted-foreground">Across all {activeTab}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start bg-muted/100 p-1">
-            <TabsTrigger value="campaigns" className="gap-2"><LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
-            <TabsTrigger value="adsets" className="gap-2"><Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
-            <TabsTrigger value="ads" className="gap-2"><FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2"><Users className="h-4 w-4" />Leads</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-6">
-            {/* Filters */}
-            <div className="flex flex-col gap-4 p-4 rounded-lg border bg-card mb-6">
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                <div className="flex items-center gap-3 flex-1">
-                  <div className="relative w-full md:w-auto max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder={`Search ${activeTab}...`}
-                      className="w-full md:w-[320px] pl-9"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                  <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2">
+            <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2 h-10 bg-white font-semibold">
                     <SlidersHorizontal className="h-4 w-4" />Add Filter
                   </Button>
-                  {(filterConditions.length > 0 || searchTerm) && (
-                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
-                      <X className="h-4 w-4" />Clear
-                    </Button>
-                  )}
-                </div>
 
-                <DropdownMenu>
+                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold">
                       <SlidersHorizontal className="h-4 w-4" />Columns
                     </Button>
                   </DropdownMenuTrigger>
@@ -463,6 +413,89 @@ const Campaigns = () => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+          </div>
+            
+        </div>
+
+        {/* Metrics Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Total Spend", icon: DollarSign, value: `$${metrics.totalSpend.toFixed(2)}` },
+            { label: "Total Leads", icon: Target, value: metrics.totalLeads },
+            { label: "Avg CPL", icon: TrendingUp, value: `$${metrics.avgCPL.toFixed(2)}` },
+            { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
+          ].map((c, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500" />
+                </div>
+                
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{c.value}</div>
+                <p className="text-xs text-[#71658B] text-muted-foreground">Across all {activeTab}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger value="campaigns" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">
+                    <LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
+            <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">
+                    <Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
+            <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">
+                    <FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
+            <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">
+                    <Users className="h-4 w-4" />Leads</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value={activeTab} className="mt-6">
+            {/* Filters */}
+            <div className="flex flex-col gap-4 p-4 bg-card mb-6">
+              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+                <div className="flex items-center gap-3 flex-1">
+                  {(filterConditions.length > 0 || searchTerm) && (
+                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
+                      <X className="h-4 w-4" />Clear
+                    </Button>
+                  )}
+                </div>                
               </div>
 
               {/* Active Filters */}
@@ -558,10 +591,10 @@ const Campaigns = () => {
               <div className="rounded-lg border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 border-b">
+                    <thead className="bg-muted/50 border-b border-r">
                       <tr>
                         {getCurrentVisibleColumns().map((col) => (
-                          <th key={col} className="px-4 py-3 text-left text-sm font-medium text-foreground">
+                          <th key={col} className="border-r px-4 py-3 text-left text-sm font-medium text-foreground">
                             {customMetrics.find((m) => m.id === col)?.name ||
                               col
                                 .split("_")
@@ -572,16 +605,19 @@ const Campaigns = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {getFilteredDataForTab().map((item, idx) => (
-                        <tr key={item.id || idx} className="hover:bg-muted/50 transition-colors">
-                          {getCurrentVisibleColumns().map((col) => (
-                            <td key={`${item.id}-${col}`} className="px-4 py-3 text-sm">
-                              {formatCellValue(item[col], col)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
+                    {getFilteredDataForTab().map((item, idx) => (
+                      <tr
+                        key={item.id || idx}
+                        className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors"
+                      >
+                        {getCurrentVisibleColumns().map((col) => (
+                          <td key={`${item.id}-${col}`} className="px-4 py-3 text-sm">
+                            {formatCellValue(item[col], col)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
                   </table>
                 </div>
               </div>

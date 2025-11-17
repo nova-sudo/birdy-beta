@@ -1,5 +1,5 @@
 "use client"
-
+import { Progress } from "@/components/ui/progress"
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -37,12 +37,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import ghl from "../../../../public/ghl_icon.png";
+import metaa from "../../../../public/meta-icon-DH8jUhnM.png";
 
 export default function ClientDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const clientId = decodeURIComponent(params?.id || "")
-
+  const [progress, setProgress] = useState(10)
   const [loading, setLoading] = useState(true)
   const [clientData, setClientData] = useState(null)
   const [notes, setNotes] = useState("")
@@ -104,12 +106,91 @@ export default function ClientDetailsPage() {
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      return (
+      <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+          {/* Animated logo/icon */}
+            <div className="w-16 h-16 flex items-center justify-center">
+            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <style>{`
+              @keyframes fly {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+              }
+              @keyframes wingFlap {
+                0%, 100% { transform: rotateZ(0deg); }
+                50% { transform: rotateZ(15deg); }
+              }
+              .bird-body {
+                animation: fly 2s ease-in-out infinite;
+              }
+              .bird-wing-left {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 35px 40px;
+              }
+              .bird-wing-right {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 65px 40px;
+              }
+                `}</style>
+              </defs>
+  
+              {/* Body */}
+              <g className="bird-body">
+                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+                {/* Head */}
+                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+                {/* Eye */}
+                <circle cx="53" cy="30" r="2" fill="white" />
+                {/* Beak */}
+                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+                {/* Tail */}
+                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+              </g>
+  
+              {/* Left Wing */}
+              <g className="bird-wing-left">
+                <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+  
+              {/* Right Wing */}
+              <g className="bird-wing-right">
+                <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+            </svg>
+              </div>
+  
+              {/* Main text */}
+          <div className="flex flex-col gap-3 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Preparing your data. This should only take a moment.
+            </p>
+          </div>
+  
+          {/* Progress bar container */}
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
+  
+          {/* Loading dots animation */}
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            />
+          </div>
+        </div>
       </div>
-    )
-  }
+      )
+    }
 
   if (!clientData) {
     return (
@@ -207,9 +288,9 @@ export default function ClientDetailsPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0 mt-6">
         {/* Search Bar */}
-        <Card className="mb-4 flex-shrink-0 bg-accent/50">
-          <CardContent className="p-6 py-4 px-6">
-            <div className="w-full">
+        {/* <Card className="mb-4 flex-shrink-0 bg-purple-100 h-25">
+          <CardContent>
+            <div className="w-full ">
               <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-3">
                 <form className="relative w-full md:w-1/3 md:min-w-[360px]">
                   <div className="relative w-full">
@@ -230,30 +311,70 @@ export default function ClientDetailsPage() {
                   </div>
                 </form>
                 <div className="flex flex-wrap gap-2 items-center md:justify-end md:flex-1">
-                  <span className="text-muted-foreground text-xs whitespace-nowrap">Try asking:</span>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
+                  <span className="text-[#71658B] text-muted-foreground text-xs whitespace-nowrap">Try asking:</span>
+                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
                     Why are bookings down this week?
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
+                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
                     Which tag gave the best cost per booking?
                   </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
+                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
                     Show ROAS breakdown by campaign
                   </Button>
                 </div>
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
 
         {/* Tabs */}
         <Tabs defaultValue="overview"  className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <TabsList className="mb-4 gap-1 flex-shrink-0 bg-muted/60 border border-border/50 shadow-sm w-full">
-            <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-            <TabsTrigger value="insights" className="flex-1">Insights</TabsTrigger>
-            <TabsTrigger value="marketing" className="flex-1">Marketing</TabsTrigger>
+          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger value="overview" className="flex-1
+            text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700
+            ">Overview</TabsTrigger>
+            <TabsTrigger value="insights" className="flex-1
+            text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700
+            ">Insights</TabsTrigger>
+            <TabsTrigger value="marketing" className="flex-1
+            text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700
+            ">Marketing</TabsTrigger>
             {/* <TabsTrigger disabled value="leads" className="flex-1 disabled:bg-black/10 disabled:text-white ">Leads</TabsTrigger> */}
-            <TabsTrigger value="callcenter" className="flex-1">Call Center</TabsTrigger>
+            <TabsTrigger value="callcenter" className="flex-1
+            text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700
+            ">Call Center</TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW TAB */}
@@ -261,10 +382,10 @@ export default function ClientDetailsPage() {
             {/* Metrics Grid */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">ROAS</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">ROAS</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.roas.toFixed(2)}x</h3>
                       <div className="flex items-center mt-1">
                         <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
@@ -273,18 +394,18 @@ export default function ClientDetailsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <TrendingUp className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-primary text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Cost Per Lead</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Cost Per Lead</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.costPerLead.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
                         <span className="text-green-500 text-[0.75rem] leading-4">+5%</span>
@@ -293,18 +414,18 @@ export default function ClientDetailsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <Users className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Users className="h-4 w-4 text-primary text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Close Rate</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Close Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.closeRate.toFixed(2)}%</h3>
                       <div className="flex items-center mt-1">
                         <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
@@ -313,18 +434,18 @@ export default function ClientDetailsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <ChartPie className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <ChartPie className="h-4 w-4 text-primary text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Customer Acq. Cost</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Customer Acq. Cost</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.cac.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
                         <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
@@ -333,8 +454,8 @@ export default function ClientDetailsPage() {
                         </span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-primary text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
@@ -349,13 +470,13 @@ export default function ClientDetailsPage() {
               <CardContent>
                 <div className="space-y-4">
                   <Textarea
-                    className="min-h-[200px] resize-none"
+                    className="min-h-[200px] resize-none bg-[#F9F8FC]"
                     placeholder="Add notes about this client..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
-                  <Button onClick={handleSaveNotes} className="w-full">
-                    <Save className="mr-2 h-4 w-4" />
+                  <Button onClick={handleSaveNotes} className="w-full bg-[#713CDD] text-white font-semibold">
+                    <Save className="mr-2 h-4 w-4 text-white font-semibold" />
                     Save Notes
                   </Button>
                 </div>
@@ -368,10 +489,10 @@ export default function ClientDetailsPage() {
             {/* Key Insights Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Best Performing Tag</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Best Performing Tag</p>
                       <h3 className="text-xl font-bold mt-2">{insights.tag_with_best_roas?.tag_name || 'N/A'}</h3>
                       <p className="text-sm mt-1">ROAS: {insights.tag_with_best_roas?.roas?.toFixed(2) || 0}x</p>
                       <div className="flex items-center mt-1">
@@ -379,16 +500,19 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.tag_with_best_roas?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Best Booking Offer</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Best Booking Offer</p>
                       <h3 className="text-xl font-bold mt-2">{insights.offer_with_best_booking_rate?.offer_name || 'N/A'}</h3>
                       <p className="text-sm mt-1">Rate: {((insights.offer_with_best_booking_rate?.booking_rate || 0) * 100).toFixed(1)}%</p>
                       <div className="flex items-center mt-1">
@@ -396,16 +520,19 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.offer_with_best_booking_rate?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Booking Delay</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Avg Booking Delay</p>
                       <h3 className="text-xl font-bold mt-2">{insights.avg_booking_delay_days?.days?.toFixed(1) || 0} days</h3>
                       <p className="text-sm mt-1">Time to convert</p>
                       <div className="flex items-center mt-1">
@@ -413,16 +540,19 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.avg_booking_delay_days?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Calendar className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Bookings This Month</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Bookings This Month</p>
                       <h3 className="text-xl font-bold mt-2">{insights.total_bookings_this_month?.count || 0}</h3>
                       <p className="text-sm mt-1">Total conversions</p>
                       <div className="flex items-center mt-1">
@@ -430,7 +560,10 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.total_bookings_this_month?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
@@ -533,37 +666,46 @@ export default function ClientDetailsPage() {
             {/* Summary Stats */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Ad Spend</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Ad Spend</p>
                       <h3 className="text-2xl font-bold mt-1">${metaSummary.total_spend?.toFixed(2) || 0}</h3>
                     </div>
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Leads</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.total_leads || 0}</h3>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Users className="h-4 w-4 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Conversion Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.conversion_rate?.toFixed(2) || 0}%</h3>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Target className="h-4 w-4 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
@@ -571,64 +713,75 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* MARKETING TAB */}
-          <TabsContent value="marketing" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="marketing" className=" mt-3 pt-0 overflow-y-auto space-y-4">
             {/* Marketing Summary */}
             <div className="grid gap-4 md:grid-cols-5">
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                <CardContent>
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Total Spend</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Total Spend</p>
                       <p className="text-lg font-bold">${metaSummary.total_spend?.toFixed(2) || 0}</p>
                     </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Eye className="h-8 w-8 text-primary/20" />
+                <CardContent>
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Impressions</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Impressions</p>
                       <p className="text-lg font-bold">{(metaSummary.total_impressions || 0).toLocaleString()}</p>
                     </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Eye className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <MousePointer className="h-8 w-8 text-primary/20" />
+                <CardContent>
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Clicks</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Clicks</p>
                       <p className="text-lg font-bold">{(metaSummary.total_clicks || 0).toLocaleString()}</p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-8 w-8 text-primary/20" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Leads</p>
-                      <p className="text-lg font-bold">{metaSummary.total_leads || 0}</p>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <MousePointer className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Target className="h-8 w-8 text-primary/20" />
+                <CardContent>
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">CPL</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Leads</p>
+                      <p className="text-lg font-bold">{metaSummary.total_leads || 0}</p>
+                    </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">CPL</p>
                       <p className="text-lg font-bold">${metaSummary.cost_per_lead?.toFixed(2) || 0}</p>
+                    </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
@@ -637,29 +790,65 @@ export default function ClientDetailsPage() {
 
             {/* Marketing Tabs */}
             <Tabs value={activeMarketingTab} onValueChange={setActiveMarketingTab}>
-              <TabsList className="w-full justify-start grid grid-cols-4 bg-muted/50">
-                <TabsTrigger value="campaigns">Campaigns ({metaSummary.total_campaigns || 0})</TabsTrigger>
-                <TabsTrigger value="adsets">Ad Sets ({metaSummary.total_adsets || 0})</TabsTrigger>
-                <TabsTrigger value="ads">Ads ({metaSummary.total_ads || 0})</TabsTrigger>
-                <TabsTrigger value="leads">Meta Leads ({metaSummary.total_leads || 0})</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="campaigns" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Campaigns ({metaSummary.total_campaigns || 0})</TabsTrigger>
+                <TabsTrigger value="adsets" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Ad Sets ({metaSummary.total_adsets || 0})</TabsTrigger>
+                <TabsTrigger value="ads" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Ads ({metaSummary.total_ads || 0})</TabsTrigger>
+                <TabsTrigger value="leads" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Meta Leads ({metaSummary.total_leads || 0})</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="campaigns" className="mt-4">
-                <Card>
+              <TabsContent value="campaigns" className="mt-4 ">
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">Leads</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
-                            <TableHead className="text-right">CPC</TableHead>
-                            <TableHead className="text-right">CPM</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className="bg-muted/50 border-b border-r"><span>Campaign</span></TableHead>
+                            <TableHead className="bg-muted/50 border-b border-r">Status</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Spend</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Impressions</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Clicks</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Leads</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CTR</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CPC</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CPM</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -671,20 +860,23 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.campaigns || []).map((campaign) => (
-                              <TableRow key={campaign.id}>
+                              <TableRow 
+                                key={campaign.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{campaign.name}</TableCell>
                                 <TableCell>
                                   <Badge variant={campaign.status === 'Active' ? 'default' : 'secondary'}>
                                     {campaign.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${campaign.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{campaign.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{campaign.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{campaign.leads || 0}</TableCell>
-                                <TableCell className="text-right">{campaign.ctr?.toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">${campaign.cpc?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">${campaign.cpm?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${campaign.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{campaign.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{campaign.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{campaign.leads || 0}</TableCell>
+                                <TableCell className="text-left">{campaign.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${campaign.cpc?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${campaign.cpm?.toFixed(2)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -696,21 +888,21 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="adsets" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0"> 
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Ad Set</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
-                            <TableHead className="text-right">CPC</TableHead>
-                            <TableHead className="text-right">CPM</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className="border-r border-border">Ad Set</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Spend</TableHead>
+                            <TableHead className="text-left border-r border-border">Impressions</TableHead>
+                            <TableHead className="text-left border-r border-border">Clicks</TableHead>
+                            <TableHead className="text-left border-r border-border">CTR</TableHead>
+                            <TableHead className="text-left border-r border-border">CPC</TableHead>
+                            <TableHead className="text-left border-r border-border">CPM</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -722,7 +914,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.adsets || []).map((adset) => (
-                              <TableRow key={adset.id}>
+                              <TableRow 
+                                key={adset.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{adset.name}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground">{adset.campaign_name}</TableCell>
                                 <TableCell>
@@ -730,12 +925,12 @@ export default function ClientDetailsPage() {
                                     {adset.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${adset.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{adset.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{adset.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{adset.ctr?.toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">${adset.cpc?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">${adset.cpm?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${adset.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{adset.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{adset.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{adset.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${adset.cpc?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${adset.cpm?.toFixed(2)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -747,21 +942,21 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="ads" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Ad</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Creative</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">Results</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
+                            <TableHead className=" border-r border-border">Ad</TableHead>
+                            <TableHead className=" border-r border-border">Campaign</TableHead>
+                            <TableHead className=" border-r border-border">Status</TableHead>
+                            <TableHead className=" border-r border-border">Creative</TableHead>
+                            <TableHead className="text-left border-r border-border">Spend</TableHead>
+                            <TableHead className="text-left border-r border-border">Impressions</TableHead>
+                            <TableHead className="text-left border-r border-border">Clicks</TableHead>
+                            <TableHead className="text-left border-r border-border">Results</TableHead>
+                            <TableHead className="text-left border-r border-border">CTR</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -773,7 +968,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.ads || []).map((ad) => (
-                              <TableRow key={ad.id}>
+                              <TableRow 
+                                key={ad.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium max-w-[200px] truncate">{ad.name}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{ad.campaign_name}</TableCell>
                                 <TableCell>
@@ -792,11 +990,11 @@ export default function ClientDetailsPage() {
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right">${ad.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{ad.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{ad.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{ad.results || 0}</TableCell>
-                                <TableCell className="text-right">{ad.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${ad.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{ad.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{ad.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{ad.results || 0}</TableCell>
+                                <TableCell className="text-left">{ad.ctr?.toFixed(2)}%</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -808,19 +1006,19 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="leads" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Ad Name</TableHead>
-                            <TableHead>Platform</TableHead>
-                            <TableHead>Created</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className=" border-r border-border">Name</TableHead>
+                            <TableHead className=" border-r border-border">Email</TableHead>
+                            <TableHead className=" border-r border-border">Phone</TableHead>
+                            <TableHead className=" border-r border-border">Campaign</TableHead>
+                            <TableHead className=" border-r border-border">Ad Name</TableHead>
+                            <TableHead className=" border-r border-border">Platform</TableHead>
+                            <TableHead className=" border-r border-border">Created</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -832,7 +1030,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.leads || []).map((lead) => (
-                              <TableRow key={lead.id}>
+                              <TableRow 
+                                key={lead.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{lead.full_name || 'N/A'}</TableCell>
                                 <TableCell>{lead.email || 'N/A'}</TableCell>
                                 <TableCell>{lead.phone_number || 'N/A'}</TableCell>
@@ -1058,49 +1259,58 @@ export default function ClientDetailsPage() {
             {/* Call Center Summary */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Calls</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.total_calls || 0}</h3>
                     </div>
-                    <Phone className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-purple-500" />
+                    </div>
+                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Leads with Calls</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Leads with Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.leads_with_calls || 0}</h3>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Calls/Lead</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Avg Calls/Lead</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.avg_calls_per_lead?.toFixed(2) || 0}</h3>
                     </div>
-                    <ChartPie className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <ChartPie className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent>
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">HP Leads</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">HP Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{hpData.total_leads || 0}</h3>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
+                    </div>               
                   </div>
                 </CardContent>
               </Card>
@@ -1155,25 +1365,43 @@ export default function ClientDetailsPage() {
 
             {/* Call Center Tabs */}
             <Tabs value={activeCallCenterTab} onValueChange={setActiveCallCenterTab}>
-              <TabsList className="w-full justify-start grid grid-cols-2 bg-muted/50">
-                <TabsTrigger value="overview">Call Overview</TabsTrigger>
-                <TabsTrigger value="logs">Detailed Call Logs</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="overview"className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Call Overview</TabsTrigger>
+                <TabsTrigger value="logs" className="gap-2
+                  text-[#71658B] font-semibold 
+                  hover:bg-[#FBFAFE]
+                  data-[state=active]:bg-white
+                  data-[state=active]:text-foreground
+                  data-[state=active]:shadow-sm
+                  data-[state=active]:border-r-0
+                  data-[state=active]:rounded-md
+                  data-[state=active]:border-b-2
+                  data-[state=active]:border-b-purple-700">Detailed Call Logs</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Lead Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Total Calls</TableHead>
-                            <TableHead>Last Contact</TableHead>
-                            <TableHead>Business</TableHead>
+                            <TableHead className="text-left border-r border-border">Lead Name</TableHead>
+                            <TableHead className="text-left border-r border-border">Email</TableHead>
+                            <TableHead className="text-left border-r border-border">Phone</TableHead>
+                            <TableHead className="text-left border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Total Calls</TableHead>
+                            <TableHead className="text-left border-r border-border">Last Contact</TableHead>
+                            <TableHead className="text-left border-r border-border">Business</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1190,7 +1418,7 @@ export default function ClientDetailsPage() {
                               .filter(lead => lead.callCount > 0)
                               .sort((a, b) => (b.callCount || 0) - (a.callCount || 0))
                               .map((lead) => (
-                                <TableRow key={lead.id}>
+                                <TableRow key={lead.id} className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors">
                                   <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
                                   <TableCell>{lead.email || 'N/A'}</TableCell>
                                   <TableCell>{lead.phone || 'N/A'}</TableCell>
@@ -1229,19 +1457,19 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="logs" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Lead Name</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Call Date</TableHead>
-                            <TableHead>Duration</TableHead>
-                            <TableHead>Direction</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Recording</TableHead>
+                            <TableHead className="text-left border-r border-border">Lead Name</TableHead>
+                            <TableHead className="text-left border-r border-border">Contact</TableHead>
+                            <TableHead className="text-left border-r border-border">Call Date</TableHead>
+                            <TableHead className="text-left border-r border-border">Duration</TableHead>
+                            <TableHead className="text-left border-r border-border">Direction</TableHead>
+                            <TableHead className="text-left border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Recording</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1274,7 +1502,7 @@ export default function ClientDetailsPage() {
                               .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
                               .slice(0, 100)
                               .map((log, idx) => (
-                                <TableRow key={idx}>
+                                <TableRow key={idx} className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors">
                                   <TableCell className="font-medium">{log.leadName || 'N/A'}</TableCell>
                                   <TableCell>
                                     <div className="text-xs">
