@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw } from "lucide-react"
+import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target } from "lucide-react"
 import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
@@ -451,6 +451,34 @@ export default function ClientsPage() {
       String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()),
   )
 
+  // Calculate statistics from clientGroups
+  const calculateStats = () => {
+    const activeClients = clientGroups.length
+    
+    const totalSpend = clientGroups.reduce((sum, group) => {
+      const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
+      return sum + spend
+    }, 0)
+    
+    const totalLeads = clientGroups.reduce((sum, group) => {
+      const metaLeads = parseInt(group.facebook?.metrics?.total_leads) || 0
+      const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
+      const hpLeads = parseInt(group.hotprospector?.metrics?.total_leads) || 0
+      return sum + metaLeads + ghlContacts + hpLeads
+    }, 0)
+    
+    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
+
+    return {
+      activeClients,
+      totalSpend,
+      totalLeads,
+      averageCPL
+    }
+  }
+
+  const stats = calculateStats()
+
   if (loading) {
       return (
       <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
@@ -539,7 +567,7 @@ export default function ClientsPage() {
     }
 
   return (
-    <div className="min-h-dvh w-full mx-auto bg-background gap-6">
+    <div className="min-h-dvh w-full mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className="w-full h-auto mx-auto">
           <div className="flex items-center justify-between">
@@ -856,7 +884,7 @@ export default function ClientsPage() {
                               <div
                                 key={group.id}
                                 onClick={() => setSelectedHotProspectorGroup(group)}
-                                className={`relative p-4 rounded-xl  cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
                                   selectedHotProspectorGroup?.id === group.id
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-border hover:border-muted-foreground bg-card"
@@ -985,8 +1013,100 @@ export default function ClientsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-            <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} columns={columns} searchQuery={searchQuery}
-             columnVisibility={ columnVisibility} customMetrics={customMetrics} setCustomMetrics={setCustomMetrics}/>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Total Active Clients */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Active Clients</p>
+                  <h3 className="text-2xl font-bold mt-1">{stats.activeClients}</h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Ad Spend */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Ad Spend</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    ${stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Leads */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Leads</p>
+                  <h3 className="text-2xl font-bold mt-1">{stats.totalLeads.toLocaleString()}</h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Average CPL */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Average CPL</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    ${stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-destructive text-[0.75rem] leading-4">-3%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Client Groups Table */}
+        <ClientGroupsTable 
+          data={clientGroups} 
+          onRowClick={handleClientGroupClick} 
+          columns={columns} 
+          searchQuery={searchQuery}
+          columnVisibility={columnVisibility} 
+          customMetrics={customMetrics} 
+          setCustomMetrics={setCustomMetrics}
+        />
 
       </div>
     </div>

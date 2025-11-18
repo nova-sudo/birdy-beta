@@ -52,7 +52,7 @@ export function LoadingScreen({
       <div className="flex flex-col items-center space-y-6 max-w-md">
         {/* Animated Icon Container */}
         <div className={`relative w-20 h-20 rounded-full bg-gradient-to-br ${config.color} p-0.5 shadow-lg`}>
-          <div className="w-full h-full rounded-full bg-background flex items-center justify-center">
+          <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
             <div className="relative">
               {/* Rotating ring */}
               <div

@@ -737,10 +737,10 @@ function SettingsPageContent() {
               <CardContent>
                 <div class="space-y-2">
                   <h1 className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Name</h1>
-                  <input type="text" value={user.name} name="" id="" className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50" disabled/>
+                  <input type="text" value={user.name} name="" id="" className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50" disabled/>
                   <div class="space-y-2 mt-6">
                     <h1 className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</h1>
-                  <input type="text" value={user.email} name="" id="" className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input bg-background 
+                  <input type="text" value={user.email} name="" id="" className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input bg-white 
                   px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground 
                   focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50" disabled/>
                   </div>
