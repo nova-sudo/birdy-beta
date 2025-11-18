@@ -1,8 +1,10 @@
 "use client";
-
+import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MdOutlineDisabledVisible } from "react-icons/md";
+
 import {
   loadCustomMetrics,
   evaluateFormula,
@@ -97,6 +99,22 @@ const Campaigns = () => {
   setAllAdSets([]);
   setAllAds([]);
   setLeads([]);
+
+  const clientGroupsCache = getFromCache('clientGroups')  
+  const cachedData = getFromCache('marketing-data') 
+  if (clientGroupsCache) {
+    setClientGroups(cachedData.clientGroups || []) 
+    if (cachedData) {
+      setCampaigns(cachedData.campaigns || [])
+      setAllAdSets(cachedData.adSets || [])
+      setAllAds(cachedData.ads || [])
+      setLeads(cachedData.leads || [])
+      setIsLoading(false)
+      return
+    }
+  }
+
+
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s global timeout
@@ -262,6 +280,14 @@ const Campaigns = () => {
     const allAdSets = results.flatMap(r => r.adsets);
     const allAds = results.flatMap(r => r.ads);
     const allLeads = results.flatMap(r => r.leads);
+    
+    saveToCache('marketing-data', {
+      campaigns: allCampaigns,
+      adSets: allAdSets,
+      ads: allAds,
+      leads: allLeads,
+      clientGroups: clientGroupsData
+    })
 
     setCampaigns(allCampaigns);
     setAllAdSets(allAdSets);

@@ -1,7 +1,9 @@
 "use client"
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { MdOutlineDisabledVisible } from "react-icons/md";
 import {
   Loader2,
   SlidersHorizontal,
@@ -103,7 +105,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "pipelineStage":
         if (!contact.pipelineStage) {
-          return <span className="text-muted-foreground text-sm">-</span> //icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span> 
         }
         return (
           <span className="text-sm font-medium text-foreground">{contact.pipelineStage}</span>
@@ -111,11 +113,11 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "leadValue":
         if (!contact.leadValue) {
-          return <span className="text-muted-foreground text-sm">-</span>//icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-            <DollarSign className="w-3 h-3" /> //icon
+            <DollarSign className="w-3 h-3" /> 
             {contact.leadValue}
           </span>
         )
@@ -180,7 +182,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "contactType":
         const type = contact.contactType || contact.type
         if (!type) {
-          return <span className="">-</span>//icon
+          return <span className=""><MdOutlineDisabledVisible /></span>
         }
         return (
           <Badge variant="secondary" className="capitalize">
@@ -191,7 +193,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "address1":
         const address = contact.address1 || contact.address
         if (!address) {
-          return <span className="text-muted-foreground text-sm">-</span>//icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <span className="text-sm text-foreground max-w-xs truncate block" title={address}>
@@ -201,7 +203,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "email":
         if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return (
           <a
@@ -215,7 +217,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "phone":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return (
           <a
@@ -229,7 +231,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "contactName":
         if (!contact[col.id] || contact[col.id] === "Unknown") {
-          return <span className="text-muted-foreground text-sm">-</span>//icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <span className="text-sm text-foreground text-left block">
@@ -239,7 +241,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "website":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>//icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         const websiteUrl = contact[col.id].startsWith("http") ? contact[col.id] : `https://${contact[col.id]}`
         return (
@@ -257,7 +259,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "source":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>//icon
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <Badge variant="outline" className="capitalize">
@@ -271,14 +273,14 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "platform":
       case "groupName":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return <span className="text-sm font-medium text-foreground">{contact[col.id]}</span>
 
       default:
         return (
           <span className="text-sm text-foreground">
-            {contact[col.id] || <span className="text-muted-foreground">-</span>}//icon
+            {contact[col.id] || <span className="text-muted-foreground"><MdOutlineDisabledVisible /></span>}
           </span>
         )
     }
@@ -484,6 +486,14 @@ export default function ContactPage() {
   const fetchContacts = async () => {
     setLoading(true)
     setError(null)
+    const cachedData = getFromCache('contacts-data')
+    if (cachedData) {
+      setContacts(cachedData.contacts || [])
+      setWebhookData(cachedData.webhooks || [])
+      setMetaData(cachedData.meta || null)
+      setLoading(false)
+      return
+    }
     try {
       const [contactsResponse, webhooksResponse] = await Promise.all([
         fetch(`https://birdy-backend.vercel.app/api/contacts/all`, {
@@ -548,9 +558,15 @@ export default function ContactPage() {
         
         return contact
       })
-
+      
+      saveToCache('contacts-data', {
+        contacts: allContacts,
+        webhooks: webhooks,
+        meta: contactsData.meta
+      })
       setContacts(allContacts)
       setMetaData(contactsData.meta || null)
+
     } catch (error) {
       console.error("Error fetching contacts:", error)
       setError(error.message)
