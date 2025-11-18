@@ -103,7 +103,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "pipelineStage":
         if (!contact.pipelineStage) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span> //icon
         }
         return (
           <span className="text-sm font-medium text-foreground">{contact.pipelineStage}</span>
@@ -111,11 +111,11 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "leadValue":
         if (!contact.leadValue) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span>//icon
         }
         return (
           <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-            <DollarSign className="w-3 h-3" />
+            <DollarSign className="w-3 h-3" /> //icon
             {contact.leadValue}
           </span>
         )
@@ -180,7 +180,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "contactType":
         const type = contact.contactType || contact.type
         if (!type) {
-          return <span className="">-</span>
+          return <span className="">-</span>//icon
         }
         return (
           <Badge variant="secondary" className="capitalize">
@@ -191,7 +191,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "address1":
         const address = contact.address1 || contact.address
         if (!address) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span>//icon
         }
         return (
           <span className="text-sm text-foreground max-w-xs truncate block" title={address}>
@@ -201,7 +201,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "email":
         if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
         }
         return (
           <a
@@ -215,7 +215,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "phone":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
         }
         return (
           <a
@@ -229,7 +229,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "contactName":
         if (!contact[col.id] || contact[col.id] === "Unknown") {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span>//icon
         }
         return (
           <span className="text-sm text-foreground text-left block">
@@ -239,7 +239,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "website":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span>//icon
         }
         const websiteUrl = contact[col.id].startsWith("http") ? contact[col.id] : `https://${contact[col.id]}`
         return (
@@ -257,7 +257,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "source":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground text-sm">-</span>//icon
         }
         return (
           <Badge variant="outline" className="capitalize">
@@ -271,14 +271,14 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "platform":
       case "groupName":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm">-</span>//icon
         }
         return <span className="text-sm font-medium text-foreground">{contact[col.id]}</span>
 
       default:
         return (
           <span className="text-sm text-foreground">
-            {contact[col.id] || <span className="text-muted-foreground">-</span>}
+            {contact[col.id] || <span className="text-muted-foreground">-</span>}//icon
           </span>
         )
     }

@@ -88,179 +88,205 @@ const Campaigns = () => {
     return base;
   };
 
-  // Fetch all client groups with their Meta ad accounts
-  const fetchAllData = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      // Fetch client groups with Meta data
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-        credentials: "include",
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      
-      setClientGroups(data.client_groups || []);
+ const fetchAllData = async () => {
+  if (isLoading) return; // Prevent double-fetch
 
-      const allCampaigns = [];
-      const allAdSetsData = [];
-      const allAdsData = [];
-      const allLeadsData = [];
+  setIsLoading(true);
+  setError(null);
+  setCampaigns([]);
+  setAllAdSets([]);
+  setAllAds([]);
+  setLeads([]);
 
-      // Process each client group
-      for (const group of data.client_groups || []) {
-        const clientGroupName = group.name;
-        const metaData = group.facebook || {};
-        const adAccountId = metaData.ad_account_id;
-        const adAccountName = metaData.name || "Unknown";
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s global timeout
 
-        if (!adAccountId) continue;
+  try {
+    // Step 1: Fetch client groups (includes Meta ad account IDs)
+    const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+      credentials: "include",
+      signal: controller.signal,
+    });
 
-        // Fetch detailed campaign data for this ad account
-        const accountResponse = await fetch(
-          `https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/data`,
-          { credentials: "include" }
-        );
-        
-        if (!accountResponse.ok) {
-          console.error(`Failed to fetch data for ad account ${adAccountId}`);
-          continue;
+    if (!groupsResponse.ok) throw new Error(`Failed to load client groups: ${groupsResponse.status}`);
+
+    const { client_groups: clientGroupsData } = await groupsResponse.json();
+
+    if (!clientGroupsData || clientGroupsData.length === 0) {
+      setClientGroups([]);
+      return;
+    }
+
+    setClientGroups(clientGroupsData);
+
+    // Step 2: Prepare parallel fetch tasks
+    const fetchTasks = clientGroupsData.map(async (group) => {
+      const metaData = group.facebook || {};
+      const adAccountId = metaData.ad_account_id;
+      const clientGroupName = group.name;
+      const adAccountName = metaData.name || "Unknown";
+
+      if (!adAccountId) {
+        return { group, campaigns: [], adsets: [], ads: [], leads: [] };
+      }
+
+      try {
+        // Parallel: fetch account insights + leads at the same time
+        const [accountRes, leadsRes] = await Promise.all([
+          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/data`, {
+            credentials: "include",
+            signal: controller.signal,
+          }).catch((err) => ({ ok: false, error: err })),
+
+          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/leads`, {
+            credentials: "include",
+            signal: controller.signal,
+          }).catch((err) => ({ ok: false, error: err })),
+        ]);
+
+        const accountData = accountRes.ok ? await accountRes.json() : null;
+        const leadsData = leadsRes.ok ? await leadsRes.json() : { data: [] };
+
+        if (!accountData?.data?.data) {
+          console.warn(`No campaign data for account ${adAccountId}`);
+          return { group, campaigns: [], adsets: [], ads: [], leads: leadsData.data || [] };
         }
 
-        const accountData = await accountResponse.json();
+        const campaigns = [];
+        const adsets = [];
+        const ads = [];
+        const accountLeads = leadsData.data || [];
 
-        // Process campaigns
-        for (const campaign of accountData.data?.data || []) {
+        // Process campaigns, adsets, ads
+        for (const campaign of accountData.data.data) {
           const insights = campaign.insights?.data?.[0] || {};
-          const leadAction = insights.actions?.find((a) => a.action_type === "onsite_conversion.lead_grouped") || {};
-          const costPerResult = insights.cost_per_result?.find(
-            (r) => r.indicator === "actions:onsite_conversion.lead_grouped"
-          ) || {};
 
-          allCampaigns.push(
+          // Campaign-level
+          campaigns.push(
             enhanceWithCustomMetrics({
-              id: campaign.id || "unknown",
+              id: campaign.id,
               accountId: adAccountId,
-              name: campaign.name || "Unknown",
+              name: campaign.name || "Unknown Campaign",
               clientGroup: clientGroupName,
               adAccount: adAccountName,
-              businessName: insights.account_name || adAccountName,
-              spend: Number.parseFloat(insights.spend || "0"),
-              leads: Number.parseInt(leadAction.value || "0"),
-              cpl: Number.parseFloat(costPerResult.values?.[0]?.value || "0"),
-              impressions: Number.parseInt(insights.impressions || "0"),
-              clicks: Number.parseInt(insights.clicks || "0"),
-              cpc: Number.parseFloat(insights.cpc || "0"),
-              reach: Number.parseInt(insights.reach || "0"),
-              frequency: Number.parseFloat(insights.frequency || "0"),
-              cpm: Number.parseFloat(insights.cpm || "0"),
-              ctr: Number.parseFloat(insights.ctr || "0"),
+              spend: parseFloat(insights.spend || "0"),
+              leads: parseInt(insights.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped")?.value || "0"),
+              cpl: parseFloat(insights.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped")?.values?.[0]?.value || "0"),
+              impressions: parseInt(insights.impressions || "0"),
+              clicks: parseInt(insights.clicks || "0"),
+              cpc: parseFloat(insights.cpc || "0"),
+              reach: parseInt(insights.reach || "0"),
+              frequency: parseFloat(insights.frequency || "0"),
+              cpm: parseFloat(insights.cpm || "0"),
+              ctr: parseFloat(insights.ctr || "0"),
             })
           );
 
-          // Process adsets
+          // Ad Sets
           for (const adset of campaign.adsets?.data || []) {
-            const adsetInsights = adset.insights?.data?.[0] || {};
-            const adsetLeadAction = adsetInsights.actions?.find(
-              (a) => a.action_type === "onsite_conversion.lead_grouped"
-            ) || {};
-            const adsetCostPerResult = adsetInsights.cost_per_result?.find(
-              (r) => r.indicator === "actions:onsite_conversion.lead_grouped"
-            ) || {};
+            const ai = adset.insights?.data?.[0] || {};
+            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
+            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
 
-            allAdSetsData.push(
+            adsets.push(
               enhanceWithCustomMetrics({
-                id: adset.id || "unknown",
+                id: adset.id,
                 accountId: adAccountId,
-                name: adset.name || "Unknown",
+                name: adset.name || "Unknown Ad Set",
                 clientGroup: clientGroupName,
                 adAccount: adAccountName,
-                campaignName: campaign.name || "Unknown",
-                businessName: insights.account_name || adAccountName,
-                spend: Number.parseFloat(adsetInsights.spend || "0"),
-                leads: Number.parseInt(adsetLeadAction.value || "0"),
-                cpl: Number.parseFloat(adsetCostPerResult.values?.[0]?.value || "0"),
-                impressions: Number.parseInt(adsetInsights.impressions || "0"),
-                clicks: Number.parseInt(adsetInsights.clicks || "0"),
-                cpc: Number.parseFloat(adsetInsights.cpc || "0"),
-                reach: Number.parseInt(adsetInsights.reach || "0"),
-                frequency: Number.parseFloat(adsetInsights.frequency || "0"),
-                cpm: Number.parseFloat(adsetInsights.cpm || "0"),
-                ctr: Number.parseFloat(adsetInsights.ctr || "0"),
+                campaignName: campaign.name,
+                spend: parseFloat(ai.spend || "0"),
+                leads: parseInt(leadAction.value || "0"),
+                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
+                impressions: parseInt(ai.impressions || "0"),
+                clicks: parseInt(ai.clicks || "0"),
+                cpc: parseFloat(ai.cpc || "0"),
+                reach: parseInt(ai.reach || "0"),
+                frequency: parseFloat(ai.frequency || "0"),
+                cpm: parseFloat(ai.cpm || "0"),
+                ctr: parseFloat(ai.ctr || "0"),
               })
             );
           }
 
-          // Process ads
+          // Ads
           for (const ad of campaign.ads?.data || []) {
-            const adInsights = ad.insights?.data?.[0] || {};
-            const adLeadAction = adInsights.actions?.find(
-              (a) => a.action_type === "onsite_conversion.lead_grouped"
-            ) || {};
-            const adCostPerResult = adInsights.cost_per_result?.find(
-              (r) => r.indicator === "actions:onsite_conversion.lead_grouped"
-            ) || {};
+            const ai = ad.insights?.data?.[0] || {};
+            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
+            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
 
-            allAdsData.push(
+            ads.push(
               enhanceWithCustomMetrics({
-                id: ad.id || "unknown",
+                id: ad.id,
                 accountId: adAccountId,
-                name: ad.name || "Unknown",
+                name: ad.name || "Unknown Ad",
                 clientGroup: clientGroupName,
                 adAccount: adAccountName,
-                campaignName: campaign.name || "Unknown",
-                businessName: insights.account_name || adAccountName,
-                spend: Number.parseFloat(adInsights.spend || "0"),
-                leads: Number.parseInt(adLeadAction.value || "0"),
-                cpl: Number.parseFloat(adCostPerResult.values?.[0]?.value || "0"),
-                impressions: Number.parseInt(adInsights.impressions || "0"),
-                clicks: Number.parseInt(adInsights.clicks || "0"),
-                cpc: Number.parseFloat(adInsights.cpc || "0"),
-                reach: Number.parseInt(adInsights.reach || "0"),
-                frequency: Number.parseFloat(adInsights.frequency || "0"),
-                cpm: Number.parseFloat(adInsights.cpm || "0"),
-                ctr: Number.parseFloat(adInsights.ctr || "0"),
+                campaignName: campaign.name,
+                spend: parseFloat(ai.spend || "0"),
+                leads: parseInt(leadAction.value || "0"),
+                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
+                impressions: parseInt(ai.impressions || "0"),
+                clicks: parseInt(ai.clicks || "0"),
+                cpc: parseFloat(ai.cpc || "0"),
+                reach: parseInt(ai.reach || "0"),
+                frequency: parseFloat(ai.frequency || "0"),
+                cpm: parseFloat(ai.cpm || "0"),
+                ctr: parseFloat(ai.ctr || "0"),
               })
             );
           }
         }
 
-        // Fetch leads for this ad account
-        try {
-          const leadsResponse = await fetch(
-            `https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/leads`,
-            { credentials: "include" }
-          );
-          
-          if (leadsResponse.ok) {
-            const leadsData = await leadsResponse.json();
-            for (const lead of leadsData.data || []) {
-              allLeadsData.push({
-                ...lead,
-                clientGroup: clientGroupName,
-                adAccount: adAccountName,
-              });
-            }
-          }
-        } catch (e) {
-          console.error(`Failed to fetch leads for ad account ${adAccountId}:`, e);
-        }
+        // Attach client group info to leads
+        const enrichedLeads = accountLeads.map((lead) => ({
+          ...lead,
+          clientGroup: clientGroupName,
+          adAccount: adAccountName,
+        }));
+
+        return { group, campaigns, adsets, ads, leads: enrichedLeads };
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        console.error(`Failed to load data for account ${adAccountId} (${clientGroupName}):`, err);
+        return { group, campaigns: [], adsets: [], ads: [], leads: [], error: err.message };
       }
+    });
 
-      setCampaigns(allCampaigns);
-      setAllAdSets(allAdSetsData);
-      setAllAds(allAdsData);
-      setLeads(allLeadsData);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setIsLoading(false);
+    // Step 3: Execute all in parallel
+    const results = await Promise.all(fetchTasks);
+
+    // Step 4: Flatten results
+    const allCampaigns = results.flatMap(r => r.campaigns);
+    const allAdSets = results.flatMap(r => r.adsets);
+    const allAds = results.flatMap(r => r.ads);
+    const allLeads = results.flatMap(r => r.leads);
+
+    setCampaigns(allCampaigns);
+    setAllAdSets(allAdSets);
+    setAllAds(allAds);
+    setLeads(allLeads);
+
+  } catch (err) {
+    if (err.name === "AbortError") {
+      setError("Request timed out. Please try again.");
+    } else {
+      setError(err.message || "Failed to load marketing data");
     }
-  };
+    console.error("fetchAllData error:", err);
+  } finally {
+    clearTimeout(timeoutId);
+    setIsLoading(false);
+  }
+};
+useEffect(() => {
+  const controller = new AbortController();
 
-  useEffect(() => {
-    fetchAllData();
-  }, []);
+  fetchAllData();
+
+  return () => controller.abort(); // Cleanup on unmount
+}, []);
 
   // Filtering
   const applyFilters = (data) => {
