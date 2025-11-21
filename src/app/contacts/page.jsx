@@ -1,7 +1,9 @@
 "use client"
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import { MdOutlineDisabledVisible } from "react-icons/md";
 import {
   Loader2,
   SlidersHorizontal,
@@ -21,7 +23,9 @@ import {
   Megaphone,
   Layers,
   AlertTriangle,
-  icons,
+  TrendingUp,
+  DollarSign,
+  Target,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -63,6 +67,9 @@ const contactColumns = [
   { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl},
   { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]", icons: ghl },
   { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
+  { id: "opportunityStatus", label: "Opportunity", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "pipelineStage", label: "Stage", defaultVisible: true, sortable: true, width: "min-w-[180px]", icons: ghl },
+  { id: "leadValue", label: "Value", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
   { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
@@ -80,51 +87,84 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   const renderCellContent = (contact, col) => {
     switch (col.id) {
-     case "tags":
-  if (!contact[col.id] || contact[col.id].length === 0) {
-    return <span className="text-muted-foreground text-sm">-</span>;
-  }
+      case "opportunityStatus":
+        if (!contact.opportunityStatus) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
+        const statusColors = {
+          open: "bg-green-100 text-green-800",
+          won: "bg-blue-100 text-blue-800",
+          lost: "bg-red-100 text-red-800",
+          abandoned: "bg-gray-100 text-gray-800"
+        }
+        return (
+          <Badge className={`capitalize ${statusColors[contact.opportunityStatus] || "bg-gray-100"}`}>
+            {contact.opportunityStatus}
+          </Badge>
+        )
 
-  const tags = contact[col.id];
-  const mainTag = tags[0];
-  const hasMoreTags = tags.length > 1;
-  const score = contact.score ? `+${contact.score}` : null;
+      case "pipelineStage":
+        if (!contact.pipelineStage) {
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span> 
+        }
+        return (
+          <span className="text-sm font-medium text-foreground">{contact.pipelineStage}</span>
+        )
 
-  return (
-    <div className="flex items-center justify-center gap-2 max-w-xs">
-      {/* Main Tag */}
-      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-        <TiTag className="w-3 h-3" />
-        {mainTag}
-      </Badge>
+      case "leadValue":
+        if (!contact.leadValue) {
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+        }
+        return (
+          <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
+            <DollarSign className="w-3 h-3" /> 
+            {contact.leadValue}
+          </span>
+        )
 
-      {/* Score Badge */}
-      {score && (
-        <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-          {score}
-        </span>
-      )}
+      case "tags":
+        if (!contact[col.id] || contact[col.id].length === 0) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
 
-      {/* Hidden Tags Tooltip (+N) */}
-      {hasMoreTags && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Badge variant="outline" className="text-xs">
-              +{tags.length - 1}
+        const tags = contact[col.id];
+        const mainTag = tags[0];
+        const hasMoreTags = tags.length > 1;
+        const score = contact.score ? `+${contact.score}` : null;
+
+        return (
+          <div className="flex items-center justify-center gap-2 max-w-xs">
+            <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+              <TiTag className="w-3 h-3" />
+              {mainTag}
             </Badge>
-          </TooltipTrigger>
-          <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
-            {tags.slice(1).map((tag, tagIndex) => (
-              <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
-                <TiTag className="w-3 h-3" />
-                {tag}
-              </div>
-            ))}
-          </TooltipContent>
-        </Tooltip>
-      )}
-    </div>
-  );
+
+            {score && (
+              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                {score}
+              </span>
+            )}
+
+            {hasMoreTags && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs">
+                    +{tags.length - 1}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
+                  {tags.slice(1).map((tag, tagIndex) => (
+                    <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
+                      <TiTag className="w-3 h-3" />
+                      {tag}
+                    </div>
+                  ))}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )
+
       case "dateAdded":
         if (!contact[col.id]) {
           return <span className="text-muted-foreground text-sm">-</span>
@@ -142,7 +182,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "contactType":
         const type = contact.contactType || contact.type
         if (!type) {
-          return <span className=" ">-</span>
+          return <span className=""><MdOutlineDisabledVisible /></span>
         }
         return (
           <Badge variant="secondary" className="capitalize">
@@ -153,7 +193,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "address1":
         const address = contact.address1 || contact.address
         if (!address) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <span className="text-sm text-foreground max-w-xs truncate block" title={address}>
@@ -163,12 +203,12 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "email":
         if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return (
           <a
             href={`mailto:${contact[col.id]}`}
-            className="text-sm text-foreground hover:text-primary  font-bold hover:underline transition-colors font-medium"
+            className="text-sm text-foreground hover:text-primary font-bold hover:underline transition-colors font-medium"
             onClick={(e) => e.stopPropagation()}
           >
             {contact[col.id]}
@@ -177,7 +217,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "phone":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return (
           <a
@@ -191,17 +231,17 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "contactName":
         if (!contact[col.id] || contact[col.id] === "Unknown") {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <span className="text-sm text-foreground text-left block">
-        {contact[col.id]}
+            {contact[col.id]}
           </span>
         )
 
       case "website":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         const websiteUrl = contact[col.id].startsWith("http") ? contact[col.id] : `https://${contact[col.id]}`
         return (
@@ -219,7 +259,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "source":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
         }
         return (
           <Badge variant="outline" className="capitalize">
@@ -233,14 +273,14 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "platform":
       case "groupName":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
+          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
         }
         return <span className="text-sm font-medium text-foreground">{contact[col.id]}</span>
 
       default:
         return (
           <span className="text-sm text-foreground">
-            {contact[col.id] || <span className="text-muted-foreground">-</span>}
+            {contact[col.id] || <span className="text-muted-foreground"><MdOutlineDisabledVisible /></span>}
           </span>
         )
     }
@@ -263,9 +303,8 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className=" border bg-card overflow-hidden">
+    <div className="border bg-card overflow-hidden">
       <style jsx>{`
-
         .fixed-column-even {
           position: sticky;
           left: 0;
@@ -290,53 +329,42 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           min-width: 150px;
           width: full;
         }
-        .table-container {
-          position: relative;
-          overflow: auto
-      }
-          `}</style>
+      `}</style>
       <div className="overflow-x-auto">
         <table className="text-sm w-full table-auto">
-          <thead className="  top-0 z-40">
-            <tr className=" transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
+          <thead className="top-0 z-40">
+            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`h-12 font-semibold bg-white text-gray-900/78   select-none cursor-default ${
+                  className={`h-12 font-semibold bg-white text-gray-900/78 select-none cursor-default ${
                     col.id === "contactName"
                       ? "fixed-header"
-                      : "min-w-[135px]  whitespace-nowrap "
+                      : "min-w-[135px] whitespace-nowrap"
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
-                >           
-
+                >
                   <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between">
-                        {/* Left side: label + sorting arrow */}
-                        <div className="flex items-center gap-2">
-                          <span className="px-1">{col.label}</span>
-
-                          {col.sortable && sortColumn === col.id && (
-                            <span>
-                              {sortDirection === "asc" ? (
-                                <ChevronUp size={14} className="text-foreground" />
-                              ) : (
-                                <ChevronDown size={14} className="text-foreground" />
-                              )}
-                            </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-1">{col.label}</span>
+                      {col.sortable && sortColumn === col.id && (
+                        <span>
+                          {sortDirection === "asc" ? (
+                            <ChevronUp size={14} className="text-foreground" />
+                          ) : (
+                            <ChevronDown size={14} className="text-foreground" />
                           )}
-                        </div>
-
-                        {/* Right side: logo */}
-                        {col.icons && (
-                          <img
-                            src={col.icons.src}
-                            alt=""
-                            className="w-4 h-4 text-muted-foreground"
-                          />
-                        )}
+                        </span>
+                      )}
+                    </div>
+                    {col.icons && (
+                      <img
+                        src={col.icons.src}
+                        alt=""
+                        className="w-4 h-4 text-muted-foreground"
+                      />
+                    )}
                   </div>
- 
-
                 </th>
               ))}
             </tr>
@@ -345,34 +373,30 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             {contacts.map((contact, index) => (
               <tr
                 key={contact.contactId || index}
-                className={` hover:bg-muted/50 cursor-pointer transition-colors ${
-                    index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
-                  }`}
+                className={`hover:bg-muted/50 cursor-pointer transition-colors ${
+                  index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
+                }`}
               >
                 {visibleColumnsData.map((col) => (
-                  <td 
-                  key={col.id} 
-                  className={` text-foreground  truncate ${
-                          col.id === "contactName"
-                            ? index % 2 === 0
-                              ? "fixed-column-odd"
-                              : "fixed-column-even"
-                            : ""
-                        }`}
-                  title={renderCellContent(contact, col).props.children}>
-                    <div 
-                     key={col.id}    
-                     className={
-                        col.id === "contactName" ? " py-3 px-4  border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]" :
-                           ""
-                        }>
-                      <span
-                      
-                       >
-                      {renderCellContent(contact, col)}
-                    </span>
+                  <td
+                    key={col.id}
+                    className={`text-foreground truncate ${
+                      col.id === "contactName"
+                        ? index % 2 === 0
+                          ? "fixed-column-odd"
+                          : "fixed-column-even"
+                        : ""
+                    }`}
+                  >
+                    <div
+                      className={
+                        col.id === "contactName"
+                          ? "py-3 px-4 border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]"
+                          : ""
+                      }
+                    >
+                      <span>{renderCellContent(contact, col)}</span>
                     </div>
-                    
                   </td>
                 ))}
               </tr>
@@ -389,7 +413,8 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const filteredTotal = filteredContacts.length
   const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
   const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithCountry = filteredContacts.filter((c) => c.country).length
+  const contactsWithOpportunities = filteredContacts.filter((c) => c.opportunityStatus).length
+  const totalLeadValue = filteredContacts.reduce((sum, c) => sum + (c.leadValue || 0), 0)
 
   const stats = [
     {
@@ -399,34 +424,35 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
       icon: Users,
     },
     {
+      title: "With Opportunities",
+      value: contactsWithOpportunities,
+      icon: Target,
+    },
+    {
+      title: "Total Lead Value",
+      value: `$${totalLeadValue.toLocaleString()}`,
+      icon: DollarSign,
+    },
+    {
       title: "With Email",
       value: contactsWithEmail,
       icon: Mail,
     },
-    {
-      title: "With Phone",
-      value: contactsWithPhone,
-      icon: Phone,
-    },
-    {
-      title: "With Country",
-      value: contactsWithCountry,
-      icon: Globe,
-    },
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => (
         <Card key={index}>
-          <CardHeader className="flex flex-row items-center justify-between  ">
-            <CardTitle className="text-sm font-medium ">{stat.title}</CardTitle>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
             <div className="p-2 bg-purple-100 rounded-md">
-            <stat.icon className="h-5 w-5 text-purple-500 " />
+              <stat.icon className="h-5 w-5 text-purple-500" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
+            {stat.subtitle && <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>}
           </CardContent>
         </Card>
       ))}
@@ -438,6 +464,7 @@ export default function ContactPage() {
   const router = useRouter()
 
   const [contacts, setContacts] = useState([])
+  const [webhookData, setWebhookData] = useState([])
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -445,33 +472,101 @@ export default function ContactPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const PAGE_SIZE = 15
   const [visibleColumns, setVisibleColumns] = useState(
-    contactColumns.filter((col) => col.defaultVisible).map((col) => col.id),
+    contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
   )
 
-  // Filter states
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSource, setSelectedSource] = useState("all")
   const [selectedType, setSelectedType] = useState("all")
   const [selectedDateRange, setSelectedDateRange] = useState("all")
+  const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
-  
 
   const fetchContacts = async () => {
     setLoading(true)
     setError(null)
+    const cachedData = getFromCache('contacts-data')
+    if (cachedData) {
+      setContacts(cachedData.contacts || [])
+      setWebhookData(cachedData.webhooks || [])
+      setMetaData(cachedData.meta || null)
+      setLoading(false)
+      return
+    }
     try {
-      const response = await fetch(`https://birdy-backend.vercel.app/api/contacts/all`, {
-        credentials: "include",
-      })
+      const [contactsResponse, webhooksResponse] = await Promise.all([
+        fetch(`https://birdy-backend.vercel.app/api/contacts/all`, {
+          credentials: "include",
+        }),
+        fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
+          credentials: "include",
+        })
+      ])
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch contacts: ${response.status} ${response.statusText}`)
+      if (!contactsResponse.ok) {
+        throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`)
       }
 
-      const data = await response.json()
-      setContacts(data.contacts || [])
-      setMetaData(data.meta || null)
+      const contactsData = await contactsResponse.json()
+      let allContacts = contactsData.contacts || []
+      
+      let webhooks = []
+      if (webhooksResponse.ok) {
+        const webhooksData = await webhooksResponse.json()
+        webhooks = webhooksData.data || []
+        setWebhookData(webhooks)
+      }
+
+      const webhookByContactId = new Map()
+      const webhookByEmail = new Map()
+      
+      webhooks.forEach(webhook => {
+        const contactId = webhook.contact_id
+        const email = webhook.data?.email
+        
+        if (contactId) {
+          webhookByContactId.set(contactId, webhook.data)
+        }
+        
+        if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
+          const normalizedEmail = email.trim().toLowerCase()
+          webhookByEmail.set(normalizedEmail, webhook.data)
+        }
+      })
+
+      allContacts = allContacts.map(contact => {
+        let webhookInfo = webhookByContactId.get(contact.contactId)
+        
+        if (!webhookInfo && contact.email) {
+          const normalizedEmail = contact.email.trim().toLowerCase()
+          if (normalizedEmail && !normalizedEmail.startsWith('no_email_')) {
+            webhookInfo = webhookByEmail.get(normalizedEmail)
+          }
+        }
+        
+        if (webhookInfo) {
+          return {
+            ...contact,
+            opportunityStatus: webhookInfo.status,
+            pipelineStage: webhookInfo.pipleline_stage || webhookInfo.pipeline_stage,
+            leadValue: webhookInfo.lead_value,
+            opportunityName: webhookInfo.opportunity_name,
+            opportunitySource: webhookInfo.opportunity_source || webhookInfo.source,
+          }
+        }
+        
+        return contact
+      })
+      
+      saveToCache('contacts-data', {
+        contacts: allContacts,
+        webhooks: webhooks,
+        meta: contactsData.meta
+      })
+      setContacts(allContacts)
+      setMetaData(contactsData.meta || null)
+
     } catch (error) {
       console.error("Error fetching contacts:", error)
       setError(error.message)
@@ -501,8 +596,6 @@ export default function ContactPage() {
     return () => clearInterval(timer);
   }, []);
 
-
-  // Get unique sources and types for filters
   const sources = useMemo(() => {
     const uniqueSources = new Set()
     contacts.forEach(c => {
@@ -518,197 +611,119 @@ export default function ContactPage() {
     return uniqueTypes.sort()
   }, [contacts])
 
-  // Check if only one source or no sources are present
+  const opportunityStatuses = useMemo(() => {
+    const statuses = [...new Set(contacts.map(c => c.opportunityStatus).filter(Boolean))]
+    return statuses.sort()
+  }, [contacts])
+
   const isSingleSource = sources.length === 1
   const noSources = sources.length === 0 && metaData && metaData.total_contacts === 0
 
-  // Apply filters and sorting
-  const paginatedContacts = useMemo(() => {
-  let filtered = [...contacts]
-
-  // === ALL YOUR EXISTING FILTERS (search, source, type, date) ===
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase()
-    filtered = filtered.filter(contact => {
-      return (
-        contact.contactName?.toLowerCase().includes(query) ||
-        contact.email?.toLowerCase().includes(query) ||
-        contact.phone?.toLowerCase().includes(query) ||
-        contact.website?.toLowerCase().includes(query) ||
-        contact.address1?.toLowerCase().includes(query) ||
-        contact.country?.toLowerCase().includes(query) ||
-        contact.campaignName?.toLowerCase().includes(query) ||
-        contact.adName?.toLowerCase().includes(query) ||
-        contact.platform?.toLowerCase().includes(query) ||
-        contact.groupName?.toLowerCase().includes(query) ||
-        contact.tags?.some(tag => tag.toLowerCase().includes(query))
-      )
-    })
-  }
-
-  if (selectedSource !== "all") {
-    filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
-  }
-
-  if (selectedType !== "all") {
-    filtered = filtered.filter(contact => {
-      const type = contact.contactType || contact.type
-      return type === selectedType
-    })
-  }
-
-  if (selectedDateRange !== "all") {
-    const now = new Date()
-    filtered = filtered.filter(contact => {
-      if (!contact.dateAdded) return false
-      const contactDate = new Date(contact.dateAdded)
-      
-      switch (selectedDateRange) {
-        case "today":
-          return contactDate.toDateString() === now.toDateString()
-        case "week":
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          return contactDate >= weekAgo
-        case "month":
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          return contactDate >= monthAgo
-        case "year":
-          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-          return contactDate >= yearAgo
-        default:
-          return true
-      }
-    })
-  }
-
-  // === SORTING ===
-  if (sortColumn) {
-    filtered.sort((a, b) => {
-      let aVal = a[sortColumn]
-      let bVal = b[sortColumn]
-
-      if (sortColumn === "dateAdded") {
-        aVal = aVal ? new Date(aVal).getTime() : 0
-        bVal = bVal ? new Date(bVal).getTime() : 0
-      } else if (sortColumn === "contactType") {
-        aVal = a.contactType || a.type || ""
-        bVal = b.contactType || b.type || ""
-      } else {
-        aVal = aVal || ""
-        bVal = bVal || ""
-      }
-
-      if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase()
-        bVal = bVal.toLowerCase()
-      }
-
-      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
-      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
-      return 0
-    })
-  }
-
-  // === PAGINATION ===
-  const start = (currentPage - 1) * PAGE_SIZE
-  const end = start + PAGE_SIZE
-  return filtered.slice(start, end)
-}, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection, currentPage])
-
   const filteredAndSortedContacts = useMemo(() => {
-  let filtered = [...contacts]
+    let filtered = [...contacts]
 
-  // === ALL YOUR EXISTING FILTERS (search, source, type, date) ===
-  if (searchQuery) {
-    const query = searchQuery.toLowerCase()
-    filtered = filtered.filter(contact => {
-      return (
-        contact.contactName?.toLowerCase().includes(query) ||
-        contact.email?.toLowerCase().includes(query) ||
-        contact.phone?.toLowerCase().includes(query) ||
-        contact.website?.toLowerCase().includes(query) ||
-        contact.address1?.toLowerCase().includes(query) ||
-        contact.country?.toLowerCase().includes(query) ||
-        contact.campaignName?.toLowerCase().includes(query) ||
-        contact.adName?.toLowerCase().includes(query) ||
-        contact.platform?.toLowerCase().includes(query) ||
-        contact.groupName?.toLowerCase().includes(query) ||
-        contact.tags?.some(tag => tag.toLowerCase().includes(query))
-      )
-    })
-  }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(contact => {
+        return (
+          contact.contactName?.toLowerCase().includes(query) ||
+          contact.email?.toLowerCase().includes(query) ||
+          contact.phone?.toLowerCase().includes(query) ||
+          contact.website?.toLowerCase().includes(query) ||
+          contact.address1?.toLowerCase().includes(query) ||
+          contact.country?.toLowerCase().includes(query) ||
+          contact.campaignName?.toLowerCase().includes(query) ||
+          contact.adName?.toLowerCase().includes(query) ||
+          contact.platform?.toLowerCase().includes(query) ||
+          contact.groupName?.toLowerCase().includes(query) ||
+          contact.opportunityName?.toLowerCase().includes(query) ||
+          contact.pipelineStage?.toLowerCase().includes(query) ||
+          contact.tags?.some(tag => tag.toLowerCase().includes(query))
+        )
+      })
+    }
 
-  if (selectedSource !== "all") {
-    filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
-  }
+    if (selectedSource !== "all") {
+      filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
+    }
 
-  if (selectedType !== "all") {
-    filtered = filtered.filter(contact => {
-      const type = contact.contactType || contact.type
-      return type === selectedType
-    })
-  }
+    if (selectedType !== "all") {
+      filtered = filtered.filter(contact => {
+        const type = contact.contactType || contact.type
+        return type === selectedType
+      })
+    }
 
-  if (selectedDateRange !== "all") {
-    const now = new Date()
-    filtered = filtered.filter(contact => {
-      if (!contact.dateAdded) return false
-      const contactDate = new Date(contact.dateAdded)
-      
-      switch (selectedDateRange) {
-        case "today":
-          return contactDate.toDateString() === now.toDateString()
-        case "week":
-          const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          return contactDate >= weekAgo
-        case "month":
-          const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          return contactDate >= monthAgo
-        case "year":
-          const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-          return contactDate >= yearAgo
-        default:
-          return true
-      }
-    })
-  }
+    if (selectedOpportunityStatus !== "all") {
+      filtered = filtered.filter(contact => contact.opportunityStatus === selectedOpportunityStatus)
+    }
 
-  // === SORTING ===
-  if (sortColumn) {
-    filtered.sort((a, b) => {
-      let aVal = a[sortColumn]
-      let bVal = b[sortColumn]
+    if (selectedDateRange !== "all") {
+      const now = new Date()
+      filtered = filtered.filter(contact => {
+        if (!contact.dateAdded) return false
+        const contactDate = new Date(contact.dateAdded)
+        
+        switch (selectedDateRange) {
+          case "today":
+            return contactDate.toDateString() === now.toDateString()
+          case "week":
+            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            return contactDate >= weekAgo
+          case "month":
+            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            return contactDate >= monthAgo
+          case "year":
+            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+            return contactDate >= yearAgo
+          default:
+            return true
+        }
+      })
+    }
 
-      if (sortColumn === "dateAdded") {
-        aVal = aVal ? new Date(aVal).getTime() : 0
-        bVal = bVal ? new Date(bVal).getTime() : 0
-      } else if (sortColumn === "contactType") {
-        aVal = a.contactType || a.type || ""
-        bVal = b.contactType || b.type || ""
-      } else {
-        aVal = aVal || ""
-        bVal = bVal || ""
-      }
+    if (sortColumn) {
+      filtered.sort((a, b) => {
+        let aVal = a[sortColumn]
+        let bVal = b[sortColumn]
 
-      if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase()
-        bVal = bVal.toLowerCase()
-      }
+        if (sortColumn === "dateAdded") {
+          aVal = aVal ? new Date(aVal).getTime() : 0
+          bVal = bVal ? new Date(bVal).getTime() : 0
+        } else if (sortColumn === "leadValue") {
+          aVal = aVal || 0
+          bVal = bVal || 0
+        } else if (sortColumn === "contactType") {
+          aVal = a.contactType || a.type || ""
+          bVal = b.contactType || b.type || ""
+        } else {
+          aVal = aVal || ""
+          bVal = bVal || ""
+        }
 
-      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
-      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
-      return 0
-    })
-  }
+        if (typeof aVal === "string") {
+          aVal = aVal.toLowerCase()
+          bVal = bVal.toLowerCase()
+        }
 
-  // === NO PAGINATION — return full list ===
-  return filtered
-}, [contacts, searchQuery, selectedSource, selectedType, selectedDateRange, sortColumn, sortDirection])
+        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
+        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
+        return 0
+      })
+    }
 
+    return filtered
+  }, [contacts, searchQuery, selectedSource, selectedType, selectedOpportunityStatus, selectedDateRange, sortColumn, sortDirection])
+
+  const paginatedContacts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE
+    const end = start + PAGE_SIZE
+    return filteredAndSortedContacts.slice(start, end)
+  }, [filteredAndSortedContacts, currentPage])
 
   const toggleColumn = (columnId) => {
     setVisibleColumns((current) =>
-      current.includes(columnId) ? current.filter((id) => id !== columnId) : [...current, columnId],
+      current.includes(columnId) ? current.filter((id) => id !== columnId) : [...current, columnId]
     )
   }
 
@@ -716,97 +731,84 @@ export default function ContactPage() {
     setSearchQuery("")
     setSelectedSource("all")
     setSelectedType("all")
+    setSelectedOpportunityStatus("all")
     setSelectedDateRange("all")
     setSortColumn("")
     setSortDirection("asc")
   }
 
-  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || selectedDateRange !== "all"
+  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || selectedOpportunityStatus !== "all" || selectedDateRange !== "all"
 
   if (loading) {
     return (
-    <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
-      <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
-        {/* Animated logo/icon */}
+      <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
           <div className="w-16 h-16 flex items-center justify-center">
-          <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <style>{`
-            @keyframes fly {
-              0%, 100% { transform: translateY(0px); }
-              50% { transform: translateY(-8px); }
-            }
-            @keyframes wingFlap {
-              0%, 100% { transform: rotateZ(0deg); }
-              50% { transform: rotateZ(15deg); }
-            }
-            .bird-body {
-              animation: fly 2s ease-in-out infinite;
-            }
-            .bird-wing-left {
-              animation: wingFlap 0.6s ease-in-out infinite;
-              transform-origin: 35px 40px;
-            }
-            .bird-wing-right {
-              animation: wingFlap 0.6s ease-in-out infinite;
-              transform-origin: 65px 40px;
-            }
-              `}</style>
-            </defs>
+            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <style>{`
+                  @keyframes fly {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-8px); }
+                  }
+                  @keyframes wingFlap {
+                    0%, 100% { transform: rotateZ(0deg); }
+                    50% { transform: rotateZ(15deg); }
+                  }
+                  .bird-body {
+                    animation: fly 2s ease-in-out infinite;
+                  }
+                  .bird-wing-left {
+                    animation: wingFlap 0.6s ease-in-out infinite;
+                    transform-origin: 35px 40px;
+                  }
+                  .bird-wing-right {
+                    animation: wingFlap 0.6s ease-in-out infinite;
+                    transform-origin: 65px 40px;
+                  }
+                `}</style>
+              </defs>
+              <g className="bird-body">
+                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+                <circle cx="53" cy="30" r="2" fill="white" />
+                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+              </g>
+              <g className="bird-wing-left">
+                <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+              <g className="bird-wing-right">
+                <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+            </svg>
+          </div>
 
-            {/* Body */}
-            <g className="bird-body">
-              <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
-              {/* Head */}
-              <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
-              {/* Eye */}
-              <circle cx="53" cy="30" r="2" fill="white" />
-              {/* Beak */}
-              <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
-              {/* Tail */}
-              <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
-            </g>
+          <div className="flex flex-col gap-3 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Preparing your data. This should only take a moment.
+            </p>
+          </div>
 
-            {/* Left Wing */}
-            <g className="bird-wing-left">
-              <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
-            </g>
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
 
-            {/* Right Wing */}
-            <g className="bird-wing-right">
-              <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
-            </g>
-          </svg>
-            </div>
-
-            {/* Main text */}
-        <div className="flex flex-col gap-3 text-center">
-          <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Preparing your data. This should only take a moment.
-          </p>
-        </div>
-
-        {/* Progress bar container */}
-        <div className="w-full flex flex-col gap-2">
-          <Progress value={progress} className="w-full h-2" showLabel={false} />
-          <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
-        </div>
-
-        {/* Loading dots animation */}
-        <div className="flex gap-1">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-          <span
-            className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
-            style={{ animationDelay: "0.2s" }}
-          />
-          <span
-            className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
-            style={{ animationDelay: "0.4s" }}
-          />
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            />
+          </div>
         </div>
       </div>
-    </div>
     )
   }
 
@@ -837,6 +839,7 @@ export default function ContactPage() {
             </AlertDescription>
           </Alert>
         )}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
             <div>
@@ -860,7 +863,7 @@ export default function ContactPage() {
                 <X className="h-3 w-3" />
               </Button>
             )}
-            {/* Source Filter */}
+
             <Select value={selectedSource} onValueChange={setSelectedSource}>
               <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
                 <SelectValue placeholder="All Sources" />
@@ -875,7 +878,6 @@ export default function ContactPage() {
               </SelectContent>
             </Select>
 
-            {/* Type Filter */}
             <Select value={selectedType} onValueChange={setSelectedType}>
               <SelectTrigger className="gap-2 bg-white font-semibold h-10 hover:bg-purple-100/75">
                 <SelectValue placeholder="All Types" />
@@ -889,6 +891,19 @@ export default function ContactPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
+              <SelectTrigger className="bg-white font-semibold h-10">
+                <SelectValue placeholder="All Opportunities" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Opportunities</SelectItem>
+                {opportunityStatuses.map(status => (
+                  <SelectItem key={status} value={status}>{status}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 h-10 bg-white hover:bg-purple-100/75 font-semibold">
@@ -911,34 +926,33 @@ export default function ContactPage() {
               </DropdownMenuContent>
             </DropdownMenu>
 
-            {/* Date Range Filter */}
             <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-              <SelectTrigger className="gap-2 hover:bg-purple-100/75 h-10 bg-white font-semibold  ">
+              <SelectTrigger className="gap-2 hover:bg-purple-100/75 h-10 bg-white font-semibold">
                 <CiCalendar />
                 <SelectValue placeholder="All Time" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value="all" className="hover:bg-[#E8DFFB]">
-                  All Time
-                </SelectItem>
-                <SelectItem value="today" className="hover:bg-[#E8DFFB]">
-                  Today
-                </SelectItem>
-                <SelectItem value="week" className="hover:bg-[#E8DFFB]">
-                  Last 7 Days
-                </SelectItem>
-                <SelectItem value="month" className="hover:bg-[#E8DFFB]">
-                  Last 30 Days
-                </SelectItem>
-                <SelectItem value="year" className="hover:bg-[#E8DFFB]">
-                  Last Year
-                </SelectItem>
+                <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem>
+                <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
               </SelectContent>
             </Select>
+
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearAllFilters}
+                className="h-10"
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         </div>
 
-        {/*cards row */}
         <DashboardStats
           className="bg-white"
           contacts={contacts}
@@ -946,7 +960,6 @@ export default function ContactPage() {
           metaData={metaData}
         />
 
-        {/*table */}
         <ContactsTable
           contacts={paginatedContacts}
           visibleColumns={visibleColumns}
@@ -955,41 +968,40 @@ export default function ContactPage() {
           onSort={(col, dir) => {
             setSortColumn(col)
             setSortDirection(dir)
-            setCurrentPage(1) // Reset to page 1 on sort
+            setCurrentPage(1)
           }}
         />
 
-      {/* Pagination Controls */}
-      <div className="flex items-center justify-center">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={currentPage === 1}
-            className="hover:bg-purple-200 gap-2"
-          >
-             <ChevronLeft size={14} className="text-foreground" />Previous
-          </Button>
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="hover:bg-purple-200 gap-2"
+            >
+              <ChevronLeft size={14} className="text-foreground" />Previous
+            </Button>
 
-          <span className="text-sm font-medium gap-2">
-            {currentPage} ... {Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
-          </span>
+            <span className="text-sm font-medium gap-2">
+              {currentPage} ... {Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+            </span>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentPage(prev => 
-              Math.min(Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE), prev + 1)
-            )}
-            disabled={currentPage >= Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
-            className="hover:bg-purple-200 gap-2"
-          >
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentPage(prev => 
+                Math.min(Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE), prev + 1)
+              )}
+              disabled={currentPage >= Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+              className="hover:bg-purple-200 gap-2"
+            >
               Next<ChevronRight size={14} className="text-foreground" />
-          </Button>
+            </Button>
+          </div>
         </div>
       </div>
-      </div>
     </div>
-  );
+  )
 }

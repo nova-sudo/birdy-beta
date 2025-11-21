@@ -2,10 +2,9 @@
 import { Progress } from "@/components/ui/progress"
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -17,18 +16,13 @@ import {
   ChartPie, 
   ChartNoAxesColumnIncreasing,
   Save,
-  Search,
   Phone,
-  Mail,
   DollarSign,
   Target,
   Eye,
-  MousePointer,
-  TrendingDown,
-  AlertCircle
+  MousePointer
 } from "lucide-react"
 import { toast } from "sonner"
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts'
 import {
   Table,
   TableBody,
@@ -37,8 +31,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import ghl from "../../../../public/ghl_icon.png";
-import metaa from "../../../../public/meta-icon-DH8jUhnM.png";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart } from "recharts"
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -48,16 +47,26 @@ export default function ClientDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [clientData, setClientData] = useState(null)
   const [notes, setNotes] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
   const [activeMarketingTab, setActiveMarketingTab] = useState("campaigns")
   const [activeCallCenterTab, setActiveCallCenterTab] = useState("overview")
-  const [activeLeadsTab, setActiveLeadsTab] = useState("all")
 
   useEffect(() => {
     if (clientId) {
       fetchClientDetails()
     }
   }, [clientId])
+
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev
+          return prev + 10
+        })
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [loading])
 
   const fetchClientDetails = async () => {
     try {
@@ -74,11 +83,12 @@ export default function ClientDetailsPage() {
       const result = await response.json()
       setClientData(result.data)
       setNotes(result.data?.group_info?.notes || "")
+      setProgress(100)
     } catch (err) {
       console.error("Error fetching client:", err)
       toast.error("Failed to load client details")
     } finally {
-      setLoading(false)
+      setTimeout(() => setLoading(false), 300)
     }
   }
 
@@ -106,91 +116,60 @@ export default function ClientDetailsPage() {
   }
 
   if (loading) {
-      return (
+    return (
       <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
         <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
-          {/* Animated logo/icon */}
-            <div className="w-16 h-16 flex items-center justify-center">
+          <div className="w-16 h-16 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <style>{`
-              @keyframes fly {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-8px); }
-              }
-              @keyframes wingFlap {
-                0%, 100% { transform: rotateZ(0deg); }
-                50% { transform: rotateZ(15deg); }
-              }
-              .bird-body {
-                animation: fly 2s ease-in-out infinite;
-              }
-              .bird-wing-left {
-                animation: wingFlap 0.6s ease-in-out infinite;
-                transform-origin: 35px 40px;
-              }
-              .bird-wing-right {
-                animation: wingFlap 0.6s ease-in-out infinite;
-                transform-origin: 65px 40px;
-              }
+                  @keyframes fly {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-8px); }
+                  }
+                  @keyframes wingFlap {
+                    0%, 100% { transform: rotateZ(0deg); }
+                    50% { transform: rotateZ(15deg); }
+                  }
+                  .bird-body { animation: fly 2s ease-in-out infinite; }
+                  .bird-wing-left { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 35px 40px; }
+                  .bird-wing-right { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 65px 40px; }
                 `}</style>
               </defs>
-  
-              {/* Body */}
               <g className="bird-body">
                 <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
-                {/* Head */}
                 <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
-                {/* Eye */}
                 <circle cx="53" cy="30" r="2" fill="white" />
-                {/* Beak */}
                 <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
-                {/* Tail */}
                 <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
               </g>
-  
-              {/* Left Wing */}
               <g className="bird-wing-left">
                 <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
               </g>
-  
-              {/* Right Wing */}
               <g className="bird-wing-right">
                 <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
               </g>
             </svg>
-              </div>
-  
-              {/* Main text */}
+          </div>
           <div className="flex flex-col gap-3 text-center">
             <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Preparing your data. This should only take a moment.
             </p>
           </div>
-  
-          {/* Progress bar container */}
           <div className="w-full flex flex-col gap-2">
-            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <Progress value={progress} className="w-full h-2" />
             <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
           </div>
-  
-          {/* Loading dots animation */}
           <div className="flex gap-1">
             <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
-              style={{ animationDelay: "0.2s" }}
-            />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
-              style={{ animationDelay: "0.4s" }}
-            />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: "0.2s" }} />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: "0.4s" }} />
           </div>
         </div>
       </div>
-      )
-    }
+    )
+  }
 
   if (!clientData) {
     return (
@@ -213,9 +192,9 @@ export default function ClientDetailsPage() {
   const insights = clientData.insights || {}
   const leadsData = clientData.leads || {}
   const callCenterData = clientData.call_center || {}
+  const metaSummary = metaData.summary || {}
 
   // Calculate metrics
-  const metaSummary = metaData.summary || {}
   const metrics = {
     roas: metaSummary.total_spend > 0 ? ((leadsData.qualified_leads || 0) * 100) / metaSummary.total_spend : 0,
     costPerLead: metaSummary.cost_per_lead || 0,
@@ -223,34 +202,96 @@ export default function ClientDetailsPage() {
     cac: metaSummary.cost_per_lead * (100 / (leadsData.conversion_rate || 1)),
   }
 
-  // Prepare chart data
+// Chart 1: Lead Status Distribution (Insights)
   const statusChartData = Object.entries(ghlData.status_breakdown || {}).map(([name, value]) => ({
     name,
-    value
+    value,
+    fill: name === 'Won' ? '#9333ea' : name === 'Open' ? '#c084fc' : name === 'Lost' ? '#7c3aed' : '#a855f7'
   }))
 
-  const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1']
+  const statusChartConfig = {
+    value: { label: "Leads" },
+    Won: { label: "Won", color: "#9333ea" },
+    Open: { label: "Open", color: "#c084fc" },
+    Lost: { label: "Lost", color: "#7c3aed" },
+    Abandoned: { label: "Abandoned", color: "#a855f7" }
+  } 
 
-  const campaignPerformanceData = (metaData.campaigns || []).slice(0, 10).map(c => ({
-    name: c.name?.substring(0, 20) + '...',
-    spend: c.spend,
-    leads: c.leads,
-    cpl: c.leads > 0 ? (c.spend / c.leads) : 0
-  }))
+  // Chart 2: Top Campaigns by Spend (Insights)
+  const topCampaignsBySpend = (metaData.campaigns || [])
+    .sort((a, b) => (b.spend || 0) - (a.spend || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      spend: c.spend || 0
+    }))
 
+  const topCampaignsByImpressionsData = (metaData.campaigns || [])
+    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      clicks: c.clicks || 0,
+      spend: c.spend || 0
+    }))
+  
+  const campaignPerformanceConfig = {
+    spend: { label: "Spend", color: "#9333ea" },
+    clicks: { label: "Clicks", color: "#9377fa" }
+  }
+
+  const campaignSpendConfig = {
+    spend: { label: "Spend ", color: "#9333ea" }
+  } 
+    const topCampaignsByClicks = (metaData.campaigns || [])
+    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      clicks: c.clicks || 0
+    }))
+
+  const campaignClicksConfig = {
+    clicks: { label: "Clicks", color: "#7c3aed" }
+  }
+
+  // Chart 5: Call Volume Distribution (Call Center)
   const callVolumeData = (hpData.leads || []).reduce((acc, lead) => {
     const callCount = lead.call_logs_count || 0
     if (callCount > 0) {
-      const range = callCount === 1 ? '1 call' : callCount <= 3 ? '2-3 calls' : callCount <= 5 ? '4-5 calls' : '6+ calls'
+      const range = callCount === 1 ? '1 call' : 
+                    callCount <= 3 ? '2-3 calls' : 
+                    callCount <= 5 ? '4-5 calls' : '6+ calls'
       acc[range] = (acc[range] || 0) + 1
     }
     return acc
   }, {})
 
-  const callVolumeChartData = Object.entries(callVolumeData).map(([name, value]) => ({
+  const callVolumeChartData = Object.entries(callVolumeData).map(([name, leads]) => ({
     name,
-    leads: value
+    leads,
+    fill: '#9333ea'
   }))
+
+  const callVolumeConfig = {
+    leads: { label: "Leads", color: "#9333ea" }
+  } 
+
+  // Chart 6: Contact Status Distribution (Call Center)
+  const contactedLeads = callCenterData.leads_with_calls || 0
+  const totalHpLeads = hpData.total_leads || 0
+  const pendingLeads = Math.max(0, totalHpLeads - contactedLeads)
+
+  const contactStatusData = [
+    { name: "Contacted", value: contactedLeads, fill: "#9333ea" },
+    { name: "Pending Contact", value: pendingLeads, fill: "#c084fc" }
+  ].filter(item => item.value > 0)
+
+  const contactStatusConfig = {
+    value: { label: "Leads" },
+    contacted: { label: "Contacted", color: "#9333ea" },
+    pending: { label: "Pending Contact", color: "#c084fc" }
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -287,182 +328,98 @@ export default function ClientDetailsPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0 mt-6">
-        {/* Search Bar */}
-        {/* <Card className="mb-4 flex-shrink-0 bg-purple-100 h-25">
-          <CardContent>
-            <div className="w-full ">
-              <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-3">
-                <form className="relative w-full md:w-1/3 md:min-w-[360px]">
-                  <div className="relative w-full">
-                    <Input
-                      className="pr-20 bg-white h-[50px] py-4 text-sm"
-                      placeholder={`Ask Birdy anything about ${groupInfo.name}...`}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button
-                      className="absolute top-1/2 -translate-y-1/2 right-2"
-                      size="sm"
-                      type="submit"
-                      disabled={!searchQuery}
-                    >
-                      <Search className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </form>
-                <div className="flex flex-wrap gap-2 items-center md:justify-end md:flex-1">
-                  <span className="text-[#71658B] text-muted-foreground text-xs whitespace-nowrap">Try asking:</span>
-                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
-                    Why are bookings down this week?
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
-                    Which tag gave the best cost per booking?
-                  </Button>
-                  <Button variant="outline" size="sm" className="rounded-md text-xs h-7 bg-white">
-                    Show ROAS breakdown by campaign
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card> */}
-
-        {/* Tabs */}
-        <Tabs defaultValue="overview"  className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
-            <TabsTrigger value="overview" className="flex-1
-            text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700
-            ">Overview</TabsTrigger>
-            <TabsTrigger value="insights" className="flex-1
-            text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700
-            ">Insights</TabsTrigger>
-            <TabsTrigger value="marketing" className="flex-1
-            text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700
-            ">Marketing</TabsTrigger>
-            {/* <TabsTrigger disabled value="leads" className="flex-1 disabled:bg-black/10 disabled:text-white ">Leads</TabsTrigger> */}
-            <TabsTrigger value="callcenter" className="flex-1
-            text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700
-            ">Call Center</TabsTrigger>
+        <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger value="overview" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Insights
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Marketing
+            </TabsTrigger>
+            <TabsTrigger value="callcenter" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Call Center
+            </TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="mt-6 overflow-y-auto space-y-4">
-            {/* Metrics Grid */}
             <div className="grid gap-4 md:grid-cols-4">
-              <Card className="overflow-hidden relative">
-                <CardContent className="">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">ROAS</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.roas.toFixed(2)}x</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+12%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-primary text-purple-500" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Cost Per Lead</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.costPerLead.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+5%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+5%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                      <Users className="h-4 w-4 text-primary text-purple-500" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Close Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.closeRate.toFixed(2)}%</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+8%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                      <ChartPie className="h-4 w-4 text-primary text-purple-500" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <ChartPie className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Customer Acq. Cost</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.cac.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+12%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-primary text-purple-500" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* History Book */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">History Book</CardTitle>
@@ -476,7 +433,7 @@ export default function ClientDetailsPage() {
                     onChange={(e) => setNotes(e.target.value)}
                   />
                   <Button onClick={handleSaveNotes} className="w-full bg-[#713CDD] text-white font-semibold">
-                    <Save className="mr-2 h-4 w-4 text-white font-semibold" />
+                    <Save className="mr-2 h-4 w-4" />
                     Save Notes
                   </Button>
                 </div>
@@ -485,11 +442,11 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* INSIGHTS TAB */}
-          <TabsContent value="insights" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="insights" className="mt-6 overflow-y-auto space-y-4">
             {/* Key Insights Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardContent className="">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Best Performing Tag</p>
@@ -500,16 +457,15 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.tag_with_best_roas?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Target className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Best Booking Offer</p>
@@ -520,16 +476,15 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.offer_with_best_booking_rate?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <DollarSign className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Avg Booking Delay</p>
@@ -540,16 +495,15 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.avg_booking_delay_days?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Calendar className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Bookings This Month</p>
@@ -560,152 +514,128 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.total_bookings_this_month?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Users className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Charts */}
+            {/* Charts - 2 in Insights */}
             <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
+              {/* Chart 1: Lead Status Distribution */}
+              <Card className="flex flex-col">
+                <CardHeader className="items-center pb-0">
                   <CardTitle>Lead Status Distribution</CardTitle>
+                  <CardDescription>Current pipeline breakdown</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                <CardContent className="flex-1 pb-0">
+                  <ChartContainer
+                    config={statusChartConfig}
+                    className="mx-auto aspect-square max-h-[250px]"
+                  >
                     <PieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
                       <Pie
                         data={statusChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
                         dataKey="value"
-                      >
-                        {statusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
+                        nameKey="name"
+                        innerRadius={60}
+
+                      />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm">
+                  <div className="flex items-center gap-2 leading-none font-medium">
+                    Total Leads: {Object.values(ghlData.status_breakdown || {}).reduce((a, b) => a + b, 0)}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Last 30 days performance
+                  </div>
+                </CardFooter>
               </Card>
 
+              {/* Chart 2: Top Campaigns by Spend */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Campaign Performance (Top 10)</CardTitle>
+                  <CardTitle>Top Campaigns by Spend</CardTitle>
+                  <CardDescription>Highest ad spend campaigns</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={campaignPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} fontSize={10} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="spend" fill="#3b82f6" name="Spend ($)" />
-                      <Bar dataKey="leads" fill="#10b981" name="Leads" />
+                  <ChartContainer config={campaignSpendConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsBySpend}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={11}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="spend" fill="var(--color-spend)" radius={8} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Marketing Funnel</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                      data={[
-                        { stage: 'Impressions', value: metaSummary.total_impressions || 0 },
-                        { stage: 'Clicks', value: metaSummary.total_clicks || 0 },
-                        { stage: 'Leads', value: metaSummary.total_leads || 0 },
-                        { stage: 'Conversions', value: leadsData.qualified_leads || 0 }
-                      ]}
-                      layout="vertical"
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="stage" />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8b5cf6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cost per Lead Trend</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={(metaData.campaigns || []).slice(0, 10).map(c => ({
-                      name: c.name?.substring(0, 15),
-                      cpl: c.leads > 0 ? (c.spend / c.leads) : 0
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={10} />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="cpl" stroke="#f59e0b" strokeWidth={2} name="CPL ($)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Total Spend: ${metaSummary.total_spend?.toFixed(2) || 0}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Based on last 30 days
+                  </div>
+                </CardFooter>
               </Card>
             </div>
 
             {/* Summary Stats */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Ad Spend</p>
                       <h3 className="text-2xl font-bold mt-1">${metaSummary.total_spend?.toFixed(2) || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <DollarSign className="h-4 w-4 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.total_leads || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Users className="h-4 w-4 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Conversion Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.conversion_rate?.toFixed(2) || 0}%</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Target className="h-4 w-4 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
@@ -713,17 +643,17 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* MARKETING TAB */}
-          <TabsContent value="marketing" className=" mt-3 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="marketing" className="mt-6 overflow-y-auto space-y-4">
             {/* Marketing Summary */}
             <div className="grid gap-4 md:grid-cols-5">
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Total Spend</p>
                       <p className="text-lg font-bold">${metaSummary.total_spend?.toFixed(2) || 0}</p>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <DollarSign className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -731,28 +661,27 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Impressions</p>
                       <p className="text-lg font-bold">{(metaSummary.total_impressions || 0).toLocaleString()}</p>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Eye className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Clicks</p>
                       <p className="text-lg font-bold">{(metaSummary.total_clicks || 0).toLocaleString()}</p>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <MousePointer className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -760,13 +689,13 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Leads</p>
                       <p className="text-lg font-bold">{metaSummary.total_leads || 0}</p>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Users className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -774,13 +703,13 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">CPL</p>
                       <p className="text-lg font-bold">${metaSummary.cost_per_lead?.toFixed(2) || 0}</p>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Target className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -788,59 +717,105 @@ export default function ClientDetailsPage() {
               </Card>
             </div>
 
+            {/* Marketing Charts - 2 charts */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Chart 3: Campaign Performance - Spend vs Clicks */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campaign Performance</CardTitle>
+                  <CardDescription>Spend and engagement metrics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={campaignPerformanceConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsByImpressionsData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={10}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent />}
+                      />
+                      <Bar dataKey="spend" fill="var(--color-spend)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="clicks" fill="var(--color-clicks)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    {metaSummary.total_campaigns || 0} Active Campaigns
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Comparing spend vs Impressions
+                  </div>
+                </CardFooter>
+              </Card>
+
+              {/* Chart 4: Top Campaigns by Clicks */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Click Generators</CardTitle>
+                  <CardDescription>Campaigns by Impressions volume</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={campaignClicksConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsByClicks}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={11}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="clicks" fill="var(--color-clicks)" radius={8} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Avg CPC: ${metaSummary.avg_cpc?.toFixed(2) || 0}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Best performing campaigns by clicks
+                  </div>
+                </CardFooter>
+              </Card>
+            </div>
+
             {/* Marketing Tabs */}
             <Tabs value={activeMarketingTab} onValueChange={setActiveMarketingTab}>
-              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
-                <TabsTrigger value="campaigns" className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Campaigns ({metaSummary.total_campaigns || 0})</TabsTrigger>
-                <TabsTrigger value="adsets" className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Ad Sets ({metaSummary.total_adsets || 0})</TabsTrigger>
-                <TabsTrigger value="ads" className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Ads ({metaSummary.total_ads || 0})</TabsTrigger>
-                <TabsTrigger value="leads" className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Meta Leads ({metaSummary.total_leads || 0})</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="campaigns" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Campaigns ({metaSummary.total_campaigns || 0})
+                </TabsTrigger>
+                <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Ad Sets ({metaSummary.total_adsets || 0})
+                </TabsTrigger>
+                <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Ads ({metaSummary.total_ads || 0})
+                </TabsTrigger>
+                <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Meta Leads ({metaSummary.total_leads || 0})
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="campaigns" className="mt-4 ">
+              <TabsContent value="campaigns" className="mt-4">
                 <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow className="border-r border-border">
-                            <TableHead className="bg-muted/50 border-b border-r"><span>Campaign</span></TableHead>
+                            <TableHead className="bg-muted/50 border-b border-r">Campaign</TableHead>
                             <TableHead className="bg-muted/50 border-b border-r">Status</TableHead>
                             <TableHead className="text-left bg-muted/50 border-b border-r">Spend</TableHead>
                             <TableHead className="text-left bg-muted/50 border-b border-r">Impressions</TableHead>
@@ -948,10 +923,10 @@ export default function ClientDetailsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead className=" border-r border-border">Ad</TableHead>
-                            <TableHead className=" border-r border-border">Campaign</TableHead>
-                            <TableHead className=" border-r border-border">Status</TableHead>
-                            <TableHead className=" border-r border-border">Creative</TableHead>
+                            <TableHead className="border-r border-border">Ad</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Status</TableHead>
+                            <TableHead className="border-r border-border">Creative</TableHead>
                             <TableHead className="text-left border-r border-border">Spend</TableHead>
                             <TableHead className="text-left border-r border-border">Impressions</TableHead>
                             <TableHead className="text-left border-r border-border">Clicks</TableHead>
@@ -1012,13 +987,13 @@ export default function ClientDetailsPage() {
                       <Table>
                         <TableHeader>
                           <TableRow className="border-r border-border">
-                            <TableHead className=" border-r border-border">Name</TableHead>
-                            <TableHead className=" border-r border-border">Email</TableHead>
-                            <TableHead className=" border-r border-border">Phone</TableHead>
-                            <TableHead className=" border-r border-border">Campaign</TableHead>
-                            <TableHead className=" border-r border-border">Ad Name</TableHead>
-                            <TableHead className=" border-r border-border">Platform</TableHead>
-                            <TableHead className=" border-r border-border">Created</TableHead>
+                            <TableHead className="border-r border-border">Name</TableHead>
+                            <TableHead className="border-r border-border">Email</TableHead>
+                            <TableHead className="border-r border-border">Phone</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Ad Name</TableHead>
+                            <TableHead className="border-r border-border">Platform</TableHead>
+                            <TableHead className="border-r border-border">Created</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1057,230 +1032,32 @@ export default function ClientDetailsPage() {
             </Tabs>
           </TabsContent>
 
-          {/* LEADS TAB */}
-          <TabsContent value="leads" className="mt-0 pt-0 overflow-y-auto space-y-4">
-            {/* Leads Summary */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.total_leads || 0}</h3>
-                    </div>
-                    <Users className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Qualified Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.qualified_leads || 0}</h3>
-                    </div>
-                    <Target className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.conversion_rate?.toFixed(2) || 0}%</h3>
-                    </div>
-                    <ChartPie className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Open Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.status_breakdown?.Open || 0}</h3>
-                    </div>
-                    <AlertCircle className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Leads Tabs */}
-            <Tabs value={activeLeadsTab} onValueChange={setActiveLeadsTab}>
-              <TabsList className="w-full justify-start grid grid-cols-5 bg-muted/50">
-                <TabsTrigger value="all">All ({leadsData.total_leads || 0})</TabsTrigger>
-                <TabsTrigger value="open">Open ({leadsData.status_breakdown?.Open || 0})</TabsTrigger>
-                <TabsTrigger value="won">Won ({leadsData.status_breakdown?.Won || 0})</TabsTrigger>
-                <TabsTrigger value="lost">Lost ({leadsData.status_breakdown?.Lost || 0})</TabsTrigger>
-                <TabsTrigger value="abandoned">Abandoned ({leadsData.status_breakdown?.Abandoned || 0})</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="all" className="mt-4">
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Source</TableHead>
-                            <TableHead>Calls</TableHead>
-                            <TableHead>Value</TableHead>
-                            <TableHead>Last Contact</TableHead>
-                            <TableHead>Created</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(leadsData.all_leads || []).length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                No leads found
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            (leadsData.all_leads || []).map((lead) => (
-                              <TableRow key={lead.id}>
-                                <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                                <TableCell>{lead.email || 'N/A'}</TableCell>
-                                <TableCell>{lead.phone || 'N/A'}</TableCell>
-                                <TableCell>
-                                  <Badge 
-                                    variant={
-                                      lead.status === 'Won' ? 'default' : 
-                                      lead.status === 'Open' ? 'secondary' : 
-                                      'destructive'
-                                    }
-                                  >
-                                    {lead.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-sm">{lead.source}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
-                                    <span>{lead.callCount || 0}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>${lead.value?.toFixed(2) || '0.00'}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {lead.lastContact !== 'N/A' 
-                                    ? new Date(lead.lastContact).toLocaleDateString() 
-                                    : 'N/A'
-                                  }
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {lead.created ? new Date(lead.created).toLocaleDateString() : 'N/A'}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {['open', 'won', 'lost', 'abandoned'].map((status) => (
-                <TabsContent key={status} value={status} className="mt-4">
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>Phone</TableHead>
-                              <TableHead>Source</TableHead>
-                              <TableHead>Calls</TableHead>
-                              <TableHead>Value</TableHead>
-                              <TableHead>Last Contact</TableHead>
-                              <TableHead>Created</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {(leadsData.all_leads || [])
-                              .filter(lead => lead.status?.toLowerCase() === status)
-                              .length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                  No {status} leads found
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              (leadsData.all_leads || [])
-                                .filter(lead => lead.status?.toLowerCase() === status)
-                                .map((lead) => (
-                                  <TableRow key={lead.id}>
-                                    <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                                    <TableCell>{lead.email || 'N/A'}</TableCell>
-                                    <TableCell>{lead.phone || 'N/A'}</TableCell>
-                                    <TableCell className="text-sm">{lead.source}</TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-1">
-                                        <Phone className="h-3 w-3" />
-                                        <span>{lead.callCount || 0}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>${lead.value?.toFixed(2) || '0.00'}</TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {lead.lastContact !== 'N/A' 
-                                        ? new Date(lead.lastContact).toLocaleDateString() 
-                                        : 'N/A'
-                                      }
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {lead.created ? new Date(lead.created).toLocaleDateString() : 'N/A'}
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-
           {/* CALL CENTER TAB */}
-          <TabsContent value="callcenter" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="callcenter" className="mt-6 overflow-y-auto space-y-4">
             {/* Call Center Summary */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.total_calls || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Phone className="h-5 w-5 text-purple-500" />
                     </div>
-                    
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Leads with Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.leads_with_calls || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Users className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -1288,13 +1065,13 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Avg Calls/Lead</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.avg_calls_per_lead?.toFixed(2) || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <ChartPie className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
@@ -1302,90 +1079,101 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent>
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">HP Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{hpData.total_leads || 0}</h3>
                     </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <Target className="h-5 w-5 text-purple-500" />
-                    </div>               
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Call Volume Chart */}
+            {/* Call Center Charts - 2 charts */}
             <div className="grid gap-4 md:grid-cols-2">
+              {/* Chart 5: Call Volume Distribution */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Leads by Call Count</CardTitle>
+                  <CardTitle>Call Volume Distribution</CardTitle>
+                  <CardDescription>Leads by number of calls</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={callVolumeChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="leads" fill="#3b82f6" />
+                  <ChartContainer config={callVolumeConfig}>
+                    <BarChart accessibilityLayer data={callVolumeChartData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="leads" fill="var(--color-leads)" radius={8} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Avg: {callCenterData.avg_calls_per_lead?.toFixed(1) || 0} calls per lead
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Distribution of call attempts
+                  </div>
+                </CardFooter>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Call Distribution</CardTitle>
+              {/* Chart 6: Contact Status */}
+              <Card className="flex flex-col">
+                <CardHeader className="items-center pb-0">
+                  <CardTitle>Contact Status</CardTitle>
+                  <CardDescription>Lead engagement breakdown</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                <CardContent className="flex-1 pb-0">
+                  <ChartContainer
+                    config={contactStatusConfig}
+                    className="mx-auto aspect-square max-h-[250px]"
+                  >
                     <PieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
                       <Pie
-                        data={callVolumeChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="leads"
-                      >
-                        {callVolumeChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
+                        data={contactStatusData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                      />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm">
+                  <div className="flex items-center gap-2 leading-none font-medium">
+                    Contact Rate: {totalHpLeads > 0 ? ((contactedLeads / totalHpLeads) * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Based on call center activity
+                  </div>
+                </CardFooter>
               </Card>
             </div>
 
             {/* Call Center Tabs */}
             <Tabs value={activeCallCenterTab} onValueChange={setActiveCallCenterTab}>
-              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
-                <TabsTrigger value="overview"className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Call Overview</TabsTrigger>
-                <TabsTrigger value="logs" className="gap-2
-                  text-[#71658B] font-semibold 
-                  hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700">Detailed Call Logs</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="overview" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Call Overview
+                </TabsTrigger>
+                <TabsTrigger value="logs" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Detailed Call Logs
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">

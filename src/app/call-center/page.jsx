@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -219,6 +220,8 @@ export default function CallCenterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(13)
   const [error, setError] = useState(null)
+  const [prefetchProgress, setPrefetchProgress] = useState(0)
+  const [isPrefetching, setIsPrefetching] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     client: true,
     ghlLocation: true,
@@ -254,33 +257,50 @@ export default function CallCenterPage() {
     sessionStorage.setItem("activeTab", activeTab)
   }, [activeTab])
 
-  const fetchAllLeads = async (page = 1, forceRefresh = false) => {
+  const prefetchRemainingPages = async (totalLeads, currentPage) => {
+  const totalPages = Math.ceil(totalLeads / leadsPerPage)
+  
+  // Don't prefetch if only one page or already prefetching
+  if (totalPages <= 1 || isPrefetching) return
+  
+  setIsPrefetching(true)
+  console.log(`[Prefetch] Starting background prefetch for pages 2-${totalPages}`)
+  
+  // Create array of page numbers to prefetch (excluding current page)
+  const pagesToPrefetch = Array.from(
+    { length: totalPages - 1 }, 
+    (_, i) => i + 2
+  )
+  
+  let successCount = 0
+  let failCount = 0
+  
+  // Prefetch pages sequentially to avoid overwhelming the server
+  for (let i = 0; i < pagesToPrefetch.length; i++) {
+    const pageNum = pagesToPrefetch[i]
+    const cacheKey = `hotprospector-leads-page-${pageNum}`
+    
+    // Skip if already cached
+    const cached = getFromCache(cacheKey)
+    if (cached) {
+      console.log(`[Prefetch] Page ${pageNum} already cached, skipping`)
+      successCount++
+      setPrefetchProgress(Math.round(((i + 1) / pagesToPrefetch.length) * 100))
+      continue
+    }
+    
     try {
-      setIsLoading(true)
-      setError(null)
-
-      const skip = (page - 1) * leadsPerPage
-
-      if (page === 1) {
-        toast.loading("Loading leads with call logs from all clients...", { id: "fetch-leads" })
-      }
-
-      // Use refresh endpoint if force refresh
-      const endpoint = forceRefresh
-        ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
-        : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
-
-      const response = await fetch(endpoint, {
-        credentials: "include",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch leads")
-      }
-
+      const skip = (pageNum - 1) * leadsPerPage
+      const response = await fetch(
+        `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`,
+        { credentials: "include" }
+      )
+      
+      if (!response.ok) throw new Error(`Failed to prefetch page ${pageNum}`)
+      
       const data = await response.json()
-
-      // Transform the lead data
+      
+      // Transform and cache
       const mappedLeads = (data.data || []).map((lead) => ({
         id: lead.id,
         client: lead.client_name || "Unknown Client",
@@ -288,8 +308,9 @@ export default function CallCenterPage() {
         ghlLocationId: lead.ghl_location_id,
         name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
         email: lead.email || "N/A",
-        phone:
-          lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
+        phone: lead.phone || lead.mobile 
+          ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() 
+          : "N/A",
         company: lead.company || "N/A",
         location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
         tags: lead.tags || [],
@@ -297,46 +318,164 @@ export default function CallCenterPage() {
         call_logs_count: lead.call_logs_count || 0,
         call_logs: lead.call_logs || [],
       }))
-
-      setLeads(mappedLeads)
-      setTotalLeads(data.meta?.total || 0)
-      setCurrentPage(page)
-      setLocationStats(data.meta?.location_stats || {})
-
-      const totalCalls = data.meta?.total_calls || 0
-
-      if (forceRefresh) {
-        toast.success(
-          `Refreshed ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
-          { id: "fetch-leads" },
-        )
-      } else {
-        toast.success(
-          `Loaded ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
-          { id: "fetch-leads" },
-        )
-      }
-
-      console.log("[HotProspector] Fetched leads:", {
-        page,
-        returned: mappedLeads.length,
-        total: data.meta?.total,
-        locations: data.meta?.locations_processed,
-        locationStats: data.meta?.location_stats,
-        totalCalls,
+      
+      saveToCache(cacheKey, {
+        leads: mappedLeads,
+        total: data.meta?.total || 0,
+        locationStats: data.meta?.location_stats || {}
       })
-    } catch (err) {
-      console.error("Error fetching leads:", err)
-      setError(err.message)
-      toast.error("Failed to fetch leads. Please check your HotProspector connection.", { id: "fetch-leads" })
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+      
+      successCount++
+      console.log(`[Prefetch] Cached page ${pageNum} (${mappedLeads.length} leads)`)
+      
+      // Update progress
+      setPrefetchProgress(Math.round(((i + 1) / pagesToPrefetch.length) * 100))
+      
+      // Small delay to avoid rate limiting (100ms between requests)
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+    } catch (error) {
+      failCount++
+      console.error(`[Prefetch] Failed to cache page ${pageNum}:`, error)
     }
   }
+  
+  setIsPrefetching(false)
+  console.log(`[Prefetch] Complete: ${successCount} cached, ${failCount} failed`)
+  
+  if (successCount > 0) {
+    toast.success(`Background loaded ${successCount} additional pages`, {
+      duration: 2000
+    })
+  }
+}
+
+
+const fetchAllLeads = async (page = 1, forceRefresh = false) => {
+  try {
+    setIsLoading(true)
+    setError(null)
+    const cacheKey = `hotprospector-leads-page-${page}`
+
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cachedData = getFromCache(cacheKey)
+      if (cachedData) {
+        setLeads(cachedData.leads)
+        setTotalLeads(cachedData.total)
+        setLocationStats(cachedData.locationStats)
+        setCurrentPage(page)
+        setIsLoading(false)
+        toast.success("Loaded from cache", { id: "fetch-leads" })
+        return
+      }
+    }
+
+    const skip = (page - 1) * leadsPerPage
+
+    if (page === 1) {
+      toast.loading("Loading leads with call logs from all clients...", { id: "fetch-leads" })
+    }
+
+    // Use refresh endpoint if force refresh
+    const endpoint = forceRefresh
+      ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
+      : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
+
+    const response = await fetch(endpoint, {
+      credentials: "include",
+    })
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch leads")
+    }
+
+    const data = await response.json()
+
+    // Transform the lead data
+    const mappedLeads = (data.data || []).map((lead) => ({
+      id: lead.id,
+      client: lead.client_name || "Unknown Client",
+      ghlLocation: lead.ghl_location_name || "Unknown Location",
+      ghlLocationId: lead.ghl_location_id,
+      name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
+      email: lead.email || "N/A",
+      phone:
+        lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
+      company: lead.company || "N/A",
+      location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
+      tags: lead.tags || [],
+      status: "Active",
+      call_logs_count: lead.call_logs_count || 0,
+      call_logs: lead.call_logs || [],
+    }))
+
+    const cacheData = {
+      leads: mappedLeads,
+      total: data.meta?.total || 0,
+      locationStats: data.meta?.location_stats || {}
+    }
+    
+    saveToCache(cacheKey, cacheData)
+
+    setLeads(mappedLeads)
+    setTotalLeads(data.meta?.total || 0)
+    setCurrentPage(page)
+    setLocationStats(data.meta?.location_stats || {})
+
+    const totalCalls = data.meta?.total_calls || 0
+
+    if (forceRefresh) {
+      toast.success(
+        `Refreshed ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
+        { id: "fetch-leads" },
+      )
+    } else {
+      toast.success(
+        `Loaded ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
+        { id: "fetch-leads" },
+      )
+    }
+
+    console.log("[HotProspector] Fetched leads:", {
+      page,
+      returned: mappedLeads.length,
+      total: data.meta?.total,
+      locations: data.meta?.locations_processed,
+      locationStats: data.meta?.location_stats,
+      totalCalls,
+    })
+
+    // ✨ START BACKGROUND PREFETCH after first page loads
+    if (page === 1 && !forceRefresh && data.meta?.total > leadsPerPage) {
+      // Use setTimeout to ensure prefetch happens after UI updates
+      setTimeout(() => {
+        prefetchRemainingPages(data.meta.total, page)
+      }, 500)
+    }
+
+  } catch (err) {
+    console.error("Error fetching leads:", err)
+    setError(err.message)
+    toast.error("Failed to fetch leads. Please check your HotProspector connection.", { id: "fetch-leads" })
+  } finally {
+    setIsLoading(false)
+    setIsRefreshing(false)
+  }
+}
+
 
   const fetchMembers = async (forceRefresh = false) => {
+    
     try {
+
+      if (!forceRefresh) {
+        const cachedMembers = getFromCache('hotprospector-members')
+        if (cachedMembers) {
+          setMembers(cachedMembers)
+          return
+        }
+      }
       const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/members", {
         credentials: "include",
       })
@@ -358,6 +497,7 @@ export default function CallCenterPage() {
         country: member.country,
       }))
 
+      saveToCache('hotprospector-members', mappedMembers)
       setMembers(mappedMembers)
 
       if (forceRefresh) {
@@ -552,6 +692,12 @@ export default function CallCenterPage() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
+            </div>
+          )}
+          {isPrefetching && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Loading additional pages in background... {prefetchProgress}%</span>
             </div>
           )}
 
