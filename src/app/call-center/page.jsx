@@ -36,6 +36,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
+import ghl from "../../../public/ghl.png";
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
@@ -492,11 +493,11 @@ export default function CallCenterPage() {
       </div>
 
       <div>
-        <div className="bg-card rounded-lg mt-6 mb-12">
+        <div className="bg-card rounded-lg mt-6 mb-12 ">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border rounded-lg shadow-sm ">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-muted-foreground text-purple-500" />
@@ -508,7 +509,7 @@ export default function CallCenterPage() {
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
@@ -520,7 +521,7 @@ export default function CallCenterPage() {
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
@@ -532,7 +533,7 @@ export default function CallCenterPage() {
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm font-medium">Team Members</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Users className="h-5 w-5 text-muted-foreground text-purple-500" />
@@ -567,11 +568,6 @@ export default function CallCenterPage() {
                   data-[state=active]:border-b-purple-700" >
                   <Phone className="h-4 w-4 mr-2" />
                   Leads
-                  {totalLeads > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-2 text-xs">
-                      {totalLeads}
-                    </Badge>
-                  )}
                 </TabsTrigger>
                 <TabsTrigger value="members" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
@@ -583,27 +579,10 @@ export default function CallCenterPage() {
                   data-[state=active]:border-b-purple-700" >
                   <Users className="h-4 w-4 mr-2" />
                   Members
-                  {members.length > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-2 text-xs">
-                      {members.length}
-                    </Badge>
-                  )}
                 </TabsTrigger>
               </TabsList>
             <TabsContent value="leads" className="mt-0">
-              {/* Client breakdown summary */}
-              {Object.keys(locationStats).length > 0 && (
-                <div className="mb-4 p-4 bg-muted/50 rounded-lg">
-                  <h3 className="text-sm font-medium mb-2">Leads by Location:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(locationStats).map(([locationId, stats]) => (
-                      <Badge key={locationId} variant="outline" className="text-xs">
-                        {stats.client_group_name || stats.name}: {stats.count} leads {stats.cached && "🟢"}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
+            
 
               {isLoading ? (
                 <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
@@ -704,12 +683,21 @@ export default function CallCenterPage() {
                 </div>
               ) : (
                 <>
-                  <div className="border">
+                  <div className="border rounded-md mt-3">
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50 border-r border-border">
-                          {visibleColumns.client && <TableHead className="border-r border-border">Client</TableHead>}
-                          {visibleColumns.ghlLocation && <TableHead className="border-r border-border">GHL Location</TableHead>}
+                          {visibleColumns.client && <TableHead className="border-r border-border">Client </TableHead>}
+                          {visibleColumns.ghlLocation && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>GHL Location</span>
+                            <img
+                              src={ghl}
+                              alt="GHL Icon"
+                              className=""
+                            />
+                            </div>
+                            </TableHead>}
                           {visibleColumns.name && <TableHead className="border-r border-border">Name</TableHead>}
                           {visibleColumns.email && <TableHead className="border-r border-border">Email</TableHead>}
                           {visibleColumns.phone && <TableHead className="border-r border-border">Phone</TableHead>}
