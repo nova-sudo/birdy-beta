@@ -33,6 +33,8 @@ function SettingsPageContent() {
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [user] = useState( JSON.parse(localStorage.getItem('user')) )
+  
 
   // Helper to set cookie
   const setCookie = (name, value, maxAge) => {
@@ -396,18 +398,38 @@ function SettingsPageContent() {
 
   return (
     <div className="min-h-screen ">
-      <div className="border-b border-border">
-        <div className="container mx-auto px-6 py-4">
+        <div className="container py-5">
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
-        </div>
+
       </div>
 
-      <div className="container mx-auto px-6 py-8">
+      <div className="container">
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="bg-muted/50">
-            <TabsTrigger value="general">General</TabsTrigger>
-            <TabsTrigger value="integrations">Integrations</TabsTrigger>
-            <TabsTrigger value="account">Account</TabsTrigger>
+          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger value="general" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700">General</TabsTrigger>
+            <TabsTrigger value="integrations" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700">Integrations</TabsTrigger>
+            <TabsTrigger value="account" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:bg-white
+            data-[state=active]:text-foreground
+            data-[state=active]:shadow-sm
+            data-[state=active]:border-r-0
+            data-[state=active]:rounded-md
+            data-[state=active]:border-b-2
+            data-[state=active]:border-b-purple-700">Account</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
@@ -709,11 +731,22 @@ function SettingsPageContent() {
           <TabsContent value="account" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Account Settings</CardTitle>
-                <CardDescription>Manage your account preferences</CardDescription>
+                <CardTitle className="text-semibold text-2xl">Account Information</CardTitle>
+                <CardDescription className="text-[#71658B]">Manage your account preferences</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">Account settings content goes here.</p>
+                <div class="space-y-2">
+                  <h1 className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Name</h1>
+                  <input type="text" value={user.name} name="" id="" className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input bg-white px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50" disabled/>
+                  <div class="space-y-2 mt-6">
+                    <h1 className="text-sm font-semibold leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">Email</h1>
+                  <input type="text" value={user.email} name="" id="" className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input bg-white 
+                  px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground 
+                  focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50" disabled/>
+                  </div>
+                  
+                  
+                 </div>
               </CardContent>
             </Card>
           </TabsContent>

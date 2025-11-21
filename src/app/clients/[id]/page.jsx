@@ -1,11 +1,10 @@
 "use client"
-
+import { Progress } from "@/components/ui/progress"
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { 
@@ -17,18 +16,13 @@ import {
   ChartPie, 
   ChartNoAxesColumnIncreasing,
   Save,
-  Search,
   Phone,
-  Mail,
   DollarSign,
   Target,
   Eye,
-  MousePointer,
-  TrendingDown,
-  AlertCircle
+  MousePointer
 } from "lucide-react"
 import { toast } from "sonner"
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart } from 'recharts'
 import {
   Table,
   TableBody,
@@ -37,25 +31,42 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart"
+import { Bar, BarChart, CartesianGrid, XAxis, Pie, PieChart } from "recharts"
 
 export default function ClientDetailsPage() {
   const router = useRouter()
   const params = useParams()
   const clientId = decodeURIComponent(params?.id || "")
-
+  const [progress, setProgress] = useState(10)
   const [loading, setLoading] = useState(true)
   const [clientData, setClientData] = useState(null)
   const [notes, setNotes] = useState("")
-  const [searchQuery, setSearchQuery] = useState("")
   const [activeMarketingTab, setActiveMarketingTab] = useState("campaigns")
   const [activeCallCenterTab, setActiveCallCenterTab] = useState("overview")
-  const [activeLeadsTab, setActiveLeadsTab] = useState("all")
 
   useEffect(() => {
     if (clientId) {
       fetchClientDetails()
     }
   }, [clientId])
+
+  useEffect(() => {
+    if (loading) {
+      const interval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev
+          return prev + 10
+        })
+      }, 200)
+      return () => clearInterval(interval)
+    }
+  }, [loading])
 
   const fetchClientDetails = async () => {
     try {
@@ -72,11 +83,12 @@ export default function ClientDetailsPage() {
       const result = await response.json()
       setClientData(result.data)
       setNotes(result.data?.group_info?.notes || "")
+      setProgress(100)
     } catch (err) {
       console.error("Error fetching client:", err)
       toast.error("Failed to load client details")
     } finally {
-      setLoading(false)
+      setTimeout(() => setLoading(false), 300)
     }
   }
 
@@ -105,8 +117,56 @@ export default function ClientDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+          <div className="w-16 h-16 flex items-center justify-center">
+            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <style>{`
+                  @keyframes fly {
+                    0%, 100% { transform: translateY(0px); }
+                    50% { transform: translateY(-8px); }
+                  }
+                  @keyframes wingFlap {
+                    0%, 100% { transform: rotateZ(0deg); }
+                    50% { transform: rotateZ(15deg); }
+                  }
+                  .bird-body { animation: fly 2s ease-in-out infinite; }
+                  .bird-wing-left { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 35px 40px; }
+                  .bird-wing-right { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 65px 40px; }
+                `}</style>
+              </defs>
+              <g className="bird-body">
+                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
+                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
+                <circle cx="53" cy="30" r="2" fill="white" />
+                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
+                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
+              </g>
+              <g className="bird-wing-left">
+                <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+              <g className="bird-wing-right">
+                <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
+              </g>
+            </svg>
+          </div>
+          <div className="flex flex-col gap-3 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Preparing your data. This should only take a moment.
+            </p>
+          </div>
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse" style={{ animationDelay: "0.2s" }} />
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse" style={{ animationDelay: "0.4s" }} />
+          </div>
+        </div>
       </div>
     )
   }
@@ -132,9 +192,9 @@ export default function ClientDetailsPage() {
   const insights = clientData.insights || {}
   const leadsData = clientData.leads || {}
   const callCenterData = clientData.call_center || {}
+  const metaSummary = metaData.summary || {}
 
   // Calculate metrics
-  const metaSummary = metaData.summary || {}
   const metrics = {
     roas: metaSummary.total_spend > 0 ? ((leadsData.qualified_leads || 0) * 100) / metaSummary.total_spend : 0,
     costPerLead: metaSummary.cost_per_lead || 0,
@@ -142,34 +202,96 @@ export default function ClientDetailsPage() {
     cac: metaSummary.cost_per_lead * (100 / (leadsData.conversion_rate || 1)),
   }
 
-  // Prepare chart data
+// Chart 1: Lead Status Distribution (Insights)
   const statusChartData = Object.entries(ghlData.status_breakdown || {}).map(([name, value]) => ({
     name,
-    value
+    value,
+    fill: name === 'Won' ? '#9333ea' : name === 'Open' ? '#c084fc' : name === 'Lost' ? '#7c3aed' : '#a855f7'
   }))
 
-  const COLORS = ['#10b981', '#f59e0b', '#ef4444', '#6366f1']
+  const statusChartConfig = {
+    value: { label: "Leads" },
+    Won: { label: "Won", color: "#9333ea" },
+    Open: { label: "Open", color: "#c084fc" },
+    Lost: { label: "Lost", color: "#7c3aed" },
+    Abandoned: { label: "Abandoned", color: "#a855f7" }
+  } 
 
-  const campaignPerformanceData = (metaData.campaigns || []).slice(0, 10).map(c => ({
-    name: c.name?.substring(0, 20) + '...',
-    spend: c.spend,
-    leads: c.leads,
-    cpl: c.leads > 0 ? (c.spend / c.leads) : 0
-  }))
+  // Chart 2: Top Campaigns by Spend (Insights)
+  const topCampaignsBySpend = (metaData.campaigns || [])
+    .sort((a, b) => (b.spend || 0) - (a.spend || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      spend: c.spend || 0
+    }))
 
+  const topCampaignsByImpressionsData = (metaData.campaigns || [])
+    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      clicks: c.clicks || 0,
+      spend: c.spend || 0
+    }))
+  
+  const campaignPerformanceConfig = {
+    spend: { label: "Spend", color: "#9333ea" },
+    clicks: { label: "Clicks", color: "#9377fa" }
+  }
+
+  const campaignSpendConfig = {
+    spend: { label: "Spend ", color: "#9333ea" }
+  } 
+    const topCampaignsByClicks = (metaData.campaigns || [])
+    .sort((a, b) => (b.clicks || 0) - (a.clicks || 0))
+    .slice(0, 6)
+    .map(c => ({
+      name: c.name?.substring(0, 12) + (c.name?.length > 12 ? '...' : ''),
+      clicks: c.clicks || 0
+    }))
+
+  const campaignClicksConfig = {
+    clicks: { label: "Clicks", color: "#7c3aed" }
+  }
+
+  // Chart 5: Call Volume Distribution (Call Center)
   const callVolumeData = (hpData.leads || []).reduce((acc, lead) => {
     const callCount = lead.call_logs_count || 0
     if (callCount > 0) {
-      const range = callCount === 1 ? '1 call' : callCount <= 3 ? '2-3 calls' : callCount <= 5 ? '4-5 calls' : '6+ calls'
+      const range = callCount === 1 ? '1 call' : 
+                    callCount <= 3 ? '2-3 calls' : 
+                    callCount <= 5 ? '4-5 calls' : '6+ calls'
       acc[range] = (acc[range] || 0) + 1
     }
     return acc
   }, {})
 
-  const callVolumeChartData = Object.entries(callVolumeData).map(([name, value]) => ({
+  const callVolumeChartData = Object.entries(callVolumeData).map(([name, leads]) => ({
     name,
-    leads: value
+    leads,
+    fill: '#9333ea'
   }))
+
+  const callVolumeConfig = {
+    leads: { label: "Leads", color: "#9333ea" }
+  } 
+
+  // Chart 6: Contact Status Distribution (Call Center)
+  const contactedLeads = callCenterData.leads_with_calls || 0
+  const totalHpLeads = hpData.total_leads || 0
+  const pendingLeads = Math.max(0, totalHpLeads - contactedLeads)
+
+  const contactStatusData = [
+    { name: "Contacted", value: contactedLeads, fill: "#9333ea" },
+    { name: "Pending Contact", value: pendingLeads, fill: "#c084fc" }
+  ].filter(item => item.value > 0)
+
+  const contactStatusConfig = {
+    value: { label: "Leads" },
+    contacted: { label: "Contacted", color: "#9333ea" },
+    pending: { label: "Pending Contact", color: "#c084fc" }
+  }
 
   return (
     <div className="h-full flex flex-col overflow-hidden">
@@ -206,142 +328,98 @@ export default function ClientDetailsPage() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden min-h-0 mt-6">
-        {/* Search Bar */}
-        <Card className="mb-4 flex-shrink-0 bg-accent/50">
-          <CardContent className="p-6 py-4 px-6">
-            <div className="w-full">
-              <div className="flex flex-col md:flex-row md:items-center md:gap-4 gap-3">
-                <form className="relative w-full md:w-1/3 md:min-w-[360px]">
-                  <div className="relative w-full">
-                    <Input
-                      className="pr-20 bg-white h-[50px] py-4 text-sm"
-                      placeholder={`Ask Birdy anything about ${groupInfo.name}...`}
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                    <Button
-                      className="absolute top-1/2 -translate-y-1/2 right-2"
-                      size="sm"
-                      type="submit"
-                      disabled={!searchQuery}
-                    >
-                      <Search className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </form>
-                <div className="flex flex-wrap gap-2 items-center md:justify-end md:flex-1">
-                  <span className="text-muted-foreground text-xs whitespace-nowrap">Try asking:</span>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
-                    Why are bookings down this week?
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
-                    Which tag gave the best cost per booking?
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-xs h-7">
-                    Show ROAS breakdown by campaign
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabs */}
-        <Tabs defaultValue="overview"  className="flex-1 flex flex-col overflow-hidden min-h-0">
-          <TabsList className="mb-4 gap-1 flex-shrink-0 bg-muted/60 border border-border/50 shadow-sm w-full">
-            <TabsTrigger value="overview" className="flex-1">Overview</TabsTrigger>
-            <TabsTrigger value="insights" className="flex-1">Insights</TabsTrigger>
-            <TabsTrigger value="marketing" className="flex-1">Marketing</TabsTrigger>
-            {/* <TabsTrigger disabled value="leads" className="flex-1 disabled:bg-black/10 disabled:text-white ">Leads</TabsTrigger> */}
-            <TabsTrigger value="callcenter" className="flex-1">Call Center</TabsTrigger>
+        <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden min-h-0">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+            <TabsTrigger value="overview" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="insights" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Insights
+            </TabsTrigger>
+            <TabsTrigger value="marketing" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Marketing
+            </TabsTrigger>
+            <TabsTrigger value="callcenter" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+              Call Center
+            </TabsTrigger>
           </TabsList>
 
           {/* OVERVIEW TAB */}
           <TabsContent value="overview" className="mt-6 overflow-y-auto space-y-4">
-            {/* Metrics Grid */}
             <div className="grid gap-4 md:grid-cols-4">
-              <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">ROAS</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">ROAS</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.roas.toFixed(2)}x</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+12%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <TrendingUp className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <TrendingUp className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Cost Per Lead</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Cost Per Lead</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.costPerLead.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+5%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+5%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <Users className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Close Rate</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Close Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{metrics.closeRate.toFixed(2)}%</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+8%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <ChartPie className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <ChartPie className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="overflow-hidden relative">
-                <CardContent className="p-6">
+              <Card>
+                <CardContent className="pt-6">
                   <div className="flex justify-between items-start">
                     <div>
-                      <p className="text-muted-foreground text-sm">Customer Acq. Cost</p>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Customer Acq. Cost</p>
                       <h3 className="text-2xl font-bold mt-1">${metrics.cac.toFixed(2)}</h3>
                       <div className="flex items-center mt-1">
-                        <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                        <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">
-                          vs. last month
-                        </span>
+                        <span className="text-green-500 text-xs">+12%</span>
+                        <span className="text-muted-foreground ml-1 text-xs">vs. last month</span>
                       </div>
                     </div>
-                    <div className="bg-primary/10 p-2 rounded-md">
-                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-primary" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <ChartNoAxesColumnIncreasing className="h-4 w-4 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* History Book */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">History Book</CardTitle>
@@ -349,12 +427,12 @@ export default function ClientDetailsPage() {
               <CardContent>
                 <div className="space-y-4">
                   <Textarea
-                    className="min-h-[200px] resize-none"
+                    className="min-h-[200px] resize-none bg-[#F9F8FC]"
                     placeholder="Add notes about this client..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                   />
-                  <Button onClick={handleSaveNotes} className="w-full">
+                  <Button onClick={handleSaveNotes} className="w-full bg-[#713CDD] text-white font-semibold">
                     <Save className="mr-2 h-4 w-4" />
                     Save Notes
                   </Button>
@@ -364,14 +442,14 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* INSIGHTS TAB */}
-          <TabsContent value="insights" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="insights" className="mt-6 overflow-y-auto space-y-4">
             {/* Key Insights Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Best Performing Tag</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Best Performing Tag</p>
                       <h3 className="text-xl font-bold mt-2">{insights.tag_with_best_roas?.tag_name || 'N/A'}</h3>
                       <p className="text-sm mt-1">ROAS: {insights.tag_with_best_roas?.roas?.toFixed(2) || 0}x</p>
                       <div className="flex items-center mt-1">
@@ -379,16 +457,18 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.tag_with_best_roas?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Best Booking Offer</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Best Booking Offer</p>
                       <h3 className="text-xl font-bold mt-2">{insights.offer_with_best_booking_rate?.offer_name || 'N/A'}</h3>
                       <p className="text-sm mt-1">Rate: {((insights.offer_with_best_booking_rate?.booking_rate || 0) * 100).toFixed(1)}%</p>
                       <div className="flex items-center mt-1">
@@ -396,16 +476,18 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.offer_with_best_booking_rate?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Booking Delay</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Avg Booking Delay</p>
                       <h3 className="text-xl font-bold mt-2">{insights.avg_booking_delay_days?.days?.toFixed(1) || 0} days</h3>
                       <p className="text-sm mt-1">Time to convert</p>
                       <div className="flex items-center mt-1">
@@ -413,16 +495,18 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.avg_booking_delay_days?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Calendar className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Calendar className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Bookings This Month</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Bookings This Month</p>
                       <h3 className="text-xl font-bold mt-2">{insights.total_bookings_this_month?.count || 0}</h3>
                       <p className="text-sm mt-1">Total conversions</p>
                       <div className="flex items-center mt-1">
@@ -430,140 +514,128 @@ export default function ClientDetailsPage() {
                         <span className="text-xs text-green-500">+{insights.total_bookings_this_month?.change_percentage || 0}%</span>
                       </div>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Charts */}
+            {/* Charts - 2 in Insights */}
             <div className="grid gap-4 md:grid-cols-2">
-              <Card>
-                <CardHeader>
+              {/* Chart 1: Lead Status Distribution */}
+              <Card className="flex flex-col">
+                <CardHeader className="items-center pb-0">
                   <CardTitle>Lead Status Distribution</CardTitle>
+                  <CardDescription>Current pipeline breakdown</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                <CardContent className="flex-1 pb-0">
+                  <ChartContainer
+                    config={statusChartConfig}
+                    className="mx-auto aspect-square max-h-[250px]"
+                  >
                     <PieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
                       <Pie
                         data={statusChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
                         dataKey="value"
-                      >
-                        {statusChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
+                        nameKey="name"
+                        innerRadius={60}
+
+                      />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm">
+                  <div className="flex items-center gap-2 leading-none font-medium">
+                    Total Leads: {Object.values(ghlData.status_breakdown || {}).reduce((a, b) => a + b, 0)}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Last 30 days performance
+                  </div>
+                </CardFooter>
               </Card>
 
+              {/* Chart 2: Top Campaigns by Spend */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Campaign Performance (Top 10)</CardTitle>
+                  <CardTitle>Top Campaigns by Spend</CardTitle>
+                  <CardDescription>Highest ad spend campaigns</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={campaignPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} fontSize={10} />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="spend" fill="#3b82f6" name="Spend ($)" />
-                      <Bar dataKey="leads" fill="#10b981" name="Leads" />
+                  <ChartContainer config={campaignSpendConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsBySpend}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={11}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="spend" fill="var(--color-spend)" radius={8} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Marketing Funnel</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                      data={[
-                        { stage: 'Impressions', value: metaSummary.total_impressions || 0 },
-                        { stage: 'Clicks', value: metaSummary.total_clicks || 0 },
-                        { stage: 'Leads', value: metaSummary.total_leads || 0 },
-                        { stage: 'Conversions', value: leadsData.qualified_leads || 0 }
-                      ]}
-                      layout="vertical"
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="stage" />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#8b5cf6" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cost per Lead Trend</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={(metaData.campaigns || []).slice(0, 10).map(c => ({
-                      name: c.name?.substring(0, 15),
-                      cpl: c.leads > 0 ? (c.spend / c.leads) : 0
-                    }))}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} fontSize={10} />
-                      <YAxis />
-                      <Tooltip />
-                      <Line type="monotone" dataKey="cpl" stroke="#f59e0b" strokeWidth={2} name="CPL ($)" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Total Spend: ${metaSummary.total_spend?.toFixed(2) || 0}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Based on last 30 days
+                  </div>
+                </CardFooter>
               </Card>
             </div>
 
             {/* Summary Stats */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Ad Spend</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Ad Spend</p>
                       <h3 className="text-2xl font-bold mt-1">${metaSummary.total_spend?.toFixed(2) || 0}</h3>
                     </div>
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Leads</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.total_leads || 0}</h3>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-4 w-4 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Conversion Rate</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Conversion Rate</p>
                       <h3 className="text-2xl font-bold mt-1">{leadsData.conversion_rate?.toFixed(2) || 0}%</h3>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Target className="h-4 w-4 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -571,95 +643,187 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* MARKETING TAB */}
-          <TabsContent value="marketing" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="marketing" className="mt-6 overflow-y-auto space-y-4">
             {/* Marketing Summary */}
             <div className="grid gap-4 md:grid-cols-5">
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <DollarSign className="h-8 w-8 text-primary/20" />
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Total Spend</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Total Spend</p>
                       <p className="text-lg font-bold">${metaSummary.total_spend?.toFixed(2) || 0}</p>
                     </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <DollarSign className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Eye className="h-8 w-8 text-primary/20" />
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Impressions</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Impressions</p>
                       <p className="text-lg font-bold">{(metaSummary.total_impressions || 0).toLocaleString()}</p>
                     </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Eye className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <MousePointer className="h-8 w-8 text-primary/20" />
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">Clicks</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Clicks</p>
                       <p className="text-lg font-bold">{(metaSummary.total_clicks || 0).toLocaleString()}</p>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-8 w-8 text-primary/20" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Leads</p>
-                      <p className="text-lg font-bold">{metaSummary.total_leads || 0}</p>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <MousePointer className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3">
-                    <Target className="h-8 w-8 text-primary/20" />
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-xs text-muted-foreground">CPL</p>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">Leads</p>
+                      <p className="text-lg font-bold">{metaSummary.total_leads || 0}</p>
+                    </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-muted-foreground text-[#71658B]">CPL</p>
                       <p className="text-lg font-bold">${metaSummary.cost_per_lead?.toFixed(2) || 0}</p>
+                    </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
+            {/* Marketing Charts - 2 charts */}
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* Chart 3: Campaign Performance - Spend vs Clicks */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Campaign Performance</CardTitle>
+                  <CardDescription>Spend and engagement metrics</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={campaignPerformanceConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsByImpressionsData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={10}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent />}
+                      />
+                      <Bar dataKey="spend" fill="var(--color-spend)" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="clicks" fill="var(--color-clicks)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    {metaSummary.total_campaigns || 0} Active Campaigns
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Comparing spend vs Impressions
+                  </div>
+                </CardFooter>
+              </Card>
+
+              {/* Chart 4: Top Campaigns by Clicks */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Click Generators</CardTitle>
+                  <CardDescription>Campaigns by Impressions volume</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={campaignClicksConfig}>
+                    <BarChart accessibilityLayer data={topCampaignsByClicks}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                        fontSize={11}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="clicks" fill="var(--color-clicks)" radius={8} />
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Avg CPC: ${metaSummary.avg_cpc?.toFixed(2) || 0}
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Best performing campaigns by clicks
+                  </div>
+                </CardFooter>
+              </Card>
+            </div>
+
             {/* Marketing Tabs */}
             <Tabs value={activeMarketingTab} onValueChange={setActiveMarketingTab}>
-              <TabsList className="w-full justify-start grid grid-cols-4 bg-muted/50">
-                <TabsTrigger value="campaigns">Campaigns ({metaSummary.total_campaigns || 0})</TabsTrigger>
-                <TabsTrigger value="adsets">Ad Sets ({metaSummary.total_adsets || 0})</TabsTrigger>
-                <TabsTrigger value="ads">Ads ({metaSummary.total_ads || 0})</TabsTrigger>
-                <TabsTrigger value="leads">Meta Leads ({metaSummary.total_leads || 0})</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="campaigns" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Campaigns ({metaSummary.total_campaigns || 0})
+                </TabsTrigger>
+                <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Ad Sets ({metaSummary.total_adsets || 0})
+                </TabsTrigger>
+                <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Ads ({metaSummary.total_ads || 0})
+                </TabsTrigger>
+                <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Meta Leads ({metaSummary.total_leads || 0})
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="campaigns" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">Leads</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
-                            <TableHead className="text-right">CPC</TableHead>
-                            <TableHead className="text-right">CPM</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className="bg-muted/50 border-b border-r">Campaign</TableHead>
+                            <TableHead className="bg-muted/50 border-b border-r">Status</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Spend</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Impressions</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Clicks</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">Leads</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CTR</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CPC</TableHead>
+                            <TableHead className="text-left bg-muted/50 border-b border-r">CPM</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -671,20 +835,23 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.campaigns || []).map((campaign) => (
-                              <TableRow key={campaign.id}>
+                              <TableRow 
+                                key={campaign.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{campaign.name}</TableCell>
                                 <TableCell>
                                   <Badge variant={campaign.status === 'Active' ? 'default' : 'secondary'}>
                                     {campaign.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${campaign.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{campaign.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{campaign.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{campaign.leads || 0}</TableCell>
-                                <TableCell className="text-right">{campaign.ctr?.toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">${campaign.cpc?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">${campaign.cpm?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${campaign.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{campaign.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{campaign.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{campaign.leads || 0}</TableCell>
+                                <TableCell className="text-left">{campaign.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${campaign.cpc?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${campaign.cpm?.toFixed(2)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -696,21 +863,21 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="adsets" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0"> 
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Ad Set</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
-                            <TableHead className="text-right">CPC</TableHead>
-                            <TableHead className="text-right">CPM</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className="border-r border-border">Ad Set</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Spend</TableHead>
+                            <TableHead className="text-left border-r border-border">Impressions</TableHead>
+                            <TableHead className="text-left border-r border-border">Clicks</TableHead>
+                            <TableHead className="text-left border-r border-border">CTR</TableHead>
+                            <TableHead className="text-left border-r border-border">CPC</TableHead>
+                            <TableHead className="text-left border-r border-border">CPM</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -722,7 +889,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.adsets || []).map((adset) => (
-                              <TableRow key={adset.id}>
+                              <TableRow 
+                                key={adset.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{adset.name}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground">{adset.campaign_name}</TableCell>
                                 <TableCell>
@@ -730,12 +900,12 @@ export default function ClientDetailsPage() {
                                     {adset.status}
                                   </Badge>
                                 </TableCell>
-                                <TableCell className="text-right">${adset.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{adset.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{adset.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{adset.ctr?.toFixed(2)}%</TableCell>
-                                <TableCell className="text-right">${adset.cpc?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">${adset.cpm?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${adset.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{adset.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{adset.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{adset.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${adset.cpc?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">${adset.cpm?.toFixed(2)}</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -747,21 +917,21 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="ads" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Ad</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Creative</TableHead>
-                            <TableHead className="text-right">Spend</TableHead>
-                            <TableHead className="text-right">Impressions</TableHead>
-                            <TableHead className="text-right">Clicks</TableHead>
-                            <TableHead className="text-right">Results</TableHead>
-                            <TableHead className="text-right">CTR</TableHead>
+                            <TableHead className="border-r border-border">Ad</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Status</TableHead>
+                            <TableHead className="border-r border-border">Creative</TableHead>
+                            <TableHead className="text-left border-r border-border">Spend</TableHead>
+                            <TableHead className="text-left border-r border-border">Impressions</TableHead>
+                            <TableHead className="text-left border-r border-border">Clicks</TableHead>
+                            <TableHead className="text-left border-r border-border">Results</TableHead>
+                            <TableHead className="text-left border-r border-border">CTR</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -773,7 +943,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.ads || []).map((ad) => (
-                              <TableRow key={ad.id}>
+                              <TableRow 
+                                key={ad.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium max-w-[200px] truncate">{ad.name}</TableCell>
                                 <TableCell className="text-sm text-muted-foreground max-w-[150px] truncate">{ad.campaign_name}</TableCell>
                                 <TableCell>
@@ -792,11 +965,11 @@ export default function ClientDetailsPage() {
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right">${ad.spend?.toFixed(2)}</TableCell>
-                                <TableCell className="text-right">{ad.impressions?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{ad.clicks?.toLocaleString()}</TableCell>
-                                <TableCell className="text-right">{ad.results || 0}</TableCell>
-                                <TableCell className="text-right">{ad.ctr?.toFixed(2)}%</TableCell>
+                                <TableCell className="text-left">${ad.spend?.toFixed(2)}</TableCell>
+                                <TableCell className="text-left">{ad.impressions?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{ad.clicks?.toLocaleString()}</TableCell>
+                                <TableCell className="text-left">{ad.results || 0}</TableCell>
+                                <TableCell className="text-left">{ad.ctr?.toFixed(2)}%</TableCell>
                               </TableRow>
                             ))
                           )}
@@ -808,19 +981,19 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="leads" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Campaign</TableHead>
-                            <TableHead>Ad Name</TableHead>
-                            <TableHead>Platform</TableHead>
-                            <TableHead>Created</TableHead>
+                          <TableRow className="border-r border-border">
+                            <TableHead className="border-r border-border">Name</TableHead>
+                            <TableHead className="border-r border-border">Email</TableHead>
+                            <TableHead className="border-r border-border">Phone</TableHead>
+                            <TableHead className="border-r border-border">Campaign</TableHead>
+                            <TableHead className="border-r border-border">Ad Name</TableHead>
+                            <TableHead className="border-r border-border">Platform</TableHead>
+                            <TableHead className="border-r border-border">Created</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -832,7 +1005,10 @@ export default function ClientDetailsPage() {
                             </TableRow>
                           ) : (
                             (metaData.leads || []).map((lead) => (
-                              <TableRow key={lead.id}>
+                              <TableRow 
+                                key={lead.id} 
+                                className="odd:bg-[#F4F3F9] even:bg-white border-b border-border"
+                              >
                                 <TableCell className="font-medium">{lead.full_name || 'N/A'}</TableCell>
                                 <TableCell>{lead.email || 'N/A'}</TableCell>
                                 <TableCell>{lead.phone_number || 'N/A'}</TableCell>
@@ -856,324 +1032,164 @@ export default function ClientDetailsPage() {
             </Tabs>
           </TabsContent>
 
-          {/* LEADS TAB */}
-          <TabsContent value="leads" className="mt-0 pt-0 overflow-y-auto space-y-4">
-            {/* Leads Summary */}
-            <div className="grid gap-4 md:grid-cols-4">
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Total Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.total_leads || 0}</h3>
-                    </div>
-                    <Users className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Qualified Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.qualified_leads || 0}</h3>
-                    </div>
-                    <Target className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Conversion Rate</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.conversion_rate?.toFixed(2) || 0}%</h3>
-                    </div>
-                    <ChartPie className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Open Leads</p>
-                      <h3 className="text-2xl font-bold mt-1">{leadsData.status_breakdown?.Open || 0}</h3>
-                    </div>
-                    <AlertCircle className="h-8 w-8 text-primary/20" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Leads Tabs */}
-            <Tabs value={activeLeadsTab} onValueChange={setActiveLeadsTab}>
-              <TabsList className="w-full justify-start grid grid-cols-5 bg-muted/50">
-                <TabsTrigger value="all">All ({leadsData.total_leads || 0})</TabsTrigger>
-                <TabsTrigger value="open">Open ({leadsData.status_breakdown?.Open || 0})</TabsTrigger>
-                <TabsTrigger value="won">Won ({leadsData.status_breakdown?.Won || 0})</TabsTrigger>
-                <TabsTrigger value="lost">Lost ({leadsData.status_breakdown?.Lost || 0})</TabsTrigger>
-                <TabsTrigger value="abandoned">Abandoned ({leadsData.status_breakdown?.Abandoned || 0})</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="all" className="mt-4">
-                <Card>
-                  <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Source</TableHead>
-                            <TableHead>Calls</TableHead>
-                            <TableHead>Value</TableHead>
-                            <TableHead>Last Contact</TableHead>
-                            <TableHead>Created</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {(leadsData.all_leads || []).length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                                No leads found
-                              </TableCell>
-                            </TableRow>
-                          ) : (
-                            (leadsData.all_leads || []).map((lead) => (
-                              <TableRow key={lead.id}>
-                                <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                                <TableCell>{lead.email || 'N/A'}</TableCell>
-                                <TableCell>{lead.phone || 'N/A'}</TableCell>
-                                <TableCell>
-                                  <Badge 
-                                    variant={
-                                      lead.status === 'Won' ? 'default' : 
-                                      lead.status === 'Open' ? 'secondary' : 
-                                      'destructive'
-                                    }
-                                  >
-                                    {lead.status}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-sm">{lead.source}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-1">
-                                    <Phone className="h-3 w-3" />
-                                    <span>{lead.callCount || 0}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>${lead.value?.toFixed(2) || '0.00'}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {lead.lastContact !== 'N/A' 
-                                    ? new Date(lead.lastContact).toLocaleDateString() 
-                                    : 'N/A'
-                                  }
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground">
-                                  {lead.created ? new Date(lead.created).toLocaleDateString() : 'N/A'}
-                                </TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {['open', 'won', 'lost', 'abandoned'].map((status) => (
-                <TabsContent key={status} value={status} className="mt-4">
-                  <Card>
-                    <CardContent className="p-0">
-                      <div className="overflow-x-auto">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Name</TableHead>
-                              <TableHead>Email</TableHead>
-                              <TableHead>Phone</TableHead>
-                              <TableHead>Source</TableHead>
-                              <TableHead>Calls</TableHead>
-                              <TableHead>Value</TableHead>
-                              <TableHead>Last Contact</TableHead>
-                              <TableHead>Created</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {(leadsData.all_leads || [])
-                              .filter(lead => lead.status?.toLowerCase() === status)
-                              .length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                  No {status} leads found
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              (leadsData.all_leads || [])
-                                .filter(lead => lead.status?.toLowerCase() === status)
-                                .map((lead) => (
-                                  <TableRow key={lead.id}>
-                                    <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
-                                    <TableCell>{lead.email || 'N/A'}</TableCell>
-                                    <TableCell>{lead.phone || 'N/A'}</TableCell>
-                                    <TableCell className="text-sm">{lead.source}</TableCell>
-                                    <TableCell>
-                                      <div className="flex items-center gap-1">
-                                        <Phone className="h-3 w-3" />
-                                        <span>{lead.callCount || 0}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell>${lead.value?.toFixed(2) || '0.00'}</TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {lead.lastContact !== 'N/A' 
-                                        ? new Date(lead.lastContact).toLocaleDateString() 
-                                        : 'N/A'
-                                      }
-                                    </TableCell>
-                                    <TableCell className="text-sm text-muted-foreground">
-                                      {lead.created ? new Date(lead.created).toLocaleDateString() : 'N/A'}
-                                    </TableCell>
-                                  </TableRow>
-                                ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </TabsContent>
-
           {/* CALL CENTER TAB */}
-          <TabsContent value="callcenter" className="mt-0 pt-0 overflow-y-auto space-y-4">
+          <TabsContent value="callcenter" className="mt-6 overflow-y-auto space-y-4">
             {/* Call Center Summary */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Calls</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Total Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.total_calls || 0}</h3>
                     </div>
-                    <Phone className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Leads with Calls</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Leads with Calls</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.leads_with_calls || 0}</h3>
                     </div>
-                    <Users className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Avg Calls/Lead</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">Avg Calls/Lead</p>
                       <h3 className="text-2xl font-bold mt-1">{callCenterData.avg_calls_per_lead?.toFixed(2) || 0}</h3>
                     </div>
-                    <ChartPie className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <ChartPie className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">HP Leads</p>
+                      <p className="text-sm text-muted-foreground text-[#71658B]">HP Leads</p>
                       <h3 className="text-2xl font-bold mt-1">{hpData.total_leads || 0}</h3>
                     </div>
-                    <Target className="h-8 w-8 text-primary/20" />
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <Target className="h-5 w-5 text-purple-500" />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Call Volume Chart */}
+            {/* Call Center Charts - 2 charts */}
             <div className="grid gap-4 md:grid-cols-2">
+              {/* Chart 5: Call Volume Distribution */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Leads by Call Count</CardTitle>
+                  <CardTitle>Call Volume Distribution</CardTitle>
+                  <CardDescription>Leads by number of calls</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={callVolumeChartData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="leads" fill="#3b82f6" />
+                  <ChartContainer config={callVolumeConfig}>
+                    <BarChart accessibilityLayer data={callVolumeChartData}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
+                      <Bar dataKey="leads" fill="var(--color-leads)" radius={8} />
                     </BarChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col items-start gap-2 text-sm">
+                  <div className="flex gap-2 leading-none font-medium">
+                    Avg: {callCenterData.avg_calls_per_lead?.toFixed(1) || 0} calls per lead
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Distribution of call attempts
+                  </div>
+                </CardFooter>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Call Distribution</CardTitle>
+              {/* Chart 6: Contact Status */}
+              <Card className="flex flex-col">
+                <CardHeader className="items-center pb-0">
+                  <CardTitle>Contact Status</CardTitle>
+                  <CardDescription>Lead engagement breakdown</CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                <CardContent className="flex-1 pb-0">
+                  <ChartContainer
+                    config={contactStatusConfig}
+                    className="mx-auto aspect-square max-h-[250px]"
+                  >
                     <PieChart>
+                      <ChartTooltip
+                        cursor={false}
+                        content={<ChartTooltipContent hideLabel />}
+                      />
                       <Pie
-                        data={callVolumeChartData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="leads"
-                      >
-                        {callVolumeChartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip />
+                        data={contactStatusData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={60}
+                      />
                     </PieChart>
-                  </ResponsiveContainer>
+                  </ChartContainer>
                 </CardContent>
+                <CardFooter className="flex-col gap-2 text-sm">
+                  <div className="flex items-center gap-2 leading-none font-medium">
+                    Contact Rate: {totalHpLeads > 0 ? ((contactedLeads / totalHpLeads) * 100).toFixed(1) : 0}%
+                  </div>
+                  <div className="text-muted-foreground leading-none">
+                    Based on call center activity
+                  </div>
+                </CardFooter>
               </Card>
             </div>
 
             {/* Call Center Tabs */}
             <Tabs value={activeCallCenterTab} onValueChange={setActiveCallCenterTab}>
-              <TabsList className="w-full justify-start grid grid-cols-2 bg-muted/50">
-                <TabsTrigger value="overview">Call Overview</TabsTrigger>
-                <TabsTrigger value="logs">Detailed Call Logs</TabsTrigger>
+              <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+                <TabsTrigger value="overview" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Call Overview
+                </TabsTrigger>
+                <TabsTrigger value="logs" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
+                  Detailed Call Logs
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Lead Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Total Calls</TableHead>
-                            <TableHead>Last Contact</TableHead>
-                            <TableHead>Business</TableHead>
+                            <TableHead className="text-left border-r border-border">Lead Name</TableHead>
+                            <TableHead className="text-left border-r border-border">Email</TableHead>
+                            <TableHead className="text-left border-r border-border">Phone</TableHead>
+                            <TableHead className="text-left border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Total Calls</TableHead>
+                            <TableHead className="text-left border-r border-border">Last Contact</TableHead>
+                            <TableHead className="text-left border-r border-border">Business</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1190,7 +1206,7 @@ export default function ClientDetailsPage() {
                               .filter(lead => lead.callCount > 0)
                               .sort((a, b) => (b.callCount || 0) - (a.callCount || 0))
                               .map((lead) => (
-                                <TableRow key={lead.id}>
+                                <TableRow key={lead.id} className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors">
                                   <TableCell className="font-medium">{lead.name || 'N/A'}</TableCell>
                                   <TableCell>{lead.email || 'N/A'}</TableCell>
                                   <TableCell>{lead.phone || 'N/A'}</TableCell>
@@ -1229,19 +1245,19 @@ export default function ClientDetailsPage() {
               </TabsContent>
 
               <TabsContent value="logs" className="mt-4">
-                <Card>
+                <Card className="rounded-none p-0">
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
                       <Table>
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Lead Name</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Call Date</TableHead>
-                            <TableHead>Duration</TableHead>
-                            <TableHead>Direction</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead>Recording</TableHead>
+                            <TableHead className="text-left border-r border-border">Lead Name</TableHead>
+                            <TableHead className="text-left border-r border-border">Contact</TableHead>
+                            <TableHead className="text-left border-r border-border">Call Date</TableHead>
+                            <TableHead className="text-left border-r border-border">Duration</TableHead>
+                            <TableHead className="text-left border-r border-border">Direction</TableHead>
+                            <TableHead className="text-left border-r border-border">Status</TableHead>
+                            <TableHead className="text-left border-r border-border">Recording</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1274,7 +1290,7 @@ export default function ClientDetailsPage() {
                               .sort((a, b) => new Date(b.created_date) - new Date(a.created_date))
                               .slice(0, 100)
                               .map((log, idx) => (
-                                <TableRow key={idx}>
+                                <TableRow key={idx} className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors">
                                   <TableCell className="font-medium">{log.leadName || 'N/A'}</TableCell>
                                   <TableCell>
                                     <div className="text-xs">

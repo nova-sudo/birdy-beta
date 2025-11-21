@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw } from "lucide-react"
+import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target } from "lucide-react"
 import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
@@ -30,9 +30,7 @@ import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
-
-
-
+import { Progress } from "@/components/ui/progress"
 
 
 const CACHE_DURATION = {
@@ -115,6 +113,7 @@ export default function ClientsPage() {
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedDateRange, setSelectedDateRange] = useState("all")
+  const [progress, setProgress] = useState(13)
 
 
   
@@ -174,6 +173,21 @@ export default function ClientsPage() {
   useEffect(() => {
     fetchClientGroups()
   }, [])
+
+   useEffect(() => {
+    const intervals = [33, 50, 66, 80, 90];
+    let step = 0;
+
+    const timer = setInterval(() => {
+      setProgress(intervals[step]);
+      step += 1;
+      if (step >= intervals.length) {
+        clearInterval(timer);
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (wizardOpen && wizardStep > 1) {
@@ -437,20 +451,123 @@ export default function ClientsPage() {
       String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()),
   )
 
-  if (loading) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className=" w-full mx-auto space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-96" />
-        </div>
-      </div>
-    )
+  // Calculate statistics from clientGroups
+  const calculateStats = () => {
+    const activeClients = clientGroups.length
+    
+    const totalSpend = clientGroups.reduce((sum, group) => {
+      const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
+      return sum + spend
+    }, 0)
+    
+    const totalLeads = clientGroups.reduce((sum, group) => {
+      const metaLeads = parseInt(group.facebook?.metrics?.total_leads) || 0
+      const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
+      const hpLeads = parseInt(group.hotprospector?.metrics?.total_leads) || 0
+      return sum + metaLeads + ghlContacts + hpLeads
+    }, 0)
+    
+    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
+
+    return {
+      activeClients,
+      totalSpend,
+      totalLeads,
+      averageCPL
+    }
   }
 
+  const stats = calculateStats()
+
+  if (loading) {
+      return (
+      <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
+        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+          {/* Animated logo/icon */}
+  <div className="w-16 h-16 flex items-center justify-center">
+        <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <style>{`
+              @keyframes fly {
+                0%, 100% { transform: translateY(0px); }
+                50% { transform: translateY(-8px); }
+              }
+              @keyframes wingFlap {
+                0%, 100% { transform: rotateZ(0deg); }
+                50% { transform: rotateZ(15deg); }
+              }
+              .bird-body {
+                animation: fly 2s ease-in-out infinite;
+              }
+              .bird-wing-left {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 35px 40px;
+              }
+              .bird-wing-right {
+                animation: wingFlap 0.6s ease-in-out infinite;
+                transform-origin: 65px 40px;
+              }
+            `}</style>
+          </defs>
+  
+          {/* Body */}
+          <g className="bird-body">
+            <circle cx="50" cy="45" r="12" fill="currentColor" className="text-primary" />
+            {/* Head */}
+            <circle cx="50" cy="32" r="10" fill="currentColor" className="text-primary" />
+            {/* Eye */}
+            <circle cx="53" cy="30" r="2" fill="white" />
+            {/* Beak */}
+            <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-primary" />
+            {/* Tail */}
+            <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-primary/70" />
+          </g>
+  
+          {/* Left Wing */}
+          <g className="bird-wing-left">
+            <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-primary/80" />
+          </g>
+  
+          {/* Right Wing */}
+          <g className="bird-wing-right">
+            <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-primary/80" />
+          </g>
+        </svg>
+      </div>
+  
+          {/* Main text */}
+          <div className="flex flex-col gap-3 text-center">
+            <h2 className="text-2xl font-bold text-foreground">Loading your data</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Preparing your data. This should only take a moment.
+            </p>
+          </div>
+  
+          {/* Progress bar container */}
+          <div className="w-full flex flex-col gap-2">
+            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
+          </div>
+  
+          {/* Loading dots animation */}
+          <div className="flex gap-1">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
+              style={{ animationDelay: "0.2s" }}
+            />
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
+              style={{ animationDelay: "0.4s" }}
+            />
+          </div>
+        </div>
+      </div>
+      )
+    }
+
   return (
-    <div className="min-h-dvh w-full mx-auto bg-background gap-6">
+    <div className="min-h-dvh w-full mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className="w-full h-auto mx-auto">
           <div className="flex items-center justify-between">
@@ -767,7 +884,7 @@ export default function ClientsPage() {
                               <div
                                 key={group.id}
                                 onClick={() => setSelectedHotProspectorGroup(group)}
-                                className={`relative p-4 rounded-xl  cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
                                   selectedHotProspectorGroup?.id === group.id
                                     ? "border-purple-500 bg-purple-50 shadow-md"
                                     : "border-border hover:border-muted-foreground bg-card"
@@ -896,8 +1013,100 @@ export default function ClientsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-            <ClientGroupsTable data={clientGroups} onRowClick={handleClientGroupClick} columns={columns} searchQuery={searchQuery}
-             columnVisibility={ columnVisibility} customMetrics={customMetrics} setCustomMetrics={setCustomMetrics}/>
+
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {/* Total Active Clients */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Active Clients</p>
+                  <h3 className="text-2xl font-bold mt-1">{stats.activeClients}</h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <Users className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Ad Spend */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Ad Spend</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    ${stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Total Leads */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Total Leads</p>
+                  <h3 className="text-2xl font-bold mt-1">{stats.totalLeads.toLocaleString()}</h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <UserCheck className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Average CPL */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-muted-foreground text-sm">Average CPL</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    ${stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </h3>
+                  <div className="flex items-center mt-1">
+                    <span className="text-destructive text-[0.75rem] leading-4">-3%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                  </div>
+                </div>
+                <div className="bg-primary/10 p-2 rounded-md">
+                  <Target className="h-4 w-4 text-primary" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Client Groups Table */}
+        <ClientGroupsTable 
+          data={clientGroups} 
+          onRowClick={handleClientGroupClick} 
+          columns={columns} 
+          searchQuery={searchQuery}
+          columnVisibility={columnVisibility} 
+          customMetrics={customMetrics} 
+          setCustomMetrics={setCustomMetrics}
+        />
 
       </div>
     </div>
