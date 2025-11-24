@@ -210,7 +210,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
         }
       `}</style>
       {/* Table */}
-      <div className="table-container border">
+      <div className="table-container border rounded-md">
         <table className="text-sm ">
           <thead className="top-0 z-40">
             <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">

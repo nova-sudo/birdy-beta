@@ -1017,19 +1017,20 @@ export default function ClientsPage() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           {/* Total Active Clients */}
-          <Card>
-            <CardContent className="p-6">
+          <Card className="border rounded-lg shadow-sm ">
+            <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-muted-foreground text-sm">Total Active Clients</p>
-                  <h3 className="text-2xl font-bold mt-1">{stats.activeClients}</h3>
+                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Active Clients</p>
+                  <h3 className="text-2xl font-bold mt-1">
+                    {stats.activeClients}</h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="bg-primary/10 p-2 rounded-md">
-                  <Users className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Users className="h-4 w-4 text-purple-500" />
                 </div>
               </div>
             </CardContent>
@@ -1037,20 +1038,20 @@ export default function ClientsPage() {
 
           {/* Total Ad Spend */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-muted-foreground text-sm">Total Ad Spend</p>
+                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Ad Spend</p>
                   <h3 className="text-2xl font-bold mt-1">
                     ${stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="bg-primary/10 p-2 rounded-md">
-                  <DollarSign className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-purple-500" />
                 </div>
               </div>
             </CardContent>
@@ -1058,18 +1059,18 @@ export default function ClientsPage() {
 
           {/* Total Leads */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-muted-foreground text-sm">Total Leads</p>
+                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Leads</p>
                   <h3 className="text-2xl font-bold mt-1">{stats.totalLeads.toLocaleString()}</h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="bg-primary/10 p-2 rounded-md">
-                  <UserCheck className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <UserCheck className="h-4 w-4 text-purple-500" />
                 </div>
               </div>
             </CardContent>
@@ -1077,20 +1078,20 @@ export default function ClientsPage() {
 
           {/* Average CPL */}
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
-                  <p className="text-muted-foreground text-sm">Average CPL</p>
+                  <p className="text-muted-foreground text-sm text-[#71658B]">Average CPL</p>
                   <h3 className="text-2xl font-bold mt-1">
                     ${stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
-                    <span className="text-destructive text-[0.75rem] leading-4">-3%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4">vs. last period</span>
+                    <span className="text-destructive text-[0.75rem] leading-4 text-[#EF4343]">-3%</span>
+                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="bg-primary/10 p-2 rounded-md">
-                  <Target className="h-4 w-4 text-primary" />
+                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Target className="h-4 w-4 text-purple-500" />
                 </div>
               </div>
             </CardContent>
