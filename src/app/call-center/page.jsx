@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
 import ghl from "../../../public/ghl.png";
+import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
@@ -638,50 +639,50 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="border rounded-lg shadow-sm ">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Clients</CardTitle>
+                <CardTitle className="text-sm text-[#71658B] font-medium">Total Clients</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-muted-foreground text-purple-500" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalClients}</div>
-                <p className="text-xs text-muted-foreground mt-1">GHL locations connected</p>
+                <p className="text-xs text-[#71658B] text-muted-foreground mt-1">GHL locations connected</p>
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
+                <CardTitle className="text-sm text-[#71658B] font-medium">Total Leads</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalLeads}</div>
-                <p className="text-xs text-muted-foreground mt-1">Across all clients</p>
+                <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Across all clients</p>
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Total Calls</CardTitle>
+                <CardTitle className="text-sm text-[#71658B] font-medium">Total Calls</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalCalls}</div>
-                <p className="text-xs text-muted-foreground mt-1">Call logs recorded</p>
+                <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Call logs recorded</p>
               </CardContent>
             </Card>
             <Card className="border rounded-lg shadow-sm">
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-sm font-medium">Team Members</CardTitle>
+                <CardTitle className="text-sm text-[#71658B] font-medium">Team Members</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Users className="h-5 w-5 text-muted-foreground text-purple-500" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{members.length}</div>
-                <p className="text-xs text-muted-foreground mt-1">Active call center agents</p>
+                <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Active call center agents</p>
               </CardContent>
             </Card>
           </div>
@@ -833,51 +834,94 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
                     <Table>
                       <TableHeader>
                         <TableRow className="bg-muted/50 border-r border-border">
-                          {visibleColumns.client && <TableHead className="border-r border-border">Client </TableHead>}
-                          {visibleColumns.ghlLocation && <TableHead className="border-r border-border">
+                          {visibleColumns.name && <TableHead className="border-r border-border">
                             <div className="flex items-center justify-between w-full">
-                            <span>GHL Location</span>
-                            <img
-                              src={ghl}
-                              alt="GHL Icon"
-                              className=""
-                            />
+                            <span>Name</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
                             </div>
                             </TableHead>}
-                          {visibleColumns.name && <TableHead className="border-r border-border">Name</TableHead>}
-                          {visibleColumns.email && <TableHead className="border-r border-border">Email</TableHead>}
-                          {visibleColumns.phone && <TableHead className="border-r border-border">Phone</TableHead>}
-                          {visibleColumns.company && <TableHead className="border-r border-border">Company</TableHead>}
-                          {visibleColumns.location && <TableHead className="border-r border-border">Location</TableHead>}
-                          {visibleColumns.calls && <TableHead className="border-r border-border">Call Logs</TableHead>}
-                          {visibleColumns.status && <TableHead className="border-r border-border">Status</TableHead>}
+                          {visibleColumns.client && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Client</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
+                          {visibleColumns.email && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Email</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
+                          {visibleColumns.phone && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Phone</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                          </div>
+                          </TableHead>}
+                          {visibleColumns.company && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Company</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
+                          {visibleColumns.location && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Location</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
+                          {visibleColumns.calls && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Call Logs</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
+                          {visibleColumns.status && <TableHead className="border-r border-border">
+                            <div className="flex items-center justify-between w-full">
+                            <span>Status</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                            </TableHead>}
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {filteredLeads.map((lead, index) => (
-                          <TableRow key={lead.id || index} 
-                            className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
+                          <TableRow
+                            key={lead.id || index}
+                            className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12"
+                          >
+                            {visibleColumns.name && (
+                              <TableCell className="font-medium">
+                                {lead.name === "N/A" ? "-" : lead.name || "-"}
+                              </TableCell>
+                            )}
+
                             {visibleColumns.client && (
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground" />
-                                  {lead.client || "Unknown"}
+                                  {lead.client === "N/A" ? "-" : lead.client || "-"}
                                 </div>
                               </TableCell>
                             )}
-                            {visibleColumns.ghlLocation && (
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                                  <span className="text-sm text-muted-foreground">{lead.ghlLocation || "Unknown"}</span>
-                                </div>
+
+                            {visibleColumns.email && (
+                              <TableCell>{lead.email === "N/A" ? "-" : lead.email || "-"}</TableCell>
+                            )}
+
+                            {visibleColumns.phone && (
+                              <TableCell>{lead.phone === "N/A" ? "-" : lead.phone || "-"}</TableCell>
+                            )}
+
+                            {visibleColumns.company && (
+                              <TableCell>{lead.company === "N/A" ? "-" : lead.company || "-"}</TableCell>
+                            )}
+
+                            {visibleColumns.location && (
+                              <TableCell>{lead.location === "N/A" ? "-" : lead.location || "-"}
                               </TableCell>
                             )}
-                            {visibleColumns.name && <TableCell className="font-medium">{lead.name || "N/A"}</TableCell>}
-                            {visibleColumns.email && <TableCell>{lead.email || "N/A"}</TableCell>}
-                            {visibleColumns.phone && <TableCell>{lead.phone || "N/A"}</TableCell>}
-                            {visibleColumns.company && <TableCell>{lead.company || "N/A"}</TableCell>}
-                            {visibleColumns.location && <TableCell>{lead.location || "N/A"}</TableCell>}
+
                             {visibleColumns.calls && (
                               <TableCell>
                                 {lead.call_logs_count > 0 ? (
@@ -887,14 +931,28 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
                                 )}
                               </TableCell>
                             )}
+
                             {visibleColumns.status && (
                               <TableCell>
-                                <Badge variant="outline" className="bg-[#DCFCE7] border-0 rounded-full text-[#166534] font-semibold">{lead.status || "Active"}</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    `
+                                      border-0 rounded-full font-semibold
+                                      ${lead.status === "Inactive"
+                                        ? "bg-[#FEE2E2] text-[#991B1B]"   // Red for inactive
+                                        : "bg-[#DCFCE7] text-[#166534]"}  // Green for active
+                                    `
+                                  }
+                                >
+                                  {lead.status || "Active"}
+                                </Badge>
                               </TableCell>
                             )}
                           </TableRow>
                         ))}
                       </TableBody>
+
                     </Table>
                   </div>
 
@@ -1026,27 +1084,59 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
                   <p className="text-muted-foreground">No team members found</p>
                 </div>
               ) : (
-                <div className=" border">
+                <div className=" border rounded-md ">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/50">
-                        <TableHead className="border-r border-border">Name</TableHead>
-                        <TableHead className="border-r border-border">Email</TableHead>
-                        <TableHead className="border-r border-border">Phone</TableHead>
-                        <TableHead className="border-r border-border">Extension</TableHead>
-                        <TableHead className="border-r border-border">Status</TableHead>
+                        <TableHead className="border-r border-border">
+                          <div className="flex items-center justify-between w-full">
+                            <span>Name</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                        </TableHead>
+                        <TableHead className="border-r border-border">
+                          <div className="flex items-center justify-between w-full">
+                            <span>Email</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                        </TableHead>
+                        <TableHead className="border-r border-border">
+                          <div className="flex items-center justify-between w-full">
+                            <span>phone</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                        </TableHead>
+                        <TableHead className="border-r border-border">
+                          <div className="flex items-center justify-between w-full">
+                            <span>Extension</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                        </TableHead>
+                        <TableHead className="border-r border-border">
+                          <div className="flex items-center justify-between w-full">
+                            <span>Status</span>
+                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            </div>
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredMembers.map((member) => (
                         <TableRow key={member.id} className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
-                          <TableCell className="font-medium">{member.name}</TableCell>
-                          <TableCell>{member.email}</TableCell>
-                          <TableCell>{member.phone}</TableCell>
-                          <TableCell>{member.extension}</TableCell>
+                          <TableCell className="font-medium">{member.name === "N/A" ? "-" : member.name || "-"}</TableCell>
+                          <TableCell>{member.email === "N/A" ? "-" : member.email || "-"}</TableCell>
+                          <TableCell>{member.phone === "N/A" ? "-" : member.phone || "-"}</TableCell>
+                          <TableCell>{member.extension === "N/A" ? "-" : member.extension || "-"}</TableCell>
                           <TableCell>
-                            <Badge variant={member.status === "Active" ? "default" : "secondary"}>
-                              {member.status}
+                            <Badge variant={member.status === "Active" ? "default" : "secondary"} 
+                            className={`
+                                  border-0 rounded-full font-semibold
+                                  ${member.status === "Inactive"
+                                    ? "bg-[#FEE2E2] text-[#991B1B]"   // Red for inactive
+                                    : "bg-[#DCFCE7] text-[#166534]"}  // Green for active
+                                `
+                              }>
+                              {member.status === "N/A" ? "-" : member.status || "-"}
                             </Badge>
                           </TableCell>
                         </TableRow>
