@@ -34,8 +34,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import lab from "../../../public/lab.png";
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([]);
@@ -644,7 +644,7 @@ useEffect(() => {
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
-              className="w-64 md:w-[320px] pl-9 h-10 bg-white"
+              className="w-64 md:w-[320px]  h-10 bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -690,7 +690,7 @@ useEffect(() => {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500" />
+                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500"/>
                 </div>
                 
               </CardHeader>
@@ -851,15 +851,31 @@ useEffect(() => {
               <div className="rounded-lg border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 border-b border-r">
+                    <thead className="bg-muted/50 border-b border-r whitespace-nowrap">
                       <tr>
                         {getCurrentVisibleColumns().map((col) => (
-                          <th key={col} className="border-r px-4 py-3 text-left text-sm font-medium text-foreground">
-                            {customMetrics.find((m) => m.id === col)?.name ||
-                              col
-                                .split("_")
-                                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                                .join(" ")}
+                          <th
+                            key={col}
+                            className="border-r px-4 py-3 text-left text-sm font-medium text-foreground "
+                          >
+                            <div className="flex items-center justify-between min-w-[200px]">
+                              {/* Title */}
+                              <span>
+                                {customMetrics.find((m) => m.id === col)?.name ||
+                                  col
+                                    .split("_")
+                                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                                    .join(" ")}
+                              </span>
+
+                              {/* Conditional Icons - aligned to the right */}
+                              {col === "clientGroup" && (
+                                <img src={lab.src} alt="Lab" className="w-4 h-4 ml-2" />
+                              )}
+                              {col !== "name" && col !== "clientGroup" && (
+                                <img src={metaa.src} alt="Meta" className="w-4 h-4 ml-2" />
+                              )}
+                            </div>
                           </th>
                         ))}
                       </tr>
@@ -868,7 +884,7 @@ useEffect(() => {
                     {getFilteredDataForTab().map((item, idx) => (
                       <tr
                         key={item.id || idx}
-                        className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors"
+                        className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors whitespace-nowrap"
                       >
                         {getCurrentVisibleColumns().map((col) => (
                           <td key={`${item.id}-${col}`} className="px-4 py-3 text-sm">

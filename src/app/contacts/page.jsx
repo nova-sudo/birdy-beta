@@ -60,7 +60,7 @@ import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import { Progress } from "@/components/ui/progress"
 
 const contactColumns = [
-  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: lab },
+  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
   { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
   { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
   { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: lab },
@@ -73,7 +73,7 @@ const contactColumns = [
   { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: metaa },
+  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: metaa},
   { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: metaa},
   { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
@@ -92,10 +92,10 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           return <span className="text-muted-foreground text-sm">-</span>
         }
         const statusColors = {
-          open: "bg-green-100 text-green-800",
-          won: "bg-blue-100 text-blue-800",
-          lost: "bg-red-100 text-red-800",
-          abandoned: "bg-gray-100 text-gray-800"
+          open: "bg-[#DBEAFE] text-[#1D4ED8] rounded-full",
+          won: "bg-[#DCFCE7] text-[#15803D] rounded-full",
+          lost: "bg-[#FEE2E2] text-[#B91C1C] rounded-full",
+          abandoned: "bg-[#FEF9C3] text-[#A16207] rounded-full"
         }
         return (
           <Badge className={`capitalize ${statusColors[contact.opportunityStatus] || "bg-gray-100"}`}>
@@ -105,7 +105,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "pipelineStage":
         if (!contact.pipelineStage) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span> 
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span> 
         }
         return (
           <span className="text-sm font-medium text-foreground">{contact.pipelineStage}</span>
@@ -113,7 +113,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "leadValue":
         if (!contact.leadValue) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
         }
         return (
           <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
@@ -182,7 +182,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "contactType":
         const type = contact.contactType || contact.type
         if (!type) {
-          return <span className=""><MdOutlineDisabledVisible /></span>
+          return <span className="">-</span>
         }
         return (
           <Badge variant="secondary" className="capitalize">
@@ -193,7 +193,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "address1":
         const address = contact.address1 || contact.address
         if (!address) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
         }
         return (
           <span className="text-sm text-foreground max-w-xs truncate block" title={address}>
@@ -203,7 +203,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "email":
         if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
-          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
+          return <span className="text-muted-foreground font-bold text-sm">-</span>
         }
         return (
           <a
@@ -217,7 +217,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "phone":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
+          return <span className="text-muted-foreground font-bold text-sm">-</span>
         }
         return (
           <a
@@ -231,7 +231,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "contactName":
         if (!contact[col.id] || contact[col.id] === "Unknown") {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
         }
         return (
           <span className="text-sm text-foreground text-left block">
@@ -241,7 +241,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "website":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
         }
         const websiteUrl = contact[col.id].startsWith("http") ? contact[col.id] : `https://${contact[col.id]}`
         return (
@@ -259,12 +259,16 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
       case "source":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm"><MdOutlineDisabledVisible classname="justify-center text-center text-gray-700" /></span>
+          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
         }
         return (
           <Badge variant="outline" className="capitalize">
-            {contact[col.id]}
+            {contact[col.id]
+              .split(",")
+              .map((s) => s.trim())
+              .join(", ")}
           </Badge>
+
         )
 
       case "country":
@@ -273,18 +277,20 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
       case "platform":
       case "groupName":
         if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm"><MdOutlineDisabledVisible /></span>
+          return <span className="text-muted-foreground text-sm">-</span>
         }
-        return <span className="text-sm font-medium text-foreground">{contact[col.id]}</span>
-
-      default:
         return (
-          <span className="text-sm text-foreground">
-            {contact[col.id] || <span className="text-muted-foreground"><MdOutlineDisabledVisible /></span>}
-          </span>
+          <div
+            className="truncate px-2"            
+            title={contact[col.id]}                   
+          >
+            <span className="text-sm font-medium text-foreground">
+              {contact[col.id]}
+            </span>
+          </div>
         )
-    }
-  }
+          }
+        }
 
   const visibleColumnsData = contactColumns.filter((col) => visibleColumns.includes(col.id))
 
@@ -303,35 +309,41 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className="border bg-card overflow-hidden">
+    <div className="border bg-card overflow-hidden rounded-md">
       <style jsx>{`
         .fixed-column-even {
+          text-align: left;
           position: sticky;
           left: 0;
           background: white;
-          z-index: 20;
+          z-index: 50;
           min-width: 243px;
           font-weight: 600;
         }
         .fixed-column-odd {
+          text-align: left;
           position: sticky;
           left: 0;
           background: #F4F3F9;
-          z-index: 20;
+          z-index: 50;
           min-width: 243px;
           font-weight: 600;
         }
         .fixed-header {
           position: sticky;
           left: 0;
-          z-index: 30;
+          z-index: 50;
           background: white;
           min-width: 150px;
           width: full;
         }
+        .table-container {
+          position: relative;
+          overflow: auto
+        }
       `}</style>
-      <div className="overflow-x-auto">
-        <table className="text-sm w-full table-auto">
+      <div className="overflow-x-auto rounded-md">
+        <table className="text-sm w-full table-auto rounded-md">
           <thead className="top-0 z-40">
             <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
               {visibleColumnsData.map((col) => (
@@ -344,7 +356,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className="px-1">{col.label}</span>
                       {col.sortable && sortColumn === col.id && (
@@ -391,7 +403,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                     <div
                       className={
                         col.id === "contactName"
-                          ? "py-3 px-4 border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]"
+                          ? "py-5 px-4  border border-2 border-l-0 border-t-0 border-b-0  border-[#e4e4e7]"
                           : ""
                       }
                     >
@@ -846,13 +858,16 @@ export default function ContactPage() {
               <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <Input
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px
+           rounded-lg py-1 px-1">
+              <Input
               placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white rounded-lg h-10 gap-2"
+              className="bg-white rounded-lg h-10 px-3 placeholder:text-left placeholder:text-muted-foreground flex items-center"
             />
+
+
             {searchQuery && (
               <Button
                 variant="ghost"
