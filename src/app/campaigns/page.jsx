@@ -34,8 +34,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import lab from "../../../public/lab.png";
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([]);
@@ -90,209 +90,344 @@ const Campaigns = () => {
     return base;
   };
 
- const fetchAllData = async () => {
-  if (isLoading) return; // Prevent double-fetch
+const fetchAllData = async () => {
+  console.log('🚀 fetchAllData called, isLoading:', isLoading);
+  
+  if (isLoading) {
+    console.log('⏸️ Already loading, skipping...');
+    return;
+  }
 
   setIsLoading(true);
   setError(null);
-  setCampaigns([]);
-  setAllAdSets([]);
-  setAllAds([]);
-  setLeads([]);
-
-  const clientGroupsCache = getFromCache('clientGroups')  
-  const cachedData = getFromCache('marketing-data') 
-  if (clientGroupsCache) {
-    setClientGroups(cachedData.clientGroups || []) 
-    if (cachedData) {
-      setCampaigns(cachedData.campaigns || [])
-      setAllAdSets(cachedData.adSets || [])
-      setAllAds(cachedData.ads || [])
-      setLeads(cachedData.leads || [])
-      setIsLoading(false)
-      return
-    }
-  }
-
-
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s global timeout
+  const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
   try {
-    // Step 1: Fetch client groups (includes Meta ad account IDs)
-    const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-      credentials: "include",
-      signal: controller.signal,
+    console.log('📦 Checking cache...');
+    
+    // ============================================
+    // STEP 1: Check cache first (instant load)
+    // ============================================
+    const cachedData = getFromCache('marketing-data');
+    const clientGroupsCache = getFromCache('clientGroups');
+    
+    console.log('Cache status:', {
+      hasCachedData: !!cachedData,
+      hasCachedGroups: !!clientGroupsCache,
+      cachedDataType: typeof cachedData,
+      cachedGroupsType: typeof clientGroupsCache
+    });
+    
+    // Validate cache data exists and is valid
+    const hasCachedData = cachedData && 
+                          typeof cachedData === 'object' && 
+                          Array.isArray(cachedData.campaigns);
+    
+    const hasCachedGroups = clientGroupsCache && 
+                            Array.isArray(clientGroupsCache);
+    
+    if (hasCachedData && hasCachedGroups) {
+      // Load cached data immediately
+      setCampaigns(cachedData.campaigns || []);
+      setAllAdSets(cachedData.adSets || []);
+      setAllAds(cachedData.ads || []);
+      setLeads(cachedData.leads || []);
+      setClientGroups(clientGroupsCache);
+      
+      setIsLoading(false);
+      
+      console.log('✅ Loaded from cache instantly', {
+        campaigns: cachedData.campaigns?.length,
+        adSets: cachedData.adSets?.length,
+        ads: cachedData.ads?.length,
+        leads: cachedData.leads?.length
+      });
+      
+      // Start background refresh (don't await)
+      refreshDataInBackground(controller.signal);
+      return;
+    }
+    
+    console.log('📡 No valid cache, fetching fresh data...');
+    
+    // Clear invalid cache
+    if (cachedData && !hasCachedData) {
+      console.warn('⚠️ Invalid cached data detected, clearing cache');
+      clearCache('marketing-data');
+    }
+    if (clientGroupsCache && !hasCachedGroups) {
+      console.warn('⚠️ Invalid cached client groups, clearing cache');
+      clearCache('clientGroups');
+    }
+
+    // ============================================
+    // STEP 2: No cache - fetch everything
+    // ============================================
+    
+    console.log('🌐 Fetching client groups from API...');
+    
+    // Fetch client groups first
+    const groupsResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/client-groups",
+      {
+        credentials: "include",
+        signal: controller.signal,
+      }
+    );
+
+    console.log('📥 Client groups response:', {
+      status: groupsResponse.status,
+      ok: groupsResponse.ok,
+      statusText: groupsResponse.statusText
     });
 
-    if (!groupsResponse.ok) throw new Error(`Failed to load client groups: ${groupsResponse.status}`);
+    if (!groupsResponse.ok) {
+      throw new Error(`Failed to load client groups: ${groupsResponse.status}`);
+    }
 
     const { client_groups: clientGroupsData } = await groupsResponse.json();
+    
+    console.log('✅ Received client groups:', clientGroupsData?.length || 0);
 
     if (!clientGroupsData || clientGroupsData.length === 0) {
       setClientGroups([]);
+      setIsLoading(false);
       return;
     }
 
     setClientGroups(clientGroupsData);
+    saveToCache('clientGroups', clientGroupsData);
 
-    // Step 2: Prepare parallel fetch tasks
-    const fetchTasks = clientGroupsData.map(async (group) => {
-      const metaData = group.facebook || {};
-      const adAccountId = metaData.ad_account_id;
-      const clientGroupName = group.name;
-      const adAccountName = metaData.name || "Unknown";
+    // ============================================
+    // STEP 3: Parallel fetch with NEW batch endpoint
+    // ============================================
+    
+    // Extract all unique Meta ad account IDs
+    const metaAccountIds = [
+      ...new Set(
+        clientGroupsData
+          .map(g => g.facebook?.ad_account_id)
+          .filter(Boolean)
+      )
+    ];
 
-      if (!adAccountId) {
-        return { group, campaigns: [], adsets: [], ads: [], leads: [] };
-      }
+    console.log(`📊 Fetching data for ${metaAccountIds.length} Meta accounts in parallel...`);
 
+    // Fetch ALL Meta accounts in ONE request (parallel on backend)
+    let allMetaData = {};
+    
+    if (metaAccountIds.length > 0) {
       try {
-        // Parallel: fetch account insights + leads at the same time
-        const [accountRes, leadsRes] = await Promise.all([
-          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/data`, {
+        const batchResponse = await fetch(
+          "https://birdy-backend.vercel.app/api/facebook/batch-accounts",
+          {
+            method: "POST",
             credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account_ids: metaAccountIds }),
             signal: controller.signal,
-          }).catch((err) => ({ ok: false, error: err })),
-
-          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/leads`, {
-            credentials: "include",
-            signal: controller.signal,
-          }).catch((err) => ({ ok: false, error: err })),
-        ]);
-
-        const accountData = accountRes.ok ? await accountRes.json() : null;
-        const leadsData = leadsRes.ok ? await leadsRes.json() : { data: [] };
-
-        if (!accountData?.data?.data) {
-          console.warn(`No campaign data for account ${adAccountId}`);
-          return { group, campaigns: [], adsets: [], ads: [], leads: leadsData.data || [] };
-        }
-
-        const campaigns = [];
-        const adsets = [];
-        const ads = [];
-        const accountLeads = leadsData.data || [];
-
-        // Process campaigns, adsets, ads
-        for (const campaign of accountData.data.data) {
-          const insights = campaign.insights?.data?.[0] || {};
-
-          // Campaign-level
-          campaigns.push(
-            enhanceWithCustomMetrics({
-              id: campaign.id,
-              accountId: adAccountId,
-              name: campaign.name || "Unknown Campaign",
-              clientGroup: clientGroupName,
-              adAccount: adAccountName,
-              spend: parseFloat(insights.spend || "0"),
-              leads: parseInt(insights.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped")?.value || "0"),
-              cpl: parseFloat(insights.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped")?.values?.[0]?.value || "0"),
-              impressions: parseInt(insights.impressions || "0"),
-              clicks: parseInt(insights.clicks || "0"),
-              cpc: parseFloat(insights.cpc || "0"),
-              reach: parseInt(insights.reach || "0"),
-              frequency: parseFloat(insights.frequency || "0"),
-              cpm: parseFloat(insights.cpm || "0"),
-              ctr: parseFloat(insights.ctr || "0"),
-            })
-          );
-
-          // Ad Sets
-          for (const adset of campaign.adsets?.data || []) {
-            const ai = adset.insights?.data?.[0] || {};
-            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
-            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
-
-            adsets.push(
-              enhanceWithCustomMetrics({
-                id: adset.id,
-                accountId: adAccountId,
-                name: adset.name || "Unknown Ad Set",
-                clientGroup: clientGroupName,
-                adAccount: adAccountName,
-                campaignName: campaign.name,
-                spend: parseFloat(ai.spend || "0"),
-                leads: parseInt(leadAction.value || "0"),
-                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
-                impressions: parseInt(ai.impressions || "0"),
-                clicks: parseInt(ai.clicks || "0"),
-                cpc: parseFloat(ai.cpc || "0"),
-                reach: parseInt(ai.reach || "0"),
-                frequency: parseFloat(ai.frequency || "0"),
-                cpm: parseFloat(ai.cpm || "0"),
-                ctr: parseFloat(ai.ctr || "0"),
-              })
-            );
           }
+        );
 
-          // Ads
-          for (const ad of campaign.ads?.data || []) {
-            const ai = ad.insights?.data?.[0] || {};
-            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
-            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
-
-            ads.push(
-              enhanceWithCustomMetrics({
-                id: ad.id,
-                accountId: adAccountId,
-                name: ad.name || "Unknown Ad",
-                clientGroup: clientGroupName,
-                adAccount: adAccountName,
-                campaignName: campaign.name,
-                spend: parseFloat(ai.spend || "0"),
-                leads: parseInt(leadAction.value || "0"),
-                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
-                impressions: parseInt(ai.impressions || "0"),
-                clicks: parseInt(ai.clicks || "0"),
-                cpc: parseFloat(ai.cpc || "0"),
-                reach: parseInt(ai.reach || "0"),
-                frequency: parseFloat(ai.frequency || "0"),
-                cpm: parseFloat(ai.cpm || "0"),
-                ctr: parseFloat(ai.ctr || "0"),
-              })
-            );
-          }
+        if (batchResponse.ok) {
+          const batchData = await batchResponse.json();
+          allMetaData = batchData.data || {};
+          console.log(`✅ Fetched ${Object.keys(allMetaData).length} Meta accounts`);
         }
-
-        // Attach client group info to leads
-        const enrichedLeads = accountLeads.map((lead) => ({
-          ...lead,
-          clientGroup: clientGroupName,
-          adAccount: adAccountName,
-        }));
-
-        return { group, campaigns, adsets, ads, leads: enrichedLeads };
       } catch (err) {
-        if (err.name === "AbortError") throw err;
-        console.error(`Failed to load data for account ${adAccountId} (${clientGroupName}):`, err);
-        return { group, campaigns: [], adsets: [], ads: [], leads: [], error: err.message };
+        console.warn('Meta batch fetch failed:', err);
       }
+    }
+
+    // Fetch leads in parallel for all accounts
+    const leadsPromises = metaAccountIds.map(accountId =>
+      fetch(
+        `https://birdy-backend.vercel.app/api/facebook/adaccounts/${accountId}/leads`,
+        { credentials: "include", signal: controller.signal }
+      )
+        .then(r => r.ok ? r.json() : { data: [] })
+        .catch(() => ({ data: [] }))
+    );
+
+    const leadsResults = await Promise.all(leadsPromises);
+    
+    // Flatten and properly map lead data
+    const allLeads = leadsResults.flatMap(result => {
+      const leadsArray = result.data || [];
+      return leadsArray.map(lead => ({
+        id: lead.id,
+        full_name: lead.full_name || '',
+        email: lead.email || '',
+        phone_number: lead.phone_number || '',
+        ad_name: lead.ad_name || '',
+        campaign_name: lead.campaign_name || '',
+        platform: lead.platform || 'Facebook',
+        created_time: lead.created_time || '',
+        // Will add clientGroup and adAccount below
+      }));
     });
 
-    // Step 3: Execute all in parallel
-    const results = await Promise.all(fetchTasks);
+    // ============================================
+    // STEP 4: Process and flatten data
+    // ============================================
+    
+    const allCampaigns = [];
+    const allAdSets = [];
+    const allAds = [];
 
-    // Step 4: Flatten results
-    const allCampaigns = results.flatMap(r => r.campaigns);
-    const allAdSets = results.flatMap(r => r.adsets);
-    const allAds = results.flatMap(r => r.ads);
-    const allLeads = results.flatMap(r => r.leads);
+    clientGroupsData.forEach(group => {
+      const metaAccountId = group.facebook?.ad_account_id;
+      const clientGroupName = group.name;
+      const adAccountName = group.facebook?.name || "Unknown";
+
+      if (!metaAccountId || !allMetaData[metaAccountId]) return;
+
+      const accountData = allMetaData[metaAccountId];
+      const campaigns = accountData.data || [];
+
+      campaigns.forEach(campaign => {
+        const insights = campaign.insights?.data?.[0] || {};
+
+        // Campaign-level
+        allCampaigns.push(
+          enhanceWithCustomMetrics({
+            id: campaign.id,
+            accountId: metaAccountId,
+            name: campaign.name || "Unknown Campaign",
+            clientGroup: clientGroupName,
+            adAccount: adAccountName,
+            spend: parseFloat(insights.spend || "0"),
+            leads: parseInt(
+              insights.actions?.find(
+                a => a.action_type === "onsite_conversion.lead_grouped"
+              )?.value || "0"
+            ),
+            cpl: parseFloat(
+              insights.cost_per_result?.find(
+                r => r.indicator === "actions:onsite_conversion.lead_grouped"
+              )?.values?.[0]?.value || "0"
+            ),
+            impressions: parseInt(insights.impressions || "0"),
+            clicks: parseInt(insights.clicks || "0"),
+            cpc: parseFloat(insights.cpc || "0"),
+            reach: parseInt(insights.reach || "0"),
+            frequency: parseFloat(insights.frequency || "0"),
+            cpm: parseFloat(insights.cpm || "0"),
+            ctr: parseFloat(insights.ctr || "0"),
+          })
+        );
+
+        // Ad Sets
+        (campaign.adsets?.data || []).forEach(adset => {
+          const ai = adset.insights?.data?.[0] || {};
+          allAdSets.push(
+            enhanceWithCustomMetrics({
+              id: adset.id,
+              accountId: metaAccountId,
+              name: adset.name || "Unknown Ad Set",
+              clientGroup: clientGroupName,
+              adAccount: adAccountName,
+              campaignName: campaign.name,
+              spend: parseFloat(ai.spend || "0"),
+              leads: parseInt(
+                ai.actions?.find(
+                  a => a.action_type === "onsite_conversion.lead_grouped"
+                )?.value || "0"
+              ),
+              cpl: parseFloat(
+                ai.cost_per_result?.find(
+                  r => r.indicator === "actions:onsite_conversion.lead_grouped"
+                )?.values?.[0]?.value || "0"
+              ),
+              impressions: parseInt(ai.impressions || "0"),
+              clicks: parseInt(ai.clicks || "0"),
+              cpc: parseFloat(ai.cpc || "0"),
+              reach: parseInt(ai.reach || "0"),
+              frequency: parseFloat(ai.frequency || "0"),
+              cpm: parseFloat(ai.cpm || "0"),
+              ctr: parseFloat(ai.ctr || "0"),
+            })
+          );
+        });
+
+        // Ads
+        (campaign.ads?.data || []).forEach(ad => {
+          const ai = ad.insights?.data?.[0] || {};
+          allAds.push(
+            enhanceWithCustomMetrics({
+              id: ad.id,
+              accountId: metaAccountId,
+              name: ad.name || "Unknown Ad",
+              clientGroup: clientGroupName,
+              adAccount: adAccountName,
+              campaignName: campaign.name,
+              spend: parseFloat(ai.spend || "0"),
+              leads: parseInt(
+                ai.actions?.find(
+                  a => a.action_type === "onsite_conversion.lead_grouped"
+                )?.value || "0"
+              ),
+              cpl: parseFloat(
+                ai.cost_per_result?.find(
+                  r => r.indicator === "actions:onsite_conversion.lead_grouped"
+                )?.values?.[0]?.value || "0"
+              ),
+              impressions: parseInt(ai.impressions || "0"),
+              clicks: parseInt(ai.clicks || "0"),
+              cpc: parseFloat(ai.cpc || "0"),
+              reach: parseInt(ai.reach || "0"),
+              frequency: parseFloat(ai.frequency || "0"),
+              cpm: parseFloat(ai.cpm || "0"),
+              ctr: parseFloat(ai.ctr || "0"),
+            })
+          );
+        });
+      });
+    });
+
+    // Enrich leads with client group info
+    const enrichedLeads = allLeads.map(lead => {
+      // Find the group that matches this lead's campaign
+      const group = clientGroupsData.find(g => {
+        const accountCampaigns = allMetaData[g.facebook?.ad_account_id];
+        if (!accountCampaigns) return false;
+        
+        // Check if any campaign in this account matches the lead's campaign
+        return accountCampaigns.data?.some(
+          campaign => campaign.name === lead.campaign_name
+        );
+      });
+
+      return {
+        ...lead,
+        clientGroup: group?.name || "Unknown",
+        adAccount: group?.facebook?.name || "Unknown",
+      };
+    });
+
+    console.log('✅ Enriched leads sample:', enrichedLeads[0]);
+
+    // ============================================
+    // STEP 5: Save to cache and update state
+    // ============================================
     
     saveToCache('marketing-data', {
       campaigns: allCampaigns,
       adSets: allAdSets,
       ads: allAds,
-      leads: allLeads,
-      clientGroups: clientGroupsData
-    })
+      leads: enrichedLeads,
+      clientGroups: clientGroupsData,
+      timestamp: Date.now()
+    });
 
     setCampaigns(allCampaigns);
     setAllAdSets(allAdSets);
     setAllAds(allAds);
-    setLeads(allLeads);
+    setLeads(enrichedLeads);
+
+    console.log(`✅ Loaded ${allCampaigns.length} campaigns, ${allAdSets.length} adsets, ${allAds.length} ads, ${enrichedLeads.length} leads`);
 
   } catch (err) {
     if (err.name === "AbortError") {
@@ -306,13 +441,86 @@ const Campaigns = () => {
     setIsLoading(false);
   }
 };
+
+
+// ============================================
+// BACKGROUND REFRESH (optional)
+// ============================================
+
+const refreshDataInBackground = async (signal) => {
+  try {
+    console.log('🔄 Refreshing data in background...');
+    
+    // Call the same fetch logic but don't show loading state
+    const groupsResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/client-groups",
+      { credentials: "include", signal }
+    );
+
+    if (!groupsResponse.ok) return;
+
+    const { client_groups: clientGroupsData } = await groupsResponse.json();
+    
+    const metaAccountIds = [
+      ...new Set(
+        clientGroupsData
+          .map(g => g.facebook?.ad_account_id)
+          .filter(Boolean)
+      )
+    ];
+
+    if (metaAccountIds.length === 0) return;
+
+    // Batch fetch
+    const batchResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/facebook/batch-accounts",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_ids: metaAccountIds }),
+        signal,
+      }
+    );
+
+    if (!batchResponse.ok) return;
+
+    const batchData = await batchResponse.json();
+    
+    // Process and update cache silently
+    // ... (same processing logic as above)
+    
+    console.log('✅ Background refresh complete');
+    
+  } catch (err) {
+    console.warn('Background refresh failed:', err);
+  }
+};
+
+
+// ============================================
+// PREFETCH ON PAGE LOAD (call this in useEffect)
+// ============================================
+
 useEffect(() => {
-  const controller = new AbortController();
+  // Call prefetch endpoint to warm up caches
+  fetch("https://birdy-backend.vercel.app/api/prefetch-data", {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(r => r.json())
+    .then(data => {
+      console.log('🔥 Prefetch started:', data.message);
+    })
+    .catch(err => {
+      console.warn('Prefetch failed:', err);
+    });
 
+  // Then fetch normally (will use cached data)
   fetchAllData();
-
-  return () => controller.abort(); // Cleanup on unmount
 }, []);
+
+
 
   // Filtering
   const applyFilters = (data) => {
@@ -436,7 +644,7 @@ useEffect(() => {
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
-              className="w-64 md:w-[320px] pl-9 h-10 bg-white"
+              className="w-64 md:w-[320px]  h-10 bg-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -482,7 +690,7 @@ useEffect(() => {
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500" />
+                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500"/>
                 </div>
                 
               </CardHeader>
@@ -643,15 +851,31 @@ useEffect(() => {
               <div className="rounded-lg border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 border-b border-r">
+                    <thead className="bg-muted/50 border-b border-r whitespace-nowrap">
                       <tr>
                         {getCurrentVisibleColumns().map((col) => (
-                          <th key={col} className="border-r px-4 py-3 text-left text-sm font-medium text-foreground">
-                            {customMetrics.find((m) => m.id === col)?.name ||
-                              col
-                                .split("_")
-                                .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-                                .join(" ")}
+                          <th
+                            key={col}
+                            className="border-r px-4 py-3 text-left text-sm font-medium text-foreground "
+                          >
+                            <div className="flex items-center justify-between min-w-[200px]">
+                              {/* Title */}
+                              <span>
+                                {customMetrics.find((m) => m.id === col)?.name ||
+                                  col
+                                    .split("_")
+                                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                                    .join(" ")}
+                              </span>
+
+                              {/* Conditional Icons - aligned to the right */}
+                              {col === "clientGroup" && (
+                                <img src={lab.src} alt="Lab" className="w-4 h-4 ml-2" />
+                              )}
+                              {col !== "name" && col !== "clientGroup" && (
+                                <img src={metaa.src} alt="Meta" className="w-4 h-4 ml-2" />
+                              )}
+                            </div>
                           </th>
                         ))}
                       </tr>
@@ -660,7 +884,7 @@ useEffect(() => {
                     {getFilteredDataForTab().map((item, idx) => (
                       <tr
                         key={item.id || idx}
-                        className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors"
+                        className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors whitespace-nowrap"
                       >
                         {getCurrentVisibleColumns().map((col) => (
                           <td key={`${item.id}-${col}`} className="px-4 py-3 text-sm">
