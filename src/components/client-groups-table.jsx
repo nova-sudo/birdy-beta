@@ -49,7 +49,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
   }, [columns, columnVisibility, columnOrder]);
 
   /* ---------- FLATTENED DATA (with aliases) ---------- */
-  const flattenedData = useMemo(() => {
+const flattenedData = useMemo(() => {
     return data.map((group) => {
       const base = {
         id: group.id,
@@ -70,6 +70,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
         meta_leads: group.facebook?.metrics?.total_leads || 0,
         hp_leads: group.hotprospector?.metrics?.total_leads || 0,
         original: group,
+        _isCreating: group._isCreating || false, // Track creating state
 
         // ALIASES for formula compatibility
         leads: group.gohighlevel?.metrics?.total_contacts || 0,
@@ -276,34 +277,41 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
               sortedData.map((row, idx) => (
                 <tr
                   key={row.id}
-                  onClick={() => onRowClick(row.original)}
-                  className={`border-b hover:bg-muted/50 cursor-pointer transition-colors ${
-                    idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
-                  }`}
+                  onClick={() => !row._isCreating && onRowClick(row.original)}
+                  className={`border-b transition-colors ${
+                    row._isCreating 
+                      ? "bg-muted/30 cursor-wait opacity-60" 
+                      : "hover:bg-muted/50 cursor-pointer"
+                  } ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
-                    {visibleColumns.map((column) => (
-                      <td
-                        key={`${row.id}-${column.id}`}
-                        className={`   text-foreground ${
+                  {visibleColumns.map((column) => (
+                    <td
+                      key={`${row.id}-${column.id}`}
+                      className={`text-foreground ${
+                        column.id === "name"
+                          ? idx % 2 === 0
+                            ? "fixed-column-odd"
+                            : "fixed-column-even"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={
                           column.id === "name"
-                            ? idx % 2 === 0
-                              ? "fixed-column-odd"
-                              : "fixed-column-even "
+                            ? "py-3 px-4 border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] flex items-center gap-2"
                             : ""
-                        }`}
+                        }
                       >
-                        <div 
-                     key={`${row.id}-${column.id}`}    
-                     className={
-                        column.id === "name" ? " py-3 px-4  border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7]" :
-                           ""
-                        }>
-                      <span>
-                        {getCellValue(row, column.id)}
-                    </span>
-                    </div>
-                      </td>
-                    ))}
+                        {/* Add spinner for name column when creating */}
+                        {column.id === "name" && row._isCreating && (
+                          <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                        )}
+                        <span className={row._isCreating ? "text-muted-foreground" : ""}>
+                          {getCellValue(row, column.id)}
+                        </span>
+                      </div>
+                    </td>
+                  ))}
                 </tr>
               ))
             )}

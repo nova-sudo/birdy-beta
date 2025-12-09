@@ -63,20 +63,7 @@ const getCachedData = (key) => {
   }
 }
 
-const setCachedData = (key, data) => {
-  try {
-    localStorage.setItem(
-      key,
-      JSON.stringify({
-        data,
-        timestamp: Date.now(),
-      }),
-    )
-    console.log(`💾 Cached ${key}`)
-  } catch (error) {
-    console.error("Cache write error:", error)
-  }
-}
+
 
 const clearCache = (pattern) => {
   try {
@@ -197,25 +184,17 @@ export default function ClientsPage() {
     }
   }, [wizardOpen, wizardStep])
 
-  const fetchClientGroups = async (forceRefresh = false) => {
+const fetchClientGroups = async (forceRefresh = false) => {
     try {
-      if (!forceRefresh) {
-        const cached = getCachedData("clientGroups")
-        if (cached) {
-          setClientGroups(cached)
-          setLoading(false)
-          console.log("[v0] Using cached client groups:", cached.length)
-          return
-        }
-      }
-
+      // Remove local cache logic - always fetch from server
+      // Server now uses database cache (max 1 hour old)
+      
       setLoading(true)
       setError("")
 
       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         credentials: "include",
       })
-
 
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
@@ -225,13 +204,12 @@ export default function ClientsPage() {
       const groups = data.client_groups || []
 
       setClientGroups(groups)
-      setCachedData("clientGroups", groups)
 
       if (forceRefresh) {
         toast.success("Client groups refreshed")
       }
 
-      console.log("[v0] Fetched fresh client groups:", groups.length)
+      console.log("[v0] Fetched client groups:", groups.length)
     } catch (err) {
       console.error("[v0] Error fetching client groups:", err)
       setError(err.message)
@@ -262,7 +240,6 @@ export default function ClientsPage() {
         const locations = data.locations || []
 
         setGhlLocations(locations)
-        setCachedData("ghlLocations", locations)
 
         console.log("[v0] Fetched fresh GHL locations:", locations.length)
 
@@ -299,7 +276,6 @@ export default function ClientsPage() {
         const accounts = data.data?.data || []
 
         setMetaAdAccounts(accounts)
-        setCachedData("metaAdAccounts", accounts)
 
         console.log("[v0] Fetched fresh Meta ad accounts:", accounts.length)
       } else {
@@ -336,7 +312,6 @@ export default function ClientsPage() {
         }))
 
         setHotProspectorGroups(normalizedGroups)
-        setCachedData("hotProspectorGroups", normalizedGroups)
 
         console.log("[v0] Fetched fresh Hot Prospector groups:", normalizedGroups.length)
       } else {
@@ -354,7 +329,7 @@ export default function ClientsPage() {
     fetchClientGroups(true)
   }
 
-  const handleCreateClientGroup = async () => {
+const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
       toast.error("Please enter a client group name")
       return
@@ -377,22 +352,49 @@ export default function ClientsPage() {
       return
     }
 
-    console.log("[v0] Creating client group with:", {
-      clientGroupName,
-      ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId,
-      meta_ad_account_id: selectedMetaAdAccount?.id,
-      hotprospector_group_id: selectedHotProspectorGroup?.id,
-    })
+    // Create temporary ID for optimistic update
+    const tempId = `temp_${Date.now()}`
+    
+    // Create optimistic group object
+    const optimisticGroup = {
+      id: tempId,
+      name: clientGroupName,
+      ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
+      meta_ad_account_id: selectedMetaAdAccount?.id || null,
+      notes: "",
+      created_at: new Date().toISOString(),
+      _isCreating: true, // Flag to show creating state
+      gohighlevel: {},
+      facebook: {},
+      hotprospector: {}
+    }
 
-    setAddingClientGroup(true)
+    // Add optimistic group to the list immediately
+    setClientGroups(prev => [optimisticGroup, ...prev])
 
+    // Close wizard and reset form
+    setWizardOpen(false)
+    setWizardStep(1)
+    const creatingGroupName = clientGroupName // Save for toast
+    setClientGroupName("")
+    setSelectedGhlLocation(null)
+    setNewGhlLocationId("")
+    setSelectedMetaAdAccount(null)
+    setSelectedHotProspectorGroup(null)
+    setLocationSearchQuery("")
+    setMetaSearchQuery("")
+    setHotProspectorSearchQuery("")
+
+    toast.info(`Creating "${creatingGroupName}"...`)
+
+    // Make API call in background
     try {
       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          name: clientGroupName,
+          name: creatingGroupName,
           ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
           meta_ad_account_id: selectedMetaAdAccount?.id || null,
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
@@ -400,32 +402,33 @@ export default function ClientsPage() {
       })
 
       if (response.ok) {
-        toast.success("Client group created successfully")
-
-        setWizardOpen(false)
-        setWizardStep(1)
-        setClientGroupName("")
-        setSelectedGhlLocation(null)
-        setNewGhlLocationId("")
-        setSelectedMetaAdAccount(null)
-        setSelectedHotProspectorGroup(null)
-        setLocationSearchQuery("")
-        setMetaSearchQuery("")
-        setHotProspectorSearchQuery("")
-
+        const data = await response.json()
+        
+        // Replace optimistic group with real data
+        setClientGroups(prev => 
+          prev.map(group => 
+            group.id === tempId ? { ...data.client_group, _isCreating: false } : group
+          )
+        )
+        
+        toast.success(`"${creatingGroupName}" created successfully!`)
         clearCache("clientGroups")
         clearCache("ghlLocations")
-        fetchClientGroups(true)
-        fetchGhlLocations(true)
       } else {
         const data = await response.json()
+        
+        // Remove optimistic group on error
+        setClientGroups(prev => prev.filter(group => group.id !== tempId))
+        
         toast.error(data.detail || "Failed to create client group")
       }
     } catch (err) {
       console.error("[v0] Error creating client group:", err)
+      
+      // Remove optimistic group on error
+      setClientGroups(prev => prev.filter(group => group.id !== tempId))
+      
       toast.error("Failed to create client group")
-    } finally {
-      setAddingClientGroup(false)
     }
   }
 
