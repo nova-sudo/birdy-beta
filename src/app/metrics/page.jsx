@@ -374,7 +374,7 @@ const MetricsHub = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white w-[calc(100dvw-100px)]">
       <div className="w-full  md:space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
