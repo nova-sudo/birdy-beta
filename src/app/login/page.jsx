@@ -6,7 +6,7 @@ import LoginForm from "./LoginForm"
 export default function LoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-dvh flex items-center justify-center p-4">
+      <div className="min-h-dvh flex items-center justify-center p-4 ">
         <div className="w-full max-w-md">
           <div className="shadow-md border bg-white rounded-lg p-8">
             <div className="animate-pulse space-y-4">

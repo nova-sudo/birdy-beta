@@ -296,7 +296,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   if (contacts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20">
+      <div className="flex flex-col items-center justify-center w-[calc(100dvw-100px)] rounded-lg border-2 border-dashed border-border bg-muted/20">
         <div className="rounded-full bg-muted p-3 mb-4">
           <Users className="h-6 w-6 text-muted-foreground" />
         </div>
@@ -309,7 +309,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className="border bg-card overflow-hidden rounded-md">
+    <div className="border bg-card overflow-hidden rounded-md w-[calc(100dvw-100px)]">
       <style jsx>{`
         .fixed-column-even {
           text-align: left;
@@ -453,7 +453,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => (
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -825,7 +825,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-full">
+    <div className="mx-auto w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         {error && (
           <Alert variant="destructive">
@@ -854,19 +854,17 @@ export default function ContactPage() {
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
+            <div className="whitespace-nowrap">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px
-           rounded-lg py-1 px-1">
-              <Input
-              placeholder="Search contacts..."
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+            <Input
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white rounded-lg h-10 px-3 placeholder:text-left placeholder:text-muted-foreground flex items-center"
+              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
             />
-
 
             {searchQuery && (
               <Button
@@ -880,8 +878,8 @@ export default function ContactPage() {
             )}
 
             <Select value={selectedSource} onValueChange={setSelectedSource}>
-              <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
-                <SelectValue placeholder="All Sources" />
+              <SelectTrigger className="gap-1 hover:bg-purple-100/75 bg-white font-semibold h-10 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <SelectValue placeholder="Sources" />
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Sources</SelectItem>
@@ -894,8 +892,8 @@ export default function ContactPage() {
             </Select>
 
             <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="gap-2 bg-white font-semibold h-10 hover:bg-purple-100/75">
-                <SelectValue placeholder="All Types" />
+              <SelectTrigger className="gap-1 bg-white font-semibold h-10 hover:bg-purple-100/75 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <SelectValue placeholder="Types" />
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Types</SelectItem>
@@ -908,8 +906,8 @@ export default function ContactPage() {
             </Select>
 
             <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
-              <SelectTrigger className="bg-white font-semibold h-10">
-                <SelectValue placeholder="All Opportunities" />
+              <SelectTrigger className="bg-white font-semibold h-10 min-w-[120px] md:min-w-[100px] md:text-sm md:px-2">
+                <SelectValue placeholder="Opps" /> {/* Abbreviated for space */}
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Opportunities</SelectItem>
@@ -921,9 +919,9 @@ export default function ContactPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-10 bg-white hover:bg-purple-100/75 font-semibold">
+                <Button variant="outline" size="sm" className="gap-1 h-10 bg-white hover:bg-purple-100/75 font-semibold min-w-[80px] md:min-w-[60px] md:text-sm md:px-1">
                   <SlidersHorizontal className="h-4 w-4" />
-                  Columns
+                  Cols {/* Abbreviated */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white">
@@ -942,9 +940,9 @@ export default function ContactPage() {
             </DropdownMenu>
 
             <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-              <SelectTrigger className="gap-2 hover:bg-purple-100/75 h-10 bg-white font-semibold">
-                <CiCalendar />
-                <SelectValue placeholder="All Time" />
+              <SelectTrigger className="gap-1 hover:bg-purple-100/75 h-10 bg-white font-semibold min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <CiCalendar className="h-4 w-4" />
+                <SelectValue placeholder="Date" />
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem>
@@ -960,9 +958,9 @@ export default function ContactPage() {
                 variant="ghost"
                 size="sm"
                 onClick={clearAllFilters}
-                className="h-10"
+                className="h-10 min-w-[80px] md:min-w-[60px] md:text-sm md:px-1 md:hidden" // Hide on tablets to save space
               >
-                Clear Filters
+                Clear
               </Button>
             )}
           </div>
