@@ -570,10 +570,10 @@ export default function ClientsPage() {
     <div className="min-h-dvh w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className=" h-auto mx-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 ">
+          <div className="flex sm:flex-wrap items-center justify-between">
+            <div className="flex sm:flex-wrap items-center gap-4 ">
               <div>
-                <h1 className="lg:text-3xl md:text-2xl sm:text-white font-bold text-foreground">Client Hub</h1>
+                <h1 className="lg:text-3xl md:text-2xl  whitespace-nowrap font-bold text-foreground">Client Hub</h1>
               </div>
               </div>
             <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
@@ -610,7 +610,7 @@ export default function ClientsPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-      </div>
+              </div>
               
               <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
