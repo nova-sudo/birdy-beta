@@ -569,48 +569,54 @@ export default function ClientsPage() {
   return (
     <div className="min-h-dvh w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
       <div className="bg-card">
-        <div className=" h-auto mx-auto">
-          <div className="flex sm:flex-wrap items-center justify-between">
-            <div className="flex sm:flex-wrap items-center gap-4 ">
+        <div className="h-auto mx-auto">
+          <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
+
+            <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="lg:text-3xl md:text-2xl  whitespace-nowrap font-bold text-foreground">Client Hub</h1>
+                <h1 className="text-xl md:text-3xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                Client Hub
+                </h1>
               </div>
-              </div>
-            <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+              
+            </div>
+
+            <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+           py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
               <div className="flex items-center gap-2">
-        <Input
-          placeholder="Search clients..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="text-gray-900 font-bold  bg-white h-10"
-        />
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base">
-                <Eye className="h-4 w-4" />
-                <span className="hidden lg:inline">Columns</span>
-                <ChevronDown className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-white">
-              {columns.map((col) => (
-                <DropdownMenuCheckboxItem
-                  key={col.id}
-                  checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
-                  onCheckedChange={() => toggleColumnVisibility(col.id)}
-                  disabled={col.id === "name"}
-                >
-                  {columnVisibility[col.id] ?? col.visible ? (
-                    <Eye className="h-4 w-4 mr-2" />
-                  ) : (
-                    <EyeOff className="h-4 w-4 mr-2" />
-                  )}
-                  {col.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-              </div>
+                <Input
+                  placeholder="Search clients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="text-gray-900 bg-white h-10 font-bold text-xs md:text-base"
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base">
+                      <Eye className="h-4 w-4" />
+                      <span className="hidden lg:inline">Columns</span>
+                      <ChevronDown className="hidden md:inline  h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 bg-white">
+                    {columns.map((col) => (
+                      <DropdownMenuCheckboxItem
+                        key={col.id}
+                        checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
+                        onCheckedChange={() => toggleColumnVisibility(col.id)}
+                        disabled={col.id === "name"}
+                      >
+                        {columnVisibility[col.id] ?? col.visible ? (
+                          <Eye className="h-4 w-4 mr-2" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 mr-2" />
+                        )}
+                        {col.label}
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
               
               <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -637,8 +643,9 @@ export default function ClientsPage() {
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
                   <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
                     <CiCalendar/>
-                   <SelectValue placeholder="All Time" className="placeholder-hidden-md" />
-
+                    <span className="hidden md:inline">
+                      <SelectValue placeholder="All Time"  />
+                    </span>
                   </SelectTrigger>
                 <SelectContent className="bg-white">
                     <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 

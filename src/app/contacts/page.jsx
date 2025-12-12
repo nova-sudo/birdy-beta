@@ -853,17 +853,20 @@ export default function ContactPage() {
         )}
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="whitespace-nowrap">
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground">Lead Hub</h1>
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg 
+          py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
             <Input
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
+              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
+              flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
             />
 
             {searchQuery && (
@@ -877,7 +880,9 @@ export default function ContactPage() {
               </Button>
             )}
 
-            <Select value={selectedSource} onValueChange={setSelectedSource}>
+            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1 
+            md:px-1 md:flex-nowrap">
+             <Select value={selectedSource} onValueChange={setSelectedSource}>
               <SelectTrigger className="gap-1 hover:bg-purple-100/75 bg-white font-semibold h-10 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
                 <SelectValue placeholder="Sources" />
               </SelectTrigger>
@@ -963,6 +968,7 @@ export default function ContactPage() {
                 Clear
               </Button>
             )}
+            </div>            
           </div>
         </div>
 

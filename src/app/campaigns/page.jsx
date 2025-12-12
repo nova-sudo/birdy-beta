@@ -652,11 +652,19 @@ useEffect(() => {
   return (
     <div className="min-h-dvh w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
-        {/* Header */}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="lg:text-3xl md:text-2xl font-bold tracking-tight text-foreground whitespace-nowrape">Marketing Hub</h1>
+
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            
+            <div className="whitespace-nowrap">
+              <h1 className="sm:text-3xl md:text-2xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+              Marketing Hub
+              </h1>
+            </div>
+            
           </div>
+
           <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
                 <Input
                   type="search"
@@ -761,7 +769,8 @@ useEffect(() => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0
+          shadow-sm overflow-x-auto">
             <TabsTrigger value="campaigns" className="gap-2
                   text-[#71658B] 
                   font-semibold 
@@ -774,7 +783,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
-            <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="adsets" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -783,7 +795,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
-            <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="ads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -792,7 +807,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="leads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm

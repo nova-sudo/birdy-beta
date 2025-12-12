@@ -399,7 +399,7 @@ function SettingsPageContent() {
   return (
     <div className="min-h-screen w-[calc(100dvw-100px)]">
         <div className="container py-5">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground text-center md:text-left">Settings</h1>
 
       </div>
 

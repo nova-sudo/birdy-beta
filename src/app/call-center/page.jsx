@@ -568,28 +568,33 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
     <div className="w-[calc(100dvw-100px)]">
       <div className="">
         <div className="">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className=" items-center gap-4">
-              <h1 className="lg:text-3xl md:text-2xl font-bold tracking-tight text-foreground whitespace-nowrap">Call Center Hub</h1>
-              {/* <p className="lg:text-sm md:text-xs text-muted-foreground truncate lg:truncate-none">Manage leads and team members from HotProspector</p> */}
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
+
+            <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <h1 className="text-xl md:text-3xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Call Center Hub</h1>
+                <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
+                  Manage leads and team members from HotProspector
+                </p>
+              </div>
             </div>
-            </div>
-            <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-              <div className="flex items-center gap-2">
+
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+           py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+              
                 <Input
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-white h-10"
                 />
-
+            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1  md:px-1 md:flex-nowrap">
                 {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button className="bg-white h-10 font-semibold md:px-2 lg:px-3" variant="outline" size="sm">
                         <Eye className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
-                        <span className="hidden lg:inline">Columns</span>
+                        <span className="inline md:hidden lg:inline">Columns</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white">
@@ -609,15 +614,16 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
-                <Button
+                
+                
+              <Button
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
                   className="bg-white font-semibold h-10 md:px-2 lg:px-3"
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 md:mr-0 lg:mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                  <span className="hidden lg:inline">Refresh</span>
+                  <span className="inline md:hidden lg:inline">Refresh</span>
                 </Button>
                 <Button
                   className="bg-white font-semibold h-10 md:px-2 lg:px-3"
@@ -625,9 +631,10 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
                   onClick={() => router.push("/settings?tab=integrations")}
                 >
                   <Settings2 className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
-                  <span className="hidden lg:inline">Settings</span>
-                </Button>
-              </div>
+                  <span className="inline md:hidden lg:inline">Settings</span>
+                </Button></div>
+                
+              
             </div>
           </div>
         </div>

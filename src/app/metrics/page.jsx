@@ -375,26 +375,28 @@ const MetricsHub = () => {
 
   return (
     <div className="min-h-screen bg-white w-[calc(100dvw-100px)]">
-      <div className="w-full  md:space-y-6">
-        {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Metrics Hub</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              View, create and manage metrics to track important KPIs
-            </p>
+      <div className="flex flex-col gap-8 ">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h1 className="text-xl md:text-3xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Metrics Hub</h1>
+              <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
+                View, create and manage metrics to track important KPIs
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1"><div className="flex items-center gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
               <Input
                 type="search"
                 placeholder="Search metrics..."
-                className="w-[280px] pl-9 bg-white h-10 font-semibold"
+                className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
+                  flex-1 min-w-[150px] md:max-w-[120px] md:text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            
             <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
             </Button>
@@ -408,10 +410,8 @@ const MetricsHub = () => {
             >
               <Plus className="h-4 text-white w-4 border-2 rounded-xl " />
             </Button>
-          </div>
-          </div>
-          
-        </div>
+            </div>
+      </div>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
@@ -463,8 +463,9 @@ const MetricsHub = () => {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full over">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm 
+          overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0">
             <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white
             data-[state=active]:text-foreground
@@ -505,21 +506,21 @@ const MetricsHub = () => {
 
           <TabsContent value={activeTab} className="mt-6">
             {/* Metrics Table */}
-            <div className=" border bg-card overflow-hidden">
+            <div className=" border bg-card overflow-hidden rounded-md shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-muted/50 border-b">
                     <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground whitespace-nowrap">
                         Metric Name
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground whitespace-nowrap">
                         Source
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground whitespace-nowrap">
                         Dashboard
                       </th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">
+                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground whitespace-nowrap">
                         Metric Controls
                       </th>
                     </tr>
@@ -529,7 +530,7 @@ const MetricsHub = () => {
                       <tr key={metric.id} className="hover:bg-muted/50 transition-colors">
                         <td className="px-6 py-4">
                           <div>
-                            <div className="font-semibold text-foreground">{metric.name}</div>
+                            <div className="font-semibold text-foreground whitespace-nowrap">{metric.name}</div>
                             <div className="text-sm text-muted-foreground mt-0.5">
                               {metric.description}
                             </div>
