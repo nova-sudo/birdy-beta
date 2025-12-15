@@ -309,40 +309,61 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className="border bg-card overflow-hidden rounded-md w-[calc(100dvw-100px)]">
+    <div className="border bg-card overflow-hidden rounded-md w-full">
       <style jsx>{`
-        .fixed-column-even {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: white;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
+        @media (min-width: 768px) {
+          .fixed-column-even {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f4f3f9;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
         }
-        .fixed-column-odd {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: #F4F3F9;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
+
+        @media (max-width: 767px) {
+          .fixed-column-even,
+          .fixed-column-odd {
+            text-align: left;
+            background: white;
+            min-width: 200px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            background: #f4f3f9;
+          }
+          .fixed-header {
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
         }
-        .fixed-header {
-          position: sticky;
-          left: 0;
-          z-index: 50;
-          background: white;
-          min-width: 150px;
-          width: full;
-        }
+
         .table-container {
           position: relative;
-          overflow: auto
+          overflow: auto;
         }
       `}</style>
-      <div className="overflow-x-auto rounded-md">
+      <div className="overflow-x-auto rounded-md table-container"> 
         <table className="text-sm w-full table-auto rounded-md">
           <thead className="top-0 z-40">
             <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
@@ -825,7 +846,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-[calc(100dvw-100px)]">
+    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         {error && (
           <Alert variant="destructive">
@@ -855,7 +876,7 @@ export default function ContactPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="whitespace-nowrap">
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
+              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left">Lead Hub</h1>
             </div>
           </div>
 

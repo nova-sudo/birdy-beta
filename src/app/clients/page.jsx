@@ -567,22 +567,21 @@ export default function ClientsPage() {
     }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-            <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-xl md:text-3xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
                 Client Hub
                 </h1>
               </div>
-              
             </div>
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-           py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Search clients..."
@@ -595,7 +594,7 @@ export default function ClientsPage() {
                     <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base">
                       <Eye className="h-4 w-4" />
                       <span className="hidden lg:inline">Columns</span>
-                      <ChevronDown className="hidden md:inline  h-4 w-4" />
+                      <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-white">
@@ -620,7 +619,7 @@ export default function ClientsPage() {
               
               <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                <span className="hidden lg:inline">Refresh</span>
+                <span className="hidden lg:inline ">Refresh</span>
               </Button>
               <Dialog
                 open={wizardOpen}

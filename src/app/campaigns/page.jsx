@@ -650,7 +650,7 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-100px)]">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -658,7 +658,7 @@ useEffect(() => {
           <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             
             <div className="whitespace-nowrap">
-              <h1 className="sm:text-3xl md:text-2xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
               Marketing Hub
               </h1>
             </div>

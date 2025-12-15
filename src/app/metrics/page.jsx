@@ -374,13 +374,13 @@ const MetricsHub = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white w-[calc(100dvw-100px)]">
+    <div className="min-h-screen bg-white w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8 ">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
           <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-xl md:text-3xl lg:text-3xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Metrics Hub</h1>
+              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Metrics Hub</h1>
               <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
                 View, create and manage metrics to track important KPIs
               </p>

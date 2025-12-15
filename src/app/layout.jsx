@@ -42,12 +42,11 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning>
           <ProtectedLayout>
-
             <SidebarProvider open={false} >
               {!hideSidebar && <AppSidebar />}
               <SidebarInset>
                 {!hideSidebar && (
-                  <header className=" bg-white w-full z-50 top-0 flex h-12 shrink-0 items-center gap-2 border-b px-4">
+                  <header className=" bg-white w-full z-50 top-0 flex h-12 shrink-0 items-center gap-2 border-b px-0 md:px-4">
                     <Separator orientation="vertical" className=" h-4" />
                     <SidebarTrigger className="md:hidden"/>
                     <div className="flex ml-auto px-4 item-center gap-6">
@@ -56,7 +55,7 @@ export default function RootLayout({ children }) {
                     </div>
                   </header>
                 )}
-                <div id="do not change the width" className="mx-auto flex mx-auto flex-1 flex-col gap-4 p-4 overflow-x-clip">
+                <div id="do not change the width" className="mx-auto flex flex-1 flex-col gap-4 p-0 md:p-4 overflow-x-clip">
                   {children}
                 </div>
               </SidebarInset>
