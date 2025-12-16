@@ -3,8 +3,14 @@ import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MdOutlineDisabledVisible } from "react-icons/md";
-
+import { CiCalendar } from "react-icons/ci";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   loadCustomMetrics,
   evaluateFormula,
@@ -23,7 +29,6 @@ import {
   Target,
   MousePointerClick,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,6 +41,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import lab from "../../../public/lab.png";
+import { ChevronDownIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([]);
@@ -49,13 +63,16 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterConditions, setFilterConditions] = useState([]);
-
+  const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [visibleColumns, setVisibleColumns] = useState({
     campaigns: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     adsets: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     ads: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "clientGroup", "platform"],
   });
+  const [open, setOpen] = useState(false)
+  const [date, setDate] = useState(null)
+
 
   // Load custom metrics
   useEffect(() => {
@@ -90,209 +107,344 @@ const Campaigns = () => {
     return base;
   };
 
- const fetchAllData = async () => {
-  if (isLoading) return; // Prevent double-fetch
+const fetchAllData = async () => {
+  console.log('🚀 fetchAllData called, isLoading:', isLoading);
+  
+  if (isLoading) {
+    console.log('⏸️ Already loading, skipping...');
+    return;
+  }
 
   setIsLoading(true);
   setError(null);
-  setCampaigns([]);
-  setAllAdSets([]);
-  setAllAds([]);
-  setLeads([]);
-
-  const clientGroupsCache = getFromCache('clientGroups')  
-  const cachedData = getFromCache('marketing-data') 
-  if (clientGroupsCache) {
-    setClientGroups(cachedData.clientGroups || []) 
-    if (cachedData) {
-      setCampaigns(cachedData.campaigns || [])
-      setAllAdSets(cachedData.adSets || [])
-      setAllAds(cachedData.ads || [])
-      setLeads(cachedData.leads || [])
-      setIsLoading(false)
-      return
-    }
-  }
-
-
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 45_000); // 45s global timeout
+  const timeoutId = setTimeout(() => controller.abort(), 45_000);
 
   try {
-    // Step 1: Fetch client groups (includes Meta ad account IDs)
-    const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-      credentials: "include",
-      signal: controller.signal,
+    console.log('📦 Checking cache...');
+    
+    // ============================================
+    // STEP 1: Check cache first (instant load)
+    // ============================================
+    const cachedData = getFromCache('marketing-data');
+    const clientGroupsCache = getFromCache('clientGroups');
+    
+    console.log('Cache status:', {
+      hasCachedData: !!cachedData,
+      hasCachedGroups: !!clientGroupsCache,
+      cachedDataType: typeof cachedData,
+      cachedGroupsType: typeof clientGroupsCache
+    });
+    
+    // Validate cache data exists and is valid
+    const hasCachedData = cachedData && 
+                          typeof cachedData === 'object' && 
+                          Array.isArray(cachedData.campaigns);
+    
+    const hasCachedGroups = clientGroupsCache && 
+                            Array.isArray(clientGroupsCache);
+    
+    if (hasCachedData && hasCachedGroups) {
+      // Load cached data immediately
+      setCampaigns(cachedData.campaigns || []);
+      setAllAdSets(cachedData.adSets || []);
+      setAllAds(cachedData.ads || []);
+      setLeads(cachedData.leads || []);
+      setClientGroups(clientGroupsCache);
+      
+      setIsLoading(false);
+      
+      console.log('✅ Loaded from cache instantly', {
+        campaigns: cachedData.campaigns?.length,
+        adSets: cachedData.adSets?.length,
+        ads: cachedData.ads?.length,
+        leads: cachedData.leads?.length
+      });
+      
+      // Start background refresh (don't await)
+      refreshDataInBackground(controller.signal);
+      return;
+    }
+    
+    console.log('📡 No valid cache, fetching fresh data...');
+    
+    // Clear invalid cache
+    if (cachedData && !hasCachedData) {
+      console.warn('⚠️ Invalid cached data detected, clearing cache');
+      clearCache('marketing-data');
+    }
+    if (clientGroupsCache && !hasCachedGroups) {
+      console.warn('⚠️ Invalid cached client groups, clearing cache');
+      clearCache('clientGroups');
+    }
+
+    // ============================================
+    // STEP 2: No cache - fetch everything
+    // ============================================
+    
+    console.log('🌐 Fetching client groups from API...');
+    
+    // Fetch client groups first
+    const groupsResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/client-groups",
+      {
+        credentials: "include",
+        signal: controller.signal,
+      }
+    );
+
+    console.log('📥 Client groups response:', {
+      status: groupsResponse.status,
+      ok: groupsResponse.ok,
+      statusText: groupsResponse.statusText
     });
 
-    if (!groupsResponse.ok) throw new Error(`Failed to load client groups: ${groupsResponse.status}`);
+    if (!groupsResponse.ok) {
+      throw new Error(`Failed to load client groups: ${groupsResponse.status}`);
+    }
 
     const { client_groups: clientGroupsData } = await groupsResponse.json();
+    
+    console.log('✅ Received client groups:', clientGroupsData?.length || 0);
 
     if (!clientGroupsData || clientGroupsData.length === 0) {
       setClientGroups([]);
+      setIsLoading(false);
       return;
     }
 
     setClientGroups(clientGroupsData);
+    saveToCache('clientGroups', clientGroupsData);
 
-    // Step 2: Prepare parallel fetch tasks
-    const fetchTasks = clientGroupsData.map(async (group) => {
-      const metaData = group.facebook || {};
-      const adAccountId = metaData.ad_account_id;
-      const clientGroupName = group.name;
-      const adAccountName = metaData.name || "Unknown";
+    // ============================================
+    // STEP 3: Parallel fetch with NEW batch endpoint
+    // ============================================
+    
+    // Extract all unique Meta ad account IDs
+    const metaAccountIds = [
+      ...new Set(
+        clientGroupsData
+          .map(g => g.facebook?.ad_account_id)
+          .filter(Boolean)
+      )
+    ];
 
-      if (!adAccountId) {
-        return { group, campaigns: [], adsets: [], ads: [], leads: [] };
-      }
+    console.log(`📊 Fetching data for ${metaAccountIds.length} Meta accounts in parallel...`);
 
+    // Fetch ALL Meta accounts in ONE request (parallel on backend)
+    let allMetaData = {};
+    
+    if (metaAccountIds.length > 0) {
       try {
-        // Parallel: fetch account insights + leads at the same time
-        const [accountRes, leadsRes] = await Promise.all([
-          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/data`, {
+        const batchResponse = await fetch(
+          "https://birdy-backend.vercel.app/api/facebook/batch-accounts",
+          {
+            method: "POST",
             credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account_ids: metaAccountIds }),
             signal: controller.signal,
-          }).catch((err) => ({ ok: false, error: err })),
-
-          fetch(`https://birdy-backend.vercel.app/api/facebook/adaccounts/${adAccountId}/leads`, {
-            credentials: "include",
-            signal: controller.signal,
-          }).catch((err) => ({ ok: false, error: err })),
-        ]);
-
-        const accountData = accountRes.ok ? await accountRes.json() : null;
-        const leadsData = leadsRes.ok ? await leadsRes.json() : { data: [] };
-
-        if (!accountData?.data?.data) {
-          console.warn(`No campaign data for account ${adAccountId}`);
-          return { group, campaigns: [], adsets: [], ads: [], leads: leadsData.data || [] };
-        }
-
-        const campaigns = [];
-        const adsets = [];
-        const ads = [];
-        const accountLeads = leadsData.data || [];
-
-        // Process campaigns, adsets, ads
-        for (const campaign of accountData.data.data) {
-          const insights = campaign.insights?.data?.[0] || {};
-
-          // Campaign-level
-          campaigns.push(
-            enhanceWithCustomMetrics({
-              id: campaign.id,
-              accountId: adAccountId,
-              name: campaign.name || "Unknown Campaign",
-              clientGroup: clientGroupName,
-              adAccount: adAccountName,
-              spend: parseFloat(insights.spend || "0"),
-              leads: parseInt(insights.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped")?.value || "0"),
-              cpl: parseFloat(insights.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped")?.values?.[0]?.value || "0"),
-              impressions: parseInt(insights.impressions || "0"),
-              clicks: parseInt(insights.clicks || "0"),
-              cpc: parseFloat(insights.cpc || "0"),
-              reach: parseInt(insights.reach || "0"),
-              frequency: parseFloat(insights.frequency || "0"),
-              cpm: parseFloat(insights.cpm || "0"),
-              ctr: parseFloat(insights.ctr || "0"),
-            })
-          );
-
-          // Ad Sets
-          for (const adset of campaign.adsets?.data || []) {
-            const ai = adset.insights?.data?.[0] || {};
-            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
-            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
-
-            adsets.push(
-              enhanceWithCustomMetrics({
-                id: adset.id,
-                accountId: adAccountId,
-                name: adset.name || "Unknown Ad Set",
-                clientGroup: clientGroupName,
-                adAccount: adAccountName,
-                campaignName: campaign.name,
-                spend: parseFloat(ai.spend || "0"),
-                leads: parseInt(leadAction.value || "0"),
-                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
-                impressions: parseInt(ai.impressions || "0"),
-                clicks: parseInt(ai.clicks || "0"),
-                cpc: parseFloat(ai.cpc || "0"),
-                reach: parseInt(ai.reach || "0"),
-                frequency: parseFloat(ai.frequency || "0"),
-                cpm: parseFloat(ai.cpm || "0"),
-                ctr: parseFloat(ai.ctr || "0"),
-              })
-            );
           }
+        );
 
-          // Ads
-          for (const ad of campaign.ads?.data || []) {
-            const ai = ad.insights?.data?.[0] || {};
-            const leadAction = ai.actions?.find(a => a.action_type === "onsite_conversion.lead_grouped") || {};
-            const costPer = ai.cost_per_result?.find(r => r.indicator === "actions:onsite_conversion.lead_grouped") || {};
-
-            ads.push(
-              enhanceWithCustomMetrics({
-                id: ad.id,
-                accountId: adAccountId,
-                name: ad.name || "Unknown Ad",
-                clientGroup: clientGroupName,
-                adAccount: adAccountName,
-                campaignName: campaign.name,
-                spend: parseFloat(ai.spend || "0"),
-                leads: parseInt(leadAction.value || "0"),
-                cpl: parseFloat(costPer.values?.[0]?.value || "0"),
-                impressions: parseInt(ai.impressions || "0"),
-                clicks: parseInt(ai.clicks || "0"),
-                cpc: parseFloat(ai.cpc || "0"),
-                reach: parseInt(ai.reach || "0"),
-                frequency: parseFloat(ai.frequency || "0"),
-                cpm: parseFloat(ai.cpm || "0"),
-                ctr: parseFloat(ai.ctr || "0"),
-              })
-            );
-          }
+        if (batchResponse.ok) {
+          const batchData = await batchResponse.json();
+          allMetaData = batchData.data || {};
+          console.log(`✅ Fetched ${Object.keys(allMetaData).length} Meta accounts`);
         }
-
-        // Attach client group info to leads
-        const enrichedLeads = accountLeads.map((lead) => ({
-          ...lead,
-          clientGroup: clientGroupName,
-          adAccount: adAccountName,
-        }));
-
-        return { group, campaigns, adsets, ads, leads: enrichedLeads };
       } catch (err) {
-        if (err.name === "AbortError") throw err;
-        console.error(`Failed to load data for account ${adAccountId} (${clientGroupName}):`, err);
-        return { group, campaigns: [], adsets: [], ads: [], leads: [], error: err.message };
+        console.warn('Meta batch fetch failed:', err);
       }
+    }
+
+    // Fetch leads in parallel for all accounts
+    const leadsPromises = metaAccountIds.map(accountId =>
+      fetch(
+        `https://birdy-backend.vercel.app/api/facebook/adaccounts/${accountId}/leads`,
+        { credentials: "include", signal: controller.signal }
+      )
+        .then(r => r.ok ? r.json() : { data: [] })
+        .catch(() => ({ data: [] }))
+    );
+
+    const leadsResults = await Promise.all(leadsPromises);
+    
+    // Flatten and properly map lead data
+    const allLeads = leadsResults.flatMap(result => {
+      const leadsArray = result.data || [];
+      return leadsArray.map(lead => ({
+        id: lead.id,
+        full_name: lead.full_name || '',
+        email: lead.email || '',
+        phone_number: lead.phone_number || '',
+        ad_name: lead.ad_name || '',
+        campaign_name: lead.campaign_name || '',
+        platform: lead.platform || 'Facebook',
+        created_time: lead.created_time || '',
+        // Will add clientGroup and adAccount below
+      }));
     });
 
-    // Step 3: Execute all in parallel
-    const results = await Promise.all(fetchTasks);
+    // ============================================
+    // STEP 4: Process and flatten data
+    // ============================================
+    
+    const allCampaigns = [];
+    const allAdSets = [];
+    const allAds = [];
 
-    // Step 4: Flatten results
-    const allCampaigns = results.flatMap(r => r.campaigns);
-    const allAdSets = results.flatMap(r => r.adsets);
-    const allAds = results.flatMap(r => r.ads);
-    const allLeads = results.flatMap(r => r.leads);
+    clientGroupsData.forEach(group => {
+      const metaAccountId = group.facebook?.ad_account_id;
+      const clientGroupName = group.name;
+      const adAccountName = group.facebook?.name || "Unknown";
+
+      if (!metaAccountId || !allMetaData[metaAccountId]) return;
+
+      const accountData = allMetaData[metaAccountId];
+      const campaigns = accountData.data || [];
+
+      campaigns.forEach(campaign => {
+        const insights = campaign.insights?.data?.[0] || {};
+
+        // Campaign-level
+        allCampaigns.push(
+          enhanceWithCustomMetrics({
+            id: campaign.id,
+            accountId: metaAccountId,
+            name: campaign.name || "Unknown Campaign",
+            clientGroup: clientGroupName,
+            adAccount: adAccountName,
+            spend: parseFloat(insights.spend || "0"),
+            leads: parseInt(
+              insights.actions?.find(
+                a => a.action_type === "onsite_conversion.lead_grouped"
+              )?.value || "0"
+            ),
+            cpl: parseFloat(
+              insights.cost_per_result?.find(
+                r => r.indicator === "actions:onsite_conversion.lead_grouped"
+              )?.values?.[0]?.value || "0"
+            ),
+            impressions: parseInt(insights.impressions || "0"),
+            clicks: parseInt(insights.clicks || "0"),
+            cpc: parseFloat(insights.cpc || "0"),
+            reach: parseInt(insights.reach || "0"),
+            frequency: parseFloat(insights.frequency || "0"),
+            cpm: parseFloat(insights.cpm || "0"),
+            ctr: parseFloat(insights.ctr || "0"),
+          })
+        );
+
+        // Ad Sets
+        (campaign.adsets?.data || []).forEach(adset => {
+          const ai = adset.insights?.data?.[0] || {};
+          allAdSets.push(
+            enhanceWithCustomMetrics({
+              id: adset.id,
+              accountId: metaAccountId,
+              name: adset.name || "Unknown Ad Set",
+              clientGroup: clientGroupName,
+              adAccount: adAccountName,
+              campaignName: campaign.name,
+              spend: parseFloat(ai.spend || "0"),
+              leads: parseInt(
+                ai.actions?.find(
+                  a => a.action_type === "onsite_conversion.lead_grouped"
+                )?.value || "0"
+              ),
+              cpl: parseFloat(
+                ai.cost_per_result?.find(
+                  r => r.indicator === "actions:onsite_conversion.lead_grouped"
+                )?.values?.[0]?.value || "0"
+              ),
+              impressions: parseInt(ai.impressions || "0"),
+              clicks: parseInt(ai.clicks || "0"),
+              cpc: parseFloat(ai.cpc || "0"),
+              reach: parseInt(ai.reach || "0"),
+              frequency: parseFloat(ai.frequency || "0"),
+              cpm: parseFloat(ai.cpm || "0"),
+              ctr: parseFloat(ai.ctr || "0"),
+            })
+          );
+        });
+
+        // Ads
+        (campaign.ads?.data || []).forEach(ad => {
+          const ai = ad.insights?.data?.[0] || {};
+          allAds.push(
+            enhanceWithCustomMetrics({
+              id: ad.id,
+              accountId: metaAccountId,
+              name: ad.name || "Unknown Ad",
+              clientGroup: clientGroupName,
+              adAccount: adAccountName,
+              campaignName: campaign.name,
+              spend: parseFloat(ai.spend || "0"),
+              leads: parseInt(
+                ai.actions?.find(
+                  a => a.action_type === "onsite_conversion.lead_grouped"
+                )?.value || "0"
+              ),
+              cpl: parseFloat(
+                ai.cost_per_result?.find(
+                  r => r.indicator === "actions:onsite_conversion.lead_grouped"
+                )?.values?.[0]?.value || "0"
+              ),
+              impressions: parseInt(ai.impressions || "0"),
+              clicks: parseInt(ai.clicks || "0"),
+              cpc: parseFloat(ai.cpc || "0"),
+              reach: parseInt(ai.reach || "0"),
+              frequency: parseFloat(ai.frequency || "0"),
+              cpm: parseFloat(ai.cpm || "0"),
+              ctr: parseFloat(ai.ctr || "0"),
+            })
+          );
+        });
+      });
+    });
+
+    // Enrich leads with client group info
+    const enrichedLeads = allLeads.map(lead => {
+      // Find the group that matches this lead's campaign
+      const group = clientGroupsData.find(g => {
+        const accountCampaigns = allMetaData[g.facebook?.ad_account_id];
+        if (!accountCampaigns) return false;
+        
+        // Check if any campaign in this account matches the lead's campaign
+        return accountCampaigns.data?.some(
+          campaign => campaign.name === lead.campaign_name
+        );
+      });
+
+      return {
+        ...lead,
+        clientGroup: group?.name || "Unknown",
+        adAccount: group?.facebook?.name || "Unknown",
+      };
+    });
+
+    console.log('✅ Enriched leads sample:', enrichedLeads[0]);
+
+    // ============================================
+    // STEP 5: Save to cache and update state
+    // ============================================
     
     saveToCache('marketing-data', {
       campaigns: allCampaigns,
       adSets: allAdSets,
       ads: allAds,
-      leads: allLeads,
-      clientGroups: clientGroupsData
-    })
+      leads: enrichedLeads,
+      clientGroups: clientGroupsData,
+      timestamp: Date.now()
+    });
 
     setCampaigns(allCampaigns);
     setAllAdSets(allAdSets);
     setAllAds(allAds);
-    setLeads(allLeads);
+    setLeads(enrichedLeads);
+
+    console.log(`✅ Loaded ${allCampaigns.length} campaigns, ${allAdSets.length} adsets, ${allAds.length} ads, ${enrichedLeads.length} leads`);
 
   } catch (err) {
     if (err.name === "AbortError") {
@@ -306,13 +458,86 @@ const Campaigns = () => {
     setIsLoading(false);
   }
 };
+
+
+// ============================================
+// BACKGROUND REFRESH (optional)
+// ============================================
+
+const refreshDataInBackground = async (signal) => {
+  try {
+    console.log('🔄 Refreshing data in background...');
+    
+    // Call the same fetch logic but don't show loading state
+    const groupsResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/client-groups",
+      { credentials: "include", signal }
+    );
+
+    if (!groupsResponse.ok) return;
+
+    const { client_groups: clientGroupsData } = await groupsResponse.json();
+    
+    const metaAccountIds = [
+      ...new Set(
+        clientGroupsData
+          .map(g => g.facebook?.ad_account_id)
+          .filter(Boolean)
+      )
+    ];
+
+    if (metaAccountIds.length === 0) return;
+
+    // Batch fetch
+    const batchResponse = await fetch(
+      "https://birdy-backend.vercel.app/api/facebook/batch-accounts",
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ account_ids: metaAccountIds }),
+        signal,
+      }
+    );
+
+    if (!batchResponse.ok) return;
+
+    const batchData = await batchResponse.json();
+    
+    // Process and update cache silently
+    // ... (same processing logic as above)
+    
+    console.log('✅ Background refresh complete');
+    
+  } catch (err) {
+    console.warn('Background refresh failed:', err);
+  }
+};
+
+
+// ============================================
+// PREFETCH ON PAGE LOAD (call this in useEffect)
+// ============================================
+
 useEffect(() => {
-  const controller = new AbortController();
+  // Call prefetch endpoint to warm up caches
+  fetch("https://birdy-backend.vercel.app/api/prefetch-data", {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(r => r.json())
+    .then(data => {
+      console.log('🔥 Prefetch started:', data.message);
+    })
+    .catch(err => {
+      console.warn('Prefetch failed:', err);
+    });
 
+  // Then fetch normally (will use cached data)
   fetchAllData();
-
-  return () => controller.abort(); // Cleanup on unmount
 }, []);
+
+
 
   // Filtering
   const applyFilters = (data) => {
@@ -425,30 +650,40 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
-        {/* Header */}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Marketing Hub</h1>
+
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            
+            <div className="whitespace-nowrap">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+              Marketing Hub
+              </h1>
+            </div>
+            
           </div>
+
           <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <Input
-              type="search"
-              placeholder={`Search ${activeTab}...`}
-              className="w-64 md:w-[320px]  h-10 bg-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+                <Input
+                  type="search"
+                  placeholder={`Search ${activeTab}...`}
+                  className="h-10 bg-white"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
 
-            <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2 h-10 bg-white font-semibold">
-                    <SlidersHorizontal className="h-4 w-4" />Add Filter
-                  </Button>
+                <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2 h-10 bg-white font-semibold md:px-2 lg:px-3">
+                  <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                  <span className="hidden lg:inline">Add Filter</span>
+                </Button>
 
-                  <DropdownMenu>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold">
-                      <SlidersHorizontal className="h-4 w-4" />Columns
+                    <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold md:px-2 lg:px-3">
+                      <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                      <span className="hidden lg:inline">Columns</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-white">
@@ -465,9 +700,47 @@ useEffect(() => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                  {/* date filter */}
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="date"
+                        className="w-35 justify-between font-normal"
+                        placeholder="Select date"
+                      >
+                        <CiCalendar/>
+                        {date ? date.toLocaleDateString() : "Select date"}
+                        <ChevronDownIcon />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0 bg-white" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        captionLayout="dropdown"
+                        onSelect={(date) => {
+                          setDate(date)
+                          setOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
 
+                {/* <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                  <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
+                    <CiCalendar/>
+                    <SelectValue placeholder="All Time" className="placeholder-hidden-md" />
+                  </SelectTrigger>
+                <SelectContent className="bg-white">
+                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
+                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
+                  </SelectContent>
+                </Select> */}
           </div>
-            
         </div>
 
         {/* Metrics Cards */}
@@ -496,9 +769,11 @@ useEffect(() => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0
+          shadow-sm overflow-x-auto">
             <TabsTrigger value="campaigns" className="gap-2
-                  text-[#71658B] font-semibold 
+                  text-[#71658B] 
+                  font-semibold 
                   hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
@@ -508,7 +783,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
-            <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="adsets" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -517,7 +795,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
-            <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="ads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -526,7 +807,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="leads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm

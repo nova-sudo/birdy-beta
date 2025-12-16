@@ -9,14 +9,6 @@ import { usePathname } from "next/navigation";
 import { Separator } from "@/components/ui/separator";
 import { Bell } from 'lucide-react';
 import { UserRound } from 'lucide-react';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -50,33 +42,20 @@ export default function RootLayout({ children }) {
       </head>
       <body suppressHydrationWarning>
           <ProtectedLayout>
-
             <SidebarProvider open={false} >
               {!hideSidebar && <AppSidebar />}
               <SidebarInset>
                 {!hideSidebar && (
-                  <header className=" bg-white w-full z-50 top-0 flex h-12 shrink-0 items-center gap-2 border-b px-4">
+                  <header className=" bg-white w-full z-50 top-0 flex h-12 shrink-0 items-center gap-2 border-b px-0 md:px-4">
                     <Separator orientation="vertical" className=" h-4" />
-                    <Breadcrumb>
-                      <BreadcrumbList>
-                        <BreadcrumbItem className="hidden md:block">
-                          <BreadcrumbLink href="#">
-                          Birdy Ai
-                          </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator className="hidden md:block" />
-                        <BreadcrumbItem>
-                          <BreadcrumbPage>Page</BreadcrumbPage>
-                        </BreadcrumbItem>
-                      </BreadcrumbList>
-                    </Breadcrumb>
+                    <SidebarTrigger className="md:hidden"/>
                     <div className="flex ml-auto px-4 item-center gap-6">
                       <Bell className="size-4"/>
                       <UserRound className="size-4"/>
                     </div>
                   </header>
                 )}
-                <div id="do not change the width" className="mx-auto flex w-[1400px] mx-auto flex-1 flex-col gap-4 p-4 overflow-x-clip">
+                <div id="do not change the width" className="mx-auto flex flex-1 flex-col gap-4 p-0 md:p-4 overflow-x-clip">
                   {children}
                 </div>
               </SidebarInset>

@@ -1,6 +1,6 @@
 import { LayoutDashboard, SquareUserRound, Boxes, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
 import { useState } from "react"
-
+import { useSidebar } from "@/components/ui/sidebar"
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +67,15 @@ const items = [
 export function AppSidebar() {
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const {
+    state,
+    open,
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+    toggleSidebar,
+  } = useSidebar()
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -110,7 +119,14 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar collapsible="icon" variant="sidebar" side="left">
+    
+      <Sidebar
+          collapsible="icon"
+          variant="sidebar"
+          side="left"
+          open={isMobile ? openMobile : open}           // 👈 controlled state
+          onOpenChange={isMobile ? setOpenMobile : setOpen} // 👈 update state
+        >
         <SidebarContent className="pt-2">
           <SidebarGroup>
             <SidebarMenuButton size="lg" asChild>
