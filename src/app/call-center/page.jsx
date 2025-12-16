@@ -461,31 +461,36 @@ const handleRefresh = () => {
   const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
 
   return (
-    <div className="">
+    <div className="w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="">
         <div className="">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
+
+            <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Call Center Hub</h1>
-                <p className="text-sm text-muted-foreground mt-1">Manage leads and team members from HotProspector</p>
+                <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Call Center Hub</h1>
+                <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
+                  Manage leads and team members from HotProspector
+                </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-              <div className="flex items-center gap-2">
+
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+           py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+              
                 <Input
                   placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 w-64 bg-white h-10"
+                  className="bg-white h-10"
                 />
-
+            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1  md:px-1 md:flex-nowrap">
                 {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button className="bg-white h-10 font-semibold" variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        Columns
+                      <Button className="bg-white h-10 font-semibold md:px-2 lg:px-3" variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                        <span className="inline md:hidden lg:inline">Columns</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-white">
@@ -505,25 +510,27 @@ const handleRefresh = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
-
-                <Button
+                
+                
+              <Button
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
-                  className="bg-white font-semibold h-10"
+                  className="bg-white font-semibold h-10 md:px-2 lg:px-3"
                 >
-                  <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                  Refresh
+                  <RefreshCw className={`h-4 w-4 mr-2 md:mr-0 lg:mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
+                  <span className="inline md:hidden lg:inline">Refresh</span>
                 </Button>
                 <Button
-                  className="bg-white font-semibold h-10"
+                  className="bg-white font-semibold h-10 md:px-2 lg:px-3"
                   variant="outline"
                   onClick={() => router.push("/settings?tab=integrations")}
                 >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Settings
-                </Button>
-              </div>
+                  <Settings2 className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                  <span className="inline md:hidden lg:inline">Settings</span>
+                </Button></div>
+                
+              
             </div>
           </div>
         </div>

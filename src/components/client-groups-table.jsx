@@ -178,36 +178,56 @@ const flattenedData = useMemo(() => {
   return (
     <div className="space-y-4">
       <style jsx>{`
+        @media (min-width: 768px) {
+          .fixed-column-even {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f4f3f9;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
+        }
 
-        .fixed-column-even {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: white;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
+        @media (max-width: 767px) {
+          .fixed-column-even,
+          .fixed-column-odd {
+            text-align: left;
+            background: white;
+            min-width: 200px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            background: #f4f3f9;
+          }
+          .fixed-header {
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
         }
-        .fixed-column-odd {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: #F4F3F9;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
-        }
-        .fixed-header {
-          position: sticky;
-          left: 0;
-          z-index: 50;
-          background: white;
-          min-width: 150px;
-          width: full;
-        }
+
         .table-container {
           position: relative;
-          overflow: auto
+          overflow: auto;
         }
       `}</style>
       {/* Table */}
