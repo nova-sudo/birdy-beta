@@ -221,8 +221,6 @@ export default function CallCenterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [progress, setProgress] = useState(13)
   const [error, setError] = useState(null)
-  const [prefetchProgress, setPrefetchProgress] = useState(0)
-  const [isPrefetching, setIsPrefetching] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     client: true,
     ghlLocation: true,
@@ -258,127 +256,25 @@ export default function CallCenterPage() {
     sessionStorage.setItem("activeTab", activeTab)
   }, [activeTab])
 
-  const prefetchRemainingPages = async (totalLeads, currentPage) => {
-  const totalPages = Math.ceil(totalLeads / leadsPerPage)
-  
-  // Don't prefetch if only one page or already prefetching
-  if (totalPages <= 1 || isPrefetching) return
-  
-  setIsPrefetching(true)
-  console.log(`[Prefetch] Starting background prefetch for pages 2-${totalPages}`)
-  
-  // Create array of page numbers to prefetch (excluding current page)
-  const pagesToPrefetch = Array.from(
-    { length: totalPages - 1 }, 
-    (_, i) => i + 2
-  )
-  
-  let successCount = 0
-  let failCount = 0
-  
-  // Prefetch pages sequentially to avoid overwhelming the server
-  for (let i = 0; i < pagesToPrefetch.length; i++) {
-    const pageNum = pagesToPrefetch[i]
-    const cacheKey = `hotprospector-leads-page-${pageNum}`
-    
-    // Skip if already cached
-    const cached = getFromCache(cacheKey)
-    if (cached) {
-      console.log(`[Prefetch] Page ${pageNum} already cached, skipping`)
-      successCount++
-      setPrefetchProgress(Math.round(((i + 1) / pagesToPrefetch.length) * 100))
-      continue
-    }
-    
-    try {
-      const skip = (pageNum - 1) * leadsPerPage
-      const response = await fetch(
-        `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`,
-        { credentials: "include" }
-      )
-      
-      if (!response.ok) throw new Error(`Failed to prefetch page ${pageNum}`)
-      
-      const data = await response.json()
-      
-      // Transform and cache
-      const mappedLeads = (data.data || []).map((lead) => ({
-        id: lead.id,
-        client: lead.client_name || "Unknown Client",
-        ghlLocation: lead.ghl_location_name || "Unknown Location",
-        ghlLocationId: lead.ghl_location_id,
-        name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
-        email: lead.email || "N/A",
-        phone: lead.phone || lead.mobile 
-          ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() 
-          : "N/A",
-        company: lead.company || "N/A",
-        location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
-        tags: lead.tags || [],
-        status: "Active",
-        call_logs_count: lead.call_logs_count || 0,
-        call_logs: lead.call_logs || [],
-      }))
-      
-      saveToCache(cacheKey, {
-        leads: mappedLeads,
-        total: data.meta?.total || 0,
-        locationStats: data.meta?.location_stats || {}
-      })
-      
-      successCount++
-      console.log(`[Prefetch] Cached page ${pageNum} (${mappedLeads.length} leads)`)
-      
-      // Update progress
-      setPrefetchProgress(Math.round(((i + 1) / pagesToPrefetch.length) * 100))
-      
-      // Small delay to avoid rate limiting (100ms between requests)
-      await new Promise(resolve => setTimeout(resolve, 100))
-      
-    } catch (error) {
-      failCount++
-      console.error(`[Prefetch] Failed to cache page ${pageNum}:`, error)
-    }
-  }
-  
-  setIsPrefetching(false)
-  console.log(`[Prefetch] Complete: ${successCount} cached, ${failCount} failed`)
-  
-  if (successCount > 0) {
-    toast.success(`Background loaded ${successCount} additional pages`, {
-      duration: 2000
-    })
-  }
-}
+
 
 
 const fetchAllLeads = async (page = 1, forceRefresh = false) => {
   try {
     setIsLoading(true)
     setError(null)
-    const cacheKey = `hotprospector-leads-page-${page}`
 
-    // Check cache first (unless forcing refresh)
-    if (!forceRefresh) {
-      const cachedData = getFromCache(cacheKey)
-      if (cachedData) {
-        setLeads(cachedData.leads)
-        setTotalLeads(cachedData.total)
-        setLocationStats(cachedData.locationStats)
-        setCurrentPage(page)
-        setIsLoading(false)
-        toast.success("Loaded from cache", { id: "fetch-leads" })
-        return
-      }
-    }
+    // ❌ REMOVE: No more client-side cache checking
+    // const cacheKey = `hotprospector-leads-page-${page}`
+    // const cachedData = getFromCache(cacheKey)
 
     const skip = (page - 1) * leadsPerPage
 
     if (page === 1) {
-      toast.loading("Loading leads with call logs from all clients...", { id: "fetch-leads" })
+      toast.loading("Loading leads from server...", { id: "fetch-leads" })
     }
 
-    // Use refresh endpoint if force refresh
+    // ✅ ALWAYS fetch from server - it handles cache internally
     const endpoint = forceRefresh
       ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
       : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
@@ -402,7 +298,9 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
       name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
       email: lead.email || "N/A",
       phone:
-        lead.phone || lead.mobile ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() : "N/A",
+        lead.phone || lead.mobile 
+          ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim() 
+          : "N/A",
       company: lead.company || "N/A",
       location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
       tags: lead.tags || [],
@@ -411,13 +309,8 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
       call_logs: lead.call_logs || [],
     }))
 
-    const cacheData = {
-      leads: mappedLeads,
-      total: data.meta?.total || 0,
-      locationStats: data.meta?.location_stats || {}
-    }
-    
-    saveToCache(cacheKey, cacheData)
+    // ❌ REMOVE: No more client-side caching
+    // saveToCache(cacheKey, { leads: mappedLeads, total: data.meta?.total || 0 })
 
     setLeads(mappedLeads)
     setTotalLeads(data.meta?.total || 0)
@@ -425,105 +318,108 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
     setLocationStats(data.meta?.location_stats || {})
 
     const totalCalls = data.meta?.total_calls || 0
+    const cacheStatus = data.meta?.cache_status || "unknown"
+    const freshFromCache = data.meta?.fresh_from_cache || 0
+    const fetchedFresh = data.meta?.fetched_fresh || 0
 
+    // Show cache info in toast
+    let toastMessage = ""
     if (forceRefresh) {
-      toast.success(
-        `Refreshed ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
-        { id: "fetch-leads" },
-      )
+      toastMessage = `Refreshed ${mappedLeads.length} leads with ${totalCalls} calls`
     } else {
-      toast.success(
-        `Loaded ${mappedLeads.length} leads with ${totalCalls} call logs from ${data.meta?.locations_processed || 0} locations`,
-        { id: "fetch-leads" },
-      )
+      if (cacheStatus === "full_cache") {
+        toastMessage = `✨ Loaded ${mappedLeads.length} leads from cache (instant)`
+      } else if (cacheStatus === "partial_cache") {
+        toastMessage = `Loaded ${mappedLeads.length} leads (${freshFromCache} cached, ${fetchedFresh} fresh)`
+      } else {
+        toastMessage = `Loaded ${mappedLeads.length} fresh leads with ${totalCalls} calls`
+      }
     }
+
+    toast.success(toastMessage, { id: "fetch-leads" })
 
     console.log("[HotProspector] Fetched leads:", {
       page,
       returned: mappedLeads.length,
       total: data.meta?.total,
-      locations: data.meta?.locations_processed,
-      locationStats: data.meta?.location_stats,
-      totalCalls,
+      cacheStatus,
+      freshFromCache,
+      fetchedFresh,
+      responseTime: data.meta?.response_time_ms,
     })
-
-    // ✨ START BACKGROUND PREFETCH after first page loads
-    if (page === 1 && !forceRefresh && data.meta?.total > leadsPerPage) {
-      // Use setTimeout to ensure prefetch happens after UI updates
-      setTimeout(() => {
-        prefetchRemainingPages(data.meta.total, page)
-      }, 500)
-    }
 
   } catch (err) {
     console.error("Error fetching leads:", err)
     setError(err.message)
-    toast.error("Failed to fetch leads. Please check your HotProspector connection.", { id: "fetch-leads" })
+    toast.error("Failed to fetch leads. Please check your HotProspector connection.", { 
+      id: "fetch-leads" 
+    })
   } finally {
     setIsLoading(false)
     setIsRefreshing(false)
   }
 }
 
+// ❌ REMOVE: prefetchRemainingPages function entirely
+// We don't need client-side prefetching anymore
 
-  const fetchMembers = async (forceRefresh = false) => {
-    
-    try {
+const fetchMembers = async (forceRefresh = false) => {
+  try {
+    // ❌ REMOVE: Client cache check
+    // const cachedMembers = getFromCache('hotprospector-members')
 
-      if (!forceRefresh) {
-        const cachedMembers = getFromCache('hotprospector-members')
-        if (cachedMembers) {
-          setMembers(cachedMembers)
-          return
-        }
-      }
-      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/members", {
-        credentials: "include",
-      })
+    const response = await fetch(
+      "https://birdy-backend.vercel.app/api/hotprospector/members", 
+      { credentials: "include" }
+    )
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch members")
-      }
+    if (!response.ok) {
+      throw new Error("Failed to fetch members")
+    }
 
-      const data = await response.json()
-      const mappedMembers = (data.data || []).map((member) => ({
-        id: member.memberId,
-        name: `${member.first_name} ${member.last_name}`.trim(),
-        email: member.email,
-        phone: member.mobile || member.inbound_phone || "N/A",
-        extension: member.phone_extension,
-        status: member.member_status,
-        title: member.title,
-        company: member.company,
-        country: member.country,
-      }))
+    const data = await response.json()
+    const mappedMembers = (data.data || []).map((member) => ({
+      id: member.memberId,
+      name: `${member.first_name} ${member.last_name}`.trim(),
+      email: member.email,
+      phone: member.mobile || member.inbound_phone || "N/A",
+      extension: member.phone_extension,
+      status: member.member_status,
+      title: member.title,
+      company: member.company,
+      country: member.country,
+    }))
 
-      saveToCache('hotprospector-members', mappedMembers)
-      setMembers(mappedMembers)
+    // ❌ REMOVE: Client cache save
+    // saveToCache('hotprospector-members', mappedMembers)
 
-      if (forceRefresh) {
-        toast.success("Members refreshed")
-      }
+    setMembers(mappedMembers)
 
-      console.log("[HotProspector] Fetched fresh members:", mappedMembers.length)
-    } catch (err) {
-      console.error("Error fetching members:", err)
-      if (forceRefresh) {
-        toast.error("Failed to refresh members")
-      }
+    if (forceRefresh) {
+      toast.success("Members refreshed")
+    }
+
+    console.log("[HotProspector] Fetched members:", mappedMembers.length)
+  } catch (err) {
+    console.error("Error fetching members:", err)
+    if (forceRefresh) {
+      toast.error("Failed to refresh members")
     }
   }
+}
 
-  const handleRefresh = () => {
-    setIsRefreshing(true)
+const handleRefresh = () => {
+  setIsRefreshing(true)
 
-    if (activeTab === "leads") {
-      // Force refresh from API (clears cache)
-      fetchAllLeads(1, true)
-    } else if (activeTab === "members") {
-      fetchMembers(true)
-    }
+  if (activeTab === "leads") {
+    // Force API refresh (bypasses server cache)
+    fetchAllLeads(1, true)
+  } else if (activeTab === "members") {
+    fetchMembers(true)
   }
+}
+
+
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -702,12 +598,7 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
               </Alert>
             </div>
           )}
-          {isPrefetching && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Loading additional pages in background... {prefetchProgress}%</span>
-            </div>
-          )}
+
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
               <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">

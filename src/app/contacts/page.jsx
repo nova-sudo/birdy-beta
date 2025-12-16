@@ -1,9 +1,6 @@
 "use client"
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { MdOutlineDisabledVisible } from "react-icons/md";
 import {
   Loader2,
   SlidersHorizontal,
@@ -61,6 +58,7 @@ import { Progress } from "@/components/ui/progress"
 
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
+  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
   { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
   { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
   { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: lab },
@@ -73,10 +71,6 @@ const contactColumns = [
   { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: metaa},
-  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: metaa},
-  { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
-  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
@@ -289,8 +283,8 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             </span>
           </div>
         )
-          }
-        }
+    }
+  }
 
   const visibleColumnsData = contactColumns.filter((col) => visibleColumns.includes(col.id))
 
@@ -494,16 +488,14 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
 }
 
 export default function ContactPage() {
-  const router = useRouter()
-
   const [contacts, setContacts] = useState([])
   const [webhookData, setWebhookData] = useState([])
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [progress, setProgress] = useState(13)
-  const [currentPage, setCurrentPage] = useState(1)
-  const PAGE_SIZE = 15
+  const [cursors, setCursors] = useState([null])
+  const [currentCursorIndex, setCurrentCursorIndex] = useState(0)
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
   )
@@ -515,90 +507,128 @@ export default function ContactPage() {
   const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
-
-  const fetchContacts = async () => {
-    setLoading(true)
-    setError(null)
-    const cachedData = getFromCache('contacts-data')
-    if (cachedData) {
-      setContacts(cachedData.contacts || [])
-      setWebhookData(cachedData.webhooks || [])
-      setMetaData(cachedData.meta || null)
-      setLoading(false)
-      return
-    }
-    try {
-      const [contactsResponse, webhooksResponse] = await Promise.all([
-        fetch(`https://birdy-backend.vercel.app/api/contacts/all`, {
-          credentials: "include",
-        }),
-        fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
+  const [clientGroups, setClientGroups] = useState([])
+  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
+  
+  // Fetch client groups once on mount
+  useEffect(() => {
+    const fetchClientGroups = async () => {
+      try {
+        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, {
           credentials: "include",
         })
-      ])
+        if (response.ok) {
+          const data = await response.json()
+          const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
+          setClientGroups(ghlGroups)
+        }
+      } catch (error) {
+        console.error("Error fetching client groups:", error)
+      }
+    }
+    fetchClientGroups()
+  }, [])
+
+  // Fetch webhooks once on mount
+  useEffect(() => {
+    const fetchWebhooks = async () => {
+      try {
+        const webhooksResponse = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
+          credentials: "include",
+        })
+
+        if (webhooksResponse.ok) {
+          const webhooksData = await webhooksResponse.json()
+          setWebhookData(webhooksData.data || [])
+        }
+      } catch (error) {
+        console.error("Error fetching webhooks:", error)
+      }
+    }
+    fetchWebhooks()
+  }, [])
+
+  const enrichContactsWithWebhooks = (contacts) => {
+    const webhookByContactId = new Map()
+    const webhookByEmail = new Map()
+    
+    webhookData.forEach(webhook => {
+      const contactId = webhook.contact_id
+      const email = webhook.data?.email
+      
+      if (contactId) {
+        webhookByContactId.set(contactId, webhook.data)
+      }
+      
+      if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
+        const normalizedEmail = email.trim().toLowerCase()
+        webhookByEmail.set(normalizedEmail, webhook.data)
+      }
+    })
+
+    return contacts.map(contact => {
+      let webhookInfo = webhookByContactId.get(contact.contactId)
+      
+      if (!webhookInfo && contact.email) {
+        const normalizedEmail = contact.email.trim().toLowerCase()
+        if (normalizedEmail && !normalizedEmail.startsWith('no_email_')) {
+          webhookInfo = webhookByEmail.get(normalizedEmail)
+        }
+      }
+      
+      if (webhookInfo) {
+        return {
+          ...contact,
+          opportunityStatus: webhookInfo.status,
+          pipelineStage: webhookInfo.pipleline_stage || webhookInfo.pipeline_stage,
+          leadValue: webhookInfo.lead_value,
+          opportunityName: webhookInfo.opportunity_name,
+          opportunitySource: webhookInfo.opportunity_source || webhookInfo.source,
+        }
+      }
+      
+      return contact
+    })
+  }
+
+  const fetchContacts = async (cursor = null, direction = 'next') => {
+    setLoading(true)
+    setError(null)
+
+    try {
+      if (clientGroups.length === 0) {
+        setContacts([])
+        setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
+        setLoading(false)
+        return
+      }
+
+      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+
+      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}`
+      if (cursor) {
+        url += `&cursor=${encodeURIComponent(cursor)}`
+      }
+
+      const contactsResponse = await fetch(url, {
+        credentials: "include",
+      })
 
       if (!contactsResponse.ok) {
         throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`)
       }
 
       const contactsData = await contactsResponse.json()
-      let allContacts = contactsData.contacts || []
       
-      let webhooks = []
-      if (webhooksResponse.ok) {
-        const webhooksData = await webhooksResponse.json()
-        webhooks = webhooksData.data || []
-        setWebhookData(webhooks)
+      const enrichedContacts = enrichContactsWithWebhooks(contactsData.contacts || [])
+
+      setContacts(enrichedContacts)
+      setMetaData(contactsData.meta || { total_contacts: 0, has_next: false, has_prev: false })
+
+      if (direction === 'next' && contactsData.meta?.next_cursor) {
+        const newCursors = [...cursors.slice(0, currentCursorIndex + 1), contactsData.meta.next_cursor]
+        setCursors(newCursors)
       }
-
-      const webhookByContactId = new Map()
-      const webhookByEmail = new Map()
-      
-      webhooks.forEach(webhook => {
-        const contactId = webhook.contact_id
-        const email = webhook.data?.email
-        
-        if (contactId) {
-          webhookByContactId.set(contactId, webhook.data)
-        }
-        
-        if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
-          const normalizedEmail = email.trim().toLowerCase()
-          webhookByEmail.set(normalizedEmail, webhook.data)
-        }
-      })
-
-      allContacts = allContacts.map(contact => {
-        let webhookInfo = webhookByContactId.get(contact.contactId)
-        
-        if (!webhookInfo && contact.email) {
-          const normalizedEmail = contact.email.trim().toLowerCase()
-          if (normalizedEmail && !normalizedEmail.startsWith('no_email_')) {
-            webhookInfo = webhookByEmail.get(normalizedEmail)
-          }
-        }
-        
-        if (webhookInfo) {
-          return {
-            ...contact,
-            opportunityStatus: webhookInfo.status,
-            pipelineStage: webhookInfo.pipleline_stage || webhookInfo.pipeline_stage,
-            leadValue: webhookInfo.lead_value,
-            opportunityName: webhookInfo.opportunity_name,
-            opportunitySource: webhookInfo.opportunity_source || webhookInfo.source,
-          }
-        }
-        
-        return contact
-      })
-      
-      saveToCache('contacts-data', {
-        contacts: allContacts,
-        webhooks: webhooks,
-        meta: contactsData.meta
-      })
-      setContacts(allContacts)
-      setMetaData(contactsData.meta || null)
 
     } catch (error) {
       console.error("Error fetching contacts:", error)
@@ -610,9 +640,13 @@ export default function ContactPage() {
     }
   }
 
+  // Fetch contacts when cursor or group changes, but only after data is loaded
   useEffect(() => {
-    fetchContacts()
-  }, [])
+    if (clientGroups.length > 0) {
+      const cursor = cursors[currentCursorIndex]
+      fetchContacts(cursor)
+    }
+  }, [currentCursorIndex, selectedClientGroup, clientGroups.length])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90];
@@ -748,12 +782,6 @@ export default function ContactPage() {
     return filtered
   }, [contacts, searchQuery, selectedSource, selectedType, selectedOpportunityStatus, selectedDateRange, sortColumn, sortDirection])
 
-  const paginatedContacts = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE
-    const end = start + PAGE_SIZE
-    return filteredAndSortedContacts.slice(start, end)
-  }, [filteredAndSortedContacts, currentPage])
-
   const toggleColumn = (columnId) => {
     setVisibleColumns((current) =>
       current.includes(columnId) ? current.filter((id) => id !== columnId) : [...current, columnId]
@@ -766,11 +794,13 @@ export default function ContactPage() {
     setSelectedType("all")
     setSelectedOpportunityStatus("all")
     setSelectedDateRange("all")
+    setSelectedClientGroup("all")
     setSortColumn("")
     setSortDirection("asc")
   }
 
-  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || selectedOpportunityStatus !== "all" || selectedDateRange !== "all"
+  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || 
+    selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all"
 
   if (loading) {
     return (
@@ -845,6 +875,18 @@ export default function ContactPage() {
     )
   }
 
+  const handlePreviousPage = () => {
+    if (currentCursorIndex > 0) {
+      setCurrentCursorIndex(prev => prev - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (metaData?.has_next) {
+      setCurrentCursorIndex(prev => prev + 1)
+    }
+  }
+
   return (
     <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
@@ -854,41 +896,35 @@ export default function ContactPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {noSources && (
-          <Alert variant="warning">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>No Contacts Available</AlertTitle>
-            <AlertDescription>
-              No contacts were retrieved from GHL, Meta, or Hot Prospector. Please verify your integration settings (GHL: {metaData.ghl_contacts_count}, Meta: {metaData.meta_leads_count}, Hot Prospector: {metaData.hotprospector_leads_count}).
-            </AlertDescription>
-          </Alert>
-        )}
-        {isSingleSource && !noSources && (
-          <Alert variant="warning">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Single Source Detected</AlertTitle>
-            <AlertDescription>
-              All contacts are sourced from {sources[0]}. Please verify Meta and Hot Prospector integrations in your account settings.
-            </AlertDescription>
-          </Alert>
-        )}
-
+ 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="whitespace-nowrap">
               <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left">Lead Hub</h1>
             </div>
           </div>
-
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg 
-          py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
             <Input
-              placeholder="Search..."
+              placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
               flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
             />
+            <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+              <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
+                <Building className="h-4 w-4" />
+                <SelectValue placeholder="All Groups" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Groups</SelectItem>
+                {clientGroups.map((group) => (
+                  <SelectItem key={group.id} value={group.id}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {searchQuery && (
               <Button
@@ -1001,14 +1037,13 @@ export default function ContactPage() {
         />
 
         <ContactsTable
-          contacts={paginatedContacts}
+          contacts={filteredAndSortedContacts}
           visibleColumns={visibleColumns}
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           onSort={(col, dir) => {
             setSortColumn(col)
             setSortDirection(dir)
-            setCurrentPage(1)
           }}
         />
 
@@ -1017,24 +1052,22 @@ export default function ContactPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
+              onClick={handlePreviousPage}
+              disabled={currentCursorIndex === 0}
               className="hover:bg-purple-200 gap-2"
             >
               <ChevronLeft size={14} className="text-foreground" />Previous
             </Button>
 
             <span className="text-sm font-medium gap-2">
-              {currentPage} ... {Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+              Page {currentCursorIndex + 1}
             </span>
 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setCurrentPage(prev => 
-                Math.min(Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE), prev + 1)
-              )}
-              disabled={currentPage >= Math.ceil(filteredAndSortedContacts.length / PAGE_SIZE)}
+              onClick={handleNextPage}
+              disabled={!metaData?.has_next}
               className="hover:bg-purple-200 gap-2"
             >
               Next<ChevronRight size={14} className="text-foreground" />
