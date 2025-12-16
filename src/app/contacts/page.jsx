@@ -71,10 +71,6 @@ const contactColumns = [
   { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "campaignName", label: "Campaign", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: metaa},
-  { id: "adName", label: "Ad Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" , icons: metaa},
-  { id: "platform", label: "Platform", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
-  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
