@@ -910,7 +910,7 @@ export default function ContactPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
-              flex-1 min-w-[150px] md:min-w-[px] md:text-sm"
+              flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
             />
             
             {searchQuery && (
