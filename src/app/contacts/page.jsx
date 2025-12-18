@@ -903,17 +903,33 @@ export default function ContactPage() {
               <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left">Lead Hub</h1>
             </div>
           </div>
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+          
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
             <Input
               placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
-              flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
+              flex-1 min-w-[150px] md:min-w-[px] md:text-sm"
             />
-            <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+            
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2 absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            )}
+
+            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible">
+
+
+              <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
               <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
-                <Building className="h-4 w-4" />
+                <Building className="h-4 w-4 hidden lg:inline" />
                 <SelectValue placeholder="All Groups" />
               </SelectTrigger>
               <SelectContent className="bg-white">
@@ -926,19 +942,7 @@ export default function ContactPage() {
               </SelectContent>
             </Select>
 
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchQuery("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
 
-            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1 
-            md:px-1 md:flex-nowrap">
              <Select value={selectedSource} onValueChange={setSelectedSource}>
               <SelectTrigger className="gap-1 hover:bg-purple-100/75 bg-white font-semibold h-10 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
                 <SelectValue placeholder="Sources" />
