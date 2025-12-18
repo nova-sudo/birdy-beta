@@ -3,8 +3,14 @@ import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MdOutlineDisabledVisible } from "react-icons/md";
-
+import { CiCalendar } from "react-icons/ci";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   loadCustomMetrics,
   evaluateFormula,
@@ -23,7 +29,6 @@ import {
   Target,
   MousePointerClick,
 } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -36,6 +41,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import lab from "../../../public/lab.png";
+import { ChevronDownIcon } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
+import { Label } from "@/components/ui/label"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([]);
@@ -49,13 +63,16 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterConditions, setFilterConditions] = useState([]);
-
+  const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [visibleColumns, setVisibleColumns] = useState({
     campaigns: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     adsets: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     ads: ["name", "clientGroup", "adAccount", "spend", "leads", "cpl", "impressions", "clicks"],
     leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "clientGroup", "platform"],
   });
+  const [open, setOpen] = useState(false)
+  const [date, setDate] = useState(null)
+
 
   // Load custom metrics
   useEffect(() => {
@@ -633,30 +650,40 @@ useEffect(() => {
   };
 
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
-        {/* Header */}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Marketing Hub</h1>
+
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            
+            <div className="whitespace-nowrap">
+              <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+              Marketing Hub
+              </h1>
+            </div>
+            
           </div>
+
           <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <Input
-              type="search"
-              placeholder={`Search ${activeTab}...`}
-              className="w-64 md:w-[320px]  h-10 bg-white"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+                <Input
+                  type="search"
+                  placeholder={`Search ${activeTab}...`}
+                  className="h-10 bg-white"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
 
-            <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2 h-10 bg-white font-semibold">
-                    <SlidersHorizontal className="h-4 w-4" />Add Filter
-                  </Button>
+                <Button variant="outline" size="sm" onClick={addFilterCondition} className="gap-2 h-10 bg-white font-semibold md:px-2 lg:px-3">
+                  <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                  <span className="hidden lg:inline">Add Filter</span>
+                </Button>
 
-                  <DropdownMenu>
+                <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold">
-                      <SlidersHorizontal className="h-4 w-4" />Columns
+                    <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold md:px-2 lg:px-3">
+                      <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
+                      <span className="hidden lg:inline">Columns</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 bg-white">
@@ -673,9 +700,47 @@ useEffect(() => {
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+                  {/* date filter */}
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        id="date"
+                        className="w-35 justify-between font-normal"
+                        placeholder="Select date"
+                      >
+                        <CiCalendar/>
+                        {date ? date.toLocaleDateString() : "Select date"}
+                        <ChevronDownIcon />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto overflow-hidden p-0 bg-white" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={date}
+                        captionLayout="dropdown"
+                        onSelect={(date) => {
+                          setDate(date)
+                          setOpen(false)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
 
+                {/* <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                  <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
+                    <CiCalendar/>
+                    <SelectValue placeholder="All Time" className="placeholder-hidden-md" />
+                  </SelectTrigger>
+                <SelectContent className="bg-white">
+                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
+                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
+                  </SelectContent>
+                </Select> */}
           </div>
-            
         </div>
 
         {/* Metrics Cards */}
@@ -704,9 +769,11 @@ useEffect(() => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0
+          shadow-sm overflow-x-auto">
             <TabsTrigger value="campaigns" className="gap-2
-                  text-[#71658B] font-semibold 
+                  text-[#71658B] 
+                  font-semibold 
                   hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
@@ -716,7 +783,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <LayoutGrid className="h-4 w-4" />Campaigns</TabsTrigger>
-            <TabsTrigger value="adsets" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="adsets" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -725,7 +795,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <Grid3X3 className="h-4 w-4" />Ad Sets</TabsTrigger>
-            <TabsTrigger value="ads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="ads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm
@@ -734,7 +807,10 @@ useEffect(() => {
                   data-[state=active]:border-b-2
                   data-[state=active]:border-b-purple-700">
                     <FileBarChart className="h-4 w-4" />Ads</TabsTrigger>
-            <TabsTrigger value="leads" className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            <TabsTrigger value="leads" className="gap-2 
+                  text-[#71658B] 
+                  font-semibold 
+                  hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
                   data-[state=active]:text-foreground
                   data-[state=active]:shadow-sm

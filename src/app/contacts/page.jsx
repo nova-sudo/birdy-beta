@@ -290,7 +290,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   if (contacts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20">
+      <div className="flex flex-col items-center justify-center w-[calc(100dvw-100px)] rounded-lg border-2 border-dashed border-border bg-muted/20">
         <div className="rounded-full bg-muted p-3 mb-4">
           <Users className="h-6 w-6 text-muted-foreground" />
         </div>
@@ -303,40 +303,61 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   }
 
   return (
-    <div className="border bg-card overflow-hidden rounded-md">
+    <div className="border bg-card overflow-hidden rounded-md w-full">
       <style jsx>{`
-        .fixed-column-even {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: white;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
+        @media (min-width: 768px) {
+          .fixed-column-even {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f4f3f9;
+            z-index: 50;
+            min-width: 243px;
+            font-weight: 600;
+          }
+          .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
         }
-        .fixed-column-odd {
-          text-align: left;
-          position: sticky;
-          left: 0;
-          background: #F4F3F9;
-          z-index: 50;
-          min-width: 243px;
-          font-weight: 600;
+
+        @media (max-width: 767px) {
+          .fixed-column-even,
+          .fixed-column-odd {
+            text-align: left;
+            background: white;
+            min-width: 200px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            background: #f4f3f9;
+          }
+          .fixed-header {
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
         }
-        .fixed-header {
-          position: sticky;
-          left: 0;
-          z-index: 50;
-          background: white;
-          min-width: 150px;
-          width: full;
-        }
+
         .table-container {
           position: relative;
-          overflow: auto
+          overflow: auto;
         }
       `}</style>
-      <div className="overflow-x-auto rounded-md">
+      <div className="overflow-x-auto rounded-md table-container"> 
         <table className="text-sm w-full table-auto rounded-md">
           <thead className="top-0 z-40">
             <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
@@ -447,7 +468,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => (
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -868,7 +889,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-full">
+    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         {error && (
           <Alert variant="destructive">
@@ -878,9 +899,9 @@ export default function ContactPage() {
         )}
  
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Lead Hub</h1>
+          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="whitespace-nowrap">
+              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left">Lead Hub</h1>
             </div>
           </div>
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
@@ -888,7 +909,8 @@ export default function ContactPage() {
               placeholder="Search contacts..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white rounded-lg h-10 px-3 placeholder:text-left placeholder:text-muted-foreground flex items-center"
+              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
+              flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
             />
             <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
               <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
@@ -916,9 +938,39 @@ export default function ContactPage() {
               </Button>
             )}
 
+            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1 
+            md:px-1 md:flex-nowrap">
+             <Select value={selectedSource} onValueChange={setSelectedSource}>
+              <SelectTrigger className="gap-1 hover:bg-purple-100/75 bg-white font-semibold h-10 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <SelectValue placeholder="Sources" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Sources</SelectItem>
+                {sources.map((source) => (
+                  <SelectItem key={source} value={source}>
+                    {source}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedType} onValueChange={setSelectedType}>
+              <SelectTrigger className="gap-1 bg-white font-semibold h-10 hover:bg-purple-100/75 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <SelectValue placeholder="Types" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="all">All Types</SelectItem>
+                {types.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
-              <SelectTrigger className="bg-white font-semibold h-10">
-                <SelectValue placeholder="All Opportunities" />
+              <SelectTrigger className="bg-white font-semibold h-10 min-w-[120px] md:min-w-[100px] md:text-sm md:px-2">
+                <SelectValue placeholder="Opps" /> {/* Abbreviated for space */}
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all">All Opportunities</SelectItem>
@@ -930,9 +982,9 @@ export default function ContactPage() {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-10 bg-white hover:bg-purple-100/75 font-semibold">
+                <Button variant="outline" size="sm" className="gap-1 h-10 bg-white hover:bg-purple-100/75 font-semibold min-w-[80px] md:min-w-[60px] md:text-sm md:px-1">
                   <SlidersHorizontal className="h-4 w-4" />
-                  Columns
+                  Cols {/* Abbreviated */}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-white">
@@ -951,9 +1003,9 @@ export default function ContactPage() {
             </DropdownMenu>
 
             <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-              <SelectTrigger className="gap-2 hover:bg-purple-100/75 h-10 bg-white font-semibold">
-                <CiCalendar />
-                <SelectValue placeholder="All Time" />
+              <SelectTrigger className="gap-1 hover:bg-purple-100/75 h-10 bg-white font-semibold min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
+                <CiCalendar className="h-4 w-4" />
+                <SelectValue placeholder="Date" />
               </SelectTrigger>
               <SelectContent className="bg-white">
                 <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem>
@@ -969,11 +1021,12 @@ export default function ContactPage() {
                 variant="ghost"
                 size="sm"
                 onClick={clearAllFilters}
-                className="h-10"
+                className="h-10 min-w-[80px] md:min-w-[60px] md:text-sm md:px-1 md:hidden" // Hide on tablets to save space
               >
-                Clear Filters
+                Clear
               </Button>
             )}
+            </div>            
           </div>
         </div>
 
