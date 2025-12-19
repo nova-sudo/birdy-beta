@@ -295,6 +295,28 @@ export default function ClientDetailsPage() {
 
   return (
     <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] pb-2 flex flex-col overflow-hidden">
+          <style jsx>{`
+          @keyframes marquee {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+
+          .animate-marquee {
+            animation: marquee 10s linear infinite;
+          }
+
+          @media (min-width: 768px) {
+            .animate-marquee {
+              animation: none;
+              transform: translateX(0);
+            }
+          }
+        `}</style>
+
       {/* Header */}
       <div className="space-y-4 pb-0">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -308,12 +330,15 @@ export default function ClientDetailsPage() {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-3xl font-bold truncate tracking-tight">
-                {groupInfo.name || "Unnamed Client"}
+              <h1 className="relative overflow-hidden text-3xl font-bold tracking-tight max-w-full">
+                <span className="inline-block animate-marquee whitespace-nowrap">
+                  {groupInfo.name || "Unnamed Client"}
+                </span>
               </h1>
+              
             </div>
           </div>
-          <div className="flex gap-2 self-start md:self-center ml-auto">
+          {/* <div className="flex gap-2 self-start md:self-center ml-auto">
             <Button variant="outline" size="sm">
               <Calendar className="h-4 w-4 mr-2" />
               Last 30 Days
@@ -322,7 +347,7 @@ export default function ClientDetailsPage() {
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
