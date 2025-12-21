@@ -530,23 +530,24 @@ export default function ContactPage() {
   }, [])
 
   // Fetch webhooks once on mount
-  useEffect(() => {
-    const fetchWebhooks = async () => {
-      try {
-        const webhooksResponse = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
-          credentials: "include",
-        })
+  //TODO : Uncomment on production Azure server.
+  // useEffect(() => {
+  //   const fetchWebhooks = async () => {
+  //     try {
+  //       const webhooksResponse = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
+  //         credentials: "include",
+  //       })
 
-        if (webhooksResponse.ok) {
-          const webhooksData = await webhooksResponse.json()
-          setWebhookData(webhooksData.data || [])
-        }
-      } catch (error) {
-        console.error("Error fetching webhooks:", error)
-      }
-    }
-    fetchWebhooks()
-  }, [])
+  //       if (webhooksResponse.ok) {
+  //         const webhooksData = await webhooksResponse.json()
+  //         setWebhookData(webhooksData.data || [])
+  //       }
+  //     } catch (error) {
+  //       console.error("Error fetching webhooks:", error)
+  //     }
+  //   }
+  //   fetchWebhooks()
+  // }, [])
 
   const enrichContactsWithWebhooks = (contacts) => {
     const webhookByContactId = new Map()
