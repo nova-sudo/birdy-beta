@@ -173,7 +173,7 @@ export default function ClientDetailsPage() {
 
   if (!clientData) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen w-[calc(100dvw-30px)] flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Client Not Found</h2>
           <Button onClick={() => router.push("/clients")}>
@@ -294,7 +294,29 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] pb-2 flex flex-col overflow-hidden">
+          <style jsx>{`
+          @keyframes marquee {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-50%);
+            }
+          }
+
+          .animate-marquee {
+            animation: marquee 10s linear infinite;
+          }
+
+          @media (min-width: 768px) {
+            .animate-marquee {
+              animation: none;
+              transform: translateX(0);
+            }
+          }
+        `}</style>
+
       {/* Header */}
       <div className="space-y-4 pb-0">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -308,12 +330,15 @@ export default function ClientDetailsPage() {
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-3xl font-bold tracking-tight">
-                {groupInfo.name || "Unnamed Client"}
+              <h1 className="relative overflow-hidden text-3xl font-bold tracking-tight max-w-full">
+                <span className="inline-block animate-marquee whitespace-nowrap">
+                  {groupInfo.name || "Unnamed Client"}
+                </span>
               </h1>
+              
             </div>
           </div>
-          <div className="flex gap-2 self-start md:self-center">
+          {/* <div className="flex gap-2 self-start md:self-center ml-auto">
             <Button variant="outline" size="sm">
               <Calendar className="h-4 w-4 mr-2" />
               Last 30 Days
@@ -322,12 +347,12 @@ export default function ClientDetailsPage() {
               <Settings className="h-4 w-4 mr-2" />
               Settings
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-h-0 mt-6">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0  mt-6">
         <Tabs defaultValue="overview" className="flex-1 flex flex-col overflow-hidden min-h-0">
           <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
             <TabsTrigger value="overview" className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
@@ -348,7 +373,7 @@ export default function ClientDetailsPage() {
           <TabsContent value="overview" className="mt-6 overflow-y-auto space-y-4">
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">ROAS</p>
@@ -366,7 +391,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Cost Per Lead</p>
@@ -384,7 +409,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Close Rate</p>
@@ -402,7 +427,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Customer Acq. Cost</p>
@@ -446,7 +471,7 @@ export default function ClientDetailsPage() {
             {/* Key Insights Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Best Performing Tag</p>
@@ -465,7 +490,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Best Booking Offer</p>
@@ -484,7 +509,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Avg Booking Delay</p>
@@ -503,7 +528,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Bookings This Month</p>
@@ -599,7 +624,7 @@ export default function ClientDetailsPage() {
             {/* Summary Stats */}
             <div className="grid gap-4 md:grid-cols-3">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Ad Spend</p>
@@ -613,7 +638,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Leads</p>
@@ -627,7 +652,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Conversion Rate</p>
@@ -647,7 +672,7 @@ export default function ClientDetailsPage() {
             {/* Marketing Summary */}
             <div className="grid gap-4 md:grid-cols-5">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Total Spend</p>
@@ -661,7 +686,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Impressions</p>
@@ -675,7 +700,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Clicks</p>
@@ -689,7 +714,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">Leads</p>
@@ -703,7 +728,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground text-[#71658B]">CPL</p>
@@ -1037,7 +1062,7 @@ export default function ClientDetailsPage() {
             {/* Call Center Summary */}
             <div className="grid gap-4 md:grid-cols-4">
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Total Calls</p>
@@ -1051,7 +1076,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Leads with Calls</p>
@@ -1065,7 +1090,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">Avg Calls/Lead</p>
@@ -1079,7 +1104,7 @@ export default function ClientDetailsPage() {
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-1">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground text-[#71658B]">HP Leads</p>
