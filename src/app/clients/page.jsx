@@ -186,7 +186,6 @@ export default function ClientsPage() {
     if (wizardOpen && wizardStep > 1) {
       if (wizardStep === 2) fetchGhlLocations()
       if (wizardStep === 3) fetchMetaAdAccounts()
-      if (wizardStep === 4) fetchHotProspectorGroups()
     }
   }, [wizardOpen, wizardStep])
 
@@ -264,15 +263,6 @@ const fetchClientGroups = async (forceRefresh = false) => {
 
   const fetchMetaAdAccounts = async (forceRefresh = false) => {
     try {
-      if (!forceRefresh) {
-        const cached = getCachedData("metaAdAccounts")
-        if (cached) {
-          setMetaAdAccounts(cached)
-          console.log("[v0] Using cached Meta ad accounts:", cached.length)
-          return
-        }
-      }
-
       const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
         credentials: "include",
       })
@@ -293,41 +283,7 @@ const fetchClientGroups = async (forceRefresh = false) => {
     }
   }
 
-  const fetchHotProspectorGroups = async (forceRefresh = false) => {
-    try {
-      if (!forceRefresh) {
-        const cached = getCachedData("hotProspectorGroups")
-        if (cached) {
-          setHotProspectorGroups(cached)
-          console.log("[v0] Using cached Hot Prospector groups:", cached.length)
-          return
-        }
-      }
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/groups", {
-        credentials: "include",
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const normalizedGroups = (data.data || []).map((group) => ({
-          id: group.GroupId,
-          name: group.GroupTitle,
-          teamId: group.TeamId,
-          addedBy: group.Added_by,
-        }))
-
-        setHotProspectorGroups(normalizedGroups)
-
-        console.log("[v0] Fetched fresh Hot Prospector groups:", normalizedGroups.length)
-      } else {
-        toast.error("Failed to fetch Hot Prospector groups")
-      }
-    } catch (err) {
-      console.error("[v0] Error fetching Hot Prospector groups:", err)
-      toast.error("Failed to fetch Hot Prospector groups")
-    }
-  }
 
   const handleRefresh = () => {
     setIsRefreshing(true)
