@@ -31,6 +31,8 @@ import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress"
+import useSWR from "swr"  
+import { useClientGroups } from "@/hooks/useClientGroups"
 
 
 const CACHE_DURATION = {
@@ -80,10 +82,19 @@ const clearCache = (pattern) => {
 }
 
 export default function ClientsPage() {
+  const { 
+    clientGroups, 
+    loading, 
+    error, 
+    isRefreshing, 
+    refreshClientGroups,
+    mutate 
+  } = useClientGroups()
+
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [clientGroups, setClientGroups] = useState([])
+  // const [loading, setLoading] = useState(true)
+  // const [error, setError] = useState("")
+  // const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
   const [clientGroupName, setClientGroupName] = useState("")
@@ -98,7 +109,7 @@ export default function ClientsPage() {
   const [metaSearchQuery, setMetaSearchQuery] = useState("")
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  // const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [progress, setProgress] = useState(13)
 
@@ -155,11 +166,9 @@ export default function ClientsPage() {
     
 
 
-
-
-  useEffect(() => {
-    fetchClientGroups()
-  }, [])
+  // useEffect(() => {
+  //   fetchClientGroups()
+  // }, [])
 
    useEffect(() => {
     const intervals = [33, 50, 66, 80, 90];
@@ -184,40 +193,40 @@ export default function ClientsPage() {
     }
   }, [wizardOpen, wizardStep])
 
-const fetchClientGroups = async (forceRefresh = false) => {
-    try {
-      // Remove local cache logic - always fetch from server
-      // Server now uses database cache (max 1 hour old)
+// const fetchClientGroups = async (forceRefresh = false) => {
+//     try {
+//       // Remove local cache logic - always fetch from server
+//       // Server now uses database cache (max 1 hour old)
       
-      setLoading(true)
-      setError("")
+//       setLoading(true)
+//       setError("")
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-        credentials: "include",
-      })
+//       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+//         credentials: "include",
+//       })
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch client groups: ${response.status}`)
-      }
+//       if (!response.ok) {
+//         throw new Error(`Failed to fetch client groups: ${response.status}`)
+//       }
 
-      const data = await response.json()
-      const groups = data.client_groups || []
+//       const data = await response.json()
+//       const groups = data.client_groups || []
 
-      setClientGroups(groups)
+//       setClientGroups(groups)
 
-      if (forceRefresh) {
-        toast.success("Client groups refreshed")
-      }
+//       if (forceRefresh) {
+//         toast.success("Client groups refreshed")
+//       }
 
-      console.log("[v0] Fetched client groups:", groups.length)
-    } catch (err) {
-      console.error("[v0] Error fetching client groups:", err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-      setIsRefreshing(false)
-    }
-  }
+//       console.log("[v0] Fetched client groups:", groups.length)
+//     } catch (err) {
+//       console.error("[v0] Error fetching client groups:", err)
+//       setError(err.message)
+//     } finally {
+//       setLoading(false)
+//       setIsRefreshing(false)
+//     }
+//   }
 
   const fetchGhlLocations = async (forceRefresh = false) => {
     try {
@@ -324,10 +333,8 @@ const fetchClientGroups = async (forceRefresh = false) => {
   }
 
   const handleRefresh = () => {
-    setIsRefreshing(true)
-    clearCache("clientGroups")
-    fetchClientGroups(true)
-  }
+  refreshClientGroups()
+}
 
 const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
@@ -402,19 +409,19 @@ const handleCreateClientGroup = async () => {
       })
 
       if (response.ok) {
-        const data = await response.json()
-        
-        // Replace optimistic group with real data
-        setClientGroups(prev => 
-          prev.map(group => 
-            group.id === tempId ? { ...data.client_group, _isCreating: false } : group
+  const data = await response.json()
+  
+  // Replace optimistic group with real data
+          setClientGroups(prev => 
+            prev.map(group => 
+              group.id === tempId ? { ...data.client_group, _isCreating: false } : group
+            )
           )
-        )
-        
-        toast.success(`"${creatingGroupName}" created successfully!`)
-        clearCache("clientGroups")
-        clearCache("ghlLocations")
-      } else {
+          
+          toast.success(`"${creatingGroupName}" created successfully!`)
+          mutate() // <-- ADD THIS: Refresh SWR cache
+          clearCache("ghlLocations")
+        }else {
         const data = await response.json()
         
         // Remove optimistic group on error
