@@ -7,7 +7,7 @@ import { toast } from "sonner"
 
 const CACHE_KEY = "clientGroups"
 const COOKIE_KEY = "clientGroupsMeta"
-const CACHE_DURATION = 1 * 60 * 1000 // 1 minute
+const CACHE_DURATION = 60 * 60 * 1000 // 1 minute
 
 const fetcher = async (url) => {
   const res = await fetch(url, { credentials: "include" })
