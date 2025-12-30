@@ -6,8 +6,8 @@ import Cookies from "js-cookie"
 import { toast } from "sonner"
 
 const CACHE_KEY = "clientGroups"
-const CACHE_DURATION = 60 * 60 * 1000 // 1 hr
 const COOKIE_KEY = "clientGroupsMeta"
+const CACHE_DURATION = 1 * 60 * 1000 // 1 minute
 
 const fetcher = async (url) => {
   const res = await fetch(url, { credentials: "include" })
@@ -19,17 +19,28 @@ const fetcher = async (url) => {
 export function useClientGroups() {
   const [cachedData, setCachedData] = useState(undefined)
 
-  // ✅ Read LOCAL cache on mount
+  // ===============================
+  // Read LOCAL cache on mount
+  // ===============================
   useEffect(() => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
-      if (!cached) return
+
+      if (!cached) {
+        console.log("❌ No ClientGroups cache found")
+        return
+      }
 
       const { data, timestamp } = JSON.parse(cached)
-      if (Date.now() - timestamp < CACHE_DURATION) {
-        console.log("✅ ClientGroups local cache loaded")
+      const age = Date.now() - timestamp
+
+      console.log(`⏱ ClientGroups cache age: ${Math.floor(age / 1000)}s`)
+
+      if (age < CACHE_DURATION) {
+        console.log("✅ ClientGroups cache is VALID")
         setCachedData(data)
       } else {
+        console.log("❌ ClientGroups cache EXPIRED → removing")
         localStorage.removeItem(CACHE_KEY)
       }
     } catch (err) {
@@ -37,6 +48,9 @@ export function useClientGroups() {
     }
   }, [])
 
+  // ===============================
+  // SWR fetch
+  // ===============================
   const {
     data,
     error,
@@ -53,7 +67,9 @@ export function useClientGroups() {
     }
   )
 
-  // ✅ Save LOCAL cache + COOKIE metadata when data changes
+  // ===============================
+  // Save LOCAL cache + COOKIE meta
+  // ===============================
   useEffect(() => {
     if (!data) return
 
@@ -67,7 +83,7 @@ export function useClientGroups() {
         })
       )
 
-      // 🍪 Cookie (metadata only)
+      // Cookie (metadata only)
       Cookies.set(
         COOKIE_KEY,
         JSON.stringify({
@@ -75,18 +91,28 @@ export function useClientGroups() {
           lastUpdated: Date.now(),
         }),
         {
-          expires: 1, // 1 day
+          expires: 1,
           sameSite: "Lax",
           secure: true,
         }
       )
 
-      console.log("💾 ClientGroups cached + cookie updated")
+      console.log(
+        `💾 ClientGroups cached at ${new Date().toLocaleTimeString()}`
+      )
     } catch (err) {
       console.error("Cache write error", err)
     }
   }, [data])
 
+  
+  useEffect(() => {
+    if (isValidating) {
+      console.log("🔄 SWR revalidating ClientGroups (network request)")
+    }
+  }, [isValidating])
+
+  
   const refreshClientGroups = async () => {
     try {
       await mutate()
