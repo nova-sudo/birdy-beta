@@ -13,6 +13,7 @@ import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
+import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import {
   Select,
   SelectContent,
