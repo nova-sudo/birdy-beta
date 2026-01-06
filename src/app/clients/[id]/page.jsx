@@ -114,7 +114,9 @@ export default function ClientDetailsPage() {
             </p>
           </div>
           <div className="w-full flex flex-col gap-2">
-            <Progress value={progress} className="w-full h-2" />
+            <div className="w-1/3 mx-auto">
+              <Progress value={progress} className="w-full h-2" />
+            </div>
             <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
           </div>
         </div>
@@ -693,24 +695,28 @@ export default function ClientDetailsPage() {
 
           {/* MARKETING SECTION (NESTED TABS) */}
           <TabsContent value="marketing" className="flex-1 flex flex-col overflow-hidden mt-6">
-            <Tabs defaultValue="campaigns" className="flex-1 flex flex-col overflow-hidden">
-              <TabsList className="w-fit h-9 bg-muted/30 p-1 mb-4">
-                <TabsTrigger value="campaigns" className="text-xs px-4">
-                  Campaigns
-                </TabsTrigger>
-                <TabsTrigger value="adsets" className="text-xs px-4">
-                  Adsets
-                </TabsTrigger>
-                <TabsTrigger value="ads" className="text-xs px-4">
-                  Ads
-                </TabsTrigger>
-                <TabsTrigger value="leads" className="text-xs px-4">
-                  Leads
-                </TabsTrigger>
-                <TabsTrigger value="performance" className="text-xs px-4">
-                  Performance
-                </TabsTrigger>
-              </TabsList>
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Tabs defaultValue="campaigns" className="flex-1 flex flex-col overflow-hidden">
+                <div className="overflow-x-auto md:overflow-x-visible">
+                  <TabsList className="w-fit h-9 bg-muted/30 p-1 mb-4 ">
+                    <TabsTrigger value="campaigns" className="text-xs px-4">
+                      Campaigns
+                    </TabsTrigger>
+                    <TabsTrigger value="adsets" className="text-xs px-4">
+                      Adsets
+                    </TabsTrigger>
+                    <TabsTrigger value="ads" className="text-xs px-4">
+                      Ads
+                    </TabsTrigger>
+                    <TabsTrigger value="leads" className="text-xs px-4">
+                      Leads
+                    </TabsTrigger>
+                    <TabsTrigger value="performance" className="text-xs px-4">
+                      Performance
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              
 
               <div className="flex-1 overflow-y-auto space-y-4 pr-2 pb-6">
                 {/* Campaigns */}
@@ -824,7 +830,7 @@ export default function ClientDetailsPage() {
       <CardContent className="pt-6 h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={topCampaignsBySpend}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(20, 15, 15, 0.05)" />
             <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
             <YAxis fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
@@ -1237,7 +1243,8 @@ export default function ClientDetailsPage() {
                   </div>
                 </TabsContent>
               </div>
-            </Tabs>
+              </Tabs>
+            </div>
           </TabsContent>
 
           {/* CALL CENTER SECTION (UNDER CONSTRUCTION) */}
