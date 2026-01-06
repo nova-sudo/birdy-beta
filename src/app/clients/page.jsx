@@ -13,7 +13,6 @@ import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
-import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import {
   Select,
   SelectContent,
@@ -41,6 +40,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
+import Image from "next/image"
 
 
 const CACHE_DURATION = {
@@ -111,27 +111,27 @@ export default function ClientsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [progress, setProgress] = useState(13)
+  const [isOpen, setIsOpen] = useState(false);
 
 
   
   const [customMetrics, setCustomMetrics] = useState([]);
   const DEFAULT_COLUMNS = [
-    { id: "name", label: "Business Name", visible: true, sortable: true },
-    { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
-    { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa },
-    { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa },
-    { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa },
-    { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa },
-    { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa },
-    { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP },
-    { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa },
-    { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa },
-    { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa },
-    { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa },
-  ];
+      { id: "name", label: "Business Name", visible: true, sortable: true },
+      { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+      { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+      { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+    ];
     const columns = useMemo(() => {
       const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
-  
       const custom = customMetrics
         .filter((m) => m.enabled && m.dashboard === "Clients")
         .map((m) => ({
@@ -139,8 +139,10 @@ export default function ClientsPage() {
           label: m.name,
           visible: true,
           sortable: true,
+          category: 'formulas',
+          type: 'formula',
         }));
-  
+      
       const seen = new Set();
       const all = [...base, ...custom];
       return all.filter((col) => {
@@ -154,6 +156,61 @@ export default function ClientsPage() {
     DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
+
+  const categories = [
+  { id: 'all', label: 'All Metrics' },
+  { id: 'gohighlevel', label: 'GoHighLevel' },
+  { id: 'metaads', label: 'Meta Ads' },
+  { id: 'hotprospector', label: 'HotProspector' },
+  { id: 'formulas', label: 'Formulas' },
+];
+
+const categoryCounts = useMemo(() => {
+  const counts = columns.reduce((acc, col) => {
+    if (col.id === 'name') return acc;
+    const cat = col.category || 'unknown';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+  counts['all'] = Object.values(counts).reduce((a, b) => a + b, 0) || 0;
+  return counts;
+}, [columns]);
+
+const getIcon = (col) => {
+  return (col.icons) ? col.icons : null;
+};
+
+const [selectedCategory, setSelectedCategory] = useState('all');
+const [searchTerm, setSearchTerm] = useState('');
+
+const filteredColumns = useMemo(() => columns.filter((col) => {
+  if (col.id === 'name') return false;
+  if (selectedCategory !== 'all' && col.category !== selectedCategory) return false;
+  if (searchTerm && !col.label.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+  return true;
+}), [columns, selectedCategory, searchTerm]);
+
+const selectAll = () => {
+  const newVisibility = {};
+  filteredColumns.forEach(col => {
+    newVisibility[col.id] = true;
+  });
+  setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
+};
+
+const clearAll = () => {
+  const newVisibility = {};
+  filteredColumns.forEach(col => {
+    newVisibility[col.id] = false;
+  });
+  setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
+};
+
+const save = () => {
+  localStorage.setItem('yourKey-columnVisibility', JSON.stringify(columnVisibility));
+  setIsOpen(false); 
+};
+
   const [searchQuery, setSearchQuery] = useState("")
   const toggleColumnVisibility = (columnId) => {
     if (columnId === "name") return;
@@ -555,7 +612,7 @@ const handleCreateClientGroup = async () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="text-gray-900 bg-white h-10 font-bold text-xs md:text-base"
                 />
-                <DropdownMenu>
+                <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base">
                       <Eye className="h-4 w-4" />
@@ -563,24 +620,63 @@ const handleCreateClientGroup = async () => {
                       <ChevronDown className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white">
-                    {columns.map((col) => (
-                      <DropdownMenuCheckboxItem
-                        key={col.id}
-                        checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
-                        onCheckedChange={() => toggleColumnVisibility(col.id)}
-                        disabled={col.id === "name"}
-                      >
-                        {columnVisibility[col.id] ?? col.visible ? (
-                          <Eye className="h-4 w-4 mr-2" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 mr-2" />
-                        )}
-                        {col.label}
-                      </DropdownMenuCheckboxItem>
-                    ))}
+                  <DropdownMenuContent align="end" className="w-fit bg-white p-0">
+                    <div className="flex flex-wrap gap-1 p-2 border-b">
+                      {categories.map(({ id, label }) => (
+                        <Button
+                          key={id}
+                          variant={selectedCategory === id ? 'default' : 'secondary'}
+                          size="sm"
+                          onClick={() => setSelectedCategory(id)}
+                          data-state={selectedCategory === id ? 'active' : 'inactive'}
+                          className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                            data-[state=active]:bg-purple-100/50
+                            data-[state=active]:text-foreground
+                            data-[state=active]:border-b-3
+                            data-[state=active]:border-b-purple-700`}
+                        >
+                          {label} {categoryCounts[id] || 0}
+                        </Button>
+                      ))}
+                    </div>
+                    <Input
+                      className="mx-2 mt-2 mb-2 w-137"
+                      placeholder={`Search in ${categories.find(c => c.id === selectedCategory)?.label || 'All Metrics'}...`}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={searchTerm}
+                    />
+                    <div className="max-h-80 overflow-y-auto px-2 pb-2 border-t">
+                      {filteredColumns.map((col) => {
+                        const Icon = getIcon(col);
+                        return (
+                          <DropdownMenuCheckboxItem
+                            key={col.id}
+                            checked={columnVisibility[col.id] ?? col.visible}
+                            onCheckedChange={() => toggleColumnVisibility(col.id)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
+                            {col.label}
+                            {Icon && (
+                              <Image
+                                src={Icon}
+                                alt=""
+                                width={16}
+                                height={16}
+                                className="ml-auto opacity-70"
+                              />
+                            )}
+                          </DropdownMenuCheckboxItem>
+                        );
+                      })}
+                    </div>
+                    <div className="flex p-2 border-t">
+                      <Button variant="ghost" size="sm" onClick={selectAll} className="border border-gray-300 rounded-md mr-2 ">Select All</Button>
+                      <Button variant="ghost" size="sm" onClick={clearAll} className="border border-gray-300 rounded-md mr-2">Clear</Button>
+                      <Button variant="default" size="sm" onClick={save} className="rounded-md bg-purple-600 text-white font-semibold">Save view</Button>
+                    </div>
                   </DropdownMenuContent>
                 </DropdownMenu>
+              
             </div>
               
               <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>

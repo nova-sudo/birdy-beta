@@ -666,7 +666,7 @@ const MetricsHub = () => {
 
         {/* Create/Edit Metric Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-white">
             <DialogHeader>
               <DialogTitle>{editingMetric ? "Edit Metric" : "Create New Metric"}</DialogTitle>
               <DialogDescription>Build a custom metric by combining available metrics with operators</DialogDescription>
@@ -674,7 +674,7 @@ const MetricsHub = () => {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="metric-name">Metric Name *</Label>
+                <Label htmlFor="metric-name" className="py-3">Metric Name *</Label>
                 <Input
                   id="metric-name"
                   placeholder="e.g., ROI, Cost per Conversion"
@@ -684,7 +684,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-description">Description</Label>
+                <Label htmlFor="metric-description" className="py-3">Description</Label>
                 <Textarea
                   id="metric-description"
                   placeholder="Optional description of what this metric calculates"
@@ -694,7 +694,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-group">Dashboard *</Label>
+                <Label htmlFor="metric-group" className="py-3">Dashboard *</Label>
                 <Select
                   value={metricForm.group}
                   onValueChange={(value) => setMetricForm((prev) => ({ ...prev, group: value }))}
@@ -711,7 +711,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label>Formula Builder</Label>
+                <Label className="py-3">Formula Builder</Label>
                 <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
                   {metricForm.formulaParts.map((part, index) => (
                     <div key={index} className="flex items-center gap-2">
@@ -720,7 +720,7 @@ const MetricsHub = () => {
                           <SelectTrigger className="flex-1">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white">
                             {availableMetrics.map((metric) => (
                               <SelectItem key={metric.id} value={metric.id}>
                                 {metric.name}
