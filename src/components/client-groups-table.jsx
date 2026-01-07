@@ -285,15 +285,17 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                   className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
                     column.id === "name"
                       ? "fixed-header"
-                      : "min-w-[135px]  whitespace-nowrap "
+                      : "min-w-[135px]   whitespace-nowrap "
                   }`}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between gap-2">
+                    <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => column.sortable && handleSort(column.id)}
-                        className={`align-middle text-left items-center gap-1 ${
-                          column.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                        className={`truncate align-middle text-left items-center gap-1 ${
+                          column.sortable
+                            ? "hover:text-foreground cursor-pointer"
+                            : "cursor-default"
                         }`}
                       >
                         {column.label}
@@ -304,18 +306,18 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                         )}
                       </button>
                     </div>
-                    <div>
+                    <div className="flex-shrink-0">
                       {column.icons ? (
                         typeof column.icons === "function" ? (
                           (() => {
-                            const Icon = column.icons;
-                            return <Icon className="h-4 w-4 text-muted-foreground" />;
+                            const Icon = column.icons
+                            return <Icon className="h-4 w-4 text-muted-foreground" />
                           })()
                         ) : (
                           <img
                             src={column.icons.src ? column.icons.src : column.icons}
                             alt={`${column.label} icon`}
-                            className="text-muted-foreground object-scale-down size-4"
+                            className="object-scale-down size-4"
                           />
                         )
                       ) : null}

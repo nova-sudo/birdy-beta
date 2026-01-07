@@ -89,7 +89,7 @@ function DropdownMenuCheckboxItem({
         <DropdownMenuPrimitive.ItemIndicator>
           <Checkbox
             defaultChecked={checked}
-            className="bg-purple-700 text-white border-0"
+            className="bg-purple-700 text-white border-0 unchecked:border"
           />
         </DropdownMenuPrimitive.ItemIndicator>
       </span>

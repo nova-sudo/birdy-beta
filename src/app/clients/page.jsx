@@ -2,16 +2,14 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target } from "lucide-react"
+import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target, Search, ChevronDown, Eye} from "lucide-react"
 import { toast } from "sonner"
 import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
 import {
   Select,
@@ -29,11 +27,10 @@ import {
 import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
-import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress"
+import Flask from "../../../public/Flask.png";
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -73,8 +70,6 @@ const getCachedData = (key) => {
   }
 }
 
-
-
 const clearCache = (pattern) => {
   try {
     const keys = Object.keys(localStorage)
@@ -112,10 +107,8 @@ export default function ClientsPage() {
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [progress, setProgress] = useState(13)
   const [isOpen, setIsOpen] = useState(false);
-
-
-  
   const [customMetrics, setCustomMetrics] = useState([]);
+
   const DEFAULT_COLUMNS = [
       { id: "name", label: "Business Name", visible: true, sortable: true },
       { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
@@ -130,17 +123,17 @@ export default function ClientsPage() {
       { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
       { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
     ];
+
     const columns = useMemo(() => {
       const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
-      const custom = customMetrics
-        .filter((m) => m.enabled && m.dashboard === "Clients")
-        .map((m) => ({
+      const custom = customMetrics.filter((m) => m.enabled && m.dashboard === "Clients").map((m) => ({
           id: m.id,
           label: m.name,
           visible: true,
           sortable: true,
           category: 'formulas',
           type: 'formula',
+          icons: Flask,
         }));
       
       const seen = new Set();
@@ -151,6 +144,7 @@ export default function ClientsPage() {
         return true;
       });
     }, [customMetrics]);
+
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
     DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
