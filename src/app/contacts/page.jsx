@@ -1,8 +1,7 @@
 "use client"
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import {
-  Loader2,
   SlidersHorizontal,
   Users,
   Mail,
@@ -53,7 +52,6 @@ import {
 } from "@/components/ui/tooltip"
 import ghl from "../../../public/ghl_icon.png";
 import lab from "../../../public/lab.png";
-import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import { Progress } from "@/components/ui/progress"
 
 const contactColumns = [
@@ -262,7 +260,6 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               .map((s) => s.trim())
               .join(", ")}
           </Badge>
-
         )
 
       case "country":
@@ -274,15 +271,14 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           return <span className="text-muted-foreground text-sm">-</span>
         }
         return (
-          <div
-            className="truncate px-2"            
-            title={contact[col.id]}                   
-          >
+          <div className="truncate px-2" title={contact[col.id]}>
             <span className="text-sm font-medium text-foreground">
               {contact[col.id]}
             </span>
           </div>
         )
+      default:
+        return <span>{contact[col.id] || "-"}</span>
     }
   }
 
@@ -306,91 +302,36 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
     <div className="border bg-card overflow-hidden rounded-md w-full">
       <style jsx>{`
         @media (min-width: 768px) {
-          .fixed-column-even {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            background: white;
-            z-index: 50;
-            min-width: 243px;
-            font-weight: 600;
-          }
-          .fixed-column-odd {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            background: #f4f3f9;
-            z-index: 50;
-            min-width: 243px;
-            font-weight: 600;
-          }
-          .fixed-header {
-            position: sticky;
-            left: 0;
-            z-index: 50;
-            background: white;
-            min-width: 150px;
-            width: 100%;
-          }
+          .fixed-column-even { position: sticky; left: 0; background: white; z-index: 50; min-width: 243px; font-weight: 600; }
+          .fixed-column-odd { position: sticky; left: 0; background: #f4f3f9; z-index: 50; min-width: 243px; font-weight: 600; }
+          .fixed-header { position: sticky; left: 0; z-index: 50; background: white; min-width: 150px; }
         }
-
         @media (max-width: 767px) {
-          .fixed-column-even,
-          .fixed-column-odd {
-            text-align: left;
-            background: white;
-            min-width: 200px;
-            font-weight: 600;
-          }
-          .fixed-column-odd {
-            background: #f4f3f9;
-          }
-          .fixed-header {
-            background: white;
-            min-width: 150px;
-            width: 100%;
-          }
-        }
-
-        .table-container {
-          position: relative;
-          overflow: auto;
+          .fixed-column-even, .fixed-column-odd { background: white; min-width: 200px; font-weight: 600; }
+          .fixed-column-odd { background: #f4f3f9; }
+          .fixed-header { background: white; min-width: 150px; }
         }
       `}</style>
-      <div className="overflow-x-auto rounded-md table-container"> 
-        <table className="text-sm w-full table-auto rounded-md">
-          <thead className="top-0 z-40">
-            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-muted/50">
+      <div className="overflow-x-auto">
+        <table className="text-sm w-full table-auto">
+          <thead>
+            <tr className="h-12 bg-muted/50">
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`h-12 font-semibold bg-white text-gray-900/78 select-none cursor-default ${
-                    col.id === "contactName"
-                      ? "fixed-header"
-                      : "min-w-[135px] whitespace-nowrap"
+                  className={`font-semibold bg-white text-gray-900/78 select-none cursor-default ${
+                    col.id === "contactName" ? "fixed-header" : "min-w-[135px] whitespace-nowrap"
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full  justify-between gap-2">
+                  <div className="flex items-center justify-between gap-2 px-2 h-full border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]">
                     <div className="flex items-center gap-2">
                       <span className="px-1">{col.label}</span>
                       {col.sortable && sortColumn === col.id && (
-                        <span>
-                          {sortDirection === "asc" ? (
-                            <ChevronUp size={14} className="text-foreground" />
-                          ) : (
-                            <ChevronDown size={14} className="text-foreground" />
-                          )}
-                        </span>
+                        sortDirection === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
                       )}
                     </div>
-                    {col.icons && (
-                      <img
-                        src={col.icons.src}
-                        alt=""
-                        className="w-4 h-4 text-muted-foreground"
-                      />
-                    )}
+                    {col.icons && <img src={col.icons.src} alt="" className="w-4 h-4" />}
                   </div>
                 </th>
               ))}
@@ -400,29 +341,19 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             {contacts.map((contact, index) => (
               <tr
                 key={contact.contactId || index}
-                className={`hover:bg-muted/50 cursor-pointer transition-colors ${
-                  index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"
-                }`}
+                className={`hover:bg-muted/50 cursor-pointer transition-colors ${index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
               >
                 {visibleColumnsData.map((col) => (
                   <td
                     key={col.id}
                     className={`text-foreground truncate ${
                       col.id === "contactName"
-                        ? index % 2 === 0
-                          ? "fixed-column-odd"
-                          : "fixed-column-even"
+                        ? index % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"
                         : ""
                     }`}
                   >
-                    <div
-                      className={
-                        col.id === "contactName"
-                          ? "py-5 px-4  border border-2 border-l-0 border-t-0 border-b-0  border-[#e4e4e7]"
-                          : ""
-                      }
-                    >
-                      <span>{renderCellContent(contact, col)}</span>
+                    <div className={col.id === "contactName" ? "py-5 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : ""}>
+                      {renderCellContent(contact, col)}
                     </div>
                   </td>
                 ))}
@@ -444,31 +375,14 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const totalLeadValue = filteredContacts.reduce((sum, c) => sum + (c.leadValue || 0), 0)
 
   const stats = [
-    {
-      title: "Total Contacts",
-      value: filteredTotal,
-      subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null,
-      icon: Users,
-    },
-    {
-      title: "With Opportunities",
-      value: contactsWithOpportunities,
-      icon: Target,
-    },
-    {
-      title: "Total Lead Value",
-      value: `$${totalLeadValue.toLocaleString()}`,
-      icon: DollarSign,
-    },
-    {
-      title: "With Email",
-      value: contactsWithEmail,
-      icon: Mail,
-    },
+    { title: "Total Contacts", value: filteredTotal, subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null, icon: Users },
+    { title: "With Opportunities", value: contactsWithOpportunities, icon: Target },
+    { title: "Total Lead Value", value: `$${totalLeadValue.toLocaleString()}`, icon: DollarSign },
+    { title: "With Email", value: contactsWithEmail, icon: Mail },
   ]
 
   return (
-    <div className="grid grid-cols-1  md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => (
         <Card key={index}>
           <CardHeader className="flex flex-row items-center justify-between">
@@ -490,6 +404,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
 export default function ContactPage() {
   const [contacts, setContacts] = useState([])
   const [webhookData, setWebhookData] = useState([])
+  const [webhookLoading, setWebhookLoading] = useState(true)
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -505,18 +420,17 @@ export default function ContactPage() {
   const [selectedType, setSelectedType] = useState("all")
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
+  const [selectedTags, setSelectedTags] = useState([])
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
   const [clientGroups, setClientGroups] = useState([])
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
-  
-  // Fetch client groups once on mount
+
+  // Fetch client groups
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, {
-          credentials: "include",
-        })
+        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, { credentials: "include" })
         if (response.ok) {
           const data = await response.json()
           const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
@@ -529,72 +443,71 @@ export default function ContactPage() {
     fetchClientGroups()
   }, [])
 
-  // Fetch webhooks once on mount
+  // Fetch webhook data (non-blocking)
   useEffect(() => {
     const fetchWebhooks = async () => {
+      setWebhookLoading(true)
       try {
-        const webhooksResponse = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=1000`, {
-          credentials: "include",
-        })
-
-        if (webhooksResponse.ok) {
-          const webhooksData = await webhooksResponse.json()
-          setWebhookData(webhooksData.data || [])
+        const response = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=10000`, { credentials: "include" })
+        if (response.ok) {
+          const data = await response.json()
+          setWebhookData(data.data || [])
+        } else {
+          setWebhookData([])
         }
       } catch (error) {
         console.error("Error fetching webhooks:", error)
+        setWebhookData([])
+      } finally {
+        setWebhookLoading(false)
       }
     }
     fetchWebhooks()
   }, [])
 
-  const enrichContactsWithWebhooks = (contacts) => {
-    const webhookByContactId = new Map()
-    const webhookByEmail = new Map()
-    
-    webhookData.forEach(webhook => {
-      const contactId = webhook.contact_id
-      const email = webhook.data?.email
-      
-      if (contactId) {
-        webhookByContactId.set(contactId, webhook.data)
-      }
-      
-      if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
-        const normalizedEmail = email.trim().toLowerCase()
-        webhookByEmail.set(normalizedEmail, webhook.data)
-      }
-    })
+  // Enrich contacts when webhook data arrives
+  useEffect(() => {
+    if (contacts.length > 0 && webhookData.length > 0) {
+      const webhookByContactId = new Map()
+      const webhookByEmail = new Map()
 
-    return contacts.map(contact => {
-      let webhookInfo = webhookByContactId.get(contact.contactId)
-      
-      if (!webhookInfo && contact.email) {
-        const normalizedEmail = contact.email.trim().toLowerCase()
-        if (normalizedEmail && !normalizedEmail.startsWith('no_email_')) {
-          webhookInfo = webhookByEmail.get(normalizedEmail)
+      webhookData.forEach(webhook => {
+        const contactId = webhook.contact_id
+        const email = webhook.data?.email
+        if (contactId) webhookByContactId.set(contactId, webhook.data)
+        if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
+          webhookByEmail.set(email.trim().toLowerCase(), webhook.data)
         }
-      }
-      
-      if (webhookInfo) {
-        return {
-          ...contact,
-          opportunityStatus: webhookInfo.status,
-          pipelineStage: webhookInfo.pipleline_stage || webhookInfo.pipeline_stage,
-          leadValue: webhookInfo.lead_value,
-          opportunityName: webhookInfo.opportunity_name,
-          opportunitySource: webhookInfo.opportunity_source || webhookInfo.source,
+      })
+
+      const enriched = contacts.map(contact => {
+        let info = webhookByContactId.get(contact.contactId)
+        if (!info && contact.email) {
+          const normEmail = contact.email.trim().toLowerCase()
+          if (normEmail && !normEmail.startsWith('no_email_')) {
+            info = webhookByEmail.get(normEmail)
+          }
         }
-      }
-      
-      return contact
-    })
-  }
+        if (info) {
+          return {
+            ...contact,
+            opportunityStatus: info.status,
+            pipelineStage: info.pipleline_stage || info.pipeline_stage,
+            leadValue: info.lead_value,
+            opportunityName: info.opportunity_name,
+            opportunitySource: info.opportunity_source || info.source,
+          }
+        }
+        return contact
+      })
+
+      setContacts(enriched)
+    }
+  }, [webhookData])
 
   const fetchContacts = async (cursor = null, direction = 'next') => {
     setLoading(true)
     setError(null)
-
     try {
       if (clientGroups.length === 0) {
         setContacts([])
@@ -604,35 +517,21 @@ export default function ContactPage() {
       }
 
       const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-
       let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}`
-      if (cursor) {
-        url += `&cursor=${encodeURIComponent(cursor)}`
+      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`
+
+      const response = await fetch(url, { credentials: "include" })
+      if (!response.ok) throw new Error(`Failed: ${response.status}`)
+
+      const data = await response.json()
+      setContacts(data.contacts || [])
+      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+
+      if (direction === 'next' && data.meta?.next_cursor) {
+        setCursors(prev => [...prev.slice(0, currentCursorIndex + 1), data.meta.next_cursor])
       }
-
-      const contactsResponse = await fetch(url, {
-        credentials: "include",
-      })
-
-      if (!contactsResponse.ok) {
-        throw new Error(`Failed to fetch contacts: ${contactsResponse.status}`)
-      }
-
-      const contactsData = await contactsResponse.json()
-      
-      const enrichedContacts = enrichContactsWithWebhooks(contactsData.contacts || [])
-
-      setContacts(enrichedContacts)
-      setMetaData(contactsData.meta || { total_contacts: 0, has_next: false, has_prev: false })
-
-      if (direction === 'next' && contactsData.meta?.next_cursor) {
-        const newCursors = [...cursors.slice(0, currentCursorIndex + 1), contactsData.meta.next_cursor]
-        setCursors(newCursors)
-      }
-
-    } catch (error) {
-      console.error("Error fetching contacts:", error)
-      setError(error.message)
+    } catch (err) {
+      setError(err.message)
       setContacts([])
       setMetaData(null)
     } finally {
@@ -640,7 +539,6 @@ export default function ContactPage() {
     }
   }
 
-  // Fetch contacts when cursor or group changes, but only after data is loaded
   useEffect(() => {
     if (clientGroups.length > 0) {
       const cursor = cursors[currentCursorIndex]
@@ -649,144 +547,83 @@ export default function ContactPage() {
   }, [currentCursorIndex, selectedClientGroup, clientGroups.length])
 
   useEffect(() => {
-    const intervals = [33, 50, 66, 80, 90];
-    let step = 0;
-
+    const intervals = [33, 50, 66, 80, 90]
+    let step = 0
     const timer = setInterval(() => {
-      setProgress(intervals[step]);
-      step += 1;
-      if (step >= intervals.length) {
-        clearInterval(timer);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
+      setProgress(intervals[step])
+      step++
+      if (step >= intervals.length) clearInterval(timer)
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   const sources = useMemo(() => {
-    const uniqueSources = new Set()
-    contacts.forEach(c => {
-      if (c.source) {
-        c.source.split(",").forEach(s => uniqueSources.add(s.trim()))
-      }
-    })
-    return [...uniqueSources].sort()
+    const set = new Set()
+    contacts.forEach(c => c.source?.split(",").forEach(s => set.add(s.trim())))
+    return [...set].sort()
   }, [contacts])
 
-  const types = useMemo(() => {
-    const uniqueTypes = [...new Set(contacts.map(c => c.contactType || c.type).filter(Boolean))]
-    return uniqueTypes.sort()
-  }, [contacts])
+  const types = useMemo(() => [...new Set(contacts.map(c => c.contactType || c.type).filter(Boolean))].sort(), [contacts])
+  const opportunityStatuses = useMemo(() => [...new Set(contacts.map(c => c.opportunityStatus).filter(Boolean))].sort(), [contacts])
 
-  const opportunityStatuses = useMemo(() => {
-    const statuses = [...new Set(contacts.map(c => c.opportunityStatus).filter(Boolean))]
-    return statuses.sort()
+  const allTags = useMemo(() => {
+    const set = new Set()
+    contacts.forEach(c => c.tags?.forEach(t => set.add(t.trim())))
+    return [...set].sort()
   }, [contacts])
-
-  const isSingleSource = sources.length === 1
-  const noSources = sources.length === 0 && metaData && metaData.total_contacts === 0
 
   const filteredAndSortedContacts = useMemo(() => {
     let filtered = [...contacts]
 
     if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      filtered = filtered.filter(contact => {
-        return (
-          contact.contactName?.toLowerCase().includes(query) ||
-          contact.email?.toLowerCase().includes(query) ||
-          contact.phone?.toLowerCase().includes(query) ||
-          contact.website?.toLowerCase().includes(query) ||
-          contact.address1?.toLowerCase().includes(query) ||
-          contact.country?.toLowerCase().includes(query) ||
-          contact.campaignName?.toLowerCase().includes(query) ||
-          contact.adName?.toLowerCase().includes(query) ||
-          contact.platform?.toLowerCase().includes(query) ||
-          contact.groupName?.toLowerCase().includes(query) ||
-          contact.opportunityName?.toLowerCase().includes(query) ||
-          contact.pipelineStage?.toLowerCase().includes(query) ||
-          contact.tags?.some(tag => tag.toLowerCase().includes(query))
-        )
-      })
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(c =>
+        c.contactName?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.website?.toLowerCase().includes(q) ||
+        c.address1?.toLowerCase().includes(q) ||
+        c.country?.toLowerCase().includes(q) ||
+        c.groupName?.toLowerCase().includes(q) ||
+        c.tags?.some(t => t.toLowerCase().includes(q))
+      )
     }
 
-    if (selectedSource !== "all") {
-      filtered = filtered.filter(contact => contact.source?.includes(selectedSource))
-    }
-
-    if (selectedType !== "all") {
-      filtered = filtered.filter(contact => {
-        const type = contact.contactType || contact.type
-        return type === selectedType
-      })
-    }
-
-    if (selectedOpportunityStatus !== "all") {
-      filtered = filtered.filter(contact => contact.opportunityStatus === selectedOpportunityStatus)
-    }
+    if (selectedSource !== "all") filtered = filtered.filter(c => c.source?.includes(selectedSource))
+    if (selectedType !== "all") filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
+    if (selectedOpportunityStatus !== "all") filtered = filtered.filter(c => c.opportunityStatus === selectedOpportunityStatus)
+    if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
 
     if (selectedDateRange !== "all") {
       const now = new Date()
-      filtered = filtered.filter(contact => {
-        if (!contact.dateAdded) return false
-        const contactDate = new Date(contact.dateAdded)
-        
+      filtered = filtered.filter(c => {
+        if (!c.dateAdded) return false
+        const d = new Date(c.dateAdded)
         switch (selectedDateRange) {
-          case "today":
-            return contactDate.toDateString() === now.toDateString()
-          case "week":
-            const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-            return contactDate >= weekAgo
-          case "month":
-            const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-            return contactDate >= monthAgo
-          case "year":
-            const yearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-            return contactDate >= yearAgo
-          default:
-            return true
+          case "today": return d.toDateString() === now.toDateString()
+          case "week": return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+          case "month": return d >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+          case "year": return d >= new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
+          default: return true
         }
       })
     }
 
     if (sortColumn) {
       filtered.sort((a, b) => {
-        let aVal = a[sortColumn]
-        let bVal = b[sortColumn]
-
-        if (sortColumn === "dateAdded") {
-          aVal = aVal ? new Date(aVal).getTime() : 0
-          bVal = bVal ? new Date(bVal).getTime() : 0
-        } else if (sortColumn === "leadValue") {
-          aVal = aVal || 0
-          bVal = bVal || 0
-        } else if (sortColumn === "contactType") {
-          aVal = a.contactType || a.type || ""
-          bVal = b.contactType || b.type || ""
-        } else {
-          aVal = aVal || ""
-          bVal = bVal || ""
-        }
-
-        if (typeof aVal === "string") {
-          aVal = aVal.toLowerCase()
-          bVal = bVal.toLowerCase()
-        }
-
-        if (aVal < bVal) return sortDirection === "asc" ? -1 : 1
-        if (aVal > bVal) return sortDirection === "asc" ? 1 : -1
-        return 0
+        let aVal = a[sortColumn] ?? ""
+        let bVal = b[sortColumn] ?? ""
+        if (sortColumn === "dateAdded") { aVal = aVal ? new Date(aVal).getTime() : 0; bVal = bVal ? new Date(bVal).getTime() : 0 }
+        if (sortColumn === "leadValue") { aVal = aVal || 0; bVal = bVal || 0 }
+        if (typeof aVal === "string") { aVal = aVal.toLowerCase(); bVal = bVal.toLowerCase() }
+        return (aVal < bVal ? -1 : 1) * (sortDirection === "asc" ? 1 : -1)
       })
     }
 
     return filtered
-  }, [contacts, searchQuery, selectedSource, selectedType, selectedOpportunityStatus, selectedDateRange, sortColumn, sortDirection])
+  }, [contacts, searchQuery, selectedSource, selectedType, selectedOpportunityStatus, selectedDateRange, selectedTags, sortColumn, sortDirection])
 
-  const toggleColumn = (columnId) => {
-    setVisibleColumns((current) =>
-      current.includes(columnId) ? current.filter((id) => id !== columnId) : [...current, columnId]
-    )
-  }
+  const toggleColumn = (id) => setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const clearAllFilters = () => {
     setSearchQuery("")
@@ -795,40 +632,28 @@ export default function ContactPage() {
     setSelectedOpportunityStatus("all")
     setSelectedDateRange("all")
     setSelectedClientGroup("all")
+    setSelectedTags([])
     setSortColumn("")
     setSortDirection("asc")
   }
 
-  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" || 
-    selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all"
+  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
+    selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all" || selectedTags.length > 0
 
   if (loading) {
     return (
       <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
         <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
+          {/* Your beautiful bird loading animation */}
           <div className="w-16 h-16 flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <style>{`
-                  @keyframes fly {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-8px); }
-                  }
-                  @keyframes wingFlap {
-                    0%, 100% { transform: rotateZ(0deg); }
-                    50% { transform: rotateZ(15deg); }
-                  }
-                  .bird-body {
-                    animation: fly 2s ease-in-out infinite;
-                  }
-                  .bird-wing-left {
-                    animation: wingFlap 0.6s ease-in-out infinite;
-                    transform-origin: 35px 40px;
-                  }
-                  .bird-wing-right {
-                    animation: wingFlap 0.6s ease-in-out infinite;
-                    transform-origin: 65px 40px;
-                  }
+                  @keyframes fly { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
+                  @keyframes wingFlap { 0%, 100% { transform: rotateZ(0deg); } 50% { transform: rotateZ(15deg); } }
+                  .bird-body { animation: fly 2s ease-in-out infinite; }
+                  .bird-wing-left { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 35px 40px; }
+                  .bird-wing-right { animation: wingFlap 0.6s ease-in-out infinite; transform-origin: 65px 40px; }
                 `}</style>
               </defs>
               <g className="bird-body">
@@ -846,233 +671,120 @@ export default function ContactPage() {
               </g>
             </svg>
           </div>
-
           <div className="flex flex-col gap-3 text-center">
             <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Preparing your data. This should only take a moment.
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">Preparing your data. This should only take a moment.</p>
           </div>
-
           <div className="w-full flex flex-col gap-2">
-            <Progress value={progress} className="w-full h-2" showLabel={false} />
+            <Progress value={progress} className="w-full h-2" />
             <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
-          </div>
-
-          <div className="flex gap-1">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
-              style={{ animationDelay: "0.2s" }}
-            />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
-              style={{ animationDelay: "0.4s" }}
-            />
           </div>
         </div>
       </div>
     )
   }
 
-  const handlePreviousPage = () => {
-    if (currentCursorIndex > 0) {
-      setCurrentCursorIndex(prev => prev - 1)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (metaData?.has_next) {
-      setCurrentCursorIndex(prev => prev + 1)
-    }
-  }
+  const handlePreviousPage = () => currentCursorIndex > 0 && setCurrentCursorIndex(prev => prev - 1)
+  const handleNextPage = () => metaData?.has_next && setCurrentCursorIndex(prev => prev + 1)
 
   return (
     <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
-        {error && (
-          <Alert variant="destructive">
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
- 
+        {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="whitespace-nowrap">
-              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left">Lead Hub</h1>
-            </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
           </div>
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
-            <Input
-              placeholder="Search contacts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
-              flex-1 min-w-[150px] md:min-w-[120px] md:text-sm"
-            />
-            <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-              <SelectTrigger className="gap-2 hover:bg-purple-100/75 bg-white font-semibold h-10">
-                <Building className="h-4 w-4" />
-                <SelectValue placeholder="All Groups" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Groups</SelectItem>
-                {clientGroups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
 
-            {searchQuery && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="gap-2 absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0"
-                onClick={() => setSearchQuery("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            )}
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-gray-100 border rounded-lg p-1 overflow-x-auto">
+            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white h-10 min-w-[150px]" />
+            {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
-            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1 
-            md:px-1 md:flex-nowrap">
-             <Select value={selectedSource} onValueChange={setSelectedSource}>
-              <SelectTrigger className="gap-1 hover:bg-purple-100/75 bg-white font-semibold h-10 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
-                <SelectValue placeholder="Sources" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Sources</SelectItem>
-                {sources.map((source) => (
-                  <SelectItem key={source} value={source}>
-                    {source}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-1 overflow-x-auto">
+              <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+                <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
+                <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+              </Select>
 
-            <Select value={selectedType} onValueChange={setSelectedType}>
-              <SelectTrigger className="gap-1 bg-white font-semibold h-10 hover:bg-purple-100/75 min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
-                <SelectValue placeholder="Types" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Types</SelectItem>
-                {types.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={selectedSource} onValueChange={setSelectedSource}>
+                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Sources" /></SelectTrigger>
+                <SelectContent className="bg-white"><SelectItem value="all">All Sources</SelectItem>{sources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
 
-            <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
-              <SelectTrigger className="bg-white font-semibold h-10 min-w-[120px] md:min-w-[100px] md:text-sm md:px-2">
-                <SelectValue placeholder="Opps" /> {/* Abbreviated for space */}
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all">All Opportunities</SelectItem>
-                {opportunityStatuses.map(status => (
-                  <SelectItem key={status} value={status}>{status}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select value={selectedType} onValueChange={setSelectedType}>
+                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Types" /></SelectTrigger>
+                <SelectContent className="bg-white"><SelectItem value="all">All Types</SelectItem>{types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+              </Select>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-1 h-10 bg-white hover:bg-purple-100/75 font-semibold min-w-[80px] md:min-w-[60px] md:text-sm md:px-1">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Cols {/* Abbreviated */}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {contactColumns.map((col) => (
-                  <DropdownMenuCheckboxItem
-                    key={col.id}
-                    checked={visibleColumns.includes(col.id)}
-                    onCheckedChange={() => toggleColumn(col.id)}
-                  >
-                    {col.label}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
+                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Opps" /></SelectTrigger>
+                <SelectContent className="bg-white"><SelectItem value="all">All Opportunities</SelectItem>{opportunityStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
 
-            <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-              <SelectTrigger className="gap-1 hover:bg-purple-100/75 h-10 bg-white font-semibold min-w-[100px] md:min-w-[80px] md:text-sm md:px-2">
-                <CiCalendar className="h-4 w-4" />
-                <SelectValue placeholder="Date" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem>
-                <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
-                <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
-                <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
-                <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
+              {/* Tags Multi-Select */}
+              <DropdownMenu className="">
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-10 bg-white gap-2">
+                    <Tag className="h-4 w-4" />
+                    {selectedTags.length === 0 ? "Tags" : selectedTags.length === 1 ? selectedTags[0] : `${selectedTags.length} tags`}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 bg-white max-h-96 overflow-y-auto">
+                  <DropdownMenuLabel>Filter by Tags ({selectedTags.length})</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {allTags.length === 0 ? <div className="px-4 py-2 text-sm text-muted-foreground">No tags</div> : allTags.map(tag => (
+                    <DropdownMenuCheckboxItem key={tag} checked={selectedTags.includes(tag)} onCheckedChange={c => setSelectedTags(prev => c ? [...prev, tag] : prev.filter(t => t !== tag))}>
+                      <div className="flex items-center gap-2"><TiTag className="w-3 h-3" />{tag}</div>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                  {selectedTags.length > 0 && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setSelectedTags([])}>Clear tags</Button>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
-            {hasActiveFilters && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearAllFilters}
-                className="h-10 min-w-[80px] md:min-w-[60px] md:text-sm md:px-1 md:hidden" // Hide on tablets to save space
-              >
-                Clear
-              </Button>
-            )}
-            </div>            
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-10  gap-1"><SlidersHorizontal className="h-4 w-4" />Cols</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-white">
+                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {contactColumns.map(col => (
+                    <DropdownMenuCheckboxItem key={col.id} checked={visibleColumns.includes(col.id)} onCheckedChange={() => toggleColumn(col.id)}>
+                      {col.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                <SelectTrigger className="h-10 bg-white gap-1"><CiCalendar className="h-4 w-4" /><SelectValue placeholder="Date" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Time</SelectItem>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="week">Last 7 Days</SelectItem>
+                  <SelectItem value="month">Last 30 Days</SelectItem>
+                  <SelectItem value="year">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
+            </div>
           </div>
         </div>
 
-        <DashboardStats
-          className="bg-white"
-          contacts={contacts}
-          filteredContacts={filteredAndSortedContacts}
-          metaData={metaData}
-        />
+        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
+        <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />
 
-        <ContactsTable
-          contacts={filteredAndSortedContacts}
-          visibleColumns={visibleColumns}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          onSort={(col, dir) => {
-            setSortColumn(col)
-            setSortDirection(dir)
-          }}
-        />
-
-        <div className="flex items-center justify-center">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={currentCursorIndex === 0}
-              className="hover:bg-purple-200 gap-2"
-            >
-              <ChevronLeft size={14} className="text-foreground" />Previous
-            </Button>
-
-            <span className="text-sm font-medium gap-2">
-              Page {currentCursorIndex + 1}
-            </span>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleNextPage}
-              disabled={!metaData?.has_next}
-              className="hover:bg-purple-200 gap-2"
-            >
-              Next<ChevronRight size={14} className="text-foreground" />
-            </Button>
-          </div>
+        <div className="flex justify-center gap-4">
+          <Button variant="ghost" onClick={handlePreviousPage} disabled={currentCursorIndex === 0}><ChevronLeft className="h-4 w-4" />Previous</Button>
+          <span className="text-sm font-medium py-2">Page {currentCursorIndex + 1}</span>
+          <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>Next<ChevronRight className="h-4 w-4" /></Button>
         </div>
       </div>
     </div>

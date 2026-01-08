@@ -7,9 +7,6 @@ import {
   formatMetricValue,
 } from "@/lib/metrics";
 
-
-
-
 export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility, searchQuery , customMetrics , setCustomMetrics}) {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
@@ -23,9 +20,6 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
     const metrics = loadCustomMetrics();
     setCustomMetrics(metrics);
   }, []);
-
-  /* ---------- DERIVED COLUMNS (no duplicates) ---------- */
-
 
   /* ---------- VISIBLE + ORDERED COLUMNS ---------- */
   const visibleColumns = useMemo(() => {
@@ -49,40 +43,60 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
   }, [columns, columnVisibility, columnOrder]);
 
   /* ---------- FLATTENED DATA (with aliases) ---------- */
-const flattenedData = useMemo(() => {
+  const flattenedData = useMemo(() => {
     return data.map((group) => {
+      // Safely extract nested values - NEVER return objects
+      const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
+      const metaCampaigns = group.facebook?.metrics?.total_campaigns ?? 0;
+      const metaAdsets = group.facebook?.metrics?.total_adsets ?? 0;
+      const metaAds = group.facebook?.metrics?.total_ads ?? 0;
+      const metaSpend = group.facebook?.metrics?.insights?.spend ?? 0;
+      const metaImpressions = group.facebook?.metrics?.insights?.impressions ?? 0;
+      const metaClicks = group.facebook?.metrics?.insights?.clicks ?? 0;
+      const metaReach = group.facebook?.metrics?.insights?.reach ?? 0;
+      const metaResults = group.facebook?.metrics?.insights?.results ?? 0;
+      const metaCpm = group.facebook?.metrics?.insights?.cpm ?? 0;
+      const metaCpc = group.facebook?.metrics?.insights?.cpc ?? 0;
+      const metaCtr = group.facebook?.metrics?.insights?.ctr ?? 0;
+      const metaCostPerResult = group.facebook?.metrics?.insights?.cost_per_result ?? 0;
+      const metaLeads = group.facebook?.metrics?.total_leads ?? 0;
+      const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
+
       const base = {
         id: group.id,
         name: group.name || "Unnamed Group",
-        ghl_contacts: group.gohighlevel?.metrics?.total_contacts || 0,
-        meta_campaigns: group.facebook?.metrics?.total_campaigns || 0,
-        meta_adsets: group.facebook?.metrics?.total_adsets || 0,
-        meta_ads: group.facebook?.metrics?.total_ads || 0,
-        meta_spend: group.facebook?.metrics?.insights?.spend || 0,
-        meta_impressions: group.facebook?.metrics?.insights?.impressions || 0,
-        meta_clicks: group.facebook?.metrics?.insights?.clicks || 0,
-        meta_reach: group.facebook?.metrics?.insights?.reach || 0,
-        meta_results: group.facebook?.metrics?.insights?.results || 0,
-        meta_cpm: group.facebook?.metrics?.insights?.cpm || 0,
-        meta_cpc: group.facebook?.metrics?.insights?.cpc || 0,
-        meta_ctr: group.facebook?.metrics?.insights?.ctr || 0,
-        meta_cost_per_result: group.facebook?.metrics?.insights?.cost_per_result || 0,
-        meta_leads: group.facebook?.metrics?.total_leads || 0,
-        hp_leads: group.hotprospector?.metrics?.total_leads || 0,
+        ghl_contacts: ghlContacts,
+        meta_campaigns: metaCampaigns,
+        meta_adsets: metaAdsets,
+        meta_ads: metaAds,
+        meta_spend: metaSpend,
+        meta_impressions: metaImpressions,
+        meta_clicks: metaClicks,
+        meta_reach: metaReach,
+        meta_results: metaResults,
+        meta_cpm: metaCpm,
+        meta_cpc: metaCpc,
+        meta_ctr: metaCtr,
+        meta_cost_per_result: metaCostPerResult,
+        meta_leads: metaLeads,
+        hp_leads: hpLeads,
         original: group,
-        _isCreating: group._isCreating || false, // Track creating state
+        _isCreating: group._isCreating || false,
 
         // ALIASES for formula compatibility
-        leads: group.gohighlevel?.metrics?.total_contacts || 0,
-        "ad-spend": group.facebook?.metrics?.insights?.spend || 0,
-        clicks: group.facebook?.metrics?.insights?.clicks || 0,
-        impressions: group.facebook?.metrics?.insights?.impressions || 0,
-        conversions: group.facebook?.metrics?.total_leads || 0,
+        leads: ghlContacts,
+        "ad-spend": metaSpend,
+        clicks: metaClicks,
+        impressions: metaImpressions,
+        conversions: metaLeads,
       };
 
+      // Calculate custom metrics
       customMetrics.forEach((metric) => {
         if (metric.formulaParts) {
-          base[metric.id] = evaluateFormula(metric.formulaParts, base);
+          const result = evaluateFormula(metric.formulaParts, base);
+          // Ensure result is a primitive value, not an object
+          base[metric.id] = typeof result === 'object' ? 0 : (result ?? 0);
         }
       });
 
@@ -111,7 +125,6 @@ const flattenedData = useMemo(() => {
     });
     return copy;
   }, [filteredData, sortConfig]);
-
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
@@ -152,26 +165,53 @@ const flattenedData = useMemo(() => {
   };
 
   /* ---------- FORMATTERS ---------- */
-  const formatCurrency = (v) =>
-    typeof v === "number" ? `$${v.toFixed(2)}` : "$0.00";
-  const formatPercentage = (v) =>
-    typeof v === "number" ? `${v.toFixed(2)}%` : "0%";
-  const formatNumber = (v) =>
-    typeof v === "number" ? v.toLocaleString() : "0";
+  const formatCurrency = (v) => {
+    const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    return `$${num.toFixed(2)}`;
+  };
+  
+  const formatPercentage = (v) => {
+    const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    return `${num.toFixed(2)}%`;
+  };
+  
+  const formatNumber = (v) => {
+    const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    return num.toLocaleString();
+  };
 
   const getCellValue = (row, columnId) => {
     const value = row[columnId];
 
+    // Handle undefined/null values
+    if (value === undefined || value === null) {
+      return "—";
+    }
+
+    // Handle objects (shouldn't happen, but safety check)
+    if (typeof value === "object") {
+      console.warn(`Object detected in cell for column ${columnId}:`, value);
+      return "—";
+    }
+
+    // Custom metrics formatting
     if (customMetrics.some((m) => m.id === columnId)) {
       return formatMetricValue(value, columnId);
     }
 
-    if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm")) {
+    // Built-in column formatting
+    if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per")) {
       return formatCurrency(value);
     }
-    if (columnId.includes("ctr")) return formatPercentage(value);
-    if (typeof value === "number") return formatNumber(value);
-    return value;
+    if (columnId.includes("ctr")) {
+      return formatPercentage(value);
+    }
+    if (typeof value === "number") {
+      return formatNumber(value);
+    }
+    
+    // String values
+    return String(value);
   };
 
   /* ---------- RENDER ---------- */
