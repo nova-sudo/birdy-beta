@@ -37,6 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import metaa from "../../../public/meta-icon-DH8jUhnM.png"
 import lab from "../../../public/lab.png"
 import { getMetricDisplayName } from "@/lib/metrics"
+import { Loading } from "@/components/ui/loader"
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([])
@@ -396,7 +397,7 @@ const Campaigns = () => {
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Select a client group" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     {clientGroups.map((group) => (
                       <SelectItem key={group.id} value={group.id}>
                         {group.name}
@@ -412,7 +413,7 @@ const Campaigns = () => {
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
-              className="h-10 bg-white"
+              className="h-10 bg-white w-40"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -454,7 +455,7 @@ const Campaigns = () => {
                 <Button
                   variant="outline"
                   id="date"
-                  className="w-35 justify-between font-normal bg-transparent"
+                  className="w-35 justify-between font-semibold bg-white"
                   placeholder="Select date"
                 >
                   <CalendarIcon />
@@ -627,10 +628,7 @@ const Campaigns = () => {
 
             {/* Table */}
             {isLoading ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4" />
-                <p className="text-sm text-muted-foreground">Loading {activeTab}...</p>
-              </div>
+              <loading />
             ) : error && getFilteredDataForTab().length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
                 <div className="rounded-full bg-destructive/10 p-3 mb-4">
