@@ -13,6 +13,7 @@ import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
+import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import {
   Select,
   SelectContent,
@@ -33,6 +34,16 @@ import { ChevronDown, Eye, EyeOff } from "lucide-react";
 import { Progress } from "@/components/ui/progress"
 import useSWR from "swr"  
 import { useClientGroups } from "@/hooks/useClientGroups"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
+import { Spinner } from "@/components/ui/spinner"
+
 
 
 const CACHE_DURATION = {
@@ -164,11 +175,9 @@ export default function ClientsPage() {
     }));
   };
     
-
-
-  // useEffect(() => {
-  //   fetchClientGroups()
-  // }, [])
+  useEffect(() => {
+    fetchClientGroups()
+  }, [])
 
    useEffect(() => {
     const intervals = [33, 50, 66, 80, 90];
@@ -189,7 +198,6 @@ export default function ClientsPage() {
     if (wizardOpen && wizardStep > 1) {
       if (wizardStep === 2) fetchGhlLocations()
       if (wizardStep === 3) fetchMetaAdAccounts()
-      if (wizardStep === 4) fetchHotProspectorGroups()
     }
   }, [wizardOpen, wizardStep])
 
@@ -267,15 +275,6 @@ export default function ClientsPage() {
 
   const fetchMetaAdAccounts = async (forceRefresh = false) => {
     try {
-      if (!forceRefresh) {
-        const cached = getCachedData("metaAdAccounts")
-        if (cached) {
-          setMetaAdAccounts(cached)
-          console.log("[v0] Using cached Meta ad accounts:", cached.length)
-          return
-        }
-      }
-
       const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
         credentials: "include",
       })
@@ -296,41 +295,7 @@ export default function ClientsPage() {
     }
   }
 
-  const fetchHotProspectorGroups = async (forceRefresh = false) => {
-    try {
-      if (!forceRefresh) {
-        const cached = getCachedData("hotProspectorGroups")
-        if (cached) {
-          setHotProspectorGroups(cached)
-          console.log("[v0] Using cached Hot Prospector groups:", cached.length)
-          return
-        }
-      }
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/groups", {
-        credentials: "include",
-      })
-
-      if (response.ok) {
-        const data = await response.json()
-        const normalizedGroups = (data.data || []).map((group) => ({
-          id: group.GroupId,
-          name: group.GroupTitle,
-          teamId: group.TeamId,
-          addedBy: group.Added_by,
-        }))
-
-        setHotProspectorGroups(normalizedGroups)
-
-        console.log("[v0] Fetched fresh Hot Prospector groups:", normalizedGroups.length)
-      } else {
-        toast.error("Failed to fetch Hot Prospector groups")
-      }
-    } catch (err) {
-      console.error("[v0] Error fetching Hot Prospector groups:", err)
-      toast.error("Failed to fetch Hot Prospector groups")
-    }
-  }
 
   const handleRefresh = () => {
   refreshClientGroups()
@@ -349,12 +314,12 @@ const handleCreateClientGroup = async () => {
       toast.error("Please select a Meta ad account or skip this step")
       return
     }
-    if (wizardStep === 4 && !selectedHotProspectorGroup && hotProspectorGroups.length > 0) {
-      toast.error("Please select a Hot Prospector group or skip this step")
-      return
-    }
+    // if (wizardStep === 4 && !selectedHotProspectorGroup && hotProspectorGroups.length > 0) {
+    //   toast.error("Please select a Hot Prospector group or skip this step")
+    //   return
+    // }
 
-    if (wizardStep < 4) {
+    if (wizardStep < 3) {
       setWizardStep(wizardStep + 1)
       return
     }
@@ -681,7 +646,7 @@ const handleCreateClientGroup = async () => {
                       <div>
                         <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
                         <p className="text-purple-100 text-sm">
-                          Step {wizardStep} of 4:{" "}
+                          Step {wizardStep} of 3:{" "}
                           {
                             [
                               "Name your client group",
@@ -694,9 +659,9 @@ const handleCreateClientGroup = async () => {
                       </div>
                     </div>
                   </DialogHeader>
-                  <div className="p-6">
+                  <div className="h-auto bg-white">
                     {wizardStep === 1 && (
-                      <div className="space-y-4">
+                      <div className="space-y-2 p-2">
                         <div>
                           <label className="text-sm font-medium text-foreground">Client Group Name</label>
                           <Input
@@ -711,25 +676,15 @@ const handleCreateClientGroup = async () => {
                       </div>
                     )}
                     {wizardStep === 2 && (
-                      <div className="space-y-4 p-8">
+                      <div className="space-y-4 p-4 ">
                         <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
                           <Input
                             type="text"
                             placeholder="Search GHL locations by name or ID..."
                             value={locationSearchQuery}
                             onChange={(e) => setLocationSearchQuery(e.target.value)}
                             className="pl-10 pr-4 py-3"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Or enter new GHL Location ID</label>
-                          <Input
-                            type="text"
-                            placeholder="Enter new GHL location ID"
-                            value={newGhlLocationId}
-                            onChange={(e) => setNewGhlLocationId(e.target.value)}
-                            className="mt-1"
                           />
                         </div>
                         <div className="space-y-2 max-h-80 overflow-y-auto">
@@ -786,9 +741,19 @@ const handleCreateClientGroup = async () => {
                             ))
                           ) : (
                             <div className="text-center py-12 text-muted-foreground">
-                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
-                              <p>No GHL locations found</p>
-                              <p className="text-sm">Enter a new location ID or skip this step</p>
+                              <div class="flex items-center justify-center h-fit">
+                                <Empty className="w-full">
+                                      <EmptyHeader>
+                                        <EmptyMedia variant="icon">
+                                          <Spinner />
+                                        </EmptyMedia>
+                                        <EmptyTitle>Loading GHL Locations</EmptyTitle>
+                                        <EmptyDescription>
+                                          Please wait while we process your request. Do not refresh the page.
+                                        </EmptyDescription>
+                                      </EmptyHeader>
+                                    </Empty>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -805,18 +770,18 @@ const handleCreateClientGroup = async () => {
                       </div>
                     )}
                     {wizardStep === 3 && (
-                      <div className="space-y-4">
-                        <div className="relative">
+                      <div className="space-y-2 p-4">
+                        <div className="relative ">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                           <Input
                             type="text"
                             placeholder="Search Meta ad accounts by name or ID..."
                             value={metaSearchQuery}
                             onChange={(e) => setMetaSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-3"
+                            className="pl-10 pr py-3"
                           />
-                        </div>
-                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                        </div> 
+                        <div className="space-y-2 max-h-80 overflow-y-auto ">
                           {filteredMetaAdAccounts.length > 0 ? (
                             filteredMetaAdAccounts.map((account) => (
                               <div
@@ -867,9 +832,19 @@ const handleCreateClientGroup = async () => {
                             ))
                           ) : (
                             <div className="text-center py-12 text-muted-foreground">
-                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
-                              <p>No Meta ad accounts found</p>
-                              <p className="text-sm">Try adjusting your search terms</p>
+                              <div class="flex items-center justify-center h-fit">
+                                <Empty className="w-full">
+                                      <EmptyHeader>
+                                        <EmptyMedia variant="icon">
+                                          <Spinner />
+                                        </EmptyMedia>
+                                        <EmptyTitle>Loading Meta Adaccounts</EmptyTitle>
+                                        <EmptyDescription>
+                                          Please wait while we process your request. Do not refresh the page.
+                                        </EmptyDescription>
+                                      </EmptyHeader>
+                                    </Empty>
+                              </div>
                             </div>
                           )}
                         </div>
@@ -885,7 +860,7 @@ const handleCreateClientGroup = async () => {
                         )}
                       </div>
                     )}
-                    {wizardStep === 4 && (
+                    {/* {wizardStep === 4 && (
                       <div className="space-y-4">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -965,18 +940,18 @@ const handleCreateClientGroup = async () => {
                           </div>
                         )}
                       </div>
-                    )}
+                    )} */}
                   </div>
-                  <div className="bg-muted/50 py-4 flex items-center justify-between border-t border-border">
+                  <div className="bg-muted/50 p-4 flex items-center justify-between border-t border-border">
                     <p className="text-sm text-muted-foreground">
                       {wizardStep === 2 &&
                         `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
                       {wizardStep === 3 &&
                         `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
-                      {wizardStep === 4 &&
-                        `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`}
+                      {/* {wizardStep === 4 &&
+                        `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`} */}
                     </p>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center ">
                       {wizardStep > 1 && (
                         <Button
                           variant="ghost"
@@ -1004,7 +979,7 @@ const handleCreateClientGroup = async () => {
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
                             Creating...
                           </>
-                        ) : wizardStep < 4 ? (
+                        ) : wizardStep < 3 ? (
                           <>
                             <ChevronRight className="w-4 h-4 mr-2" />
                             Next
@@ -1126,7 +1101,7 @@ const handleCreateClientGroup = async () => {
           columnVisibility={columnVisibility} 
           customMetrics={customMetrics} 
           setCustomMetrics={setCustomMetrics}
-        />
+        /> 
 
       </div>
     </div>
