@@ -88,14 +88,11 @@ const metaMetrics = [
     category: "standard",
     enabled: true,
   },
-]
-
-const campaignsMetrics = [
   {
     id: "spend",
     name: "Spend",
     description: "Campaign advertising spend",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -105,7 +102,7 @@ const campaignsMetrics = [
     id: "impressions",
     name: "Impressions",
     description: "Number of impressions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -115,7 +112,7 @@ const campaignsMetrics = [
     id: "clicks",
     name: "Clicks",
     description: "Number of clicks",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -125,7 +122,7 @@ const campaignsMetrics = [
     id: "cpc",
     name: "CPC",
     description: "Cost per click",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -135,7 +132,7 @@ const campaignsMetrics = [
     id: "reach",
     name: "Reach",
     description: "Total reach of campaign",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -145,7 +142,7 @@ const campaignsMetrics = [
     id: "ctr",
     name: "CTR",
     description: "Click-through rate",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -155,7 +152,7 @@ const campaignsMetrics = [
     id: "frequency",
     name: "Frequency",
     description: "Average frequency per user",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -165,7 +162,7 @@ const campaignsMetrics = [
     id: "cpm",
     name: "CPM",
     description: "Cost per thousand impressions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -175,7 +172,7 @@ const campaignsMetrics = [
     id: "campaign-results",
     name: "Results",
     description: "Campaign results/conversions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -185,13 +182,17 @@ const campaignsMetrics = [
     id: "campaign-leads",
     name: "Campaign Leads",
     description: "Leads from campaign",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
     enabled: true,
   },
 ]
+
+// const metaMetrics = [
+  
+// ]
 
 const contactsMetrics = [
   {
@@ -209,7 +210,7 @@ const contactsMetrics = [
 const availableMetrics = [
   ...standardMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
   ...metaMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
-  ...campaignsMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
+  ...metaMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
   ...contactsMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
 ]
 const sources = [...new Set(availableMetrics.map(m => m.source))]
@@ -225,7 +226,7 @@ const MetricSelector = ({ value, onChange }) => {
 
   const ghlMetrics = availableMetrics.filter((m) => m.source === "GoHighLevel")
   const metaMetrics = availableMetrics.filter((m) => m.source === "Meta Ads")
-  const fbMetrics = availableMetrics.filter((m) => m.source === "Facebook Ads")
+
 
   const currentName = availableMetrics.find((m) => m.id === value)?.name || "Select metric..."
 
@@ -244,7 +245,7 @@ const MetricSelector = ({ value, onChange }) => {
       </PopoverTrigger>
       <PopoverContent className="p-0 w-fit bg-white ">
         <Tabs defaultValue="all" className="w-fit">
-          <TabsList className="grid w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
+          <TabsList className="text-center w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
             <TabsTrigger value="all" className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
                             data-[state=active]:bg-purple-100/50
                             data-[state=active]:text-foreground
@@ -260,11 +261,6 @@ const MetricSelector = ({ value, onChange }) => {
                             data-[state=active]:text-foreground
                             data-[state=active]:border-b-3
                             data-[state=active]:border-b-purple-700 h-full`}>Meta Ads {metaMetrics.length}</TabsTrigger>
-            <TabsTrigger value="fb" className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
-                            data-[state=active]:bg-purple-100/50
-                            data-[state=active]:text-foreground
-                            data-[state=active]:border-b-3
-                            data-[state=active]:border-b-purple-700 h-full  `}>Facebook Ads {fbMetrics.length}</TabsTrigger>
           </TabsList>
           <TabsContent value="all" className="border-0 p-0">
             <Command>
@@ -342,7 +338,7 @@ const MetricSelector = ({ value, onChange }) => {
             <Command>
               <CommandList>
                 <CommandEmpty>No metric found.</CommandEmpty>
-                {fbMetrics.map((metric) => (
+                {metaMetrics.map((metric) => (
                   <CommandItem
                     key={metric.id}
                     value={metric.name}
@@ -403,7 +399,7 @@ const MetricsHub = () => {
     }
   }, [customMetrics])
 
-  const allMetrics = [...standardMetrics, ...metaMetrics, ...campaignsMetrics, ...contactsMetrics, ...customMetrics]
+  const allMetrics = [...standardMetrics, ...metaMetrics, ...metaMetrics, ...contactsMetrics, ...customMetrics]
 
   // Filter metrics based on active tab and search
   const filteredMetrics = allMetrics.filter((metric) => {
@@ -558,7 +554,7 @@ const MetricsHub = () => {
         </Badge>
       )
     }
-    if (source === "Meta Ads" || source === "Facebook Ads") {
+    if (source === "Meta Ads" ) {
       return (
         <Badge variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
           <TrendingUp className="w-3 h-3" />
@@ -657,7 +653,7 @@ const MetricsHub = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {standardMetrics.length + metaMetrics.length + campaignsMetrics.length + contactsMetrics.length}
+                {standardMetrics.length + metaMetrics.length + metaMetrics.length + contactsMetrics.length}
               </div>
             </CardContent>
           </Card>
