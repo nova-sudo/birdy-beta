@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import {
@@ -13,34 +13,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Search,
-  Plus,
-  Filter,
-  TrendingUp,
-  Users,
-  DollarSign,
-  Target,
-  Calculator,
-  Webhook,
-  BarChart3,
-  Edit,
-  Trash2,
-  PieChart,
-  X,
-} from "lucide-react"
+import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X } from "lucide-react"
 
-// Predefined standard metrics from GoHighLevel
+// Predefined standard metrics from GoHighLevel (Clients page)
 const standardMetrics = [
   {
     id: "leads",
@@ -84,7 +63,7 @@ const standardMetrics = [
   },
 ]
 
-// Predefined standard metrics from Meta Ads
+// Predefined standard metrics from Meta Ads (Clients page)
 const metaMetrics = [
   {
     id: "cpl",
@@ -108,41 +87,143 @@ const metaMetrics = [
   },
 ]
 
-// Predefined webhook metrics
-// const webhookMetrics = [
-//   {
-//     id: "zapier-lead-count",
-//     name: "Zapier Lead Count",
-//     description: "Leads imported via Zapier integration",
-//     source: "Webhook",
-//     dashboard: "Clients",
-//     formula: null,
-//     category: "webhook",
-//     enabled: true,
-//   },
-//   {
-//     id: "make-webhook-conversions",
-//     name: "Make.com Webhook Conversions",
-//     description: "Conversions tracked via Make.com webhook",
-//     source: "Webhook",
-//     dashboard: "Campaign",
-//     formula: null,
-//     category: "webhook",
-//     enabled: true,
-//   },
-// ]
+const campaignsMetrics = [
+  {
+    id: "spend",
+    name: "Spend",
+    description: "Campaign advertising spend",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "impressions",
+    name: "Impressions",
+    description: "Number of impressions",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "clicks",
+    name: "Clicks",
+    description: "Number of clicks",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "cpc",
+    name: "CPC",
+    description: "Cost per click",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "reach",
+    name: "Reach",
+    description: "Total reach of campaign",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "ctr",
+    name: "CTR",
+    description: "Click-through rate",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "frequency",
+    name: "Frequency",
+    description: "Average frequency per user",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "cpm",
+    name: "CPM",
+    description: "Cost per thousand impressions",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "campaign-results",
+    name: "Results",
+    description: "Campaign results/conversions",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+  {
+    id: "campaign-leads",
+    name: "Campaign Leads",
+    description: "Leads from campaign",
+    source: "Facebook Ads",
+    dashboard: "Campaigns",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+]
 
-// Available metrics for formula builder
+const contactsMetrics = [
+  {
+    id: "lead-value",
+    name: "Lead Value",
+    description: "Value of individual leads",
+    source: "GoHighLevel",
+    dashboard: "Contacts",
+    formula: null,
+    category: "standard",
+    enabled: true,
+  },
+]
+
 const availableMetrics = [
-  { id: "leads", name: "Leads" },
-  { id: "bookings", name: "Bookings" },
-  { id: "total-revenue", name: "Total Revenue" },
-  { id: "upsell-revenue", name: "Upsell Revenue" },
-  { id: "cpl", name: "CPL" },
-  { id: "ad-spend", name: "Ad Spend" },
-  { id: "clicks", name: "Clicks" },
-  { id: "impressions", name: "Impressions" },
-  { id: "conversions", name: "Conversions" },
+  // Clients page
+  { id: "leads", name: "Leads", dashboard: "Clients" },
+  { id: "bookings", name: "Bookings", dashboard: "Clients" },
+  { id: "total-revenue", name: "Total Revenue", dashboard: "Clients" },
+  { id: "upsell-revenue", name: "Upsell Revenue", dashboard: "Clients" },
+  { id: "cpl", name: "CPL", dashboard: "Clients" },
+  { id: "ad-spend", name: "Ad Spend", dashboard: "Clients" },
+  // Campaigns page
+  { id: "spend", name: "Spend", dashboard: "Campaigns" },
+  { id: "impressions", name: "Impressions", dashboard: "Campaigns" },
+  { id: "clicks", name: "Clicks", dashboard: "Campaigns" },
+  { id: "cpc", name: "CPC", dashboard: "Campaigns" },
+  { id: "reach", name: "Reach", dashboard: "Campaigns" },
+  { id: "ctr", name: "CTR", dashboard: "Campaigns" },
+  { id: "frequency", name: "Frequency", dashboard: "Campaigns" },
+  { id: "cpm", name: "CPM", dashboard: "Campaigns" },
+  { id: "campaign-results", name: "Results", dashboard: "Campaigns" },
+  { id: "campaign-leads", name: "Campaign Leads", dashboard: "Campaigns" },
+  // Contacts page
+  { id: "lead-value", name: "Lead Value", dashboard: "Contacts" },
 ]
 
 const operators = [
@@ -158,7 +239,7 @@ const MetricsHub = () => {
   const [customMetrics, setCustomMetrics] = useState([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMetric, setEditingMetric] = useState(null)
-  
+
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
     name: "",
@@ -187,13 +268,7 @@ const MetricsHub = () => {
     }
   }, [customMetrics])
 
-  // Combine all metrics
-  const allMetrics = [
-    ...standardMetrics,
-    ...metaMetrics,
-    // ...webhookMetrics,
-    ...customMetrics,
-  ]
+  const allMetrics = [...standardMetrics, ...metaMetrics, ...campaignsMetrics, ...contactsMetrics, ...customMetrics]
 
   // Filter metrics based on active tab and search
   const filteredMetrics = allMetrics.filter((metric) => {
@@ -246,7 +321,7 @@ const MetricsHub = () => {
 
     if (editingMetric) {
       setCustomMetrics(
-        customMetrics.map((m) => (m.id === editingMetric.id ? { ...newMetric, id: editingMetric.id } : m))
+        customMetrics.map((m) => (m.id === editingMetric.id ? { ...newMetric, id: editingMetric.id } : m)),
       )
     } else {
       setCustomMetrics([...customMetrics, newMetric])
@@ -289,19 +364,13 @@ const MetricsHub = () => {
   }
 
   const handleToggleMetric = (metricId) => {
-    setCustomMetrics(
-      customMetrics.map((m) => (m.id === metricId ? { ...m, enabled: !m.enabled } : m))
-    )
+    setCustomMetrics(customMetrics.map((m) => (m.id === metricId ? { ...m, enabled: !m.enabled } : m)))
   }
 
   const addOperation = () => {
     setMetricForm({
       ...metricForm,
-      formulaParts: [
-        ...metricForm.formulaParts,
-        { type: "operator", value: "+" },
-        { type: "metric", value: "leads" },
-      ],
+      formulaParts: [...metricForm.formulaParts, { type: "operator", value: "+" }, { type: "metric", value: "leads" }],
     })
   }
 
@@ -335,11 +404,11 @@ const MetricsHub = () => {
         </Badge>
       )
     }
-    if (source === "Meta Ads") {
+    if (source === "Meta Ads" || source === "Facebook Ads") {
       return (
         <Badge variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
           <TrendingUp className="w-3 h-3" />
-          Meta Ads
+          {source}
         </Badge>
       )
     }
@@ -360,43 +429,42 @@ const MetricsHub = () => {
   }
 
   const getDashboardBadge = (dashboard) => {
+    const normalizedDashboard = dashboard === "Campaign" ? "Campaigns" : dashboard
     const colors = {
       Clients: "bg-green-100 text-green-800",
-      Campaign: "bg-blue-100 text-blue-800",
+      Campaigns: "bg-blue-100 text-blue-800",
+      Contacts: "bg-purple-100 text-purple-800",
       "Call Centre": "bg-orange-100 text-orange-800",
     }
 
-    return (
-      <Badge className={colors[dashboard] || "bg-gray-100 text-gray-800"}>
-        {dashboard}
-      </Badge>
-    )
+    return <Badge className={colors[normalizedDashboard] || "bg-gray-100 text-gray-800"}>{normalizedDashboard}</Badge>
   }
 
   return (
     <div className="min-h-screen bg-white w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8 ">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-
           <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Metrics Hub</h1>
+              <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                Metrics Hub
+              </h1>
               <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
-                View, create and manage metrics to track important KPIs
+                View, create and manage metrics from all dashboards - Clients, Campaigns, and Contacts
               </p>
             </div>
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
-              <Input
-                type="search"
-                placeholder="Search metrics..."
-                className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
+            <Input
+              type="search"
+              placeholder="Search metrics..."
+              className="bg-white rounded-lg h-10 px-2 placeholder:text-left placeholder:text-muted-foreground flex items-center 
                   flex-1 min-w-[150px] md:max-w-[120px] md:text-sm"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+
             <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
             </Button>
@@ -410,8 +478,8 @@ const MetricsHub = () => {
             >
               <Plus className="h-4 text-white w-4 border-2 rounded-xl " />
             </Button>
-            </div>
-      </div>
+          </div>
+        </div>
 
         {/* Stats Cards */}
         <div className="grid gap-4 md:grid-cols-4">
@@ -420,8 +488,7 @@ const MetricsHub = () => {
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <PieChart className="h-4 w-4 text-muted-foreground text-purple-500" />
-                </div>
-              
+              </div>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{allMetrics.length}</div>
@@ -435,19 +502,18 @@ const MetricsHub = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{standardMetrics.length + metaMetrics.length}</div>
+              <div className="text-2xl font-bold">
+                {standardMetrics.length + metaMetrics.length + campaignsMetrics.length + contactsMetrics.length}
+              </div>
             </CardContent>
           </Card>
-          <Card> 
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Webhook Metrics</CardTitle>
               <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                 <Webhook className="h-4 w-4 text-muted-foreground text-purple-500" />
               </div>
             </CardHeader>
-            {/* <CardContent>
-              <div className="text-2xl font-bold">{webhookMetrics.length}</div>
-            </CardContent> */}
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -464,44 +530,62 @@ const MetricsHub = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full over">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm 
-          overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0">
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+          <TabsList
+            className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm 
+          overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0"
+          >
+            <TabsTrigger
+              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white
             data-[state=active]:text-foreground
             data-[state=active]:shadow-sm
             data-[state=active]:border-r-0
             data-[state=active]:rounded-md
             data-[state=active]:border-b-2
-            data-[state=active]:border-b-purple-700" 
-            value="all">All Metrics</TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:border-b-purple-700"
+              value="all"
+            >
+              All Metrics
+            </TabsTrigger>
+            <TabsTrigger
+              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white
             data-[state=active]:text-foreground
             data-[state=active]:shadow-sm
             data-[state=active]:border-r-0
             data-[state=active]:rounded-md
             data-[state=active]:border-b-2
-            data-[state=active]:border-b-purple-700" 
-             value="standard">Standard Metrics</TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:border-b-purple-700"
+              value="standard"
+            >
+              Standard Metrics
+            </TabsTrigger>
+            <TabsTrigger
+              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white
             data-[state=active]:text-foreground
             data-[state=active]:shadow-sm
             data-[state=active]:border-r-0
             data-[state=active]:rounded-md
             data-[state=active]:border-b-2
-            data-[state=active]:border-b-purple-700" 
-             value="webhook">Webhook Metrics</TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+            data-[state=active]:border-b-purple-700"
+              value="webhook"
+            >
+              Webhook Metrics
+            </TabsTrigger>
+            <TabsTrigger
+              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white
             data-[state=active]:text-foreground
             data-[state=active]:shadow-sm
             data-[state=active]:border-r-0
             data-[state=active]:rounded-md
             data-[state=active]:border-b-2
-            data-[state=active]:border-b-purple-700" 
-             value="custom">Custom Formulas</TabsTrigger>
+            data-[state=active]:border-b-purple-700"
+              value="custom"
+            >
+              Custom Formulas
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-6">
@@ -531,9 +615,7 @@ const MetricsHub = () => {
                         <td className="px-6 py-4">
                           <div>
                             <div className="font-semibold text-foreground whitespace-nowrap">{metric.name}</div>
-                            <div className="text-sm text-muted-foreground mt-0.5">
-                              {metric.description}
-                            </div>
+                            <div className="text-sm text-muted-foreground mt-0.5">{metric.description}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4">{getSourceBadge(metric.source)}</td>
@@ -547,7 +629,6 @@ const MetricsHub = () => {
                                   size="sm"
                                   className="h-9 px-3 bg-purple-600 disabled:bg-purple-600/50 text-white  hover:bg-purple-700"
                                   onClick={() => handleEditMetric(metric)}
-                                  
                                 >
                                   Edit Metric
                                 </Button>
@@ -558,7 +639,6 @@ const MetricsHub = () => {
                                   onClick={() => handleDeleteMetric(metric.id)}
                                   tooltip="Delete Metric"
                                 >
-                                    
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </>
@@ -567,27 +647,12 @@ const MetricsHub = () => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-9 px-3 bg-[#7854EA] text-white disabled:bg-[#7854EA]/70 hover:bg-purple-700"
+                                className="h-9 px-3 bg-gray-100 hover:bg-gray-200"
                                 disabled
-                                tooltip="Editing standard/webhook metrics is not allowed"
                               >
-                                Edit Metric
+                                {metric.enabled ? "Enabled" : "Disabled"}
                               </Button>
                             )}
-                            <div
-                            disabled
-                              className={`relative disabled:bg-gray-700  inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
-                                metric.enabled ? "bg-purple-600" : "bg-gray-200"
-                              }`}
-                              onClick={() => metric.category === "custom" && handleToggleMetric(metric.id)}
-                            >
-                              <span
-                              disabled
-                                className={`inline-block disabled:bg-gray-700 h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                  metric.enabled ? "translate-x-6" : "translate-x-1"
-                                }`}
-                              />
-                            </div>
                           </div>
                         </td>
                       </tr>
@@ -596,92 +661,66 @@ const MetricsHub = () => {
                 </table>
               </div>
             </div>
-
-            {filteredMetrics.length === 0 && (
-              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-12">
-                <Calculator className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No metrics found</h3>
-                <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-                  {searchQuery
-                    ? "Try adjusting your search terms"
-                    : "Create your first custom metric to get started"}
-                </p>
-              </div>
-            )}
           </TabsContent>
         </Tabs>
-      </div>
 
-      {/* Create/Edit Metric Dialog */}
-      <Dialog  open={isCreateDialogOpen} onOpenChange={(open) => {
-        if (!open) resetForm()
-        setIsCreateDialogOpen(open)
-      }}>
-        <DialogContent className="sm:max-w-[600px] bg-white overflow-auto max-h-dvh">
-          <DialogHeader>
-            <DialogTitle>{editingMetric ? "Edit Custom Metric" : "Create Custom Metric"}</DialogTitle>
-          </DialogHeader>
+        {/* Create/Edit Metric Dialog */}
+        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{editingMetric ? "Edit Metric" : "Create New Metric"}</DialogTitle>
+              <DialogDescription>Build a custom metric by combining available metrics with operators</DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-6 py-4">
-            {/* Metric Name */}
-            <div className="space-y-2">
-              <Label htmlFor="metric-name">Metric Name</Label>
-              <Input
-                id="metric-name"
-                placeholder="e.g., Lead-to-Close Ratio"
-                value={metricForm.name}
-                onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
-              />
-            </div>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="metric-name">Metric Name *</Label>
+                <Input
+                  id="metric-name"
+                  placeholder="e.g., ROI, Cost per Conversion"
+                  value={metricForm.name}
+                  onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
+                />
+              </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="metric-description">Description (Optional)</Label>
-              <Textarea
-                id="metric-description"
-                placeholder="Describe what this metric measures"
-                value={metricForm.description}
-                onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
-                rows={2}
-              />
-            </div>
+              <div>
+                <Label htmlFor="metric-description">Description</Label>
+                <Textarea
+                  id="metric-description"
+                  placeholder="Optional description of what this metric calculates"
+                  value={metricForm.description}
+                  onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
+                />
+              </div>
 
-            {/* Group */}
-            <div className="space-y-2 bg-white">
-              <Label htmlFor="metric-group">
-                Group <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={metricForm.group}
-                onValueChange={(value) => setMetricForm({ ...metricForm, group: value })}
-              >
-                <SelectTrigger id="metric-group">
-                  <SelectValue placeholder="Select a group" />
-                </SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="Clients">Clients</SelectItem>
-                  <SelectItem value="Campaign">Campaign</SelectItem>
-                  <SelectItem value="Call Centre">Call Centre</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="metric-group">Dashboard *</Label>
+                <Select
+                  value={metricForm.group}
+                  onValueChange={(value) => setMetricForm((prev) => ({ ...prev, group: value }))}
+                >
+                  <SelectTrigger className="w-full bg-white">
+                    <SelectValue placeholder="Select dashboard" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Clients">Clients</SelectItem>
+                    <SelectItem value="Campaigns">Campaigns</SelectItem>
+                    <SelectItem value="Contacts">Contacts</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Formula Builder */}
-            <div className="space-y-3 ">
-              <Label>Formula Builder</Label>
-              <div className="space-y-3 p-4 rounded-lg border bg-muted/20">
-                {metricForm.formulaParts.map((part, index) => (
-                  <div key={index}>
-                    {part.type === "metric" ? (
-                      <div className="flex items-center bg-white gap-2">
-                        <Select
-                          value={part.value}
-                          onValueChange={(value) => updateFormulaPart(index, value)}
-                        >
-                          <SelectTrigger className="bg-purple-100 border-purple-200">
+              <div>
+                <Label>Formula Builder</Label>
+                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+                  {metricForm.formulaParts.map((part, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      {part.type === "metric" ? (
+                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
+                          <SelectTrigger className="flex-1">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                          <SelectContent>
                             {availableMetrics.map((metric) => (
                               <SelectItem key={metric.id} value={metric.id}>
                                 {metric.name}
@@ -689,27 +728,12 @@ const MetricsHub = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                        {metricForm.formulaParts.length > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-9 w-9"
-                            onClick={() => removeFormulaPart(index)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex items-center justify-center">
-                        <Select
-                          value={part.value}
-                          onValueChange={(value) => updateFormulaPart(index, value)}
-                        >
-                          <SelectTrigger className="w-32 bg-white">
+                      ) : (
+                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
+                          <SelectTrigger className="w-24">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                          <SelectContent>
                             {operators.map((op) => (
                               <SelectItem key={op.value} value={op.value}>
                                 {op.label}
@@ -717,62 +741,46 @@ const MetricsHub = () => {
                             ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={addOperation}
-                  className="w-full gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Operation
-                </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFormulaPart(index)}
+                        disabled={metricForm.formulaParts.length === 1}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addOperation} className="w-full bg-transparent">
+                    <Plus className="h-4 w-4 mr-2" /> Add Operation
+                  </Button>
+                </div>
               </div>
 
-              {/* Formula Preview */}
-              <div className="p-3 rounded-lg bg-muted">
-                <div className="text-sm font-medium text-muted-foreground mb-1">Formula Preview:</div>
-                <div className="font-mono text-sm">{buildFormulaString(metricForm.formulaParts)}</div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="display-dashboard"
+                  checked={metricForm.displayOnDashboard}
+                  onCheckedChange={(checked) => setMetricForm({ ...metricForm, displayOnDashboard: checked })}
+                />
+                <Label htmlFor="display-dashboard" className="font-normal">
+                  Display on dashboard
+                </Label>
               </div>
             </div>
 
-            {/* Display on Dashboard */}
-            {/* <div className="flex items-center space-x-2">
-              <Checkbox
-                id="display-dashboard"
-                checked={metricForm.displayOnDashboard}
-                onCheckedChange={(checked) =>
-                  setMetricForm({ ...metricForm, displayOnDashboard: checked })
-                }
-              />
-              <Label
-                htmlFor="display-dashboard"
-                className="text-sm font-normal cursor-pointer"
-              >
-                Display on dashboard
-              </Label>
-            </div> */}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsCreateDialogOpen(false)
-              resetForm()
-            }}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleCreateMetric}
-              className="bg-purple-600 text-white hover:bg-purple-700"
-            >
-              Save Metric
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={resetForm}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateMetric} className="bg-purple-600 hover:bg-purple-700">
+                {editingMetric ? "Update Metric" : "Create Metric"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
     </div>
   )
 }
