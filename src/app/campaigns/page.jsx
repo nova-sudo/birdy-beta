@@ -38,6 +38,8 @@ import metaa from "../../../public/meta-icon-DH8jUhnM.png"
 import lab from "../../../public/lab.png"
 import { getMetricDisplayName } from "@/lib/metrics"
 import { Loading } from "@/components/ui/loader"
+import { TableContainer } from "@/components/ui/table-container" // Or the correct path
+import StyledTable from "@/components/ui/table-container" // Or the correct path; assuming it's default exported
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([])
@@ -313,6 +315,7 @@ const Campaigns = () => {
     if (activeTab === "leads") return applyFilters(leads)
     return []
   }
+  
 
   const baseColumns = [
     "name",
@@ -332,6 +335,23 @@ const Campaigns = () => {
   }
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
+
+  const tableTitle = `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Overview`;
+const tableDescription = `Showing ${getFilteredDataForTab().length} ${activeTab}`;
+const tableColumns = getCurrentVisibleColumns().map((col) => ({
+  key: col,
+  header: () => (
+    <div className="flex items-center justify-between min-w-[200px]">
+      <span>{getMetricDisplayName(col)}</span>
+      {col === "clientGroup" || col === "name" ? (
+        <Image src={lab} alt="Lab" className="w-4 h-4 ml-2" />
+      ) : (
+        <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
+      )}
+    </div>
+  ),
+  render: (value) => formatCellValue(value, col),
+}));
 
   const toggleColumn = (col) => {
     setVisibleColumns((prev) => {
@@ -536,29 +556,20 @@ const Campaigns = () => {
 
           <TabsContent value={activeTab} className="mt-6">
             {/* Filters */}
-              <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-                <div className="flex items-center gap-3 flex-1">
-                  {(filterConditions.length > 0 || searchTerm) && (
-                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2 bg-transparent">
-                      <X className="h-4 w-4" />
-                      Clear
-                    </Button>
-                  )}
-                </div>
+              <div className="flex flex-col space-y-0 md:flex-row md:items-center md:justify-between md:space-y-0">
               
-
               {/* Active Filters */}
               {filterConditions.length > 0 && (
-                <div className="pt-4 border-t space-y-3">
+                <div className="border rounded-lg my-3 text-left">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-foreground">Active Filters</h3>
-                    <Button variant="ghost" size="sm" onClick={() => setFilterConditions([])} className="h-8 text-xs">
+                    <h3 className="text-sm px-4 mt-2 font-semibold text-foreground">Active Filters</h3>
+                    <Button variant="ghost" size="sm" onClick={() => setFilterConditions([])} className="h-8 px-4 mt-2 text-xs">
                       Clear all
                     </Button>
                   </div>
                   <div className="space-y-2">
                     {filterConditions.map((c, idx) => (
-                      <div key={idx} className="flex items-center gap-2 p-3 rounded-md bg-muted/50 border">
+                      <div key={idx} className="flex items-center gap-2 p-3  bg-muted/50 border-t">
                         <Select value={c.field} onValueChange={(v) => updateFilterCondition(idx, "field", v)}>
                           <SelectTrigger className="w-[160px] h-9">
                             <SelectValue />
@@ -624,6 +635,14 @@ const Campaigns = () => {
                   </div>
                 </div>
               )}
+               <div className="flex justify-end items-center gap-3 flex-1">
+                  {(filterConditions.length > 0 || searchTerm) && (
+                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2 bg-transparent">
+                      <X className="h-4 w-4" />
+                      Clear
+                    </Button>
+                  )}
+                </div>
             </div>
 
             {/* Table */}
@@ -639,7 +658,8 @@ const Campaigns = () => {
               </div>
             ) : getFilteredDataForTab().length > 0 ? (
               <div className="rounded-lg border bg-card overflow-hidden">
-                <div className="overflow-x-auto">
+                  <StyledTable columns={tableColumns} data={getFilteredDataForTab()} />
+                {/* <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b border-r whitespace-nowrap">
                       <tr>
@@ -675,7 +695,7 @@ const Campaigns = () => {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </div> */}
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
