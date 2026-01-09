@@ -2,17 +2,15 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
 import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target } from "lucide-react"
 import { toast } from "sonner"
-import { ClientGroupsTable } from "@/components/client-groups-table"
 import { Input } from "@/components/ui/input"
 import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
-import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import {
   Select,
   SelectContent,
@@ -30,10 +28,8 @@ import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
-import { Progress } from "@/components/ui/progress"
 import {
   Empty,
-  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -41,6 +37,7 @@ import {
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
 import { Loading } from "@/components/ui/loader"
+import StyledTable from "@/components/ui/table-container"
 
 
 const CACHE_DURATION = {
@@ -1003,7 +1000,7 @@ const handleCreateClientGroup = async () => {
         </div>
 
         {/* Client Groups Table */}
-        <ClientGroupsTable 
+        <StyledTable 
           data={clientGroups} 
           onRowClick={handleClientGroupClick} 
           columns={columns} 

@@ -727,7 +727,7 @@ export default function ContactPage() {
 
               <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
                 <SelectTrigger className="h-10 bg-white gap-1"><CiCalendar className="h-4 w-4" /><SelectValue placeholder="Date" /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white">
                   <SelectItem value="all">All Time</SelectItem>
                   <SelectItem value="today">Today</SelectItem>
                   <SelectItem value="week">Last 7 Days</SelectItem>
