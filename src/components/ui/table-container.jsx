@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
 
 import {
   loadCustomMetrics,
@@ -23,9 +22,6 @@ export const TableContainer = ({ children, title, description }) => (
   </Card>
 )
 
-/**
- * StyledTable component that uses shadcn UI table components
- */
 const StyledTable = ({
   columns = [],
   data = [],
@@ -278,7 +274,7 @@ const StyledTable = ({
             left: 0;
             background: white;
             z-index: 50;
-            min-width: 243px;
+            min-width: 250px;
             font-weight: 600;
           }
           .fixed-column-odd {
@@ -287,7 +283,7 @@ const StyledTable = ({
             left: 0;
             background: #f4f3f9;
             z-index: 50;
-            min-width: 243px;
+            min-width: 250px;
             font-weight: 600;
           }
           .fixed-header {
@@ -325,23 +321,23 @@ const StyledTable = ({
       `}</style>
       {/* Table */}
       <div className="table-container border rounded-md">
-        <Table className="w-full text-sm">
-          <TableHeader className="bg-muted/30">
-            <TableRow className="hover:bg-transparent">
-              {visibleColumns.map((col, colIdx) => (
-                <TableHead
+        <table className="text-sm">
+          <thead className="top-0 z-40">
+            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
+              {visibleColumns.map((col) => (
+                <th
                   key={col.id}
                   draggable={col.id !== "name"}
                   onDragStart={(e) => handleDragStart(e, col.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col.id)}
-                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default px-2 ${
-                    colIdx === 0
+                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
+                    col.id === "name"
                       ? "fixed-header"
-                      : "min-w-[135px]  whitespace-nowrap "
+                      : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] h-full justify-between gap-2">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between gap-2">
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
@@ -371,31 +367,32 @@ const StyledTable = ({
                       ) : null}
                     </div>
                   </div>
-                </TableHead>
+                </th>
               ))}
-            </TableRow>
-          </TableHeader>
+            </tr>
+          </thead>
 
-          <TableBody>
+          <tbody className="text-center">
             {sortedData.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={visibleColumns.length} className="px-4 py-8 text-muted-foreground">
+              <tr>
+                <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
                   {isClientMode ? "No client groups found" : "No data available."}
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               sortedData.map((row, idx) => (
-                <TableRow
+                <tr
                   key={row.id || idx}
                   onClick={() => !row._isCreating && onRowClick?.(row.original || row)}
                   className={`border-b transition-colors ${
                     row._isCreating 
                       ? "bg-muted/30 cursor-wait opacity-60" 
                       : "hover:bg-muted/50 cursor-pointer"
-                  } ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                  } 
+                  ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
                   {visibleColumns.map((col, colIdx) => (
-                    <TableCell
+                    <td
                       key={`${row.id || idx}-${col.id}`}
                       className={`text-foreground ${
                         colIdx === 0
@@ -408,7 +405,7 @@ const StyledTable = ({
                       <div
                         className={
                           colIdx === 0
-                            ? "py-3 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2"
+                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2"
                             : ""
                         }
                       >
@@ -429,13 +426,13 @@ const StyledTable = ({
                           )}
                         </span>
                       </div>
-                    </TableCell>
+                    </td>
                   ))}
-                </TableRow>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {isClientMode && (
