@@ -512,7 +512,7 @@ const handleRefresh = () => {
                 )}
                 
                 
-              <Button
+              {/* <Button
                   variant="outline"
                   onClick={handleRefresh}
                   disabled={isRefreshing}
@@ -520,7 +520,7 @@ const handleRefresh = () => {
                 >
                   <RefreshCw className={`h-4 w-4 mr-2 md:mr-0 lg:mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   <span className="inline md:hidden lg:inline">Refresh</span>
-                </Button>
+                </Button> */}
                 <Button
                   className="bg-white font-semibold h-10 md:px-2 lg:px-3"
                   variant="outline"
