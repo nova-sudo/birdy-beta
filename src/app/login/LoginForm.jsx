@@ -72,7 +72,7 @@ export default function LoginForm() {
 
   return (
     <div className="min-h-dvh flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+      <div className="w-[calc(100dvw-0px)] max-w-md">
         <Card className="shadow-md border bg-white">
           <CardHeader className="space-y-1 text-center pb-8">
             <div className="mx-auto w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mb-4">

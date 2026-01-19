@@ -202,7 +202,7 @@ const fetchClientGroups = async (forceRefresh = false) => {
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
       }
-
+      // 
       const data = await response.json()
       const groups = data.client_groups || []
 
@@ -499,10 +499,10 @@ const handleCreateClientGroup = async () => {
                 </DropdownMenu>
             </div>
               
-              <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>
+              {/* <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>
                 <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                 <span className="hidden lg:inline ">Refresh</span>
-              </Button>
+              </Button> */}
               <Dialog
                 open={wizardOpen}
                 onOpenChange={(open) => {
