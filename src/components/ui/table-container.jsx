@@ -292,7 +292,7 @@ const StyledTable = ({
             z-index: 50;
             background: white;
             min-width: 150px;
-            width: 100%;
+            width: 5%;
           }
         }
 
