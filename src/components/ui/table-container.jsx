@@ -1,5 +1,5 @@
-// src/components/client-groups-table.jsx
 import { useState, useMemo, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 import {
   loadCustomMetrics,
@@ -7,25 +7,55 @@ import {
   formatMetricValue,
 } from "@/lib/metrics";
 
-export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility, searchQuery , customMetrics , setCustomMetrics}) {
-  /* ---------- STATE ---------- */
-  const [sortConfig, setSortConfig] = useState({ key: "name", direction: "asc" });
-  const [draggedColumn, setDraggedColumn] = useState(null);
+/**
+ * Reusable container for dashboard tables with glassmorphism styling
+ */
+export const TableContainer = ({ children, title, description }) => (
+  <Card className="border border-border/40 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm">
+    <CardHeader className="pb-3 border-b border-border/30">
+      <div>
+        <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
+        {description && <CardDescription className="text-xs text-muted-foreground mt-1">{description}</CardDescription>}
+      </div>
+    </CardHeader>
+    <CardContent className="p-0 overflow-x-auto">{children}</CardContent>
+  </Card>
+)
 
-  // Drag-and-drop order
+const StyledTable = ({
+  columns = [],
+  data = [],
+  clickableFirstColumn = false,
+  onFirstColumnClick,
+  onRowClick,
+  columnVisibility = {},
+  searchQuery = "",
+  customMetrics,
+  setCustomMetrics,
+}) => {
+  /* ---------- STATE ---------- */
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState([]);
+
+  const isClientMode = customMetrics !== undefined;
 
   /* ---------- LOAD CUSTOM METRICS ---------- */
   useEffect(() => {
-    const metrics = loadCustomMetrics();
-    setCustomMetrics(metrics);
-  }, []);
+    if (setCustomMetrics) {
+      const metrics = loadCustomMetrics();
+      setCustomMetrics(metrics);
+    }
+  }, [setCustomMetrics]);
 
   /* ---------- VISIBLE + ORDERED COLUMNS ---------- */
   const visibleColumns = useMemo(() => {
     let list = columns.map((col) => ({
       ...col,
-      visible: col.id === "name" ? true : columnVisibility[col.id] ?? col.visible,
+      id: col.id || col.key,
+      header: col.header || col.label,
+      cell: col.cell || col.render,
+      visible: col.id === "name" ? true : columnVisibility[col.id] ?? col.visible ?? true,
     }));
 
     list = list.filter((c) => c.visible);
@@ -42,8 +72,18 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
     return list;
   }, [columns, columnVisibility, columnOrder]);
 
+  useEffect(() => {
+    if (!sortConfig.key && visibleColumns.length > 0) {
+      setSortConfig({ key: visibleColumns[0].id, direction: "asc" });
+    }
+  }, [visibleColumns, sortConfig.key]);
+
   /* ---------- FLATTENED DATA (with aliases) ---------- */
   const flattenedData = useMemo(() => {
+    if (!isClientMode) {
+      return data;
+    }
+
     return data.map((group) => {
       // Safely extract nested values - NEVER return objects
       const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
@@ -102,26 +142,35 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
 
       return base;
     });
-  }, [data, customMetrics]);
+  }, [data, customMetrics, isClientMode]);
 
   /* ---------- FILTER & SORT ---------- */
   const filteredData = useMemo(() => {
     if (!searchQuery) return flattenedData;
     const q = searchQuery.toLowerCase();
-    return flattenedData.filter((row) => row.name.toLowerCase().includes(q));
-  }, [flattenedData, searchQuery]);
+    const searchKey = visibleColumns[0]?.id;
+    if (!searchKey) return flattenedData;
+    return flattenedData.filter((row) => {
+      const value = row[searchKey];
+      return value != null && value.toString().toLowerCase().includes(q);
+    });
+  }, [flattenedData, searchQuery, visibleColumns]);
 
   const sortedData = useMemo(() => {
+    if (!sortConfig.key) return filteredData;
     const copy = [...filteredData];
     copy.sort((a, b) => {
-      const av = a[sortConfig.key];
-      const bv = b[sortConfig.key];
-      if (typeof av === "string") {
-        return sortConfig.direction === "asc"
-          ? av.localeCompare(bv)
-          : bv.localeCompare(av);
+      let av = a[sortConfig.key];
+      let bv = b[sortConfig.key];
+      if (av == null) av = typeof bv === 'string' ? '' : 0;
+      if (bv == null) bv = typeof av === 'string' ? '' : 0;
+      let cmp;
+      if (typeof av === "string" && typeof bv === "string") {
+        cmp = av.localeCompare(bv);
+      } else {
+        cmp = Number(av) - Number(bv);
       }
-      return sortConfig.direction === "asc" ? av - bv : bv - av;
+      return sortConfig.direction === "asc" ? cmp : -cmp;
     });
     return copy;
   }, [filteredData, sortConfig]);
@@ -195,7 +244,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
     }
 
     // Custom metrics formatting
-    if (customMetrics.some((m) => m.id === columnId)) {
+    if (customMetrics?.some((m) => m.id === columnId)) {
       return formatMetricValue(value, columnId);
     }
 
@@ -225,7 +274,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
             left: 0;
             background: white;
             z-index: 50;
-            min-width: 243px;
+            min-width: 250px;
             font-weight: 600;
           }
           .fixed-column-odd {
@@ -234,7 +283,7 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
             left: 0;
             background: #f4f3f9;
             z-index: 50;
-            min-width: 243px;
+            min-width: 250px;
             font-weight: 600;
           }
           .fixed-header {
@@ -272,34 +321,34 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
       `}</style>
       {/* Table */}
       <div className="table-container border rounded-md">
-        <table className="text-sm ">
+        <table className="text-sm">
           <thead className="top-0 z-40">
             <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
-              {visibleColumns.map((column) => (
+              {visibleColumns.map((col) => (
                 <th
-                  key={column.id}
-                  draggable={column.id !== "name"}
-                  onDragStart={(e) => handleDragStart(e, column.id)}
+                  key={col.id}
+                  draggable={col.id !== "name"}
+                  onDragStart={(e) => handleDragStart(e, col.id)}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, column.id)}
+                  onDrop={(e) => handleDrop(e, col.id)}
                   className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
-                    column.id === "name"
+                    col.id === "name"
                       ? "fixed-header"
-                      : "min-w-[135px]   whitespace-nowrap "
+                      : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
                   <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
-                        onClick={() => column.sortable && handleSort(column.id)}
+                        onClick={() => col.sortable && handleSort(col.id)}
                         className={`truncate align-middle text-left items-center gap-1 ${
-                          column.sortable
+                          col.sortable
                             ? "hover:text-foreground cursor-pointer"
                             : "cursor-default"
                         }`}
                       >
-                        {column.label}
-                        {column.sortable && sortConfig.key === column.id && (
+                        {typeof col.header === "function" ? col.header() : col.header}
+                        {col.sortable && sortConfig.key === col.id && (
                           <span className="text-sm px-2 text-right">
                             {sortConfig.direction === "asc" ? "↑" : "↓ "}
                           </span>
@@ -307,17 +356,17 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                       </button>
                     </div>
                     <div className="flex-shrink-0">
-                      {column.icons ? (
-                        typeof column.icons === "function" ? (
+                      {col.icons ? (
+                        typeof col.icons === "function" ? (
                           (() => {
-                            const Icon = column.icons
-                            return <Icon className="h-4 w-4 text-muted-foreground" />
+                            const Icon = col.icons;
+                            return <Icon className="h-4 w-4 text-muted-foreground" />;
                           })()
                         ) : (
                           <img
-                            src={column.icons.src ? column.icons.src : column.icons}
-                            alt={`${column.label} icon`}
-                            className="object-scale-down size-4"
+                            src={col.icons.src ? col.icons.src : col.icons}
+                            alt={`${col.label} icon`}
+                            className="text-muted-foreground object-scale-down size-4"
                           />
                         )
                       ) : null}
@@ -331,26 +380,27 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
           <tbody className="text-center">
             {sortedData.length === 0 ? (
               <tr>
-                <td colSpan={visibleColumns.length} className="px-4 py-8 text-muted-foreground">
-                  No client groups found
+                <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
+                  {isClientMode ? "No client groups found" : "No data available."}
                 </td>
               </tr>
             ) : (
               sortedData.map((row, idx) => (
                 <tr
-                  key={row.id}
-                  onClick={() => !row._isCreating && onRowClick(row.original)}
+                  key={row.id || idx}
+                  onClick={() => !row._isCreating && onRowClick?.(row.original || row)}
                   className={`border-b transition-colors ${
                     row._isCreating 
                       ? "bg-muted/30 cursor-wait opacity-60" 
                       : "hover:bg-muted/50 cursor-pointer"
-                  } ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                  } 
+                  ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
-                  {visibleColumns.map((column) => (
+                  {visibleColumns.map((col, colIdx) => (
                     <td
-                      key={`${row.id}-${column.id}`}
+                      key={`${row.id || idx}-${col.id}`}
                       className={`text-foreground ${
-                        column.id === "name"
+                        colIdx === 0
                           ? idx % 2 === 0
                             ? "fixed-column-odd"
                             : "fixed-column-even"
@@ -359,17 +409,26 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
                     >
                       <div
                         className={
-                          column.id === "name"
-                            ? "py-3 px-4 border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] flex items-center gap-2"
+                          colIdx === 0
+                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2"
                             : ""
                         }
                       >
-                        {/* Add spinner for name column when creating */}
-                        {column.id === "name" && row._isCreating && (
+                        {/* Add spinner for first column when creating */}
+                        {colIdx === 0 && row._isCreating && (
                           <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
                         <span className={row._isCreating ? "text-muted-foreground" : ""}>
-                          {getCellValue(row, column.id)}
+                          {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                            <button
+                              onClick={() => onFirstColumnClick?.(row)}
+                              className="text-left font-semibold text-primary hover:underline cursor-pointer"
+                            >
+                              {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                            </button>
+                          ) : (
+                            col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                          )}
                         </span>
                       </div>
                     </td>
@@ -381,9 +440,13 @@ export function ClientGroupsTable({ data, onRowClick, columns, columnVisibility,
         </table>
       </div>
 
-      <div className="text-sm text-center font-semibold text-black/50 text-muted-foreground">
-        Showing {sortedData.length} of {flattenedData.length} client groups
-      </div>
+      {isClientMode && (
+        <div className="text-sm text-center font-semibold text-black/50 text-muted-foreground">
+          Showing {sortedData.length} of {flattenedData.length} client groups
+        </div>
+      )}
     </div>
   );
 }
+
+export default StyledTable
