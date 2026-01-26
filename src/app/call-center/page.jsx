@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
-  Loader2,
   Users,
   Phone,
   Eye,
@@ -27,15 +26,13 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   Building2,
-  MapPin,
   Clock,
   Play,
   Download,
   User,
   Mail,
-  Loader,
+  Construction
 } from "lucide-react"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
@@ -462,9 +459,22 @@ const handleRefresh = () => {
   // Calculate total calls across all leads
   const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
 
+  const UnderConstruction = ({ title, message }) => (
+    <Card className="border-dashed border-2 py-24 flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
+      <Construction className="w-12 h-12 mb-4 opacity-20" />
+      <h3 className="font-semibold text-lg text-foreground">{title}</h3>
+      <p className="text-sm max-w-xs text-center">{message}</p>
+    </Card>
+  )
+
   return (
     <div className="w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
-      <div className="">
+      <UnderConstruction 
+              title="Call Center Dashboard"
+              message="This section will feature live call tracking, recording playback, and agent performance metrics."
+            />
+            <div className="invisible">
+              <div>
         <div className="">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
 
@@ -603,7 +613,7 @@ const handleRefresh = () => {
 
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
-              <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+              <TabsList className="inline-flex h-13 items-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
                 <TabsTrigger value="leads"
                   className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
                   data-[state=active]:bg-white
@@ -656,7 +666,7 @@ const handleRefresh = () => {
                           {visibleColumns.name && <TableHead className="border-r border-border">
                             <div className="flex items-center justify-between w-full">
                             <span>Name</span>
-                            <img src={HP.src} alt="hp logo" className="w-4 h-4" />
+                            <Image src={HP} alt="hp logo" className="w-4 h-4" />
                             </div>
                             </TableHead>}
                           {visibleColumns.client && <TableHead className="border-r border-border">
@@ -887,6 +897,8 @@ const handleRefresh = () => {
           </Tabs>
         </div>
       </div>
+            </div>
+      
     </div>
   )
 }

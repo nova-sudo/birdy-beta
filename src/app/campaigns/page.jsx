@@ -37,9 +37,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import metaa from "../../../public/meta-icon-DH8jUhnM.png"
 import lab from "../../../public/lab.png"
 import { getMetricDisplayName } from "@/lib/metrics"
-import { Loading } from "@/components/ui/loader"
-import { TableContainer } from "@/components/ui/table-container" // Or the correct path
 import StyledTable from "@/components/ui/table-container" // Or the correct path; assuming it's default exported
+import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([])
@@ -62,6 +61,9 @@ const Campaigns = () => {
   })
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(null)
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const [columnsSearch, setColumnsSearch] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("all")
 
   // Load custom metrics
   useEffect(() => {
@@ -318,8 +320,6 @@ const Campaigns = () => {
   
 
   const baseColumns = [
-    "name",
-    "clientGroup",
     "adAccount",
     "spend",
     "cpl",
@@ -331,8 +331,77 @@ const Campaigns = () => {
   ]
   const getAvailableColumns = () => {
     if (activeTab === "leads") return ["full_name", "email", "phone_number", "ad_name", "campaign_name", "clientGroup"]
-    return [...baseColumns, ...customMetrics.map((m) => m.id)]
+    return ["name", "clientGroup", ...baseColumns, ...customMetrics.map((m) => m.id)]
   }
+
+  const categories = [
+  { id: "all", label: "All" },
+  { id: "meta", label: "Meta" },
+  { id: "custom", label: "Custom" },
+  ]
+
+  const toggleableColumns = getAvailableColumns().filter((col) => col !== "name")
+
+  const metaCount = toggleableColumns.filter(col => baseColumns.includes(col)).length
+  const customCount = toggleableColumns.length - metaCount
+
+  const categoryCounts = {
+  all: toggleableColumns.length,
+  meta: metaCount,
+  custom: customCount,
+}
+
+const allColumnsForDropdown = toggleableColumns.map((col) => ({
+  id: col,
+  label: getMetricDisplayName(col),
+  visible: (visibleColumns[activeTab] || []).includes(col),
+  type: baseColumns.includes(col) ? "meta" : "custom",
+}))
+
+const filteredColumns = allColumnsForDropdown.filter((col) => {
+  const matchesCategory =
+    selectedCategory === "all" || col.type === selectedCategory
+
+  const matchesSearch = col.label
+    .toLowerCase()
+    .includes(columnsSearch.toLowerCase())
+
+  return matchesCategory && matchesSearch
+})
+
+const columnVisibility = Object.fromEntries(
+  allColumnsForDropdown.map((c) => [
+    c.id,
+    (visibleColumns[activeTab] || []).includes(c.id)
+  ])
+)
+
+const toggleColumnVisibility = (colId) => {
+  toggleColumn(colId)
+}
+
+const selectAll = () => {
+  setVisibleColumns((prev) => ({
+    ...prev,
+    [activeTab]: getAvailableColumns(),
+  }))
+}
+
+const clearAll = () => {
+  setVisibleColumns((prev) => ({
+    ...prev,
+    [activeTab]: activeTab === "leads" ? [] : ["name"],
+  }))
+}
+
+const saveView = () => {
+  setColumnsOpen(false)
+}
+
+const getIcon = (col) => {
+  if (col.id === "clientGroup" || col.id === "name") return lab
+  return metaa
+}
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
 
@@ -448,27 +517,29 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
               <span className="hidden lg:inline">Add Filter</span>
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-10 bg-white font-semibold md:px-2 lg:px-3">
-                  <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
-                  <span className="hidden lg:inline">Columns</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-white">
-                <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {getAvailableColumns().map((col) => (
-                  <DropdownMenuCheckboxItem
-                    key={col}
-                    checked={getCurrentVisibleColumns().includes(col)}
-                    onCheckedChange={() => toggleColumn(col)}
-                  >
-                    {getMetricDisplayName(col)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <ColumnVisibilityDropdown
+              isOpen={columnsOpen}
+              setIsOpen={setColumnsOpen}
+
+              categories={categories}
+              selectedCategory={selectedCategory}
+              setSelectedCategory={setSelectedCategory}
+              categoryCounts={categoryCounts}
+
+              searchTerm={columnsSearch}
+              setSearchTerm={setColumnsSearch}
+
+              filteredColumns={filteredColumns}
+              columnVisibility={columnVisibility}
+              toggleColumnVisibility={toggleColumnVisibility}
+
+              getIcon={getIcon}
+
+              selectAll={selectAll}
+              clearAll={clearAll}
+              save={saveView}
+            />
+
             {/* date filter */}
             <Popover open={open} onOpenChange={setOpen}>
               <PopoverTrigger asChild>
