@@ -53,12 +53,12 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
-  const [visibleColumns, setVisibleColumns] = useState({
-    campaigns: ["name", "spend", "impressions", "clicks", "Reach", "ctr"],
-    adsets: ["name", "spend",  "impressions", "clicks", "Reach","ctr"],
-    ads: ["name", "spend",  "impressions", "clicks", "Reach","ctr"],
-    leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
-  })
+const [visibleColumns, setVisibleColumns] = useState({
+  campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
+})
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(null)
   const [columnsOpen, setColumnsOpen] = useState(false)
