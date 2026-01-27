@@ -13,11 +13,14 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command"
+import { Check, ChevronDown } from "lucide-react"
 
 // Predefined standard metrics from GoHighLevel (Clients page)
 const standardMetrics = [
@@ -85,14 +88,11 @@ const metaMetrics = [
     category: "standard",
     enabled: true,
   },
-]
-
-const campaignsMetrics = [
   {
     id: "spend",
     name: "Spend",
     description: "Campaign advertising spend",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -102,7 +102,7 @@ const campaignsMetrics = [
     id: "impressions",
     name: "Impressions",
     description: "Number of impressions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -112,7 +112,7 @@ const campaignsMetrics = [
     id: "clicks",
     name: "Clicks",
     description: "Number of clicks",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -122,7 +122,7 @@ const campaignsMetrics = [
     id: "cpc",
     name: "CPC",
     description: "Cost per click",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -132,7 +132,7 @@ const campaignsMetrics = [
     id: "reach",
     name: "Reach",
     description: "Total reach of campaign",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -142,7 +142,7 @@ const campaignsMetrics = [
     id: "ctr",
     name: "CTR",
     description: "Click-through rate",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -152,7 +152,7 @@ const campaignsMetrics = [
     id: "frequency",
     name: "Frequency",
     description: "Average frequency per user",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -162,7 +162,7 @@ const campaignsMetrics = [
     id: "cpm",
     name: "CPM",
     description: "Cost per thousand impressions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -172,7 +172,7 @@ const campaignsMetrics = [
     id: "campaign-results",
     name: "Results",
     description: "Campaign results/conversions",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
@@ -182,13 +182,17 @@ const campaignsMetrics = [
     id: "campaign-leads",
     name: "Campaign Leads",
     description: "Leads from campaign",
-    source: "Facebook Ads",
+    source: "Meta Ads",
     dashboard: "Campaigns",
     formula: null,
     category: "standard",
     enabled: true,
   },
 ]
+
+// const metaMetrics = [
+  
+// ]
 
 const contactsMetrics = [
   {
@@ -204,34 +208,161 @@ const contactsMetrics = [
 ]
 
 const availableMetrics = [
-  // Clients page
-  { id: "leads", name: "Leads", dashboard: "Clients" },
-  { id: "bookings", name: "Bookings", dashboard: "Clients" },
-  { id: "total-revenue", name: "Total Revenue", dashboard: "Clients" },
-  { id: "upsell-revenue", name: "Upsell Revenue", dashboard: "Clients" },
-  { id: "cpl", name: "CPL", dashboard: "Clients" },
-  { id: "ad-spend", name: "Ad Spend", dashboard: "Clients" },
-  // Campaigns page
-  { id: "spend", name: "Spend", dashboard: "Campaigns" },
-  { id: "impressions", name: "Impressions", dashboard: "Campaigns" },
-  { id: "clicks", name: "Clicks", dashboard: "Campaigns" },
-  { id: "cpc", name: "CPC", dashboard: "Campaigns" },
-  { id: "reach", name: "Reach", dashboard: "Campaigns" },
-  { id: "ctr", name: "CTR", dashboard: "Campaigns" },
-  { id: "frequency", name: "Frequency", dashboard: "Campaigns" },
-  { id: "cpm", name: "CPM", dashboard: "Campaigns" },
-  { id: "campaign-results", name: "Results", dashboard: "Campaigns" },
-  { id: "campaign-leads", name: "Campaign Leads", dashboard: "Campaigns" },
-  // Contacts page
-  { id: "lead-value", name: "Lead Value", dashboard: "Contacts" },
+  ...standardMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
+  ...metaMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
+  ...metaMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
+  ...contactsMetrics.map(({ id, name, dashboard, source }) => ({ id, name, dashboard, source })),
 ]
-
+const sources = [...new Set(availableMetrics.map(m => m.source))]
 const operators = [
   { value: "+", label: "Add (+)" },
   { value: "-", label: "Subtract (−)" },
   { value: "*", label: "Multiply (×)" },
   { value: "/", label: "Divide (÷)" },
 ]
+
+const MetricSelector = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false)
+
+  const ghlMetrics = availableMetrics.filter((m) => m.source === "GoHighLevel")
+  const metaMetrics = availableMetrics.filter((m) => m.source === "Meta Ads")
+
+
+  const currentName = availableMetrics.find((m) => m.id === value)?.name || "Select metric..."
+
+  return (
+    <Popover open={open} onOpenChange={setOpen} >
+      <PopoverTrigger asChild >
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="flex-1 justify-between "
+        >
+          {currentName}
+          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-fit bg-white ">
+        <Tabs defaultValue="all" className="w-fit">
+          <TabsList className="text-center w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
+            <TabsTrigger value="all" className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                            data-[state=active]:bg-purple-100/50
+                            data-[state=active]:text-foreground
+                            data-[state=active]:border-b-3
+                            data-[state=active]:border-b-purple-700 h-full`}>All {availableMetrics.length}</TabsTrigger>
+            <TabsTrigger value="ghl" className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                            data-[state=active]:bg-purple-100/50
+                            data-[state=active]:text-foreground
+                            data-[state=active]:border-b-3
+                            data-[state=active]:border-b-purple-700 h-full`}>GoHighLevel {ghlMetrics.length}</TabsTrigger>
+            <TabsTrigger value="meta" className={`text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+                            data-[state=active]:bg-purple-100/50
+                            data-[state=active]:text-foreground
+                            data-[state=active]:border-b-3
+                            data-[state=active]:border-b-purple-700 h-full`}>Meta Ads {metaMetrics.length}</TabsTrigger>
+          </TabsList>
+          <TabsContent value="all" className="border-0 p-0">
+            <Command>
+              <CommandList>
+                <CommandEmpty>No metric found.</CommandEmpty>
+                {availableMetrics.map((metric) => (
+                  <CommandItem
+                    key={metric.id}
+                    value={metric.name}
+                    onSelect={() => {
+                      onChange(metric.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={
+                        metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"
+                      }
+                    />
+                    {metric.name}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </TabsContent>
+          <TabsContent value="ghl" className="border-0 p-0">
+            <Command>
+              <CommandList>
+                <CommandEmpty>No metric found.</CommandEmpty>
+                {ghlMetrics.map((metric) => (
+                  <CommandItem
+                    key={metric.id}
+                    value={metric.name}
+                    onSelect={() => {
+                      onChange(metric.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={
+                        metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"
+                      }
+                    />
+                    {metric.name}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </TabsContent>
+          <TabsContent value="meta" className="border-0 p-0">
+            <Command>
+              <CommandList>
+                <CommandEmpty>No metric found.</CommandEmpty>
+                {metaMetrics.map((metric) => (
+                  <CommandItem
+                    key={metric.id}
+                    value={metric.name}
+                    onSelect={() => {
+                      onChange(metric.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={
+                        metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"
+                      }
+                    />
+                    {metric.name}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </TabsContent>
+          <TabsContent value="fb" className="border-0 p-0">
+            <Command>
+              <CommandList>
+                <CommandEmpty>No metric found.</CommandEmpty>
+                {metaMetrics.map((metric) => (
+                  <CommandItem
+                    key={metric.id}
+                    value={metric.name}
+                    onSelect={() => {
+                      onChange(metric.id)
+                      setOpen(false)
+                    }}
+                  >
+                    <Check
+                      className={
+                        metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"
+                      }
+                    />
+                    {metric.name}
+                  </CommandItem>
+                ))}
+              </CommandList>
+            </Command>
+          </TabsContent>
+        </Tabs>
+      </PopoverContent>
+    </Popover>
+  )
+}
 
 const MetricsHub = () => {
   const [activeTab, setActiveTab] = useState("all")
@@ -242,12 +373,12 @@ const MetricsHub = () => {
 
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
-    name: "",
-    description: "",
-    group: "",
-    formulaParts: [{ type: "metric", value: "leads" }],
-    displayOnDashboard: false,
-  })
+  name: "",
+  description: "",
+  group: "",
+  formulaParts: [{ type: "metric", source: sources[0] || "GoHighLevel", value: availableMetrics.find(m => m.source === (sources[0] || "GoHighLevel"))?.id || "leads" }],
+  displayOnDashboard: false,
+})
 
   // Load custom metrics from localStorage on mount
   useEffect(() => {
@@ -268,7 +399,7 @@ const MetricsHub = () => {
     }
   }, [customMetrics])
 
-  const allMetrics = [...standardMetrics, ...metaMetrics, ...campaignsMetrics, ...contactsMetrics, ...customMetrics]
+  const allMetrics = [...standardMetrics, ...metaMetrics, ...metaMetrics, ...contactsMetrics, ...customMetrics]
 
   // Filter metrics based on active tab and search
   const filteredMetrics = allMetrics.filter((metric) => {
@@ -332,28 +463,37 @@ const MetricsHub = () => {
   }
 
   const resetForm = () => {
-    setMetricForm({
-      name: "",
-      description: "",
-      group: "",
-      formulaParts: [{ type: "metric", value: "leads" }],
-      displayOnDashboard: false,
-    })
-    setIsCreateDialogOpen(false)
-    setEditingMetric(null)
-  }
+  setMetricForm({
+    name: "",
+    description: "",
+    group: "",
+    formulaParts: [{ type: "metric", source: sources[0] || "GoHighLevel", value: availableMetrics.find(m => m.source === (sources[0] || "GoHighLevel"))?.id || "leads" }],
+    displayOnDashboard: false,
+  })
+  setIsCreateDialogOpen(false)
+  setEditingMetric(null)
+}
 
   const handleEditMetric = (metric) => {
     if (metric.category !== "custom") return
 
     setEditingMetric(metric)
     setMetricForm({
-      name: metric.name,
-      description: metric.description,
-      group: metric.dashboard,
-      formulaParts: metric.formulaParts || [{ type: "metric", value: "leads" }],
-      displayOnDashboard: metric.displayOnDashboard || false,
-    })
+  name: metric.name,
+  description: metric.description,
+  group: metric.dashboard,
+  formulaParts: (metric.formulaParts || [{ type: "metric", source: sources[0] || "GoHighLevel", value: "leads" }]).map(part => {
+    if (part.type === "metric") {
+      if (!part.source) {
+        const met = availableMetrics.find(m => m.id === part.value)
+        part.source = met ? met.source : (sources[0] || "GoHighLevel")
+      }
+      return part
+    }
+    return part
+  }),
+  displayOnDashboard: metric.displayOnDashboard || false,
+})
     setIsCreateDialogOpen(true)
   }
 
@@ -395,6 +535,16 @@ const MetricsHub = () => {
     setMetricForm({ ...metricForm, formulaParts: newParts })
   }
 
+  const updateFormulaPartSource = (index, source) => {
+  const newParts = [...metricForm.formulaParts]
+  newParts[index].source = source
+  const firstMetric = availableMetrics.find(m => m.source === source)
+  if (firstMetric) {
+    newParts[index].value = firstMetric.id
+  }
+  setMetricForm({ ...metricForm, formulaParts: newParts })
+}
+
   const getSourceBadge = (source) => {
     if (source === "GoHighLevel") {
       return (
@@ -404,7 +554,7 @@ const MetricsHub = () => {
         </Badge>
       )
     }
-    if (source === "Meta Ads" || source === "Facebook Ads") {
+    if (source === "Meta Ads" ) {
       return (
         <Badge variant="outline" className="gap-1 bg-blue-50 text-blue-700 border-blue-200">
           <TrendingUp className="w-3 h-3" />
@@ -503,7 +653,7 @@ const MetricsHub = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {standardMetrics.length + metaMetrics.length + campaignsMetrics.length + contactsMetrics.length}
+                {standardMetrics.length + metaMetrics.length + metaMetrics.length + contactsMetrics.length}
               </div>
             </CardContent>
           </Card>
@@ -566,7 +716,7 @@ const MetricsHub = () => {
             data-[state=active]:text-foreground
             data-[state=active]:shadow-sm
             data-[state=active]:border-r-0
-            data-[state=active]:rounded-md
+
             data-[state=active]:border-b-2
             data-[state=active]:border-b-purple-700"
               value="webhook"
@@ -666,7 +816,7 @@ const MetricsHub = () => {
 
         {/* Create/Edit Metric Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl bg-white">
             <DialogHeader>
               <DialogTitle>{editingMetric ? "Edit Metric" : "Create New Metric"}</DialogTitle>
               <DialogDescription>Build a custom metric by combining available metrics with operators</DialogDescription>
@@ -674,7 +824,7 @@ const MetricsHub = () => {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="metric-name">Metric Name *</Label>
+                <Label htmlFor="metric-name" className="py-3">Metric Name *</Label>
                 <Input
                   id="metric-name"
                   placeholder="e.g., ROI, Cost per Conversion"
@@ -684,7 +834,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-description">Description</Label>
+                <Label htmlFor="metric-description" className="py-3">Description</Label>
                 <Textarea
                   id="metric-description"
                   placeholder="Optional description of what this metric calculates"
@@ -694,7 +844,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-group">Dashboard *</Label>
+                <Label htmlFor="metric-group" className="py-3">Dashboard *</Label>
                 <Select
                   value={metricForm.group}
                   onValueChange={(value) => setMetricForm((prev) => ({ ...prev, group: value }))}
@@ -703,39 +853,31 @@ const MetricsHub = () => {
                     <SelectValue placeholder="Select dashboard" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="Clients">Clients</SelectItem>
-                    <SelectItem value="Campaigns">Campaigns</SelectItem>
-                    <SelectItem value="Contacts">Contacts</SelectItem>
+                    <SelectItem value="Clients" className="hover:bg-purple-100">Clients</SelectItem>
+                    <SelectItem value="Campaigns" className="hover:bg-purple-100">Campaigns</SelectItem>
+                    <SelectItem value="Contacts" className="hover:bg-purple-100">Contacts</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div>
-                <Label>Formula Builder</Label>
+                <Label className="py-3">Formula Builder</Label>
                 <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
                   {metricForm.formulaParts.map((part, index) => (
                     <div key={index} className="flex items-center gap-2">
                       {part.type === "metric" ? (
-                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {availableMetrics.map((metric) => (
-                              <SelectItem key={metric.id} value={metric.id}>
-                                {metric.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <MetricSelector
+                          value={part.value}
+                          onChange={(newValue) => updateFormulaPart(index, newValue)}
+                        />
                       ) : (
                         <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
-                          <SelectTrigger className="w-24">
+                          <SelectTrigger className="w-fit ">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white w-fit">
                             {operators.map((op) => (
-                              <SelectItem key={op.value} value={op.value}>
+                              <SelectItem key={op.value} value={op.value} classame="w-fit hover:bg-purple-100">
                                 {op.label}
                               </SelectItem>
                             ))}
@@ -774,7 +916,7 @@ const MetricsHub = () => {
               <Button variant="outline" onClick={resetForm}>
                 Cancel
               </Button>
-              <Button onClick={handleCreateMetric} className="bg-purple-600 hover:bg-purple-700">
+              <Button onClick={handleCreateMetric} className="bg-purple-600 text-white font-semibold hover:bg-purple-700">
                 {editingMetric ? "Update Metric" : "Create Metric"}
               </Button>
             </DialogFooter>

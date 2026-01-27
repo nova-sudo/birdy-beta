@@ -6,10 +6,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, ArrowLeft, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target } from "lucide-react"
+import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target, Search, ChevronDown, Eye} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
-import { Search } from "lucide-react" 
 import { CiCalendar } from "react-icons/ci";
 import {
   Select,
@@ -27,7 +26,8 @@ import {
 import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
 import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
-import { ChevronDown, Eye, EyeOff } from "lucide-react";
+import { Progress } from "@/components/ui/progress"
+import Flask from "../../../public/Flask.png";
 import {
   Empty,
   EmptyDescription,
@@ -36,8 +36,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty"
 import { Spinner } from "@/components/ui/spinner"
+import Image from "next/image"
 import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
+import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 
 
 const CACHE_DURATION = {
@@ -69,8 +71,6 @@ const getCachedData = (key) => {
     return null
   }
 }
-
-
 
 const clearCache = (pattern) => {
   try {
@@ -108,36 +108,36 @@ export default function ClientsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [selectedDateRange, setSelectedDateRange] = useState("all")
   const [progress, setProgress] = useState(13)
-
-
-  
+  const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
+
   const DEFAULT_COLUMNS = [
-    { id: "name", label: "Business Name", visible: true, sortable: true },
-    { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl },
-    { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa },
-    { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa },
-    { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa },
-    { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa },
-    { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa },
-    { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP },
-    { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa },
-    { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa },
-    { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa },
-    { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa },
-  ];
+      { id: "name", label: "Business Name", visible: true, sortable: true },
+      { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+      { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+      { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+      { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
+    ];
+
     const columns = useMemo(() => {
       const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
-  
-      const custom = customMetrics
-        .filter((m) => m.enabled && m.dashboard === "Clients")
-        .map((m) => ({
+      const custom = customMetrics.filter((m) => m.enabled && m.dashboard === "Clients").map((m) => ({
           id: m.id,
           label: m.name,
           visible: true,
           sortable: true,
+          category: 'formulas',
+          type: 'formula',
+          icons: Flask,
         }));
-  
+      
       const seen = new Set();
       const all = [...base, ...custom];
       return all.filter((col) => {
@@ -146,11 +146,67 @@ export default function ClientsPage() {
         return true;
       });
     }, [customMetrics]);
+
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
     DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
+
+  const categories = [
+  { id: 'all', label: 'All Metrics' },
+  { id: 'gohighlevel', label: 'GoHighLevel' },
+  { id: 'metaads', label: 'Meta Ads' },
+  { id: 'hotprospector', label: 'HotProspector' },
+  { id: 'formulas', label: 'Formulas' },
+];
+
+const categoryCounts = useMemo(() => {
+  const counts = columns.reduce((acc, col) => {
+    if (col.id === 'name') return acc;
+    const cat = col.category || 'unknown';
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {});
+  counts['all'] = Object.values(counts).reduce((a, b) => a + b, 0) || 0;
+  return counts;
+}, [columns]);
+
+const getIcon = (col) => {
+  return (col.icons) ? col.icons : null;
+};
+
+const [selectedCategory, setSelectedCategory] = useState('all');
+const [searchTerm, setSearchTerm] = useState('');
+
+const filteredColumns = useMemo(() => columns.filter((col) => {
+  if (col.id === 'name') return false;
+  if (selectedCategory !== 'all' && col.category !== selectedCategory) return false;
+  if (searchTerm && !col.label.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+  return true;
+}), [columns, selectedCategory, searchTerm]);
+
+const selectAll = () => {
+  const newVisibility = {};
+  filteredColumns.forEach(col => {
+    newVisibility[col.id] = true;
+  });
+  setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
+};
+
+const clearAll = () => {
+  const newVisibility = {};
+  filteredColumns.forEach(col => {
+    newVisibility[col.id] = false;
+  });
+  setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
+};
+
+const save = () => {
+  localStorage.setItem('yourKey-columnVisibility', JSON.stringify(columnVisibility));
+  setIsOpen(false); 
+};
+
   const [searchQuery, setSearchQuery] = useState("")
   const toggleColumnVisibility = (columnId) => {
     if (columnId === "name") return;
@@ -471,32 +527,23 @@ const handleCreateClientGroup = async () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="text-gray-900 bg-white h-10 font-bold text-xs md:text-base"
                 />
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base">
-                      <Eye className="h-4 w-4" />
-                      <span className="hidden lg:inline">Columns</span>
-                      <ChevronDown className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 bg-white">
-                    {columns.map((col) => (
-                      <DropdownMenuCheckboxItem
-                        key={col.id}
-                        checked={col.id === "name" ? true : columnVisibility[col.id] ?? col.visible}
-                        onCheckedChange={() => toggleColumnVisibility(col.id)}
-                        disabled={col.id === "name"}
-                      >
-                        {columnVisibility[col.id] ?? col.visible ? (
-                          <Eye className="h-4 w-4 mr-2" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 mr-2" />
-                        )}
-                        {col.label}
-                      </DropdownMenuCheckboxItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <ColumnVisibilityDropdown
+                  isOpen={isOpen}
+                  setIsOpen={setIsOpen}
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  categoryCounts={categoryCounts}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  filteredColumns={filteredColumns}
+                  columnVisibility={columnVisibility}
+                  toggleColumnVisibility={toggleColumnVisibility}
+                  getIcon={getIcon}
+                  selectAll={selectAll}
+                  clearAll={clearAll}
+                  save={save}
+                /> 
             </div>
               
               {/* <Button variant="outline" className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base" onClick={handleRefresh} disabled={isRefreshing}>

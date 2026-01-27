@@ -54,6 +54,7 @@ import ghl from "../../../public/ghl_icon.png";
 import lab from "../../../public/lab.png";
 import { Progress } from "@/components/ui/progress"
 import { Loading } from "@/components/ui/loader";
+import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
 
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
@@ -426,6 +427,15 @@ export default function ContactPage() {
   const [sortDirection, setSortDirection] = useState("asc")
   const [clientGroups, setClientGroups] = useState([])
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
+  const [selectedCategory, setSelectedCategory] = useState("columns")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [columnVisibility, setColumnVisibility] = useState(
+    contactColumns.reduce((acc, col) => {
+      acc[col.id] = col.defaultVisible
+      return acc
+    }, {})
+  )
 
   // Fetch client groups
   useEffect(() => {
@@ -641,6 +651,94 @@ export default function ContactPage() {
   const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
     selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all" || selectedTags.length > 0
 
+   const categories = [
+  { id: "columns", label: "Columns" },
+  { id: "sources", label: "Sources" },
+  { id: "types", label: "Types" },
+  { id: "opportunities", label: "Opportunities" },
+  { id: "tags", label: "Tags" },
+];
+
+const filteredColumns = useMemo(() => {
+  switch (selectedCategory) {
+    case "columns":
+      return contactColumns.filter(col =>
+        col.label.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    case "sources":
+      return sources
+        .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
+        .map(s => ({ id: s, label: s, visible: selectedSource === s }));
+    case "types":
+      return types
+        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+        .map(t => ({ id: t, label: t, visible: selectedType === t }));
+    case "opportunities":
+      return opportunityStatuses
+        .filter(o => o.toLowerCase().includes(searchTerm.toLowerCase()))
+        .map(o => ({ id: o, label: o, visible: selectedOpportunityStatus === o }));
+    case "tags":
+      return allTags
+        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+        .map(t => ({ id: t, label: t, visible: selectedTags.includes(t) }));
+    default:
+      return [];
+  }
+}, [
+  selectedCategory,
+  searchTerm,
+  contactColumns,
+  sources,
+  types,
+  opportunityStatuses,
+  allTags,
+  selectedSource,
+  selectedType,
+  selectedOpportunityStatus,
+  selectedTags
+]);
+
+const toggleColumnVisibility = (id) => {
+  switch (selectedCategory) {
+    case "columns":
+      setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+      break;
+    case "sources":
+      setSelectedSource(prev => prev === id ? "all" : id);
+      break;
+    case "types":
+      setSelectedType(prev => prev === id ? "all" : id);
+      break;
+    case "opportunities":
+      setSelectedOpportunityStatus(prev => prev === id ? "all" : id);
+      break;
+    case "tags":
+      setSelectedTags(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+      break;
+  }
+}
+
+const selectAll = () => {
+  switch (selectedCategory) {
+    case "columns": setVisibleColumns(contactColumns.map(c => c.id)); break;
+    case "sources": if (sources.length === 1) setSelectedSource(sources[0]); break;
+    case "types": if (types.length === 1) setSelectedType(types[0]); break;
+    case "opportunities": if (opportunityStatuses.length === 1) setSelectedOpportunityStatus(opportunityStatuses[0]); break;
+    case "tags": setSelectedTags(allTags); break;
+  }
+}
+
+const clearAll = () => {
+  switch (selectedCategory) {
+    case "columns": setVisibleColumns([]); break;
+    case "sources": setSelectedSource("all"); break;
+    case "types": setSelectedType("all"); break;
+    case "opportunities": setSelectedOpportunityStatus("all"); break;
+    case "tags": setSelectedTags([]); break;
+  }
+}
+
+
   if (loading) {
     return (
       <Loading progress={progress}/>
@@ -661,7 +759,8 @@ export default function ContactPage() {
           </div>
 
           <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-gray-100 border rounded-lg p-1 overflow-x-auto">
-            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="bg-white h-10 min-w-[150px]" />
+            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+             className="bg-white h-10 min-w-[150px] w-fit" />
             {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
             <div className="flex gap-1 overflow-x-auto">
@@ -670,23 +769,23 @@ export default function ContactPage() {
                 <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
               </Select>
 
-              <Select value={selectedSource} onValueChange={setSelectedSource}>
+              {/* <Select value={selectedSource} onValueChange={setSelectedSource}>
                 <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Sources" /></SelectTrigger>
                 <SelectContent className="bg-white"><SelectItem value="all">All Sources</SelectItem>{sources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              </Select> */}
 
-              <Select value={selectedType} onValueChange={setSelectedType}>
+              {/* <Select value={selectedType} onValueChange={setSelectedType}>
                 <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Types" /></SelectTrigger>
                 <SelectContent className="bg-white"><SelectItem value="all">All Types</SelectItem>{types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
+              </Select> */}
 
-              <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
+              {/* <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
                 <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Opps" /></SelectTrigger>
                 <SelectContent className="bg-white"><SelectItem value="all">All Opportunities</SelectItem>{opportunityStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select>
+              </Select> */}
 
               {/* Tags Multi-Select */}
-              <DropdownMenu className="">
+              {/* <DropdownMenu className="">
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-10 bg-white gap-2">
                     <Tag className="h-4 w-4" />
@@ -708,9 +807,35 @@ export default function ContactPage() {
                     </>
                   )}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> */}
+              <ColumnVisibilityDropdown
+                isOpen={isDropdownOpen}
+                setIsOpen={setIsDropdownOpen}
 
-              <DropdownMenu>
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+                categoryCounts={{
+                  columns: contactColumns.length,
+                  sources: sources.length,
+                  types: types.length,
+                  opportunities: opportunityStatuses.length,
+                  tags: allTags.length,
+                }}
+
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+
+                filteredColumns={filteredColumns}
+                columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
+                toggleColumnVisibility={toggleColumnVisibility}
+
+                selectAll={selectAll}
+                clearAll={clearAll}
+                save={() => console.log("Save view clicked")}
+              />
+
+              {/* <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" className="h-10  gap-1"><SlidersHorizontal className="h-4 w-4" />Cols</Button>
                 </DropdownMenuTrigger>
@@ -723,7 +848,7 @@ export default function ContactPage() {
                     </DropdownMenuCheckboxItem>
                   ))}
                 </DropdownMenuContent>
-              </DropdownMenu>
+              </DropdownMenu> */}
 
               <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
                 <SelectTrigger className="h-10 bg-white gap-1"><CiCalendar className="h-4 w-4" /><SelectValue placeholder="Date" /></SelectTrigger>

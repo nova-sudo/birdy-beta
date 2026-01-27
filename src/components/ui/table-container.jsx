@@ -292,7 +292,7 @@ const StyledTable = ({
             z-index: 50;
             background: white;
             min-width: 150px;
-            width: 100%;
+            width: 5%;
           }
         }
 
@@ -337,12 +337,14 @@ const StyledTable = ({
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full justify-between gap-2">
-                    <div className="flex items-center gap-1">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                    <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
-                        className={`align-middle text-left items-center gap-1 ${
-                          col.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                        className={`truncate align-middle text-left items-center gap-1 ${
+                          col.sortable
+                            ? "hover:text-foreground cursor-pointer"
+                            : "cursor-default"
                         }`}
                       >
                         {typeof col.header === "function" ? col.header() : col.header}
@@ -353,14 +355,17 @@ const StyledTable = ({
                         )}
                       </button>
                     </div>
-                    <div>
+                    <div className="flex-shrink-0">
                       {col.icons ? (
                         typeof col.icons === "function" ? (
-                          <col.icons className="h-4 w-4 text-muted-foreground" />
+                          (() => {
+                            const Icon = col.icons;
+                            return <Icon className="h-4 w-4 text-muted-foreground" />;
+                          })()
                         ) : (
                           <img
                             src={col.icons.src ? col.icons.src : col.icons}
-                            alt={`${col.header} icon`}
+                            alt={`${col.label} icon`}
                             className="text-muted-foreground object-scale-down size-4"
                           />
                         )
