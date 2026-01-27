@@ -117,18 +117,12 @@ const StyledTable = ({
     , null);
   };
 
-  const getTotalTagCount = (group) => {
+  const getTagCount = (group) => {
     const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
     return Object.keys(tagBreakdown).length;
   };
 
-  // NEW: Get count for a specific tag
-  const getSpecificTagCount = (group, tagName) => {
-    const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
-    return tagBreakdown[tagName] || 0;
-  };
-
-  /* ---------- FLATTENED DATA (BACKWARD COMPATIBLE + ENHANCED + TAGS) ---------- */
+  /* ---------- FLATTENED DATA (BACKWARD COMPATIBLE + ENHANCED) ---------- */
   const flattenedData = useMemo(() => {
     if (!isClientMode) {
       return data;
@@ -197,16 +191,9 @@ const StyledTable = ({
         // GoHighLevel details
         base.ghl_address = group.gohighlevel?.address ?? "";
         base.ghl_name = group.gohighlevel?.name ?? "";
-        base.total_tags = getTotalTagCount(group);
+        base.total_tags = getTagCount(group);
         const topTags = getTopTags(group, 3);
         base.top_tag_string = topTags.map(([tag, count]) => `${tag} (${count})`).join(", ");
-
-        // NEW: Extract specific tag counts dynamically based on column config
-        columns.forEach((col) => {
-          if (col.type === 'tag' && col.tagName) {
-            base[col.id] = getSpecificTagCount(group, col.tagName);
-          }
-        });
 
         // Meta status
         base.active_campaigns = getActiveCampaignCount(group);
@@ -246,7 +233,7 @@ const StyledTable = ({
 
       return base;
     });
-  }, [data, customMetrics, isClientMode, enableEnhancedExtraction, columns]);
+  }, [data, customMetrics, isClientMode, enableEnhancedExtraction]);
 
   /* ---------- FILTER & SORT ---------- */
   const filteredData = useMemo(() => {

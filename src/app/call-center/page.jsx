@@ -37,7 +37,7 @@ import {
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
 import ghl from "../../../public/ghl.png";
-import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
+import HP from "../../../public/hp_icon.png";
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
