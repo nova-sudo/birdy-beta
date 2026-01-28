@@ -30,14 +30,6 @@ import { Input } from "@/components/ui/input"
 import { TiTag } from "react-icons/ti";
 import { CiCalendar } from "react-icons/ci";
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -648,6 +640,15 @@ export default function ContactPage() {
     setSortDirection("asc")
   }
 
+  const saveView = () => {
+    setIsDropdownOpen(false)
+  }
+
+  const getIcon = (col) => {
+    if (col.id === "source") return lab
+    return ghl
+  }
+
   const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
     selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all" || selectedTags.length > 0
 
@@ -656,8 +657,8 @@ export default function ContactPage() {
   { id: "sources", label: "Sources" },
   { id: "types", label: "Types" },
   { id: "opportunities", label: "Opportunities" },
-  { id: "tags", label: "Tags" },
-];
+  { id: "tags", label: "Tags", icon: <TiTag className="w-4 h-4" /> },
+  ];
 
 const filteredColumns = useMemo(() => {
   switch (selectedCategory) {
@@ -765,8 +766,11 @@ const clearAll = () => {
 
             <div className="flex gap-1 overflow-x-auto">
               <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" />
+                  <SelectValue placeholder="All Groups" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
               </Select>
 
               {/* <Select value={selectedSource} onValueChange={setSelectedSource}>
@@ -830,9 +834,11 @@ const clearAll = () => {
                 columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
                 toggleColumnVisibility={toggleColumnVisibility}
 
+                getIcon={getIcon}
+
                 selectAll={selectAll}
                 clearAll={clearAll}
-                save={() => console.log("Save view clicked")}
+                save={saveView}
               />
 
               {/* <DropdownMenu>

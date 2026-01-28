@@ -47,7 +47,7 @@ export default function ColumnVisibilityDropdown({
 
       <DropdownMenuContent align="end" className="w-fit bg-white p-0">
         {/* Categories */}
-        <div className="flex flex-wrap gap-1 p-2 border-b">
+        <div className="grid grid-flow-col auto-cols-fr gap-1 p-2 border-b w-full">
           {categories.map(({ id, label }) => (
             <Button
               key={id}
@@ -55,7 +55,8 @@ export default function ColumnVisibilityDropdown({
               size="sm"
               onClick={() => setSelectedCategory(id)}
               data-state={selectedCategory === id ? "active" : "inactive"}
-              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+              className="w-full whitespace-nowrap
+                text-[#71658B] font-semibold hover:bg-[#FBFAFE]
                 data-[state=active]:bg-purple-100/50
                 data-[state=active]:text-foreground
                 data-[state=active]:border-b-3
