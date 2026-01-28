@@ -117,18 +117,12 @@ const StyledTable = ({
     , null);
   };
 
-  const getTotalTagCount = (group) => {
+  const getTagCount = (group) => {
     const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
     return Object.keys(tagBreakdown).length;
   };
 
-  // NEW: Get count for a specific tag
-  const getSpecificTagCount = (group, tagName) => {
-    const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
-    return tagBreakdown[tagName] || 0;
-  };
-
-  /* ---------- FLATTENED DATA (BACKWARD COMPATIBLE + ENHANCED + TAGS) ---------- */
+  /* ---------- FLATTENED DATA (BACKWARD COMPATIBLE + ENHANCED) ---------- */
   const flattenedData = useMemo(() => {
     if (!isClientMode) {
       return data;
@@ -197,16 +191,9 @@ const StyledTable = ({
         // GoHighLevel details
         base.ghl_address = group.gohighlevel?.address ?? "";
         base.ghl_name = group.gohighlevel?.name ?? "";
-        base.total_tags = getTotalTagCount(group);
+        base.total_tags = getTagCount(group);
         const topTags = getTopTags(group, 3);
         base.top_tag_string = topTags.map(([tag, count]) => `${tag} (${count})`).join(", ");
-
-        // NEW: Extract specific tag counts dynamically based on column config
-        columns.forEach((col) => {
-          if (col.type === 'tag' && col.tagName) {
-            base[col.id] = getSpecificTagCount(group, col.tagName);
-          }
-        });
 
         // Meta status
         base.active_campaigns = getActiveCampaignCount(group);
@@ -246,7 +233,7 @@ const StyledTable = ({
 
       return base;
     });
-  }, [data, customMetrics, isClientMode, enableEnhancedExtraction, columns]);
+  }, [data, customMetrics, isClientMode, enableEnhancedExtraction]);
 
   /* ---------- FILTER & SORT ---------- */
   const filteredData = useMemo(() => {
@@ -456,8 +443,8 @@ const StyledTable = ({
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center justify-between w-full border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full">
-                    <div className="flex items-center gap-1 min-w-0 flex-1">
+                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                    <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
                         className={`truncate align-middle text-left items-center gap-1 ${
@@ -474,7 +461,7 @@ const StyledTable = ({
                         )}
                       </button>
                     </div>
-                    <div className="flex-shrink-0 ml-auto">
+                    <div className="flex-shrink-0">
                       {col.icons ? (
                         typeof col.icons === "function" ? (
                           (() => {

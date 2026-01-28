@@ -10,6 +10,7 @@ import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, Do
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { CiCalendar } from "react-icons/ci";
+import { ENHANCED_CLIENT_COLUMNS, ENHANCED_CATEGORIES, COLUMN_PRESETS } from '@/lib/enhanced-columns-config';
 import {
   Select,
   SelectContent,
@@ -25,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
-import HP from "../../../public/hotprospector-icon-BwyOjGPv.png";
+import HP from "../../../public/hp_icon.png";
 import { Progress } from "@/components/ui/progress"
 import Flask from "../../../public/Flask.png";
 import {
@@ -111,23 +112,9 @@ export default function ClientsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
 
-  const DEFAULT_COLUMNS = [
-      { id: "name", label: "Business Name", visible: true, sortable: true },
-      { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
-      { id: "meta_campaigns", label: "Campaigns", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_spend", label: "Ad Spend", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_ctr", label: "CTR", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_cpc", label: "CPC", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_leads", label: "Meta Leads", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
-      { id: "meta_impressions", label: "Impressions", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_clicks", label: "Clicks", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_reach", label: "Reach", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-      { id: "meta_cpm", label: "CPM", visible: true, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
-    ];
 
     const columns = useMemo(() => {
-      const base = DEFAULT_COLUMNS.map((col) => ({ ...col }));
+      const base = ENHANCED_CLIENT_COLUMNS.map((col) => ({ ...col }));
       const custom = customMetrics.filter((m) => m.enabled && m.dashboard === "Clients").map((m) => ({
           id: m.id,
           label: m.name,
@@ -149,7 +136,7 @@ export default function ClientsPage() {
 
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
-    DEFAULT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
+    ENHANCED_CLIENT_COLUMNS.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
 
@@ -157,7 +144,7 @@ export default function ClientsPage() {
   { id: 'all', label: 'All Metrics' },
   { id: 'gohighlevel', label: 'GoHighLevel' },
   { id: 'metaads', label: 'Meta Ads' },
-  { id: 'hotprospector', label: 'HotProspector' },
+  { id: 'hotprospector', label: 'HotProspector' },  
   { id: 'formulas', label: 'Formulas' },
 ];
 
@@ -258,9 +245,11 @@ const fetchClientGroups = async (forceRefresh = false) => {
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
       }
-      // 
       const data = await response.json()
-      const groups = data.client_groups || []
+      const groups = (data.client_groups || []).map(group => ({
+        ...group,
+        _isPending: group.status === "pending" // Convert backend status to frontend flag
+      }))
 
       setClientGroups(groups)
 
@@ -379,7 +368,8 @@ const handleCreateClientGroup = async () => {
       meta_ad_account_id: selectedMetaAdAccount?.id || null,
       notes: "",
       created_at: new Date().toISOString(),
-      _isCreating: true, // Flag to show creating state
+      status: "pending",  // Changed from "_isCreating" flag
+      _isPending: true,    // Visual flag for frontend
       gohighlevel: {},
       facebook: {},
       hotprospector: {}
@@ -480,10 +470,8 @@ const handleCreateClientGroup = async () => {
     }, 0)
     
     const totalLeads = clientGroups.reduce((sum, group) => {
-      const metaLeads = parseInt(group.facebook?.metrics?.total_leads) || 0
       const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
-      const hpLeads = parseInt(group.hotprospector?.metrics?.total_leads) || 0
-      return sum + metaLeads + ghlContacts + hpLeads
+      return ghlContacts ;
     }, 0)
     
     const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
@@ -1055,7 +1043,8 @@ const handleCreateClientGroup = async () => {
           columnVisibility={columnVisibility} 
           customMetrics={customMetrics} 
           setCustomMetrics={setCustomMetrics}
-        /> 
+          enableEnhancedExtraction={true}
+        />
 
       </div>
     </div>

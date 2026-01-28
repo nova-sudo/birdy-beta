@@ -53,12 +53,12 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
-  const [visibleColumns, setVisibleColumns] = useState({
-    campaigns: ["name", "spend", "cpl", "impressions", "clicks"],
-    adsets: ["name", "spend", "cpl", "impressions", "clicks"],
-    ads: ["name", "spend", "cpl", "impressions", "clicks"],
-    leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
-  })
+const [visibleColumns, setVisibleColumns] = useState({
+  campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
+})
   const [open, setOpen] = useState(false)
   const [date, setDate] = useState(null)
   const [columnsOpen, setColumnsOpen] = useState(false)
@@ -150,7 +150,6 @@ const Campaigns = () => {
               clientGroup: clientGroupName,
               adAccount: adAccountName,
               spend: Number.parseFloat(campaign.spend || "0"),
-              cpl: Number.parseFloat(campaign.cpl || "0"),
               impressions: Number.parseInt(campaign.impressions || "0"),
               clicks: Number.parseInt(campaign.clicks || "0"),
               cpc: Number.parseFloat(campaign.cpc || "0"),
@@ -173,7 +172,6 @@ const Campaigns = () => {
               adAccount: adAccountName,
               spend: Number.parseFloat(adset.spend || "0"),
               leads: Number.parseInt(adset.leads || "0"),
-              cpl: Number.parseFloat(adset.cpl || "0"),
               impressions: Number.parseInt(adset.impressions || "0"),
               clicks: Number.parseInt(adset.clicks || "0"),
               cpc: Number.parseFloat(adset.cpc || "0"),
@@ -196,7 +194,6 @@ const Campaigns = () => {
               adAccount: adAccountName,
               spend: Number.parseFloat(ad.spend || "0"),
               leads: Number.parseInt(ad.leads || "0"),
-              cpl: Number.parseFloat(ad.cpl || "0"),
               impressions: Number.parseInt(ad.impressions || "0"),
               clicks: Number.parseInt(ad.clicks || "0"),
               cpc: Number.parseFloat(ad.cpc || "0"),
@@ -322,7 +319,6 @@ const Campaigns = () => {
   const baseColumns = [
     "adAccount",
     "spend",
-    "cpl",
     "impressions",
     "clicks",
     "cpc",
@@ -436,16 +432,15 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
     const totalLeads = data.reduce((s, i) => s + (i.leads || 0), 0)
     const totalClicks = data.reduce((s, i) => s + (i.clicks || 0), 0)
     const totalImpressions = data.reduce((s, i) => s + (i.impressions || 0), 0)
-    const avgCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
     const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
-    return { totalSpend, totalLeads, totalClicks, totalImpressions, avgCPL, avgCTR }
+    return { totalSpend, totalLeads, totalClicks, totalImpressions, avgCTR }
   }
   const metrics = calculateMetrics()
 
   const formatCellValue = (value, col) => {
     if (value === null || value === undefined) return "-"
     if (customMetrics.some((m) => m.id === col)) return formatMetricValue(value, col)
-    if (["spend", "cpl", "cpc", "cpm"].includes(col)) return `$${Number(value).toFixed(2)}`
+    if (["spend", "cpc", "cpm"].includes(col)) return `$${Number(value).toFixed(2)}`
     if (col === "ctr") return `${Number(value).toFixed(2)}%`
     if (typeof value === "number") return value.toLocaleString()
     return value
@@ -574,7 +569,6 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
           {[
             { label: "Total Spend", icon: DollarSign, value: `$${metrics.totalSpend.toFixed(2)}` },
             { label: "Total Leads", icon: Target, value: metrics.totalLeads },
-            { label: "Avg CPL", icon: TrendingUp, value: `$${metrics.avgCPL.toFixed(2)}` },
             { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
           ].map((c, i) => (
             <Card key={i}>
@@ -662,7 +656,6 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
                                 <SelectItem value="adAccount">Ad Account</SelectItem>
                                 <SelectItem value="spend">Spend</SelectItem>
                                 <SelectItem value="leads">Leads</SelectItem>
-                                <SelectItem value="cpl">CPL</SelectItem>
                                 <SelectItem value="clicks">Clicks</SelectItem>
                                 {customMetrics.map((m) => (
                                   <SelectItem key={m.id} value={m.id}>
