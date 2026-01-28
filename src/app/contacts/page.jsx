@@ -412,7 +412,8 @@ export default function ContactPage() {
   const [error, setError] = useState(null)
   const [progress, setProgress] = useState(13)
   const [cursors, setCursors] = useState([null])
-  const [currentCursorIndex, setCurrentCursorIndex] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
   )
@@ -516,46 +517,46 @@ export default function ContactPage() {
     }
   }, [webhookData])
 
-  const fetchContacts = async (cursor = null, direction = 'next') => {
+const fetchContacts = async (page = 1) => {
     setLoading(true)
     setError(null)
     try {
-      if (clientGroups.length === 0) {
-        setContacts([])
-        setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
-        setLoading(false)
-        return
-      }
+        if (clientGroups.length === 0) {
+            setContacts([])
+            setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
+            setLoading(false)
+            return
+        }
 
-      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}`
-      if (cursor) url += `&cursor=${encodeURIComponent(cursor)}`
+        const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+        
+        // ✅ PASS PAGE AND LIMIT
+        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
 
-      const response = await fetch(url, { credentials: "include" })
-      if (!response.ok) throw new Error(`Failed: ${response.status}`)
+        const response = await fetch(url, { credentials: "include" })
+        if (!response.ok) throw new Error(`Failed: ${response.status}`)
 
-      const data = await response.json()
-      setContacts(data.contacts || [])
-      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
-
-      if (direction === 'next' && data.meta?.next_cursor) {
-        setCursors(prev => [...prev.slice(0, currentCursorIndex + 1), data.meta.next_cursor])
-      }
+        const data = await response.json()
+        setContacts(data.contacts || [])
+        setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+        
+        // Update current page
+        setCurrentPage(page)
+        
     } catch (err) {
-      setError(err.message)
-      setContacts([])
-      setMetaData(null)
+        setError(err.message)
+        setContacts([])
+        setMetaData(null)
     } finally {
-      setLoading(false)
+        setLoading(false)
     }
-  }
+}
 
   useEffect(() => {
-    if (clientGroups.length > 0) {
-      const cursor = cursors[currentCursorIndex]
-      fetchContacts(cursor)
-    }
-  }, [currentCursorIndex, selectedClientGroup, clientGroups.length])
+      if (clientGroups.length > 0) {
+          fetchContacts(1) // Always start at page 1 when filters change
+      }
+  }, [selectedClientGroup, clientGroups.length])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90]
@@ -745,9 +746,16 @@ const clearAll = () => {
     )
   }
 
-  const handlePreviousPage = () => currentCursorIndex > 0 && setCurrentCursorIndex(prev => prev - 1)
-  const handleNextPage = () => metaData?.has_next && setCurrentCursorIndex(prev => prev + 1)
-
+  const handlePreviousPage = () => {
+      if (currentPage > 1) {
+          fetchContacts(currentPage - 1)
+      }
+  }  
+  const handleNextPage = () => {
+      if (metaData?.has_next) {
+          fetchContacts(currentPage + 1)
+      }
+  }
   return (
     <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
@@ -869,11 +877,27 @@ const clearAll = () => {
         <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
         <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />
 
-        <div className="flex justify-center gap-4">
-          <Button variant="ghost" onClick={handlePreviousPage} disabled={currentCursorIndex === 0}><ChevronLeft className="h-4 w-4" />Previous</Button>
-          <span className="text-sm font-medium py-2">Page {currentCursorIndex + 1}</span>
-          <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>Next<ChevronRight className="h-4 w-4" /></Button>
-        </div>
+            <div className="flex justify-center gap-4">
+                <Button 
+                    variant="ghost" 
+                    onClick={handlePreviousPage} 
+                    disabled={currentPage === 1}
+                >
+                    <ChevronLeft className="h-4 w-4" />Previous
+                </Button>
+                
+                <span className="text-sm font-medium py-2">
+                    Page {currentPage} of {metaData?.total_pages || 1}
+                </span>
+                
+                <Button 
+                    variant="ghost" 
+                    onClick={handleNextPage} 
+                    disabled={!metaData?.has_next}
+                >
+                    Next<ChevronRight className="h-4 w-4" />
+                </Button>
+          </div>
       </div>
     </div>
   )
