@@ -460,11 +460,13 @@ const handleRefresh = () => {
   const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
 
   const UnderConstruction = ({ title, message }) => (
-    <Card className="border-dashed border-2 py-24 flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
-      <Construction className="w-12 h-12 mb-4 opacity-20" />
-      <h3 className="font-semibold text-lg text-foreground">{title}</h3>
-      <p className="text-sm max-w-xs text-center">{message}</p>
-    </Card>
+    <div className="flex items-center justify-center w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] h-[calc(100vh-30px)] mx-auto">
+      <Card className="border-dashed border-2 py-24 flex flex-col items-center justify-center text-muted-foreground bg-muted/5 w-full h-full">
+        <Construction className="w-12 h-12 mb-4 opacity-20" />
+        <h3 className="font-semibold text-lg text-foreground">{title}</h3>
+        <p className="text-sm max-w-xs text-center">{message}</p>
+      </Card>
+    </div>
   )
 
   return (
@@ -473,7 +475,7 @@ const handleRefresh = () => {
               title="Call Center Dashboard"
               message="This section will feature live call tracking, recording playback, and agent performance metrics."
             />
-            <div className="invisible">
+            {/* <div className="">
               <div>
         <div className="">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
@@ -485,9 +487,9 @@ const handleRefresh = () => {
                   Manage leads and team members from HotProspector
                 </p>
               </div>
-            </div>
+            </div> */}
 
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+          {/* <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
               
                 <Input
@@ -495,8 +497,8 @@ const handleRefresh = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-white h-10"
-                />
-            <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1  md:px-1 md:flex-nowrap">
+                /> */}
+            {/* <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1  md:px-1 md:flex-nowrap">
                 {activeTab === "leads" && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -521,7 +523,7 @@ const handleRefresh = () => {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                )}
+                )} */}
                 
                 
               {/* <Button
@@ -533,25 +535,25 @@ const handleRefresh = () => {
                   <RefreshCw className={`h-4 w-4 mr-2 md:mr-0 lg:mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
                   <span className="inline md:hidden lg:inline">Refresh</span>
                 </Button> */}
-                <Button
+                {/* <Button
                   className="bg-white font-semibold h-10 md:px-2 lg:px-3"
                   variant="outline"
                   onClick={() => router.push("/settings?tab=integrations")}
                 >
                   <Settings2 className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
                   <span className="inline md:hidden lg:inline">Settings</span>
-                </Button></div>
+                </Button></div> */}
                 
               
-            </div>
+            {/* </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
-      <div>
-        <div className="bg-card rounded-lg mt-6 mb-12 ">
+      {/* <div>
+        <div className="bg-card rounded-lg mt-6 mb-12 "> */}
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="border rounded-lg shadow-sm ">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-sm text-[#71658B] font-medium">Total Clients</CardTitle>
@@ -600,19 +602,19 @@ const handleRefresh = () => {
                 <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Active call center agents</p>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
 
-          {error && (
+          {/* {error && (
             <div className="p-6">
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             </div>
-          )}
+          )} */}
 
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
+          {/* <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
               <TabsList className="inline-flex h-13 items-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
                 <TabsTrigger value="leads"
                   className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
@@ -723,9 +725,9 @@ const handleRefresh = () => {
                               <TableCell className="font-medium">
                                 {lead.name === "N/A" ? "-" : lead.name || "-"}
                               </TableCell>
-                            )}
+                            )} */}
 
-                            {visibleColumns.client && (
+                            {/* {visibleColumns.client && (
                               <TableCell className="font-medium">
                                 <div className="flex items-center gap-2">
                                   <Building2 className="h-4 w-4 text-muted-foreground" />
@@ -783,10 +785,10 @@ const handleRefresh = () => {
                       </TableBody>
 
                     </Table>
-                  </div>
+                  </div> */}
 
                   {/* Pagination Controls */}
-                  <div className="flex items-center justify-center p-4">
+                  {/* <div className="flex items-center justify-center p-4">
                     <div className="flex items-center gap-4">
                       <Button
                         variant="ghost"
@@ -821,9 +823,9 @@ const handleRefresh = () => {
                   </div>
                 </>
               )}
-            </TabsContent>
+            </TabsContent> */}
 
-            <TabsContent value="members" className="mt-5">
+            {/* <TabsContent value="members" className="mt-5">
               {isLoading ? (
                 <Loading progress={progress}/>
               ) : filteredMembers.length === 0 ? (
@@ -897,7 +899,7 @@ const handleRefresh = () => {
           </Tabs>
         </div>
       </div>
-            </div>
+            </div> */}
       
     </div>
   )
