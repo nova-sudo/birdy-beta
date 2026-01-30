@@ -507,7 +507,7 @@ const handleCreateClientGroup = async () => {
             </div>
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Search clients..."

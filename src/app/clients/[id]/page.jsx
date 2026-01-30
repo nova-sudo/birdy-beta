@@ -20,6 +20,8 @@ import {
   Legend,
   Tooltip,
 } from "recharts"
+import { Loading } from "@/components/ui/loader";
+
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -93,34 +95,7 @@ export default function ClientDetailsPage() {
   if (loading) {
     // ... bird loading animation ...
     return (
-      <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
-        <div className="flex flex-col items-center gap-8 w-full px-6">
-          <div className="w-16 h-16 flex items-center justify-center">
-            {/* ... bird svg ... */}
-            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <g className="bird-body">
-                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
-                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
-                <circle cx="53" cy="30" r="2" fill="white" />
-                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
-                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
-              </g>
-            </svg>
-          </div>
-          <div className="flex flex-col gap-3 text-center">
-            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Preparing your data. This should only take a moment.
-            </p>
-          </div>
-          <div className="w-full flex flex-col gap-2">
-            <div className="w-1/3 mx-auto">
-              <Progress value={progress} className="w-full h-2" />
-            </div>
-            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
-          </div>
-        </div>
-      </div>
+      <Loading progress={progress}/>
     )
   }
 
@@ -391,69 +366,69 @@ export default function ClientDetailsPage() {
 
           <TabsContent value="analytics" className="m-0 space-y-4">
             {/* Top Performance Metrics */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="bg-gradient-to-br from-purple-600 to-purple-700 text-white border-0 shadow-lg">
-                <CardContent className="pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
+              <Card className="bg-white border-purple-100">
+                <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-purple-100">Best CTR</p>
-                      <span className="px-2 py-1 bg-white/20 rounded text-xs font-bold">TOP</span>
+                      <p className="text-sm text-black">Best CTR</p>
+                      <span className="px-2 py-1 bg-purple-600 rounded text-xs text-white font-bold">TOP</span>
                     </div>
-                    <h3 className="text-3xl font-bold">
+                    <h3 className="text-3xl text-purple-600 font-bold">
                       {Math.max(...ads.map(a => a.ctr || 0)).toFixed(2)}%
                     </h3>
-                    <p className="text-xs text-purple-100 truncate">
+                    <p className="text-xs text-black truncate">
                       {ads.sort((a, b) => (b.ctr || 0) - (a.ctr || 0))[0]?.name?.substring(0, 25) || 'N/A'}
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-green-600 to-green-700 text-white border-0 shadow-lg">
-                <CardContent className="pt-6">
+              <Card className="bg-white border-purple-100">
+                <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-green-100">Lowest CPC</p>
-                      <span className="px-2 py-1 bg-white/20 rounded text-xs font-bold">BEST</span>
+                      <p className="text-sm text-black">Lowest CPC</p>
+                      <span className="px-2 py-1 bg-green-600 text-white rounded text-xs font-bold">BEST</span>
                     </div>
-                    <h3 className="text-3xl font-bold">
+                    <h3 className="text-3xl text-green-600 font-bold">
                       ${Math.min(...campaigns.filter(c => c.cpc > 0).map(c => c.cpc || Infinity)).toFixed(2)}
                     </h3>
-                    <p className="text-xs text-green-100 truncate">
+                    <p className="text-xs text-black truncate">
                       {campaigns.sort((a, b) => (a.cpc || Infinity) - (b.cpc || Infinity))[0]?.name?.substring(0, 25) || 'N/A'}
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-blue-600 to-blue-700 text-white border-0 shadow-lg">
-                <CardContent className="pt-6">
+              <Card className="bg-white border-purple-100">
+                <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-blue-100">Highest Reach</p>
-                      <span className="px-2 py-1 bg-white/20 rounded text-xs font-bold">MAX</span>
+                      <p className="text-sm text-black">Highest Reach</p>
+                      <span className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-bold">MAX</span>
                     </div>
-                    <h3 className="text-3xl font-bold">
+                    <h3 className="text-3xl text-blue-600 font-bold">
                       {Math.max(...campaigns.map(c => c.reach || 0)).toLocaleString()}
                     </h3>
-                    <p className="text-xs text-blue-100 truncate">
+                    <p className="text-xs text-black truncate">
                       {campaigns.sort((a, b) => (b.reach || 0) - (a.reach || 0))[0]?.name?.substring(0, 25) || 'N/A'}
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-orange-600 to-orange-700 text-white border-0 shadow-lg">
-                <CardContent className="pt-6">
+              <Card className="bg-white border-purple-100">
+                <CardContent>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-orange-100">Conversion Rate</p>
-                      <span className="px-2 py-1 bg-white/20 rounded text-xs font-bold">AVG</span>
+                      <p className="text-sm text-black">Conversion Rate</p>
+                      <span className="px-2 py-1 bg-orange-600 text-white rounded text-xs font-bold">AVG</span>
                     </div>
-                    <h3 className="text-3xl font-bold">
+                    <h3 className="text-3xl text-orange-600 font-bold">
                       {totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : 0}%
                     </h3>
-                    <p className="text-xs text-orange-100">Click-through performance</p>
+                    <p className="text-xs text-black">Click-through performance</p>
                   </div>
                 </CardContent>
               </Card>
@@ -694,24 +669,32 @@ export default function ClientDetailsPage() {
           </TabsContent>
 
           {/* MARKETING SECTION (NESTED TABS) */}
-          <TabsContent value="marketing" className="flex-1 flex flex-col overflow-hidden mt-6">
+          <TabsContent value="marketing" className="flex-1 flex flex-col overflow-hidden  ">
             <div className="flex-1 flex flex-col overflow-hidden">
-              <Tabs defaultValue="campaigns" className="flex-1 flex flex-col overflow-hidden">
-                <div className="overflow-x-auto md:overflow-x-visible">
-                  <TabsList className="w-fit h-9 bg-muted/30 p-1 mb-4 ">
-                    <TabsTrigger value="campaigns" className="text-xs px-4">
+              <Tabs defaultValue="campaigns" className="flex-1 flex flex-col overflow-hidden ">
+                <div className="overflow-x-auto md:overflow-x-visible w-2/3 mx-auto">
+                 <TabsList className="inline-flex h-10 border-t-0 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/10 mb-4 ">
+                    <TabsTrigger value="campaigns"
+                      className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground 
+                      data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
                       Campaigns
                     </TabsTrigger>
-                    <TabsTrigger value="adsets" className="text-xs px-4">
+                    <TabsTrigger value="adsets"               
+                    className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground 
+                    data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
                       Adsets
                     </TabsTrigger>
-                    <TabsTrigger value="ads" className="text-xs px-4">
+                    <TabsTrigger value="ads"               
+                    className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground 
+                    data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
                       Ads
                     </TabsTrigger>
-                    <TabsTrigger value="leads" className="text-xs px-4">
+                    <TabsTrigger value="leads"              
+                    className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
                       Leads
                     </TabsTrigger>
-                    <TabsTrigger value="performance" className="text-xs px-4">
+                    <TabsTrigger value="performance"               
+                    className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
                       Performance
                     </TabsTrigger>
                   </TabsList>
@@ -829,8 +812,8 @@ export default function ClientDetailsPage() {
       </CardHeader>
       <CardContent className="pt-6 h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={topCampaignsBySpend}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(20, 15, 15, 0.05)" />
+          <BarChart data={topCampaignsBySpend} fill={purpleColor}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="" />
             <XAxis dataKey="name" fontSize={10} axisLine={false} tickLine={false} />
             <YAxis fontSize={10} axisLine={false} tickLine={false} />
             <Tooltip 
