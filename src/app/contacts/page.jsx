@@ -766,10 +766,12 @@ const clearAll = () => {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-gray-100 border rounded-lg p-1 overflow-x-auto">
-            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-             className="bg-white h-10 min-w-[150px] w-fit" />
-            {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+              <div className="flex items-center gap-2">
+                <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  className="text-gray-900 bg-white h-10 max-w-[200px] font-bold text-xs md:text-base"/>
+                  {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
             <div className="flex gap-1 overflow-x-auto">
               <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
@@ -871,6 +873,8 @@ const clearAll = () => {
 
               {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
             </div>
+            </div>
+              
           </div>
         </div>
 

@@ -55,7 +55,7 @@ export default function RootLayout({ children }) {
                   //   </div>
                   // </header>
                 )} */}
-                <div id="do not change the width" className="w-full mx-auto flex flex-1 flex-col gap-4 p-0 md:p-4 overflow-x-clip">
+                <div id="do not change the width" className="w-full mx-auto flex flex-1 flex-col gap-4 p-4   md:p-4 overflow-x-clip">
                   {children}
                 </div>
               </SidebarInset>

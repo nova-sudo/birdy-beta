@@ -49,7 +49,7 @@ export default function ColumnVisibilityDropdown({
 
       <DropdownMenuContent align="end" className="bg-white p-0 w-screen sm:w-fit md:w-fit">
         {/* Categories */}
-        <div className="flex flex-nowrap sm:flex-wrap gap-1 p-2 border-b overflow-x-auto md:overflow-x-visible">
+        <div className="flex flex-nowrap justify-between gap-1 p-2 border-b overflow-x-auto md:overflow-x-visible">
           {categories.map(({ id, label }) => (
             <Button
               key={id}
