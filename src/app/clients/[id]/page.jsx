@@ -672,8 +672,8 @@ export default function ClientDetailsPage() {
           <TabsContent value="marketing" className="flex-1 flex flex-col overflow-hidden  ">
             <div className="flex-1 flex flex-col overflow-hidden">
               <Tabs defaultValue="campaigns" className="flex-1 flex flex-col overflow-hidden ">
-                <div className="overflow-x-auto md:overflow-x-visible w-2/3 mx-auto">
-                 <TabsList className="inline-flex h-10 border-t-0 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/10 mb-4 ">
+                <div className="w-2/3 mx-auto">
+                 <TabsList className="overflow-x-auto md:overflow-x-visible inline-flex h-10 border-t-0 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/10 mb-4 ">
                     <TabsTrigger value="campaigns"
                       className="flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground 
                       data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-200">
