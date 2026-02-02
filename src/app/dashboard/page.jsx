@@ -33,7 +33,7 @@ export default function dashboard() {
 
     try {
       // Fetch clients data
-      const clientsRes = await fetch("https://birdy-backend.vercel.app/api/get_all_clients", {
+      const clientsRes = await fetch("http://localhost:3005/api/get_all_clients", {
         credentials: "include",
       })
 
@@ -46,13 +46,13 @@ export default function dashboard() {
       const clientsData = await clientsRes.json()
 
       // Fetch GHL locations
-      const locationsRes = await fetch("https://birdy-backend.vercel.app/api/location-data", {
+      const locationsRes = await fetch("http://localhost:3005/api/location-data", {
         credentials: "include",
       })
       const locationsData = locationsRes.ok ? await locationsRes.json() : { locations: [] }
 
       // Fetch Meta ad accounts
-      const adAccountsRes = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
+      const adAccountsRes = await fetch("http://localhost:3005/api/facebook/adaccounts", {
         credentials: "include",
       })
       const adAccountsData = adAccountsRes.ok ? await adAccountsRes.json() : { data: { data: [] } }

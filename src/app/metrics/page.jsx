@@ -154,7 +154,7 @@ const MetricsHub = () => {
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+        const response = await fetch("http://localhost:3005/api/client-groups", {
           credentials: "include",
         })
         if (response.ok) {

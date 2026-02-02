@@ -455,7 +455,7 @@ export default function ContactPage() {
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, { credentials: "include" })
+        const response = await fetch(`http://localhost:3005/api/client-groups`, { credentials: "include" })
         if (response.ok) {
           const data = await response.json()
           const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
@@ -473,7 +473,7 @@ export default function ContactPage() {
     const fetchWebhooks = async () => {
       setWebhookLoading(true)
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=10000`, { credentials: "include" })
+        const response = await fetch(`http://localhost:3005/api/webhook-data?limit=10000`, { credentials: "include" })
         if (response.ok) {
           const data = await response.json()
           setWebhookData(data.data || [])
@@ -544,7 +544,7 @@ export default function ContactPage() {
         const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
         
         // Build URL with pagination and date range
-        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+        let url = `http://localhost:3005/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
         
         // Add date range parameters
         if (dateRange.from) {
