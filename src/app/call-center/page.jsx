@@ -275,8 +275,8 @@ const fetchAllLeads = async (page = 1, forceRefresh = false) => {
 
     // ✅ ALWAYS fetch from server - it handles cache internally
     const endpoint = forceRefresh
-      ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
-      : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
+      ? "http://localhost:3005/api/hotprospector/leads/refresh"
+      : `http://localhost:3005/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
 
     const response = await fetch(endpoint, {
       credentials: "include",
@@ -368,7 +368,7 @@ const fetchMembers = async (forceRefresh = false) => {
     // const cachedMembers = getFromCache('hotprospector-members')
 
     const response = await fetch(
-      "https://birdy-backend.vercel.app/api/hotprospector/members", 
+      "http://localhost:3005/api/hotprospector/members", 
       { credentials: "include" }
     )
 

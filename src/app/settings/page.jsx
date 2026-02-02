@@ -189,7 +189,7 @@ function SettingsPageContent() {
 
         // Fetch status from backend
         console.log("Fetching status from backend")
-        const response = await fetch("https://birdy-backend.vercel.app/api/status", {
+        const response = await fetch("http://localhost:3005/api/status", {
           credentials: "include",
         })
         if (!response.ok) {
@@ -227,7 +227,7 @@ function SettingsPageContent() {
         }
 
         // Check HotProspector status
-        const hpResponse = await fetch("https://birdy-backend.vercel.app/api/hotprospector/status", {
+        const hpResponse = await fetch("http://localhost:3005/api/hotprospector/status", {
           credentials: "include",
         })
         if (hpResponse.ok) {
@@ -258,7 +258,7 @@ function SettingsPageContent() {
       setError(null)
       const endpoint = integrationType === "gohighlevel" ? "/api/connect" : "/api/connect/facebook"
       console.log(`Initiating ${integrationType} connect request`)
-      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
+      const response = await fetch(`http://localhost:3005${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -291,7 +291,7 @@ function SettingsPageContent() {
     try {
       setIsLoading(true)
       setError(null)
-      const response = await fetch("https://birdy-backend.vercel.app/disconnect", {
+      const response = await fetch("http://localhost:3005/disconnect", {
         credentials: "include",
       })
       if (!response.ok) {
@@ -325,7 +325,7 @@ function SettingsPageContent() {
       setError(null)
       console.log(`Initiating ${integrationType} test API request`)
       const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
-      const response = await fetch(`https://birdy-backend.vercel.app${endpoint}`, {
+      const response = await fetch(`http://localhost:3005${endpoint}`, {
         credentials: "include",
       })
       if (!response.ok) {
@@ -357,7 +357,7 @@ function SettingsPageContent() {
       setIsLoading(true)
       setError(null)
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/hotprospector/connect", {
+      const response = await fetch("http://localhost:3005/api/hotprospector/connect", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

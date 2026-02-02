@@ -1,5 +1,5 @@
 // lib/api.js
-const API_BASE_URL = 'https://birdy-backend.vercel.app'
+const API_BASE_URL = 'http://localhost:3005'
 
 /**
  * Make authenticated API request

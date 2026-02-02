@@ -53,7 +53,7 @@ export default function ClientDetailsPage() {
   const fetchClientDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${clientId}`, { credentials: "include" })
+      const response = await fetch(`http://localhost:3005/api/client-groups/${clientId}`, { credentials: "include" })
 
       if (!response.ok) {
         throw new Error("Failed to fetch client details")
@@ -74,7 +74,7 @@ export default function ClientDetailsPage() {
 
   const handleSaveNotes = async () => {
     try {
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${clientId}/notes`, {
+      const response = await fetch(`http://localhost:3005/api/client-groups/${clientId}/notes`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
