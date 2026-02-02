@@ -22,6 +22,8 @@ import {
   TrendingUp,
   DollarSign,
   Target,
+  CalendarIcon,
+  ChevronDown as ChevronDownIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -55,6 +57,9 @@ import lab from "../../../public/lab.png";
 import { Progress } from "@/components/ui/progress"
 import { Loading } from "@/components/ui/loader";
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { format, subDays } from "date-fns"
 
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
@@ -438,6 +443,14 @@ export default function ContactPage() {
     }, {})
   )
 
+  // Date range state - default to last 7 days
+  const [dateRange, setDateRange] = useState({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  })
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [tempDateRange, setTempDateRange] = useState(dateRange)
+
   // Fetch client groups
   useEffect(() => {
     const fetchClientGroups = async () => {
@@ -517,7 +530,7 @@ export default function ContactPage() {
     }
   }, [webhookData])
 
-const fetchContacts = async (page = 1) => {
+  const fetchContacts = async (page = 1) => {
     setLoading(true)
     setError(null)
     try {
@@ -530,8 +543,18 @@ const fetchContacts = async (page = 1) => {
 
         const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
         
-        // ✅ PASS PAGE AND LIMIT
+        // Build URL with pagination and date range
         let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+        
+        // Add date range parameters
+        if (dateRange.from) {
+            url += `&start_date=${format(dateRange.from, 'yyyy-MM-dd')}`
+        }
+        if (dateRange.to) {
+            url += `&end_date=${format(dateRange.to, 'yyyy-MM-dd')}`
+        }
+
+        console.log('🔍 Fetching contacts:', { url, dateRange })
 
         const response = await fetch(url, { credentials: "include" })
         if (!response.ok) throw new Error(`Failed: ${response.status}`)
@@ -540,7 +563,6 @@ const fetchContacts = async (page = 1) => {
         setContacts(data.contacts || [])
         setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
         
-        // Update current page
         setCurrentPage(page)
         
     } catch (err) {
@@ -550,13 +572,13 @@ const fetchContacts = async (page = 1) => {
     } finally {
         setLoading(false)
     }
-}
+  }
 
   useEffect(() => {
-      if (clientGroups.length > 0) {
-          fetchContacts(1) // Always start at page 1 when filters change
-      }
-  }, [selectedClientGroup, clientGroups.length])
+    if (clientGroups.length > 0) {
+        fetchContacts(1) // Always start at page 1 when filters change
+    }
+  }, [selectedClientGroup, clientGroups.length, dateRange])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90]
@@ -606,21 +628,6 @@ const fetchContacts = async (page = 1) => {
     if (selectedOpportunityStatus !== "all") filtered = filtered.filter(c => c.opportunityStatus === selectedOpportunityStatus)
     if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
 
-    if (selectedDateRange !== "all") {
-      const now = new Date()
-      filtered = filtered.filter(c => {
-        if (!c.dateAdded) return false
-        const d = new Date(c.dateAdded)
-        switch (selectedDateRange) {
-          case "today": return d.toDateString() === now.toDateString()
-          case "week": return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-          case "month": return d >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-          case "year": return d >= new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000)
-          default: return true
-        }
-      })
-    }
-
     if (sortColumn) {
       filtered.sort((a, b) => {
         let aVal = a[sortColumn] ?? ""
@@ -638,107 +645,127 @@ const fetchContacts = async (page = 1) => {
   const toggleColumn = (id) => setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const clearAllFilters = () => {
-    setSearchQuery("")
-    setSelectedSource("all")
-    setSelectedType("all")
-    setSelectedOpportunityStatus("all")
-    setSelectedDateRange("all")
-    setSelectedClientGroup("all")
-    setSelectedTags([])
-    setSortColumn("")
-    setSortDirection("asc")
+      setSearchQuery("")
+      setSelectedSource("all")
+      setSelectedType("all")
+      setSelectedOpportunityStatus("all")
+      setSelectedDateRange("all")
+      setDateRange({
+        from: subDays(new Date(), 7),
+        to: new Date(),
+      })
+      setSelectedClientGroup("all")
+      setSelectedTags([])
+      setSortColumn("")
+      setSortDirection("asc")
   }
 
   const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
-    selectedOpportunityStatus !== "all" || selectedDateRange !== "all" || selectedClientGroup !== "all" || selectedTags.length > 0
+    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" || 
+    selectedTags.length > 0
 
-   const categories = [
-  { id: "columns", label: "Columns" },
-  { id: "sources", label: "Sources" },
-  { id: "types", label: "Types" },
-  { id: "opportunities", label: "Opportunities" },
-  { id: "tags", label: "Tags" },
-];
+  const categories = [
+    { id: "columns", label: "Columns" },
+    { id: "sources", label: "Sources" },
+    { id: "types", label: "Types" },
+    { id: "opportunities", label: "Opportunities" },
+    { id: "tags", label: "Tags" },
+  ];
 
-const filteredColumns = useMemo(() => {
-  switch (selectedCategory) {
-    case "columns":
-      return contactColumns.filter(col =>
-        col.label.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    case "sources":
-      return sources
-        .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(s => ({ id: s, label: s, visible: selectedSource === s }));
-    case "types":
-      return types
-        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(t => ({ id: t, label: t, visible: selectedType === t }));
-    case "opportunities":
-      return opportunityStatuses
-        .filter(o => o.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(o => ({ id: o, label: o, visible: selectedOpportunityStatus === o }));
-    case "tags":
-      return allTags
-        .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-        .map(t => ({ id: t, label: t, visible: selectedTags.includes(t) }));
-    default:
-      return [];
+  const filteredColumns = useMemo(() => {
+    switch (selectedCategory) {
+      case "columns":
+        return contactColumns.filter(col =>
+          col.label.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      case "sources":
+        return sources
+          .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(s => ({ id: s, label: s, visible: selectedSource === s }));
+      case "types":
+        return types
+          .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(t => ({ id: t, label: t, visible: selectedType === t }));
+      case "opportunities":
+        return opportunityStatuses
+          .filter(o => o.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(o => ({ id: o, label: o, visible: selectedOpportunityStatus === o }));
+      case "tags":
+        return allTags
+          .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
+          .map(t => ({ id: t, label: t, visible: selectedTags.includes(t) }));
+      default:
+        return [];
+    }
+  }, [
+    selectedCategory,
+    searchTerm,
+    contactColumns,
+    sources,
+    types,
+    opportunityStatuses,
+    allTags,
+    selectedSource,
+    selectedType,
+    selectedOpportunityStatus,
+    selectedTags
+  ]);
+
+  const toggleColumnVisibility = (id) => {
+    switch (selectedCategory) {
+      case "columns":
+        setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+        break;
+      case "sources":
+        setSelectedSource(prev => prev === id ? "all" : id);
+        break;
+      case "types":
+        setSelectedType(prev => prev === id ? "all" : id);
+        break;
+      case "opportunities":
+        setSelectedOpportunityStatus(prev => prev === id ? "all" : id);
+        break;
+      case "tags":
+        setSelectedTags(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+        break;
+    }
   }
-}, [
-  selectedCategory,
-  searchTerm,
-  contactColumns,
-  sources,
-  types,
-  opportunityStatuses,
-  allTags,
-  selectedSource,
-  selectedType,
-  selectedOpportunityStatus,
-  selectedTags
-]);
 
-const toggleColumnVisibility = (id) => {
-  switch (selectedCategory) {
-    case "columns":
-      setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-      break;
-    case "sources":
-      setSelectedSource(prev => prev === id ? "all" : id);
-      break;
-    case "types":
-      setSelectedType(prev => prev === id ? "all" : id);
-      break;
-    case "opportunities":
-      setSelectedOpportunityStatus(prev => prev === id ? "all" : id);
-      break;
-    case "tags":
-      setSelectedTags(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-      break;
+  const selectAll = () => {
+    switch (selectedCategory) {
+      case "columns": setVisibleColumns(contactColumns.map(c => c.id)); break;
+      case "sources": if (sources.length === 1) setSelectedSource(sources[0]); break;
+      case "types": if (types.length === 1) setSelectedType(types[0]); break;
+      case "opportunities": if (opportunityStatuses.length === 1) setSelectedOpportunityStatus(opportunityStatuses[0]); break;
+      case "tags": setSelectedTags(allTags); break;
+    }
   }
-}
 
-const selectAll = () => {
-  switch (selectedCategory) {
-    case "columns": setVisibleColumns(contactColumns.map(c => c.id)); break;
-    case "sources": if (sources.length === 1) setSelectedSource(sources[0]); break;
-    case "types": if (types.length === 1) setSelectedType(types[0]); break;
-    case "opportunities": if (opportunityStatuses.length === 1) setSelectedOpportunityStatus(opportunityStatuses[0]); break;
-    case "tags": setSelectedTags(allTags); break;
+  const clearAll = () => {
+    switch (selectedCategory) {
+      case "columns": setVisibleColumns([]); break;
+      case "sources": setSelectedSource("all"); break;
+      case "types": setSelectedType("all"); break;
+      case "opportunities": setSelectedOpportunityStatus("all"); break;
+      case "tags": setSelectedTags([]); break;
+    }
   }
-}
 
-const clearAll = () => {
-  switch (selectedCategory) {
-    case "columns": setVisibleColumns([]); break;
-    case "sources": setSelectedSource("all"); break;
-    case "types": setSelectedType("all"); break;
-    case "opportunities": setSelectedOpportunityStatus("all"); break;
-    case "tags": setSelectedTags([]); break;
+  // Date range handlers
+  const applyDateRange = () => {
+    setDateRange(tempDateRange)
+    setDatePickerOpen(false)
   }
-}
 
+  const resetDateRange = () => {
+    const defaultRange = {
+      from: subDays(new Date(), 7),
+      to: new Date(),
+    }
+    setTempDateRange(defaultRange)
+    setDateRange(defaultRange)
+    setDatePickerOpen(false)
+  }
 
   if (loading) {
     return (
@@ -756,6 +783,7 @@ const clearAll = () => {
           fetchContacts(currentPage + 1)
       }
   }
+
   return (
     <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
@@ -777,45 +805,6 @@ const clearAll = () => {
                 <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
               </Select>
 
-              {/* <Select value={selectedSource} onValueChange={setSelectedSource}>
-                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Sources" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Sources</SelectItem>{sources.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select> */}
-
-              {/* <Select value={selectedType} onValueChange={setSelectedType}>
-                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Types" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Types</SelectItem>{types.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select> */}
-
-              {/* <Select value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus}>
-                <SelectTrigger className="h-10 bg-white"><SelectValue placeholder="Opps" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Opportunities</SelectItem>{opportunityStatuses.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-              </Select> */}
-
-              {/* Tags Multi-Select */}
-              {/* <DropdownMenu className="">
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10 bg-white gap-2">
-                    <Tag className="h-4 w-4" />
-                    {selectedTags.length === 0 ? "Tags" : selectedTags.length === 1 ? selectedTags[0] : `${selectedTags.length} tags`}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-64 bg-white max-h-96 overflow-y-auto">
-                  <DropdownMenuLabel>Filter by Tags ({selectedTags.length})</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {allTags.length === 0 ? <div className="px-4 py-2 text-sm text-muted-foreground">No tags</div> : allTags.map(tag => (
-                    <DropdownMenuCheckboxItem key={tag} checked={selectedTags.includes(tag)} onCheckedChange={c => setSelectedTags(prev => c ? [...prev, tag] : prev.filter(t => t !== tag))}>
-                      <div className="flex items-center gap-2"><TiTag className="w-3 h-3" />{tag}</div>
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                  {selectedTags.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setSelectedTags([])}>Clear tags</Button>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu> */}
               <ColumnVisibilityDropdown
                 isOpen={isDropdownOpen}
                 setIsOpen={setIsDropdownOpen}
@@ -843,61 +832,113 @@ const clearAll = () => {
                 save={() => console.log("Save view clicked")}
               />
 
-              {/* <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="h-10  gap-1"><SlidersHorizontal className="h-4 w-4" />Cols</Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white">
-                  <DropdownMenuLabel>Toggle Columns</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {contactColumns.map(col => (
-                    <DropdownMenuCheckboxItem key={col.id} checked={visibleColumns.includes(col.id)} onCheckedChange={() => toggleColumn(col.id)}>
-                      {col.label}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu> */}
+              {/* Enhanced Date Range Picker */}
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    <span className="hidden md:inline">
+                      {dateRange.from && dateRange.to
+                        ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                        : "Select date range"}
+                    </span>
+                    <ChevronDownIcon className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 bg-white" align="end">
+                  <div className="p-3">
+                    <CalendarComponent
+                      mode="range"
+                      defaultMonth={tempDateRange?.from}
+                      selected={tempDateRange}
+                      onSelect={(range) => {
+                        if (range?.from && range?.to) {
+                          setTempDateRange({ from: range.from, to: range.to })
+                        } else if (range?.from) {
+                          setTempDateRange({ from: range.from, to: range.from })
+                        }
+                      }}
+                      numberOfMonths={2}
+                      captionLayout="dropdown-buttons"
+                      fromYear={2020}
+                      toYear={new Date().getFullYear()}
+                      disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
+                      className="rounded-lg border shadow-sm"
+                    />
 
-              <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                <SelectTrigger className="h-10 bg-white gap-1"><CiCalendar className="h-4 w-4" /><SelectValue placeholder="Date" /></SelectTrigger>
-                <SelectContent className="bg-white">
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="week">Last 7 Days</SelectItem>
-                  <SelectItem value="month">Last 30 Days</SelectItem>
-                  <SelectItem value="year">Last Year</SelectItem>
-                </SelectContent>
-              </Select>
+                    {/* Action buttons */}
+                    <div className="flex items-center justify-between pt-3 border-t mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={resetDateRange}
+                      >
+                        Reset
+                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDatePickerOpen(false)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={applyDateRange}
+                          disabled={!tempDateRange.from || !tempDateRange.to}
+                        >
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
               {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
             </div>
           </div>
         </div>
 
+        {/* Date Range Indicator */}
+        {dateRange.from && dateRange.to && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarIcon className="h-4 w-4" />
+            <span>
+              Showing data from {format(dateRange.from, "MMM dd, yyyy")} to {format(dateRange.to, "MMM dd, yyyy")}
+              ({Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days)
+            </span>
+          </div>
+        )}
+
         <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
         <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />
 
-            <div className="flex justify-center gap-4">
-                <Button 
-                    variant="ghost" 
-                    onClick={handlePreviousPage} 
-                    disabled={currentPage === 1}
-                >
-                    <ChevronLeft className="h-4 w-4" />Previous
-                </Button>
-                
-                <span className="text-sm font-medium py-2">
-                    Page {currentPage} of {metaData?.total_pages || 1}
-                </span>
-                
-                <Button 
-                    variant="ghost" 
-                    onClick={handleNextPage} 
-                    disabled={!metaData?.has_next}
-                >
-                    Next<ChevronRight className="h-4 w-4" />
-                </Button>
-          </div>
+        <div className="flex justify-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={handlePreviousPage} 
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4" />Previous
+          </Button>
+          
+          <span className="text-sm font-medium py-2">
+            Page {currentPage} of {metaData?.total_pages || 1}
+          </span>
+          
+          <Button 
+            variant="ghost" 
+            onClick={handleNextPage} 
+            disabled={!metaData?.has_next}
+          >
+            Next<ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
     </div>
   )

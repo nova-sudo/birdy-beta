@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import Image from "next/image"
-// import  loadCustomMetrics  from "../../lib/load-custom-metrics"
+import Calendar05 from "@/components/calendar-05"
 import {
   Search,
   SlidersHorizontal,
@@ -37,8 +37,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import metaa from "../../../public/meta-icon-DH8jUhnM.png"
 import lab from "../../../public/lab.png"
 import { getMetricDisplayName } from "@/lib/metrics"
-import StyledTable from "@/components/ui/table-container" // Or the correct path; assuming it's default exported
+import StyledTable from "@/components/ui/table-container" 
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import { format, subDays } from "date-fns"
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([])
@@ -53,14 +54,21 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
-const [visibleColumns, setVisibleColumns] = useState({
-  campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
-})
-  const [open, setOpen] = useState(false)
-  const [date, setDate] = useState(null)
+  
+  // Date range state - default to last 7 days
+  const [dateRange, setDateRange] = useState({
+    from: subDays(new Date(), 7),
+    to: new Date(),
+  })
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [tempDateRange, setTempDateRange] = useState(dateRange)
+  
+  const [visibleColumns, setVisibleColumns] = useState({
+    campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+    adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+    ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+    leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
+  })
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [columnsSearch, setColumnsSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -89,7 +97,7 @@ const [visibleColumns, setVisibleColumns] = useState({
     })
   }, [customMetrics])
 
-  const enhanceWithCustomMetrics = (item) => {
+const enhanceWithCustomMetrics = (item) => {
   const base = { ...item }
   // Load custom metrics directly here instead of using state
   const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
@@ -102,149 +110,326 @@ const [visibleColumns, setVisibleColumns] = useState({
   return base
 }
 
+const fetchAllData = async (signal) => {
+  setIsLoading(true)
+  setError(null)
 
-  const fetchAllData = async (signal) => {
-    setIsLoading(true)
-    setError(null)
+  const timeoutId = setTimeout(() => signal?.abort(), 45_000)
 
-    const timeoutId = setTimeout(() => signal?.abort(), 45_000)
+  try {
+    // Format dates for API
+    const startDate = format(dateRange.from, 'yyyy-MM-dd')
+    const endDate = format(dateRange.to, 'yyyy-MM-dd')
 
-    try {
-      // Fetch client groups (includes campaigns, ads, adsets under facebook)
-      const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+    console.log('🔍 Fetching data for date range:', { startDate, endDate })
+
+    // Fetch client groups first (for metadata only)
+    const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+      credentials: "include",
+      signal: signal,
+    })
+
+    if (!groupsResponse.ok) {
+      throw new Error(`Failed to load client groups: ${groupsResponse.status}`)
+    }
+
+    const groupsData = await groupsResponse.json()
+    const clientGroupsData = groupsData.client_groups || []
+
+    console.log('📊 Client Groups:', clientGroupsData.length)
+
+    if (!clientGroupsData || clientGroupsData.length === 0) {
+      setClientGroups([])
+      setIsLoading(false)
+      return
+    }
+
+    setClientGroups(clientGroupsData)
+
+    // Set first client group as default
+    if (clientGroupsData.length > 0 && !selectedClientGroup) {
+      setSelectedClientGroup(clientGroupsData[0].id)
+    }
+
+    // Build group IDs param
+    const groupIds = clientGroupsData.map(g => g.id).join(',')
+    console.log('🔍 Fetching insights for groups:', groupIds)
+
+    // ============================================
+    // 🔥 Fetch campaigns
+    // ============================================
+    const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    console.log('📡 Campaigns URL:', campaignsUrl)
+    
+    const campaignsResponse = await fetch(campaignsUrl, {
+      credentials: "include",
+      signal: signal,
+    })
+
+    // ============================================
+    // 🔥 Fetch adsets
+    // ============================================
+    const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    console.log('📡 Adsets URL:', adsetsUrl)
+    
+    const adsetsResponse = await fetch(adsetsUrl, {
+      credentials: "include",
+      signal: signal,
+    })
+
+    // ============================================
+    // 🔥 Fetch ads
+    // ============================================
+    const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    console.log('📡 Ads URL:', adsUrl)
+    
+    const adsResponse = await fetch(adsUrl, {
+      credentials: "include",
+      signal: signal,
+    })
+
+    // ============================================
+    // 🔥 Fetch leads
+    // ============================================
+    const leadsResponse = await fetch(
+      `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
+      {
         credentials: "include",
         signal: signal,
-      })
-
-      if (!groupsResponse.ok) {
-        throw new Error(`Failed to load client groups: ${groupsResponse.status}`)
       }
+    )
 
-      const groupsData = await groupsResponse.json()
-      const clientGroupsData = groupsData.client_groups || []
+    // Process responses
+    const [campaignsData, adsetsData, adsData, leadsData] = await Promise.all([
+      campaignsResponse.ok ? campaignsResponse.json() : { insights: [] },
+      adsetsResponse.ok ? adsetsResponse.json() : { insights: [] },
+      adsResponse.ok ? adsResponse.json() : { insights: [] },
+      leadsResponse.ok ? leadsResponse.json() : { leads: [] }
+    ])
 
-      if (!clientGroupsData || clientGroupsData.length === 0) {
-        setClientGroups([])
-        setIsLoading(false)
-        return
-      }
+    console.log('📊 RAW DATA RECEIVED:')
+    console.log('  - Campaigns insights:', campaignsData.insights?.length || 0)
+    console.log('  - Adsets insights:', adsetsData.insights?.length || 0)
+    console.log('  - Ads insights:', adsData.insights?.length || 0)
+    console.log('  - Leads:', leadsData.leads?.length || 0)
 
-      setClientGroups(clientGroupsData)
+    // Log first few items for inspection
+    if (adsetsData.insights?.length > 0) {
+      console.log('🔍 First adset insight:', adsetsData.insights[0])
+    }
+    if (adsData.insights?.length > 0) {
+      console.log('🔍 First ad insight:', adsData.insights[0])
+    }
 
-      // Extract campaigns, ads, and adsets from client groups
-      const allCampaigns = []
-      const allAdSets = []
-      const allAds = []
-
-      clientGroupsData.forEach((group) => {
-        const facebookData = group.facebook || {}
-        const clientGroupName = group.name
-        const adAccountName = facebookData.name || "Unknown"
-
-        // Process campaigns
-        ;(facebookData.campaigns || []).forEach((campaign) => {
-          allCampaigns.push(
-            enhanceWithCustomMetrics({
-              id: campaign.id,
-              name: campaign.name || "Unknown Campaign",
-              clientGroup: clientGroupName,
-              adAccount: adAccountName,
-              spend: Number.parseFloat(campaign.spend || "0"),
-              impressions: Number.parseInt(campaign.impressions || "0"),
-              clicks: Number.parseInt(campaign.clicks || "0"),
-              cpc: Number.parseFloat(campaign.cpc || "0"),
-              reach: Number.parseInt(campaign.reach || "0"),
-              frequency: Number.parseFloat(campaign.frequency || "0"),
-              cpm: Number.parseFloat(campaign.cpm || "0"),
-              ctr: Number.parseFloat(campaign.ctr || "0"),
-              _groupId: group.id,
-            }),
-          )
-        })
-
-        // Process adsets
-        ;(facebookData.adsets || []).forEach((adset) => {
-          allAdSets.push(
-            enhanceWithCustomMetrics({
-              id: adset.id,
-              name: adset.name || "Unknown Ad Set",
-              clientGroup: clientGroupName,
-              adAccount: adAccountName,
-              spend: Number.parseFloat(adset.spend || "0"),
-              leads: Number.parseInt(adset.leads || "0"),
-              impressions: Number.parseInt(adset.impressions || "0"),
-              clicks: Number.parseInt(adset.clicks || "0"),
-              cpc: Number.parseFloat(adset.cpc || "0"),
-              reach: Number.parseInt(adset.reach || "0"),
-              frequency: Number.parseFloat(adset.frequency || "0"),
-              cpm: Number.parseFloat(adset.cpm || "0"),
-              ctr: Number.parseFloat(adset.ctr || "0"),
-              _groupId: group.id,
-            }),
-          )
-        })
-
-        // Process ads
-        ;(facebookData.ads || []).forEach((ad) => {
-          allAds.push(
-            enhanceWithCustomMetrics({
-              id: ad.id,
-              name: ad.name || "Unknown Ad",
-              clientGroup: clientGroupName,
-              adAccount: adAccountName,
-              spend: Number.parseFloat(ad.spend || "0"),
-              leads: Number.parseInt(ad.leads || "0"),
-              impressions: Number.parseInt(ad.impressions || "0"),
-              clicks: Number.parseInt(ad.clicks || "0"),
-              cpc: Number.parseFloat(ad.cpc || "0"),
-              reach: Number.parseInt(ad.reach || "0"),
-              frequency: Number.parseFloat(ad.frequency || "0"),
-              cpm: Number.parseFloat(ad.cpm || "0"),
-              ctr: Number.parseFloat(ad.ctr || "0"),
-              _groupId: group.id,
-            }),
-          )
-        })
-      })
-
-      setCampaigns(allCampaigns)
-      setAllAdSets(allAdSets)
-      setAllAds(allAds)
-
-      // Set first client group as default
-      if (clientGroupsData.length > 0) {
-        setSelectedClientGroup(clientGroupsData[0].id)
-      }
-
-      // Fetch leads separately
-      const leadsResponse = await fetch("https://birdy-backend.vercel.app/api/leads", {
-        credentials: "include",
-        signal: signal,
-      })
-
-      if (leadsResponse.ok) {
-        const leadsData = await leadsResponse.json()
-        const allLeads = (leadsData.leads || []).map((lead) => ({
-          ...lead,
-          _groupId: clientGroupsData.find((g) => g.name === lead.clientGroup)?.id,
-        }))
-        setLeads(allLeads)
-      }
-    } catch (err) {
-      // Ignore errors from cancelled requests (React Strict Mode in dev)
-      if (err.name === "AbortError") {
-        console.log("Request was aborted (likely due to React Strict Mode)")
-        return // Don't set error state for aborted requests
+    // ============================================
+    // 🔥 AGGREGATE CAMPAIGNS BY NAME
+    // ============================================
+    const campaignAggregation = {}
+    
+    ;(campaignsData.insights || []).forEach(insight => {
+      const data = insight.insight_data || {}
+      const campaignKey = `${data.campaign_id}_${insight.client_group_id}`
+      
+      if (!campaignAggregation[campaignKey]) {
+        campaignAggregation[campaignKey] = {
+          id: data.campaign_id,
+          name: data.campaign_name || 'Unknown Campaign',
+          _groupId: insight.client_group_id,
+          clientGroup: insight.client_group_name || 'Unknown',
+          adAccount: insight.ad_account_id || '',
+          spend: 0,
+          social_spend: 0, // NEW: Add social spend
+          impressions: 0,
+          clicks: 0,
+          reach: 0,
+          leads: 0,
+          account_currency: data.account_currency || 'USD', // NEW: Add currency
+          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN',
+        }
       }
       
-      setError(err.message || "Failed to load marketing data")
-      console.error("fetchAllData error:", err)
-      // Don't clear existing data on error - keep what we have
-    } finally {
-      clearTimeout(timeoutId)
-      setIsLoading(false)
+      const agg = campaignAggregation[campaignKey]
+      agg.spend += Number.parseFloat(data.spend || "0")
+      agg.social_spend += Number.parseFloat(data.social_spend || "0") // NEW: Aggregate social spend
+      agg.impressions += Number.parseInt(data.impressions || "0", 10)
+      agg.clicks += Number.parseInt(data.clicks || "0", 10)
+      agg.reach += Number.parseInt(data.reach || "0", 10)
+      agg.leads += Number.parseInt(data.leads || "0", 10)
+      if (data.conversion_rate_ranking && data.conversion_rate_ranking !== 'UNKNOWN') {
+        agg.conversion_rate_ranking = data.conversion_rate_ranking
+      }
+    })
+    
+    const processedCampaigns = Object.values(campaignAggregation).map(campaign => {
+      campaign.ctr = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions * 100) : 0
+      campaign.cpc = campaign.clicks > 0 ? (campaign.spend / campaign.clicks) : 0
+      campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
+      campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0 // NEW: Calculate CPP
+      campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
+      return enhanceWithCustomMetrics(campaign)
+    })
+
+    console.log('✅ Processed campaigns:', processedCampaigns.length)
+
+    // ============================================
+    // 🔥 AGGREGATE ADSETS BY NAME
+    // ============================================
+    const adsetAggregation = {}
+    
+    console.log('🔍 Processing adsets, raw insights count:', adsetsData.insights?.length || 0)
+    
+    ;(adsetsData.insights || []).forEach((insight, index) => {
+      const data = insight.insight_data || {}
+      
+      console.log(`🔍 Adset insight ${index}:`, {
+        adset_id: data.adset_id,
+        adset_name: data.adset_name,
+        spend: data.spend,
+        impressions: data.impressions,
+        clicks: data.clicks
+      })
+      
+      const adsetKey = `${data.adset_id}_${insight.client_group_id}`
+      
+      if (!adsetAggregation[adsetKey]) {
+        adsetAggregation[adsetKey] = {
+          id: data.adset_id,
+          name: data.adset_name || 'Unknown AdSet',
+          campaign_name: data.campaign_name || 'Unknown Campaign',
+          _groupId: insight.client_group_id,
+          clientGroup: insight.client_group_name || 'Unknown',
+          adAccount: insight.ad_account_id || '',
+          spend: 0,
+          social_spend: 0, // NEW
+          impressions: 0,
+          clicks: 0,
+          reach: 0,
+          leads: 0,
+          account_currency: data.account_currency || 'USD', // NEW
+          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN', // NEW
+        }
+      }
+      
+      const agg = adsetAggregation[adsetKey]
+      agg.spend += Number.parseFloat(data.spend || "0")
+      agg.social_spend += Number.parseFloat(data.social_spend || "0") 
+      agg.impressions += Number.parseInt(data.impressions || "0", 10)
+      agg.clicks += Number.parseInt(data.clicks || "0", 10)
+      agg.reach += Number.parseInt(data.reach || "0", 10)
+      agg.leads += Number.parseInt(data.leads || "0", 10)
+      if (data.conversion_rate_ranking && data.conversion_rate_ranking !== 'UNKNOWN') {
+      agg.conversion_rate_ranking = data.conversion_rate_ranking
     }
+    })
+
+    
+    console.log('🔍 Adset aggregation keys:', Object.keys(adsetAggregation))
+    console.log('🔍 Adset aggregation sample:', Object.values(adsetAggregation)[0])
+    
+    const processedAdsets = Object.values(adsetAggregation).map(adset => {
+      adset.ctr = adset.impressions > 0 ? (adset.clicks / adset.impressions * 100) : 0
+      adset.cpc = adset.clicks > 0 ? (adset.spend / adset.clicks) : 0
+      adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
+      adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0 // NEW
+      adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
+      return enhanceWithCustomMetrics(adset)
+    })
+
+    console.log('✅ Processed adsets:', processedAdsets.length)
+    console.log('✅ First processed adset:', processedAdsets[0])
+
+    // ============================================
+    // 🔥 AGGREGATE ADS BY NAME
+    // ============================================
+    const adAggregation = {}
+    
+    console.log('🔍 Processing ads, raw insights count:', adsData.insights?.length || 0)
+    
+    ;(adsData.insights || []).forEach((insight, index) => {
+      const data = insight.insight_data || {}
+      
+      console.log(`🔍 Ad insight ${index}:`, {
+        ad_id: data.ad_id,
+        ad_name: data.ad_name,
+        spend: data.spend,
+        impressions: data.impressions,
+        clicks: data.clicks
+      })
+      
+      const adKey = `${data.ad_id}_${insight.client_group_id}`
+      
+      if (!adAggregation[adKey]) {
+        adAggregation[adKey] = {
+          id: data.ad_id,
+          name: data.ad_name || 'Unknown Ad',
+          campaign_name: data.campaign_name || 'Unknown Campaign',
+          adset_name: data.adset_name || 'Unknown AdSet',
+          _groupId: insight.client_group_id,
+          clientGroup: insight.client_group_name || 'Unknown',
+          adAccount: insight.ad_account_id || '',
+          spend: 0,
+          social_spend: 0, // NEW
+          impressions: 0,
+          clicks: 0,
+          reach: 0,
+          leads: 0,
+          account_currency: data.account_currency || 'USD', // NEW
+          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN', // NEW    
+        }
+      }
+      
+      const agg = adAggregation[adKey]
+      agg.spend += Number.parseFloat(data.spend || "0")
+      agg.social_spend += Number.parseFloat(data.social_spend || "0") // NEW
+      agg.impressions += Number.parseInt(data.impressions || "0", 10)
+      agg.clicks += Number.parseInt(data.clicks || "0", 10)
+      agg.reach += Number.parseInt(data.reach || "0", 10)
+      agg.leads += Number.parseInt(data.leads || "0", 10)
+      if (data.conversion_rate_ranking && data.conversion_rate_ranking !== 'UNKNOWN') {
+      agg.conversion_rate_ranking = data.conversion_rate_ranking
+    }
+    })
+    
+    console.log('🔍 Ad aggregation keys:', Object.keys(adAggregation))
+    console.log('🔍 Ad aggregation sample:', Object.values(adAggregation)[0])
+    
+    const processedAds = Object.values(adAggregation).map(ad => {
+      ad.ctr = ad.impressions > 0 ? (ad.clicks / ad.impressions * 100) : 0
+      ad.cpc = ad.clicks > 0 ? (ad.spend / ad.clicks) : 0
+      ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
+      ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0 // NEW
+      ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
+      return enhanceWithCustomMetrics(ad)
+    })
+
+    console.log('✅ Processed ads:', processedAds.length)
+    console.log('✅ First processed ad:', processedAds[0])
+
+    setCampaigns(processedCampaigns)
+    setAllAdSets(processedAdsets)
+    setAllAds(processedAds)
+    setLeads(leadsData.leads || [])
+
+    console.log(`✅ Loaded data for ${startDate} to ${endDate}:`, {
+      campaigns: processedCampaigns.length,
+      adsets: processedAdsets.length,
+      ads: processedAds.length,
+      leads: (leadsData.leads || []).length
+    })
+
+  } catch (err) {
+    if (err.name === "AbortError") {
+      console.log("Request was aborted (likely due to React Strict Mode)")
+      return
+    }
+    
+    console.error('❌ fetchAllData error:', err)
+    setError(err.message || "Failed to load marketing data")
+  } finally {
+    clearTimeout(timeoutId)
+    setIsLoading(false)
   }
+}
 
   useEffect(() => {
     // Create abort controller for cleanup
@@ -260,14 +445,35 @@ const [visibleColumns, setVisibleColumns] = useState({
     return () => {
       controller.abort()
     }
-  }, [])
+  }, []) // Only load once on mount
+
+  // Reload data when date range changes
+  useEffect(() => {
+    const controller = new AbortController()
+    
+    if (dateRange.from && dateRange.to) {
+      fetchAllData(controller.signal)
+    }
+    
+    return () => {
+      controller.abort()
+    }
+  }, [dateRange])
 
   const applyFilters = (data) => {
     let filtered = [...data]
 
     // Filter by selected client group
     if (selectedClientGroup) {
-      filtered = filtered.filter((i) => i._groupId === selectedClientGroup)
+      if (activeTab === "leads") {
+        // For leads, match by group_name since leads don't have _groupId
+        const selectedGroup = clientGroups.find(g => g.id === selectedClientGroup)
+        if (selectedGroup) {
+          filtered = filtered.filter((i) => i.group_name === selectedGroup.name)
+        }
+      } else {
+        filtered = filtered.filter((i) => i._groupId === selectedClientGroup)
+      }
     }
 
     const lower = searchTerm.toLowerCase()
@@ -283,7 +489,8 @@ const [visibleColumns, setVisibleColumns] = useState({
               i.email?.toLowerCase().includes(lower) ||
               i.phone_number?.toLowerCase().includes(lower) ||
               i.ad_name?.toLowerCase().includes(lower) ||
-              i.campaign_name?.toLowerCase().includes(lower))),
+              i.campaign_name?.toLowerCase().includes(lower) ||
+              i.group_name?.toLowerCase().includes(lower))),
       )
     }
 
@@ -307,33 +514,46 @@ const [visibleColumns, setVisibleColumns] = useState({
     return filtered
   }
 
-  const getFilteredDataForTab = () => {
-    if (activeTab === "campaigns") return applyFilters(campaigns)
-    if (activeTab === "adsets") return applyFilters(allAdSets)
-    if (activeTab === "ads") return applyFilters(allAds)
-    if (activeTab === "leads") return applyFilters(leads)
-    return []
-  }
+const getFilteredDataForTab = () => {
+  let data = []
+  if (activeTab === "campaigns") data = campaigns
+  if (activeTab === "adsets") data = allAdSets
+  if (activeTab === "ads") data = allAds
+  if (activeTab === "leads") data = leads
   
-
+  console.log(`🔍 getFilteredDataForTab (${activeTab}):`, {
+    rawCount: data.length,
+    filtered: applyFilters(data).length
+  })
+  
+  return applyFilters(data)
+}
+  
   const baseColumns = [
-    "adAccount",
-    "spend",
-    "impressions",
-    "clicks",
-    "cpc",
-    "reach",
-    "ctr",
+  "adAccount",
+  "spend",
+  "social_spend", // NEW
+  "impressions",
+  "clicks",
+  "cpc",
+  "cpp", // NEW
+  "reach",
+  "ctr",
+  "cpm",
+  "frequency",
+  "conversion_rate_ranking", // NEW
+  "account_currency", // NEW
   ]
+  
   const getAvailableColumns = () => {
-    if (activeTab === "leads") return ["full_name", "email", "phone_number", "ad_name", "campaign_name", "clientGroup"]
+    if (activeTab === "leads") return ["full_name", "email", "phone_number", "ad_name", "campaign_name", "group_name", "created_time"]
     return ["name", "clientGroup", ...baseColumns, ...customMetrics.map((m) => m.id)]
   }
 
   const categories = [
-  { id: "all", label: "All" },
-  { id: "meta", label: "Meta" },
-  { id: "custom", label: "Custom" },
+    { id: "all", label: "All" },
+    { id: "meta", label: "Meta" },
+    { id: "custom", label: "Custom" },
   ]
 
   const toggleableColumns = getAvailableColumns().filter((col) => col !== "name")
@@ -342,81 +562,81 @@ const [visibleColumns, setVisibleColumns] = useState({
   const customCount = toggleableColumns.length - metaCount
 
   const categoryCounts = {
-  all: toggleableColumns.length,
-  meta: metaCount,
-  custom: customCount,
-}
+    all: toggleableColumns.length,
+    meta: metaCount,
+    custom: customCount,
+  }
 
-const allColumnsForDropdown = toggleableColumns.map((col) => ({
-  id: col,
-  label: getMetricDisplayName(col),
-  visible: (visibleColumns[activeTab] || []).includes(col),
-  type: baseColumns.includes(col) ? "meta" : "custom",
-}))
-
-const filteredColumns = allColumnsForDropdown.filter((col) => {
-  const matchesCategory =
-    selectedCategory === "all" || col.type === selectedCategory
-
-  const matchesSearch = col.label
-    .toLowerCase()
-    .includes(columnsSearch.toLowerCase())
-
-  return matchesCategory && matchesSearch
-})
-
-const columnVisibility = Object.fromEntries(
-  allColumnsForDropdown.map((c) => [
-    c.id,
-    (visibleColumns[activeTab] || []).includes(c.id)
-  ])
-)
-
-const toggleColumnVisibility = (colId) => {
-  toggleColumn(colId)
-}
-
-const selectAll = () => {
-  setVisibleColumns((prev) => ({
-    ...prev,
-    [activeTab]: getAvailableColumns(),
+  const allColumnsForDropdown = toggleableColumns.map((col) => ({
+    id: col,
+    label: getMetricDisplayName(col),
+    visible: (visibleColumns[activeTab] || []).includes(col),
+    type: baseColumns.includes(col) ? "meta" : "custom",
   }))
-}
 
-const clearAll = () => {
-  setVisibleColumns((prev) => ({
-    ...prev,
-    [activeTab]: activeTab === "leads" ? [] : ["name"],
-  }))
-}
+  const filteredColumns = allColumnsForDropdown.filter((col) => {
+    const matchesCategory =
+      selectedCategory === "all" || col.type === selectedCategory
 
-const saveView = () => {
-  setColumnsOpen(false)
-}
+    const matchesSearch = col.label
+      .toLowerCase()
+      .includes(columnsSearch.toLowerCase())
 
-const getIcon = (col) => {
-  if (col.id === "clientGroup" || col.id === "name") return lab
-  return metaa
-}
+    return matchesCategory && matchesSearch
+  })
+
+  const columnVisibility = Object.fromEntries(
+    allColumnsForDropdown.map((c) => [
+      c.id,
+      (visibleColumns[activeTab] || []).includes(c.id)
+    ])
+  )
+
+  const toggleColumnVisibility = (colId) => {
+    toggleColumn(colId)
+  }
+
+  const selectAll = () => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [activeTab]: getAvailableColumns(),
+    }))
+  }
+
+  const clearAll = () => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [activeTab]: activeTab === "leads" ? [] : ["name"],
+    }))
+  }
+
+  const saveView = () => {
+    setColumnsOpen(false)
+  }
+
+  const getIcon = (col) => {
+    if (col.id === "clientGroup" || col.id === "name") return lab
+    return metaa
+  }
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
 
   const tableTitle = `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Overview`;
-const tableDescription = `Showing ${getFilteredDataForTab().length} ${activeTab}`;
-const tableColumns = getCurrentVisibleColumns().map((col) => ({
-  key: col,
-  header: () => (
-    <div className="flex items-center justify-between min-w-[200px]">
-      <span>{getMetricDisplayName(col)}</span>
-      {col === "clientGroup" || col === "name" ? (
-        <Image src={lab} alt="Lab" className="w-4 h-4 ml-2" />
-      ) : (
-        <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
-      )}
-    </div>
-  ),
-  render: (value) => formatCellValue(value, col),
-}));
+  const tableDescription = `Showing ${getFilteredDataForTab().length} ${activeTab}`;
+  const tableColumns = getCurrentVisibleColumns().map((col) => ({
+    key: col,
+    header: () => (
+      <div className="flex items-center justify-between min-w-[200px]">
+        <span>{getMetricDisplayName(col)}</span>
+        {col === "clientGroup" || col === "name" ? (
+          <Image src={lab} alt="Lab" className="w-4 h-4 ml-2" />
+        ) : (
+          <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
+        )}
+      </div>
+    ),
+    render: (value) => formatCellValue(value, col),
+  }));
 
   const toggleColumn = (col) => {
     setVisibleColumns((prev) => {
@@ -440,8 +660,10 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
   const formatCellValue = (value, col) => {
     if (value === null || value === undefined) return "-"
     if (customMetrics.some((m) => m.id === col)) return formatMetricValue(value, col)
-    if (["spend", "cpc", "cpm"].includes(col)) return `$${Number(value).toFixed(2)}`
+    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col)) return `$${Number(value).toFixed(2)}`
     if (col === "ctr") return `${Number(value).toFixed(2)}%`
+    if (col === "account_currency") return value.toUpperCase()
+    if (col === "conversion_rate_ranking") return value.replace(/_/g, ' ')
     if (typeof value === "number") return value.toLocaleString()
     return value
   }
@@ -452,15 +674,42 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
       { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" },
     ])
   }
+  
   const updateFilterCondition = (idx, field, val) => {
     setFilterConditions((prev) => prev.map((c, i) => (i === idx ? { ...c, [field]: val } : c)))
   }
+  
   const removeFilterCondition = (idx) => {
     setFilterConditions((prev) => prev.filter((_, i) => i !== idx))
   }
+  
   const handleClearFilters = () => {
     setFilterConditions([])
     setSearchTerm("")
+  }
+
+  // Date range preset handlers
+  const handleDateRangePreset = (days) => {
+    const newRange = {
+      from: subDays(new Date(), days),
+      to: new Date(),
+    }
+    setTempDateRange(newRange)
+  }
+
+  const applyDateRange = () => {
+    setDateRange(tempDateRange)
+    setDatePickerOpen(false)
+  }
+
+  const resetDateRange = () => {
+    const defaultRange = {
+      from: subDays(new Date(), 7),
+      to: new Date(),
+    }
+    setTempDateRange(defaultRange)
+    setDateRange(defaultRange)
+    setDatePickerOpen(false)
   }
 
   return (
@@ -535,34 +784,86 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
               save={saveView}
             />
 
-            {/* date filter */}
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  id="date"
-                  className="w-35 justify-between font-semibold bg-white"
-                  placeholder="Select date"
-                >
-                  <CalendarIcon />
-                  {date ? date.toLocaleDateString() : "Select date"}
-                  <ChevronDown />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto overflow-hidden p-0 bg-white" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  captionLayout="dropdown"
-                  onSelect={(date) => {
-                    setDate(date)
-                    setOpen(false)
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
+            {/* Enhanced Date Range Picker */}
+        {/* Enhanced Date Range Picker */}
+<Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+  <PopoverTrigger asChild>
+    <Button
+      variant="outline"
+      className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+    >
+      <CalendarIcon className="h-4 w-4" />
+      <span className="hidden md:inline">
+        {dateRange.from && dateRange.to
+          ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+          : "Select date range"}
+      </span>
+      <ChevronDown className="h-4 w-4" />
+    </Button>
+  </PopoverTrigger>
+  <PopoverContent className="w-auto p-0 bg-white" align="end">
+    <div className="p-3">
+      <Calendar
+        mode="range"
+        defaultMonth={tempDateRange?.from}
+        selected={tempDateRange}
+        onSelect={(range) => {
+          if (range?.from && range?.to) {
+            setTempDateRange({ from: range.from, to: range.to })
+          } else if (range?.from) {
+            setTempDateRange({ from: range.from, to: range.from })
+          }
+        }}
+        numberOfMonths={2}
+        captionLayout="dropdown-buttons"
+        fromYear={2020}
+        toYear={new Date().getFullYear()}
+        disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
+        className="rounded-lg border shadow-sm"
+      />
+
+      {/* Action buttons */}
+      <div className="flex items-center justify-between pt-3 border-t mt-3">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={resetDateRange}
+        >
+          Reset
+        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDatePickerOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={applyDateRange}
+            disabled={!tempDateRange.from || !tempDateRange.to}
+          >
+            Apply
+          </Button>
+        </div>
+      </div>
+    </div>
+  </PopoverContent>
+</Popover>
           </div>
         </div>
+
+        {/* Date Range Indicator */}
+        {dateRange.from && dateRange.to && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CalendarIcon className="h-4 w-4" />
+            <span>
+              Showing data from {format(dateRange.from, "MMM dd, yyyy")} to {format(dateRange.to, "MMM dd, yyyy")}
+              ({Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days)
+            </span>
+          </div>
+        )}
 
         {/* Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -621,7 +922,7 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
 
           <TabsContent value={activeTab} className="mt-6">
             {/* Filters */}
-              <div className="flex flex-col space-y-0 md:flex-row md:items-center md:justify-between md:space-y-0">
+            <div className="flex flex-col space-y-0 md:flex-row md:items-center md:justify-between md:space-y-0">
               
               {/* Active Filters */}
               {filterConditions.length > 0 && (
@@ -647,7 +948,7 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
                                 <SelectItem value="phone_number">Phone Number</SelectItem>
                                 <SelectItem value="ad_name">Ad Name</SelectItem>
                                 <SelectItem value="campaign_name">Campaign Name</SelectItem>
-                                <SelectItem value="clientGroup">Client Group</SelectItem>
+                                <SelectItem value="group_name">Client Group</SelectItem>
                               </>
                             ) : (
                               <>
@@ -699,19 +1000,22 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
                   </div>
                 </div>
               )}
-               <div className="flex justify-end items-center gap-3 flex-1">
-                  {(filterConditions.length > 0 || searchTerm) && (
-                    <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2 bg-transparent">
-                      <X className="h-4 w-4" />
-                      Clear
-                    </Button>
-                  )}
-                </div>
+              <div className="flex justify-end items-center gap-3 flex-1">
+                {(filterConditions.length > 0 || searchTerm) && (
+                  <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2 bg-transparent">
+                    <X className="h-4 w-4" />
+                    Clear
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Table */}
             {isLoading ? (
-              <loading />
+              <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mb-4"></div>
+                <p className="text-sm text-muted-foreground">Loading {activeTab}...</p>
+              </div>
             ) : error && getFilteredDataForTab().length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
                 <div className="rounded-full bg-destructive/10 p-3 mb-4">
@@ -722,44 +1026,7 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
               </div>
             ) : getFilteredDataForTab().length > 0 ? (
               <div className="rounded-lg border bg-card overflow-hidden">
-                  <StyledTable columns={tableColumns} data={getFilteredDataForTab()} />
-                {/* <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50 border-b border-r whitespace-nowrap">
-                      <tr>
-                        {getCurrentVisibleColumns().map((col) => (
-                          <th key={col} className="border-r px-4 py-3 text-left text-sm font-medium text-foreground">
-                            <div className="flex items-center justify-between min-w-[200px]">
-                              <span>
-                                {getMetricDisplayName(col)}
-                              </span>
-                              
-                              {col === "clientGroup" || col === "name" ? (
-                                <Image src={lab} alt="Lab" className="w-4 h-4 ml-2" />
-                              ) : (
-                                <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {getFilteredDataForTab().map((item, idx) => (
-                        <tr
-                          key={item.id || idx}
-                          className="odd:bg-[#F4F3F9] even:bg-white hover:bg-muted/50 transition-colors whitespace-nowrap"
-                        >
-                          {getCurrentVisibleColumns().map((col) => (
-                            <td key={`${item.id}-${col}`} className="px-4 py-3 text-sm">
-                              {formatCellValue(item[col], col)}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div> */}
+                <StyledTable columns={tableColumns} data={getFilteredDataForTab()} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
@@ -768,7 +1035,7 @@ const tableColumns = getCurrentVisibleColumns().map((col) => ({
                 </div>
                 <h3 className="text-lg font-semibold mb-2">No results found</h3>
                 <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-                  No data matches your current filters. Try adjusting your search criteria.
+                  No data matches your current filters. Try adjusting your search criteria or date range.
                 </p>
                 {(filterConditions.length > 0 || searchTerm) && (
                   <Button variant="outline" size="sm" onClick={handleClearFilters}>
