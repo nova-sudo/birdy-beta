@@ -362,7 +362,7 @@ const MetricsHub = () => {
   }
 
   return (
-    <div className="min-h-screen bg-white w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
+    <div className="min-h-screen bg-white w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -433,11 +433,11 @@ const MetricsHub = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-sm space-y-1">
+              <div className="text-sm space-y-1 py-2">
                 {statistics?.byDashboard && Object.entries(statistics.byDashboard).map(([dash, count]) => (
                   <div key={dash} className="flex justify-between">
                     <span>{dash}:</span>
-                    <span className="font-semibold">{count}</span>
+                    <span className="font-semibold w-6 text-center">{count}</span>
                   </div>
                 ))}
               </div>

@@ -397,14 +397,14 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="min-h-screen w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
-        <div className="container py-5">
+    <div className="min-h-screen w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
+        <div className="py-2">
           <h1 className="text-3xl font-bold tracking-tight text-foreground text-center md:text-left">Settings</h1>
 
       </div>
 
-      <div className="container">
-        <Tabs defaultValue={defaultTab} className="space-y-6">
+      <div>
+        <Tabs defaultValue={defaultTab} className="space-y-6 py-6">
           <TabsList className="inline-flex h-13 item-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
             <TabsTrigger value="general" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
             data-[state=active]:bg-white

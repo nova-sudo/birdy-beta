@@ -785,7 +785,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
+    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
         {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
@@ -872,11 +872,12 @@ export default function ContactPage() {
                     />
 
                     {/* Action buttons */}
-                    <div className="flex items-center justify-between pt-3 border-t mt-3">
+                    <div className="flex items-center pt-3 border-t mt-3">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={resetDateRange}
+                        className="border border-gray-300 rounded-md mr-2"
                       >
                         Reset
                       </Button>
@@ -885,6 +886,7 @@ export default function ContactPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setDatePickerOpen(false)}
+                          className="border border-gray-300 rounded-md mr-2"
                         >
                           Cancel
                         </Button>
@@ -892,6 +894,7 @@ export default function ContactPage() {
                           size="sm"
                           onClick={applyDateRange}
                           disabled={!tempDateRange.from || !tempDateRange.to}
+                          className="rounded-md bg-purple-600 text-white font-semibold"
                         >
                           Apply
                         </Button>

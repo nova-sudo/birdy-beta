@@ -506,7 +506,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
