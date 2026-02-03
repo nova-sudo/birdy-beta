@@ -124,7 +124,7 @@ const fetchAllData = async (signal) => {
     console.log('🔍 Fetching data for date range:', { startDate, endDate })
 
     // Fetch client groups first (for metadata only)
-    const groupsResponse = await fetch("http://localhost:3005/api/client-groups", {
+    const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
       credentials: "include",
       signal: signal,
     })
@@ -158,7 +158,7 @@ const fetchAllData = async (signal) => {
     // ============================================
     // 🔥 Fetch campaigns
     // ============================================
-    const campaignsUrl = `http://localhost:3005/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Campaigns URL:', campaignsUrl)
     
     const campaignsResponse = await fetch(campaignsUrl, {
@@ -169,7 +169,7 @@ const fetchAllData = async (signal) => {
     // ============================================
     // 🔥 Fetch adsets
     // ============================================
-    const adsetsUrl = `http://localhost:3005/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Adsets URL:', adsetsUrl)
     
     const adsetsResponse = await fetch(adsetsUrl, {
@@ -180,7 +180,7 @@ const fetchAllData = async (signal) => {
     // ============================================
     // 🔥 Fetch ads
     // ============================================
-    const adsUrl = `http://localhost:3005/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
+    const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Ads URL:', adsUrl)
     
     const adsResponse = await fetch(adsUrl, {
@@ -192,7 +192,7 @@ const fetchAllData = async (signal) => {
     // 🔥 Fetch leads
     // ============================================
     const leadsResponse = await fetch(
-      `http://localhost:3005/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
+      `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
       {
         credentials: "include",
         signal: signal,
