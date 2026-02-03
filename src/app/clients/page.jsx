@@ -268,7 +268,7 @@ export default function ClientsPage() {
       setLoading(true)
       setError("")
 
-      const response = await fetch("http://localhost:3005/api/client-groups", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         credentials: "include",
       })
 
@@ -307,7 +307,7 @@ export default function ClientsPage() {
         }
       }
 
-      const response = await fetch("http://localhost:3005/api/subaccount/locations", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/subaccount/locations", {
         credentials: "include",
       })
 
@@ -334,7 +334,7 @@ export default function ClientsPage() {
 
   const fetchMetaAdAccounts = async (forceRefresh = false) => {
     try {
-      const response = await fetch("http://localhost:3005/api/facebook/adaccounts", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
         credentials: "include",
       })
 
@@ -412,7 +412,7 @@ export default function ClientsPage() {
     toast.info(`Creating "${creatingGroupName}"...`)
 
     try {
-      const response = await fetch("http://localhost:3005/api/client-groups", {
+      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
