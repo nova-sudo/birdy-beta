@@ -592,29 +592,10 @@ export default function ClientsPage() {
                 }}
               >
                  {/* Date Range Filter */}
-                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
-                    <CiCalendar/>
-                    <span className="hidden md:inline">
-                      <SelectValue placeholder="All Time"  />
-                    </span>
-                  </SelectTrigger>
-                <SelectContent className="bg-white">
-                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
-                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
-                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
-                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
-                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
-                  </SelectContent>
-                </Select>
+
 
                 {/* Add client */}
-                <Button
-                  onClick={() => setWizardOpen(true)}
-                  className="bg-[#713CDD] inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
-                >
-                   <Plus className="h-4 w-4 border rounded-full border-2" />
-                </Button>
+        
                 <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
                   <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
                     <div className="flex items-center gap-3">
