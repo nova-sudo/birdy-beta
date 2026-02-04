@@ -539,7 +539,7 @@ const MetricsHub = () => {
 
             <div className="space-y-4">
               <div>
-                <Label htmlFor="metric-name">Metric Name *</Label>
+                <Label htmlFor="metric-name" className="pb-2">Metric Name *</Label>
                 <Input
                   id="metric-name"
                   placeholder="e.g., ROI, Cost per Conversion"
@@ -549,7 +549,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-description">Description</Label>
+                <Label htmlFor="metric-description" className="pb-2">Description</Label>
                 <Textarea
                   id="metric-description"
                   placeholder="Optional description"
@@ -559,7 +559,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label htmlFor="metric-group">Dashboard *</Label>
+                <Label htmlFor="metric-group" className="pb-2">Dashboard *</Label>
                 <Select value={metricForm.group} onValueChange={(value) => setMetricForm({ ...metricForm, group: value })}>
                   <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Select dashboard" />
@@ -573,7 +573,7 @@ const MetricsHub = () => {
               </div>
 
               <div>
-                <Label>Formula Builder</Label>
+                <Label className="pb-2">Formula Builder</Label>
                 <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
                   {metricForm.formulaParts.map((part, index) => (
                     <div key={index} className="flex items-center gap-2">

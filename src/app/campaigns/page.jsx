@@ -715,7 +715,7 @@ const getFilteredDataForTab = () => {
   return (
     <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
             <div className="whitespace-nowrap">
               <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
@@ -742,7 +742,8 @@ const getFilteredDataForTab = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
@@ -750,8 +751,8 @@ const getFilteredDataForTab = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-
-            <Button
+            <div className="flex gap-1 overflow-x-auto lg:overflow-x-hidden">
+              <Button
               variant="outline"
               size="sm"
               onClick={addFilterCondition}
@@ -854,6 +855,8 @@ const getFilteredDataForTab = () => {
                 </div>
               </PopoverContent>
             </Popover>
+            </div>
+            
           </div>
         </div>
 
