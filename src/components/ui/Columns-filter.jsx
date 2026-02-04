@@ -1,3 +1,5 @@
+'use client';
+
 import Image from "next/image"
 import { Eye, ChevronDown } from "lucide-react"
 
@@ -45,9 +47,9 @@ export default function ColumnVisibilityDropdown({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="w-fit bg-white p-0">
+      <DropdownMenuContent align="end" className="bg-white p-0 w-screen sm:w-fit md:w-fit">
         {/* Categories */}
-        <div className="flex flex-wrap gap-1 p-2 border-b">
+        <div className="flex flex-nowrap justify-between gap-1 p-2 border-b overflow-x-auto md:overflow-x-visible">
           {categories.map(({ id, label }) => (
             <Button
               key={id}
@@ -55,7 +57,7 @@ export default function ColumnVisibilityDropdown({
               size="sm"
               onClick={() => setSelectedCategory(id)}
               data-state={selectedCategory === id ? "active" : "inactive"}
-              className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
+              className="flex-shrink-0 text-[#71658B] font-semibold hover:bg-[#FBFAFE]
                 data-[state=active]:bg-purple-100/50
                 data-[state=active]:text-foreground
                 data-[state=active]:border-b-3
@@ -67,15 +69,17 @@ export default function ColumnVisibilityDropdown({
         </div>
 
         {/* Search */}
-        <Input
-          className="mx-2 mt-2 mb-2 w-137"
-          placeholder={`Search in ${
-            categories.find(c => c.id === selectedCategory)?.label ||
-            "All Metrics"
-          }...`}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
+        <div className="px-2 mt-2 mb-2">
+          <Input
+            className="w-full"
+            placeholder={`Search in ${
+              categories.find(c => c.id === selectedCategory)?.label ||
+              "All Metrics"
+            }...`}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
 
         {/* Columns */}
         <div className="max-h-80 overflow-y-auto px-2 pb-2 border-t">
@@ -93,7 +97,7 @@ export default function ColumnVisibilityDropdown({
 
                 {Icon && (
                   <Image
-                    src={Icon}
+                    src={Icon || "/placeholder.svg"}
                     alt=""
                     width={16}
                     height={16}
