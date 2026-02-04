@@ -546,7 +546,35 @@ export default function ClientsPage() {
                 /> 
               </div>
               
-              <Dialog
+              <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
+                  <CiCalendar/>
+                  <span className="hidden md:inline">
+                    <SelectValue placeholder="All Time"  />
+                  </span>
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
+                  <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
+                  <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
+                  <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
+                  <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Button
+                onClick={() => setWizardOpen(true)}
+                className="bg-[#713CDD] inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
+              >
+                <Plus className="h-4 w-4 border rounded-full border-2" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 🔥 FIXED: Dialog moved outside and properly structured */}
+      <Dialog
                 open={wizardOpen}
                 onOpenChange={(open) => {
                   setWizardOpen(open)
@@ -563,37 +591,369 @@ export default function ClientsPage() {
                   }
                 }}
               >
-                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="bg-white gap-1 md:gap-2 px-2 md:px-4 md:text-base font-semibold h-10">
-                    <CiCalendar/>
-                    <span className="hidden md:inline">
-                      <SelectValue placeholder="All Time"  />
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all" className="hover:bg-[#E8DFFB]">All Time</SelectItem> 
-                    <SelectItem value="today" className="hover:bg-[#E8DFFB]">Today</SelectItem>
-                    <SelectItem value="week" className="hover:bg-[#E8DFFB]">Last 7 Days</SelectItem>
-                    <SelectItem value="month" className="hover:bg-[#E8DFFB]">Last 30 Days</SelectItem>
-                    <SelectItem value="year" className="hover:bg-[#E8DFFB]">Last Year</SelectItem>
-                  </SelectContent>
-                </Select>
+                 {/* Date Range Filter */}
 
-                <Button
-                  onClick={() => setWizardOpen(true)}
-                  className="bg-[#713CDD] inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
-                >
-                  <Plus className="h-4 w-4 border rounded-full border-2" />
-                </Button>
+
+                {/* Add client */}
+        
                 <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
-                  {/* Dialog content - keeping existing code */}
-                  {/* ... wizard steps ... */}
+                  <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-white/20 p-2 rounded-lg">
+                        <Building2 className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
+                        <p className="text-purple-100 text-sm">
+                          Step {wizardStep} of 3:{" "}
+                          {
+                            [
+                              "Name your client group",
+                              "Select or add GHL subaccount",
+                              "Select Meta ad account",
+                              "Select Hot Prospector group",
+                            ][wizardStep - 1]
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                  <div className="h-auto bg-white">
+                    {wizardStep === 1 && (
+                      <div className="space-y-2 p-2">
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Client Group Name</label>
+                          <Input
+                            type="text"
+                            placeholder="Enter client group name"
+                            value={clientGroupName}
+                            onChange={(e) => setClientGroupName(e.target.value)}
+                            className="mt-1"
+                            autoFocus
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {wizardStep === 2 && (
+                      <div className="space-y-4 p-4 ">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
+                          <Input
+                            type="text"
+                            placeholder="Search GHL locations by name or ID..."
+                            value={locationSearchQuery}
+                            onChange={(e) => setLocationSearchQuery(e.target.value)}
+                            className="pl-10 pr-4 py-3"
+                          />
+                        </div>
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                          {filteredGhlLocations.length > 0 ? (
+                            filteredGhlLocations.map((location) => (
+                              <div
+                                key={location.locationId}
+                                onClick={() => {
+                                  setSelectedGhlLocation(location)
+                                  setNewGhlLocationId("")
+                                }}
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                  selectedGhlLocation?.locationId === location.locationId
+                                    ? "border-purple-500 bg-purple-50 shadow-md"
+                                    : "border-border hover:border-muted-foreground bg-card"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3
+                                        className={`font-semibold truncate ${
+                                          selectedGhlLocation?.locationId === location.locationId
+                                            ? "text-purple-900"
+                                            : "text-foreground"
+                                        }`}
+                                      >
+                                        {location.name || "Unnamed Location"}
+                                      </h3>
+                                    </div>
+                                    <p
+                                      className={`text-xs font-mono ${
+                                        selectedGhlLocation?.locationId === location.locationId
+                                          ? "text-purple-600"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      ID: {location.locationId}
+                                    </p>
+                                  </div>
+                                  <div
+                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                      selectedGhlLocation?.locationId === location.locationId
+                                        ? "bg-purple-600 border-purple-600"
+                                        : "border-border group-hover:border-muted-foreground"
+                                    }`}
+                                  >
+                                    {selectedGhlLocation?.locationId === location.locationId && (
+                                      <Check className="w-3 h-3 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <div class="flex items-center justify-center h-fit">
+                                <Empty className="w-full">
+                                      <EmptyHeader>
+                                        <EmptyMedia variant="icon">
+                                          <Spinner />
+                                        </EmptyMedia>
+                                        <EmptyTitle>Loading GHL Locations</EmptyTitle>
+                                        <EmptyDescription>
+                                          Please wait while we process your request. Do not refresh the page.
+                                        </EmptyDescription>
+                                      </EmptyHeader>
+                                    </Empty>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {(selectedGhlLocation || newGhlLocationId) && (
+                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-purple-600" />
+                              <span className="text-sm font-medium text-purple-900">
+                                Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {wizardStep === 3 && (
+                      <div className="space-y-2 p-4">
+                        <div className="relative ">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                          <Input
+                            type="text"
+                            placeholder="Search Meta ad accounts by name or ID..."
+                            value={metaSearchQuery}
+                            onChange={(e) => setMetaSearchQuery(e.target.value)}
+                            className="pl-10 pr py-3"
+                          />
+                        </div> 
+                        <div className="space-y-2 max-h-80 overflow-y-auto ">
+                          {filteredMetaAdAccounts.length > 0 ? (
+                            filteredMetaAdAccounts.map((account) => (
+                              <div
+                                key={account.id}
+                                onClick={() => setSelectedMetaAdAccount(account)}
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                  selectedMetaAdAccount?.id === account.id
+                                    ? "border-purple-500 bg-purple-50 shadow-md"
+                                    : "border-border hover:border-muted-foreground bg-card"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3
+                                        className={`font-semibold truncate ${
+                                          selectedMetaAdAccount?.id === account.id
+                                            ? "text-purple-900"
+                                            : "text-foreground"
+                                        }`}
+                                      >
+                                        {account.name || "Unnamed Ad Account"}
+                                      </h3>
+                                    </div>
+                                    <p
+                                      className={`text-xs font-mono ${
+                                        selectedMetaAdAccount?.id === account.id
+                                          ? "text-purple-600"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      ID: {account.id}
+                                    </p>
+                                  </div>
+                                  <div
+                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                      selectedMetaAdAccount?.id === account.id
+                                        ? "bg-purple-600 border-purple-600"
+                                        : "border-border group-hover:border-muted-foreground"
+                                    }`}
+                                  >
+                                    {selectedMetaAdAccount?.id === account.id && (
+                                      <Check className="w-3 h-3 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <div class="flex items-center justify-center h-fit">
+                                <Empty className="w-full">
+                                      <EmptyHeader>
+                                        <EmptyMedia variant="icon">
+                                          <Spinner />
+                                        </EmptyMedia>
+                                        <EmptyTitle>Loading Meta Adaccounts</EmptyTitle>
+                                        <EmptyDescription>
+                                          Please wait while we process your request. Do not refresh the page.
+                                        </EmptyDescription>
+                                      </EmptyHeader>
+                                    </Empty>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        {selectedMetaAdAccount && (
+                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-purple-600" />
+                              <span className="text-sm font-medium text-purple-900">
+                                Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* {wizardStep === 4 && (
+                      <div className="space-y-4">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                          <Input
+                            type="text"
+                            placeholder="Search Hot Prospector groups by name or ID..."
+                            value={hotProspectorSearchQuery}
+                            onChange={(e) => setHotProspectorSearchQuery(e.target.value)}
+                            className="pl-10 pr-4 py-3"
+                          />
+                        </div>
+                        <div className="space-y-2 max-h-80 overflow-y-auto">
+                          {filteredHotProspectorGroups.length > 0 ? (
+                            filteredHotProspectorGroups.map((group) => (
+                              <div
+                                key={group.id}
+                                onClick={() => setSelectedHotProspectorGroup(group)}
+                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
+                                  selectedHotProspectorGroup?.id === group.id
+                                    ? "border-purple-500 bg-purple-50 shadow-md"
+                                    : "border-border hover:border-muted-foreground bg-card"
+                                }`}
+                              >
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <h3
+                                        className={`font-semibold truncate ${
+                                          selectedHotProspectorGroup?.id === group.id
+                                            ? "text-purple-900"
+                                            : "text-foreground"
+                                        }`}
+                                      >
+                                        {group.name || "Unnamed Group"}
+                                      </h3>
+                                    </div>
+                                    <p
+                                      className={`text-xs font-mono ${
+                                        selectedHotProspectorGroup?.id === group.id
+                                          ? "text-purple-600"
+                                          : "text-muted-foreground"
+                                      }`}
+                                    >
+                                      ID: {group.id}
+                                    </p>
+                                  </div>
+                                  <div
+                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                                      selectedHotProspectorGroup?.id === group.id
+                                        ? "bg-purple-600 border-purple-600"
+                                        : "border-border group-hover:border-muted-foreground"
+                                    }`}
+                                  >
+                                    {selectedHotProspectorGroup?.id === group.id && (
+                                      <Check className="w-3 h-3 text-white" />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
+                              <p>No Hot Prospector groups found</p>
+                              <p className="text-sm">Try adjusting your search terms</p>
+                            </div>
+                          )}
+                        </div>
+                        {selectedHotProspectorGroup && (
+                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-purple-600" />
+                              <span className="text-sm font-medium text-purple-900">
+                                Selected: {selectedHotProspectorGroup.name || "Unnamed Group"}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )} */}
+                  </div>
+                  <div className="bg-muted/50 p-4 flex items-center justify-between border-t border-border">
+                    <p className="text-sm text-muted-foreground">
+                      {wizardStep === 2 &&
+                        `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
+                      {wizardStep === 3 &&
+                        `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
+                      {/* {wizardStep === 4 &&
+                        `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`} */}
+                    </p>
+                    <div className="flex items-center ">
+                      {wizardStep > 1 && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => setWizardStep(wizardStep - 1)}
+                          className="text-muted-foreground hover:bg-muted"
+                        >
+                          Back
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => setWizardOpen(false)}
+                        disabled={addingClientGroup}
+                        className="text-muted-foreground hover:bg-muted"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleCreateClientGroup}
+                        disabled={addingClientGroup || (wizardStep === 1 && !clientGroupName)}
+                        className="bg-purple-600 hover:bg-purple-700 text-white min-w-[120px]"
+                      >
+                        {addingClientGroup ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                            Creating...
+                          </>
+                        ) : wizardStep < 3 ? (
+                          <>
+                            <ChevronRight className="w-4 h-4 mr-2" />
+                            Next
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Create Client Group
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </DialogContent>
               </Dialog>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <div className="w-full mx-auto py-6 space-y-6">
         {error && (
