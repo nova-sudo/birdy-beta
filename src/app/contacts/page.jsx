@@ -66,16 +66,22 @@ const contactColumns = [
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
   { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
   { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "source", label: "Source", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: lab },
   { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl},
   { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]", icons: ghl },
-  { id: "contactType", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]" , icons: ghl},
-  { id: "opportunityStatus", label: "Opportunity", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "pipelineStage", label: "Stage", defaultVisible: true, sortable: true, width: "min-w-[180px]", icons: ghl },
-  { id: "leadValue", label: "Value", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
-  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]" , icons: ghl},
+  { id: "type", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl},
+  { id: "opportunities", label: "Opportunities", defaultVisible: true, sortable: false, width: "min-w-[150px]", icons: ghl },
+  { id: "firstName", label: "First Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "lastName", label: "Last Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "companyName", label: "Company", defaultVisible: false, sortable: true, width: "min-w-[180px]", icons: ghl },
+  { id: "source", label: "Source", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "city", label: "City", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
+  { id: "state", label: "State", defaultVisible: false, sortable: true, width: "min-w-[120px]", icons: ghl },
+  { id: "postalCode", label: "Postal Code", defaultVisible: false, sortable: true, width: "min-w-[120px]", icons: ghl },
   { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
+  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]", icons: ghl },
+  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]", icons: ghl },
+  { id: "dateOfBirth", label: "Date of Birth", defaultVisible: false, sortable: true, width: "min-w-[130px]", icons: ghl },
+  { id: "assignedTo", label: "Assigned To", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl }
 ]
 
 const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
@@ -86,40 +92,95 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
 
   const renderCellContent = (contact, col) => {
     switch (col.id) {
-      case "opportunityStatus":
-        if (!contact.opportunityStatus) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        const statusColors = {
-          open: "bg-[#DBEAFE] text-[#1D4ED8] rounded-full",
-          won: "bg-[#DCFCE7] text-[#15803D] rounded-full",
-          lost: "bg-[#FEE2E2] text-[#B91C1C] rounded-full",
-          abandoned: "bg-[#FEF9C3] text-[#A16207] rounded-full"
-        }
-        return (
-          <Badge className={`capitalize ${statusColors[contact.opportunityStatus] || "bg-gray-100"}`}>
-            {contact.opportunityStatus}
+      case "opportunities":
+      if (!contact.opportunities || contact.opportunities.length === 0) {
+        return <span className="text-muted-foreground text-sm">No opportunities</span>
+      }
+      
+      const opportunities = contact.opportunities
+      const mainOpp = opportunities[0]
+      const hasMoreOpps = opportunities.length > 1
+      
+      // Extract opportunity details
+      const oppStatus = mainOpp.status || "unknown"
+      const oppValue = mainOpp.monetaryValue || 0
+      const oppStage = mainOpp.pipelineStageId || mainOpp.stage || "unknown"
+      
+      const statusColors = {
+        open: "bg-[#DBEAFE] text-[#1D4ED8]",
+        won: "bg-[#DCFCE7] text-[#15803D]",
+        lost: "bg-[#FEE2E2] text-[#B91C1C]",
+        abandoned: "bg-[#FEF9C3] text-[#A16207]"
+      }
+      
+      return (
+        <div className="flex items-center gap-2">
+          <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
+            {oppStatus}
           </Badge>
-        )
+          
+          {oppValue > 0 && (
+            <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
+              <DollarSign className="w-3 h-3" />
+              {oppValue}
+            </span>
+          )}
+          
+          {hasMoreOpps && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">
+                  +{opportunities.length - 1}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+                {opportunities.slice(1).map((opp, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
+                    <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
+                      {opp.status}
+                    </Badge>
+                    {opp.monetaryValue > 0 && (
+                      <span className="text-xs text-green-600">${opp.monetaryValue}</span>
+                    )}
+                  </div>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )
 
-      case "pipelineStage":
-        if (!contact.pipelineStage) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span> 
-        }
-        return (
-          <span className="text-sm font-medium text-foreground">{contact.pipelineStage}</span>
-        )
+    // ✅ NEW: Handle company name
+    case "companyName":
+      if (!contact.companyName) {
+        return <span className="text-muted-foreground text-sm">-</span>
+      }
+      return (
+        <span className="text-sm font-medium text-foreground">{contact.companyName}</span>
+      )
 
-      case "leadValue":
-        if (!contact.leadValue) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
-        }
-        return (
-          <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-            <DollarSign className="w-3 h-3" /> 
-            {contact.leadValue}
-          </span>
-        )
+    // ✅ NEW: Handle city, state, postalCode
+    case "city":
+    case "state":
+    case "postalCode":
+      if (!contact[col.id]) {
+        return <span className="text-muted-foreground text-sm">-</span>
+      }
+      return (
+        <span className="text-sm text-foreground">{contact[col.id]}</span>
+      )
+
+    // ✅ UPDATE: type field (was contactType)
+    case "type":
+      const type = contact.type || contact.contactType
+      if (!type) {
+        return <span className="text-muted-foreground text-sm">-</span>
+      }
+      return (
+        <Badge variant="secondary" className="capitalize">
+          {type}
+        </Badge>
+      )
 
       case "tags":
         if (!contact[col.id] || contact[col.id].length === 0) {
@@ -176,17 +237,6 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               day: "numeric",
             })}
           </span>
-        )
-
-      case "contactType":
-        const type = contact.contactType || contact.type
-        if (!type) {
-          return <span className="">-</span>
-        }
-        return (
-          <Badge variant="secondary" className="capitalize">
-            {type}
-          </Badge>
         )
 
       case "address1":
@@ -378,9 +428,16 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const filteredTotal = filteredContacts.length
   const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
   const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithOpportunities = filteredContacts.filter((c) => c.opportunityStatus).length
-  const totalLeadValue = filteredContacts.reduce((sum, c) => sum + (c.leadValue || 0), 0)
-
+  const contactsWithOpportunities = filteredContacts.filter((c) => 
+    c.opportunities && c.opportunities.length > 0
+  ).length
+  const totalLeadValue = filteredContacts.reduce((sum, c) => {
+    if (!c.opportunities) return sum
+    const oppValue = c.opportunities.reduce((oppSum, opp) => 
+      oppSum + (opp.monetaryValue || 0), 0
+    )
+    return sum + oppValue
+  }, 0)
   const stats = [
     { title: "Total Contacts", value: filteredTotal, subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null, icon: Users },
     { title: "With Opportunities", value: contactsWithOpportunities, icon: Target },
@@ -410,8 +467,6 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
 
 export default function ContactPage() {
   const [contacts, setContacts] = useState([])
-  const [webhookData, setWebhookData] = useState([])
-  const [webhookLoading, setWebhookLoading] = useState(true)
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -467,68 +522,6 @@ export default function ContactPage() {
     }
     fetchClientGroups()
   }, [])
-
-  // Fetch webhook data (non-blocking)
-  useEffect(() => {
-    const fetchWebhooks = async () => {
-      setWebhookLoading(true)
-      try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/webhook-data?limit=10000`, { credentials: "include" })
-        if (response.ok) {
-          const data = await response.json()
-          setWebhookData(data.data || [])
-        } else {
-          setWebhookData([])
-        }
-      } catch (error) {
-        console.error("Error fetching webhooks:", error)
-        setWebhookData([])
-      } finally {
-        setWebhookLoading(false)
-      }
-    }
-    fetchWebhooks()
-  }, [])
-
-  // Enrich contacts when webhook data arrives
-  useEffect(() => {
-    if (contacts.length > 0 && webhookData.length > 0) {
-      const webhookByContactId = new Map()
-      const webhookByEmail = new Map()
-
-      webhookData.forEach(webhook => {
-        const contactId = webhook.contact_id
-        const email = webhook.data?.email
-        if (contactId) webhookByContactId.set(contactId, webhook.data)
-        if (email && typeof email === 'string' && email.trim() && !email.startsWith('no_email_')) {
-          webhookByEmail.set(email.trim().toLowerCase(), webhook.data)
-        }
-      })
-
-      const enriched = contacts.map(contact => {
-        let info = webhookByContactId.get(contact.contactId)
-        if (!info && contact.email) {
-          const normEmail = contact.email.trim().toLowerCase()
-          if (normEmail && !normEmail.startsWith('no_email_')) {
-            info = webhookByEmail.get(normEmail)
-          }
-        }
-        if (info) {
-          return {
-            ...contact,
-            opportunityStatus: info.status,
-            pipelineStage: info.pipleline_stage || info.pipeline_stage,
-            leadValue: info.lead_value,
-            opportunityName: info.opportunity_name,
-            opportunitySource: info.opportunity_source || info.source,
-          }
-        }
-        return contact
-      })
-
-      setContacts(enriched)
-    }
-  }, [webhookData])
 
   const fetchContacts = async (page = 1) => {
     setLoading(true)
@@ -625,8 +618,11 @@ export default function ContactPage() {
 
     if (selectedSource !== "all") filtered = filtered.filter(c => c.source?.includes(selectedSource))
     if (selectedType !== "all") filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
-    if (selectedOpportunityStatus !== "all") filtered = filtered.filter(c => c.opportunityStatus === selectedOpportunityStatus)
-    if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
+  if (selectedOpportunityStatus !== "all") {
+    filtered = filtered.filter(c => 
+      c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
+    )
+  }    if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
 
     if (sortColumn) {
       filtered.sort((a, b) => {
