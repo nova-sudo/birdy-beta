@@ -395,6 +395,7 @@ const StyledTable = ({
             z-index: 50;
             min-width: 250px;
             font-weight: 600;
+            max-width: 250px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -404,6 +405,7 @@ const StyledTable = ({
             z-index: 50;
             min-width: 250px;
             font-weight: 600;
+            max-width: 250px;
           }
           .fixed-header {
             position: sticky;
@@ -518,7 +520,7 @@ const StyledTable = ({
                   {visibleColumns.map((col, colIdx) => (
                     <td
                       key={`${row.id || idx}-${col.id}`}
-                      className={`text-foreground ${
+                      className={`text-foreground truncate ${
                         colIdx === 0
                           ? idx % 2 === 0
                             ? "fixed-column-odd"
@@ -529,15 +531,20 @@ const StyledTable = ({
                       <div
                         className={
                           colIdx === 0
-                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2"
-                            : ""
+                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
+                            : "min-w-0"
                         }
                       >
                         {/* Add spinner for first column when creating OR pending */}
                         {colIdx === 0 && (row._isCreating || row._isPending) && (
                           <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
-                        <span className={(row._isCreating || row._isPending) ? "text-muted-foreground" : ""}>
+                        <span
+                          className={`truncate min-w-0 ${
+                            row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                          }`}
+                        >
+
                           {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                             <button
                               onClick={() => onFirstColumnClick?.(row)}
