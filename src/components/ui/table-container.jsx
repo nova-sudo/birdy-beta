@@ -2,6 +2,12 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 
 import {
   loadCustomMetrics,
@@ -539,23 +545,33 @@ const StyledTable = ({
                         {colIdx === 0 && (row._isCreating || row._isPending) && (
                           <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
-                        <span
-                          className={`truncate min-w-0 ${
-                            row._isCreating || row._isPending ? "text-muted-foreground" : ""
-                          }`}
-                        >
-
-                          {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                            <button
-                              onClick={() => onFirstColumnClick?.(row)}
-                              className="text-left font-semibold text-primary hover:underline cursor-pointer"
-                            >
-                              {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                            </button>
-                          ) : (
-                            col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                          )}
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={`truncate min-w-0 ${
+                                  row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                }`}
+                              >
+                                {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                  <button
+                                    onClick={() => onFirstColumnClick?.(row)}
+                                    className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                  >
+                                    {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                  </button>
+                                ) : (
+                                  col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            {colIdx === 0 && !col.cell && (
+                              <TooltipContent>
+                                <p>{getCellValue(row, col.id)}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </td>
                   ))}
