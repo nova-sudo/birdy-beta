@@ -2,6 +2,14 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 import {
   loadCustomMetrics,
   evaluateFormula,
@@ -526,7 +534,7 @@ const getPageNumbers = () => {
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                  <div className="flex items-center justify-between border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
@@ -544,7 +552,7 @@ const getPageNumbers = () => {
                         )}
                       </button>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 ml-auto">
                       {col.icons ? (
                         typeof col.icons === "function" ? (
                           (() => {
@@ -609,25 +617,33 @@ const getPageNumbers = () => {
                         {colIdx === 0 && (row._isCreating || row._isPending) && (
                           <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
-                        <span
-                          className={`truncate min-w-0 ${
-                            row._isCreating || row._isPending ? "text-muted-foreground" : ""
-                          }`}
-                          title={colIdx === 0 && !col.cell ? getCellValue(row, col.id) : undefined}
-                        >
-
-                          {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                            <button
-                              onClick={() => onFirstColumnClick?.(row)}
-                              className="text-left font-semibold text-primary hover:underline cursor-pointer"
-                              title={!col.cell ? getCellValue(row, col.id) : undefined}
-                            >
-                              {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                            </button>
-                          ) : (
-                            col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                          )}
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={`truncate min-w-0 ${
+                                  row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                }`}
+                              >
+                                {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                  <button
+                                    onClick={() => onFirstColumnClick?.(row)}
+                                    className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                  >
+                                    {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                  </button>
+                                ) : (
+                                  col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            {colIdx === 0 && !col.cell && (
+                              <TooltipContent>
+                                <p>{getCellValue(row, col.id)}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </td>
                   ))}

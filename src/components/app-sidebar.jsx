@@ -43,8 +43,8 @@ const items = [
     icon: Boxes,
   },
   {
-    title: "Call Center",
-    url: "/call-center",
+    title: "Sales Hub",
+    url: "/Sales-Hub",
     icon: Phone,
   },
   {
