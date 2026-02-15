@@ -9,7 +9,6 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/u
 import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target, Search, ChevronDown, Eye} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
-import { CiCalendar } from "react-icons/ci";
 import { 
   ENHANCED_CLIENT_COLUMNS, 
   ENHANCED_CATEGORIES, 
