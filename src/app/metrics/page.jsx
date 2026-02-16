@@ -29,6 +29,19 @@ import {
   searchMetrics,
   getAvailableMetricsForFormulas 
 } from "@/lib/metrics-discovery"
+import ghl from "../../../public/ghl_icon.png";
+import metaa from "../../../public/meta-icon-DH8jUhnM.png";
+import HP from "../../../public/hp_icon.png";
+import Flask from "../../../public/Flask.png";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 const operators = [
   { value: "+", label: "Add (+)" },
@@ -140,6 +153,8 @@ const MetricsHub = () => {
   const [discoveredMetrics, setDiscoveredMetrics] = useState([])
   const [availableMetricsForFormulas, setAvailableMetricsForFormulas] = useState([])
   const [statistics, setStatistics] = useState(null)
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15; // Adjust as needed
 
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
@@ -224,6 +239,16 @@ const MetricsHub = () => {
 
     return matchesTab && matchesSearch
   })
+
+  const totalPages = Math.ceil(filteredMetrics.length / itemsPerPage);
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+  };
+
+  const currentMetrics = filteredMetrics.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const buildFormulaString = (parts) => {
     return parts
@@ -331,35 +356,157 @@ const MetricsHub = () => {
 
   const getSourceBadge = (source) => {
     const badges = {
-      "GoHighLevel": { color: "bg-green-50 text-green-700 border-green-200", icon: BarChart3 },
-      "Meta Ads": { color: "bg-blue-50 text-blue-700 border-blue-200", icon: TrendingUp },
-      "Webhook": { color: "bg-red-50 text-red-700 border-red-200", icon: Webhook },
-      "Custom Formula": { color: "bg-purple-50 text-purple-700 border-purple-200", icon: Calculator },
-      "Calculated": { color: "bg-orange-50 text-orange-700 border-orange-200", icon: Calculator },
-      "System": { color: "bg-gray-50 text-gray-700 border-gray-200", icon: BarChart3 },
-      "HotProspector": { color: "bg-pink-50 text-pink-700 border-pink-200", icon: TrendingUp },
-    }
+  "GoHighLevel": { 
+    color: "text-[#16A34A] bg-[#F0FDF4] font-semibold border-green-200 rounded-full", 
+    image: ghl 
+  },
+  "Meta Ads": { 
+    color: "text-[#2563EB] bg-[#EFF6FF] font-semibold border-blue-200 rounded-full", 
+    image: metaa 
+  },
+  "Webhook": { 
+    color: "text-[#E11D48] bg-[#FFF1F2] font-semibold border-red-200 rounded-full", 
+    image: null 
+  },
+  "Custom Formula": { 
+    color: "text-[#7854EA] bg-[#F5F3FF] font-semibold border-purple-200 rounded-full", 
+    image: Flask 
+  },
+  "Calculated": { 
+    color: "text-[#EA580C] bg-[#FFF7ED] font-semibold border-orange-200 rounded-full", 
+    image: null 
+  },
+  "System": { 
+    color: "text-[#4B5563] bg-[#F9FAFB] font-semibold border-gray-200 rounded-full", 
+    image: null 
+  },
+  "HotProspector": { 
+    color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full", 
+    image: HP 
+  },
+}
     
     const badge = badges[source] || badges["System"]
-    const Icon = badge.icon
     
     return (
-      <Badge variant="outline" className={`gap-1 ${badge.color}`}>
-        <Icon className="w-3 h-3" />
-        {source}
-      </Badge>
+      <Badge variant="outline" className={`w-fit h-7 ${badge.color}`}>
+      {badge.image ? (
+        <img 
+          src={badge.image.src} 
+          alt={`${source} icon`}
+          className="w-4 h-4" 
+        />
+      ) : null}
+      {source}
+    </Badge>
     )
   }
 
   const getDashboardBadge = (dashboard) => {
     const colors = {
-      Clients: "bg-green-100 text-green-800",
-      Campaigns: "bg-blue-100 text-blue-800",
-      Contacts: "bg-purple-100 text-purple-800",
+      Clients: "bg-green-100 text-green-800 rounded-full",
+      Campaigns: "bg-blue-100 text-blue-800 rounded-full",
+      Contacts: "bg-purple-100 text-purple-800 rounded-full",
     }
 
     return <Badge className={colors[dashboard] || "bg-gray-100 text-gray-800"}>{dashboard}</Badge>
   }
+
+    // Function to generate pagination items with ellipsis logic
+  const renderPaginationItems = () => {
+    const items = [];
+    const ellipsis = <PaginationItem key="ellipsis"><PaginationEllipsis /></PaginationItem>;
+
+    if (totalPages <= 5) {
+      // Show all pages if 5 or fewer
+      for (let i = 1; i <= totalPages; i++) {
+        items.push(
+          <PaginationItem key={i}>
+            <PaginationLink
+              href="#"
+              isActive={currentPage === i}
+              onClick={(e) => { e.preventDefault(); handlePageChange(i); }}
+            >
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    } else {
+      // Show first 2, last 2, and current with ellipsis
+      items.push(
+        <PaginationItem key={1}>
+          <PaginationLink
+            href="#"
+            isActive={currentPage === 1}
+            onClick={(e) => { e.preventDefault(); handlePageChange(1); }}
+          >
+            1
+          </PaginationLink>
+        </PaginationItem>
+      );
+
+      if (currentPage > 3) {
+        items.push(ellipsis);
+      } else {
+        items.push(
+          <PaginationItem key={2}>
+            <PaginationLink
+              href="#"
+              isActive={currentPage === 2}
+              onClick={(e) => { e.preventDefault(); handlePageChange(2); }}
+            >
+              2
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      if (currentPage > 2 && currentPage < totalPages - 1) {
+        items.push(
+          <PaginationItem key={currentPage}>
+            <PaginationLink
+              href="#"
+              isActive={true}
+              onClick={(e) => { e.preventDefault(); handlePageChange(currentPage); }}
+            >
+              {currentPage}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      if (currentPage < totalPages - 2) {
+        items.push(ellipsis);
+      } else {
+        items.push(
+          <PaginationItem key={totalPages - 1}>
+            <PaginationLink
+              href="#"
+              isActive={currentPage === totalPages - 1}
+              onClick={(e) => { e.preventDefault(); handlePageChange(totalPages - 1); }}
+            >
+              {totalPages - 1}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+
+      items.push(
+        <PaginationItem key={totalPages}>
+          <PaginationLink
+            href="#"
+            isActive={currentPage === totalPages}
+            onClick={(e) => { e.preventDefault(); handlePageChange(totalPages); }}
+          >
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return items;
+  };
 
   return (
     <div className="min-h-screen bg-white w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
@@ -369,7 +516,7 @@ const MetricsHub = () => {
             <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
               Metrics Hub
             </h1>
-            <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
+            <p className="text-sm text-[#71658B] mt-1 text-center md:text-left">
               {statistics ? `${statistics.total} metrics discovered across all dashboards` : "Loading metrics..."}
             </p>
           </div>
@@ -399,7 +546,7 @@ const MetricsHub = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* <div className="grid gap-4 mb-0 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
@@ -454,10 +601,10 @@ const MetricsHub = () => {
               <div className="text-2xl font-bold">{customMetrics.length}</div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-0">
           <TabsList className="inline-flex h-13 w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0">
             <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="all">
               All Metrics
@@ -465,36 +612,39 @@ const MetricsHub = () => {
             <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="standard">
               Standard Metrics
             </TabsTrigger>
+            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="webhook">
+              Webhook Metrics
+            </TabsTrigger>
             <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="custom">
               Custom Formulas
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-6">
+          <TabsContent value={activeTab} className="mt-3">
             <div className="border bg-card overflow-hidden rounded-md shadow-sm">
               <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-muted/50 border-b">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">Metric Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">Source</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">Dashboard</th>
-                      <th className="px-6 py-4 text-left text-sm font-medium text-foreground">Controls</th>
+                <table className="w-full caption-bottom text-sm">
+                  <thead className="bg-muted/50 border-b sticky top-0 z-20">
+                    <tr className="">
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Metric Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Source</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Dashboard</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Controls</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {filteredMetrics.map((metric) => (
+                    {currentMetrics.map((metric) => (
                       <tr key={metric.id} className="hover:bg-muted/50">
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-2">
                           <div className="font-semibold text-foreground">{metric.name}</div>
-                          <div className="text-sm text-muted-foreground mt-0.5">{metric.description}</div>
+                          <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
                           {metric.isDynamic && (
                             <Badge variant="outline" className="mt-1 text-xs">Dynamic</Badge>
                           )}
                         </td>
-                        <td className="px-6 py-4">{getSourceBadge(metric.source)}</td>
-                        <td className="px-6 py-4">{getDashboardBadge(metric.dashboard)}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-4 py-2">{getSourceBadge(metric.source)}</td>
+                        <td className="px-4 py-2">{getDashboardBadge(metric.dashboard)}</td>
+                        <td className="px-4 py-2">
                           <div className="flex items-center gap-2">
                             {metric.category === "custom" ? (
                               <>
@@ -504,7 +654,7 @@ const MetricsHub = () => {
                                   className="h-9 px-3 bg-purple-600 text-white hover:bg-purple-700"
                                   onClick={() => handleEditMetric(metric)}
                                 >
-                                  Edit
+                                  Edit Metric
                                 </Button>
                                 <Button
                                   variant="ghost"
@@ -525,7 +675,33 @@ const MetricsHub = () => {
                   </tbody>
                 </table>
               </div>
+              
             </div>
+            {totalPages > 1 && (
+        <Pagination className="mt-4">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage > 1) handlePageChange(currentPage - 1);
+                }}
+              />
+            </PaginationItem>
+            {renderPaginationItems()}
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                }}
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
+      )}
           </TabsContent>
         </Tabs>
 
