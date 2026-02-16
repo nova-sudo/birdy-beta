@@ -1,4 +1,4 @@
-import { LayoutDashboard, SquareUserRound, Boxes, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
+import {SquareUserRound, ChartNoAxesColumnIncreasing, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
 import { useState } from "react"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
@@ -38,9 +38,9 @@ const items = [
     icon: SquareUserRound,
   },
   {
-    title: "Campaigns",
+    title: "Marketing",
     url: "/campaigns",
-    icon: Boxes,
+    icon: ChartNoAxesColumnIncreasing,
   },
   {
     title: "Sales Hub",

@@ -505,7 +505,7 @@ export default function ClientsPage() {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] mx-auto bg-white gap-6">
       <div className="bg-card">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -518,7 +518,7 @@ export default function ClientsPage() {
             </div>
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Search clients..."
