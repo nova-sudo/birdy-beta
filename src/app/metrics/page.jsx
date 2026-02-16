@@ -546,7 +546,7 @@ const MetricsHub = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 mb-0 md:grid-cols-4">
+        {/* <div className="grid gap-4 mb-0 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
@@ -601,7 +601,7 @@ const MetricsHub = () => {
               <div className="text-2xl font-bold">{customMetrics.length}</div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-0">
