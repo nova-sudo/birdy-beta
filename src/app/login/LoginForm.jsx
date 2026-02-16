@@ -8,9 +8,17 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
+
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? "https://birdy-backend.vercel.app"
 
 export default function LoginForm() {
-  const [formData, setFormData] = useState({ email: "", password: "", rememberMe: false })
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    rememberMe: false,
+  })
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -31,39 +39,47 @@ export default function LoginForm() {
     setError("")
 
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/login", {
+      // ── 1. Authenticate ──────────────────────────────────────────────────
+      const response = await fetch(`${API_BASE}/api/login`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
         credentials: "include",
       })
 
       const data = await response.json()
 
-      if (response.ok && data.message === "Login successful") {
-        // Calculate expiration time for user_authenticated
-        const now = new Date()
-        const expiresAt = formData.rememberMe
-          ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
-          : new Date(now.getTime() + 60 * 60 * 1000) // 1 hour
-
-        // Store user info and authentication flag in localStorage
-        localStorage.setItem('user', JSON.stringify(data.user))
-        localStorage.setItem('user_authenticated', JSON.stringify({
-          value: true,
-          expires_at: expiresAt.toISOString(),
-        }))
-
-        // Redirect to /clients
-        const redirectPath = searchParams.get('redirect') || '/clients'
-        router.push(redirectPath)
-      } else {
+      if (!response.ok || data.message !== "Login successful") {
         setError(data.detail || "Login failed. Please try again.")
+        return
       }
+
+      // ── 2. Persist session ───────────────────────────────────────────────
+      const now = new Date()
+      const expiresAt = formData.rememberMe
+        ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
+        : new Date(now.getTime() + 60 * 60 * 1000)            // 1 hour
+
+      localStorage.setItem("user", JSON.stringify(data.user))
+      localStorage.setItem(
+        "user_authenticated",
+        JSON.stringify({ value: true, expires_at: expiresAt.toISOString() })
+      )
+
+      // ── 3. Check for expired integration tokens ──────────────────────────
+      // checkAndRefreshExpiredTokens returns:
+      //   null   → it already kicked off an OAuth redirect; do nothing here
+      //   string → the path we should navigate to
+      const intendedRedirect = searchParams.get("redirect") || "/clients"
+      const nextPath = await checkAndRefreshExpiredTokens(intendedRedirect)
+
+      if (nextPath !== null) {
+        router.push(nextPath)
+      }
+      // If nextPath === null the browser is already navigating to the OAuth
+      // provider, so we intentionally do nothing further.
     } catch (err) {
-      console.error('Login error:', err)
+      console.error("Login error:", err)
       setError("Login failed. Please try again.")
     } finally {
       setIsLoading(false)
@@ -79,7 +95,9 @@ export default function LoginForm() {
               <Lock className="w-6 h-6 text-white" />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">Welcome back</CardTitle>
-            <CardDescription className="text-gray-600">Sign in to your account to continue</CardDescription>
+            <CardDescription className="text-gray-600">
+              Sign in to your account to continue
+            </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-6">
@@ -90,6 +108,7 @@ export default function LoginForm() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Email */}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-800">
                   Email address
@@ -108,6 +127,7 @@ export default function LoginForm() {
                 </div>
               </div>
 
+              {/* Password */}
               <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium text-gray-800">
                   Password
@@ -151,7 +171,10 @@ export default function LoginForm() {
 
             <div className="text-center text-sm text-gray-600">
               {"Don't have an account? "}
-              <a href="/register" className="text-purple-600 hover:text-purple-700 font-medium transition-colors">
+              <a
+                href="/register"
+                className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
+              >
                 Create one here
               </a>
             </div>
