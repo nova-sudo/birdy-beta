@@ -43,7 +43,7 @@ const items = [
     icon: Boxes,
   },
   {
-    title: "Sales Hub",
+    title: "Sales",
     url: "/Sales-Hub",
     icon: Phone,
   },
