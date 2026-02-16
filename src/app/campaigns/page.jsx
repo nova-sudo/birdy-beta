@@ -713,9 +713,9 @@ const getFilteredDataForTab = () => {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
             <div className="whitespace-nowrap">
               <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
@@ -742,7 +742,8 @@ const getFilteredDataForTab = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border padding-4px rounded-lg py-1 px-1">
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
@@ -750,8 +751,8 @@ const getFilteredDataForTab = () => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-
-            <Button
+            <div className="flex gap-1 overflow-x-auto lg:overflow-x-hidden">
+              <Button
               variant="outline"
               size="sm"
               onClick={addFilterCondition}
@@ -786,71 +787,76 @@ const getFilteredDataForTab = () => {
 
             {/* Enhanced Date Range Picker */}
         {/* Enhanced Date Range Picker */}
-<Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-  <PopoverTrigger asChild>
-    <Button
-      variant="outline"
-      className="w-auto justify-between font-semibold bg-white gap-2 px-3"
-    >
-      <CalendarIcon className="h-4 w-4" />
-      <span className="hidden md:inline">
-        {dateRange.from && dateRange.to
-          ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-          : "Select date range"}
-      </span>
-      <ChevronDown className="h-4 w-4" />
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent className="w-auto p-0 bg-white" align="end">
-    <div className="p-3">
-      <Calendar
-        mode="range"
-        defaultMonth={tempDateRange?.from}
-        selected={tempDateRange}
-        onSelect={(range) => {
-          if (range?.from && range?.to) {
-            setTempDateRange({ from: range.from, to: range.to })
-          } else if (range?.from) {
-            setTempDateRange({ from: range.from, to: range.from })
-          }
-        }}
-        numberOfMonths={2}
-        captionLayout="dropdown-buttons"
-        fromYear={2020}
-        toYear={new Date().getFullYear()}
-        disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
-        className="rounded-lg border shadow-sm"
-      />
+            <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  <span className="hidden md:inline">
+                    {dateRange.from && dateRange.to
+                      ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                      : "Select date range"}
+                  </span>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 bg-white" align="end">
+                <div className="p-3">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={tempDateRange?.from}
+                    selected={tempDateRange}
+                    onSelect={(range) => {
+                      if (range?.from && range?.to) {
+                        setTempDateRange({ from: range.from, to: range.to })
+                      } else if (range?.from) {
+                        setTempDateRange({ from: range.from, to: range.from })
+                      }
+                    }}
+                    numberOfMonths={2}
+                    captionLayout="dropdown-buttons"
+                    fromYear={2020}
+                    toYear={new Date().getFullYear()}
+                    disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
+                    className="rounded-lg border shadow-sm"
+                  />
 
-      {/* Action buttons */}
-      <div className="flex items-center justify-between pt-3 border-t mt-3">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={resetDateRange}
-        >
-          Reset
-        </Button>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setDatePickerOpen(false)}
-          >
-            Cancel
-          </Button>
-          <Button
-            size="sm"
-            onClick={applyDateRange}
-            disabled={!tempDateRange.from || !tempDateRange.to}
-          >
-            Apply
-          </Button>
-        </div>
-      </div>
-    </div>
-  </PopoverContent>
-</Popover>
+                  {/* Action buttons */}
+                  <div className="flex items-center pt-3 border-t mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={resetDateRange}
+                      className="border border-gray-300 rounded-md mr-2"
+                    >
+                      Reset
+                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDatePickerOpen(false)}
+                        className="border border-gray-300 rounded-md mr-2"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={applyDateRange}
+                        disabled={!tempDateRange.from || !tempDateRange.to}
+                        className="rounded-md bg-purple-600 text-white font-semibold"
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+            </div>
+            
           </div>
         </div>
 

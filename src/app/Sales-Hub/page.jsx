@@ -468,7 +468,7 @@ const handleRefresh = () => {
   )
 
   return (
-    <div className="w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
+    <div className="w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <UnderConstruction 
               title="Sales Hub Coming Soon"
               message="This section will feature live call tracking, recording playback, and agent performance metrics."
