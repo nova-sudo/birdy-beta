@@ -781,7 +781,7 @@ export default function ContactPage() {
   }
 
   return (
-    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
+    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
         {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
@@ -790,10 +790,12 @@ export default function ContactPage() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
           </div>
 
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-gray-100 border rounded-lg p-1 overflow-x-auto">
-            <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-             className="bg-white h-10 min-w-[150px] w-fit" />
-            {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
+            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+              <div className="flex items-center gap-2">
+                <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                  className="text-gray-900 bg-white h-10 max-w-[200px] font-bold text-xs md:text-base"/>
+                  {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
             <div className="flex gap-1 overflow-x-auto">
               <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
@@ -866,11 +868,12 @@ export default function ContactPage() {
                     />
 
                     {/* Action buttons */}
-                    <div className="flex items-center justify-between pt-3 border-t mt-3">
+                    <div className="flex items-center pt-3 border-t mt-3">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={resetDateRange}
+                        className="border border-gray-300 rounded-md mr-2"
                       >
                         Reset
                       </Button>
@@ -879,6 +882,7 @@ export default function ContactPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => setDatePickerOpen(false)}
+                          className="border border-gray-300 rounded-md mr-2"
                         >
                           Cancel
                         </Button>
@@ -886,6 +890,7 @@ export default function ContactPage() {
                           size="sm"
                           onClick={applyDateRange}
                           disabled={!tempDateRange.from || !tempDateRange.to}
+                          className="rounded-md bg-purple-600 text-white font-semibold"
                         >
                           Apply
                         </Button>
@@ -897,6 +902,8 @@ export default function ContactPage() {
 
               {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
             </div>
+            </div>
+              
           </div>
         </div>
 
