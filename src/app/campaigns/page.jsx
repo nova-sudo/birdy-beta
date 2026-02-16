@@ -35,7 +35,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import metaa from "../../../public/meta-icon-DH8jUhnM.png"
-import lab from "../../../public/lab.png"
+import Flask from "../../../public/Flask.png"
 import { getMetricDisplayName } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container" 
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
@@ -615,7 +615,7 @@ const getFilteredDataForTab = () => {
   }
 
   const getIcon = (col) => {
-    if (col.id === "clientGroup" || col.id === "name") return lab
+    if (col.id === "clientGroup" || col.id === "name") return Flask
     return metaa
   }
 
@@ -629,7 +629,7 @@ const getFilteredDataForTab = () => {
       <div className="flex items-center justify-between min-w-[200px]">
         <span>{getMetricDisplayName(col)}</span>
         {col === "clientGroup" || col === "name" ? (
-          <Image src={lab} alt="Lab" className="w-4 h-4 ml-2" />
+          <Image src={Flask} alt="Flask" className="w-4 h-4 ml-2" />
         ) : (
           <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
         )}

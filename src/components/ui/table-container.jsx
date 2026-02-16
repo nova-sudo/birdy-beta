@@ -4,10 +4,33 @@ import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+import {
   loadCustomMetrics,
   evaluateFormula,
   formatMetricValue,
 } from "@/lib/metrics";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 /**
  * Reusable container for dashboard tables with glassmorphism styling
@@ -43,6 +66,8 @@ const StyledTable = ({
   const [columnOrder, setColumnOrder] = useState([]);
 
   const isClientMode = customMetrics !== undefined;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(15);
 
   /* ---------- LOAD CUSTOM METRICS ---------- */
   useEffect(() => {
@@ -279,6 +304,57 @@ const StyledTable = ({
     return copy;
   }, [filteredData, sortConfig]);
 
+  /* ---------- PAGINATION ---------- */
+const totalPages = Math.ceil(sortedData.length / pageSize);
+const paginatedData = useMemo(() => {
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = startIndex + pageSize;
+  return sortedData.slice(startIndex, endIndex);
+}, [sortedData, currentPage, pageSize]);
+
+// Reset to page 1 when data changes
+useEffect(() => {
+  setCurrentPage(1);
+}, [sortedData.length, pageSize]);
+
+const getPageNumbers = () => {
+  const pages = [];
+  const showEllipsisStart = currentPage > 3;
+  const showEllipsisEnd = currentPage < totalPages - 2;
+
+  pages.push(1);
+
+  if (showEllipsisStart) {
+    pages.push('ellipsis-start');
+  } else {
+    for (let i = 2; i < currentPage; i++) {
+      pages.push(i);
+    }
+  }
+
+  for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+    if (!pages.includes(i)) {
+      pages.push(i);
+    }
+  }
+
+  if (showEllipsisEnd) {
+    pages.push('ellipsis-end');
+  } else {
+    for (let i = currentPage + 1; i < totalPages; i++) {
+      if (!pages.includes(i)) {
+        pages.push(i);
+      }
+    }
+  }
+
+  if (totalPages > 1 && !pages.includes(totalPages)) {
+    pages.push(totalPages);
+  }
+
+  return pages;
+};
+
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
     setSortConfig((prev) => ({
@@ -395,6 +471,7 @@ const StyledTable = ({
             z-index: 50;
             min-width: 250px;
             font-weight: 600;
+            max-width: 250px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -404,6 +481,7 @@ const StyledTable = ({
             z-index: 50;
             min-width: 250px;
             font-weight: 600;
+            max-width: 250px;
           }
           .fixed-header {
             position: sticky;
@@ -456,7 +534,7 @@ const StyledTable = ({
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                  <div className="flex items-center justify-between border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
@@ -474,7 +552,7 @@ const StyledTable = ({
                         )}
                       </button>
                     </div>
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 ml-auto">
                       {col.icons ? (
                         typeof col.icons === "function" ? (
                           (() => {
@@ -497,14 +575,16 @@ const StyledTable = ({
           </thead>
 
           <tbody className="text-center">
-            {sortedData.length === 0 ? (
+            {paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
                   {isClientMode ? "No client groups found" : "No data available."}
                 </td>
               </tr>
             ) : (
-              sortedData.map((row, idx) => (
+              paginatedData.map((row, idx) => {
+              const globalIdx = (currentPage - 1) * pageSize + idx;
+              return (
                 <tr
                   key={row.id || idx}
                   onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
@@ -513,14 +593,14 @@ const StyledTable = ({
                       ? "bg-muted/30 cursor-wait opacity-60" 
                       : "hover:bg-muted/50 cursor-pointer"
                   } 
-                  ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                  ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
                   {visibleColumns.map((col, colIdx) => (
                     <td
                       key={`${row.id || idx}-${col.id}`}
-                      className={`text-foreground ${
+                      className={`text-foreground truncate ${
                         colIdx === 0
-                          ? idx % 2 === 0
+                          ? globalIdx % 2 === 0
                             ? "fixed-column-odd"
                             : "fixed-column-even"
                           : ""
@@ -529,39 +609,100 @@ const StyledTable = ({
                       <div
                         className={
                           colIdx === 0
-                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2"
-                            : ""
+                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
+                            : "min-w-0"
                         }
                       >
                         {/* Add spinner for first column when creating OR pending */}
                         {colIdx === 0 && (row._isCreating || row._isPending) && (
                           <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
-                        <span className={(row._isCreating || row._isPending) ? "text-muted-foreground" : ""}>
-                          {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                            <button
-                              onClick={() => onFirstColumnClick?.(row)}
-                              className="text-left font-semibold text-primary hover:underline cursor-pointer"
-                            >
-                              {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                            </button>
-                          ) : (
-                            col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                          )}
-                        </span>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span
+                                className={`truncate min-w-0 ${
+                                  row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                }`}
+                              >
+                                {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                  <button
+                                    onClick={() => onFirstColumnClick?.(row)}
+                                    className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                  >
+                                    {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                  </button>
+                                ) : (
+                                  col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                )}
+                              </span>
+                            </TooltipTrigger>
+                            {colIdx === 0 && !col.cell && (
+                              <TooltipContent>
+                                <p>{getCellValue(row, col.id)}</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
                       </div>
                     </td>
                   ))}
                 </tr>
-              ))
+                ); 
+              })    
             )}
           </tbody>
         </table>
       </div>
 
-      {isClientMode && (
-        <div className="text-sm text-center font-semibold text-black/50 text-muted-foreground">
-          Showing {sortedData.length} of {flattenedData.length} client groups
+      {/* Pagination Controls */}
+      {isClientMode && sortedData.length > 0 && (
+        <div className="flex items-center justify-between">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious 
+                  href="#" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage > 1) setCurrentPage(prev => prev - 1);
+                  }}
+                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+              
+              {getPageNumbers().map((page, idx) => (
+                <PaginationItem key={`${page}-${idx}`}>
+                  {typeof page === 'string' ? (
+                    <PaginationEllipsis />
+                  ) : (
+                    <PaginationLink
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(page);
+                      }}
+                      isActive={currentPage === page}
+                      className="cursor-pointer"
+                    >
+                      {page}
+                    </PaginationLink>
+                  )}
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext 
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
+                  }}
+                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       )}
 
