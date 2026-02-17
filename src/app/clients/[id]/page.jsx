@@ -220,9 +220,9 @@ export default function ClientDetailsPage() {
   )
 
   return (
-    <div className="min-h-dvh w-full pb-2 flex flex-col overflow-hidden px-4 md:px-8">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] flex flex-col overflow-hidden ">
       {/* Header */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => router.push("/clients")} className="mr-2">

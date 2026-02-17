@@ -359,14 +359,57 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
     <div className="border bg-card overflow-hidden rounded-md w-full">
       <style jsx>{`
         @media (min-width: 768px) {
-          .fixed-column-even { position: sticky; left: 0; background: white; z-index: 50; min-width: 243px; font-weight: 600; }
-          .fixed-column-odd { position: sticky; left: 0; background: #f4f3f9; z-index: 50; min-width: 243px; font-weight: 600; }
-          .fixed-header { position: sticky; left: 0; z-index: 50; background: white; min-width: 150px; }
+          .fixed-column-even {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 50;
+            min-width: 250px;
+            font-weight: 600;
+            max-width: 250px;
+          }
+          .fixed-column-odd {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f4f3f9;
+            z-index: 50;
+            min-width: 250px;
+            font-weight: 600;
+            max-width: 250px;
+          }
+          .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
+            background: white;
+            min-width: 150px;
+            width: 5%;
+          }
         }
+
         @media (max-width: 767px) {
-          .fixed-column-even, .fixed-column-odd { background: white; min-width: 200px; font-weight: 600; }
-          .fixed-column-odd { background: #f4f3f9; }
-          .fixed-header { background: white; min-width: 150px; }
+          .fixed-column-even,
+          .fixed-column-odd {
+            text-align: left;
+            background: white;
+            min-width: 200px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            background: #f4f3f9;
+          }
+          .fixed-header {
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
+        }
+
+        .table-container {
+          position: relative;
+          overflow: auto;
         }
       `}</style>
       <div className="overflow-x-auto">
@@ -510,7 +553,7 @@ export default function ContactPage() {
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, { credentials: "include" })
+        const response = await fetch(`https://birdy-backend.vercel.app.vercel.app/api/client-groups`, { credentials: "include" })
         if (response.ok) {
           const data = await response.json()
           const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
@@ -537,7 +580,7 @@ export default function ContactPage() {
         const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
         
         // Build URL with pagination and date range
-        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+        https://birdy-backend.vercel.apprdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
         
         // Add date range parameters
         if (dateRange.from) {

@@ -1,12 +1,11 @@
 "use client"
-
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target, Search, ChevronDown, Eye} from "lucide-react"
+import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { 
@@ -411,17 +410,19 @@ export default function ClientsPage() {
     toast.info(`Creating "${creatingGroupName}"...`)
 
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: creatingGroupName,
-          ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
-          meta_ad_account_id: selectedMetaAdAccount?.id || null,
-          hotprospector_group_id: selectedHotProspectorGroup?.id || null,
-        }),
-      })
+  const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: creatingGroupName,
+      ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
+      meta_ad_account_id: selectedMetaAdAccount?.id || null,
+      hotprospector_group_id: selectedHotProspectorGroup?.id || null,
+      ad_account_currency: selectedMetaAdAccount?.currency || null,  // Add this; fallback to null if unavailable
+      notes: "",  // Add this; use empty string or a dynamic value if needed
+    }),
+  });
 
       if (response.ok) {
         const data = await response.json()
@@ -511,7 +512,7 @@ export default function ClientsPage() {
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
                   Client Hub
                 </h1>
               </div>
