@@ -21,6 +21,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 
@@ -30,50 +41,32 @@ function SettingsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") || "integrations"
-  const [integrationStatus, setIntegrationStatus] = useState(null)
-  const [facebookIntegrationStatus, setFacebookIntegrationStatus] = useState(null)
-  const [hotprospectorStatus, setHotprospectorStatus] = useState(null)
+
+  // Separate state variables with clear naming — no ambiguity about which level of nesting
+  const [ghlStatus, setGhlStatus] = useState({ connected: false })
+  const [facebookStatus, setFacebookStatus] = useState({ connected: false })
+  const [hotprospectorStatus, setHotprospectorStatus] = useState({ connected: false })
+
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
   const [isLoading, setIsLoading] = useState(false)
+  const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
-  const [user] = useState(JSON.parse(localStorage.getItem("user")))
+  const [user] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("user")) } catch { return null }
+  })
 
-  // ── Cookie helpers ──────────────────────────────────────────────────────────
   const setCookie = (name, value, maxAge) => {
     const safeMaxAge = Number.isInteger(maxAge) && maxAge > 0 ? maxAge : 3600
     document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${safeMaxAge}; SameSite=Lax`
   }
 
-  const getCookie = (name) => {
-    for (const cookie of document.cookie.split(";")) {
-      const [key, value] = cookie.trim().split("=")
-      if (key === name) return decodeURIComponent(value)
-    }
-    return null
+  const clearCookie = (name) => {
+    document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
   }
 
-  // ── localStorage helpers ────────────────────────────────────────────────────
-  const saveIntegrationStatus = (integrationType, status) => {
-    if (!status) return
-    const key = integrationType === "gohighlevel" ? "goHighLevelIntegration" : "facebookIntegration"
-    localStorage.setItem(key, JSON.stringify(status))
-    if (integrationType === "gohighlevel") setIntegrationStatus(status)
-    else setFacebookIntegrationStatus(status)
-  }
-
-  const clearIntegrationStatus = (integrationType) => {
-    const key = integrationType === "gohighlevel" ? "goHighLevelIntegration" : "facebookIntegration"
-    const cookieName = integrationType === "gohighlevel" ? "gohighlevel_tokens" : "facebook_tokens"
-    localStorage.removeItem(key)
-    document.cookie = `${cookieName}=; path=/; max-age=0; SameSite=Lax`
-    if (integrationType === "gohighlevel") setIntegrationStatus({ connected: false })
-    else setFacebookIntegrationStatus({ connected: false })
-  }
-
-  // ── Main status + callback effect ──────────────────────────────────────────
   useEffect(() => {
-    const checkIntegrationStatus = async () => {
+    const init = async () => {
       try {
         setIsLoading(true)
         setError(null)
@@ -83,7 +76,6 @@ function SettingsPageContent() {
         const errorMsg = searchParams.get("error")
         const errorDescription = searchParams.get("error_description")
 
-        // ── Handle OAuth error callback ──────────────────────────────────────
         if (errorMsg && status === "error") {
           const msg = `${errorMsg}${errorDescription ? `: ${errorDescription}` : ""}`
           setError(msg)
@@ -91,42 +83,38 @@ function SettingsPageContent() {
           return
         }
 
-        // ── Handle successful OAuth callback ─────────────────────────────────
         if (tokenData && status === "success") {
           try {
             const tokens = JSON.parse(decodeURIComponent(tokenData))
             const integrationType = tokens.scope?.includes("read_insights") ? "facebook" : "gohighlevel"
             const cookieName = integrationType === "gohighlevel" ? "gohighlevel_tokens" : "facebook_tokens"
+            const expiresIn = tokens.expires_in || (integrationType === "facebook" ? 60 * 24 * 60 * 60 : 3600)
+            setCookie(cookieName, JSON.stringify(tokens), expiresIn)
 
-            setCookie(
-              cookieName,
-              JSON.stringify(tokens),
-              tokens.expires_in || (integrationType === "facebook" ? 60 * 24 * 60 * 60 : 3600),
-            )
-            saveIntegrationStatus(integrationType, {
+            const newStatus = {
               connected: true,
               expires_at: tokens.expires_at,
-              token_expired: new Date(tokens.expires_at) < new Date(),
-            })
+              token_expired: tokens.expires_at ? new Date(tokens.expires_at) < new Date() : false,
+            }
+
+            if (integrationType === "gohighlevel") {
+              localStorage.setItem("goHighLevelIntegration", JSON.stringify(newStatus))
+              setGhlStatus(newStatus)
+            } else {
+              localStorage.setItem("facebookIntegration", JSON.stringify(newStatus))
+              setFacebookStatus(newStatus)
+            }
 
             toast.success("Connection Successful", {
               description: `${integrationType === "gohighlevel" ? "GoHighLevel" : "Meta"} connected successfully.`,
             })
 
-            // ── Check if another integration still needs refreshing ───────────
-            // (e.g. GHL was just refreshed, now check if Meta also needs it)
             const storedRedirect = sessionStorage.getItem("post_integration_redirect")
             if (storedRedirect) {
-              // Don't remove yet — checkAndRefreshExpiredTokens will store it
-              // again if it needs to kick off another OAuth flow.
               sessionStorage.removeItem("post_integration_redirect")
               const nextPath = await checkAndRefreshExpiredTokens(storedRedirect)
-              if (nextPath !== null) {
-                router.push(nextPath)
-              }
-              // If null, another OAuth redirect was initiated — do nothing.
+              if (nextPath !== null) router.push(nextPath)
             }
-
             return
           } catch (e) {
             console.error("Error parsing OAuth callback tokens:", e)
@@ -136,60 +124,65 @@ function SettingsPageContent() {
           }
         }
 
-        // ── Normal page load: restore from localStorage ──────────────────────
-        const ghlStored = localStorage.getItem("goHighLevelIntegration")
-        const fbStored = localStorage.getItem("facebookIntegration")
-
-        if (ghlStored) {
-          const parsed = JSON.parse(ghlStored)
-          if (parsed.connected && parsed.expires_at) setIntegrationStatus(parsed)
-        }
-        if (fbStored) {
-          const parsed = JSON.parse(fbStored)
-          if (parsed.connected && parsed.expires_at) setFacebookIntegrationStatus(parsed)
-        }
-
-        // ── Sync with backend ────────────────────────────────────────────────
+        // Normal load — backend is the source of truth
         const res = await fetch(`${API_BASE}/api/status`, { credentials: "include" })
         if (!res.ok) throw new Error(`Status fetch failed: ${res.status}`)
         const data = await res.json()
 
+        // GHL: agency.connected is what controls the UI
         if (data.gohighlevel?.agency?.connected) {
-          saveIntegrationStatus("gohighlevel", {
+          const s = {
             connected: true,
             expires_at: data.gohighlevel.agency.expires_at,
-            token_expired: new Date(data.gohighlevel.agency.expires_at) < new Date(),
-          })
-        } else if (!ghlStored) {
-          saveIntegrationStatus("gohighlevel", { connected: false })
+            token_expired: data.gohighlevel.agency.token_expired ?? false,
+          }
+          localStorage.setItem("goHighLevelIntegration", JSON.stringify(s))
+          setGhlStatus(s)
+        } else {
+          setGhlStatus({ connected: false })
+          localStorage.removeItem("goHighLevelIntegration")
         }
 
+        // Facebook
         if (data.facebook?.connected) {
-          saveIntegrationStatus("facebook", {
+          const s = {
             connected: true,
             expires_at: data.facebook.expires_at,
-            token_expired: new Date(data.facebook.expires_at) < new Date(),
-          })
-        } else if (!fbStored) {
-          saveIntegrationStatus("facebook", { connected: false })
+            token_expired: data.facebook.token_expired ?? false,
+          }
+          localStorage.setItem("facebookIntegration", JSON.stringify(s))
+          setFacebookStatus(s)
+        } else {
+          setFacebookStatus({ connected: false })
+          localStorage.removeItem("facebookIntegration")
         }
 
-        // ── HotProspector ────────────────────────────────────────────────────
+        // HotProspector
         const hpRes = await fetch(`${API_BASE}/api/hotprospector/status`, { credentials: "include" })
         if (hpRes.ok) setHotprospectorStatus(await hpRes.json())
+
       } catch (err) {
-        console.error("checkIntegrationStatus error:", err)
+        console.error("init error:", err)
         setError(`Failed to fetch integration status: ${err.message}`)
         toast.error("Error", { description: err.message })
+
+        // Fall back to localStorage on error so UI still shows last known state
+        try {
+          const s = JSON.parse(localStorage.getItem("goHighLevelIntegration") || "{}")
+          if (s.connected) setGhlStatus(s)
+        } catch {}
+        try {
+          const s = JSON.parse(localStorage.getItem("facebookIntegration") || "{}")
+          if (s.connected) setFacebookStatus(s)
+        } catch {}
       } finally {
         setIsLoading(false)
       }
     }
 
-    checkIntegrationStatus()
+    init()
   }, [searchParams])
 
-  // ── Connect / Disconnect / Test ─────────────────────────────────────────────
   const handleConnect = async (integrationType) => {
     try {
       setIsLoading(true)
@@ -208,21 +201,53 @@ function SettingsPageContent() {
     }
   }
 
-  const handleDisconnect = async (integrationType) => {
+  const handleRemoveIntegration = async (integrationType) => {
     try {
-      setIsLoading(true)
+      setRemovingIntegration(integrationType)
       setError(null)
-      const res = await fetch(`${API_BASE}/disconnect`, { credentials: "include" })
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      clearIntegrationStatus(integrationType)
-      toast.success("Disconnected", {
-        description: `${integrationType === "gohighlevel" ? "GoHighLevel" : "Meta"} disconnected.`,
+
+      const endpointMap = {
+        gohighlevel: "/api/integrations/gohighlevel/remove",
+        facebook: "/api/integrations/facebook/remove",
+        hotprospector: "/api/integrations/hotprospector/remove",
+      }
+
+      const res = await fetch(`${API_BASE}${endpointMap[integrationType]}`, {
+        method: "DELETE",
+        credentials: "include",
+      })
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.detail || `${res.status} ${res.statusText}`)
+      }
+
+      if (integrationType === "gohighlevel") {
+        localStorage.removeItem("goHighLevelIntegration")
+        clearCookie("gohighlevel_tokens")
+        setGhlStatus({ connected: false })
+      } else if (integrationType === "facebook") {
+        localStorage.removeItem("facebookIntegration")
+        clearCookie("facebook_tokens")
+        setFacebookStatus({ connected: false })
+      } else if (integrationType === "hotprospector") {
+        setHotprospectorStatus({ connected: false })
+      }
+
+      const labelMap = {
+        gohighlevel: "GoHighLevel",
+        facebook: "Meta (Facebook)",
+        hotprospector: "HotProspector",
+      }
+
+      toast.success("Integration Removed", {
+        description: `${labelMap[integrationType]} credentials have been deleted.`,
       })
     } catch (err) {
-      setError(`Failed to disconnect: ${err.message}`)
-      toast.error("Error", { description: err.message })
+      setError(`Failed to remove integration: ${err.message}`)
+      toast.error("Removal Failed", { description: err.message })
     } finally {
-      setIsLoading(false)
+      setRemovingIntegration(null)
     }
   }
 
@@ -233,7 +258,7 @@ function SettingsPageContent() {
       const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
       const res = await fetch(`${API_BASE}${endpoint}`, { credentials: "include" })
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      toast.success("Test Successful", { description: "API test passed. Check console for details." })
+      toast.success("Test Successful", { description: "API test passed." })
     } catch (err) {
       setError(`Test failed: ${err.message}`)
       toast.error("Test Failed", { description: err.message })
@@ -271,7 +296,47 @@ function SettingsPageContent() {
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // Reusable remove button with confirmation
+  const RemoveButton = ({ integrationType, label }) => {
+    const isRemoving = removingIntegration === integrationType
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isRemoving}
+            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
+          >
+            {isRemoving
+              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Removing…</>
+              : "Remove"
+            }
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete your {label} credentials from Birdy. You will need
+              to reconnect if you want to use this integration again. Client groups linked to
+              this integration will lose their data source.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => handleRemoveIntegration(integrationType)}
+            >
+              Yes, remove it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+  }
+
   return (
     <div className="min-h-screen w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
       <div className="container py-5">
@@ -295,7 +360,6 @@ function SettingsPageContent() {
             ))}
           </TabsList>
 
-          {/* General */}
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
@@ -308,7 +372,6 @@ function SettingsPageContent() {
             </Card>
           </TabsContent>
 
-          {/* Integrations */}
           <TabsContent value="integrations" className="space-y-6">
             {error && (
               <Alert variant="destructive">
@@ -316,7 +379,6 @@ function SettingsPageContent() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
             <div className="space-y-4">
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-1">Connected Services</h2>
@@ -329,42 +391,36 @@ function SettingsPageContent() {
               <Card className="border-border/50">
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
                       <Plug2 className="h-6 w-6 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-base">GoHighLevel</CardTitle>
-                        {integrationStatus?.connected && (
-                          <Badge variant={integrationStatus.token_expired ? "destructive" : "default"} className="text-xs">
-                            {integrationStatus.token_expired ? (
-                              <><XCircle className="h-3 w-3 mr-1" />Expired</>
-                            ) : (
-                              <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
-                            )}
+                        {ghlStatus.connected && (
+                          <Badge variant={ghlStatus.token_expired ? "destructive" : "default"} className="text-xs">
+                            {ghlStatus.token_expired
+                              ? <><XCircle className="h-3 w-3 mr-1" />Expired</>
+                              : <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
+                            }
                           </Badge>
                         )}
                       </div>
                       <CardDescription className="text-sm">CRM and marketing automation platform for agencies</CardDescription>
-                      {integrationStatus?.connected && integrationStatus.expires_at && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Expires: {new Date(integrationStatus.expires_at).toLocaleString()}
+                      {ghlStatus.connected && ghlStatus.expires_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Expires: {new Date(ghlStatus.expires_at).toLocaleString()}
                         </p>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    {integrationStatus?.connected ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {ghlStatus.connected ? (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => handleTestApi("gohighlevel")} disabled={isLoading}>
-                          {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                          Test Connection
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDisconnect("gohighlevel")} disabled={isLoading}>
-                          Disconnect
-                        </Button>
+
+                        <RemoveButton integrationType="gohighlevel" label="GoHighLevel" />
                       </>
                     ) : (
                       <Button size="sm" onClick={() => handleConnect("gohighlevel")} disabled={isLoading}>
@@ -385,44 +441,37 @@ function SettingsPageContent() {
               <Card className="border-border/50">
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shrink-0">
                       <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                       </svg>
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-base">Meta (Facebook)</CardTitle>
-                        {facebookIntegrationStatus?.connected && (
-                          <Badge variant={facebookIntegrationStatus.token_expired ? "destructive" : "default"} className="text-xs">
-                            {facebookIntegrationStatus.token_expired ? (
-                              <><XCircle className="h-3 w-3 mr-1" />Expired</>
-                            ) : (
-                              <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
-                            )}
+                        {facebookStatus.connected && (
+                          <Badge variant={facebookStatus.token_expired ? "destructive" : "default"} className="text-xs">
+                            {facebookStatus.token_expired
+                              ? <><XCircle className="h-3 w-3 mr-1" />Expired</>
+                              : <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
+                            }
                           </Badge>
                         )}
                       </div>
                       <CardDescription className="text-sm">Access Facebook insights and marketing tools</CardDescription>
-                      {facebookIntegrationStatus?.connected && facebookIntegrationStatus.expires_at && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Expires: {new Date(facebookIntegrationStatus.expires_at).toLocaleString()}
+                      {facebookStatus.connected && facebookStatus.expires_at && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Expires: {new Date(facebookStatus.expires_at).toLocaleString()}
                         </p>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    {facebookIntegrationStatus?.connected ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {facebookStatus.connected ? (
                       <>
-                        <Button variant="outline" size="sm" onClick={() => handleTestApi("facebook")} disabled={isLoading}>
-                          {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                          Test Connection
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => handleDisconnect("facebook")} disabled={isLoading}>
-                          Disconnect
-                        </Button>
+                        <RemoveButton integrationType="facebook" label="Meta (Facebook)" />
                       </>
                     ) : (
                       <Button size="sm" onClick={() => handleConnect("facebook")} disabled={isLoading}>
@@ -443,29 +492,29 @@ function SettingsPageContent() {
               <Card className="border-border/50">
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0">
                       <Phone className="h-6 w-6 text-white" />
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <CardTitle className="text-base">HotProspector</CardTitle>
-                        {hotprospectorStatus?.connected && (
+                        {hotprospectorStatus.connected && (
                           <Badge variant="default" className="text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />Connected
                           </Badge>
                         )}
                       </div>
                       <CardDescription className="text-sm">Lead generation and call center management platform</CardDescription>
-                      {hotprospectorStatus?.connected && hotprospectorStatus.api_uid && (
-                        <p className="text-xs text-muted-foreground mt-2">API UID: {hotprospectorStatus.api_uid}</p>
+                      {hotprospectorStatus.connected && hotprospectorStatus.api_uid && (
+                        <p className="text-xs text-muted-foreground mt-1">API UID: {hotprospectorStatus.api_uid}</p>
                       )}
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2">
-                    {hotprospectorStatus?.connected ? (
-                      <Button variant="outline" size="sm" disabled>Connected</Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {hotprospectorStatus.connected ? (
+                      <RemoveButton integrationType="hotprospector" label="HotProspector" />
                     ) : (
                       <Dialog open={hotprospectorDialogOpen} onOpenChange={setHotprospectorDialogOpen}>
                         <DialogTrigger asChild>
@@ -536,7 +585,6 @@ function SettingsPageContent() {
             </div>
           </TabsContent>
 
-          {/* Account */}
           <TabsContent value="account" className="space-y-6">
             <Card>
               <CardHeader>
@@ -550,8 +598,8 @@ function SettingsPageContent() {
                     type="text"
                     value={user?.name ?? ""}
                     readOnly
-                    className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     disabled
+                    className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                   />
                   <div className="space-y-2 mt-6">
                     <h1 className="text-sm font-semibold leading-none">Email</h1>
@@ -559,8 +607,8 @@ function SettingsPageContent() {
                       type="text"
                       value={user?.email ?? ""}
                       readOnly
-                      className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       disabled
+                      className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                     />
                   </div>
                 </div>
