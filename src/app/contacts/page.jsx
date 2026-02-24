@@ -60,7 +60,9 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format, subDays } from "date-fns"
+import getSymbolFromCurrency from "currency-symbol-map";
 
+const userCurrency = localStorage.getItem("user_default_currency");
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
@@ -121,8 +123,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           
           {oppValue > 0 && (
             <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              {oppValue}
+              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
             </span>
           )}
           
@@ -484,7 +485,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const stats = [
     { title: "Total Contacts", value: filteredTotal, subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null, icon: Users },
     { title: "With Opportunities", value: contactsWithOpportunities, icon: Target },
-    { title: "Total Lead Value", value: `$${totalLeadValue.toLocaleString()}`, icon: DollarSign },
+    { title: "Total Lead Value", value: `${getSymbolFromCurrency(userCurrency)}${totalLeadValue.toLocaleString()}`, icon: DollarSign },
     { title: "With Email", value: contactsWithEmail, icon: Mail },
   ]
 
@@ -553,7 +554,7 @@ export default function ContactPage() {
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app.vercel.app/api/client-groups`, { credentials: "include" })
+        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, { credentials: "include" })
         if (response.ok) {
           const data = await response.json()
           const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
@@ -580,7 +581,7 @@ export default function ContactPage() {
         const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
         
         // Build URL with pagination and date range
-        https://birdy-backend.vercel.apprdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
         
         // Add date range parameters
         if (dateRange.from) {

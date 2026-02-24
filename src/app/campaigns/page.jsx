@@ -40,6 +40,9 @@ import { getMetricDisplayName } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container" 
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { format, subDays } from "date-fns"
+import getSymbolFromCurrency from "currency-symbol-map";
+
+const userCurrency = localStorage.getItem("user_default_currency");
 
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics] = useState([])
@@ -660,7 +663,7 @@ const getFilteredDataForTab = () => {
   const formatCellValue = (value, col) => {
     if (value === null || value === undefined) return "-"
     if (customMetrics.some((m) => m.id === col)) return formatMetricValue(value, col)
-    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col)) return `$${Number(value).toFixed(2)}`
+    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col)) return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
     if (col === "ctr") return `${Number(value).toFixed(2)}%`
     if (col === "account_currency") return value.toUpperCase()
     if (col === "conversion_rate_ranking") return value.replace(/_/g, ' ')
@@ -874,7 +877,7 @@ const getFilteredDataForTab = () => {
         {/* Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Total Spend", icon: DollarSign, value: `$${metrics.totalSpend.toFixed(2)}` },
+            { label: "Total Spend", icon: DollarSign, value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
             { label: "Total Leads", icon: Target, value: metrics.totalLeads },
             { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
           ].map((c, i) => (

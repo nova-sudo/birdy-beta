@@ -45,8 +45,9 @@ import Image from "next/image"
 import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import getSymbolFromCurrency from "currency-symbol-map";
 
-
+const STORAGE_KEY = "user_default_currency";
 const CACHE_DURATION = {
   clientGroups: 120 * 60 * 1000,
   ghlLocations: 60 * 60 * 1000,
@@ -115,6 +116,10 @@ export default function ClientsPage() {
   const [progress, setProgress] = useState(13)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
+  const [userCurrency, setUserCurrency] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
+  });
+  const [currencyLoading, setCurrencyLoading] = useState(true);
 
   // 🔥 KEY FIX: Build dynamic columns when clientGroups changes
   const columns = useMemo(() => {
@@ -157,6 +162,42 @@ export default function ClientsPage() {
     return map;
   });
 
+useEffect(() => {
+  let cancelled = false;
+
+  async function fetchCurrency() {
+    try {
+      const response = await fetch("https://birdy-backend.vercel.app/api/user/currency", {
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error(`Failed to fetch currency: ${response.status}`);
+
+      const data = await response.json();
+      const currency = data.default_currency ?? null;
+      console.log("📥 Fetched user currency:", currency);
+
+      if (!cancelled) {
+        setUserCurrency(currency);
+        try {
+          if (currency) localStorage.setItem(STORAGE_KEY, currency);
+          else localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          console.warn("[useUserCurrency] localStorage unavailable:", e);
+        }
+      }
+    } catch (err) {
+      console.error("[useUserCurrency] Error fetching currency:", err);
+      if (!cancelled) setCurrencyLoading(false);
+      return;
+    } finally {
+      if (!cancelled) setCurrencyLoading(false);
+    }
+  }
+
+  fetchCurrency();
+  return () => { cancelled = true; };
+}, []);
   // Update column visibility when columns change
   useEffect(() => {
     setColumnVisibility((prev) => {
@@ -394,7 +435,6 @@ export default function ClientsPage() {
     }
 
     setClientGroups(prev => [optimisticGroup, ...prev])
-
     setWizardOpen(false)
     setWizardStep(1)
     const creatingGroupName = clientGroupName
@@ -491,7 +531,7 @@ export default function ClientsPage() {
 
     return {
       activeClients,
-      totalSpend,
+       totalSpend,
       totalLeads,
       averageCPL
     }
@@ -966,7 +1006,7 @@ export default function ClientsPage() {
                 <div>
                   <p className="text-muted-foreground text-sm text-[#71658B]">Total Ad Spend</p>
                   <h3 className="text-2xl font-bold mt-1">
-                    ${stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
@@ -1004,7 +1044,7 @@ export default function ClientsPage() {
                 <div>
                   <p className="text-muted-foreground text-sm text-[#71658B]">Average CPL</p>
                   <h3 className="text-2xl font-bold mt-1">
-                    ${stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
                     <span className="text-destructive text-[0.75rem] leading-4 text-[#EF4343]">-3%</span>
