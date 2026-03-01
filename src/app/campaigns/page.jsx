@@ -70,7 +70,22 @@ const Campaigns = () => {
     campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
     adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
     ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-    leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name"],
+    // 🔥 UPDATED: All new lead fields are visible by default
+    leads: [
+      "full_name",
+      "email",
+      "phone_number",
+      "ad_name",
+      "adset_name",
+      "campaign_name",
+      "ad_id",
+      "adset_id",
+      "campaign_id",
+      "form_id",
+      "platform",
+      "is_organic",
+      "created_time",
+    ],
   })
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [columnsSearch, setColumnsSearch] = useState("")
@@ -102,7 +117,6 @@ const Campaigns = () => {
 
 const enhanceWithCustomMetrics = (item) => {
   const base = { ...item }
-  // Load custom metrics directly here instead of using state
   const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
   
   customMetricsForDashboard.forEach((metric) => {
@@ -120,13 +134,11 @@ const fetchAllData = async (signal) => {
   const timeoutId = setTimeout(() => signal?.abort(), 45_000)
 
   try {
-    // Format dates for API
     const startDate = format(dateRange.from, 'yyyy-MM-dd')
     const endDate = format(dateRange.to, 'yyyy-MM-dd')
 
     console.log('🔍 Fetching data for date range:', { startDate, endDate })
 
-    // Fetch client groups first (for metadata only)
     const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
       credentials: "include",
       signal: signal,
@@ -149,18 +161,13 @@ const fetchAllData = async (signal) => {
 
     setClientGroups(clientGroupsData)
 
-    // Set first client group as default
     if (clientGroupsData.length > 0 && !selectedClientGroup) {
       setSelectedClientGroup(clientGroupsData[0].id)
     }
 
-    // Build group IDs param
     const groupIds = clientGroupsData.map(g => g.id).join(',')
     console.log('🔍 Fetching insights for groups:', groupIds)
 
-    // ============================================
-    // 🔥 Fetch campaigns
-    // ============================================
     const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Campaigns URL:', campaignsUrl)
     
@@ -169,9 +176,6 @@ const fetchAllData = async (signal) => {
       signal: signal,
     })
 
-    // ============================================
-    // 🔥 Fetch adsets
-    // ============================================
     const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Adsets URL:', adsetsUrl)
     
@@ -180,9 +184,6 @@ const fetchAllData = async (signal) => {
       signal: signal,
     })
 
-    // ============================================
-    // 🔥 Fetch ads
-    // ============================================
     const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
     console.log('📡 Ads URL:', adsUrl)
     
@@ -191,9 +192,6 @@ const fetchAllData = async (signal) => {
       signal: signal,
     })
 
-    // ============================================
-    // 🔥 Fetch leads
-    // ============================================
     const leadsResponse = await fetch(
       `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
       {
@@ -202,7 +200,6 @@ const fetchAllData = async (signal) => {
       }
     )
 
-    // Process responses
     const [campaignsData, adsetsData, adsData, leadsData] = await Promise.all([
       campaignsResponse.ok ? campaignsResponse.json() : { insights: [] },
       adsetsResponse.ok ? adsetsResponse.json() : { insights: [] },
@@ -216,7 +213,6 @@ const fetchAllData = async (signal) => {
     console.log('  - Ads insights:', adsData.insights?.length || 0)
     console.log('  - Leads:', leadsData.leads?.length || 0)
 
-    // Log first few items for inspection
     if (adsetsData.insights?.length > 0) {
       console.log('🔍 First adset insight:', adsetsData.insights[0])
     }
@@ -225,7 +221,7 @@ const fetchAllData = async (signal) => {
     }
 
     // ============================================
-    // 🔥 AGGREGATE CAMPAIGNS BY NAME
+    // AGGREGATE CAMPAIGNS
     // ============================================
     const campaignAggregation = {}
     
@@ -241,19 +237,19 @@ const fetchAllData = async (signal) => {
           clientGroup: insight.client_group_name || 'Unknown',
           adAccount: insight.ad_account_id || '',
           spend: 0,
-          social_spend: 0, // NEW: Add social spend
+          social_spend: 0,
           impressions: 0,
           clicks: 0,
           reach: 0,
           leads: 0,
-          account_currency: data.account_currency || 'USD', // NEW: Add currency
+          account_currency: data.account_currency || 'USD',
           conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN',
         }
       }
       
       const agg = campaignAggregation[campaignKey]
       agg.spend += Number.parseFloat(data.spend || "0")
-      agg.social_spend += Number.parseFloat(data.social_spend || "0") // NEW: Aggregate social spend
+      agg.social_spend += Number.parseFloat(data.social_spend || "0")
       agg.impressions += Number.parseInt(data.impressions || "0", 10)
       agg.clicks += Number.parseInt(data.clicks || "0", 10)
       agg.reach += Number.parseInt(data.reach || "0", 10)
@@ -267,7 +263,7 @@ const fetchAllData = async (signal) => {
       campaign.ctr = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions * 100) : 0
       campaign.cpc = campaign.clicks > 0 ? (campaign.spend / campaign.clicks) : 0
       campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
-      campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0 // NEW: Calculate CPP
+      campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0
       campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
       return enhanceWithCustomMetrics(campaign)
     })
@@ -275,7 +271,7 @@ const fetchAllData = async (signal) => {
     console.log('✅ Processed campaigns:', processedCampaigns.length)
 
     // ============================================
-    // 🔥 AGGREGATE ADSETS BY NAME
+    // AGGREGATE ADSETS
     // ============================================
     const adsetAggregation = {}
     
@@ -303,13 +299,13 @@ const fetchAllData = async (signal) => {
           clientGroup: insight.client_group_name || 'Unknown',
           adAccount: insight.ad_account_id || '',
           spend: 0,
-          social_spend: 0, // NEW
+          social_spend: 0,
           impressions: 0,
           clicks: 0,
           reach: 0,
           leads: 0,
-          account_currency: data.account_currency || 'USD', // NEW
-          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN', // NEW
+          account_currency: data.account_currency || 'USD',
+          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN',
         }
       }
       
@@ -321,11 +317,10 @@ const fetchAllData = async (signal) => {
       agg.reach += Number.parseInt(data.reach || "0", 10)
       agg.leads += Number.parseInt(data.leads || "0", 10)
       if (data.conversion_rate_ranking && data.conversion_rate_ranking !== 'UNKNOWN') {
-      agg.conversion_rate_ranking = data.conversion_rate_ranking
-    }
+        agg.conversion_rate_ranking = data.conversion_rate_ranking
+      }
     })
 
-    
     console.log('🔍 Adset aggregation keys:', Object.keys(adsetAggregation))
     console.log('🔍 Adset aggregation sample:', Object.values(adsetAggregation)[0])
     
@@ -333,7 +328,7 @@ const fetchAllData = async (signal) => {
       adset.ctr = adset.impressions > 0 ? (adset.clicks / adset.impressions * 100) : 0
       adset.cpc = adset.clicks > 0 ? (adset.spend / adset.clicks) : 0
       adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
-      adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0 // NEW
+      adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0
       adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
       return enhanceWithCustomMetrics(adset)
     })
@@ -342,7 +337,7 @@ const fetchAllData = async (signal) => {
     console.log('✅ First processed adset:', processedAdsets[0])
 
     // ============================================
-    // 🔥 AGGREGATE ADS BY NAME
+    // AGGREGATE ADS
     // ============================================
     const adAggregation = {}
     
@@ -371,26 +366,26 @@ const fetchAllData = async (signal) => {
           clientGroup: insight.client_group_name || 'Unknown',
           adAccount: insight.ad_account_id || '',
           spend: 0,
-          social_spend: 0, // NEW
+          social_spend: 0,
           impressions: 0,
           clicks: 0,
           reach: 0,
           leads: 0,
-          account_currency: data.account_currency || 'USD', // NEW
-          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN', // NEW    
+          account_currency: data.account_currency || 'USD',
+          conversion_rate_ranking: data.conversion_rate_ranking || 'UNKNOWN',
         }
       }
       
       const agg = adAggregation[adKey]
       agg.spend += Number.parseFloat(data.spend || "0")
-      agg.social_spend += Number.parseFloat(data.social_spend || "0") // NEW
+      agg.social_spend += Number.parseFloat(data.social_spend || "0")
       agg.impressions += Number.parseInt(data.impressions || "0", 10)
       agg.clicks += Number.parseInt(data.clicks || "0", 10)
       agg.reach += Number.parseInt(data.reach || "0", 10)
       agg.leads += Number.parseInt(data.leads || "0", 10)
       if (data.conversion_rate_ranking && data.conversion_rate_ranking !== 'UNKNOWN') {
-      agg.conversion_rate_ranking = data.conversion_rate_ranking
-    }
+        agg.conversion_rate_ranking = data.conversion_rate_ranking
+      }
     })
     
     console.log('🔍 Ad aggregation keys:', Object.keys(adAggregation))
@@ -400,7 +395,7 @@ const fetchAllData = async (signal) => {
       ad.ctr = ad.impressions > 0 ? (ad.clicks / ad.impressions * 100) : 0
       ad.cpc = ad.clicks > 0 ? (ad.spend / ad.clicks) : 0
       ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
-      ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0 // NEW
+      ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0
       ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
       return enhanceWithCustomMetrics(ad)
     })
@@ -435,29 +430,21 @@ const fetchAllData = async (signal) => {
 }
 
   useEffect(() => {
-    // Create abort controller for cleanup
     const controller = new AbortController()
-    
     const loadData = async () => {
       await fetchAllData(controller.signal)
     }
-    
     loadData()
-    
-    // Cleanup: abort any pending requests when component unmounts
     return () => {
       controller.abort()
     }
-  }, []) // Only load once on mount
+  }, [])
 
-  // Reload data when date range changes
   useEffect(() => {
     const controller = new AbortController()
-    
     if (dateRange.from && dateRange.to) {
       fetchAllData(controller.signal)
     }
-    
     return () => {
       controller.abort()
     }
@@ -466,10 +453,8 @@ const fetchAllData = async (signal) => {
   const applyFilters = (data) => {
     let filtered = [...data]
 
-    // Filter by selected client group
     if (selectedClientGroup) {
       if (activeTab === "leads") {
-        // For leads, match by group_name since leads don't have _groupId
         const selectedGroup = clientGroups.find(g => g.id === selectedClientGroup)
         if (selectedGroup) {
           filtered = filtered.filter((i) => i.group_name === selectedGroup.name)
@@ -492,8 +477,10 @@ const fetchAllData = async (signal) => {
               i.email?.toLowerCase().includes(lower) ||
               i.phone_number?.toLowerCase().includes(lower) ||
               i.ad_name?.toLowerCase().includes(lower) ||
+              i.adset_name?.toLowerCase().includes(lower) ||
               i.campaign_name?.toLowerCase().includes(lower) ||
-              i.group_name?.toLowerCase().includes(lower))),
+              i.group_name?.toLowerCase().includes(lower) ||
+              i.platform?.toLowerCase().includes(lower))),
       )
     }
 
@@ -533,23 +520,41 @@ const getFilteredDataForTab = () => {
 }
   
   const baseColumns = [
-  "adAccount",
-  "spend",
-  "social_spend", // NEW
-  "impressions",
-  "clicks",
-  "cpc",
-  "cpp", // NEW
-  "reach",
-  "ctr",
-  "cpm",
-  "frequency",
-  "conversion_rate_ranking", // NEW
-  "account_currency", // NEW
+    "adAccount",
+    "spend",
+    "social_spend",
+    "impressions",
+    "clicks",
+    "cpc",
+    "cpp",
+    "reach",
+    "ctr",
+    "cpm",
+    "frequency",
+    "conversion_rate_ranking",
+    "account_currency",
   ]
   
   const getAvailableColumns = () => {
-    if (activeTab === "leads") return ["full_name", "email", "phone_number", "ad_name", "campaign_name", "group_name", "created_time"]
+    if (activeTab === "leads") {
+      // 🔥 UPDATED: All new lead fields available
+      return [
+        "full_name",
+        "email",
+        "phone_number",
+        "ad_name",
+        "adset_name",
+        "campaign_name",
+        "ad_id",
+        "adset_id",
+        "campaign_id",
+        "form_id",
+        "platform",
+        "is_organic",
+        "created_time",
+        "group_name",
+      ]
+    }
     return ["name", "clientGroup", ...baseColumns, ...customMetrics.map((m) => m.id)]
   }
 
@@ -667,6 +672,8 @@ const getFilteredDataForTab = () => {
     if (col === "ctr") return `${Number(value).toFixed(2)}%`
     if (col === "account_currency") return value.toUpperCase()
     if (col === "conversion_rate_ranking") return value.replace(/_/g, ' ')
+    // 🔥 NEW: Format boolean is_organic as readable text
+    if (col === "is_organic") return value ? "Yes" : "No"
     if (typeof value === "number") return value.toLocaleString()
     return value
   }
@@ -691,7 +698,6 @@ const getFilteredDataForTab = () => {
     setSearchTerm("")
   }
 
-  // Date range preset handlers
   const handleDateRangePreset = (days) => {
     const newRange = {
       from: subDays(new Date(), days),
@@ -788,8 +794,6 @@ const getFilteredDataForTab = () => {
               save={saveView}
             />
 
-            {/* Enhanced Date Range Picker */}
-        {/* Enhanced Date Range Picker */}
             <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -826,7 +830,6 @@ const getFilteredDataForTab = () => {
                     className="rounded-lg border shadow-sm"
                   />
 
-                  {/* Action buttons */}
                   <div className="flex items-center pt-3 border-t mt-3">
                     <Button
                       variant="outline"
@@ -933,7 +936,6 @@ const getFilteredDataForTab = () => {
             {/* Filters */}
             <div className="flex flex-col space-y-0 md:flex-row md:items-center md:justify-between md:space-y-0">
               
-              {/* Active Filters */}
               {filterConditions.length > 0 && (
                 <div className="border rounded-lg my-3 text-left">
                   <div className="flex items-center justify-between">
@@ -956,7 +958,14 @@ const getFilteredDataForTab = () => {
                                 <SelectItem value="email">Email</SelectItem>
                                 <SelectItem value="phone_number">Phone Number</SelectItem>
                                 <SelectItem value="ad_name">Ad Name</SelectItem>
+                                <SelectItem value="adset_name">Ad Set Name</SelectItem>
                                 <SelectItem value="campaign_name">Campaign Name</SelectItem>
+                                <SelectItem value="ad_id">Ad ID</SelectItem>
+                                <SelectItem value="adset_id">Ad Set ID</SelectItem>
+                                <SelectItem value="campaign_id">Campaign ID</SelectItem>
+                                <SelectItem value="form_id">Form ID</SelectItem>
+                                <SelectItem value="platform">Platform</SelectItem>
+                                <SelectItem value="is_organic">Organic</SelectItem>
                                 <SelectItem value="group_name">Client Group</SelectItem>
                               </>
                             ) : (
