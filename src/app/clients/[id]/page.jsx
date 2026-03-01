@@ -23,6 +23,15 @@ import {
 import { Loading } from "@/components/ui/loader";
 
 
+/**
+ * Displays a client's details and marketing analytics based on the client id from the route.
+ *
+ * Renders a loading state while fetching client data, a "Client Not Found" view if no data is available,
+ * and a multi-tab interface (Overview, Marketing, Call Center, Analytics) with charts, tables, and notes editing
+ * when client data is present. Also provides a notes save action that persists updates to the server.
+ *
+ * @returns {JSX.Element} The client details page UI.
+ */
 export default function ClientDetailsPage() {
   const router = useRouter()
   const params = useParams()
@@ -220,9 +229,9 @@ export default function ClientDetailsPage() {
   )
 
   return (
-    <div className="min-h-dvh w-full pb-2 flex flex-col overflow-hidden px-4 md:px-8">
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] flex flex-col overflow-hidden ">
       {/* Header */}
-      <div className="space-y-4 pt-4">
+      <div className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" onClick={() => router.push("/clients")} className="mr-2">
