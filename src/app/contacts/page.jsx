@@ -1,6 +1,8 @@
 "use client"
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
+import { useColumnViews } from "@/lib/useColumnViews"
+import { ViewLoading }    from "@/components/ui/ViewLoading"
 import {
   SlidersHorizontal,
   Users,
@@ -473,10 +475,15 @@ export default function ContactPage() {
   const [progress, setProgress] = useState(13)
   const [cursors, setCursors] = useState([null])
   const [currentPage, setCurrentPage] = useState(1)
+  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("contacts")
 
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
   )
+  useEffect(() => {
+    if (!viewsLoaded || !savedColumns) return
+    setVisibleColumns(savedColumns)
+  }, [viewsLoaded, savedColumns])
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSource, setSelectedSource] = useState("all")
@@ -779,7 +786,8 @@ export default function ContactPage() {
           fetchContacts(currentPage + 1)
       }
   }
-
+  if (!viewsLoaded) return <ViewLoading />
+   
   return (
     <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
       <div className="flex flex-col gap-8">
@@ -827,8 +835,12 @@ export default function ContactPage() {
 
                 selectAll={selectAll}
                 clearAll={clearAll}
-                save={() => console.log("Save view clicked")}
+                  save={async () => {
+                    await saveToDB(visibleColumns)
+                    setIsDropdownOpen(false)
+                  }}
               />
+              
 
               {/* Enhanced Date Range Picker */}
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
