@@ -1,4 +1,4 @@
-import {SquareUserRound, ChartNoAxesColumnIncreasing, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
+import {SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
 import { useState } from "react"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
@@ -56,6 +56,11 @@ const items = [
     title: "Metrics",
     url: "/metrics",
     icon: Calculator,
+  },
+  {
+    title: "Alerts",
+    url: "/alerts",
+    icon: Bell,
   },
   {
     title: "Settings",
