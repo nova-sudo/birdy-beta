@@ -338,12 +338,12 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="min-h-screen w-[calc(100dvw-30px)] md:w-[calc(100dvw-100px)]">
-      <div className="container py-5">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground text-center md:text-left">Settings</h1>
+    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] mx-auto">
+      <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between mb-6">
+        <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Settings</h1>
       </div>
 
-      <div className="container">
+      <div>
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
             {["general", "integrations", "account"].map((tab) => (
@@ -379,7 +379,7 @@ function SettingsPageContent() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div>
                 <h2 className="text-lg font-semibold text-foreground mb-1">Connected Services</h2>
                 <p className="text-sm text-muted-foreground">Manage your third-party service integrations</p>
@@ -589,7 +589,7 @@ function SettingsPageContent() {
             <Card>
               <CardHeader>
                 <CardTitle className="text-semibold text-2xl">Account Information</CardTitle>
-                <CardDescription className="text-[#71658B]">Manage your account preferences</CardDescription>
+                <CardDescription className="text-[#71658B] mb-2">Manage your account preferences</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
