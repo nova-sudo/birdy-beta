@@ -1,12 +1,11 @@
 "use client"
-
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import { AlertCircle, Building2, Plus, Check, ChevronRight, RefreshCw, Users, DollarSign, UserCheck, Target, Search, ChevronDown, Eye} from "lucide-react"
+import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
@@ -48,8 +47,9 @@ import Image from "next/image"
 import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import getSymbolFromCurrency from "currency-symbol-map";
 
-
+const STORAGE_KEY = "user_default_currency";
 const CACHE_DURATION = {
   clientGroups: 120 * 60 * 1000,
   ghlLocations: 60 * 60 * 1000,
@@ -118,6 +118,10 @@ export default function ClientsPage() {
   const [progress, setProgress] = useState(13)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
+  const [userCurrency, setUserCurrency] = useState(() => {
+    try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
+  });
+  const [currencyLoading, setCurrencyLoading] = useState(true);
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("clients")
 
   // 🔥 KEY FIX: Build dynamic columns when clientGroups changes
@@ -170,6 +174,42 @@ export default function ClientsPage() {
     })
   }, [viewsLoaded, savedColumns])
 
+useEffect(() => {
+  let cancelled = false;
+
+  async function fetchCurrency() {
+    try {
+      const response = await fetch("https://birdy-backend.vercel.app/api/user/currency", {
+        credentials: "include",
+      });
+
+      if (!response.ok) throw new Error(`Failed to fetch currency: ${response.status}`);
+
+      const data = await response.json();
+      const currency = data.default_currency ?? null;
+      console.log("📥 Fetched user currency:", currency);
+
+      if (!cancelled) {
+        setUserCurrency(currency);
+        try {
+          if (currency) localStorage.setItem(STORAGE_KEY, currency);
+          else localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+          console.warn("[useUserCurrency] localStorage unavailable:", e);
+        }
+      }
+    } catch (err) {
+      console.error("[useUserCurrency] Error fetching currency:", err);
+      if (!cancelled) setCurrencyLoading(false);
+      return;
+    } finally {
+      if (!cancelled) setCurrencyLoading(false);
+    }
+  }
+
+  fetchCurrency();
+  return () => { cancelled = true; };
+}, []);
   // Update column visibility when columns change
   useEffect(() => {
     setColumnVisibility((prev) => {
@@ -411,7 +451,6 @@ export default function ClientsPage() {
     }
 
     setClientGroups(prev => [optimisticGroup, ...prev])
-
     setWizardOpen(false)
     setWizardStep(1)
     const creatingGroupName = clientGroupName
@@ -427,17 +466,19 @@ export default function ClientsPage() {
     toast.info(`Creating "${creatingGroupName}"...`)
 
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          name: creatingGroupName,
-          ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
-          meta_ad_account_id: selectedMetaAdAccount?.id || null,
-          hotprospector_group_id: selectedHotProspectorGroup?.id || null,
-        }),
-      })
+  const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      name: creatingGroupName,
+      ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
+      meta_ad_account_id: selectedMetaAdAccount?.id || null,
+      hotprospector_group_id: selectedHotProspectorGroup?.id || null,
+      ad_account_currency: selectedMetaAdAccount?.currency || null,  // Add this; fallback to null if unavailable
+      notes: "",  // Add this; use empty string or a dynamic value if needed
+    }),
+  });
 
       if (response.ok) {
         const data = await response.json()
@@ -506,7 +547,7 @@ export default function ClientsPage() {
 
     return {
       activeClients,
-      totalSpend,
+       totalSpend,
       totalLeads,
       averageCPL
     }
@@ -528,7 +569,7 @@ export default function ClientsPage() {
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
               <div>
-                <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
                   Client Hub
                 </h1>
               </div>
@@ -982,7 +1023,7 @@ export default function ClientsPage() {
                 <div>
                   <p className="text-muted-foreground text-sm text-[#71658B]">Total Ad Spend</p>
                   <h3 className="text-2xl font-bold mt-1">
-                    ${stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
@@ -1020,7 +1061,7 @@ export default function ClientsPage() {
                 <div>
                   <p className="text-muted-foreground text-sm text-[#71658B]">Average CPL</p>
                   <h3 className="text-2xl font-bold mt-1">
-                    ${stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </h3>
                   <div className="flex items-center mt-1">
                     <span className="text-destructive text-[0.75rem] leading-4 text-[#EF4343]">-3%</span>

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-
 import {
   Tooltip,
   TooltipContent,
@@ -31,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import getSymbolFromCurrency from "currency-symbol-map";
 
 /**
  * Reusable container for dashboard tables with glassmorphism styling
@@ -46,7 +46,7 @@ export const TableContainer = ({ children, title, description }) => (
     <CardContent className="p-0 overflow-x-auto">{children}</CardContent>
   </Card>
 )
-
+const userCurrency = localStorage.getItem("user_default_currency");
 const StyledTable = ({
   columns = [],
   data = [],
@@ -396,7 +396,7 @@ const getPageNumbers = () => {
   /* ---------- FORMATTERS ---------- */
   const formatCurrency = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
-    return `$${num.toFixed(2)}`;
+    return `${getSymbolFromCurrency(userCurrency)}${num.toFixed(2)}`;
   };
   
   const formatPercentage = (v) => {
