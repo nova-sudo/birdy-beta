@@ -62,7 +62,9 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format, subDays } from "date-fns"
+import getSymbolFromCurrency from "currency-symbol-map";
 
+const userCurrency = localStorage.getItem("user_default_currency");
 const contactColumns = [
   { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
@@ -123,8 +125,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           
           {oppValue > 0 && (
             <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-              <DollarSign className="w-3 h-3" />
-              {oppValue}
+              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
             </span>
           )}
           
@@ -361,14 +362,57 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
     <div className="border bg-card overflow-hidden rounded-md w-full">
       <style jsx>{`
         @media (min-width: 768px) {
-          .fixed-column-even { position: sticky; left: 0; background: white; z-index: 50; min-width: 243px; font-weight: 600; }
-          .fixed-column-odd { position: sticky; left: 0; background: #f4f3f9; z-index: 50; min-width: 243px; font-weight: 600; }
-          .fixed-header { position: sticky; left: 0; z-index: 50; background: white; min-width: 150px; }
+          .fixed-column-even {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: white;
+            z-index: 50;
+            min-width: 250px;
+            font-weight: 600;
+            max-width: 250px;
+          }
+          .fixed-column-odd {
+            text-align: left;
+            position: sticky;
+            left: 0;
+            background: #f4f3f9;
+            z-index: 50;
+            min-width: 250px;
+            font-weight: 600;
+            max-width: 250px;
+          }
+          .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
+            background: white;
+            min-width: 150px;
+            width: 5%;
+          }
         }
+
         @media (max-width: 767px) {
-          .fixed-column-even, .fixed-column-odd { background: white; min-width: 200px; font-weight: 600; }
-          .fixed-column-odd { background: #f4f3f9; }
-          .fixed-header { background: white; min-width: 150px; }
+          .fixed-column-even,
+          .fixed-column-odd {
+            text-align: left;
+            background: white;
+            min-width: 200px;
+            font-weight: 600;
+          }
+          .fixed-column-odd {
+            background: #f4f3f9;
+          }
+          .fixed-header {
+            background: white;
+            min-width: 150px;
+            width: 100%;
+          }
+        }
+
+        .table-container {
+          position: relative;
+          overflow: auto;
         }
       `}</style>
       <div className="overflow-x-auto">
@@ -443,7 +487,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const stats = [
     { title: "Total Contacts", value: filteredTotal, subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null, icon: Users },
     { title: "With Opportunities", value: contactsWithOpportunities, icon: Target },
-    { title: "Total Lead Value", value: `$${totalLeadValue.toLocaleString()}`, icon: DollarSign },
+    { title: "Total Lead Value", value: `${getSymbolFromCurrency(userCurrency)}${totalLeadValue.toLocaleString()}`, icon: DollarSign },
     { title: "With Email", value: contactsWithEmail, icon: Mail },
   ]
 
