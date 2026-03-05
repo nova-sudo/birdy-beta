@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import Image from "next/image"
 import Calendar05 from "@/components/calendar-05"
+import { useColumnViews } from "@/lib/useColumnViews"
+import { ViewLoading }    from "@/components/ui/ViewLoading"
 import {
   Search,
   SlidersHorizontal,
@@ -57,6 +59,8 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
+  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("campaigns")
+
   
   // Date range state - default to last 7 days
   const [dateRange, setDateRange] = useState({
@@ -87,6 +91,11 @@ const Campaigns = () => {
       "created_time",
     ],
   })
+ // ③ apply saved view
+  useEffect(() => {
+    if (!viewsLoaded || !savedColumns) return
+    setVisibleColumns(prev => ({ ...prev, ...savedColumns }))
+  }, [viewsLoaded, savedColumns])
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [columnsSearch, setColumnsSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -618,9 +627,12 @@ const getFilteredDataForTab = () => {
     }))
   }
 
-  const saveView = () => {
+  const saveView = async () => {
+    await saveToDB(visibleColumns)
     setColumnsOpen(false)
   }
+  if (!viewsLoaded) return <ViewLoading />
+
 
   const getIcon = (col) => {
     if (col.id === "clientGroup" || col.id === "name") return Flask

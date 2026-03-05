@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/u
 import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
+import { useColumnViews } from "@/lib/useColumnViews"
+import { ViewLoading }    from "@/components/ui/ViewLoading"
 import { 
   ENHANCED_CLIENT_COLUMNS, 
   ENHANCED_CATEGORIES, 
@@ -120,6 +122,7 @@ export default function ClientsPage() {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
   const [currencyLoading, setCurrencyLoading] = useState(true);
+  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("clients")
 
   // 🔥 KEY FIX: Build dynamic columns when clientGroups changes
   const columns = useMemo(() => {
@@ -161,6 +164,15 @@ export default function ClientsPage() {
     columns.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
+ useEffect(() => {
+    if (!viewsLoaded || !savedColumns) return
+    setColumnVisibility(prev => {
+      const updated = { ...prev }
+      Object.keys(updated).forEach(k => { updated[k] = false })
+      savedColumns.forEach(id => { updated[id] = true })
+      return updated
+    })
+  }, [viewsLoaded, savedColumns])
 
 useEffect(() => {
   let cancelled = false;
@@ -261,10 +273,14 @@ useEffect(() => {
     setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
   };
 
-  const save = () => {
-    localStorage.setItem('clients-columnVisibility', JSON.stringify(columnVisibility));
-    setIsOpen(false); 
-  };
+  const save = async () => {
+    localStorage.setItem('clients-columnVisibility', JSON.stringify(columnVisibility))
+    const visibleIds = Object.entries(columnVisibility)
+      .filter(([, v]) => v)
+      .map(([k]) => k)
+    await saveToDB(visibleIds)
+    setIsOpen(false)
+  }
 
   const [searchQuery, setSearchQuery] = useState("")
   
@@ -544,6 +560,7 @@ useEffect(() => {
       <Loading progress={progress} />
     )
   }
+    if (!viewsLoaded) return <ViewLoading />
 
   return (
     <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)] mx-auto bg-white gap-6">
