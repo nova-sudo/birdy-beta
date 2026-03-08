@@ -841,7 +841,7 @@ export default function ContactPage() {
   if (!viewsLoaded) return <ViewLoading />
    
   return (
-    <div className="mx-auto w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
+    <div className="mx-auto w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 

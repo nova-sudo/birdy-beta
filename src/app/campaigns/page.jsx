@@ -734,7 +734,7 @@ const getFilteredDataForTab = () => {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-30px)] md:w-[calc(100dvw-80px)]">
+    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
