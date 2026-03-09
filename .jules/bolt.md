@@ -1,0 +1,3 @@
+## 2025-05-15 - [Eliminating Data Fetching Waterfalls & Redundant Renders]
+**Learning:** In complex dashboards like the Marketing Hub, sequential `await fetch()` calls create significant latency. Parallelizing these with `Promise.all` can reduce data load time by up to 75% (from sum of latencies to max of latencies). Additionally, expensive filtering and mapping logic in the render body without memoization causes UI jank on every state change (e.g., search input or tab switching).
+**Action:** Always parallelize independent API calls. Use `useMemo` for derived data (filtering, metrics) and stable component props (table columns) to prevent unnecessary re-renders in data-intensive views.
