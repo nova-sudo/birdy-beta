@@ -5,6 +5,13 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
@@ -132,25 +139,31 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <select
-                value={formData.default_currency}
-                onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Select your currency"
+                <Label htmlFor="default_currency" className="text-sm font-medium text-gray-800">
+                  Default currency
+                </Label>
+                <Select
+                  value={formData.default_currency}
+                  onValueChange={(value) => setFormData({ ...formData, default_currency: value })}
                 >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="CNY">CNY - Chinese Yuan</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="INR">INR - Indian Rupee</option>
-                    <option value="CAD">CAD - Canadian Dollar</option>
-                    <option value="AUD">AUD - Australian Dollar</option>
-                    <option value="CHF">CHF - Swiss Franc</option>
-                    <option value="MXN">MXN - Mexican Peso</option>
-                    <option value="AED">AED - UAE Dirham</option>
-                    <option value="SAR">SAR - Saudi Riyal</option>
-                </select> 
+                  <SelectTrigger id="default_currency" className="w-full h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20">
+                    <SelectValue placeholder="Select your currency" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-gray-200">
+                    <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR - Euro</SelectItem>
+                    <SelectItem value="CNY">CNY - Chinese Yuan</SelectItem>
+                    <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
+                    <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                    <SelectItem value="INR">INR - Indian Rupee</SelectItem>
+                    <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
+                    <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                    <SelectItem value="CHF">CHF - Swiss Franc</SelectItem>
+                    <SelectItem value="MXN">MXN - Mexican Peso</SelectItem>
+                    <SelectItem value="AED">AED - UAE Dirham</SelectItem>
+                    <SelectItem value="SAR">SAR - Saudi Riyal</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               
