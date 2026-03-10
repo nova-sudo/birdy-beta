@@ -1,0 +1,3 @@
+## 2025-05-15 - [Marketing Hub Optimization]
+**Learning:** In complex dashboards with multiple tabs, memoizing filtered data for ALL tabs simultaneously makes tab-switching instant but can add overhead to input-based filtering (like search). Decoupling filtering logic from the active tab state is necessary for independent memoization.
+**Action:** Use `useMemo` to pre-calculate filtered lists for all data categories. Ensure expensive utility calls (like `loadCustomMetrics`) are hoisted out of tight loops. Avoid including non-standard dependencies (like function calls) in `useMemo` dependency arrays.
