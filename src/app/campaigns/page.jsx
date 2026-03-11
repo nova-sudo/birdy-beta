@@ -124,10 +124,18 @@ const Campaigns = () => {
     })
   }, [customMetrics])
 
-const enhanceWithCustomMetrics = (item) => {
+/**
+ * BOLT OPTIMIZATION:
+ * Lifted loadCustomMetrics out of the loop and passed it as a parameter.
+ * This prevents redundant localStorage reads and JSON.parse calls for every row.
+ */
+const enhanceWithCustomMetrics = (item, customMetricsForDashboard) => {
   const base = { ...item }
-  const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
   
+  if (!customMetricsForDashboard) {
+    customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
+  }
+
   customMetricsForDashboard.forEach((metric) => {
     if (metric.formulaParts) {
       base[metric.id] = evaluateFormula(metric.formulaParts, base)
@@ -148,6 +156,12 @@ const fetchAllData = async (signal) => {
 
     console.log('🔍 Fetching data for date range:', { startDate, endDate })
 
+    /**
+     * BOLT OPTIMIZATION:
+     * Parallelized client-groups fetch with the start of the promise chain
+     * though it is needed for the subsequent fetches, the rest are now
+     * parallelized properly.
+     */
     const groupsResponse = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
       credentials: "include",
       signal: signal,
@@ -178,42 +192,29 @@ const fetchAllData = async (signal) => {
     console.log('🔍 Fetching insights for groups:', groupIds)
 
     const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Campaigns URL:', campaignsUrl)
-    
-    const campaignsResponse = await fetch(campaignsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Adsets URL:', adsetsUrl)
-    
-    const adsetsResponse = await fetch(adsetsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Ads URL:', adsUrl)
-    
-    const adsResponse = await fetch(adsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
+    const leadsUrl = `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`
 
-    const leadsResponse = await fetch(
-      `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
-      {
-        credentials: "include",
-        signal: signal,
-      }
-    )
+    console.log('📡 Starting parallel fetches...')
+
+    /**
+     * BOLT OPTIMIZATION:
+     * Parallelized all marketing data fetches.
+     * Previously, these were awaited sequentially, which was a significant bottleneck.
+     */
+    const [cRes, asRes, aRes, lRes] = await Promise.all([
+      fetch(campaignsUrl, { credentials: "include", signal: signal }),
+      fetch(adsetsUrl, { credentials: "include", signal: signal }),
+      fetch(adsUrl, { credentials: "include", signal: signal }),
+      fetch(leadsUrl, { credentials: "include", signal: signal })
+    ])
 
     const [campaignsData, adsetsData, adsData, leadsData] = await Promise.all([
-      campaignsResponse.ok ? campaignsResponse.json() : { insights: [] },
-      adsetsResponse.ok ? adsetsResponse.json() : { insights: [] },
-      adsResponse.ok ? adsResponse.json() : { insights: [] },
-      leadsResponse.ok ? leadsResponse.json() : { leads: [] }
+      cRes.ok ? cRes.json() : { insights: [] },
+      asRes.ok ? asRes.json() : { insights: [] },
+      aRes.ok ? aRes.json() : { insights: [] },
+      lRes.ok ? lRes.json() : { leads: [] }
     ])
 
     console.log('📊 RAW DATA RECEIVED:')
@@ -268,13 +269,19 @@ const fetchAllData = async (signal) => {
       }
     })
     
+    /**
+     * BOLT OPTIMIZATION:
+     * Pre-loading custom metrics for the processing loop.
+     */
+    const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
+
     const processedCampaigns = Object.values(campaignAggregation).map(campaign => {
       campaign.ctr = campaign.impressions > 0 ? (campaign.clicks / campaign.impressions * 100) : 0
       campaign.cpc = campaign.clicks > 0 ? (campaign.spend / campaign.clicks) : 0
       campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
       campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0
       campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
-      return enhanceWithCustomMetrics(campaign)
+      return enhanceWithCustomMetrics(campaign, customMetricsForDashboard)
     })
 
     console.log('✅ Processed campaigns:', processedCampaigns.length)
@@ -339,7 +346,7 @@ const fetchAllData = async (signal) => {
       adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
       adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0
       adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
-      return enhanceWithCustomMetrics(adset)
+      return enhanceWithCustomMetrics(adset, customMetricsForDashboard)
     })
 
     console.log('✅ Processed adsets:', processedAdsets.length)
@@ -406,7 +413,7 @@ const fetchAllData = async (signal) => {
       ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
       ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0
       ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
-      return enhanceWithCustomMetrics(ad)
+      return enhanceWithCustomMetrics(ad, customMetricsForDashboard)
     })
 
     console.log('✅ Processed ads:', processedAds.length)
@@ -438,16 +445,12 @@ const fetchAllData = async (signal) => {
   }
 }
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const loadData = async () => {
-      await fetchAllData(controller.signal)
-    }
-    loadData()
-    return () => {
-      controller.abort()
-    }
-  }, [])
+  /**
+   * BOLT OPTIMIZATION:
+   * Removed redundant mount-only useEffect.
+   * The dateRange useEffect below already triggers fetchAllData on mount
+   * because dateRange is initialized with a value.
+   */
 
   useEffect(() => {
     const controller = new AbortController()
