@@ -124,15 +124,16 @@ const Campaigns = () => {
     })
   }, [customMetrics])
 
-const enhanceWithCustomMetrics = (item) => {
+const enhanceWithCustomMetrics = (item, customMetricsForDashboard) => {
   const base = { ...item }
-  const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
   
-  customMetricsForDashboard.forEach((metric) => {
-    if (metric.formulaParts) {
-      base[metric.id] = evaluateFormula(metric.formulaParts, base)
-    }
-  })
+  if (customMetricsForDashboard) {
+    customMetricsForDashboard.forEach((metric) => {
+      if (metric.formulaParts) {
+        base[metric.id] = evaluateFormula(metric.formulaParts, base)
+      }
+    })
+  }
   return base
 }
 
@@ -141,6 +142,7 @@ const fetchAllData = async (signal) => {
   setError(null)
 
   const timeoutId = setTimeout(() => signal?.abort(), 45_000)
+  const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
 
   try {
     const startDate = format(dateRange.from, 'yyyy-MM-dd')
@@ -274,7 +276,7 @@ const fetchAllData = async (signal) => {
       campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
       campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0
       campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
-      return enhanceWithCustomMetrics(campaign)
+      return enhanceWithCustomMetrics(campaign, customMetricsForDashboard)
     })
 
     console.log('✅ Processed campaigns:', processedCampaigns.length)
@@ -339,7 +341,7 @@ const fetchAllData = async (signal) => {
       adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
       adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0
       adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
-      return enhanceWithCustomMetrics(adset)
+      return enhanceWithCustomMetrics(adset, customMetricsForDashboard)
     })
 
     console.log('✅ Processed adsets:', processedAdsets.length)
@@ -406,7 +408,7 @@ const fetchAllData = async (signal) => {
       ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
       ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0
       ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
-      return enhanceWithCustomMetrics(ad)
+      return enhanceWithCustomMetrics(ad, customMetricsForDashboard)
     })
 
     console.log('✅ Processed ads:', processedAds.length)
