@@ -368,7 +368,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             left: 0;
             background: white;
             z-index: 50;
-            min-width: 250px;
+            min-width: 200px;
             font-weight: 600;
             max-width: 250px;
           }
@@ -378,7 +378,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             left: 0;
             background: #f4f3f9;
             z-index: 50;
-            min-width: 250px;
+            min-width: 200px;
             font-weight: 600;
             max-width: 250px;
           }
@@ -387,8 +387,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             left: 0;
             z-index: 50;
             background: white;
-            min-width: 150px;
-            width: 5%;
+            min-width: 200px;
           }
         }
 
@@ -396,6 +395,9 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
           .fixed-column-even,
           .fixed-column-odd {
             text-align: left;
+            position: sticky;
+            left: 0;
+            z-index: 50;
             background: white;
             min-width: 200px;
             font-weight: 600;
@@ -404,30 +406,36 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
             background: #f4f3f9;
           }
           .fixed-header {
+            position: sticky;
+            left: 0;
+            z-index: 50;
             background: white;
-            min-width: 150px;
-            width: 100%;
+            min-width: 200px;
+            width: auto;
           }
         }
 
         .table-container {
           position: relative;
-          overflow: auto;
+          overflow-x: auto;
+          overflow-y: visible;
         }
       `}</style>
-      <div className="overflow-x-auto">
-        <table className="text-sm w-full table-auto">
-          <thead>
-            <tr className="h-12 bg-muted/50">
+      <div className="table-container border rounded-md">
+        <table className="text-sm">
+          <thead className="top-0 z-40">
+            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`font-semibold bg-white text-gray-900/78 select-none cursor-default ${
-                    col.id === "contactName" ? "fixed-header" : "min-w-[135px] whitespace-nowrap"
+                  className={`h-12 font-semibold text-gray-900/78 select-none ${
+                    col.id === "contactName"
+                      ? "fixed-header"
+                      : "min-w-[135px] whitespace-nowrap"
                   }`}
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
-                  <div className="flex items-center justify-between gap-2 px-2 h-full border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]">
+                  <div className={`flex items-center justify-between gap-2 px-2 h-full ${col.id !== "contactName" ? "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]"}`}>
                     <div className="flex items-center gap-2">
                       <span className="px-1">{col.label}</span>
                       {col.sortable && sortColumn === col.id && (
@@ -440,11 +448,11 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y text-center">
+          <tbody className="text-center">
             {contacts.map((contact, index) => (
               <tr
                 key={contact.contactId || index}
-                className={`hover:bg-muted/50 cursor-pointer transition-colors ${index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                className={`hover:bg-muted/50 cursor-pointer transition-colors h-8 ${index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
               >
                 {visibleColumnsData.map((col) => (
                   <td
@@ -455,7 +463,7 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                         : ""
                     }`}
                   >
-                    <div className={col.id === "contactName" ? "py-5 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : ""}>
+                    <div className={col.id === "contactName" ? "py-3 px-2 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : ""}>
                       {renderCellContent(contact, col)}
                     </div>
                   </td>
@@ -839,7 +847,7 @@ export default function ContactPage() {
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground text-center md:text-left">Lead Hub</h1>
+            <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Lead Hub</h1>
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
@@ -876,7 +884,6 @@ export default function ContactPage() {
                 filteredColumns={filteredColumns}
                 columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
                 toggleColumnVisibility={toggleColumnVisibility}
-
                 selectAll={selectAll}
                 clearAll={clearAll}
                   save={async () => {
