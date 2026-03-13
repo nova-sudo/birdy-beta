@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -124,11 +124,10 @@ const Campaigns = () => {
     })
   }, [customMetrics])
 
-const enhanceWithCustomMetrics = (item) => {
+const enhanceWithCustomMetrics = (item, metrics) => {
   const base = { ...item }
-  const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
   
-  customMetricsForDashboard.forEach((metric) => {
+  metrics.forEach((metric) => {
     if (metric.formulaParts) {
       base[metric.id] = evaluateFormula(metric.formulaParts, base)
     }
@@ -233,6 +232,7 @@ const fetchAllData = async (signal) => {
     // AGGREGATE CAMPAIGNS
     // ============================================
     const campaignAggregation = {}
+    const metricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
     
     ;(campaignsData.insights || []).forEach(insight => {
       const data = insight.insight_data || {}
@@ -274,7 +274,7 @@ const fetchAllData = async (signal) => {
       campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
       campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0
       campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
-      return enhanceWithCustomMetrics(campaign)
+      return enhanceWithCustomMetrics(campaign, metricsForDashboard)
     })
 
     console.log('✅ Processed campaigns:', processedCampaigns.length)
@@ -339,7 +339,7 @@ const fetchAllData = async (signal) => {
       adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
       adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0
       adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
-      return enhanceWithCustomMetrics(adset)
+      return enhanceWithCustomMetrics(adset, metricsForDashboard)
     })
 
     console.log('✅ Processed adsets:', processedAdsets.length)
@@ -406,7 +406,7 @@ const fetchAllData = async (signal) => {
       ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
       ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0
       ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
-      return enhanceWithCustomMetrics(ad)
+      return enhanceWithCustomMetrics(ad, metricsForDashboard)
     })
 
     console.log('✅ Processed ads:', processedAds.length)
@@ -459,11 +459,11 @@ const fetchAllData = async (signal) => {
     }
   }, [dateRange])
 
-  const applyFilters = (data) => {
+  const applyFiltersInternal = (data, tab) => {
     let filtered = [...data]
 
     if (selectedClientGroup) {
-      if (activeTab === "leads") {
+      if (tab === "leads") {
         const selectedGroup = clientGroups.find(g => g.id === selectedClientGroup)
         if (selectedGroup) {
           filtered = filtered.filter((i) => i.group_name === selectedGroup.name)
@@ -481,7 +481,7 @@ const fetchAllData = async (signal) => {
           i.name?.toLowerCase().includes(lower) ||
           i.clientGroup?.toLowerCase().includes(lower) ||
           i.adAccount?.toLowerCase().includes(lower) ||
-          (activeTab === "leads" &&
+          (tab === "leads" &&
             (i.full_name?.toLowerCase().includes(lower) ||
               i.email?.toLowerCase().includes(lower) ||
               i.phone_number?.toLowerCase().includes(lower) ||
@@ -513,19 +513,17 @@ const fetchAllData = async (signal) => {
     return filtered
   }
 
+  const filteredCampaigns = useMemo(() => applyFiltersInternal(campaigns, "campaigns"), [campaigns, selectedClientGroup, searchTerm, filterConditions, clientGroups])
+  const filteredAdSets = useMemo(() => applyFiltersInternal(allAdSets, "adsets"), [allAdSets, selectedClientGroup, searchTerm, filterConditions, clientGroups])
+  const filteredAds = useMemo(() => applyFiltersInternal(allAds, "ads"), [allAds, selectedClientGroup, searchTerm, filterConditions, clientGroups])
+  const filteredLeads = useMemo(() => applyFiltersInternal(leads, "leads"), [leads, selectedClientGroup, searchTerm, filterConditions, clientGroups])
+
 const getFilteredDataForTab = () => {
-  let data = []
-  if (activeTab === "campaigns") data = campaigns
-  if (activeTab === "adsets") data = allAdSets
-  if (activeTab === "ads") data = allAds
-  if (activeTab === "leads") data = leads
-  
-  console.log(`🔍 getFilteredDataForTab (${activeTab}):`, {
-    rawCount: data.length,
-    filtered: applyFilters(data).length
-  })
-  
-  return applyFilters(data)
+  if (activeTab === "campaigns") return filteredCampaigns
+  if (activeTab === "adsets") return filteredAdSets
+  if (activeTab === "ads") return filteredAds
+  if (activeTab === "leads") return filteredLeads
+  return []
 }
   
   const baseColumns = [
@@ -666,7 +664,7 @@ const getFilteredDataForTab = () => {
     })
   }
 
-  const calculateMetrics = () => {
+  const metrics = useMemo(() => {
     const data = getFilteredDataForTab()
     const totalSpend = data.reduce((s, i) => s + (i.spend || 0), 0)
     const totalLeads = data.reduce((s, i) => s + (i.leads || 0), 0)
@@ -674,8 +672,7 @@ const getFilteredDataForTab = () => {
     const totalImpressions = data.reduce((s, i) => s + (i.impressions || 0), 0)
     const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
     return { totalSpend, totalLeads, totalClicks, totalImpressions, avgCTR }
-  }
-  const metrics = calculateMetrics()
+  }, [activeTab, filteredCampaigns, filteredAdSets, filteredAds, filteredLeads])
 
   const formatCellValue = (value, col) => {
     if (value === null || value === undefined) return "-"
