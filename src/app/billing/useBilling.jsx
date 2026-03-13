@@ -8,7 +8,7 @@ import {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, ArrowRight, Loader2 } from "lucide-react";
+import { Lock, ArrowRight, Loader2, Plus } from "lucide-react";
 
 const API_BASE   = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const PLAN_ORDER = ["starter", "growth", "scale"];
@@ -49,16 +49,29 @@ export function useBilling() {
 
   const { status, loading, refresh } = ctx;
 
-  const subscribed   = status?.subscribed ?? false;
-  const plan         = status?.plan ?? { id: "free", name: "Free", max_clients: 0 };
-  const subStatus    = status?.status ?? "inactive";
-  const clientCount  = status?.client_count ?? 0;
-  const clientLimit  = status?.client_limit ?? 0;
-  const extraClients = status?.extra_clients_paid ?? 0;
-  const atLimit      = subscribed && clientCount >= clientLimit;
-  const nearLimit    = subscribed && clientCount >= clientLimit - 1 && !atLimit;
+  const subscribed      = status?.subscribed ?? false;
+  const plan            = status?.plan ?? { id: "free", name: "Free", max_clients: 0 };
+  const subStatus       = status?.status ?? "inactive";
+  const clientCount     = status?.client_count ?? 0;
+  const clientLimit     = status?.client_limit ?? 0;
+  const extraClients    = status?.extra_clients_paid ?? 0;
+  const canAddExtraSlots = status?.can_add_extra_slots ?? false;
+  const atLimit         = subscribed && clientCount >= clientLimit;
+  const nearLimit       = subscribed && clientCount >= clientLimit - 1 && !atLimit;
 
-  return { loading, subscribed, plan, status: subStatus, clientCount, clientLimit, extraClients, atLimit, nearLimit, refresh };
+  return {
+    loading,
+    subscribed,
+    plan,
+    status: subStatus,
+    clientCount,
+    clientLimit,
+    extraClients,
+    canAddExtraSlots,
+    atLimit,
+    nearLimit,
+    refresh,
+  };
 }
 
 // ── SubscriptionGate ──────────────────────────────────────────────────────────
@@ -114,11 +127,31 @@ export function SubscriptionGate({ children, fallback, requirePlan }) {
 // ── ClientLimitWarning ────────────────────────────────────────────────────────
 
 export function ClientLimitWarning() {
-  const { subscribed, atLimit, nearLimit, clientCount, clientLimit, plan } = useBilling();
+  const { subscribed, atLimit, nearLimit, clientCount, clientLimit, plan, canAddExtraSlots } = useBilling();
   const router = useRouter();
 
   if (!subscribed || (!atLimit && !nearLimit)) return null;
 
+  // Scale users at limit → prompt to add extra slots
+  if (atLimit && canAddExtraSlots) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700">
+        <Plus className="w-4 h-4 flex-shrink-0" />
+        <p>
+          You&apos;ve reached your {plan.name} plan limit of {clientLimit} clients.{" "}
+          <button
+            type="button"
+            onClick={() => router.push("/billing")}
+            className="underline font-medium hover:no-underline"
+          >
+            Add extra client slots ($10/mo each)
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  // Starter / Growth users at limit → prompt to upgrade
   return (
     <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm mb-4 ${
       atLimit
