@@ -7,7 +7,7 @@ import {
   Loader2, Crown,
 } from "lucide-react";
 
-const API_BASE              = process.env.NEXT_PUBLIC_API_BASE ?? "";
+const API_BASE              = "https://birdy-backend.vercel.app";
 const PADDLE_CLIENT_TOKEN   = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "";
 const PADDLE_ENVIRONMENT    = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "production";
 const EXTRA_CLIENT_PRICE_ID = process.env.NEXT_PUBLIC_PADDLE_PRICE_EXTRA_CLIENT ?? "";
@@ -464,7 +464,7 @@ export default function BillingPage() {
 
   return (
     <div className="min-h-screen ">
-      
+
       <div className="max-w-6xl mx-auto px-4 py-12">
 
         <div className="text-center mb-10">
