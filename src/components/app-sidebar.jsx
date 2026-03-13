@@ -87,7 +87,7 @@ export function AppSidebar() {
     
     try {
       // Call logout API
-      const response = await fetch('https://birdy-be.vercel.app/api/logout', {
+      const response = await fetch('https://birdy-backend.vercel.app/api/logout', {
         method: 'POST',
         credentials: 'include',
         headers: {

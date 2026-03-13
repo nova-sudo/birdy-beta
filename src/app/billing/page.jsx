@@ -324,7 +324,7 @@ export default function BillingPage() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/billing/status`, { credentials: "include" });
+      const res = await fetch(`https://birdy-backend.vercel.app/api/billing/status`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load billing status");
       setBillingStatus(await res.json());
     } catch (e) {
