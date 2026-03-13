@@ -174,42 +174,6 @@ export default function ClientsPage() {
     })
   }, [viewsLoaded, savedColumns])
 
-useEffect(() => {
-  let cancelled = false;
-
-  async function fetchCurrency() {
-    try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/user/currency", {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error(`Failed to fetch currency: ${response.status}`);
-
-      const data = await response.json();
-      const currency = data.default_currency ?? null;
-      console.log("📥 Fetched user currency:", currency);
-
-      if (!cancelled) {
-        setUserCurrency(currency);
-        try {
-          if (currency) localStorage.setItem(STORAGE_KEY, currency);
-          else localStorage.removeItem(STORAGE_KEY);
-        } catch (e) {
-          console.warn("[useUserCurrency] localStorage unavailable:", e);
-        }
-      }
-    } catch (err) {
-      console.error("[useUserCurrency] Error fetching currency:", err);
-      if (!cancelled) setCurrencyLoading(false);
-      return;
-    } finally {
-      if (!cancelled) setCurrencyLoading(false);
-    }
-  }
-
-  fetchCurrency();
-  return () => { cancelled = true; };
-}, []);
   // Update column visibility when columns change
   useEffect(() => {
     setColumnVisibility((prev) => {
