@@ -32,30 +32,22 @@ export default function dashboard() {
     setError("")
 
     try {
-      // Fetch clients data
-      const clientsRes = await fetch("https://birdy-backend.vercel.app/api/get_all_clients", {
-        credentials: "include",
-      })
-
-
+      // Fetch all data in parallel
+      const [clientsRes, locationsRes, adAccountsRes] = await Promise.all([
+        fetch("https://birdy-backend.vercel.app/api/get_all_clients", { credentials: "include" }),
+        fetch("https://birdy-backend.vercel.app/api/location-data", { credentials: "include" }),
+        fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", { credentials: "include" })
+      ])
 
       if (!clientsRes.ok) {
         throw new Error("Failed to fetch clients data")
       }
 
-      const clientsData = await clientsRes.json()
-
-      // Fetch GHL locations
-      const locationsRes = await fetch("https://birdy-backend.vercel.app/api/location-data", {
-        credentials: "include",
-      })
-      const locationsData = locationsRes.ok ? await locationsRes.json() : { locations: [] }
-
-      // Fetch Meta ad accounts
-      const adAccountsRes = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
-        credentials: "include",
-      })
-      const adAccountsData = adAccountsRes.ok ? await adAccountsRes.json() : { data: { data: [] } }
+      const [clientsData, locationsData, adAccountsData] = await Promise.all([
+        clientsRes.json(),
+        locationsRes.ok ? locationsRes.json() : { locations: [] },
+        adAccountsRes.ok ? adAccountsRes.json() : { data: { data: [] } }
+      ])
 
       // Calculate source distribution
       const sourceCount = { GHL: 0, Meta: 0, Both: 0 }

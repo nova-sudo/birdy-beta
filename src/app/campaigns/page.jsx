@@ -124,9 +124,9 @@ const Campaigns = () => {
     })
   }, [customMetrics])
 
-const enhanceWithCustomMetrics = (item) => {
+const enhanceWithCustomMetrics = (item, metrics) => {
   const base = { ...item }
-  const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
+  const customMetricsForDashboard = metrics || loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
   
   customMetricsForDashboard.forEach((metric) => {
     if (metric.formulaParts) {
@@ -178,42 +178,22 @@ const fetchAllData = async (signal) => {
     console.log('🔍 Fetching insights for groups:', groupIds)
 
     const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Campaigns URL:', campaignsUrl)
-    
-    const campaignsResponse = await fetch(campaignsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Adsets URL:', adsetsUrl)
-    
-    const adsetsResponse = await fetch(adsetsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Ads URL:', adsUrl)
-    
-    const adsResponse = await fetch(adsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
+    const leadsUrl = `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`
 
-    const leadsResponse = await fetch(
-      `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
-      {
-        credentials: "include",
-        signal: signal,
-      }
-    )
+    const [campaignsRes, adsetsRes, adsRes, leadsRes] = await Promise.all([
+      fetch(campaignsUrl, { credentials: "include", signal: signal }),
+      fetch(adsetsUrl, { credentials: "include", signal: signal }),
+      fetch(adsUrl, { credentials: "include", signal: signal }),
+      fetch(leadsUrl, { credentials: "include", signal: signal })
+    ])
 
     const [campaignsData, adsetsData, adsData, leadsData] = await Promise.all([
-      campaignsResponse.ok ? campaignsResponse.json() : { insights: [] },
-      adsetsResponse.ok ? adsetsResponse.json() : { insights: [] },
-      adsResponse.ok ? adsResponse.json() : { insights: [] },
-      leadsResponse.ok ? leadsResponse.json() : { leads: [] }
+      campaignsRes.ok ? campaignsRes.json() : { insights: [] },
+      adsetsRes.ok ? adsetsRes.json() : { insights: [] },
+      adsRes.ok ? adsRes.json() : { insights: [] },
+      leadsRes.ok ? leadsRes.json() : { leads: [] }
     ])
 
     console.log('📊 RAW DATA RECEIVED:')
@@ -233,6 +213,7 @@ const fetchAllData = async (signal) => {
     // AGGREGATE CAMPAIGNS
     // ============================================
     const campaignAggregation = {}
+    const customMetricsForDashboard = loadCustomMetrics().filter((m) => m.enabled && m.dashboard === "Campaigns")
     
     ;(campaignsData.insights || []).forEach(insight => {
       const data = insight.insight_data || {}
@@ -274,7 +255,7 @@ const fetchAllData = async (signal) => {
       campaign.cpm = campaign.impressions > 0 ? (campaign.spend / campaign.impressions * 1000) : 0
       campaign.cpp = campaign.reach > 0 ? (campaign.spend / campaign.reach) : 0
       campaign.frequency = campaign.reach > 0 ? (campaign.impressions / campaign.reach) : 0
-      return enhanceWithCustomMetrics(campaign)
+      return enhanceWithCustomMetrics(campaign, customMetricsForDashboard)
     })
 
     console.log('✅ Processed campaigns:', processedCampaigns.length)
@@ -339,7 +320,7 @@ const fetchAllData = async (signal) => {
       adset.cpm = adset.impressions > 0 ? (adset.spend / adset.impressions * 1000) : 0
       adset.cpp = adset.reach > 0 ? (adset.spend / adset.reach) : 0
       adset.frequency = adset.reach > 0 ? (adset.impressions / adset.reach) : 0
-      return enhanceWithCustomMetrics(adset)
+      return enhanceWithCustomMetrics(adset, customMetricsForDashboard)
     })
 
     console.log('✅ Processed adsets:', processedAdsets.length)
@@ -406,7 +387,7 @@ const fetchAllData = async (signal) => {
       ad.cpm = ad.impressions > 0 ? (ad.spend / ad.impressions * 1000) : 0
       ad.cpp = ad.reach > 0 ? (ad.spend / ad.reach) : 0
       ad.frequency = ad.reach > 0 ? (ad.impressions / ad.reach) : 0
-      return enhanceWithCustomMetrics(ad)
+      return enhanceWithCustomMetrics(ad, customMetricsForDashboard)
     })
 
     console.log('✅ Processed ads:', processedAds.length)
