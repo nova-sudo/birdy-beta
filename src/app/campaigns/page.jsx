@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -178,42 +178,25 @@ const fetchAllData = async (signal) => {
     console.log('🔍 Fetching insights for groups:', groupIds)
 
     const campaignsUrl = `https://birdy-backend.vercel.app/api/campaign-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Campaigns URL:', campaignsUrl)
-    
-    const campaignsResponse = await fetch(campaignsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsetsUrl = `https://birdy-backend.vercel.app/api/adset-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Adsets URL:', adsetsUrl)
-    
-    const adsetsResponse = await fetch(adsetsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
-
     const adsUrl = `https://birdy-backend.vercel.app/api/ad-insights?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}`
-    console.log('📡 Ads URL:', adsUrl)
-    
-    const adsResponse = await fetch(adsUrl, {
-      credentials: "include",
-      signal: signal,
-    })
+    const leadsUrl = `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`
 
-    const leadsResponse = await fetch(
-      `https://birdy-backend.vercel.app/api/facebook-leads/filtered?start_date=${startDate}&end_date=${endDate}&groups=${groupIds}&limit=5000`,
-      {
-        credentials: "include",
-        signal: signal,
-      }
-    )
+    console.log('📡 Parallel fetching insights/leads...')
+
+    // ⚡ Bolt: Parallelize API calls to eliminate waterfall (saves ~3x network time)
+    const [campaignsRes, adsetsRes, adsRes, leadsRes] = await Promise.all([
+      fetch(campaignsUrl, { credentials: "include", signal: signal }),
+      fetch(adsetsUrl, { credentials: "include", signal: signal }),
+      fetch(adsUrl, { credentials: "include", signal: signal }),
+      fetch(leadsUrl, { credentials: "include", signal: signal })
+    ])
 
     const [campaignsData, adsetsData, adsData, leadsData] = await Promise.all([
-      campaignsResponse.ok ? campaignsResponse.json() : { insights: [] },
-      adsetsResponse.ok ? adsetsResponse.json() : { insights: [] },
-      adsResponse.ok ? adsResponse.json() : { insights: [] },
-      leadsResponse.ok ? leadsResponse.json() : { leads: [] }
+      campaignsRes.ok ? campaignsRes.json() : { insights: [] },
+      adsetsRes.ok ? adsetsRes.json() : { insights: [] },
+      adsRes.ok ? adsRes.json() : { insights: [] },
+      leadsRes.ok ? leadsRes.json() : { leads: [] }
     ])
 
     console.log('📊 RAW DATA RECEIVED:')
@@ -438,16 +421,8 @@ const fetchAllData = async (signal) => {
   }
 }
 
-  useEffect(() => {
-    const controller = new AbortController()
-    const loadData = async () => {
-      await fetchAllData(controller.signal)
-    }
-    loadData()
-    return () => {
-      controller.abort()
-    }
-  }, [])
+  // ⚡ Bolt: Removed redundant mount-only useEffect.
+  // The [dateRange] dependency below covers the initial load because dateRange has default values.
 
   useEffect(() => {
     const controller = new AbortController()
@@ -513,20 +488,19 @@ const fetchAllData = async (signal) => {
     return filtered
   }
 
-const getFilteredDataForTab = () => {
+const filteredData = useMemo(() => {
   let data = []
   if (activeTab === "campaigns") data = campaigns
   if (activeTab === "adsets") data = allAdSets
   if (activeTab === "ads") data = allAds
   if (activeTab === "leads") data = leads
   
-  console.log(`🔍 getFilteredDataForTab (${activeTab}):`, {
-    rawCount: data.length,
-    filtered: applyFilters(data).length
+  console.log(`🔍 Calculating memoized filteredData (${activeTab}):`, {
+    rawCount: data.length
   })
   
   return applyFilters(data)
-}
+}, [activeTab, campaigns, allAdSets, allAds, leads, selectedClientGroup, searchTerm, filterConditions])
   
   const baseColumns = [
     "adAccount",
@@ -642,21 +616,23 @@ const getFilteredDataForTab = () => {
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
 
   const tableTitle = `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Overview`;
-  const tableDescription = `Showing ${getFilteredDataForTab().length} ${activeTab}`;
-  const tableColumns = getCurrentVisibleColumns().map((col) => ({
-    key: col,
-    header: () => (
-      <div className="flex items-center justify-between min-w-[200px]">
-        <span>{getMetricDisplayName(col)}</span>
-        {col === "clientGroup" || col === "name" ? (
-          <Image src={Flask} alt="Flask" className="w-4 h-4 ml-2" />
-        ) : (
-          <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
-        )}
-      </div>
-    ),
-    render: (value) => formatCellValue(value, col),
-  }));
+  const tableDescription = `Showing ${filteredData.length} ${activeTab}`;
+  const tableColumns = useMemo(() => {
+    return getCurrentVisibleColumns().map((col) => ({
+      key: col,
+      header: () => (
+        <div className="flex items-center justify-between min-w-[200px]">
+          <span>{getMetricDisplayName(col)}</span>
+          {col === "clientGroup" || col === "name" ? (
+            <Image src={Flask} alt="Flask" className="w-4 h-4 ml-2" />
+          ) : (
+            <Image src={metaa} alt="Meta" className="w-4 h-4 ml-2" />
+          )}
+        </div>
+      ),
+      render: (value) => formatCellValue(value, col),
+    }));
+  }, [activeTab, visibleColumns, customMetrics]);
 
   const toggleColumn = (col) => {
     setVisibleColumns((prev) => {
@@ -666,16 +642,15 @@ const getFilteredDataForTab = () => {
     })
   }
 
-  const calculateMetrics = () => {
-    const data = getFilteredDataForTab()
+  const metrics = useMemo(() => {
+    const data = filteredData
     const totalSpend = data.reduce((s, i) => s + (i.spend || 0), 0)
     const totalLeads = data.reduce((s, i) => s + (i.leads || 0), 0)
     const totalClicks = data.reduce((s, i) => s + (i.clicks || 0), 0)
     const totalImpressions = data.reduce((s, i) => s + (i.impressions || 0), 0)
     const avgCTR = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0
     return { totalSpend, totalLeads, totalClicks, totalImpressions, avgCTR }
-  }
-  const metrics = calculateMetrics()
+  }, [filteredData])
 
   const formatCellValue = (value, col) => {
     if (value === null || value === undefined) return "-"
@@ -1046,7 +1021,7 @@ const getFilteredDataForTab = () => {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mb-4"></div>
                 <p className="text-sm text-muted-foreground">Loading {activeTab}...</p>
               </div>
-            ) : error && getFilteredDataForTab().length === 0 ? (
+            ) : error && filteredData.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
                 <div className="rounded-full bg-destructive/10 p-3 mb-4">
                   <X className="h-6 w-6 text-destructive" />
@@ -1054,9 +1029,9 @@ const getFilteredDataForTab = () => {
                 <h3 className="text-lg font-semibold mb-2">Error loading data</h3>
                 <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
               </div>
-            ) : getFilteredDataForTab().length > 0 ? (
+            ) : filteredData.length > 0 ? (
               <div className="rounded-lg border bg-card overflow-hidden">
-                <StyledTable columns={tableColumns} data={getFilteredDataForTab()} />
+                <StyledTable columns={tableColumns} data={filteredData} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
