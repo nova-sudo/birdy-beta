@@ -13,7 +13,7 @@ import {
  * Reusable container for dashboard tables with glassmorphism styling
  */
 export const TableContainer = ({ children, title, description }) => (
-  <Card className="border border-border/40 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm">
+  <Card className="border border-border/40  hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm">
     <CardHeader className="pb-3 border-b border-border/30">
       <div>
         <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>

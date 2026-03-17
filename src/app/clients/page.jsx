@@ -15,17 +15,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search} from "lucide-react"
+import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading }    from "@/components/ui/ViewLoading"
-import { 
-  ENHANCED_CLIENT_COLUMNS, 
-  ENHANCED_CATEGORIES, 
+import { ViewLoading } from "@/components/ui/ViewLoading"
+import {
+  ENHANCED_CLIENT_COLUMNS,
+  ENHANCED_CATEGORIES,
   COLUMN_PRESETS,
   buildDynamicColumns,
-  getTagCount 
+  getTagCount
 } from '@/lib/enhanced-columns-config';
 import {
   Select,
@@ -138,11 +138,11 @@ export default function ClientsPage() {
   // 🔥 KEY FIX: Build dynamic columns when clientGroups changes
   const columns = useMemo(() => {
     console.log("🔄 Rebuilding columns with", clientGroups.length, "client groups");
-    
+
     // Build dynamic columns including tags from client groups data
     const dynamicColumns = buildDynamicColumns(clientGroups);
     console.log("📊 Dynamic columns built:", dynamicColumns.length, "total columns");
-    
+
     // Add custom formula metrics
     const custom = customMetrics
       .filter((m) => m.enabled && m.dashboard === "Clients")
@@ -155,7 +155,7 @@ export default function ClientsPage() {
         type: 'formula',
         icons: Flask,
       }));
-    
+
     // Combine and deduplicate
     const seen = new Set();
     const all = [...dynamicColumns, ...custom];
@@ -164,7 +164,7 @@ export default function ClientsPage() {
       seen.add(col.id);
       return true;
     });
-    
+
     console.log("✅ Final columns:", deduplicated.length);
     return deduplicated;
   }, [customMetrics, clientGroups]); // 🔥 KEY: Added clientGroups dependency
@@ -175,7 +175,7 @@ export default function ClientsPage() {
     columns.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
- useEffect(() => {
+  useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
     setColumnVisibility(prev => {
       const updated = { ...prev }
@@ -258,7 +258,7 @@ export default function ClientsPage() {
   }
 
   const [searchQuery, setSearchQuery] = useState("")
-  
+
   const toggleColumnVisibility = (columnId) => {
     if (columnId === "name") return;
     setColumnVisibility((prev) => ({
@@ -266,7 +266,7 @@ export default function ClientsPage() {
       [columnId]: !(prev[columnId] ?? true),
     }));
   };
-    
+
   useEffect(() => {
     fetchClientGroups()
   }, [])
@@ -410,7 +410,7 @@ export default function ClientsPage() {
     }
 
     const tempId = `temp_${Date.now()}`
-    
+
     const optimisticGroup = {
       id: tempId,
       name: clientGroupName,
@@ -441,35 +441,35 @@ export default function ClientsPage() {
     toast.info(`Creating "${creatingGroupName}"...`)
 
     try {
-  const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    credentials: "include",
-    body: JSON.stringify({
-      name: creatingGroupName,
-      ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
-      meta_ad_account_id: selectedMetaAdAccount?.id || null,
-      hotprospector_group_id: selectedHotProspectorGroup?.id || null,
-      ad_account_currency: selectedMetaAdAccount?.currency || null,  // Add this; fallback to null if unavailable
-      notes: "",  // Add this; use empty string or a dynamic value if needed
-    }),
-  });
+      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          name: creatingGroupName,
+          ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
+          meta_ad_account_id: selectedMetaAdAccount?.id || null,
+          hotprospector_group_id: selectedHotProspectorGroup?.id || null,
+          ad_account_currency: selectedMetaAdAccount?.currency || null,  // Add this; fallback to null if unavailable
+          notes: "",  // Add this; use empty string or a dynamic value if needed
+        }),
+      });
 
       if (response.ok) {
         const data = await response.json()
-        
-        setClientGroups(prev => 
-          prev.map(group => 
+
+        setClientGroups(prev =>
+          prev.map(group =>
             group.id === tempId ? { ...data.client_group, _isCreating: false } : group
           )
         )
-        
+
         toast.success(`"${creatingGroupName}" created successfully!`)
         clearCache("clientGroups")
         clearCache("ghlLocations")
       } else {
         const data = await response.json()
-        
+
         setClientGroups(prev => prev.filter(group => group.id !== tempId))
 
         // 🔥 Handle CLIENT_LIMIT_REACHED error
@@ -481,9 +481,9 @@ export default function ClientsPage() {
       }
     } catch (err) {
       console.error("[v0] Error creating client group:", err)
-      
+
       setClientGroups(prev => prev.filter(group => group.id !== tempId))
-      
+
       toast.error("Failed to create client group")
     }
   }
@@ -512,22 +512,22 @@ export default function ClientsPage() {
 
   const calculateStats = () => {
     const activeClients = clientGroups.length
-    
+
     const totalSpend = clientGroups.reduce((sum, group) => {
       const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
       return sum + spend
     }, 0)
-    
+
     const totalLeads = clientGroups.reduce((sum, group) => {
       const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
       return ghlContacts
     }, 0)
-    
+
     const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
 
     return {
       activeClients,
-       totalSpend,
+      totalSpend,
       totalLeads,
       averageCPL
     }
@@ -540,7 +540,7 @@ export default function ClientsPage() {
       <Loading progress={progress} />
     )
   }
-    if (!viewsLoaded) return <ViewLoading />
+  if (!viewsLoaded) return <ViewLoading />
 
   return (
     <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)] mx-auto bg-[#f6f8fa] gap-6">
@@ -580,7 +580,7 @@ export default function ClientsPage() {
                   selectAll={selectAll}
                   clearAll={clearAll}
                   save={save}
-                /> 
+                />
               </div>
               <Button
                 onClick={() => setWizardOpen(true)}
@@ -593,247 +593,239 @@ export default function ClientsPage() {
         </div>
       </div>
       <Dialog
-                open={wizardOpen}
-                onOpenChange={(open) => {
-                  setWizardOpen(open)
-                  if (!open) {
-                    setWizardStep(1)
-                    setClientGroupName("")
-                    setSelectedGhlLocation(null)
-                    setNewGhlLocationId("")
-                    setSelectedMetaAdAccount(null)
-                    setSelectedHotProspectorGroup(null)
-                    setLocationSearchQuery("")
-                    setMetaSearchQuery("")
-                    setHotProspectorSearchQuery("")
+        open={wizardOpen}
+        onOpenChange={(open) => {
+          setWizardOpen(open)
+          if (!open) {
+            setWizardStep(1)
+            setClientGroupName("")
+            setSelectedGhlLocation(null)
+            setNewGhlLocationId("")
+            setSelectedMetaAdAccount(null)
+            setSelectedHotProspectorGroup(null)
+            setLocationSearchQuery("")
+            setMetaSearchQuery("")
+            setHotProspectorSearchQuery("")
+          }
+        }}
+      >
+        {/* Add client */}
+        <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
+          <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-2 rounded-lg">
+                <Building2 className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
+                <p className="text-purple-100 text-sm">
+                  Step {wizardStep} of 3:{" "}
+                  {
+                    [
+                      "Name your client group",
+                      "Select or add GHL subaccount",
+                      "Select Meta ad account",
+                      "Select Hot Prospector group",
+                    ][wizardStep - 1]
                   }
-                }}
-              >
-                {/* Add client */}
-                <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
-                  <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-white/20 p-2 rounded-lg">
-                        <Building2 className="w-5 h-5 text-white" />
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="h-auto bg-white">
+            {wizardStep === 1 && (
+              <div className="space-y-2 p-2">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Client Group Name</label>
+                  <Input
+                    type="text"
+                    placeholder="Enter client group name"
+                    value={clientGroupName}
+                    onChange={(e) => setClientGroupName(e.target.value)}
+                    className="mt-1"
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+            {wizardStep === 2 && (
+              <div className="space-y-4 p-4 ">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
+                  <Input
+                    type="text"
+                    placeholder="Search GHL locations by name or ID..."
+                    value={locationSearchQuery}
+                    onChange={(e) => setLocationSearchQuery(e.target.value)}
+                    className="pl-10 pr-4 py-3"
+                  />
+                </div>
+                <div className="space-y-2 max-h-80 overflow-y-auto">
+                  {filteredGhlLocations.length > 0 ? (
+                    filteredGhlLocations.map((location) => (
+                      <div
+                        key={location.locationId}
+                        onClick={() => {
+                          setSelectedGhlLocation(location)
+                          setNewGhlLocationId("")
+                        }}
+                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedGhlLocation?.locationId === location.locationId
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-border hover:border-muted-foreground bg-card"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3
+                                className={`font-semibold truncate ${selectedGhlLocation?.locationId === location.locationId
+                                  ? "text-purple-900"
+                                  : "text-foreground"
+                                  }`}
+                              >
+                                {location.name || "Unnamed Location"}
+                              </h3>
+                            </div>
+                            <p
+                              className={`text-xs font-mono ${selectedGhlLocation?.locationId === location.locationId
+                                ? "text-purple-600"
+                                : "text-muted-foreground"
+                                }`}
+                            >
+                              ID: {location.locationId}
+                            </p>
+                          </div>
+                          <div
+                            className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedGhlLocation?.locationId === location.locationId
+                              ? "bg-purple-600 border-purple-600"
+                              : "border-border group-hover:border-muted-foreground"
+                              }`}
+                          >
+                            {selectedGhlLocation?.locationId === location.locationId && (
+                              <Check className="w-3 h-3 text-white" />
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
-                        <p className="text-purple-100 text-sm">
-                          Step {wizardStep} of 3:{" "}
-                          {
-                            [
-                              "Name your client group",
-                              "Select or add GHL subaccount",
-                              "Select Meta ad account",
-                              "Select Hot Prospector group",
-                            ][wizardStep - 1]
-                          }
-                        </p>
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <div class="flex items-center justify-center h-fit">
+                        <Empty className="w-full">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                              <Spinner />
+                            </EmptyMedia>
+                            <EmptyTitle>Loading GHL Locations</EmptyTitle>
+                            <EmptyDescription>
+                              Please wait while we process your request. Do not refresh the page.
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
                       </div>
                     </div>
-                  </DialogHeader>
-                  <div className="h-auto bg-white">
-                    {wizardStep === 1 && (
-                      <div className="space-y-2 p-2">
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Client Group Name</label>
-                          <Input
-                            type="text"
-                            placeholder="Enter client group name"
-                            value={clientGroupName}
-                            onChange={(e) => setClientGroupName(e.target.value)}
-                            className="mt-1"
-                            autoFocus
-                          />
-                        </div>
-                      </div>
-                    )}
-                    {wizardStep === 2 && (
-                      <div className="space-y-4 p-4 ">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
-                          <Input
-                            type="text"
-                            placeholder="Search GHL locations by name or ID..."
-                            value={locationSearchQuery}
-                            onChange={(e) => setLocationSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-3"
-                          />
-                        </div>
-                        <div className="space-y-2 max-h-80 overflow-y-auto">
-                          {filteredGhlLocations.length > 0 ? (
-                            filteredGhlLocations.map((location) => (
-                              <div
-                                key={location.locationId}
-                                onClick={() => {
-                                  setSelectedGhlLocation(location)
-                                  setNewGhlLocationId("")
-                                }}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
-                                  selectedGhlLocation?.locationId === location.locationId
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-border hover:border-muted-foreground bg-card"
-                                }`}
+                  )}
+                </div>
+                {(selectedGhlLocation || newGhlLocationId) && (
+                  <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-900">
+                        Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {wizardStep === 3 && (
+              <div className="space-y-2 p-4">
+                <div className="relative ">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    type="text"
+                    placeholder="Search Meta ad accounts by name or ID..."
+                    value={metaSearchQuery}
+                    onChange={(e) => setMetaSearchQuery(e.target.value)}
+                    className="pl-10 pr py-3"
+                  />
+                </div>
+                <div className="space-y-2 max-h-80 overflow-y-auto ">
+                  {filteredMetaAdAccounts.length > 0 ? (
+                    filteredMetaAdAccounts.map((account) => (
+                      <div
+                        key={account.id}
+                        onClick={() => setSelectedMetaAdAccount(account)}
+                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedMetaAdAccount?.id === account.id
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-border hover:border-muted-foreground bg-card"
+                          }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3
+                                className={`font-semibold truncate ${selectedMetaAdAccount?.id === account.id
+                                  ? "text-purple-900"
+                                  : "text-foreground"
+                                  }`}
                               >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h3
-                                        className={`font-semibold truncate ${
-                                          selectedGhlLocation?.locationId === location.locationId
-                                            ? "text-purple-900"
-                                            : "text-foreground"
-                                        }`}
-                                      >
-                                        {location.name || "Unnamed Location"}
-                                      </h3>
-                                    </div>
-                                    <p
-                                      className={`text-xs font-mono ${
-                                        selectedGhlLocation?.locationId === location.locationId
-                                          ? "text-purple-600"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    >
-                                      ID: {location.locationId}
-                                    </p>
-                                  </div>
-                                  <div
-                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                      selectedGhlLocation?.locationId === location.locationId
-                                        ? "bg-purple-600 border-purple-600"
-                                        : "border-border group-hover:border-muted-foreground"
-                                    }`}
-                                  >
-                                    {selectedGhlLocation?.locationId === location.locationId && (
-                                      <Check className="w-3 h-3 text-white" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                              <div class="flex items-center justify-center h-fit">
-                                <Empty className="w-full">
-                                      <EmptyHeader>
-                                        <EmptyMedia variant="icon">
-                                          <Spinner />
-                                        </EmptyMedia>
-                                        <EmptyTitle>Loading GHL Locations</EmptyTitle>
-                                        <EmptyDescription>
-                                          Please wait while we process your request. Do not refresh the page.
-                                        </EmptyDescription>
-                                      </EmptyHeader>
-                                    </Empty>
-                              </div>
+                                {account.name || "Unnamed Ad Account"}
+                              </h3>
                             </div>
-                          )}
-                        </div>
-                        {(selectedGhlLocation || newGhlLocationId) && (
-                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm font-medium text-purple-900">
-                                Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                    {wizardStep === 3 && (
-                      <div className="space-y-2 p-4">
-                        <div className="relative ">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                          <Input
-                            type="text"
-                            placeholder="Search Meta ad accounts by name or ID..."
-                            value={metaSearchQuery}
-                            onChange={(e) => setMetaSearchQuery(e.target.value)}
-                            className="pl-10 pr py-3"
-                          />
-                        </div> 
-                        <div className="space-y-2 max-h-80 overflow-y-auto ">
-                          {filteredMetaAdAccounts.length > 0 ? (
-                            filteredMetaAdAccounts.map((account) => (
-                              <div
-                                key={account.id}
-                                onClick={() => setSelectedMetaAdAccount(account)}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
-                                  selectedMetaAdAccount?.id === account.id
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-border hover:border-muted-foreground bg-card"
+                            <p
+                              className={`text-xs font-mono ${selectedMetaAdAccount?.id === account.id
+                                ? "text-purple-600"
+                                : "text-muted-foreground"
                                 }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h3
-                                        className={`font-semibold truncate ${
-                                          selectedMetaAdAccount?.id === account.id
-                                            ? "text-purple-900"
-                                            : "text-foreground"
-                                        }`}
-                                      >
-                                        {account.name || "Unnamed Ad Account"}
-                                      </h3>
-                                    </div>
-                                    <p
-                                      className={`text-xs font-mono ${
-                                        selectedMetaAdAccount?.id === account.id
-                                          ? "text-purple-600"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    >
-                                      ID: {account.id}
-                                    </p>
-                                  </div>
-                                  <div
-                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                      selectedMetaAdAccount?.id === account.id
-                                        ? "bg-purple-600 border-purple-600"
-                                        : "border-border group-hover:border-muted-foreground"
-                                    }`}
-                                  >
-                                    {selectedMetaAdAccount?.id === account.id && (
-                                      <Check className="w-3 h-3 text-white" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                              <div class="flex items-center justify-center h-fit">
-                                <Empty className="w-full">
-                                      <EmptyHeader>
-                                        <EmptyMedia variant="icon">
-                                          <Spinner />
-                                        </EmptyMedia>
-                                        <EmptyTitle>Loading Meta Adaccounts</EmptyTitle>
-                                        <EmptyDescription>
-                                          Please wait while we process your request. Do not refresh the page.
-                                        </EmptyDescription>
-                                      </EmptyHeader>
-                                    </Empty>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        {selectedMetaAdAccount && (
-                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm font-medium text-purple-900">
-                                Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
-                              </span>
-                            </div>
+                            >
+                              ID: {account.id}
+                            </p>
                           </div>
-                        )}
+                          <div
+                            className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedMetaAdAccount?.id === account.id
+                              ? "bg-purple-600 border-purple-600"
+                              : "border-border group-hover:border-muted-foreground"
+                              }`}
+                          >
+                            {selectedMetaAdAccount?.id === account.id && (
+                              <Check className="w-3 h-3 text-white" />
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    )}
-                    {/* {wizardStep === 4 && (
+                    ))
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <div class="flex items-center justify-center h-fit">
+                        <Empty className="w-full">
+                          <EmptyHeader>
+                            <EmptyMedia variant="icon">
+                              <Spinner />
+                            </EmptyMedia>
+                            <EmptyTitle>Loading Meta Adaccounts</EmptyTitle>
+                            <EmptyDescription>
+                              Please wait while we process your request. Do not refresh the page.
+                            </EmptyDescription>
+                          </EmptyHeader>
+                        </Empty>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {selectedMetaAdAccount && (
+                  <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-purple-600" />
+                      <span className="text-sm font-medium text-purple-900">
+                        Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            {/* {wizardStep === 4 && (
                       <div className="space-y-4">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -914,60 +906,60 @@ export default function ClientsPage() {
                         )}
                       </div>
                     )} */}
-                  </div>
-                  <div className="bg-muted/50 p-4 flex items-center justify-between border-t border-border">
-                    <p className="text-sm text-muted-foreground">
-                      {wizardStep === 2 &&
-                        `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
-                      {wizardStep === 3 &&
-                        `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
-                      {/* {wizardStep === 4 &&
+          </div>
+          <div className="bg-muted/50 p-4 flex items-center justify-between border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              {wizardStep === 2 &&
+                `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
+              {wizardStep === 3 &&
+                `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
+              {/* {wizardStep === 4 &&
                         `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`} */}
-                    </p>
-                    <div className="flex items-center ">
-                      {wizardStep > 1 && (
-                        <Button
-                          variant="ghost"
-                          onClick={() => setWizardStep(wizardStep - 1)}
-                          className="text-muted-foreground hover:bg-muted"
-                        >
-                          Back
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        onClick={() => setWizardOpen(false)}
-                        disabled={addingClientGroup}
-                        className="text-muted-foreground hover:bg-muted"
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleCreateClientGroup}
-                        disabled={addingClientGroup || (wizardStep === 1 && !clientGroupName)}
-                        className="bg-purple-600 hover:bg-purple-700 text-white min-w-[120px]"
-                      >
-                        {addingClientGroup ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                            Creating...
-                          </>
-                        ) : wizardStep < 3 ? (
-                          <>
-                            <ChevronRight className="w-4 h-4 mr-2" />
-                            Next
-                          </>
-                        ) : (
-                          <>
-                            <Plus className="w-4 h-4 mr-2" />
-                            Create Client Group
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
+            </p>
+            <div className="flex items-center ">
+              {wizardStep > 1 && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setWizardStep(wizardStep - 1)}
+                  className="text-muted-foreground hover:bg-muted"
+                >
+                  Back
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => setWizardOpen(false)}
+                disabled={addingClientGroup}
+                className="text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateClientGroup}
+                disabled={addingClientGroup || (wizardStep === 1 && !clientGroupName)}
+                className="bg-purple-600 hover:bg-purple-700 text-white min-w-[120px]"
+              >
+                {addingClientGroup ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Creating...
+                  </>
+                ) : wizardStep < 3 ? (
+                  <>
+                    <ChevronRight className="w-4 h-4 mr-2" />
+                    Next
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Client Group
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 🔥 Client Limit Reached Dialog */}
       <AlertDialog open={clientLimitDialogOpen} onOpenChange={setClientLimitDialogOpen}>
@@ -1004,7 +996,7 @@ export default function ClientsPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border rounded-lg shadow-sm ">
+          <Card className="border rounded-xl ">
             <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
@@ -1082,13 +1074,13 @@ export default function ClientsPage() {
         </div>
 
         {/* 🔥 KEY FIX: Pass getTagCount function to StyledTable */}
-        <StyledTable 
-          data={clientGroups} 
-          onRowClick={handleClientGroupClick} 
-          columns={columns} 
+        <StyledTable
+          data={clientGroups}
+          onRowClick={handleClientGroupClick}
+          columns={columns}
           searchQuery={searchQuery}
-          columnVisibility={columnVisibility} 
-          customMetrics={customMetrics} 
+          columnVisibility={columnVisibility}
+          customMetrics={customMetrics}
           setCustomMetrics={setCustomMetrics}
           enableEnhancedExtraction={true}
           getTagCount={getTagCount}
