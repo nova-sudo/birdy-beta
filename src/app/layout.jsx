@@ -45,17 +45,13 @@ export default function RootLayout({ children }) {
             <SidebarProvider open={false} >
               {!hideSidebar && <AppSidebar />}
               <SidebarInset>
-                {/* {!hideSidebar && (
-                  // <header className=" bg-white w-full z-50 top-0 flex h-12 shrink-0 items-center gap-2 border-b px-0 md:px-4">
-                  //   <Separator orientation="vertical" className=" h-4" />
-                  //   <SidebarTrigger className="md:hidden"/>
-                  //   <div className="flex ml-auto px-4 item-center gap-6">
-                  //     <Bell className="size-4"/>
-                  //     <UserRound className="size-4"/>
-                  //   </div>
-                  // </header>
-                )} */}
-                <div id="do not change the width" className=" mx-auto flex flex-1 flex-col gap-4 p-4 md:p-4 overflow-x-hidden">
+                {!hideSidebar && (
+                  <header className=" bg-[#f6f8fa] md:hidden w-full z-50 top-0 flex mx-auto my-auto">
+                    <Separator orientation="vertical" className=" h-4" />
+                    <SidebarTrigger className="md:hidden"/>
+                  </header>
+                )}
+                <div id="do not change the width" className=" mx-auto bg-[#f6f8fa] w-full flex flex-1 flex-col gap-4 p-4 md:p-4 overflow-x-hidden">
                   {children}
                 </div>
               </SidebarInset>

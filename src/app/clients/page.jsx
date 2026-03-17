@@ -543,7 +543,7 @@ export default function ClientsPage() {
     if (!viewsLoaded) return <ViewLoading />
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)] mx-auto bg-white gap-6">
+    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)] mx-auto bg-[#f6f8fa] gap-6">
       <div className="bg-card">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -563,7 +563,7 @@ export default function ClientsPage() {
                   placeholder="Search clients..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-gray-900 bg-white h-10 font-bold text-xs md:text-base"
+                  className="text-muted-foreground bg-white h-10 text-thin md:text-base"
                 />
                 <ColumnVisibilityDropdown
                   isOpen={isOpen}
@@ -1016,8 +1016,8 @@ export default function ClientsPage() {
                     <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Users className="h-4 w-4 text-purple-500" />
+                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Users className="h-4 w-4 text-purple-600 font-bold" />
                 </div>
               </div>
             </CardContent>
@@ -1036,8 +1036,8 @@ export default function ClientsPage() {
                     <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-purple-500" />
+                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <DollarSign className="h-4 w-4 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -1054,8 +1054,8 @@ export default function ClientsPage() {
                     <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <UserCheck className="h-4 w-4 text-purple-500" />
+                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <UserCheck className="h-4 w-4 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -1074,8 +1074,8 @@ export default function ClientsPage() {
                     <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
                   </div>
                 </div>
-                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Target className="h-4 w-4 text-purple-500" />
+                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Target className="h-4 w-4 text-purple-600" />
                 </div>
               </div>
             </CardContent>

@@ -469,9 +469,9 @@ const getPageNumbers = () => {
             left: 0;
             background: white;
             z-index: 50;
-            min-width: 250px;
-            font-weight: 600;
-            max-width: 250px;
+            min-width: 200px;
+            font-weight: 575;
+            max-width: 215px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -479,16 +479,16 @@ const getPageNumbers = () => {
             left: 0;
             background: #f4f3f9;
             z-index: 50;
-            min-width: 250px;
-            font-weight: 600;
-            max-width: 250px;
+            min-width: 200px;
+            font-weight: 575;
+            max-width: 215px;
           }
           .fixed-header {
             position: sticky;
             left: 0;
             z-index: 50;
             background: white;
-            min-width: 150px;
+            min-width: 200px;
             width: 5%;
           }
         }
@@ -499,7 +499,7 @@ const getPageNumbers = () => {
             text-align: left;
             background: white;
             min-width: 200px;
-            font-weight: 600;
+            font-weight: 575;
           }
           .fixed-column-odd {
             background: #f4f3f9;
@@ -534,7 +534,7 @@ const getPageNumbers = () => {
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
-                  <div className="flex items-center justify-between border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                  <div className="flex items-center justify-between border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
@@ -598,24 +598,24 @@ const getPageNumbers = () => {
                   {visibleColumns.map((col, colIdx) => (
                     <td
                       key={`${row.id || idx}-${col.id}`}
-                      className={`text-foreground truncate ${
+                      className={`text-foreground truncate  ${
                         colIdx === 0
                           ? globalIdx % 2 === 0
-                            ? "fixed-column-odd"
-                            : "fixed-column-even"
+                            ? "fixed-column-odd h-11"
+                            : "fixed-column-even h-11"
                           : ""
                       }`}
                     >
                       <div
                         className={
                           colIdx === 0
-                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
+                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
                             : "min-w-0"
                         }
                       >
                         {/* Add spinner for first column when creating OR pending */}
                         {colIdx === 0 && (row._isCreating || row._isPending) && (
-                          <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          <div className="w-4 h-4 border-1 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
                         )}
                         <TooltipProvider>
                           <Tooltip>

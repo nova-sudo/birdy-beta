@@ -2,7 +2,7 @@
 
 import Image from "next/image"
 import { Eye, ChevronDown } from "lucide-react"
-
+import { SlidersHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -39,9 +39,9 @@ export default function ColumnVisibilityDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="flex items-center gap-1 md:gap-2 px-2 md:px-4 font-semibold bg-white h-10 text-sm md:text-base"
+          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm "
         >
-          <Eye className="h-4 w-4" />
+          <SlidersHorizontal className="h-4 w-4" />
           <span className="hidden lg:inline">Columns</span>
           <ChevronDown className="h-4 w-4" />
         </Button>

@@ -878,17 +878,6 @@ const getFilteredDataForTab = () => {
           </div>
         </div>
 
-        {/* Date Range Indicator */}
-        {dateRange.from && dateRange.to && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarIcon className="h-4 w-4" />
-            <span>
-              Showing data from {format(dateRange.from, "MMM dd, yyyy")} to {format(dateRange.to, "MMM dd, yyyy")}
-              ({Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days)
-            </span>
-          </div>
-        )}
-
         {/* Metrics Cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
