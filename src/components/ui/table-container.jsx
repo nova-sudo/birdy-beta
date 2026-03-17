@@ -471,7 +471,7 @@ const getPageNumbers = () => {
             z-index: 50;
             min-width: 200px;
             font-weight: 575;
-            max-width: 215px;
+            max-width: 245px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -481,7 +481,7 @@ const getPageNumbers = () => {
             z-index: 50;
             min-width: 200px;
             font-weight: 575;
-            max-width: 215px;
+            max-width: 245px;
           }
           .fixed-header {
             position: sticky;
