@@ -5,6 +5,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search} from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
@@ -118,6 +128,7 @@ export default function ClientsPage() {
   const [progress, setProgress] = useState(13)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
+  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false) // 🔥 NEW
   const [userCurrency, setUserCurrency] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
@@ -174,42 +185,6 @@ export default function ClientsPage() {
     })
   }, [viewsLoaded, savedColumns])
 
-useEffect(() => {
-  let cancelled = false;
-
-  async function fetchCurrency() {
-    try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/user/currency", {
-        credentials: "include",
-      });
-
-      if (!response.ok) throw new Error(`Failed to fetch currency: ${response.status}`);
-
-      const data = await response.json();
-      const currency = data.default_currency ?? null;
-      console.log("📥 Fetched user currency:", currency);
-
-      if (!cancelled) {
-        setUserCurrency(currency);
-        try {
-          if (currency) localStorage.setItem(STORAGE_KEY, currency);
-          else localStorage.removeItem(STORAGE_KEY);
-        } catch (e) {
-          console.warn("[useUserCurrency] localStorage unavailable:", e);
-        }
-      }
-    } catch (err) {
-      console.error("[useUserCurrency] Error fetching currency:", err);
-      if (!cancelled) setCurrencyLoading(false);
-      return;
-    } finally {
-      if (!cancelled) setCurrencyLoading(false);
-    }
-  }
-
-  fetchCurrency();
-  return () => { cancelled = true; };
-}, []);
   // Update column visibility when columns change
   useEffect(() => {
     setColumnVisibility((prev) => {
@@ -496,8 +471,13 @@ useEffect(() => {
         const data = await response.json()
         
         setClientGroups(prev => prev.filter(group => group.id !== tempId))
-        
-        toast.error(data.detail || "Failed to create client group")
+
+        // 🔥 Handle CLIENT_LIMIT_REACHED error
+        if (response.status === 402 && data.detail?.code === "CLIENT_LIMIT_REACHED") {
+          setClientLimitDialogOpen(true)
+        } else {
+          toast.error(data.detail || "Failed to create client group")
+        }
       }
     } catch (err) {
       console.error("[v0] Error creating client group:", err)
@@ -567,6 +547,7 @@ useEffect(() => {
       <div className="bg-card">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
+            
             <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
               <div>
                 <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
@@ -988,6 +969,31 @@ useEffect(() => {
                   </div>
                 </DialogContent>
               </Dialog>
+
+      {/* 🔥 Client Limit Reached Dialog */}
+      <AlertDialog open={clientLimitDialogOpen} onOpenChange={setClientLimitDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Client Limit Reached</AlertDialogTitle>
+            <AlertDialogDescription>
+              You've reached your client limit (25). Add extra client slots ($10/mo each)
+              from the Billing page to continue.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => {
+                setClientLimitDialogOpen(false)
+                router.push("/billing")
+              }}
+            >
+              Go to Billing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="w-full mx-auto py-6 space-y-6">
         {error && (

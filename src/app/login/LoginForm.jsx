@@ -66,18 +66,18 @@ export default function LoginForm() {
         JSON.stringify({ value: true, expires_at: expiresAt.toISOString() })
       )
 
+      // ✅ Save currency so useUserCurrency hook reads it instantly on first render
+      if (data.user?.default_currency) {
+        localStorage.setItem("user_default_currency", data.user.default_currency)
+      }
+
       // ── 3. Check for expired integration tokens ──────────────────────────
-      // checkAndRefreshExpiredTokens returns:
-      //   null   → it already kicked off an OAuth redirect; do nothing here
-      //   string → the path we should navigate to
       const intendedRedirect = searchParams.get("redirect") || "/clients"
       const nextPath = await checkAndRefreshExpiredTokens(intendedRedirect)
 
       if (nextPath !== null) {
         router.push(nextPath)
       }
-      // If nextPath === null the browser is already navigating to the OAuth
-      // provider, so we intentionally do nothing further.
     } catch (err) {
       console.error("Login error:", err)
       setError("Login failed. Please try again.")

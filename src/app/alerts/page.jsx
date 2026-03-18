@@ -55,7 +55,7 @@ import {
   Zap,
 } from "lucide-react"
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://birdy-backend.vercel.app"
+const API_BASE = "https://birdy-backend.vercel.app"
 
 // ── Constants ────────────────────────────────────────────────
 
