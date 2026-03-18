@@ -970,16 +970,6 @@ export default function ContactPage() {
           </div>
         </div>
 
-        {/* Date Range Indicator */}
-        {dateRange.from && dateRange.to && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarIcon className="h-4 w-4" />
-            <span>
-              Showing data from {format(dateRange.from, "MMM dd, yyyy")} to {format(dateRange.to, "MMM dd, yyyy")}
-              ({Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days)
-            </span>
-          </div>
-        )}
 
         <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
         <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />

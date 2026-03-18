@@ -470,7 +470,7 @@ const getPageNumbers = () => {
             background: white;
             z-index: 50;
             min-width: 200px;
-            font-weight: 575;
+            font-weight: 565;
             max-width: 245px;
           }
           .fixed-column-odd {
@@ -480,7 +480,7 @@ const getPageNumbers = () => {
             background: #f4f3f9;
             z-index: 50;
             min-width: 200px;
-            font-weight: 575;
+            font-weight: 565;
             max-width: 245px;
           }
           .fixed-header {
@@ -520,7 +520,7 @@ const getPageNumbers = () => {
       <div className="table-container border rounded-md">
         <table className="text-sm">
           <thead className="top-0 z-40">
-            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
+            <tr className="transition-colors  data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -590,8 +590,8 @@ const getPageNumbers = () => {
                   onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
                   className={`border-b transition-colors ${
                     (row._isCreating || row._isPending)
-                      ? "bg-muted/30 cursor-wait opacity-60" 
-                      : "hover:bg-muted/50 cursor-pointer"
+                      ? "bg-muted/30 cursor-wait opacity-60 w-fit" 
+                      : "hover:bg-muted/50 cursor-pointer w-fit"
                   } 
                   ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
