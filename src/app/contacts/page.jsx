@@ -83,11 +83,11 @@ const buildContactColumns = () => [
   },
   {
     id: "groupName",
-    header: "Group",
+    header: "Client Group",
     label: "Group",
     defaultVisible: true,
     sortable: true,
-    icons: ghl,
+    icons: lab,
     cell: (value) =>
       !value ? (
         <span className="text-muted-foreground text-sm">-</span>
