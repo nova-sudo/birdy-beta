@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
@@ -995,80 +995,72 @@ export default function ClientsPage() {
         )}
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border rounded-lg shadow-sm">
-            <CardContent className="">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Active Clients</p>
-                  <h3 className="text-2xl font-bold ">{stats.activeClients}</h3>
-                  <div className="flex items-center mt-1">
-                    <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                  </div>
-                </div>
-                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
+                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <Users className="h-4 w-4 text-purple-600 font-bold" />
                 </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeClients}</div>
+                <p className="text-xs text-[#71658B] text-muted-foreground ">
+                  <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
+                  <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+                </p>
+              </CardContent>
+          </Card>
+
+          <Card className="border rounded-lg shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-muted-foreground font-normal text-sm">Total Ad Spend</CardTitle>
+              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <DollarSign className="h-4 w-4 text-purple-600 font-bold" />
               </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+              {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </div>
+              <p className="text-xs text-[#71658B] text-muted-foreground ">
+                <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
+                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+              </p>
             </CardContent>
           </Card>
 
           <Card className="border rounded-lg shadow-sm">
-            <CardContent className="">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Ad Spend</p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </h3>
-                  <div className="flex items-center mt-1">
-                    <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                  </div>
-                </div>
-                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <DollarSign className="h-4 w-4 text-purple-600" />
-                </div>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-muted-foreground font-normal text-sm">Total Leads</CardTitle>
+              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <UserCheck className="h-4 w-4 text-purple-600 font-bold" />
               </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalLeads}</div>
+              <p className="text-xs text-[#71658B] text-muted-foreground ">
+                <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
+                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+              </p>
             </CardContent>
           </Card>
 
-          <Card className="rounded-lg border shadow-sm">
-            <CardContent className="">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm text-[#71658B]">Total Leads</p>
-                  <h3 className="text-2xl font-bold mt-1">{stats.totalLeads.toLocaleString()}</h3>
-                  <div className="flex items-center mt-1">
-                    <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                  </div>
-                </div>
-                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <UserCheck className="h-4 w-4 text-purple-600" />
-                </div>
+          <Card className="border rounded-lg shadow-sm">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-muted-foreground font-normal text-sm">Average CPL</CardTitle>
+              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <Target className="h-4 w-4 text-purple-600 font-bold" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-lg border shadow-sm">
-            <CardContent className="">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-muted-foreground text-sm text-[#71658B]">Average CPL</p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </h3>
-                  <div className="flex items-center mt-1">
-                    <span className="text-destructive text-[0.75rem] leading-4 text-[#EF4343]">-3%</span>
-                    <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                  </div>
-                </div>
-                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Target className="h-4 w-4 text-purple-600" />
-                </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+              {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
+              <p className="text-xs text-[#71658B] text-muted-foreground ">
+                <span className="text-green-500 text-[0.75rem] leading-4">-5%</span>
+                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+              </p>
             </CardContent>
           </Card>
         </div>
