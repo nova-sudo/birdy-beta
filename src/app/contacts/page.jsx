@@ -378,9 +378,9 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
       {stats.map((stat, index) => (
         <Card key={index} className="border shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium text-[#71658B] text-muted-foreground">{stat.title}</CardTitle>
-            <div className="p-2 bg-purple-100 rounded-md">
-              <stat.icon className="h-5 w-5 text-purple-500" />
+            <CardTitle className="text-sm font-normal text-[#71658B] text-muted-foreground">{stat.title}</CardTitle>
+            <div className="w-8 h-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+              <stat.icon className="h-4 w-5 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>

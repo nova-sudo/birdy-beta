@@ -876,17 +876,18 @@ const Campaigns = () => {
             { label: "Total Spend", icon: DollarSign, value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
             { label: "Total Leads", icon: Target, value: metrics.totalLeads },
             { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
-          ].map((c, i) => (
+            { label: "Avg CPL", icon: TrendingUp, value: metrics.totalLeads > 0 ? `${getSymbolFromCurrency(userCurrency)}${(metrics.totalSpend / metrics.totalLeads).toFixed(2)}` : "-" },
+            ].map((c, i) => (
             <Card key={i} className="border shadow-sm rounded-lg">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
-                <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <c.icon className="h-5 w-5 text-muted-foreground text-purple-500" />
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-muted-foreground font-normal text-sm ">{c.label}</CardTitle>
+                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <c.icon className="h-4 w-4 text-muted-foreground text-purple-600" />
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{c.value}</div>
-                <p className="text-xs text-[#71658B] text-muted-foreground">Across all {activeTab}</p>
+                <p className="text-xs text-[#71658B] text-muted-foreground ">Across all {activeTab}</p>
               </CardContent>
             </Card>
           ))}
