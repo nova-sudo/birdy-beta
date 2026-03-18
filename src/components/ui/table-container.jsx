@@ -517,7 +517,7 @@ const StyledTable = ({
       `}</style>
       {/* Table */}
       <div className="table-container border rounded-md">
-        <table className="text-md">
+        <table className="text-sm">
           <thead className="top-0 z-40">
             <tr className="transition-colors  data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((col) => (
@@ -527,7 +527,7 @@ const StyledTable = ({
                   onDragStart={(e) => handleDragStart(e, col.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col.id)}
-                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${col.id === "name"
+                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${col.id === "name" || col.id === "full_name" || col.id === "contactName"
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
                     }`}

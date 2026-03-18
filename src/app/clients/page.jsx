@@ -557,7 +557,7 @@ export default function ClientsPage() {
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
             py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Input
                   placeholder="Search clients..."
                   value={searchQuery}
@@ -996,7 +996,7 @@ export default function ClientsPage() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card className="border rounded-xl ">
+          <Card className="border rounded-lg shadow-sm">
             <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
@@ -1014,7 +1014,7 @@ export default function ClientsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border rounded-lg shadow-sm">
             <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
@@ -1034,7 +1034,7 @@ export default function ClientsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-lg border shadow-sm">
             <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>
@@ -1052,7 +1052,7 @@ export default function ClientsPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="rounded-lg border shadow-sm">
             <CardContent className="">
               <div className="flex justify-between items-start">
                 <div>

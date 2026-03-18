@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X } from "lucide-react"
+import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
@@ -509,7 +509,7 @@ const MetricsHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
+    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -522,13 +522,16 @@ const MetricsHub = () => {
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1">
-            <Input
+            <div className="relative">
+              <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"/>
+              <Input
               type="search"
               placeholder="Search metrics..."
-              className="bg-white rounded-lg h-10 px-2"
+              className="bg-white rounded-lg h-10 px-2 pl-8"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            </div>
             <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
             </Button>
@@ -620,12 +623,12 @@ const MetricsHub = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-3">
+          <TabsContent value={activeTab} className="mt-4">
             <div className="border bg-card overflow-hidden rounded-md shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full caption-bottom text-sm">
-                  <thead className="bg-muted/50 border-b sticky top-0 z-20">
-                    <tr className="">
+                  <thead className="bg-white sticky top-0 z-20 border-b border-border">
+                    <tr className="border-b-2 border-[#e4e4e7]">
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Metric Name</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Source</th>
                       <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Dashboard</th>

@@ -43,7 +43,7 @@ export default function RootLayout({ children }) {
                     <SidebarTrigger className="md:hidden"/>
                   </header>
                 )}
-                <div id="do not change the width" className=" mx-auto bg-[#f6f8fa] w-full flex flex-1 flex-col gap-4 p-4 md:p-4 overflow-x-hidden">
+                <div id="do not change the width" className=" mx-auto bg-[#f6f8fa] w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden">
                   {children}
                 </div>
               </SidebarInset>

@@ -741,7 +741,7 @@ const Campaigns = () => {
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-semibold whitespace-nowrap">Client Group:</Label>
                 <Select value={selectedClientGroup || ""} onValueChange={setSelectedClientGroup}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-48 bg-white">
                     <SelectValue placeholder="Select a client group" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
@@ -756,17 +756,16 @@ const Campaigns = () => {
             )}
           </div>
 
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
-              className="h-10 bg-white w-40"
+              className="h-10 bg-white w-fit md:w-65 rounded-md text-sm font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <div className="flex gap-1 overflow-x-auto lg:overflow-x-hidden">
-              <Button
+              {/* <Button
                 variant="outline"
                 size="sm"
                 onClick={addFilterCondition}
@@ -774,7 +773,7 @@ const Campaigns = () => {
               >
                 <SlidersHorizontal className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
                 <span className="hidden lg:inline">Add Filter</span>
-              </Button>
+              </Button> */}
 
               <ColumnVisibilityDropdown
                 isOpen={columnsOpen}
@@ -803,7 +802,7 @@ const Campaigns = () => {
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+                    className="w-auto h-10 font-semibold bg-white gap-2 px-3"
                   >
                     <CalendarIcon className="h-4 w-4" />
                     <span className="hidden md:inline">
@@ -878,7 +877,7 @@ const Campaigns = () => {
             { label: "Total Leads", icon: Target, value: metrics.totalLeads },
             { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
           ].map((c, i) => (
-            <Card key={i}>
+            <Card key={i} className="border shadow-sm rounded-lg">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm text-[#71658B] font-medium">{c.label}</CardTitle>
                 <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
@@ -898,28 +897,28 @@ const Campaigns = () => {
           <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0 shadow-sm overflow-x-auto">
             <TabsTrigger
               value="campaigns"
-              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-600"
             >
               <LayoutGrid className="h-4 w-4" />
               Campaigns
             </TabsTrigger>
             <TabsTrigger
               value="adsets"
-              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-600"
             >
               <Grid3X3 className="h-4 w-4" />
               Ad Sets
             </TabsTrigger>
             <TabsTrigger
               value="ads"
-              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-600"
             >
               <FileBarChart className="h-4 w-4" />
               Ads
             </TabsTrigger>
             <TabsTrigger
               value="leads"
-              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+              className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-600"
             >
               <Users className="h-4 w-4" />
               Leads
