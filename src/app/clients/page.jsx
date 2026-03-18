@@ -1038,7 +1038,7 @@ export default function ClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalLeads}</div>
+              <div className="text-2xl font-bold">{stats.totalLeads.toLocaleString()}</div>
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
                 <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
