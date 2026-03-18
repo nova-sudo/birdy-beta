@@ -562,10 +562,8 @@ export default function AlertsPage() {
 
   const isPctOp = ["pct_drop", "pct_rise"].includes(form.operator)
 
-  // ── Page ──────────────────────────────────────────────────────
-
   return (
-    <main className="min-h-screen bg-white w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
+    <main className="min-h-screen w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
       <div className=" mx-auto">
 
         {/* Header */}
