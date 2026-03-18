@@ -21,13 +21,13 @@ import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieCh
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
-import { 
-  discoverAllMetrics, 
+import {
+  discoverAllMetrics,
   getMetricsStatistics,
   getAvailableSources,
   getAvailableDashboards,
   searchMetrics,
-  getAvailableMetricsForFormulas 
+  getAvailableMetricsForFormulas
 } from "@/lib/metrics-discovery"
 import ghl from "../../../public/ghl_icon.png";
 import metaa from "../../../public/meta-icon-DH8jUhnM.png";
@@ -84,16 +84,16 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
               All {availableMetrics.length}
             </TabsTrigger>
             {Object.keys(metricsBySource).map(source => (
-              <TabsTrigger 
+              <TabsTrigger
                 key={source}
-                value={source.toLowerCase()} 
+                value={source.toLowerCase()}
                 className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 data-[state=active]:border-b-purple-700 h-full"
               >
                 {source} {metricsBySource[source].length}
               </TabsTrigger>
             ))}
           </TabsList>
-          
+
           <TabsContent value="all" className="border-0 p-0">
             <Command>
               <CommandList>
@@ -114,7 +114,7 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
               </CommandList>
             </Command>
           </TabsContent>
-          
+
           {Object.entries(metricsBySource).map(([source, metrics]) => (
             <TabsContent key={source} value={source.toLowerCase()} className="border-0 p-0">
               <Command>
@@ -187,16 +187,16 @@ const MetricsHub = () => {
   useEffect(() => {
     if (clientGroups.length > 0) {
       console.log("🔍 Discovering metrics with", clientGroups.length, "client groups")
-      
+
       const metrics = discoverAllMetrics(clientGroups)
       setDiscoveredMetrics(metrics)
-      
+
       const formulaMetrics = getAvailableMetricsForFormulas(clientGroups)
       setAvailableMetricsForFormulas(formulaMetrics)
-      
+
       const stats = getMetricsStatistics(clientGroups)
       setStatistics(stats)
-      
+
       console.log("✅ Metrics discovery complete:", stats)
     }
   }, [clientGroups])
@@ -356,49 +356,49 @@ const MetricsHub = () => {
 
   const getSourceBadge = (source) => {
     const badges = {
-  "GoHighLevel": { 
-    color: "text-[#16A34A] bg-[#F0FDF4] font-semibold border-green-200 rounded-full", 
-    image: ghl 
-  },
-  "Meta Ads": { 
-    color: "text-[#2563EB] bg-[#EFF6FF] font-semibold border-blue-200 rounded-full", 
-    image: metaa 
-  },
-  "Webhook": { 
-    color: "text-[#E11D48] bg-[#FFF1F2] font-semibold border-red-200 rounded-full", 
-    image: null 
-  },
-  "Custom Formula": { 
-    color: "text-[#7854EA] bg-[#F5F3FF] font-semibold border-purple-200 rounded-full", 
-    image: Flask 
-  },
-  "Calculated": { 
-    color: "text-[#EA580C] bg-[#FFF7ED] font-semibold border-orange-200 rounded-full", 
-    image: null 
-  },
-  "System": { 
-    color: "text-[#4B5563] bg-[#F9FAFB] font-semibold border-gray-200 rounded-full", 
-    image: null 
-  },
-  "HotProspector": { 
-    color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full", 
-    image: HP 
-  },
-}
-    
+      "GoHighLevel": {
+        color: "text-[#16A34A] bg-[#F0FDF4] font-semibold border-green-200 rounded-full",
+        image: ghl
+      },
+      "Meta Ads": {
+        color: "text-[#2563EB] bg-[#EFF6FF] font-semibold border-blue-200 rounded-full",
+        image: metaa
+      },
+      "Webhook": {
+        color: "text-[#E11D48] bg-[#FFF1F2] font-semibold border-red-200 rounded-full",
+        image: null
+      },
+      "Custom Formula": {
+        color: "text-[#7854EA] bg-[#F5F3FF] font-semibold border-purple-200 rounded-full",
+        image: Flask
+      },
+      "Calculated": {
+        color: "text-[#EA580C] bg-[#FFF7ED] font-semibold border-orange-200 rounded-full",
+        image: null
+      },
+      "System": {
+        color: "text-[#4B5563] bg-[#F9FAFB] font-semibold border-gray-200 rounded-full",
+        image: null
+      },
+      "HotProspector": {
+        color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
+        image: HP
+      },
+    }
+
     const badge = badges[source] || badges["System"]
-    
+
     return (
       <Badge variant="outline" className={`w-fit h-7 ${badge.color}`}>
-      {badge.image ? (
-        <img 
-          src={badge.image.src} 
-          alt={`${source} icon`}
-          className="w-4 h-4" 
-        />
-      ) : null}
-      {source}
-    </Badge>
+        {badge.image ? (
+          <img
+            src={badge.image.src}
+            alt={`${source} icon`}
+            className="w-4 h-4"
+          />
+        ) : null}
+        {source}
+      </Badge>
     )
   }
 
@@ -412,7 +412,7 @@ const MetricsHub = () => {
     return <Badge className={colors[dashboard] || "bg-gray-100 text-gray-800"}>{dashboard}</Badge>
   }
 
-    // Function to generate pagination items with ellipsis logic
+  // Function to generate pagination items with ellipsis logic
   const renderPaginationItems = () => {
     const items = [];
     const ellipsis = <PaginationItem key="ellipsis"><PaginationEllipsis /></PaginationItem>;
@@ -509,7 +509,7 @@ const MetricsHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
+    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -523,14 +523,14 @@ const MetricsHub = () => {
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1">
             <div className="relative">
-              <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"/>
+              <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-              type="search"
-              placeholder="Search metrics..."
-              className="bg-white rounded-lg h-10 px-2 pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+                type="search"
+                placeholder="Search metrics..."
+                className="bg-white rounded-lg h-10 px-2 pl-8"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
             </div>
             <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
@@ -678,33 +678,33 @@ const MetricsHub = () => {
                   </tbody>
                 </table>
               </div>
-              
+
             </div>
             {totalPages > 1 && (
-        <Pagination className="mt-4">
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage > 1) handlePageChange(currentPage - 1);
-                }}
-              />
-            </PaginationItem>
-            {renderPaginationItems()}
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  if (currentPage < totalPages) handlePageChange(currentPage + 1);
-                }}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
-      )}
+              <Pagination className="mt-4">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) handlePageChange(currentPage - 1);
+                      }}
+                    />
+                  </PaginationItem>
+                  {renderPaginationItems()}
+                  <PaginationItem>
+                    <PaginationNext
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) handlePageChange(currentPage + 1);
+                      }}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </TabsContent>
         </Tabs>
 

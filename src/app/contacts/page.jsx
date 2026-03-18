@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading }    from "@/components/ui/ViewLoading"
+import { ViewLoading } from "@/components/ui/ViewLoading"
 import {
   SlidersHorizontal,
   Users,
@@ -228,9 +228,9 @@ const buildContactColumns = () => [
       const oppStatus = mainOpp.status || "unknown"
       const oppValue = mainOpp.monetaryValue || 0
       const statusColors = {
-        open:      "bg-[#DBEAFE] text-[#1D4ED8]",
-        won:       "bg-[#DCFCE7] text-[#15803D]",
-        lost:      "bg-[#FEE2E2] text-[#B91C1C]",
+        open: "bg-[#DBEAFE] text-[#1D4ED8]",
+        won: "bg-[#DCFCE7] text-[#15803D]",
+        lost: "bg-[#FEE2E2] text-[#B91C1C]",
         abandoned: "bg-[#FEF9C3] text-[#A16207]",
       }
       return (
@@ -266,8 +266,8 @@ const buildContactColumns = () => [
       )
     },
   },
-  { id: "firstName",   header: "First Name",   label: "First Name",   defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "lastName",    header: "Last Name",    label: "Last Name",    defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "firstName", header: "First Name", label: "First Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "lastName", header: "Last Name", label: "Last Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
   {
     id: "companyName",
     header: "Company",
@@ -290,8 +290,8 @@ const buildContactColumns = () => [
       ? <span className="text-muted-foreground text-sm">-</span>
       : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
   },
-  { id: "city",       header: "City",        label: "City",        defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "state",      header: "State",       label: "State",       defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
   { id: "postalCode", header: "Postal Code", label: "Postal Code", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
   {
     id: "country",
@@ -346,7 +346,7 @@ const buildContactColumns = () => [
     },
   },
   { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "assignedTo",  header: "Assigned To",   label: "Assigned To",  defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
 ]
 
 const contactColumns = buildContactColumns()
@@ -356,12 +356,12 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const filteredTotal = filteredContacts.length
   const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
   const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithOpportunities = filteredContacts.filter((c) => 
+  const contactsWithOpportunities = filteredContacts.filter((c) =>
     c.opportunities && c.opportunities.length > 0
   ).length
   const totalLeadValue = filteredContacts.reduce((sum, c) => {
     if (!c.opportunities) return sum
-    const oppValue = c.opportunities.reduce((oppSum, opp) => 
+    const oppValue = c.opportunities.reduce((oppSum, opp) =>
       oppSum + (opp.monetaryValue || 0), 0
     )
     return sum + oppValue
@@ -379,7 +379,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
         <Card key={index} className="border shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-normal text-[#71658B] text-muted-foreground">{stat.title}</CardTitle>
-            <div className="w-8 h-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+            <div className="w-8 h-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
               <stat.icon className="h-4 w-5 text-purple-600" />
             </div>
           </CardHeader>
@@ -468,49 +468,49 @@ export default function ContactPage() {
     setLoading(true)
     setError(null)
     try {
-        if (clientGroups.length === 0) {
-            setContacts([])
-            setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
-            setLoading(false)
-            return
-        }
-
-        const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-        
-        // Build URL with pagination and date range
-        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
-        
-        // Add date range parameters
-        if (dateRange.from) {
-            url += `&start_date=${format(dateRange.from, 'yyyy-MM-dd')}`
-        }
-        if (dateRange.to) {
-            url += `&end_date=${format(dateRange.to, 'yyyy-MM-dd')}`
-        }
-
-        console.log('🔍 Fetching contacts:', { url, dateRange })
-
-        const response = await fetch(url, { credentials: "include" })
-        if (!response.ok) throw new Error(`Failed: ${response.status}`)
-
-        const data = await response.json()
-        setContacts(data.contacts || [])
-        setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
-        
-        setCurrentPage(page)
-        
-    } catch (err) {
-        setError(err.message)
+      if (clientGroups.length === 0) {
         setContacts([])
-        setMetaData(null)
-    } finally {
+        setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
         setLoading(false)
+        return
+      }
+
+      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+
+      // Build URL with pagination and date range
+      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+
+      // Add date range parameters
+      if (dateRange.from) {
+        url += `&start_date=${format(dateRange.from, 'yyyy-MM-dd')}`
+      }
+      if (dateRange.to) {
+        url += `&end_date=${format(dateRange.to, 'yyyy-MM-dd')}`
+      }
+
+      console.log('🔍 Fetching contacts:', { url, dateRange })
+
+      const response = await fetch(url, { credentials: "include" })
+      if (!response.ok) throw new Error(`Failed: ${response.status}`)
+
+      const data = await response.json()
+      setContacts(data.contacts || [])
+      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+
+      setCurrentPage(page)
+
+    } catch (err) {
+      setError(err.message)
+      setContacts([])
+      setMetaData(null)
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
     if (clientGroups.length > 0) {
-        fetchContacts(1) // Always start at page 1 when filters change
+      fetchContacts(1) // Always start at page 1 when filters change
     }
   }, [selectedClientGroup, clientGroups.length, dateRange])
 
@@ -559,11 +559,11 @@ export default function ContactPage() {
 
     if (selectedSource !== "all") filtered = filtered.filter(c => c.source?.includes(selectedSource))
     if (selectedType !== "all") filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
-  if (selectedOpportunityStatus !== "all") {
-    filtered = filtered.filter(c => 
-      c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
-    )
-  }    if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
+    if (selectedOpportunityStatus !== "all") {
+      filtered = filtered.filter(c =>
+        c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
+      )
+    } if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
 
     if (sortColumn) {
       filtered.sort((a, b) => {
@@ -582,23 +582,23 @@ export default function ContactPage() {
   const toggleColumn = (id) => setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const clearAllFilters = () => {
-      setSearchQuery("")
-      setSelectedSource("all")
-      setSelectedType("all")
-      setSelectedOpportunityStatus("all")
-      setSelectedDateRange("all")
-      setDateRange({
-        from: subDays(new Date(), 7),
-        to: new Date(),
-      })
-      setSelectedClientGroup("all")
-      setSelectedTags([])
-      setSortColumn("")
-      setSortDirection("asc")
+    setSearchQuery("")
+    setSelectedSource("all")
+    setSelectedType("all")
+    setSelectedOpportunityStatus("all")
+    setSelectedDateRange("all")
+    setDateRange({
+      from: subDays(new Date(), 7),
+      to: new Date(),
+    })
+    setSelectedClientGroup("all")
+    setSelectedTags([])
+    setSortColumn("")
+    setSortDirection("asc")
   }
 
   const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
-    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" || 
+    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" ||
     selectedTags.length > 0
 
   const categories = [
@@ -706,25 +706,25 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <Loading progress={progress}/>
+      <Loading progress={progress} />
     )
   }
 
   const handlePreviousPage = () => {
-      if (currentPage > 1) {
-          fetchContacts(currentPage - 1)
-      }
-  }  
+    if (currentPage > 1) {
+      fetchContacts(currentPage - 1)
+    }
+  }
   const handleNextPage = () => {
-      if (metaData?.has_next) {
-          fetchContacts(currentPage + 1)
-      }
+    if (metaData?.has_next) {
+      fetchContacts(currentPage + 1)
+    }
   }
   if (!viewsLoaded) return <ViewLoading />
-   
+
   return (
-    <div className="mx-auto w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
-      <div className="flex flex-col gap-8">
+    <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
+      <div className="flex flex-col gap-6">
         {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -734,121 +734,121 @@ export default function ContactPage() {
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
             py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
-              <div className="flex items-center gap-1">
-                <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  className="text-gray-900 bg-white h-10 max-w-[200px]  text-sm font-medium md:text-sm"/>
-                  {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
+            <div className="flex items-center gap-1">
+              <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="text-gray-900 bg-white h-10 max-w-[200px]  text-sm font-medium md:text-sm" />
+              {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
-            <div className="flex gap-1 md:overflow-x-visible">
-              <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                <SelectTrigger className="h-10 bg-white font-semibold"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="flex gap-1 md:overflow-x-visible">
+                <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+                  <SelectTrigger className="h-10 bg-white font-semibold"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
+                  <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+                </Select>
 
-              <ColumnVisibilityDropdown
-                isOpen={isDropdownOpen}
-                setIsOpen={setIsDropdownOpen}
+                <ColumnVisibilityDropdown
+                  isOpen={isDropdownOpen}
+                  setIsOpen={setIsDropdownOpen}
 
-                categories={categories}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                categoryCounts={{
-                  columns: contactColumns.length,
-                  sources: sources.length,
-                  types: types.length,
-                  opportunities: opportunityStatuses.length,
-                  tags: allTags.length,
-                }}
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  categoryCounts={{
+                    columns: contactColumns.length,
+                    sources: sources.length,
+                    types: types.length,
+                    opportunities: opportunityStatuses.length,
+                    tags: allTags.length,
+                  }}
 
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
 
-                filteredColumns={filteredColumns}
-                columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
-                toggleColumnVisibility={toggleColumnVisibility}
-                selectAll={selectAll}
-                clearAll={clearAll}
+                  filteredColumns={filteredColumns}
+                  columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
+                  toggleColumnVisibility={toggleColumnVisibility}
+                  selectAll={selectAll}
+                  clearAll={clearAll}
                   save={async () => {
                     await saveToDB(visibleColumns)
                     setIsDropdownOpen(false)
                   }}
-              />
-              
+                />
 
-              {/* Enhanced Date Range Picker */}
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-auto h-10 justify-between font-semibold bg-white gap-2 px-3"
-                  >
-                    <CalendarIcon className="h-4 w-4" />
-                    <span className="hidden md:inline">
-                      {dateRange.from && dateRange.to
-                        ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                        : "Select date range"}
-                    </span>
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="end">
-                  <div className="p-3">
-                    <CalendarComponent
-                      mode="range"
-                      defaultMonth={tempDateRange?.from}
-                      selected={tempDateRange}
-                      onSelect={(range) => {
-                        if (range?.from && range?.to) {
-                          setTempDateRange({ from: range.from, to: range.to })
-                        } else if (range?.from) {
-                          setTempDateRange({ from: range.from, to: range.from })
-                        }
-                      }}
-                      numberOfMonths={2}
-                      captionLayout="dropdown-buttons"
-                      fromYear={2020}
-                      toYear={new Date().getFullYear()}
-                      disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
-                      className="rounded-lg border shadow-sm"
-                    />
 
-                    {/* Action buttons */}
-                    <div className="flex items-center pt-3 border-t mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={resetDateRange}
-                        className="border border-gray-300 rounded-md mr-2"
-                      >
-                        Reset
-                      </Button>
-                      <div className="flex gap-2">
+                {/* Enhanced Date Range Picker */}
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-auto h-10 justify-between font-semibold bg-white gap-2 px-3"
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                      <span className="hidden md:inline">
+                        {dateRange.from && dateRange.to
+                          ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                          : "Select date range"}
+                      </span>
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white" align="end">
+                    <div className="p-3">
+                      <CalendarComponent
+                        mode="range"
+                        defaultMonth={tempDateRange?.from}
+                        selected={tempDateRange}
+                        onSelect={(range) => {
+                          if (range?.from && range?.to) {
+                            setTempDateRange({ from: range.from, to: range.to })
+                          } else if (range?.from) {
+                            setTempDateRange({ from: range.from, to: range.from })
+                          }
+                        }}
+                        numberOfMonths={2}
+                        captionLayout="dropdown-buttons"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
+                        className="rounded-lg border shadow-sm"
+                      />
+
+                      {/* Action buttons */}
+                      <div className="flex items-center pt-3 border-t mt-3">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => setDatePickerOpen(false)}
+                          onClick={resetDateRange}
                           className="border border-gray-300 rounded-md mr-2"
                         >
-                          Cancel
+                          Reset
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={applyDateRange}
-                          disabled={!tempDateRange.from || !tempDateRange.to}
-                          className="rounded-md bg-purple-600 text-white font-semibold"
-                        >
-                          Apply
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDatePickerOpen(false)}
+                            className="border border-gray-300 rounded-md mr-2"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={applyDateRange}
+                            disabled={!tempDateRange.from || !tempDateRange.to}
+                            className="rounded-md bg-purple-600 text-white font-semibold"
+                          >
+                            Apply
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
 
-              {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
+                {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
+              </div>
             </div>
-            </div>
-              
+
           </div>
         </div>
 
@@ -874,21 +874,21 @@ export default function ContactPage() {
           />
         )}
         <div className="flex justify-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={handlePreviousPage} 
+          <Button
+            variant="ghost"
+            onClick={handlePreviousPage}
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />Previous
           </Button>
-          
+
           <span className="text-sm font-medium py-2">
             Page {currentPage} of {metaData?.total_pages || 1}
           </span>
-          
-          <Button 
-            variant="ghost" 
-            onClick={handleNextPage} 
+
+          <Button
+            variant="ghost"
+            onClick={handleNextPage}
             disabled={!metaData?.has_next}
           >
             Next<ChevronRight className="h-4 w-4" />

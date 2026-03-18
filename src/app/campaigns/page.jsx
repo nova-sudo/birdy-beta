@@ -727,8 +727,8 @@ const Campaigns = () => {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
-      <div className="flex flex-col gap-8">
+    <div className="min-h-dvh w-[calc(100dvw-70px)] mx-auto md:w-[calc(100dvw-130px)]">
+      <div className="flex flex-col gap-6">
         <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
             <div className="whitespace-nowrap">
@@ -877,11 +877,11 @@ const Campaigns = () => {
             { label: "Total Leads", icon: Target, value: metrics.totalLeads },
             { label: "Avg CTR", icon: MousePointerClick, value: `${metrics.avgCTR.toFixed(2)}%` },
             { label: "Avg CPL", icon: TrendingUp, value: metrics.totalLeads > 0 ? `${getSymbolFromCurrency(userCurrency)}${(metrics.totalSpend / metrics.totalLeads).toFixed(2)}` : "-" },
-            ].map((c, i) => (
+          ].map((c, i) => (
             <Card key={i} className="border shadow-sm rounded-lg">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-muted-foreground font-normal text-sm ">{c.label}</CardTitle>
-                <div className="h-8 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
                   <c.icon className="h-4 w-4 text-muted-foreground text-purple-600" />
                 </div>
               </CardHeader>

@@ -543,7 +543,7 @@ export default function ClientsPage() {
   if (!viewsLoaded) return <ViewLoading />
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)] mx-auto bg-[#f6f8fa] gap-6">
+    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto bg-[#f6f8fa] gap-6">
       <div className="bg-[#f6f8fa]">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -1001,7 +1001,7 @@ export default function ClientsPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-muted-foreground text-sm text-[#71658B]">Total Active Clients</p>
-                  <h3 className="text-2xl font-bold mt-1">{stats.activeClients}</h3>
+                  <h3 className="text-2xl font-bold ">{stats.activeClients}</h3>
                   <div className="flex items-center mt-1">
                     <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
                     <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
