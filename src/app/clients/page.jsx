@@ -673,8 +673,8 @@ export default function ClientsPage() {
                         key={location.locationId}
                         onClick={() => { setSelectedGhlLocation(location); setNewGhlLocationId("") }}
                         className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedGhlLocation?.locationId === location.locationId
-                            ? "border-purple-500 bg-purple-50 shadow-md"
-                            : "border-border hover:border-muted-foreground bg-card"
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-border hover:border-muted-foreground bg-card"
                           }`}
                       >
                         <div className="flex items-start justify-between">
@@ -689,8 +689,8 @@ export default function ClientsPage() {
                             </p>
                           </div>
                           <div className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedGhlLocation?.locationId === location.locationId
-                              ? "bg-purple-600 border-purple-600"
-                              : "border-border group-hover:border-muted-foreground"
+                            ? "bg-purple-600 border-purple-600"
+                            : "border-border group-hover:border-muted-foreground"
                             }`}>
                             {selectedGhlLocation?.locationId === location.locationId && <Check className="w-3 h-3 text-white" />}
                           </div>
@@ -740,8 +740,8 @@ export default function ClientsPage() {
                         key={account.id}
                         onClick={() => setSelectedMetaAdAccount(account)}
                         className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedMetaAdAccount?.id === account.id
-                            ? "border-purple-500 bg-purple-50 shadow-md"
-                            : "border-border hover:border-muted-foreground bg-card"
+                          ? "border-purple-500 bg-purple-50 shadow-md"
+                          : "border-border hover:border-muted-foreground bg-card"
                           }`}
                       >
                         <div className="flex items-start justify-between">
@@ -756,8 +756,8 @@ export default function ClientsPage() {
                             </p>
                           </div>
                           <div className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedMetaAdAccount?.id === account.id
-                              ? "bg-purple-600 border-purple-600"
-                              : "border-border group-hover:border-muted-foreground"
+                            ? "bg-purple-600 border-purple-600"
+                            : "border-border group-hover:border-muted-foreground"
                             }`}>
                             {selectedMetaAdAccount?.id === account.id && <Check className="w-3 h-3 text-white" />}
                           </div>

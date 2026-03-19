@@ -170,11 +170,11 @@ function SettingsPageContent() {
         try {
           const s = JSON.parse(localStorage.getItem("goHighLevelIntegration") || "{}")
           if (s.connected) setGhlStatus(s)
-        } catch {}
+        } catch { }
         try {
           const s = JSON.parse(localStorage.getItem("facebookIntegration") || "{}")
           if (s.connected) setFacebookStatus(s)
-        } catch {}
+        } catch { }
       } finally {
         setIsLoading(false)
       }

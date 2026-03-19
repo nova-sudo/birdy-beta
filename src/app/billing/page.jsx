@@ -7,11 +7,11 @@ import {
   Loader2, Crown,
 } from "lucide-react";
 
-const API_BASE              = "https://birdy-backend.vercel.app";
-const PADDLE_CLIENT_TOKEN   = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "";
-const PADDLE_ENVIRONMENT    = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "production";
+const API_BASE = "https://birdy-backend.vercel.app";
+const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "";
+const PADDLE_ENVIRONMENT = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "production";
 const EXTRA_CLIENT_PRICE_ID = process.env.NEXT_PUBLIC_PADDLE_PRICE_EXTRA_CLIENT ?? "";
-const EXTRA_CLIENT_PRICE    = 10;
+const EXTRA_CLIENT_PRICE = 10;
 
 const PLANS = [
   {
@@ -56,8 +56,8 @@ const PLANS = [
 const PLAN_ORDER = ["starter", "growth", "scale"];
 
 const COLOR_CLASSES = {
-  blue:    { bg: "bg-blue-600",    light: "bg-blue-50",    border: "border-blue-500",    text: "text-blue-600",    button: "bg-blue-600 hover:bg-blue-700",    badge: "bg-blue-100 text-blue-700" },
-  purple:  { bg: "bg-purple-600",  light: "bg-purple-50",  border: "border-purple-500",  text: "text-purple-600",  button: "bg-purple-600 hover:bg-purple-700",  badge: "bg-purple-100 text-purple-700" },
+  blue: { bg: "bg-blue-600", light: "bg-blue-50", border: "border-blue-500", text: "text-blue-600", button: "bg-blue-600 hover:bg-blue-700", badge: "bg-blue-100 text-blue-700" },
+  purple: { bg: "bg-purple-600", light: "bg-purple-50", border: "border-purple-500", text: "text-purple-600", button: "bg-purple-600 hover:bg-purple-700", badge: "bg-purple-100 text-purple-700" },
   emerald: { bg: "bg-emerald-600", light: "bg-emerald-50", border: "border-emerald-500", text: "text-emerald-600", button: "bg-emerald-600 hover:bg-emerald-700", badge: "bg-emerald-100 text-emerald-700" },
 };
 
@@ -83,8 +83,8 @@ async function getPaddle() {
       token: PADDLE_CLIENT_TOKEN,
       eventCallback: (data) => {
         if (data.name === "checkout.completed") console.log("Paddle checkout completed:", data.data?.transaction_id);
-        if (data.name === "checkout.warning")   console.warn("Paddle checkout warning:", data.data);
-        if (data.name === "checkout.error")     console.error("Paddle checkout error:", data.data);
+        if (data.name === "checkout.warning") console.warn("Paddle checkout warning:", data.data);
+        if (data.name === "checkout.error") console.error("Paddle checkout error:", data.data);
       },
     });
     paddleInitialized = true;
@@ -95,7 +95,7 @@ async function getPaddle() {
 
 function StatusBadge({ status }) {
   const styles = {
-    active:   "bg-green-100 text-green-700 border-green-200",
+    active: "bg-green-100 text-green-700 border-green-200",
     trialing: "bg-blue-100 text-blue-700 border-blue-200",
     past_due: "bg-amber-100 text-amber-700 border-amber-200",
     canceled: "bg-red-100 text-red-700 border-red-200",
@@ -115,8 +115,8 @@ function PlanCard({
 }) {
   const Icon = plan.icon;
   const c = COLOR_CLASSES[plan.color];
-  const isCurrent   = billingStatus?.plan?.id === plan.id && billingStatus?.subscribed;
-  const isLoading   = loadingPlanId === plan.id;
+  const isCurrent = billingStatus?.plan?.id === plan.id && billingStatus?.subscribed;
+  const isLoading = loadingPlanId === plan.id;
   const isDowngrade = billingStatus?.subscribed && PLAN_ORDER.indexOf(plan.id) < PLAN_ORDER.indexOf(billingStatus.plan?.id);
 
   // Show extra slots picker on Scale card whether it's current plan or not
@@ -326,13 +326,13 @@ function CurrentPlanBar({ billingStatus, onPortal, loadingPortal }) {
 
 export default function BillingPage() {
   const [billingStatus, setBillingStatus] = useState(null);
-  const [loading, setLoading]             = useState(true);
+  const [loading, setLoading] = useState(true);
   const [loadingPlanId, setLoadingPlanId] = useState(null);
-  const [loadingExtra, setLoadingExtra]   = useState(false);
+  const [loadingExtra, setLoadingExtra] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
-  const [error, setError]                 = useState(null);
-  const [successMsg, setSuccessMsg]       = useState(null);
-  const [extraClients, setExtraClients]   = useState(0);
+  const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
+  const [extraClients, setExtraClients] = useState(0);
 
   const fetchStatus = useCallback(async () => {
     try {

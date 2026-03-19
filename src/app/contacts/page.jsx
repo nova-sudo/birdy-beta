@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading }    from "@/components/ui/ViewLoading"
+import { ViewLoading } from "@/components/ui/ViewLoading"
 import {
   SlidersHorizontal,
   Users,
@@ -70,9 +70,9 @@ const contactColumns = [
   { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
   { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
   { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl},
+  { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl },
   { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]", icons: ghl },
-  { id: "type", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl},
+  { id: "type", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
   { id: "opportunities", label: "Opportunities", defaultVisible: true, sortable: false, width: "min-w-[150px]", icons: ghl },
   { id: "firstName", label: "First Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
   { id: "lastName", label: "Last Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
@@ -97,93 +97,93 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
   const renderCellContent = (contact, col) => {
     switch (col.id) {
       case "opportunities":
-      if (!contact.opportunities || contact.opportunities.length === 0) {
-        return <span className="text-muted-foreground text-sm">No opportunities</span>
-      }
-      
-      const opportunities = contact.opportunities
-      const mainOpp = opportunities[0]
-      const hasMoreOpps = opportunities.length > 1
-      
-      // Extract opportunity details
-      const oppStatus = mainOpp.status || "unknown"
-      const oppValue = mainOpp.monetaryValue || 0
-      const oppStage = mainOpp.pipelineStageId || mainOpp.stage || "unknown"
-      
-      const statusColors = {
-        open: "bg-[#DBEAFE] text-[#1D4ED8]",
-        won: "bg-[#DCFCE7] text-[#15803D]",
-        lost: "bg-[#FEE2E2] text-[#B91C1C]",
-        abandoned: "bg-[#FEF9C3] text-[#A16207]"
-      }
-      
-      return (
-        <div className="flex items-center gap-2">
-          <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
-            {oppStatus}
+        if (!contact.opportunities || contact.opportunities.length === 0) {
+          return <span className="text-muted-foreground text-sm">No opportunities</span>
+        }
+
+        const opportunities = contact.opportunities
+        const mainOpp = opportunities[0]
+        const hasMoreOpps = opportunities.length > 1
+
+        // Extract opportunity details
+        const oppStatus = mainOpp.status || "unknown"
+        const oppValue = mainOpp.monetaryValue || 0
+        const oppStage = mainOpp.pipelineStageId || mainOpp.stage || "unknown"
+
+        const statusColors = {
+          open: "bg-[#DBEAFE] text-[#1D4ED8]",
+          won: "bg-[#DCFCE7] text-[#15803D]",
+          lost: "bg-[#FEE2E2] text-[#B91C1C]",
+          abandoned: "bg-[#FEF9C3] text-[#A16207]"
+        }
+
+        return (
+          <div className="flex items-center gap-2">
+            <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
+              {oppStatus}
+            </Badge>
+
+            {oppValue > 0 && (
+              <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
+                {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
+              </span>
+            )}
+
+            {hasMoreOpps && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs">
+                    +{opportunities.length - 1}
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+                  {opportunities.slice(1).map((opp, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm py-1">
+                      <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
+                        {opp.status}
+                      </Badge>
+                      {opp.monetaryValue > 0 && (
+                        <span className="text-xs text-green-600">${opp.monetaryValue}</span>
+                      )}
+                    </div>
+                  ))}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        )
+
+      // ✅ NEW: Handle company name
+      case "companyName":
+        if (!contact.companyName) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
+        return (
+          <span className="text-sm font-medium text-foreground">{contact.companyName}</span>
+        )
+
+      // ✅ NEW: Handle city, state, postalCode
+      case "city":
+      case "state":
+      case "postalCode":
+        if (!contact[col.id]) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
+        return (
+          <span className="text-sm text-foreground">{contact[col.id]}</span>
+        )
+
+      // ✅ UPDATE: type field (was contactType)
+      case "type":
+        const type = contact.type || contact.contactType
+        if (!type) {
+          return <span className="text-muted-foreground text-sm">-</span>
+        }
+        return (
+          <Badge variant="secondary" className="capitalize">
+            {type}
           </Badge>
-          
-          {oppValue > 0 && (
-            <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
-            </span>
-          )}
-          
-          {hasMoreOpps && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">
-                  +{opportunities.length - 1}
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
-                {opportunities.slice(1).map((opp, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
-                      {opp.status}
-                    </Badge>
-                    {opp.monetaryValue > 0 && (
-                      <span className="text-xs text-green-600">${opp.monetaryValue}</span>
-                    )}
-                  </div>
-                ))}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      )
-
-    // ✅ NEW: Handle company name
-    case "companyName":
-      if (!contact.companyName) {
-        return <span className="text-muted-foreground text-sm">-</span>
-      }
-      return (
-        <span className="text-sm font-medium text-foreground">{contact.companyName}</span>
-      )
-
-    // ✅ NEW: Handle city, state, postalCode
-    case "city":
-    case "state":
-    case "postalCode":
-      if (!contact[col.id]) {
-        return <span className="text-muted-foreground text-sm">-</span>
-      }
-      return (
-        <span className="text-sm text-foreground">{contact[col.id]}</span>
-      )
-
-    // ✅ UPDATE: type field (was contactType)
-    case "type":
-      const type = contact.type || contact.contactType
-      if (!type) {
-        return <span className="text-muted-foreground text-sm">-</span>
-      }
-      return (
-        <Badge variant="secondary" className="capitalize">
-          {type}
-        </Badge>
-      )
+        )
 
       case "tags":
         if (!contact[col.id] || contact[col.id].length === 0) {
@@ -428,11 +428,10 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
               {visibleColumnsData.map((col) => (
                 <th
                   key={col.id}
-                  className={`h-12 font-semibold text-gray-900/78 select-none ${
-                    col.id === "contactName"
-                      ? "fixed-header"
-                      : "min-w-[135px] whitespace-nowrap"
-                  }`}
+                  className={`h-12 font-semibold text-gray-900/78 select-none ${col.id === "contactName"
+                    ? "fixed-header"
+                    : "min-w-[135px] whitespace-nowrap"
+                    }`}
                   onClick={() => col.sortable && handleSort(col.id)}
                 >
                   <div className={`flex items-center justify-between gap-2 px-2 h-full ${col.id !== "contactName" ? "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]"}`}>
@@ -457,11 +456,10 @@ const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, on
                 {visibleColumnsData.map((col) => (
                   <td
                     key={col.id}
-                    className={`text-foreground truncate ${
-                      col.id === "contactName"
-                        ? index % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"
-                        : ""
-                    }`}
+                    className={`text-foreground truncate ${col.id === "contactName"
+                      ? index % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"
+                      : ""
+                      }`}
                   >
                     <div className={col.id === "contactName" ? "py-3 px-2 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : ""}>
                       {renderCellContent(contact, col)}
@@ -482,12 +480,12 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const filteredTotal = filteredContacts.length
   const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
   const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithOpportunities = filteredContacts.filter((c) => 
+  const contactsWithOpportunities = filteredContacts.filter((c) =>
     c.opportunities && c.opportunities.length > 0
   ).length
   const totalLeadValue = filteredContacts.reduce((sum, c) => {
     if (!c.opportunities) return sum
-    const oppValue = c.opportunities.reduce((oppSum, opp) => 
+    const oppValue = c.opportunities.reduce((oppSum, opp) =>
       oppSum + (opp.monetaryValue || 0), 0
     )
     return sum + oppValue
@@ -586,49 +584,49 @@ export default function ContactPage() {
     setLoading(true)
     setError(null)
     try {
-        if (clientGroups.length === 0) {
-            setContacts([])
-            setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
-            setLoading(false)
-            return
-        }
-
-        const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-        
-        // Build URL with pagination and date range
-        let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
-        
-        // Add date range parameters
-        if (dateRange.from) {
-            url += `&start_date=${format(dateRange.from, 'yyyy-MM-dd')}`
-        }
-        if (dateRange.to) {
-            url += `&end_date=${format(dateRange.to, 'yyyy-MM-dd')}`
-        }
-
-        console.log('🔍 Fetching contacts:', { url, dateRange })
-
-        const response = await fetch(url, { credentials: "include" })
-        if (!response.ok) throw new Error(`Failed: ${response.status}`)
-
-        const data = await response.json()
-        setContacts(data.contacts || [])
-        setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
-        
-        setCurrentPage(page)
-        
-    } catch (err) {
-        setError(err.message)
+      if (clientGroups.length === 0) {
         setContacts([])
-        setMetaData(null)
-    } finally {
+        setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
         setLoading(false)
+        return
+      }
+
+      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+
+      // Build URL with pagination and date range
+      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+
+      // Add date range parameters
+      if (dateRange.from) {
+        url += `&start_date=${format(dateRange.from, 'yyyy-MM-dd')}`
+      }
+      if (dateRange.to) {
+        url += `&end_date=${format(dateRange.to, 'yyyy-MM-dd')}`
+      }
+
+      console.log('🔍 Fetching contacts:', { url, dateRange })
+
+      const response = await fetch(url, { credentials: "include" })
+      if (!response.ok) throw new Error(`Failed: ${response.status}`)
+
+      const data = await response.json()
+      setContacts(data.contacts || [])
+      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+
+      setCurrentPage(page)
+
+    } catch (err) {
+      setError(err.message)
+      setContacts([])
+      setMetaData(null)
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
     if (clientGroups.length > 0) {
-        fetchContacts(1) // Always start at page 1 when filters change
+      fetchContacts(1) // Always start at page 1 when filters change
     }
   }, [selectedClientGroup, clientGroups.length, dateRange])
 
@@ -677,11 +675,11 @@ export default function ContactPage() {
 
     if (selectedSource !== "all") filtered = filtered.filter(c => c.source?.includes(selectedSource))
     if (selectedType !== "all") filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
-  if (selectedOpportunityStatus !== "all") {
-    filtered = filtered.filter(c => 
-      c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
-    )
-  }    if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
+    if (selectedOpportunityStatus !== "all") {
+      filtered = filtered.filter(c =>
+        c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
+      )
+    } if (selectedTags.length > 0) filtered = filtered.filter(c => c.tags?.some(t => selectedTags.includes(t)))
 
     if (sortColumn) {
       filtered.sort((a, b) => {
@@ -700,23 +698,23 @@ export default function ContactPage() {
   const toggleColumn = (id) => setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const clearAllFilters = () => {
-      setSearchQuery("")
-      setSelectedSource("all")
-      setSelectedType("all")
-      setSelectedOpportunityStatus("all")
-      setSelectedDateRange("all")
-      setDateRange({
-        from: subDays(new Date(), 7),
-        to: new Date(),
-      })
-      setSelectedClientGroup("all")
-      setSelectedTags([])
-      setSortColumn("")
-      setSortDirection("asc")
+    setSearchQuery("")
+    setSelectedSource("all")
+    setSelectedType("all")
+    setSelectedOpportunityStatus("all")
+    setSelectedDateRange("all")
+    setDateRange({
+      from: subDays(new Date(), 7),
+      to: new Date(),
+    })
+    setSelectedClientGroup("all")
+    setSelectedTags([])
+    setSortColumn("")
+    setSortDirection("asc")
   }
 
   const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
-    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" || 
+    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" ||
     selectedTags.length > 0
 
   const categories = [
@@ -824,22 +822,22 @@ export default function ContactPage() {
 
   if (loading) {
     return (
-      <Loading progress={progress}/>
+      <Loading progress={progress} />
     )
   }
 
   const handlePreviousPage = () => {
-      if (currentPage > 1) {
-          fetchContacts(currentPage - 1)
-      }
-  }  
+    if (currentPage > 1) {
+      fetchContacts(currentPage - 1)
+    }
+  }
   const handleNextPage = () => {
-      if (metaData?.has_next) {
-          fetchContacts(currentPage + 1)
-      }
+    if (metaData?.has_next) {
+      fetchContacts(currentPage + 1)
+    }
   }
   if (!viewsLoaded) return <ViewLoading />
-   
+
   return (
     <div className="mx-auto w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
       <div className="flex flex-col gap-8">
@@ -852,121 +850,121 @@ export default function ContactPage() {
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
             py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
-              <div className="flex items-center gap-2">
-                <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                  className="text-gray-900 bg-white h-10 max-w-[200px] font-bold text-xs md:text-base"/>
-                  {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
+            <div className="flex items-center gap-2">
+              <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                className="text-gray-900 bg-white h-10 max-w-[200px] font-bold text-xs md:text-base" />
+              {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
-            <div className="flex gap-1 overflow-x-auto">
-              <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
-                <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
-              </Select>
+              <div className="flex gap-1 overflow-x-auto">
+                <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+                  <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
+                  <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+                </Select>
 
-              <ColumnVisibilityDropdown
-                isOpen={isDropdownOpen}
-                setIsOpen={setIsDropdownOpen}
+                <ColumnVisibilityDropdown
+                  isOpen={isDropdownOpen}
+                  setIsOpen={setIsDropdownOpen}
 
-                categories={categories}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                categoryCounts={{
-                  columns: contactColumns.length,
-                  sources: sources.length,
-                  types: types.length,
-                  opportunities: opportunityStatuses.length,
-                  tags: allTags.length,
-                }}
+                  categories={categories}
+                  selectedCategory={selectedCategory}
+                  setSelectedCategory={setSelectedCategory}
+                  categoryCounts={{
+                    columns: contactColumns.length,
+                    sources: sources.length,
+                    types: types.length,
+                    opportunities: opportunityStatuses.length,
+                    tags: allTags.length,
+                  }}
 
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
 
-                filteredColumns={filteredColumns}
-                columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
-                toggleColumnVisibility={toggleColumnVisibility}
-                selectAll={selectAll}
-                clearAll={clearAll}
+                  filteredColumns={filteredColumns}
+                  columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
+                  toggleColumnVisibility={toggleColumnVisibility}
+                  selectAll={selectAll}
+                  clearAll={clearAll}
                   save={async () => {
                     await saveToDB(visibleColumns)
                     setIsDropdownOpen(false)
                   }}
-              />
-              
+                />
 
-              {/* Enhanced Date Range Picker */}
-              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-auto justify-between font-semibold bg-white gap-2 px-3"
-                  >
-                    <CalendarIcon className="h-4 w-4" />
-                    <span className="hidden md:inline">
-                      {dateRange.from && dateRange.to
-                        ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
-                        : "Select date range"}
-                    </span>
-                    <ChevronDownIcon className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-white" align="end">
-                  <div className="p-3">
-                    <CalendarComponent
-                      mode="range"
-                      defaultMonth={tempDateRange?.from}
-                      selected={tempDateRange}
-                      onSelect={(range) => {
-                        if (range?.from && range?.to) {
-                          setTempDateRange({ from: range.from, to: range.to })
-                        } else if (range?.from) {
-                          setTempDateRange({ from: range.from, to: range.from })
-                        }
-                      }}
-                      numberOfMonths={2}
-                      captionLayout="dropdown-buttons"
-                      fromYear={2020}
-                      toYear={new Date().getFullYear()}
-                      disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
-                      className="rounded-lg border shadow-sm"
-                    />
 
-                    {/* Action buttons */}
-                    <div className="flex items-center pt-3 border-t mt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={resetDateRange}
-                        className="border border-gray-300 rounded-md mr-2"
-                      >
-                        Reset
-                      </Button>
-                      <div className="flex gap-2">
+                {/* Enhanced Date Range Picker */}
+                <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                      <span className="hidden md:inline">
+                        {dateRange.from && dateRange.to
+                          ? `${format(dateRange.from, "MMM dd")} - ${format(dateRange.to, "MMM dd")}`
+                          : "Select date range"}
+                      </span>
+                      <ChevronDownIcon className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 bg-white" align="end">
+                    <div className="p-3">
+                      <CalendarComponent
+                        mode="range"
+                        defaultMonth={tempDateRange?.from}
+                        selected={tempDateRange}
+                        onSelect={(range) => {
+                          if (range?.from && range?.to) {
+                            setTempDateRange({ from: range.from, to: range.to })
+                          } else if (range?.from) {
+                            setTempDateRange({ from: range.from, to: range.from })
+                          }
+                        }}
+                        numberOfMonths={2}
+                        captionLayout="dropdown-buttons"
+                        fromYear={2020}
+                        toYear={new Date().getFullYear()}
+                        disabled={(date) => date > new Date() || date < new Date("2020-01-01")}
+                        className="rounded-lg border shadow-sm"
+                      />
+
+                      {/* Action buttons */}
+                      <div className="flex items-center pt-3 border-t mt-3">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          onClick={() => setDatePickerOpen(false)}
+                          onClick={resetDateRange}
                           className="border border-gray-300 rounded-md mr-2"
                         >
-                          Cancel
+                          Reset
                         </Button>
-                        <Button
-                          size="sm"
-                          onClick={applyDateRange}
-                          disabled={!tempDateRange.from || !tempDateRange.to}
-                          className="rounded-md bg-purple-600 text-white font-semibold"
-                        >
-                          Apply
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDatePickerOpen(false)}
+                            className="border border-gray-300 rounded-md mr-2"
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            size="sm"
+                            onClick={applyDateRange}
+                            disabled={!tempDateRange.from || !tempDateRange.to}
+                            className="rounded-md bg-purple-600 text-white font-semibold"
+                          >
+                            Apply
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
+                  </PopoverContent>
+                </Popover>
 
-              {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
+                {hasActiveFilters && <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">Clear</Button>}
+              </div>
             </div>
-            </div>
-              
+
           </div>
         </div>
 
@@ -985,21 +983,21 @@ export default function ContactPage() {
         <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />
 
         <div className="flex justify-center gap-4">
-          <Button 
-            variant="ghost" 
-            onClick={handlePreviousPage} 
+          <Button
+            variant="ghost"
+            onClick={handlePreviousPage}
             disabled={currentPage === 1}
           >
             <ChevronLeft className="h-4 w-4" />Previous
           </Button>
-          
+
           <span className="text-sm font-medium py-2">
             Page {currentPage} of {metaData?.total_pages || 1}
           </span>
-          
-          <Button 
-            variant="ghost" 
-            onClick={handleNextPage} 
+
+          <Button
+            variant="ghost"
+            onClick={handleNextPage}
             disabled={!metaData?.has_next}
           >
             Next<ChevronRight className="h-4 w-4" />
