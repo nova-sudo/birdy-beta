@@ -149,21 +149,27 @@ export function AppSidebar() {
             <SidebarGroupLabel>Application</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-y-5 pt-4">
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <SidebarMenuButton asChild>
-                          <a href={item.url} className="font-semibold text-[14px] text-purple-900">
-                            <item.icon />
-                            <span>{item.title}</span>
-                          </a>
-                        </SidebarMenuButton>
-                      </TooltipTrigger>
-                      <TooltipContent>{item.title}</TooltipContent>
-                    </Tooltip>
-                  </SidebarMenuItem>
-                ))}
+                {items.map((item) => {
+                  const isActive = window.location.pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <SidebarMenuButton asChild>
+                            <a
+                              href={item.url}
+                              className={`font-semibold text-[14px] ${isActive ? 'text-purple-600' : 'text-black'}`}
+                            >
+                              <item.icon />
+                              <span>{item.title}</span>
+                            </a>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent>{item.title}</TooltipContent>
+                      </Tooltip>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>

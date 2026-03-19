@@ -64,7 +64,6 @@ const StyledTable = ({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState([]);
-
   const isClientMode = customMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
@@ -137,9 +136,9 @@ const StyledTable = ({
   const getBestPerformingAd = (group) => {
     const ads = group?.facebook?.ads || [];
     if (ads.length === 0) return null;
-    return ads.reduce((best, ad) => 
+    return ads.reduce((best, ad) =>
       (ad.ctr > (best?.ctr || 0)) ? ad : best
-    , null);
+      , null);
   };
 
   const getTotalTagCount = (group) => {
@@ -305,55 +304,55 @@ const StyledTable = ({
   }, [filteredData, sortConfig]);
 
   /* ---------- PAGINATION ---------- */
-const totalPages = Math.ceil(sortedData.length / pageSize);
-const paginatedData = useMemo(() => {
-  const startIndex = (currentPage - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  return sortedData.slice(startIndex, endIndex);
-}, [sortedData, currentPage, pageSize]);
+  const totalPages = Math.ceil(sortedData.length / pageSize);
+  const paginatedData = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return sortedData.slice(startIndex, endIndex);
+  }, [sortedData, currentPage, pageSize]);
 
-// Reset to page 1 when data changes
-useEffect(() => {
-  setCurrentPage(1);
-}, [sortedData.length, pageSize]);
+  // Reset to page 1 when data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [sortedData.length, pageSize]);
 
-const getPageNumbers = () => {
-  const pages = [];
-  const showEllipsisStart = currentPage > 3;
-  const showEllipsisEnd = currentPage < totalPages - 2;
+  const getPageNumbers = () => {
+    const pages = [];
+    const showEllipsisStart = currentPage > 3;
+    const showEllipsisEnd = currentPage < totalPages - 2;
 
-  pages.push(1);
+    pages.push(1);
 
-  if (showEllipsisStart) {
-    pages.push('ellipsis-start');
-  } else {
-    for (let i = 2; i < currentPage; i++) {
-      pages.push(i);
+    if (showEllipsisStart) {
+      pages.push('ellipsis-start');
+    } else {
+      for (let i = 2; i < currentPage; i++) {
+        pages.push(i);
+      }
     }
-  }
 
-  for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
-    if (!pages.includes(i)) {
-      pages.push(i);
-    }
-  }
-
-  if (showEllipsisEnd) {
-    pages.push('ellipsis-end');
-  } else {
-    for (let i = currentPage + 1; i < totalPages; i++) {
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
       if (!pages.includes(i)) {
         pages.push(i);
       }
     }
-  }
 
-  if (totalPages > 1 && !pages.includes(totalPages)) {
-    pages.push(totalPages);
-  }
+    if (showEllipsisEnd) {
+      pages.push('ellipsis-end');
+    } else {
+      for (let i = currentPage + 1; i < totalPages; i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+    }
 
-  return pages;
-};
+    if (totalPages > 1 && !pages.includes(totalPages)) {
+      pages.push(totalPages);
+    }
+
+    return pages;
+  };
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
@@ -398,17 +397,17 @@ const getPageNumbers = () => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
     return `${getSymbolFromCurrency(userCurrency)}${num.toFixed(2)}`;
   };
-  
+
   const formatPercentage = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
     return `${num.toFixed(2)}%`;
   };
-  
+
   const formatNumber = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
     return num.toLocaleString();
   };
-  
+
   const formatDate = (v) => {
     if (!v) return "—";
     try {
@@ -453,7 +452,7 @@ const getPageNumbers = () => {
     if (typeof value === "number") {
       return formatNumber(value);
     }
-    
+
     // String values
     return String(value);
   };
@@ -469,9 +468,9 @@ const getPageNumbers = () => {
             left: 0;
             background: white;
             z-index: 50;
-            min-width: 250px;
-            font-weight: 600;
-            max-width: 250px;
+            min-width: 200px;
+            font-weight: 565;
+            max-width: 245px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -479,16 +478,16 @@ const getPageNumbers = () => {
             left: 0;
             background: #f4f3f9;
             z-index: 50;
-            min-width: 250px;
-            font-weight: 600;
-            max-width: 250px;
+            min-width: 200px;
+            font-weight: 565;
+            max-width: 245px;
           }
           .fixed-header {
             position: sticky;
             left: 0;
             z-index: 50;
             background: white;
-            min-width: 150px;
+            min-width: 200px;
             width: 5%;
           }
         }
@@ -499,7 +498,7 @@ const getPageNumbers = () => {
             text-align: left;
             background: white;
             min-width: 200px;
-            font-weight: 600;
+            font-weight: 575;
           }
           .fixed-column-odd {
             background: #f4f3f9;
@@ -520,7 +519,7 @@ const getPageNumbers = () => {
       <div className="table-container border rounded-md">
         <table className="text-sm">
           <thead className="top-0 z-40">
-            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
+            <tr className="transition-colors  data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -528,21 +527,19 @@ const getPageNumbers = () => {
                   onDragStart={(e) => handleDragStart(e, col.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col.id)}
-                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
-                    col.id === "name"
+                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${col.id === "name" || col.id === "full_name" || col.id === "contactName"
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
-                  }`}
+                    }`}
                 >
-                  <div className="flex items-center justify-between border border-2 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                  <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
-                        className={`truncate align-middle text-left items-center gap-1 ${
-                          col.sortable
+                        className={`truncate align-middle text-left items-center gap-1 ${col.sortable
                             ? "hover:text-foreground cursor-pointer"
                             : "cursor-default"
-                        }`}
+                          }`}
                       >
                         {typeof col.header === "function" ? col.header() : col.header}
                         {col.sortable && sortConfig.key === col.id && (
@@ -583,73 +580,70 @@ const getPageNumbers = () => {
               </tr>
             ) : (
               paginatedData.map((row, idx) => {
-              const globalIdx = (currentPage - 1) * pageSize + idx;
-              return (
-                <tr
-                  key={row.id || idx}
-                  onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
-                  className={`border-b transition-colors ${
-                    (row._isCreating || row._isPending)
-                      ? "bg-muted/30 cursor-wait opacity-60" 
-                      : "hover:bg-muted/50 cursor-pointer"
-                  } 
+                const globalIdx = (currentPage - 1) * pageSize + idx;
+                return (
+                  <tr
+                    key={row.id || idx}
+                    onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
+                    className={`border-b transition-colors ${(row._isCreating || row._isPending)
+                        ? "bg-muted/30 cursor-wait opacity-60 w-fit"
+                        : "hover:bg-muted/50 cursor-pointer w-fit"
+                      } 
                   ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
-                >
-                  {visibleColumns.map((col, colIdx) => (
-                    <td
-                      key={`${row.id || idx}-${col.id}`}
-                      className={`text-foreground truncate ${
-                        colIdx === 0
-                          ? globalIdx % 2 === 0
-                            ? "fixed-column-odd"
-                            : "fixed-column-even"
-                          : ""
-                      }`}
-                    >
-                      <div
-                        className={
-                          colIdx === 0
-                            ? "py-2 px-4 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
-                            : "min-w-0"
-                        }
+                  >
+                    {visibleColumns.map((col, colIdx) => (
+                      <td
+                        key={`${row.id || idx}-${col.id}`}
+                        className={`text-foreground truncate  ${colIdx === 0
+                            ? globalIdx % 2 === 0
+                              ? "fixed-column-odd h-11"
+                              : "fixed-column-even h-11"
+                            : ""
+                          }`}
                       >
-                        {/* Add spinner for first column when creating OR pending */}
-                        {colIdx === 0 && (row._isCreating || row._isPending) && (
-                          <div className="w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                        )}
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                className={`truncate min-w-0 ${
-                                  row._isCreating || row._isPending ? "text-muted-foreground" : ""
-                                }`}
-                              >
-                                {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                                  <button
-                                    onClick={() => onFirstColumnClick?.(row)}
-                                    className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
-                                  >
-                                    {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                                  </button>
-                                ) : (
-                                  col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                                )}
-                              </span>
-                            </TooltipTrigger>
-                            {colIdx === 0 && !col.cell && (
-                              <TooltipContent>
-                                <p>{getCellValue(row, col.id)}</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
-                      </div>
-                    </td>
-                  ))}
-                </tr>
-                ); 
-              })    
+                        <div
+                          className={
+                            colIdx === 0
+                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
+                              : "min-w-0"
+                          }
+                        >
+                          {/* Add spinner for first column when creating OR pending */}
+                          {colIdx === 0 && (row._isCreating || row._isPending) && (
+                            <div className="w-4 h-4 border-1 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                          )}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className={`truncate min-w-0 ${row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                    }`}
+                                >
+                                  {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                    <button
+                                      onClick={() => onFirstColumnClick?.(row)}
+                                      className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                    >
+                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                    </button>
+                                  ) : (
+                                    col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                  )}
+                                </span>
+                              </TooltipTrigger>
+                              {colIdx === 0 && !col.cell && (
+                                <TooltipContent>
+                                  <p>{getCellValue(row, col.id)}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -661,8 +655,8 @@ const getPageNumbers = () => {
           <Pagination>
             <PaginationContent>
               <PaginationItem>
-                <PaginationPrevious 
-                  href="#" 
+                <PaginationPrevious
+                  href="#"
                   onClick={(e) => {
                     e.preventDefault();
                     if (currentPage > 1) setCurrentPage(prev => prev - 1);
@@ -670,7 +664,7 @@ const getPageNumbers = () => {
                   className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
                 />
               </PaginationItem>
-              
+
               {getPageNumbers().map((page, idx) => (
                 <PaginationItem key={`${page}-${idx}`}>
                   {typeof page === 'string' ? (
@@ -690,9 +684,9 @@ const getPageNumbers = () => {
                   )}
                 </PaginationItem>
               ))}
-              
+
               <PaginationItem>
-                <PaginationNext 
+                <PaginationNext
                   href="#"
                   onClick={(e) => {
                     e.preventDefault();

@@ -63,417 +63,293 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format, subDays } from "date-fns"
 import getSymbolFromCurrency from "currency-symbol-map";
+import StyledTable from "@/components/ui/table-container"
 
 const userCurrency = localStorage.getItem("user_default_currency");
-const contactColumns = [
-  { id: "contactName", label: "Name", defaultVisible: true, sortable: true, width: "min-w-[200px]" },
-  { id: "groupName", label: "Group", defaultVisible: true, sortable: true, width: "min-w-[200px]", icons: ghl },
-  { id: "email", label: "Email", defaultVisible: true, sortable: true, width: "min-w-[250px]", icons: ghl },
-  { id: "phone", label: "Phone", defaultVisible: true, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "dateAdded", label: "Date Added", defaultVisible: true, sortable: true, width: "min-w-[130px]", icons: ghl },
-  { id: "tags", label: "Tags", defaultVisible: true, width: "min-w-[150px]", icons: ghl },
-  { id: "type", label: "Type", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "opportunities", label: "Opportunities", defaultVisible: true, sortable: false, width: "min-w-[150px]", icons: ghl },
-  { id: "firstName", label: "First Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "lastName", label: "Last Name", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "companyName", label: "Company", defaultVisible: false, sortable: true, width: "min-w-[180px]", icons: ghl },
-  { id: "source", label: "Source", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "city", label: "City", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl },
-  { id: "state", label: "State", defaultVisible: false, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "postalCode", label: "Postal Code", defaultVisible: false, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "country", label: "Country", defaultVisible: true, sortable: true, width: "min-w-[120px]", icons: ghl },
-  { id: "website", label: "Website", defaultVisible: false, sortable: true, width: "min-w-[200px]", icons: ghl },
-  { id: "address1", label: "Address", defaultVisible: false, sortable: true, width: "min-w-[200px]", icons: ghl },
-  { id: "dateOfBirth", label: "Date of Birth", defaultVisible: false, sortable: true, width: "min-w-[130px]", icons: ghl },
-  { id: "assignedTo", label: "Assigned To", defaultVisible: false, sortable: true, width: "min-w-[150px]", icons: ghl }
+const buildContactColumns = () => [
+  {
+    id: "contactName",
+    header: "Name",
+    label: "Name",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (value) =>
+      !value || value === "Unknown" ? (
+        <span className="text-muted-foreground text-sm px-2">-</span>
+      ) : (
+        <span className="text-sm text-foreground text-left block">{value}</span>
+      ),
+  },
+  {
+    id: "groupName",
+    header: "Client Group",
+    label: "Group",
+    defaultVisible: true,
+    sortable: true,
+    icons: lab,
+    cell: (value) =>
+      !value ? (
+        <span className="text-muted-foreground text-sm">-</span>
+      ) : (
+        <div className="truncate px-2" title={value}>
+          <span className="text-sm font-medium text-foreground">{value}</span>
+        </div>
+      ),
+  },
+  {
+    id: "email",
+    header: "Email",
+    label: "Email",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (value) =>
+      !value || value.startsWith("no_email_") ? (
+        <span className="text-muted-foreground font-bold text-sm">-</span>
+      ) : (
+        <a
+          href={`mailto:${value}`}
+          className="text-sm text-foreground hover:text-primary font-bold hover:underline transition-colors"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {value}
+        </a>
+      ),
+  },
+  {
+    id: "phone",
+    header: "Phone",
+    label: "Phone",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (value) =>
+      !value ? (
+        <span className="text-muted-foreground font-bold text-sm">-</span>
+      ) : (
+        <a
+          href={`tel:${value}`}
+          className="text-sm text-foreground hover:text-primary hover:underline transition-colors font-mono"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {value}
+        </a>
+      ),
+  },
+  {
+    id: "dateAdded",
+    header: "Date Added",
+    label: "Date Added",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (value) =>
+      !value ? (
+        <span className="text-muted-foreground text-sm">-</span>
+      ) : (
+        <span className="text-sm text-foreground">
+          {new Date(value).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+          })}
+        </span>
+      ),
+  },
+  {
+    id: "tags",
+    header: "Tags",
+    label: "Tags",
+    defaultVisible: true,
+    icons: ghl,
+    cell: (value, row) => {
+      if (!value || value.length === 0)
+        return <span className="text-muted-foreground text-sm">-</span>
+      const tags = value
+      const mainTag = tags[0]
+      const hasMoreTags = tags.length > 1
+      const score = row?.score ? `+${row.score}` : null
+      return (
+        <div className="flex items-center justify-center gap-2 max-w-xs">
+          <Badge variant="secondary" className="flex items-center gap-1 text-xs">
+            <TiTag className="w-3 h-3" />
+            {mainTag}
+          </Badge>
+          {score && (
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {score}
+            </span>
+          )}
+          {hasMoreTags && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">+{tags.length - 1}</Badge>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+                {tags.slice(1).map((tag, tagIndex) => (
+                  <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
+                    <TiTag className="w-3 h-3" />{tag}
+                  </div>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    id: "type",
+    header: "Type",
+    label: "Type",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (value, row) => {
+      const type = value || row?.contactType
+      if (!type) return <span className="text-muted-foreground text-sm">-</span>
+      return <Badge variant="secondary" className="capitalize">{type}</Badge>
+    },
+  },
+  {
+    id: "opportunities",
+    header: "Opportunities",
+    label: "Opportunities",
+    defaultVisible: true,
+    sortable: false,
+    icons: ghl,
+    cell: (value) => {
+      if (!value || value.length === 0)
+        return <span className="text-muted-foreground text-sm">No opportunities</span>
+      const opportunities = value
+      const mainOpp = opportunities[0]
+      const hasMoreOpps = opportunities.length > 1
+      const oppStatus = mainOpp.status || "unknown"
+      const oppValue = mainOpp.monetaryValue || 0
+      const statusColors = {
+        open: "bg-[#DBEAFE] text-[#1D4ED8]",
+        won: "bg-[#DCFCE7] text-[#15803D]",
+        lost: "bg-[#FEE2E2] text-[#B91C1C]",
+        abandoned: "bg-[#FEF9C3] text-[#A16207]",
+      }
+      return (
+        <div className="flex items-center gap-2">
+          <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
+            {oppStatus}
+          </Badge>
+          {oppValue > 0 && (
+            <span className="text-sm font-semibold text-green-600">
+              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
+            </span>
+          )}
+          {hasMoreOpps && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+                {opportunities.slice(1).map((opp, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
+                    <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
+                      {opp.status}
+                    </Badge>
+                    {opp.monetaryValue > 0 && (
+                      <span className="text-xs text-green-600">${opp.monetaryValue}</span>
+                    )}
+                  </div>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )
+    },
+  },
+  { id: "firstName", header: "First Name", label: "First Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "lastName", header: "Last Name", label: "Last Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  {
+    id: "companyName",
+    header: "Company",
+    label: "Company",
+    defaultVisible: false,
+    sortable: true,
+    icons: ghl,
+    cell: (v) => !v
+      ? <span className="text-muted-foreground text-sm">-</span>
+      : <span className="text-sm font-medium text-foreground">{v}</span>,
+  },
+  {
+    id: "source",
+    header: "Source",
+    label: "Source",
+    defaultVisible: false,
+    sortable: true,
+    icons: ghl,
+    cell: (v) => !v
+      ? <span className="text-muted-foreground text-sm">-</span>
+      : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
+  },
+  { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "postalCode", header: "Postal Code", label: "Postal Code", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  {
+    id: "country",
+    header: "Country",
+    label: "Country",
+    defaultVisible: true,
+    sortable: true,
+    icons: ghl,
+    cell: (v) => !v
+      ? <span className="text-muted-foreground text-sm">-</span>
+      : <div className="truncate px-2" title={v}><span className="text-sm font-medium text-foreground">{v}</span></div>,
+  },
+  {
+    id: "website",
+    header: "Website",
+    label: "Website",
+    defaultVisible: false,
+    sortable: true,
+    icons: ghl,
+    cell: (v) => {
+      if (!v) return <span className="text-muted-foreground text-sm">-</span>
+      const url = v.startsWith("http") ? v : `https://${v}`
+      return (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-foreground hover:text-primary hover:underline transition-colors max-w-xs truncate inline-block"
+          title={v}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {v}
+        </a>
+      )
+    },
+  },
+  {
+    id: "address1",
+    header: "Address",
+    label: "Address",
+    defaultVisible: false,
+    sortable: true,
+    icons: ghl,
+    cell: (v, row) => {
+      const addr = v || row?.address
+      if (!addr) return <span className="text-muted-foreground text-sm">-</span>
+      return (
+        <span className="text-sm text-foreground max-w-xs truncate block" title={addr}>
+          {addr}
+        </span>
+      )
+    },
+  },
+  { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
 ]
 
-const ContactsTable = ({ contacts, visibleColumns, sortColumn, sortDirection, onSort }) => {
-  const handleSort = (columnId) => {
-    const newDirection = sortColumn === columnId && sortDirection === "asc" ? "desc" : "asc"
-    onSort(columnId, newDirection)
-  }
-
-  const renderCellContent = (contact, col) => {
-    switch (col.id) {
-      case "opportunities":
-        if (!contact.opportunities || contact.opportunities.length === 0) {
-          return <span className="text-muted-foreground text-sm">No opportunities</span>
-        }
-
-        const opportunities = contact.opportunities
-        const mainOpp = opportunities[0]
-        const hasMoreOpps = opportunities.length > 1
-
-        // Extract opportunity details
-        const oppStatus = mainOpp.status || "unknown"
-        const oppValue = mainOpp.monetaryValue || 0
-        const oppStage = mainOpp.pipelineStageId || mainOpp.stage || "unknown"
-
-        const statusColors = {
-          open: "bg-[#DBEAFE] text-[#1D4ED8]",
-          won: "bg-[#DCFCE7] text-[#15803D]",
-          lost: "bg-[#FEE2E2] text-[#B91C1C]",
-          abandoned: "bg-[#FEF9C3] text-[#A16207]"
-        }
-
-        return (
-          <div className="flex items-center gap-2">
-            <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
-              {oppStatus}
-            </Badge>
-
-            {oppValue > 0 && (
-              <span className="text-sm font-semibold text-green-600 flex items-center gap-1">
-                {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
-              </span>
-            )}
-
-            {hasMoreOpps && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="text-xs">
-                    +{opportunities.length - 1}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
-                  {opportunities.slice(1).map((opp, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                      <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
-                        {opp.status}
-                      </Badge>
-                      {opp.monetaryValue > 0 && (
-                        <span className="text-xs text-green-600">${opp.monetaryValue}</span>
-                      )}
-                    </div>
-                  ))}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )
-
-      // ✅ NEW: Handle company name
-      case "companyName":
-        if (!contact.companyName) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <span className="text-sm font-medium text-foreground">{contact.companyName}</span>
-        )
-
-      // ✅ NEW: Handle city, state, postalCode
-      case "city":
-      case "state":
-      case "postalCode":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <span className="text-sm text-foreground">{contact[col.id]}</span>
-        )
-
-      // ✅ UPDATE: type field (was contactType)
-      case "type":
-        const type = contact.type || contact.contactType
-        if (!type) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <Badge variant="secondary" className="capitalize">
-            {type}
-          </Badge>
-        )
-
-      case "tags":
-        if (!contact[col.id] || contact[col.id].length === 0) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-
-        const tags = contact[col.id];
-        const mainTag = tags[0];
-        const hasMoreTags = tags.length > 1;
-        const score = contact.score ? `+${contact.score}` : null;
-
-        return (
-          <div className="flex items-center justify-center gap-2 max-w-xs">
-            <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-              <TiTag className="w-3 h-3" />
-              {mainTag}
-            </Badge>
-
-            {score && (
-              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                {score}
-              </span>
-            )}
-
-            {hasMoreTags && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="text-xs">
-                    +{tags.length - 1}
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md gap-1 p-2 max-h-48 overflow-y-auto">
-                  {tags.slice(1).map((tag, tagIndex) => (
-                    <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
-                      <TiTag className="w-3 h-3" />
-                      {tag}
-                    </div>
-                  ))}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        )
-
-      case "dateAdded":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <span className="text-sm text-foreground">
-            {new Date(contact[col.id]).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "short",
-              day: "numeric",
-            })}
-          </span>
-        )
-
-      case "address1":
-        const address = contact.address1 || contact.address
-        if (!address) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
-        }
-        return (
-          <span className="text-sm text-foreground max-w-xs truncate block" title={address}>
-            {address}
-          </span>
-        )
-
-      case "email":
-        if (!contact[col.id] || contact[col.id].startsWith("no_email_")) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
-        }
-        return (
-          <a
-            href={`mailto:${contact[col.id]}`}
-            className="text-sm text-foreground hover:text-primary font-bold hover:underline transition-colors font-medium"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {contact[col.id]}
-          </a>
-        )
-
-      case "phone":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground font-bold text-sm">-</span>
-        }
-        return (
-          <a
-            href={`tel:${contact[col.id]}`}
-            className="text-sm text-foreground hover:text-primary hover:underline transition-colors font-mono"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {contact[col.id]}
-          </a>
-        )
-
-      case "contactName":
-        if (!contact[col.id] || contact[col.id] === "Unknown") {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
-        }
-        return (
-          <span className="text-sm text-foreground text-left block">
-            {contact[col.id]}
-          </span>
-        )
-
-      case "website":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
-        }
-        const websiteUrl = contact[col.id].startsWith("http") ? contact[col.id] : `https://${contact[col.id]}`
-        return (
-          <a
-            href={websiteUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-foreground hover:text-primary hover:underline transition-colors max-w-xs truncate inline-block"
-            title={contact[col.id]}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {contact[col.id]}
-          </a>
-        )
-
-      case "source":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground justify-center text-gray-600 px-20 text-sm">-</span>
-        }
-        return (
-          <Badge variant="outline" className="capitalize">
-            {contact[col.id]
-              .split(",")
-              .map((s) => s.trim())
-              .join(", ")}
-          </Badge>
-        )
-
-      case "country":
-      case "campaignName":
-      case "adName":
-      case "platform":
-      case "groupName":
-        if (!contact[col.id]) {
-          return <span className="text-muted-foreground text-sm">-</span>
-        }
-        return (
-          <div className="truncate px-2" title={contact[col.id]}>
-            <span className="text-sm font-medium text-foreground">
-              {contact[col.id]}
-            </span>
-          </div>
-        )
-      default:
-        return <span>{contact[col.id] || "-"}</span>
-    }
-  }
-
-  const visibleColumnsData = contactColumns.filter((col) => visibleColumns.includes(col.id))
-
-  if (contacts.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center w-[calc(100dvw-100px)] rounded-lg border-2 border-dashed border-border bg-muted/20">
-        <div className="rounded-full bg-muted p-3 mb-4">
-          <Users className="h-6 w-6 text-muted-foreground" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
-        <p className="text-sm text-muted-foreground text-center max-w-sm">
-          Try adjusting your filters or search criteria, or verify your integration settings.
-        </p>
-      </div>
-    )
-  }
-
-  return (
-    <div className="border bg-card overflow-hidden rounded-md w-full">
-      <style jsx>{`
-        @media (min-width: 768px) {
-          .fixed-column-even {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            background: white;
-            z-index: 50;
-            min-width: 200px;
-            font-weight: 600;
-            max-width: 250px;
-          }
-          .fixed-column-odd {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            background: #f4f3f9;
-            z-index: 50;
-            min-width: 200px;
-            font-weight: 600;
-            max-width: 250px;
-          }
-          .fixed-header {
-            position: sticky;
-            left: 0;
-            z-index: 50;
-            background: white;
-            min-width: 200px;
-          }
-        }
-
-        @media (max-width: 767px) {
-          .fixed-column-even,
-          .fixed-column-odd {
-            text-align: left;
-            position: sticky;
-            left: 0;
-            z-index: 50;
-            background: white;
-            min-width: 200px;
-            font-weight: 600;
-          }
-          .fixed-column-odd {
-            background: #f4f3f9;
-          }
-          .fixed-header {
-            position: sticky;
-            left: 0;
-            z-index: 50;
-            background: white;
-            min-width: 200px;
-            width: auto;
-          }
-        }
-
-        .table-container {
-          position: relative;
-          overflow-x: auto;
-          overflow-y: visible;
-        }
-      `}</style>
-      <div className="table-container border rounded-md">
-        <table className="text-sm">
-          <thead className="top-0 z-40">
-            <tr className="transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted h-12 bg-white">
-              {visibleColumnsData.map((col) => (
-                <th
-                  key={col.id}
-                  className={`h-12 font-semibold text-gray-900/78 select-none ${col.id === "contactName"
-                    ? "fixed-header"
-                    : "min-w-[135px] whitespace-nowrap"
-                    }`}
-                  onClick={() => col.sortable && handleSort(col.id)}
-                >
-                  <div className={`flex items-center justify-between gap-2 px-2 h-full ${col.id !== "contactName" ? "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : "border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]"}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="px-1">{col.label}</span>
-                      {col.sortable && sortColumn === col.id && (
-                        sortDirection === "asc" ? <ChevronUp size={14} /> : <ChevronDown size={14} />
-                      )}
-                    </div>
-                    {col.icons && <img src={col.icons.src} alt="" className="w-4 h-4" />}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="text-center">
-            {contacts.map((contact, index) => (
-              <tr
-                key={contact.contactId || index}
-                className={`hover:bg-muted/50 cursor-pointer transition-colors h-8 ${index % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
-              >
-                {visibleColumnsData.map((col) => (
-                  <td
-                    key={col.id}
-                    className={`text-foreground truncate ${col.id === "contactName"
-                      ? index % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"
-                      : ""
-                      }`}
-                  >
-                    <div className={col.id === "contactName" ? "py-3 px-2 border border-2 border-l-0 border-t-0 border-b-0 border-[#e4e4e7]" : ""}>
-                      {renderCellContent(contact, col)}
-                    </div>
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
+const contactColumns = buildContactColumns()
 
 const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const totalContacts = contacts.length
@@ -500,16 +376,17 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {stats.map((stat, index) => (
-        <Card key={index}>
+        <Card key={index} className="border shadow-sm rounded-lg">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-            <div className="p-2 bg-purple-100 rounded-md">
-              <stat.icon className="h-5 w-5 text-purple-500" />
+            <CardTitle className="text-sm font-normal text-[#71658B] text-muted-foreground">{stat.title}</CardTitle>
+            <div className="w-8 h-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+              <stat.icon className="h-4 w-5 text-purple-600" />
             </div>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stat.value}</div>
-            {stat.subtitle && <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>}
+            {stat.subtitle && <p className="text-xs text-muted-foreground mt-0">{stat.subtitle}</p>}
+            <p className="text-xs text-[#71658B] text-muted-foreground">Across all Leads</p>
           </CardContent>
         </Card>
       ))}
@@ -553,6 +430,13 @@ export default function ContactPage() {
       acc[col.id] = col.defaultVisible
       return acc
     }, {})
+  )
+  const columnVisibilityMap = useMemo(
+    () => contactColumns.reduce(
+      (acc, col) => ({ ...acc, [col.id]: visibleColumns.includes(col.id) }),
+      {}
+    ),
+    [visibleColumns]
   )
 
   // Date range state - default to last 7 days
@@ -839,8 +723,8 @@ export default function ContactPage() {
   if (!viewsLoaded) return <ViewLoading />
 
   return (
-    <div className="mx-auto w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
-      <div className="flex flex-col gap-8">
+    <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
+      <div className="flex flex-col gap-6">
         {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -850,14 +734,14 @@ export default function ContactPage() {
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
             py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Input placeholder="Search contacts..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                className="text-gray-900 bg-white h-10 max-w-[200px] font-bold text-xs md:text-base" />
+                className="text-gray-900 bg-white h-10 max-w-[200px]  text-sm font-medium md:text-sm" />
               {searchQuery && <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}><X className="h-4 w-4" /></Button>}
 
-              <div className="flex gap-1 overflow-x-auto">
+              <div className="flex gap-1 md:overflow-x-visible">
                 <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                  <SelectTrigger className="h-10 bg-white"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
+                  <SelectTrigger className="h-10 bg-white font-semibold"><Building className="h-4 w-4 hidden lg:inline" /><SelectValue placeholder="All Groups" /></SelectTrigger>
                   <SelectContent className="bg-white"><SelectItem value="all">All Groups</SelectItem>{clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
                 </Select>
 
@@ -896,7 +780,7 @@ export default function ContactPage() {
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
-                      className="w-auto justify-between font-semibold bg-white gap-2 px-3"
+                      className="w-auto h-10 justify-between font-semibold bg-white gap-2 px-3"
                     >
                       <CalendarIcon className="h-4 w-4" />
                       <span className="hidden md:inline">
@@ -968,20 +852,27 @@ export default function ContactPage() {
           </div>
         </div>
 
-        {/* Date Range Indicator */}
-        {dateRange.from && dateRange.to && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CalendarIcon className="h-4 w-4" />
-            <span>
-              Showing data from {format(dateRange.from, "MMM dd, yyyy")} to {format(dateRange.to, "MMM dd, yyyy")}
-              ({Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days)
-            </span>
-          </div>
-        )}
 
         <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
-        <ContactsTable contacts={filteredAndSortedContacts} visibleColumns={visibleColumns} sortColumn={sortColumn} sortDirection={sortDirection} onSort={(col, dir) => { setSortColumn(col); setSortDirection(dir) }} />
-
+        {filteredAndSortedContacts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20 py-16">
+            <div className="rounded-full bg-muted p-3 mb-4">
+              <Users className="h-6 w-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              Try adjusting your filters or search criteria, or verify your integration settings.
+            </p>
+          </div>
+        ) : (
+          <StyledTable
+            columns={contactColumns}
+            data={filteredAndSortedContacts}
+            columnVisibility={columnVisibilityMap}
+            searchQuery=""
+            clickableFirstColumn={false}
+          />
+        )}
         <div className="flex justify-center gap-4">
           <Button
             variant="ghost"

@@ -338,8 +338,8 @@ function SettingsPageContent() {
   }
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)] mx-auto">
-      <div className="flex gap-4 px-2 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between mb-6">
+    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+      <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between mb-6">
         <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Settings</h1>
       </div>
 
