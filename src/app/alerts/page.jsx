@@ -98,16 +98,16 @@ const SNOOZE_OPTIONS = [
 
 function statusBadge(status, snoozedUntil) {
   if (status === "active")
-    return <Badge className="bg-[#713cdd]/10 text-[#713cdd] border-0 font-medium">Active</Badge>
+    return <Badge className="bg-[#713cdd] text-white border-0 rounded-full xt-xs font-semibold hover:bg-primary/80 px-2.5 py-0.5">Active</Badge>
   if (status === "triggered")
-    return <Badge className="bg-red-100 text-red-700 border-0 font-medium">Triggered</Badge>
+    return <Badge className="bg-[#EF4343] text-white border-0 rounded-full text-xs font-semibold px-2.5 py-0.5">Triggered</Badge>
   if (status === "paused") {
     const snoozeLabel = snoozedUntil
       ? `Until ${formatRelative(new Date(snoozedUntil))}`
       : "Paused"
     return (
-      <div className="flex flex-col gap-0.5">
-        <Badge className="bg-orange-100 text-orange-700 border-0 font-medium w-fit">Snoozed</Badge>
+      <div>te
+        <Badge className="bg-[#FFEDD5] text-[#9A3412] border-0 rounded-full text-xs font-semibold px-2.5 py-0.5">Snoozed</Badge>
         {snoozedUntil && (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />{snoozeLabel}
@@ -189,7 +189,7 @@ function ProgressToTrigger({ alert }) {
     <div className="space-y-1 min-w-[140px] max-w-[180px]">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium tabular-nums">{fmt(current)}</span>
-        <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span>
+        {/* <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span> */}
       </div>
       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div
@@ -202,6 +202,7 @@ function ProgressToTrigger({ alert }) {
           ? <span className="text-red-500 font-medium">⚡ Triggered</span>
           : `${pct.toFixed(0)}% to trigger`
         }
+        <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span> 
       </div>
     </div>
   )
@@ -420,7 +421,7 @@ export default function AlertsPage() {
     <tr className="border-b transition-colors hover:bg-muted/50 h-12 bg-white">
       {/* Name */}
       <td className="py-3 px-4 align-middle min-w-[180px]">
-        <div className="font-medium text-sm">{alert.name}</div>
+        <div className="font-semibold text-md">{alert.name}</div>
         {alert.description && (
           <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">{alert.description}</div>
         )}
@@ -542,8 +543,8 @@ export default function AlertsPage() {
       <table className="w-full caption-bottom text-sm">
         <thead className="bg-white sticky top-0 z-20">
           <tr className="border-b h-11">
-            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-medium text-muted-foreground bg-white">
+            {["Alert Name","Metric","Condition","Progress","Status","Targets","Last Updated","Actions"].map(h => (
+              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">
                 {h}
               </th>
             ))}
@@ -564,14 +565,14 @@ export default function AlertsPage() {
   // ── Page ──────────────────────────────────────────────────────
 
   return (
-    <main className="flex-1 overflow-y-auto p-6 md:p-8">
-      <div className="container mx-auto max-w-7xl">
+    <main className="min-h-screen bg-white w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
+      <div className=" mx-auto">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Alerts</h1>
-            <p className="text-muted-foreground text-sm mt-0.5">
+            <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Alerts</h1>
+            <p className="text-sm text-[#71658B] mt-1 text-center md:text-left">
               Create and manage alerts for your metrics
             </p>
           </div>
@@ -582,9 +583,9 @@ export default function AlertsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="active" className="w-full">
-          <TabsList className="inline-flex w-full h-auto items-center justify-between rounded-lg bg-muted/60 p-1 text-muted-foreground overflow-x-auto border border-border/50 shadow-sm mb-4">
-            <TabsTrigger value="active" className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-[#713cdd]">
+        <Tabs defaultValue="active" className="w-full gap-4">
+          <TabsList className="inline-flex h-13 w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0">
+            <TabsTrigger value="active" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
               Active Alerts
               {alerts.counts?.active > 0 && (
                 <span className="ml-2 rounded-full bg-[#713cdd]/10 px-2 py-0.5 text-xs font-medium text-[#713cdd]">
@@ -592,7 +593,7 @@ export default function AlertsPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="triggered" className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-[#713cdd]">
+            <TabsTrigger value="triggered" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
               Triggered
               {alerts.counts?.triggered > 0 && (
                 <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
@@ -600,7 +601,7 @@ export default function AlertsPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="paused" className="flex-1 rounded-md px-4 py-2.5 text-sm font-medium data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-[#713cdd]">
+            <TabsTrigger value="paused" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700">
               Snoozed / Paused
               {alerts.counts?.paused > 0 && (
                 <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
