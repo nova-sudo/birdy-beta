@@ -572,12 +572,12 @@ export default function ClientsPage() {
                   placeholder="Search clients..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-muted-foreground bg-white h-10 text-thin md:text-base"
+                  className=" bg-white h-10 text-thin md:text-base"
                 />
 
                 {/* ── 🔥 DATE RANGE SELECTOR ───────────────────────────── */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="w-[130px] h-10 bg-white border-0 shadow-none text-sm text-muted-foreground">
+                  <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
