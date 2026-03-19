@@ -1,4 +1,4 @@
-import {SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
+import { SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
 import { useState } from "react"
 import { useSidebar } from "@/components/ui/sidebar"
 import {
@@ -84,7 +84,7 @@ export function AppSidebar() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    
+
     try {
       // Call logout API
       const response = await fetch('https://birdy-backend.vercel.app/api/logout', {
@@ -98,10 +98,10 @@ export function AppSidebar() {
       if (response.ok) {
         // Clear all localStorage
         localStorage.clear()
-        
+
         // Clear all sessionStorage
         sessionStorage.clear()
-        
+
         // Redirect to landing page
         window.location.href = '/'
       } else {
@@ -124,14 +124,14 @@ export function AppSidebar() {
 
   return (
     <>
-    
+
       <Sidebar
-          collapsible="icon"
-          variant="sidebar"
-          side="left"
-          open={isMobile ? openMobile : open}           // 👈 controlled state
-          onOpenChange={isMobile ? setOpenMobile : setOpen} // 👈 update state
-        >
+        collapsible="icon"
+        variant="sidebar"
+        side="left"
+        open={isMobile ? openMobile : open}           // 👈 controlled state
+        onOpenChange={isMobile ? setOpenMobile : setOpen} // 👈 update state
+      >
         <SidebarContent className="pt-2">
           <SidebarGroup>
             <SidebarMenuButton size="lg" asChild>
@@ -145,7 +145,7 @@ export function AppSidebar() {
                 </div>
               </a>
             </SidebarMenuButton>
-            
+
             <SidebarGroupLabel>Application</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-y-5 pt-4">
@@ -180,7 +180,7 @@ export function AppSidebar() {
             <SidebarMenuItem>
               <Tooltip>
                 <TooltipTrigger>
-                  <SidebarMenuButton 
+                  <SidebarMenuButton
                     onClick={() => setShowLogoutDialog(true)}
                     className="font-semibold text-[14px] text-red-600 hover:text-red-700 hover:bg-red-50"
                   >

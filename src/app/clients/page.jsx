@@ -67,6 +67,27 @@ const CACHE_DURATION = {
   hotProspectorGroups: 60 * 60 * 1000,
 }
 
+// ── Date preset helpers ──────────────────────────────────────────────────────
+
+// Maps to PRESET_ALIAS keys on the backend
+const DATE_PRESETS = [
+  { value: "maximum", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "this_week_mon_today", label: "This Week" },
+  { value: "last_7d", label: "Last 7 Days" },
+  { value: "last_14d", label: "Last 14 Days" },
+  { value: "last_30d", label: "Last 30 Days" },
+  { value: "this_month", label: "This Month" },
+  { value: "last_month", label: "Last Month" },
+  { value: "this_quarter", label: "This Quarter" },
+  { value: "last_quarter", label: "Last Quarter" },
+  { value: "this_year", label: "This Year" },
+  { value: "last_year", label: "Last Year" },
+]
+
+// ── Cache helpers ────────────────────────────────────────────────────────────
+
 const getCachedData = (key) => {
   try {
     const cached = localStorage.getItem(key)
@@ -124,18 +145,21 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [selectedDateRange, setSelectedDateRange] = useState("all")
+
+  // ── 🔥 DATE RANGE STATE ──────────────────────────────────────────────────
+  const [selectedDateRange, setSelectedDateRange] = useState("maximum")
+
   const [progress, setProgress] = useState(13)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
-  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false) // 🔥 NEW
+  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
   const [userCurrency, setUserCurrency] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("clients")
 
-  // 🔥 KEY FIX: Build dynamic columns when clientGroups changes
+  // Build dynamic columns when clientGroups changes
   const columns = useMemo(() => {
     console.log("🔄 Rebuilding columns with", clientGroups.length, "client groups");
 
@@ -167,9 +191,8 @@ export default function ClientsPage() {
 
     console.log("✅ Final columns:", deduplicated.length);
     return deduplicated;
-  }, [customMetrics, clientGroups]); // 🔥 KEY: Added clientGroups dependency
+  }, [customMetrics, clientGroups]);
 
-  // Initialize column visibility from columns
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
     columns.forEach((c) => (map[c.id] = c.visible));
@@ -185,7 +208,6 @@ export default function ClientsPage() {
     })
   }, [viewsLoaded, savedColumns])
 
-  // Update column visibility when columns change
   useEffect(() => {
     setColumnVisibility((prev) => {
       const updated = { ...prev };
@@ -203,7 +225,7 @@ export default function ClientsPage() {
     { id: 'gohighlevel', label: 'GoHighLevel' },
     { id: 'metaads', label: 'Meta Ads' },
     { id: 'hotprospector', label: 'HotProspector' },
-    { id: 'tags', label: 'Lead Tags' }, // 🔥 KEY: Tags category
+    { id: 'tags', label: 'Lead Tags' },
     { id: 'formulas', label: 'Formulas' },
   ];
 
@@ -234,17 +256,13 @@ export default function ClientsPage() {
 
   const selectAll = () => {
     const newVisibility = {};
-    filteredColumns.forEach(col => {
-      newVisibility[col.id] = true;
-    });
+    filteredColumns.forEach(col => { newVisibility[col.id] = true; });
     setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
   };
 
   const clearAll = () => {
     const newVisibility = {};
-    filteredColumns.forEach(col => {
-      newVisibility[col.id] = false;
-    });
+    filteredColumns.forEach(col => { newVisibility[col.id] = false; });
     setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
   };
 
@@ -268,21 +286,17 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    fetchClientGroups()
-  }, [])
+    fetchClientGroups(false, selectedDateRange)
+  }, [selectedDateRange])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90];
     let step = 0;
-
     const timer = setInterval(() => {
       setProgress(intervals[step]);
       step += 1;
-      if (step >= intervals.length) {
-        clearInterval(timer);
-      }
+      if (step >= intervals.length) clearInterval(timer);
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
@@ -293,12 +307,17 @@ export default function ClientsPage() {
     }
   }, [wizardOpen, wizardStep])
 
-  const fetchClientGroups = async (forceRefresh = false) => {
+  // ── 🔥 fetchClientGroups accepts an optional datePreset override ─────────
+  const fetchClientGroups = async (forceRefresh = false, datePreset = selectedDateRange) => {
     try {
       setLoading(true)
       setError("")
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+      const url = new URL("https://birdy-backend.vercel.app/api/client-groups")
+      // Always send date_preset — backend defaults to maximum anyway
+      url.searchParams.set("date_preset", datePreset || "maximum")
+
+      const response = await fetch(url.toString(), {
         credentials: "include",
       })
 
@@ -312,7 +331,7 @@ export default function ClientsPage() {
       }))
 
       setClientGroups(groups)
-      console.log("📥 Fetched client groups:", groups.length);
+      console.log("📥 Fetched client groups:", groups.length, "| preset:", datePreset);
 
       if (forceRefresh) {
         toast.success("Client groups refreshed")
@@ -344,11 +363,8 @@ export default function ClientsPage() {
       if (response.ok) {
         const data = await response.json()
         const locations = data.locations || []
-
         setGhlLocations(locations)
-
         console.log("[v0] Fetched fresh GHL locations:", locations.length)
-
         if (locations.length === 0) {
           toast.warning("No GHL locations found. Please enter a location ID or skip this step.")
         }
@@ -371,9 +387,7 @@ export default function ClientsPage() {
       if (response.ok) {
         const data = await response.json()
         const accounts = data.data?.data || []
-
         setMetaAdAccounts(accounts)
-
         console.log("[v0] Fetched fresh Meta ad accounts:", accounts.length)
       } else {
         toast.error("Failed to fetch Meta ad accounts")
@@ -387,7 +401,7 @@ export default function ClientsPage() {
   const handleRefresh = () => {
     setIsRefreshing(true)
     clearCache("clientGroups")
-    fetchClientGroups(true)
+    fetchClientGroups(true, selectedDateRange)
   }
 
   const handleCreateClientGroup = async () => {
@@ -471,8 +485,6 @@ export default function ClientsPage() {
         const data = await response.json()
 
         setClientGroups(prev => prev.filter(group => group.id !== tempId))
-
-        // 🔥 Handle CLIENT_LIMIT_REACHED error
         if (response.status === 402 && data.detail?.code === "CLIENT_LIMIT_REACHED") {
           setClientLimitDialogOpen(true)
         } else {
@@ -536,9 +548,7 @@ export default function ClientsPage() {
   const stats = calculateStats()
 
   if (loading) {
-    return (
-      <Loading progress={progress} />
-    )
+    return <Loading progress={progress} />
   }
   if (!viewsLoaded) return <ViewLoading />
 
@@ -564,6 +574,21 @@ export default function ClientsPage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="text-muted-foreground bg-white h-10 text-thin md:text-base"
                 />
+
+                {/* ── 🔥 DATE RANGE SELECTOR ───────────────────────────── */}
+                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
+                  <SelectTrigger className="w-[130px] h-10 bg-white border-0 shadow-none text-sm text-muted-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_PRESETS.map((preset) => (
+                      <SelectItem key={preset.value} value={preset.value}>
+                        {preset.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
                 <ColumnVisibilityDropdown
                   isOpen={isOpen}
                   setIsOpen={setIsOpen}
@@ -592,6 +617,8 @@ export default function ClientsPage() {
           </div>
         </div>
       </div>
+
+      {/* Add client dialog */}
       <Dialog
         open={wizardOpen}
         onOpenChange={(open) => {
@@ -894,16 +921,6 @@ export default function ClientsPage() {
                             </div>
                           )}
                         </div>
-                        {selectedHotProspectorGroup && (
-                          <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-purple-600" />
-                              <span className="text-sm font-medium text-purple-900">
-                                Selected: {selectedHotProspectorGroup.name || "Unnamed Group"}
-                              </span>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     )} */}
           </div>
@@ -961,7 +978,7 @@ export default function ClientsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 🔥 Client Limit Reached Dialog */}
+      {/* Client Limit Reached Dialog */}
       <AlertDialog open={clientLimitDialogOpen} onOpenChange={setClientLimitDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -975,10 +992,7 @@ export default function ClientsPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-purple-600 hover:bg-purple-700 text-white"
-              onClick={() => {
-                setClientLimitDialogOpen(false)
-                router.push("/billing")
-              }}
+              onClick={() => { setClientLimitDialogOpen(false); router.push("/billing") }}
             >
               Go to Billing
             </AlertDialogAction>

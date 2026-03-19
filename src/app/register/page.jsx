@@ -133,27 +133,27 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <select
-                value={formData.default_currency}
-                onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                placeholder="Select your currency"
+                  value={formData.default_currency}
+                  onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  placeholder="Select your currency"
                 >
-                    <option value="USD">USD - US Dollar</option>
-                    <option value="EUR">EUR - Euro</option>
-                    <option value="CNY">CNY - Chinese Yuan</option>
-                    <option value="JPY">JPY - Japanese Yen</option>
-                    <option value="GBP">GBP - British Pound</option>
-                    <option value="INR">INR - Indian Rupee</option>
-                    <option value="CAD">CAD - Canadian Dollar</option>
-                    <option value="AUD">AUD - Australian Dollar</option>
-                    <option value="CHF">CHF - Swiss Franc</option>
-                    <option value="MXN">MXN - Mexican Peso</option>
-                    <option value="AED">AED - UAE Dirham</option>
-                    <option value="SAR">SAR - Saudi Riyal</option>
-                </select> 
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="CNY">CNY - Chinese Yuan</option>
+                  <option value="JPY">JPY - Japanese Yen</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="INR">INR - Indian Rupee</option>
+                  <option value="CAD">CAD - Canadian Dollar</option>
+                  <option value="AUD">AUD - Australian Dollar</option>
+                  <option value="CHF">CHF - Swiss Franc</option>
+                  <option value="MXN">MXN - Mexican Peso</option>
+                  <option value="AED">AED - UAE Dirham</option>
+                  <option value="SAR">SAR - Saudi Riyal</option>
+                </select>
               </div>
 
-              
+
 
               <Button
                 type="submit"

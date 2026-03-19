@@ -60,37 +60,37 @@ const API_BASE = "https://birdy-backend.vercel.app"
 // ── Constants ────────────────────────────────────────────────
 
 const METRIC_OPTIONS = [
-  { value: "lead_count",  label: "Lead Count",   icon: Users },
-  { value: "spend",       label: "Total Spend",  icon: DollarSign },
-  { value: "ctr",         label: "CTR (%)",      icon: MousePointerClick },
-  { value: "cpc",         label: "CPC ($)",      icon: DollarSign },
-  { value: "cpm",         label: "CPM ($)",      icon: DollarSign },
-  { value: "impressions", label: "Impressions",  icon: TrendingUp },
-  { value: "clicks",      label: "Clicks",       icon: MousePointerClick },
-  { value: "roas",        label: "ROAS",         icon: TrendingUp },
-  { value: "roi",         label: "ROI",          icon: TrendingUp },
+  { value: "lead_count", label: "Lead Count", icon: Users },
+  { value: "spend", label: "Total Spend", icon: DollarSign },
+  { value: "ctr", label: "CTR (%)", icon: MousePointerClick },
+  { value: "cpc", label: "CPC ($)", icon: DollarSign },
+  { value: "cpm", label: "CPM ($)", icon: DollarSign },
+  { value: "impressions", label: "Impressions", icon: TrendingUp },
+  { value: "clicks", label: "Clicks", icon: MousePointerClick },
+  { value: "roas", label: "ROAS", icon: TrendingUp },
+  { value: "roi", label: "ROI", icon: TrendingUp },
 ]
 
 const OPERATOR_OPTIONS = [
-  { value: "gt",       label: "Greater than  (>)" },
-  { value: "lt",       label: "Less than  (<)" },
-  { value: "eq",       label: "Equals  (=)" },
+  { value: "gt", label: "Greater than  (>)" },
+  { value: "lt", label: "Less than  (<)" },
+  { value: "eq", label: "Equals  (=)" },
   { value: "pct_drop", label: "Drops by  (↓ %)" },
   { value: "pct_rise", label: "Rises by  (↑ %)" },
 ]
 
 const PERIOD_OPTIONS = [
-  { value: "day",   label: "Previous day" },
-  { value: "week",  label: "Previous week" },
+  { value: "day", label: "Previous day" },
+  { value: "week", label: "Previous week" },
   { value: "month", label: "Previous month" },
 ]
 
 const SNOOZE_OPTIONS = [
-  { value: 1,   label: "1 hour" },
-  { value: 4,   label: "4 hours" },
-  { value: 12,  label: "12 hours" },
-  { value: 24,  label: "24 hours" },
-  { value: 48,  label: "2 days" },
+  { value: 1, label: "1 hour" },
+  { value: 4, label: "4 hours" },
+  { value: 12, label: "12 hours" },
+  { value: 24, label: "24 hours" },
+  { value: 48, label: "2 days" },
   { value: 168, label: "1 week" },
 ]
 
@@ -123,18 +123,18 @@ function formatRelative(date) {
   if (!date) return "—"
   const diff = date - new Date()
   const absDiff = Math.abs(diff)
-  const mins  = Math.round(absDiff / 60000)
+  const mins = Math.round(absDiff / 60000)
   const hours = Math.round(absDiff / 3600000)
-  const days  = Math.round(absDiff / 86400000)
+  const days = Math.round(absDiff / 86400000)
 
   if (diff > 0) {
-    if (days > 1)  return `in ${days} days`
+    if (days > 1) return `in ${days} days`
     if (hours > 1) return `in ${hours} hours`
     return `in ${mins} minutes`
   } else {
-    if (days > 1)  return `${days} days ago`
+    if (days > 1) return `${days} days ago`
     if (hours > 1) return `${hours} hours ago`
-    if (mins > 0)  return `${mins} minutes ago`
+    if (mins > 0) return `${mins} minutes ago`
     return "just now"
   }
 }
@@ -142,24 +142,24 @@ function formatRelative(date) {
 function conditionSummary(alert) {
   const { condition } = alert
   if (!condition) return "—"
-  const op     = condition.operator
-  const val    = condition.value
+  const op = condition.operator
+  const val = condition.value
   const metric = METRIC_OPTIONS.find(m => m.value === condition.metric)?.label || condition.metric
 
   if (op === "pct_drop") return `↓ ${val}%  vs ${condition.period || "week"}`
   if (op === "pct_rise") return `↑ ${val}%  vs ${condition.period || "week"}`
-  if (op === "gt")  return `> ${val}`
-  if (op === "lt")  return `< ${val}`
-  if (op === "eq")  return `= ${val}`
+  if (op === "gt") return `> ${val}`
+  if (op === "lt") return `< ${val}`
+  if (op === "eq") return `= ${val}`
   return `${op} ${val}`
 }
 
 function ProgressToTrigger({ alert }) {
-  const pct       = alert.progress_pct ?? 0
-  const current   = alert.current_value ?? null
+  const pct = alert.progress_pct ?? 0
+  const current = alert.current_value ?? null
   const threshold = alert.condition?.value
-  const operator  = alert.condition?.operator
-  const metric    = METRIC_OPTIONS.find(m => m.value === alert.condition?.metric)?.label || alert.condition?.metric || ""
+  const operator = alert.condition?.operator
+  const metric = METRIC_OPTIONS.find(m => m.value === alert.condition?.metric)?.label || alert.condition?.metric || ""
   const triggered = alert.status === "triggered"
 
   if (current === null || current === undefined) {
@@ -167,21 +167,21 @@ function ProgressToTrigger({ alert }) {
   }
 
   // Format display values
-  const isCurrency = ["spend","cpc","cpm"].includes(alert.condition?.metric)
-  const isPct      = ["ctr","pct_drop","pct_rise"].includes(alert.condition?.metric) || ["pct_drop","pct_rise"].includes(operator)
+  const isCurrency = ["spend", "cpc", "cpm"].includes(alert.condition?.metric)
+  const isPct = ["ctr", "pct_drop", "pct_rise"].includes(alert.condition?.metric) || ["pct_drop", "pct_rise"].includes(operator)
   const fmt = (v) => {
     if (isCurrency) return `$${Number(v).toFixed(2)}`
-    if (isPct)      return `${Number(v).toFixed(1)}%`
+    if (isPct) return `${Number(v).toFixed(1)}%`
     return Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })
   }
 
   const barColor = triggered
     ? "bg-red-500"
     : pct >= 80
-    ? "bg-orange-400"
-    : pct >= 50
-    ? "bg-yellow-400"
-    : "bg-[#713cdd]/40"
+      ? "bg-orange-400"
+      : pct >= 50
+        ? "bg-yellow-400"
+        : "bg-[#713cdd]/40"
 
   const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "pct_drop" ? "↓" : "↑"
 
@@ -231,17 +231,17 @@ const EMPTY_FORM = {
 // ── Main page ─────────────────────────────────────────────────
 
 export default function AlertsPage() {
-  const [alerts, setAlerts]               = useState({ active: [], triggered: [], paused: [], counts: {} })
-  const [clientGroups, setClientGroups]   = useState([])
-  const [isLoading, setIsLoading]         = useState(true)
-  const [dialogOpen, setDialogOpen]       = useState(false)
-  const [editingAlert, setEditingAlert]   = useState(null)
-  const [deleteTarget, setDeleteTarget]   = useState(null)
-  const [snoozeTarget, setSnoozeTarget]   = useState(null)
-  const [snoozeHours, setSnoozeHours]     = useState(24)
-  const [evaluating, setEvaluating]       = useState(null)
-  const [form, setForm]                   = useState(EMPTY_FORM)
-  const [saving, setSaving]               = useState(false)
+  const [alerts, setAlerts] = useState({ active: [], triggered: [], paused: [], counts: {} })
+  const [clientGroups, setClientGroups] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [editingAlert, setEditingAlert] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [snoozeTarget, setSnoozeTarget] = useState(null)
+  const [snoozeHours, setSnoozeHours] = useState(24)
+  const [evaluating, setEvaluating] = useState(null)
+  const [form, setForm] = useState(EMPTY_FORM)
+  const [saving, setSaving] = useState(false)
 
   // ── Data fetching ────────────────────────────────────────────
 
@@ -264,7 +264,7 @@ export default function AlertsPage() {
       if (!res.ok) return
       const data = await res.json()
       setClientGroups(data.client_groups || [])
-    } catch {}
+    } catch { }
   }, [])
 
   useEffect(() => {
@@ -283,13 +283,13 @@ export default function AlertsPage() {
   const openEdit = (alert) => {
     setEditingAlert(alert)
     setForm({
-      name:                alert.name || "",
-      description:         alert.description || "",
-      metric:              alert.condition?.metric || "lead_count",
-      operator:            alert.condition?.operator || "pct_drop",
-      value:               String(alert.condition?.value ?? "30"),
-      period:              alert.condition?.period || "week",
-      target_group_ids:    alert.target_group_ids || [],
+      name: alert.name || "",
+      description: alert.description || "",
+      metric: alert.condition?.metric || "lead_count",
+      operator: alert.condition?.operator || "pct_drop",
+      value: String(alert.condition?.value ?? "30"),
+      period: alert.condition?.period || "week",
+      target_group_ids: alert.target_group_ids || [],
       notification_channels: alert.notification_channels || ["in_app"],
     })
     setDialogOpen(true)
@@ -314,7 +314,7 @@ export default function AlertsPage() {
         notification_channels: form.notification_channels,
       }
 
-      const url    = editingAlert ? `${API_BASE}/api/alerts/${editingAlert.id}` : `${API_BASE}/api/alerts`
+      const url = editingAlert ? `${API_BASE}/api/alerts/${editingAlert.id}` : `${API_BASE}/api/alerts`
       const method = editingAlert ? "PATCH" : "POST"
 
       const res = await fetch(url, {
@@ -386,7 +386,7 @@ export default function AlertsPage() {
   const handleEvaluate = async (alert) => {
     setEvaluating(alert.id)
     try {
-      const res  = await fetch(`${API_BASE}/api/alerts/${alert.id}/evaluate`, {
+      const res = await fetch(`${API_BASE}/api/alerts/${alert.id}/evaluate`, {
         method: "POST",
         credentials: "include",
       })
@@ -440,7 +440,7 @@ export default function AlertsPage() {
         <div className="text-sm font-mono font-medium">{conditionSummary(alert)}</div>
         {alert.condition?.period && (
           <div className="text-xs text-muted-foreground mt-0.5">
-            {["pct_drop","pct_rise"].includes(alert.condition?.operator) ? "vs " : "window: "}
+            {["pct_drop", "pct_rise"].includes(alert.condition?.operator) ? "vs " : "window: "}
             {alert.condition.period}
           </div>
         )}
@@ -615,9 +615,9 @@ export default function AlertsPage() {
             </div>
           ) : (
             <>
-              <TabsContent value="active"    className="mt-2"><AlertTable rows={alerts.active    || []} emptyLabel="active" /></TabsContent>
+              <TabsContent value="active" className="mt-2"><AlertTable rows={alerts.active || []} emptyLabel="active" /></TabsContent>
               <TabsContent value="triggered" className="mt-2"><AlertTable rows={alerts.triggered || []} emptyLabel="triggered" /></TabsContent>
-              <TabsContent value="paused"    className="mt-2"><AlertTable rows={alerts.paused    || []} emptyLabel="paused" /></TabsContent>
+              <TabsContent value="paused" className="mt-2"><AlertTable rows={alerts.paused || []} emptyLabel="paused" /></TabsContent>
             </>
           )}
         </Tabs>
@@ -732,11 +732,10 @@ export default function AlertsPage() {
                         key={g.id}
                         type="button"
                         onClick={() => toggleGroup(g.id)}
-                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
-                          selected
-                            ? "bg-[#713cdd] text-white border-[#713cdd]"
-                            : "bg-white text-foreground border-border hover:border-[#713cdd]"
-                        }`}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected
+                          ? "bg-[#713cdd] text-white border-[#713cdd]"
+                          : "bg-white text-foreground border-border hover:border-[#713cdd]"
+                          }`}
                       >
                         {g.name}
                       </button>
