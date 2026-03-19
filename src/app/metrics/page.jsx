@@ -509,16 +509,13 @@ const MetricsHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
-      <div className="flex flex-col gap-8">
+    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+      <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+            <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
               Metrics Hub
             </h1>
-            <p className="text-sm text-[#71658B] mt-1 text-center md:text-left">
-              {statistics ? `${statistics.total} metrics discovered across all dashboards` : "Loading metrics..."}
-            </p>
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1">

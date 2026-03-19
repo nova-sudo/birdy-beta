@@ -563,16 +563,14 @@ export default function AlertsPage() {
   const isPctOp = ["pct_drop", "pct_rise"].includes(form.operator)
 
   return (
-    <main className="min-h-screen w-[calc(100dvw-50px)] md:w-[calc(100dvw-100px)]">
+    <main className="min-h-screen w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div className=" mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Alerts</h1>
-            <p className="text-sm text-[#71658B] mt-1 text-center md:text-left">
-              Create and manage alerts for your metrics
-            </p>
+            <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Alerts</h1>
+
           </div>
           <Button onClick={openCreate} className="bg-[#713cdd] hover:bg-[#5f2fc0] text-white gap-2">
             <CirclePlus className="h-4 w-4" />
