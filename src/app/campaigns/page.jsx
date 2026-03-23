@@ -50,7 +50,7 @@ const userCurrency = localStorage.getItem("user_default_currency")
 const Campaigns = () => {
   const [customMetrics, setCustomMetrics]           = useState([])
   const [clientGroups, setClientGroups]             = useState([])
-  const [selectedClientGroup, setSelectedClientGroup] = useState(null)
+  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [campaigns, setCampaigns]                   = useState([])
   const [allAdSets, setAllAdSets]                   = useState([])
   const [allAds, setAllAds]                         = useState([])
@@ -70,9 +70,8 @@ const Campaigns = () => {
     ads:       ["name", "spend", "impressions", "reach", "clicks", "ctr"],
     leads: [
       "full_name", "email", "phone_number",
-      "ad_name", "adset_name", "campaign_name",
-      "ad_id", "adset_id", "campaign_id",
-      "form_id", "platform", "is_organic", "created_time",
+      "ad_name", "campaign_name",
+      "platform", "created_time", "group_name",
     ],
   })
 
@@ -141,7 +140,7 @@ const Campaigns = () => {
       }
 
       setClientGroups(groups)
-      if (!selectedClientGroup) setSelectedClientGroup(groups[0].id)
+      // Default to "all" to show all groups
 
       // 2. Flatten campaigns / adsets / ads out of each group's facebook cache
       const processedCampaigns = []
@@ -233,6 +232,8 @@ const Campaigns = () => {
         { credentials: "include", signal }
       )
       const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
+      console.log("Leads data structure:", leadsData.leads?.[0])
+      console.log("Number of leads fetched:", leadsData.leads?.length)
       setLeads(leadsData.leads || [])
 
     } catch (err) {
@@ -252,10 +253,26 @@ const Campaigns = () => {
   }, [selectedDatePreset])
 
   // ── Filtering ──────────────────────────────────────────────────────────────
+  const isAllZerosRow = (item) => {
+    // For non-leads tabs, filter out rows where all metric values are zero
+    if (activeTab !== "leads") {
+      const metricFields = ["spend", "impressions", "clicks", "reach", "leads", "ctr", "cpc", "cpm", "cpp", "frequency"]
+      const hasAnyNonZeroMetric = metricFields.some(field => {
+        const val = item[field]
+        return val !== undefined && val !== null && Number(val) !== 0
+      })
+      return !hasAnyNonZeroMetric
+    }
+    return false
+  }
+
   const applyFilters = (data) => {
     let filtered = [...data]
 
-    if (selectedClientGroup) {
+    // Filter out all-zero rows
+    filtered = filtered.filter(item => !isAllZerosRow(item))
+
+    if (selectedClientGroup && selectedClientGroup !== "all") {
       if (activeTab === "leads") {
         const selectedGroup = clientGroups.find(g => g.id === selectedClientGroup)
         if (selectedGroup) filtered = filtered.filter(i => i.group_name === selectedGroup.name)
@@ -266,12 +283,13 @@ const Campaigns = () => {
 
     const lower = searchTerm.toLowerCase()
     if (searchTerm) {
-      filtered = filtered.filter(i =>
-        i.name?.toLowerCase().includes(lower) ||
+      filtered = filtered.filter(i => {
+        const leadName = i.full_name || i.field_data?.["full name"] || i.field_data?.full_name || i.fullName || i.name || `${i.first_name || ''} ${i.last_name || ''}`.trim() || "";
+        return i.name?.toLowerCase().includes(lower) ||
         i.clientGroup?.toLowerCase().includes(lower) ||
         i.adAccount?.toLowerCase().includes(lower) ||
         (activeTab === "leads" && (
-          i.full_name?.toLowerCase().includes(lower) ||
+          leadName.toLowerCase().includes(lower) ||
           i.email?.toLowerCase().includes(lower) ||
           i.phone_number?.toLowerCase().includes(lower) ||
           i.ad_name?.toLowerCase().includes(lower) ||
@@ -280,12 +298,15 @@ const Campaigns = () => {
           i.group_name?.toLowerCase().includes(lower) ||
           i.platform?.toLowerCase().includes(lower)
         ))
-      )
+      })
     }
 
     filterConditions.forEach(c => {
       filtered = filtered.filter(i => {
-        const val = i[c.field]
+        let val = i[c.field]
+        if (c.field === "full_name") {
+          val = i.full_name || i.field_data?.["full name"] || i.field_data?.full_name || i.fullName || i.name || `${i.first_name || ''} ${i.last_name || ''}`.trim() || "";
+        }
         if (typeof val === "string") {
           if (c.operator === "equals")   return val.toLowerCase() === String(c.value).toLowerCase()
           if (c.operator === "contains") return val.toLowerCase().includes(String(c.value).toLowerCase())
@@ -323,9 +344,8 @@ const Campaigns = () => {
     if (activeTab === "leads") {
       return [
         "full_name", "email", "phone_number",
-        "ad_name", "adset_name", "campaign_name",
-        "ad_id", "adset_id", "campaign_id",
-        "form_id", "platform", "is_organic", "created_time", "group_name",
+        "ad_name", "campaign_name", "platform",
+        "created_time", "group_name",
       ]
     }
     return ["name", "clientGroup", ...baseColumns, ...customMetrics.map(m => m.id)]
@@ -377,22 +397,42 @@ const Campaigns = () => {
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
 
   const tableColumns = getCurrentVisibleColumns().map(col => ({
+    id:     col,
     key:    col,
     header: getMetricDisplayName(col),
     label:  getMetricDisplayName(col),
     icons:  col === "clientGroup" || col === "name" ? Flask : metaa,
-    render: (value) => formatCellValue(value, col),
+    render: (value, row) => formatCellValue(value, col, row),
   }))
 
-  const formatCellValue = (value, col) => {
-    if (value === null || value === undefined) return "-"
+  const formatCellValue = (value, col, row) => {
+    if (col === "full_name") {
+      value = value || row?.field_data?.["full name"] || row?.field_data?.full_name || row?.full_name || row?.fullName || row?.name || 
+              (row?.first_name || row?.last_name ? `${row?.first_name || ''} ${row?.last_name || ''}`.trim() : null);
+    }
+    if (value === null || value === undefined || value === "") return "-"
     if (customMetrics.some(m => m.id === col))                    return formatMetricValue(value, col)
     if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col))
       return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
     if (col === "ctr")                  return `${Number(value).toFixed(2)}%`
     if (col === "account_currency")     return value.toUpperCase()
     if (col === "conversion_rate_ranking") return value.replace(/_/g, " ")
-    if (col === "is_organic")           return value ? "Yes" : "No"
+    if (col === "created_time" && value) {
+      try {
+        const date = new Date(value)
+        return date.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      } catch (e) {
+        return value
+      }
+    }
+    if (col === "platform")             return value === "fb" ? "Facebook" : value === "ig" ? "Instagram" : value
+    
+    // Capitalize names
+    if (col === "full_name" || col === "name") {
+      const str = String(value);
+      return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    }
+
     if (typeof value === "number")      return value.toLocaleString()
     return value
   }
@@ -435,11 +475,12 @@ const Campaigns = () => {
             {clientGroups.length > 0 && (
               <div className="flex items-center gap-2">
                 <Label className="text-sm font-semibold whitespace-nowrap">Client Group:</Label>
-                <Select value={selectedClientGroup || ""} onValueChange={setSelectedClientGroup}>
+                <Select value={selectedClientGroup || "all"} onValueChange={setSelectedClientGroup}>
                   <SelectTrigger className="w-48 bg-white">
                     <SelectValue placeholder="Select a client group" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
+                    <SelectItem value="all">All Groups</SelectItem>
                     {clientGroups.map(group => (
                       <SelectItem key={group.id} value={group.id}>{group.name}</SelectItem>
                     ))}
@@ -538,7 +579,7 @@ const Campaigns = () => {
             ))}
           </TabsList>
 
-          <TabsContent value={activeTab} className="mt-6">
+          <TabsContent value={activeTab} className="mt-6" key={activeTab}>
             {/* ── Active filters ── */}
             {filterConditions.length > 0 && (
               <div className="border rounded-lg my-3 text-left">
@@ -632,7 +673,7 @@ const Campaigns = () => {
               </div>
             ) : getFilteredDataForTab().length > 0 ? (
               <div className="rounded-lg border bg-card overflow-hidden">
-                <StyledTable columns={tableColumns} data={getFilteredDataForTab()} />
+                <StyledTable columns={tableColumns} data={getFilteredDataForTab()} columnVisibility={columnVisibility} />
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">

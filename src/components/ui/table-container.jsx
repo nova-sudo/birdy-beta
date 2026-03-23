@@ -83,7 +83,7 @@ const StyledTable = ({
       id: col.id || col.key,
       header: col.header || col.label,
       cell: col.cell || col.render,
-      visible: col.id === "name" ? true : columnVisibility[col.id] ?? col.visible ?? true,
+      visible: ["name", "full_name"].includes(col.id) ? true : columnVisibility[col.id] ?? col.visible ?? true,
     }));
 
     list = list.filter((c) => c.visible);
@@ -611,7 +611,7 @@ const StyledTable = ({
                           className={
                             colIdx === 0
                               ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
-                              : "min-w-0"
+                              : "min-w-0 px-2"
                           }
                         >
                           {/* Add spinner for first column when creating OR pending */}

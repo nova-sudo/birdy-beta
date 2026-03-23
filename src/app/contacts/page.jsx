@@ -475,7 +475,7 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
   const conversionRate = totalOpportunities > 0 ? ((wonCount / totalOpportunities) * 100).toFixed(1) : 0
 
   const stats = [
-    { title: "Won Leads", value: wonCount, icon: Target },
+    { title: "Total Leads", value: totalOpportunities, icon: Target },
     { title: "Lost Leads", value: lostCount, icon: Target },
     { title: "Open Leads", value: openCount, icon: Target },
     { title: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp },
