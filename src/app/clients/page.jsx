@@ -19,7 +19,7 @@ import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, U
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading } from "@/components/ui/ViewLoading"
+
 import {
   ENHANCED_CLIENT_COLUMNS,
   ENHANCED_CATEGORIES,

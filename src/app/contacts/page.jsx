@@ -2,7 +2,6 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading } from "@/components/ui/ViewLoading"
 import {
   SlidersHorizontal,
   Users,
@@ -721,7 +720,6 @@ export default function ContactPage() {
       fetchContacts(currentPage + 1)
     }
   }
-  // if (!viewsLoaded) return <ViewLoading />
 
   return (
     <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">

@@ -608,11 +608,35 @@ const StyledTable = ({
                 </tr>
               ))
             ) : paginatedData.length === 0 ? (
-              <tr>
-                <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
-                  {isClientMode ? "No client groups found" : "No data available."}
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, idx) => (
+                <tr
+                  key={`empty-skeleton-${idx}`}
+                  className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                >
+                  {visibleColumns.map((col, colIdx) => (
+                    <td
+                      key={`empty-skeleton-${idx}-${col.id}`}
+                      className={`text-foreground truncate ${
+                        colIdx === 0
+                          ? idx % 2 === 0
+                            ? "fixed-column-odd h-11"
+                            : "fixed-column-even h-11"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={
+                          colIdx === 0
+                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                            : "flex items-center justify-center px-2 h-11"
+                        }
+                      >
+                        <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : (
               paginatedData.map((row, idx) => {
                 const globalIdx = (currentPage - 1) * pageSize + idx;
