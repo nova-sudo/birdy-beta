@@ -43,6 +43,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import ghl from "../../../public/ghl_icon.png";
 import lab from "../../../public/lab.png";
 import { Progress } from "@/components/ui/progress"
@@ -277,20 +282,19 @@ const buildContactColumns = () => [
     },
   },
   {
-    id: "opportunities",
-    header: "Opportunities",
-    label: "Opportunities",
+    id: "opportunityStatus",
+    header: "Opportunity Status",
+    label: "Opportunity Status",
     defaultVisible: true,
     sortable: false,
     icons: ghl,
-    cell: (value) => {
-      if (!value || value.length === 0)
-        return <span className="text-muted-foreground text-sm">No opportunities</span>
-      const opportunities = value
+    cell: (value, row) => {
+      const opportunities = row?.opportunities || [];
+      if (!opportunities || opportunities.length === 0)
+        return <span className="text-muted-foreground text-sm">—</span>
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppStatus = mainOpp.status || "unknown"
-      const oppValue = mainOpp.monetaryValue || 0
       const statusColors = {
         open: "bg-[#DBEAFE] text-[#1D4ED8]",
         won: "bg-[#DCFCE7] text-[#15803D]",
@@ -302,11 +306,6 @@ const buildContactColumns = () => [
           <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
             {oppStatus}
           </Badge>
-          {oppValue > 0 && (
-            <span className="text-sm font-semibold text-green-600">
-              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
-            </span>
-          )}
           {hasMoreOpps && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -318,8 +317,51 @@ const buildContactColumns = () => [
                     <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
                       {opp.status}
                     </Badge>
+                  </div>
+                ))}
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      )
+    },
+  },
+  {
+    id: "opportunityValue",
+    header: "Opportunity Value",
+    label: "Opportunity Value",
+    defaultVisible: true,
+    sortable: false,
+    icons: ghl,
+    cell: (value, row) => {
+      const opportunities = row?.opportunities || [];
+      if (!opportunities || opportunities.length === 0)
+        return <span className="text-muted-foreground text-sm">—</span>
+      const mainOpp = opportunities[0]
+      const hasMoreOpps = opportunities.length > 1
+      const oppValue = mainOpp.monetaryValue || 0
+      return (
+        <div className="flex items-center gap-2">
+          {oppValue > 0 ? (
+            <span className="text-sm font-semibold text-green-600">
+              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
+            </span>
+          ) : (
+            <span className="text-muted-foreground text-sm">—</span>
+          )}
+          {hasMoreOpps && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
+              </TooltipTrigger>
+              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+                {opportunities.slice(1).map((opp, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
                     {opp.monetaryValue > 0 && (
-                      <span className="text-xs text-green-600">${opp.monetaryValue}</span>
+                      <span className="text-sm text-green-600">{getSymbolFromCurrency(userCurrency)}{opp.monetaryValue.toLocaleString()}</span>
+                    )}
+                    {opp.monetaryValue === 0 && (
+                      <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </div>
                 ))}
@@ -821,6 +863,42 @@ export default function ContactPage() {
         </div>
 
         <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
+
+        {/* Opportunity Status Filter Tabs */}
+        <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
+          <TabsList className="inline-flex h-auto items-center rounded-lg bg-muted/60 p-1 text-muted-foreground overflow-x-auto border border-border/50 shadow-sm w-full justify-start">
+            <TabsTrigger 
+              value="all" 
+              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
+            >
+              All Leads
+            </TabsTrigger>
+            <TabsTrigger 
+              value="open" 
+              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
+            >
+              Open
+            </TabsTrigger>
+            <TabsTrigger 
+              value="won" 
+              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
+            >
+              Won
+            </TabsTrigger>
+            <TabsTrigger 
+              value="abandoned" 
+              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
+            >
+              Abandoned
+            </TabsTrigger>
+            <TabsTrigger 
+              value="lost" 
+              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
+            >
+              Lost
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {filteredAndSortedContacts.length === 0 ? (
           <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20 py-16">
