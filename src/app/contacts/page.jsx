@@ -457,26 +457,28 @@ const buildContactColumns = () => [
 
 const contactColumns = buildContactColumns()
 
-const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
-  const totalContacts = contacts.length
-  const filteredTotal = filteredContacts.length
-  const contactsWithEmail = filteredContacts.filter((c) => c.email && !c.email.startsWith("no_email_")).length
-  const contactsWithPhone = filteredContacts.filter((c) => c.phone).length
-  const contactsWithOpportunities = filteredContacts.filter((c) =>
-    c.opportunities && c.opportunities.length > 0
-  ).length
-  const totalLeadValue = filteredContacts.reduce((sum, c) => {
-    if (!c.opportunities) return sum
-    const oppValue = c.opportunities.reduce((oppSum, opp) =>
-      oppSum + (opp.monetaryValue || 0), 0
-    )
-    return sum + oppValue
-  }, 0)
+const DashboardStats = ({ contacts, filteredContacts, metaData, loading }) => {
+  // Calculate opportunity counts by status
+  const opportunitiesByStatus = filteredContacts.reduce((acc, c) => {
+    if (!c.opportunities || c.opportunities.length === 0) return acc
+    c.opportunities.forEach((opp) => {
+      const status = opp.status || "open"
+      acc[status] = (acc[status] || 0) + 1
+    })
+    return acc
+  }, {})
+
+  const wonCount = opportunitiesByStatus.won || 0
+  const lostCount = opportunitiesByStatus.lost || 0
+  const openCount = opportunitiesByStatus.open || 0
+  const totalOpportunities = wonCount + lostCount + openCount + (opportunitiesByStatus.abandoned || 0)
+  const conversionRate = totalOpportunities > 0 ? ((wonCount / totalOpportunities) * 100).toFixed(1) : 0
+
   const stats = [
-    { title: "Total Contacts", value: filteredTotal, subtitle: totalContacts !== filteredTotal ? `of ${totalContacts}` : null, icon: Users },
-    { title: "With Opportunities", value: contactsWithOpportunities, icon: Target },
-    { title: "Total Lead Value", value: `${getSymbolFromCurrency(userCurrency)}${totalLeadValue.toLocaleString()}`, icon: DollarSign },
-    { title: "With Email", value: contactsWithEmail, icon: Mail },
+    { title: "Won Leads", value: wonCount, icon: Target },
+    { title: "Lost Leads", value: lostCount, icon: Target },
+    { title: "Open Leads", value: openCount, icon: Target },
+    { title: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp },
   ]
 
   return (
@@ -490,7 +492,13 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
+            {loading ? (
+                  <div className="w-full py-4">
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ) : (
+                  <div className="text-2xl font-bold">{stat.value}</div>
+)}
             {stat.subtitle && <p className="text-xs text-muted-foreground mt-0">{stat.subtitle}</p>}
             <p className="text-xs text-[#71658B] text-muted-foreground">Across all Leads</p>
           </CardContent>
@@ -574,7 +582,7 @@ export default function ContactPage() {
       // Convert preset to concrete date strings
       const { start_date, end_date } = presetToDateRange(selectedDateRange)
 
-      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=100`
+      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=15`
 
       if (start_date) url += `&start_date=${start_date}`
       if (end_date)   url += `&end_date=${end_date}`
@@ -863,7 +871,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
+        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} loading={loading} />
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
