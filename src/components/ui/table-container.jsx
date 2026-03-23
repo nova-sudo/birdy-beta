@@ -433,6 +433,12 @@ const StyledTable = ({
       return "—";
     }
 
+    // Format name columns to title case
+    if (columnId === "name" || columnId === "full_name" || columnId === "contactName") {
+      const str = String(value);
+      return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    }
+
     // Custom metrics formatting
     if (customMetrics?.some((m) => m.id === columnId)) {
       return formatMetricValue(value, columnId);
@@ -573,7 +579,7 @@ const StyledTable = ({
             </tr>
           </thead>
 
-          <tbody className="text-center">
+          <tbody className="text-left">
             {isLoading ? (
               // Skeleton rows — mirrors real row structure exactly
               Array.from({ length: pageSize }).map((_, idx) => (
