@@ -64,6 +64,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { format, subDays } from "date-fns"
 import getSymbolFromCurrency from "currency-symbol-map";
 import StyledTable from "@/components/ui/table-container"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const userCurrency = localStorage.getItem("user_default_currency");
 const buildContactColumns = () => [
@@ -704,11 +705,11 @@ export default function ContactPage() {
     setDatePickerOpen(false)
   }
 
-  if (loading) {
-    return (
-      <Loading progress={progress} />
-    )
-  }
+  // if (loading) {
+  //   return (
+  //     <Loading progress={progress} />
+  //   )
+  // }
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -720,7 +721,7 @@ export default function ContactPage() {
       fetchContacts(currentPage + 1)
     }
   }
-  if (!viewsLoaded) return <ViewLoading />
+  // if (!viewsLoaded) return <ViewLoading />
 
   return (
     <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
@@ -859,10 +860,15 @@ export default function ContactPage() {
             <div className="rounded-full bg-muted p-3 mb-4">
               <Users className="h-6 w-6 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
+            {/* <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               Try adjusting your filters or search criteria, or verify your integration settings.
-            </p>
+            </p> */}
+            <div className="flex w-full max-w-xs flex-col gap-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+              </div>
           </div>
         ) : (
           <StyledTable

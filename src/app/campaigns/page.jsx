@@ -43,6 +43,7 @@ import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { format, subDays } from "date-fns"
 import getSymbolFromCurrency from "currency-symbol-map";
+import { Skeleton } from "@/components/ui/skeleton"
 
 const userCurrency = localStorage.getItem("user_default_currency");
 
@@ -631,7 +632,7 @@ const Campaigns = () => {
     await saveToDB(visibleColumns)
     setColumnsOpen(false)
   }
-  if (!viewsLoaded) return <ViewLoading />
+  // if (!viewsLoaded) return <ViewLoading />
 
 
   const getIcon = (col) => {
@@ -1042,18 +1043,27 @@ const Campaigns = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-16">
-                <div className="rounded-full bg-muted p-3 mb-4">
+                {/* <div className="rounded-full bg-muted p-3 mb-4">
                   <Search className="h-6 w-6 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">No results found</h3>
+                </div> */}
+                {/* <h3 className="text-lg font-semibold mb-2">No results found</h3>
                 <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
                   No data matches your current filters. Try adjusting your search criteria or date range.
-                </p>
-                {(filterConditions.length > 0 || searchTerm) && (
-                  <Button variant="outline" size="sm" onClick={handleClearFilters}>
-                    Clear all filters
-                  </Button>
-                )}
+                </p> */}
+                <div className="flex w-full max-w-sm flex-col gap-2">
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <div className="flex gap-4" key={index}>
+                      <Skeleton className="h-4 flex-1" />
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-4 w-20" />
+                    </div>
+                  ))}
+                  {(filterConditions.length > 0 || searchTerm) && (
+                    <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                      Clear all filters
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
           </TabsContent>

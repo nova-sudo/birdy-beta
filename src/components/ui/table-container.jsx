@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import {
   loadCustomMetrics,
@@ -50,6 +51,7 @@ const userCurrency = localStorage.getItem("user_default_currency");
 const StyledTable = ({
   columns = [],
   data = [],
+  isLoading =false,
   clickableFirstColumn = false,
   onFirstColumnClick,
   onRowClick,
@@ -519,7 +521,7 @@ const StyledTable = ({
       <div className="table-container border rounded-md">
         <table className="text-sm">
           <thead className="top-0 z-40">
-            <tr className="transition-colors  data-[state=selected]:bg-muted h-12 bg-white">
+            <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -572,7 +574,40 @@ const StyledTable = ({
           </thead>
 
           <tbody className="text-center">
-            {paginatedData.length === 0 ? (
+            {isLoading ? (
+              // Skeleton rows — mirrors real row structure exactly
+              Array.from({ length: pageSize }).map((_, idx) => (
+                <tr
+                  key={`skeleton-${idx}`}
+                  className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                >
+                  {visibleColumns.map((col, colIdx) => (
+                    <td
+                      key={`skeleton-${idx}-${col.id}`}
+                      className={`text-foreground truncate ${
+                        colIdx === 0
+                          ? idx % 2 === 0
+                            ? "fixed-column-odd h-11"
+                            : "fixed-column-even h-11"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={
+                          colIdx === 0
+                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                            : "flex items-center justify-center px-2 h-11"
+                        }
+                      >
+                        <Skeleton
+                          className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`}
+                        />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : paginatedData.length === 0 ? (
               <tr>
                 <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
                   {isClientMode ? "No client groups found" : "No data available."}
