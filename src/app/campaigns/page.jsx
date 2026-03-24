@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -116,41 +116,65 @@ const getDateRangeFromPreset = (preset) => {
   return { start: formatDate(start), end: formatDate(end) }
 }
 
-const userCurrency = localStorage.getItem("user_default_currency")
+// FIX 1: Move localStorage access inside the component to avoid module-level
+// crashes in SSR and before hydration. Defined as a helper used inside component.
+const getUserCurrency = () => {
+  if (typeof window === "undefined") return "USD"
+  return localStorage.getItem("user_default_currency") ?? "USD"
+}
+
+// FIX 2: Default column sets per tab — used as fallback when savedColumns is
+// empty/missing AND as the initial state, so the first render always has columns.
+const DEFAULT_VISIBLE_COLUMNS = {
+  campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  leads: [
+    "full_name", "email", "phone_number",
+    "ad_name", "campaign_name",
+    "platform", "created_time", "group_name",
+  ],
+}
 
 const Campaigns = () => {
-  const [customMetrics, setCustomMetrics]           = useState([])
-  const [clientGroups, setClientGroups]             = useState([])
+  // FIX 1: currency read inside component body (runs client-side only)
+  const userCurrency = getUserCurrency()
+
+  const [customMetrics, setCustomMetrics] = useState([])
+  const [clientGroups, setClientGroups] = useState([])
   const [selectedClientGroup, setSelectedClientGroup] = useState(null)
-  const [campaigns, setCampaigns]                   = useState([])
-  const [allAdSets, setAllAdSets]                   = useState([])
-  const [allAds, setAllAds]                         = useState([])
-  const [leads, setLeads]                           = useState([])
-  const [isLoading, setIsLoading]                   = useState(true)
-  const [error, setError]                           = useState(null)
-  const [activeTab, setActiveTab]                   = useState("campaigns")
-  const [searchTerm, setSearchTerm]                 = useState("")
-  const [filterConditions, setFilterConditions]     = useState([])
+  const [campaigns, setCampaigns] = useState([])
+  const [allAdSets, setAllAdSets] = useState([])
+  const [allAds, setAllAds] = useState([])
+  const [leads, setLeads] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState("campaigns")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterConditions, setFilterConditions] = useState([])
 
   const [selectedDatePreset, setSelectedDatePreset] = useState("last_7d")
 
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("campaigns")
 
-  const [visibleColumns, setVisibleColumns] = useState({
-    campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-    adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-    ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-    leads: [
-      "full_name", "email", "phone_number",
-      "ad_name", "campaign_name",
-      "platform", "created_time", "group_name",
-    ],
-  })
+  // FIX 2: Initialize with DEFAULT_VISIBLE_COLUMNS so columns are never empty
+  // on the first render — skeletons will always have cells to show.
+  const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
 
-  // Apply saved column view
+  // FIX 2: Apply saved column view with a guard so an empty/corrupt saved view
+  // never wipes out the defaults and leaves tableColumns as [].
   useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
-    setVisibleColumns(prev => ({ ...prev, ...savedColumns }))
+    setVisibleColumns(prev => {
+      const merged = { ...prev, ...savedColumns }
+      // Guard: ensure every tab always has at least its default columns
+      Object.keys(DEFAULT_VISIBLE_COLUMNS).forEach(tab => {
+        if (!merged[tab] || merged[tab].length === 0) {
+          merged[tab] = DEFAULT_VISIBLE_COLUMNS[tab]
+        }
+      })
+      return merged
+    })
   }, [viewsLoaded, savedColumns])
 
   const [columnsOpen, setColumnsOpen] = useState(false)
@@ -170,7 +194,7 @@ const Campaigns = () => {
       const updated = { ...prev }
         ;["campaigns", "adsets", "ads"].forEach(tab => {
           const existing = new Set(updated[tab] || [])
-          customIds.forEach(id => { if (!existing.has(id)) updated[tab] = [...updated[tab], id] })
+          customIds.forEach(id => { if (!existing.has(id)) updated[tab] = [...(updated[tab] || []), id] })
         })
       return updated
     })
@@ -192,7 +216,6 @@ const Campaigns = () => {
     setError(null)
 
     try {
-      // 1. Fetch client groups with Meta data already embedded (preset-aware)
       const groupsRes = await fetch(
         `https://birdy-backend.vercel.app/api/client-groups?date_preset=${selectedDatePreset}`,
         { credentials: "include", signal }
@@ -212,9 +235,7 @@ const Campaigns = () => {
       }
 
       setClientGroups(groups)
-      // Default to "all" to show all groups
 
-      // 2. Flatten campaigns / adsets / ads out of each group's facebook cache
       const processedCampaigns = []
       const processedAdsets = []
       const processedAds = []
@@ -228,7 +249,6 @@ const Campaigns = () => {
           account_currency: fb.currency || "USD",
         }
 
-        // Campaigns
         for (const c of (fb.campaigns || [])) {
           const row = {
             ...groupMeta,
@@ -249,14 +269,13 @@ const Campaigns = () => {
           processedCampaigns.push(enhanceWithCustomMetrics(row))
         }
 
-        // Adsets
         for (const a of (fb.adsets || [])) {
           const row = {
             ...groupMeta,
             id: a.id,
             name: a.name,
             status: (a.status || 'inactive').toLowerCase(),
-            campaign_name: a.campaign_id || "",   // backend returns campaign_id; name not always present
+            campaign_name: a.campaign_id || "",
             spend: a.spend || 0,
             impressions: a.impressions || 0,
             clicks: a.clicks || 0,
@@ -271,7 +290,6 @@ const Campaigns = () => {
           processedAdsets.push(enhanceWithCustomMetrics(row))
         }
 
-        // Ads
         for (const ad of (fb.ads || [])) {
           const row = {
             ...groupMeta,
@@ -298,7 +316,6 @@ const Campaigns = () => {
       setAllAdSets(processedAdsets)
       setAllAds(processedAds)
 
-      // 3. Leads — still fetched separately (stored in facebook_leads collection)
       const groupIds = groups.map(g => g.id).join(",")
       const { start, end } = getDateRangeFromPreset(selectedDatePreset)
 
@@ -320,7 +337,6 @@ const Campaigns = () => {
     }
   }
 
-  // Re-fetch whenever the preset changes
   useEffect(() => {
     const controller = new AbortController()
     fetchAllData(controller.signal)
@@ -329,7 +345,6 @@ const Campaigns = () => {
 
   // ── Filtering ──────────────────────────────────────────────────────────────
   const isAllZerosRow = (item) => {
-    // For non-leads tabs, filter out rows where all metric values are zero
     if (activeTab !== "leads") {
       const metricFields = ["spend", "impressions", "clicks", "reach", "leads", "ctr", "cpc", "cpm", "cpp", "frequency"]
       const hasAnyNonZeroMetric = metricFields.some(field => {
@@ -344,7 +359,6 @@ const Campaigns = () => {
   const applyFilters = (data) => {
     let filtered = [...data]
 
-    // Filter out all-zero rows
     filtered = filtered.filter(item => !isAllZerosRow(item))
 
     if (selectedClientGroup && selectedClientGroup !== "all") {
@@ -450,34 +464,28 @@ const Campaigns = () => {
     return matchesCategory && matchesSearch
   })
 
+  const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
+
   const columnVisibility = Object.fromEntries(
-    allColumnsForDropdown.map(c => [c.id, (visibleColumns[activeTab] || []).includes(c.id)])
+    getCurrentVisibleColumns().map(col => [col, true])
   )
 
   const toggleColumn = (col) => {
     setVisibleColumns(prev => {
-      const cur = prev[activeTab] || []
+      const cur = prev[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
       const updated = cur.includes(col) ? cur.filter(c => c !== col) : [...cur, col]
       return { ...prev, [activeTab]: updated }
     })
   }
 
   const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
-  const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
+  const clearAll = () => setVisibleColumns(prev => ({
+    ...prev,
+    [activeTab]: activeTab === "leads" ? [] : ["name"],
+  }))
   const saveView = async () => { await saveToDB(visibleColumns); setColumnsOpen(false) }
 
-
   const getIcon = (col) => (col.id === "clientGroup" || col.id === "name" ? Flask : metaa)
-  const getCurrentVisibleColumns = () => visibleColumns[activeTab] || []
-
-  const tableColumns = getCurrentVisibleColumns().map(col => ({
-    id: col,
-    key: col,
-    header: getMetricDisplayName(col),
-    label: getMetricDisplayName(col),
-    icons: col === "clientGroup" || col === "name" ? Flask : metaa,
-    render: (value, row) => formatCellValue(value, col, row),
-  }))
 
   const formatCellValue = (value, col, row) => {
     if (col === "full_name") {
@@ -501,7 +509,6 @@ const Campaigns = () => {
     }
     if (col === "platform") return value === "fb" ? "Facebook" : value === "ig" ? "Instagram" : value
 
-    // Capitalize names
     if (col === "full_name" || col === "name") {
       const str = String(value);
       return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
@@ -511,10 +518,25 @@ const Campaigns = () => {
     return value
   }
 
+  // FIX 3: Wrap tableColumns in useMemo with a non-empty fallback so StyledTable
+  // always receives columns on the very first render tick — skeleton rows need
+  // at least one column definition to render their cells.
+  const tableColumns = useMemo(() => {
+    const cols = getCurrentVisibleColumns()
+    // Safety net: if cols is somehow still empty, fall back to the tab default
+    const effectiveCols = cols.length > 0 ? cols : DEFAULT_VISIBLE_COLUMNS[activeTab]
+    return effectiveCols.map(col => ({
+      id: col,
+      key: col,
+      header: getMetricDisplayName(col),
+      label: getMetricDisplayName(col),
+      icons: col === "clientGroup" || col === "name" ? Flask : metaa,
+      render: (value, row) => formatCellValue(value, col, row),
+    }))
+  }, [visibleColumns, activeTab, customMetrics, userCurrency])
+
   // ── Summary metrics ────────────────────────────────────────────────────────
   const calculateMetrics = () => {
-    // Top stats are calculated from the campaigns list (global view),
-    // but filtered by the current Client Group selection.
     let baseData = campaigns;
     if (selectedClientGroup && selectedClientGroup !== "all") {
       baseData = campaigns.filter(i => i._groupId === selectedClientGroup);
@@ -598,7 +620,6 @@ const Campaigns = () => {
                 save={saveView}
               />
 
-              {/* ── Date preset selector (replaces the old calendar picker) ── */}
               <Select value={selectedDatePreset} onValueChange={setSelectedDatePreset}>
                 <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
                   <SelectValue />
@@ -632,7 +653,7 @@ const Campaigns = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                {(isLoading || getFilteredDataForTab().length === 0) ? (
+                {isLoading ? (
                   <div className="w-full py-4">
                     <Skeleton className="h-4 w-1/2" />
                   </div>
@@ -744,12 +765,7 @@ const Campaigns = () => {
             </div>
 
             {/* ── Table / states ── */}
-            {isLoading && error && getFilteredDataForTab().length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-700 mb-4" />
-                <p className="text-sm text-muted-foreground">Loading {activeTab}...</p>
-              </div>
-            ) : error && getFilteredDataForTab().length === 0 ? (
+            {error ? (
               <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
                 <div className="rounded-full bg-destructive/10 p-3 mb-4">
                   <X className="h-6 w-6 text-destructive" />
@@ -759,7 +775,12 @@ const Campaigns = () => {
               </div>
             ) : (
               <div className="rounded-lg border bg-card overflow-hidden">
-                <StyledTable columns={tableColumns} data={getFilteredDataForTab()} columnVisibility={columnVisibility} />
+                <StyledTable
+                  columns={tableColumns}
+                  data={getFilteredDataForTab()}
+                  columnVisibility={columnVisibility}
+                  isLoading={isLoading}
+                />
               </div>
             )}
           </TabsContent>
