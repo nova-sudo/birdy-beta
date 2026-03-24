@@ -8,6 +8,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import {
   loadCustomMetrics,
@@ -50,6 +51,7 @@ const userCurrency = localStorage.getItem("user_default_currency");
 const StyledTable = ({
   columns = [],
   data = [],
+  isLoading = false,
   clickableFirstColumn = false,
   onFirstColumnClick,
   onRowClick,
@@ -57,7 +59,6 @@ const StyledTable = ({
   searchQuery = "",
   customMetrics,
   setCustomMetrics,
-  // NEW: Feature flag to enable enhanced extraction
   enableEnhancedExtraction = false,
   isRowLoading,
 }) => {
@@ -65,7 +66,8 @@ const StyledTable = ({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState([]);
-  const isClientMode = customMetrics !== undefined;
+  // FIX: only true when Client Hub explicitly passes BOTH customMetrics array AND setCustomMetrics setter
+  const isClientMode = Array.isArray(customMetrics) && setCustomMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
@@ -84,7 +86,7 @@ const StyledTable = ({
       id: col.id || col.key,
       header: col.header || col.label,
       cell: col.cell || col.render,
-      visible: ["name", "full_name"].includes(col.id) ? true : columnVisibility[col.id] ?? col.visible ?? true,
+      visible: ["name", "full_name"].includes(col.id || col.key) ? true : columnVisibility[col.id || col.key] ?? col.visible ?? true,
     }));
 
     list = list.filter((c) => c.visible);
@@ -147,7 +149,6 @@ const StyledTable = ({
     return Object.keys(tagBreakdown).length;
   };
 
-  // NEW: Get count for a specific tag
   const getSpecificTagCount = (group, tagName) => {
     const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
     return tagBreakdown[tagName] || 0;
@@ -160,7 +161,6 @@ const StyledTable = ({
     }
 
     return data.map((group) => {
-      // ===== EXISTING FIELDS (UNCHANGED) =====
       const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
       const metaCampaigns = group.facebook?.metrics?.total_campaigns ?? 0;
       const metaAdsets = group.facebook?.metrics?.total_adsets ?? 0;
@@ -173,11 +173,8 @@ const StyledTable = ({
       const metaCpm = group.facebook?.metrics?.insights?.cpm ?? 0;
       const metaCpc = group.facebook?.metrics?.insights?.cpc ?? 0;
       const metaCtr = group.facebook?.metrics?.insights?.ctr ?? 0;
-
-      // ✅ FIXED: read from insights, not metrics root
       const metaCostPerResult = group.facebook?.metrics?.insights?.cost_per_result ?? 0;
       const metaLeads = group.facebook?.metrics?.insights?.total_leads ?? 0;
-
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
       const base = {
@@ -210,9 +207,7 @@ const StyledTable = ({
         conversions: metaLeads,
       };
 
-      // ===== ENHANCED FIELDS (ONLY IF ENABLED) =====
       if (enableEnhancedExtraction) {
-        // Core information
         base.ghl_location_id = group.ghl_location_id ?? "";
         base.meta_ad_account_id = group.meta_ad_account_id ?? "";
         base.notes = group.notes ?? "";
@@ -222,50 +217,39 @@ const StyledTable = ({
         base.last_meta_refresh = group.last_meta_refresh ?? "";
         base.last_hp_refresh = group.last_hp_refresh ?? "";
 
-        // GoHighLevel details
         base.ghl_address = group.gohighlevel?.address ?? "";
         base.ghl_name = group.gohighlevel?.name ?? "";
         base.total_tags = getTotalTagCount(group);
         const topTags = getTopTags(group, 3);
         base.top_tag_string = topTags.map(([tag, count]) => `${tag} (${count})`).join(", ");
 
-        // NEW: Extract specific tag counts dynamically based on column config
         columns.forEach((col) => {
           if (col.type === 'tag' && col.tagName) {
             base[col.id] = getSpecificTagCount(group, col.tagName);
           }
         });
 
-        // Meta status
         base.active_campaigns = getActiveCampaignCount(group);
         base.paused_campaigns = getPausedCampaignCount(group);
         base.meta_account_name = group.facebook?.name ?? "Unknown";
         base.meta_currency = group.facebook?.currency ?? "";
 
-        // Ad performance
         const bestAd = getBestPerformingAd(group);
         base.best_ad_name = bestAd?.name ?? "";
         base.best_ad_ctr = bestAd?.ctr ?? 0;
 
-        // Calculated metrics
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
-
-        // ✅ FIXED: use pre-calculated backend value instead of recalculating
         base.cost_per_lead = metaCostPerResult;
-
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
 
-        // Data freshness
         base.meta_freshness = getDataFreshness(group.last_meta_refresh);
         base.ghl_freshness = getDataFreshness(group.last_ghl_refresh);
         base.hp_freshness = getDataFreshness(group.last_hp_refresh);
 
-        // Account age
         const accountAgeMs = group.created_at ? Date.now() - new Date(group.created_at) : 0;
         base.account_age_days = Math.floor(accountAgeMs / (1000 * 60 * 60 * 24));
       }
 
-      // Calculate custom metrics
       if (customMetrics) {
         customMetrics.forEach((metric) => {
           if (metric.formulaParts) {
@@ -318,7 +302,6 @@ const StyledTable = ({
     return sortedData.slice(startIndex, endIndex);
   }, [sortedData, currentPage, pageSize]);
 
-  // Reset to page 1 when data changes
   useEffect(() => {
     setCurrentPage(1);
   }, [sortedData.length, pageSize]);
@@ -427,29 +410,24 @@ const StyledTable = ({
   const getCellValue = (row, columnId) => {
     const value = row[columnId];
 
-    // Handle undefined/null values
     if (value === undefined || value === null) {
       return "—";
     }
 
-    // Handle objects (shouldn't happen, but safety check)
     if (typeof value === "object") {
       console.warn(`Object detected in cell for column ${columnId}:`, value);
       return "—";
     }
 
-    // Format name columns to title case
     if (columnId === "name" || columnId === "full_name" || columnId === "contactName") {
       const str = String(value);
       return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     }
 
-    // Custom metrics formatting
     if (customMetrics?.some((m) => m.id === columnId)) {
       return formatMetricValue(value, columnId);
     }
 
-    // Built-in column formatting
     if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per")) {
       return formatCurrency(value);
     }
@@ -466,7 +444,6 @@ const StyledTable = ({
       return formatNumber(value);
     }
 
-    // String values
     return String(value);
   };
 
@@ -532,7 +509,7 @@ const StyledTable = ({
       <div className="table-container border rounded-md">
         <table className="text-sm">
           <thead className="top-0 z-40">
-            <tr className="transition-colors  data-[state=selected]:bg-muted h-12 bg-white">
+            <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -585,13 +562,66 @@ const StyledTable = ({
           </thead>
 
           <tbody className="text-left">
-            {paginatedData.length === 0 ? (
+            {/* CASE 1: Loading → skeleton rows */}
+            {isLoading ? (
+              Array.from({ length: pageSize }).map((_, idx) => (
+                <tr
+                  key={`skeleton-${idx}`}
+                  className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                >
+                  {visibleColumns.map((col, colIdx) => (
+                    <td
+                      key={`skeleton-${idx}-${col.id}`}
+                      className={`text-foreground truncate ${
+                        colIdx === 0
+                          ? idx % 2 === 0
+                            ? "fixed-column-odd h-11"
+                            : "fixed-column-even h-11"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className={
+                          colIdx === 0
+                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                            : "flex items-center justify-center px-2 h-11"
+                        }
+                      >
+                        <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
+                      </div>
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : paginatedData.length === 0 ? (
+              /* CASE 2: Done loading, no data → empty state message */
               <tr>
-                <td colSpan={visibleColumns.length} className="px-4 py-4 text-muted-foreground">
-                  {isClientMode ? "No client groups found" : "No data available."}
+                <td
+                  colSpan={visibleColumns.length}
+                  className="h-48 text-center align-middle"
+                >
+                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-8 w-8 opacity-30"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9.75 9.75h.008v.008H9.75V9.75zm4.5 0h.008v.008h-.008V9.75zM12 3a9 9 0 100 18A9 9 0 0012 3zm0 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
+                      />
+                    </svg>
+                    <p className="text-sm font-medium">No data available</p>
+                    <p className="text-xs opacity-60">Try adjusting your filters or date range</p>
+                  </div>
                 </td>
               </tr>
             ) : (
+              /* CASE 3: Has data → real rows */
               paginatedData.map((row, idx) => {
                 const globalIdx = (currentPage - 1) * pageSize + idx;
                 return (
@@ -683,7 +713,7 @@ const StyledTable = ({
       </div>
 
       {/* Pagination Controls */}
-      {sortedData.length > 0 && totalPages > 1 && (
+      {!isLoading && sortedData.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <Pagination>
             <PaginationContent>

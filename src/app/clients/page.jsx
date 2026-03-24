@@ -19,7 +19,7 @@ import { AlertCircle, Building2, Plus, Check, ChevronRight, Users, DollarSign, U
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading } from "@/components/ui/ViewLoading"
+
 import {
   ENHANCED_CLIENT_COLUMNS,
   ENHANCED_CATEGORIES,
@@ -58,6 +58,7 @@ import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map";
+import { Skeleton } from "@/components/ui/skeleton"
 
 const STORAGE_KEY = "user_default_currency";
 const CACHE_DURATION = {
@@ -564,11 +565,6 @@ export default function ClientsPage() {
 
   const stats = calculateStats()
 
-  if (loading) {
-    return <Loading progress={progress} />
-  }
-  if (!viewsLoaded) return <ViewLoading />
-
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto bg-[#f6f8fa] gap-6">
       <div className="bg-[#f6f8fa]">
@@ -1053,19 +1049,25 @@ export default function ClientsPage() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
-              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                <Users className="h-4 w-4 text-purple-600 font-bold" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeClients}</div>
-              <p className="text-xs text-[#71658B] text-muted-foreground ">
-                <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-              </p>
-            </CardContent>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
+                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                  <Users className="h-4 w-4 text-purple-600 font-bold" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="w-full py-4">
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ) : (
+                  <div className="text-2xl font-bold">{stats.activeClients}</div>
+                )}
+                <p className="text-xs text-[#71658B] text-muted-foreground ">
+                  <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
+                  <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+                </p>
+              </CardContent>
           </Card>
 
           <Card className="border rounded-lg shadow-sm">
@@ -1076,9 +1078,15 @@ export default function ClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
+              {loading ? (
+                <div className="w-full py-4">
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : (
+                <div className="text-2xl font-bold">
+                  {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
                 <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
@@ -1094,7 +1102,13 @@ export default function ClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalLeads.toLocaleString()}</div>
+              {loading ? (
+                <div className="w-full py-4">
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : (
+                <div className="text-2xl font-bold">{stats.totalLeads.toLocaleString()}</div>
+              )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
                 <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
@@ -1110,9 +1124,15 @@ export default function ClientsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
+              {loading ? (
+                <div className="w-full py-4">
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+              ) : (
+                <div className="text-2xl font-bold">
+                  {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </div>
+              )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">-5%</span>
                 <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
@@ -1132,7 +1152,7 @@ export default function ClientsPage() {
           setCustomMetrics={setCustomMetrics}
           enableEnhancedExtraction={true}
           getTagCount={getTagCount}
-          isRowLoading={(row) => row._isCreating === true || row._isPending === true}
+          isLoading={loading}
         />
       </div>
     </div>

@@ -2,7 +2,6 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { ViewLoading } from "@/components/ui/ViewLoading"
 import {
   SlidersHorizontal,
   Users,
@@ -56,6 +55,7 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
 import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 import getSymbolFromCurrency from "currency-symbol-map";
 import StyledTable from "@/components/ui/table-container"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const userCurrency = localStorage.getItem("user_default_currency");
 
@@ -457,7 +457,7 @@ const buildContactColumns = () => [
 
 const contactColumns = buildContactColumns()
 
-const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
+const DashboardStats = ({ contacts, filteredContacts, metaData, loading }) => {
   // Calculate opportunity counts by status
   const opportunitiesByStatus = filteredContacts.reduce((acc, c) => {
     if (!c.opportunities || c.opportunities.length === 0) return acc
@@ -492,7 +492,13 @@ const DashboardStats = ({ contacts, filteredContacts, metaData }) => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stat.value}</div>
+            {loading ? (
+                  <div className="w-full py-4">
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                ) : (
+                  <div className="text-2xl font-bold">{stat.value}</div>
+)}
             {stat.subtitle && <p className="text-xs text-muted-foreground mt-0">{stat.subtitle}</p>}
             <p className="text-xs text-[#71658B] text-muted-foreground">Across all Leads</p>
           </CardContent>
@@ -761,9 +767,11 @@ export default function ContactPage() {
     }
   }
 
-  if (loading) {
-    return <Loading progress={progress} />
-  }
+  // if (loading) {
+  //   return (
+  //     <Loading progress={progress} />
+  //   )
+  // }
 
   const handlePreviousPage = () => {
     if (currentPage > 1) fetchContacts(currentPage - 1)
@@ -772,7 +780,6 @@ export default function ContactPage() {
     if (metaData?.has_next) fetchContacts(currentPage + 1)
   }
 
-  if (!viewsLoaded) return <ViewLoading />
 
   return (
     <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
@@ -864,7 +871,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} />
+        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} loading={loading} />
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
@@ -902,25 +909,15 @@ export default function ContactPage() {
           </TabsList>
         </Tabs>
 
-        {filteredAndSortedContacts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center w-full rounded-lg border-2 border-dashed border-border bg-muted/20 py-16">
-            <div className="rounded-full bg-muted p-3 mb-4">
-              <Users className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No contacts found</h3>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Try adjusting your filters or search criteria, or verify your integration settings.
-            </p>
-          </div>
-        ) : (
+       
           <StyledTable
             columns={contactColumns}
             data={filteredAndSortedContacts}
             columnVisibility={columnVisibilityMap}
             searchQuery=""
             clickableFirstColumn={false}
+            isLoading={loading}
           />
-        )}
 
         <div className="flex justify-center gap-4">
           <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
