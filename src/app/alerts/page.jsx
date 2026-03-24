@@ -203,7 +203,7 @@ function ProgressToTrigger({ alert }) {
           ? <span className="text-red-500 font-medium">⚡ Triggered</span>
           : `${pct.toFixed(0)}% to trigger`
         }
-        <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span> 
+        <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span>
       </div>
     </div>
   )
@@ -544,7 +544,7 @@ export default function AlertsPage() {
       <table className="w-full caption-bottom text-sm">
         <thead className="bg-white sticky top-0 z-20">
           <tr className="border-b h-11">
-            {["Alert Name","Metric","Condition","Progress","Status","Targets","Last Updated","Actions"].map(h => (
+            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
               <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">
                 {h}
               </th>

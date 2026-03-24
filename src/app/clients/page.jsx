@@ -154,6 +154,8 @@ export default function ClientsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
   const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [duplicateGroupName, setDuplicateGroupName] = useState("")
   const [userCurrency, setUserCurrency] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
@@ -328,7 +330,8 @@ export default function ClientsPage() {
       const data = await response.json()
       const groups = (data.client_groups || []).map(group => ({
         ...group,
-        _isPending: group.status === "pending"
+        _isPending: group.status === "pending",
+        _isCreating: group.status === "creating",
       }))
 
       setClientGroups(groups)
@@ -475,7 +478,9 @@ export default function ClientsPage() {
 
         setClientGroups(prev =>
           prev.map(group =>
-            group.id === tempId ? { ...data.client_group, _isCreating: false } : group
+            group.id === tempId
+              ? { ...data.client_group, _isCreating: false, _isPending: false }
+              : group
           )
         )
 
@@ -486,8 +491,14 @@ export default function ClientsPage() {
         const data = await response.json()
 
         setClientGroups(prev => prev.filter(group => group.id !== tempId))
+
         if (response.status === 402 && data.detail?.code === "CLIENT_LIMIT_REACHED") {
           setClientLimitDialogOpen(true)
+        } else if (response.status === 409) {
+          const detail = typeof data.detail === "string" ? data.detail : ""
+          const nameMatch = detail.match(/^A client group named "([^"]+)"/)
+          setDuplicateGroupName(nameMatch ? nameMatch[1] : "another client group")
+          setDuplicateDialogOpen(true)
         } else {
           toast.error(data.detail || "Failed to create client group")
         }
@@ -531,12 +542,18 @@ export default function ClientsPage() {
       return sum + spend
     }, 0)
 
+    // ← Read Meta leads, not GHL contacts
     const totalLeads = clientGroups.reduce((sum, group) => {
-      const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
-      return ghlContacts
+      const leads = parseInt(group.facebook?.metrics?.insights?.total_leads) || 0
+      return sum + leads
     }, 0)
 
-    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
+    // ← Read pre-calculated CPL from backend instead of dividing manually
+    const totalCPL = clientGroups.reduce((sum, group) => {
+      const cpl = parseFloat(group.facebook?.metrics?.insights?.cost_per_result) || 0
+      return sum + cpl
+    }, 0)
+    const averageCPL = clientGroups.length > 0 ? totalCPL / clientGroups.filter(g => g.facebook?.metrics?.insights?.cost_per_result > 0).length : 0
 
     return {
       activeClients,
@@ -991,6 +1008,31 @@ export default function ClientsPage() {
               onClick={() => { setClientLimitDialogOpen(false); router.push("/billing") }}
             >
               Go to Billing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Duplicate Integration Dialog */}
+      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Integration Already in Use</AlertDialogTitle>
+            <AlertDialogDescription>
+              The selected GHL location or Meta ad account is already linked to{" "}
+              <span className="font-semibold text-foreground">
+                &ldquo;{duplicateGroupName}&rdquo;
+              </span>
+              . Each integration can only be connected to one client group at a time.
+              Please choose a different account, or remove it from the existing group first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => setDuplicateDialogOpen(false)}
+            >
+              Got it
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
