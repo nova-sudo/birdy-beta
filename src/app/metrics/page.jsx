@@ -42,6 +42,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton"
+import { InboxIcon } from "lucide-react"
 
 const operators = [
   { value: "+", label: "Add (+)" },
@@ -154,7 +156,11 @@ const MetricsHub = () => {
   const [availableMetricsForFormulas, setAvailableMetricsForFormulas] = useState([])
   const [statistics, setStatistics] = useState(null)
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true)
   const itemsPerPage = 15; // Adjust as needed
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false)
+  const [viewingMetric, setViewingMetric] = useState(null)
+  const [viewForm, setViewForm] = useState({ name: "", description: "", group: "" })
 
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
@@ -178,6 +184,9 @@ const MetricsHub = () => {
         }
       } catch (error) {
         console.error("Error fetching client groups:", error)
+      }
+      finally {
+        setIsLoading(false)  // <- add this
       }
     }
     fetchClientGroups()
@@ -318,6 +327,22 @@ const MetricsHub = () => {
       displayOnDashboard: metric.displayOnDashboard || false,
     })
     setIsCreateDialogOpen(true)
+  }
+
+  const handleViewMetric = (metric) => {
+    setViewingMetric(metric)
+    setViewForm({ name: metric.name, description: metric.description || "", group: metric.dashboard || "" })
+    setIsViewDialogOpen(true)
+  }
+
+  const handleSaveViewMetric = () => {
+    setDiscoveredMetrics(prev =>
+      prev.map(m => m.id === viewingMetric.id
+        ? { ...m, name: viewForm.name, description: viewForm.description, dashboard: viewForm.group }
+        : m
+      )
+    )
+    setIsViewDialogOpen(false)
   }
 
   const handleDeleteMetric = (metricId) => {
@@ -633,8 +658,37 @@ const MetricsHub = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {currentMetrics.map((metric) => (
-                      <tr key={metric.id} className="hover:bg-muted/50">
+                    {isLoading ? (
+                      Array.from({ length: 8 }).map((_, idx) => (
+                        <tr key={`skeleton-${idx}`} className={`border-b bg-white`}>
+                          <td className="px-4 py-3">
+                            <Skeleton className="h-4 w-40 mb-2" />
+                            <Skeleton className="h-3 w-64" />
+                          </td>
+                          <td className="px-4 py-3"><Skeleton className="h-6 w-28 rounded-full" /></td>
+                          <td className="px-4 py-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                          <td className="px-4 py-3"><Skeleton className="h-8 w-24 rounded-md" /></td>
+                        </tr>
+                      ))
+                    ) : currentMetrics.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>
+                          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                              <InboxIcon className="h-6 w-6 text-muted-foreground/60" />
+                            </div>
+                            <p className="text-sm font-medium">No {activeTab} metrics found</p>
+                            <p className="text-xs text-muted-foreground/70">
+                              {activeTab === "custom"
+                                ? "Create your first custom metric using the + button above."
+                                : "No metrics are available for this category yet."}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                    currentMetrics.map((metric, idx) => (
+                      <tr key={metric.id} className={`hover:bg-muted/50 bg-white"}`}>
                         <td className="px-4 py-2">
                           <div className="font-semibold text-foreground">{metric.name}</div>
                           <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
@@ -666,18 +720,26 @@ const MetricsHub = () => {
                                 </Button>
                               </>
                             ) : (
-                              <Badge variant="outline">Standard</Badge>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 px-3 bg-purple-600 text-white hover:bg-purple-700"
+                                onClick={() => handleViewMetric(metric)}
+                              >
+                                Edit Metric
+                              </Button>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                   </tbody>
                 </table>
               </div>
 
             </div>
-            {totalPages > 1 && (
+            {!isLoading && totalPages > 1 && (
               <Pagination className="mt-4">
                 <PaginationContent>
                   <PaginationItem>
@@ -750,40 +812,42 @@ const MetricsHub = () => {
 
               <div>
                 <Label className="pb-2">Formula Builder</Label>
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
-                  {metricForm.formulaParts.map((part, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      {part.type === "metric" ? (
-                        <MetricSelector
-                          value={part.value}
-                          onChange={(newValue) => updateFormulaPart(index, newValue)}
-                          availableMetrics={availableMetricsForFormulas}
-                        />
-                      ) : (
-                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
-                          <SelectTrigger className="w-fit">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {operators.map((op) => (
-                              <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFormulaPart(index)}
-                        disabled={metricForm.formulaParts.length === 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {viewingMetric?.formulaParts?.length > 0 ? (
+                      viewingMetric.formulaParts.map((part, index) => (
+                        part.type === "metric" ? (
+                          <div key={index} className="flex items-center gap-1 bg-white border rounded-md px-3 py-1.5 text-sm">
+                            {availableMetricsForFormulas.find(m => m.id === part.value)?.label || part.value}
+                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <div key={index} className="flex items-center gap-1 bg-white border rounded-md px-3 py-1.5 text-sm">
+                            {operators.find(o => o.value === part.value)?.label?.split(" ")[0] + "..."}
+                            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                            <X className="h-3 w-3 text-muted-foreground" />
+                          </div>
+                        )
+                      ))
+                    ) : (
+                      <div className="flex items-center gap-1 bg-white border rounded-md px-3 py-1.5 text-sm text-muted-foreground">
+                        {viewingMetric?.name}
+                      </div>
+                    )}
+                    <Button variant="outline" size="sm" className="gap-1 bg-white" disabled>
+                      <Plus className="h-4 w-4" /> Add Operation
+                    </Button>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                    <p className="text-sm text-muted-foreground">
+                      {viewingMetric?.formula || viewingMetric?.name || "—"}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Display on dashboard</Label>
+                      <Checkbox checked={viewingMetric?.displayOnDashboard || false} disabled />
                     </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addOperation} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" /> Add Operation
-                  </Button>
+                  </div>
                 </div>
               </div>
 
@@ -801,6 +865,87 @@ const MetricsHub = () => {
               <Button variant="outline" onClick={resetForm}>Cancel</Button>
               <Button onClick={handleCreateMetric} className="bg-purple-600 text-white hover:bg-purple-700">
                 {editingMetric ? "Update" : "Create"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-2xl bg-white">
+            <DialogHeader>
+              <DialogTitle>Edit Metric</DialogTitle>
+              <DialogDescription>Edit standard metric details</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label className="pb-2">Metric Name</Label>
+                <Input
+                  value={viewForm.name}
+                  onChange={(e) => setViewForm({ ...viewForm, name: e.target.value })}
+                  className="bg-white"
+                />
+              </div>
+
+              <div>
+                <Label className="pb-2">Description (Optional)</Label>
+                <Input
+                  value={viewForm.description}
+                  onChange={(e) => setViewForm({ ...viewForm, description: e.target.value })}
+                  className="bg-white"
+                />
+              </div>
+
+              <div>
+                <Label className="pb-2">
+                  Group <span className="text-red-500">*</span>
+                </Label>
+                <Select
+                  value={viewForm.group || viewingMetric?.dashboard || ""}
+                  onValueChange={(value) => setViewForm({ ...viewForm, group: value })}
+                >
+                  <SelectTrigger className="bg-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="Clients">Clients</SelectItem>
+                    <SelectItem value="Campaigns">Campaigns</SelectItem>
+                    <SelectItem value="Contacts">Contacts</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="pb-2">Source</Label>
+                <div className="pt-1">
+                  {viewingMetric && getSourceBadge(viewingMetric.source)}
+                </div>
+              </div>
+
+              <div>
+                <Label className="pb-2">Formula Builder</Label>
+                <div className="border rounded-lg p-4 bg-muted/30 space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1 bg-white border rounded-md px-3 py-1.5 text-sm text-muted-foreground">
+                      {viewingMetric?.name}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-border/40">
+                    <p className="text-sm text-muted-foreground">
+                      {viewingMetric?.name || "—"}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm">Display on dashboard</Label>
+                      <Checkbox checked={viewingMetric?.displayOnDashboard || false} disabled />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex items-center justify-end">
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveViewMetric} className="bg-purple-600 text-white hover:bg-purple-700">
+                Save Metric
               </Button>
             </DialogFooter>
           </DialogContent>
