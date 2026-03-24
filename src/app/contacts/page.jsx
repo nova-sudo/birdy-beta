@@ -61,19 +61,19 @@ const userCurrency = localStorage.getItem("user_default_currency");
 
 // ── Date preset definitions (mirrors Client Hub) ─────────────────────────────
 const DATE_PRESETS = [
-  { value: "maximum",            label: "All Time" },
-  { value: "today",              label: "Today" },
-  { value: "yesterday",          label: "Yesterday" },
-  { value: "this_week_mon_today",label: "This Week" },
-  { value: "last_7d",            label: "Last 7 Days" },
-  { value: "last_14d",           label: "Last 14 Days" },
-  { value: "last_30d",           label: "Last 30 Days" },
-  { value: "this_month",         label: "This Month" },
-  { value: "last_month",         label: "Last Month" },
-  { value: "this_quarter",       label: "This Quarter" },
-  { value: "last_quarter",       label: "Last Quarter" },
-  { value: "this_year",          label: "This Year" },
-  { value: "last_year",          label: "Last Year" },
+  { value: "maximum", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
+  { value: "this_week_mon_today", label: "This Week" },
+  { value: "last_7d", label: "Last 7 Days" },
+  { value: "last_14d", label: "Last 14 Days" },
+  { value: "last_30d", label: "Last 30 Days" },
+  { value: "this_month", label: "This Month" },
+  { value: "last_month", label: "Last Month" },
+  { value: "this_quarter", label: "This Quarter" },
+  { value: "last_quarter", label: "Last Quarter" },
+  { value: "this_year", label: "This Year" },
+  { value: "last_year", label: "Last Year" },
 ]
 
 /**
@@ -579,7 +579,7 @@ export default function ContactPage() {
       let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=15`
 
       if (start_date) url += `&start_date=${start_date}`
-      if (end_date)   url += `&end_date=${end_date}`
+      if (end_date) url += `&end_date=${end_date}`
 
       console.log("🔍 Fetching contacts:", { url, preset: selectedDateRange, start_date, end_date })
 
@@ -869,32 +869,32 @@ export default function ContactPage() {
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
           <TabsList className="inline-flex h-auto items-center rounded-lg bg-muted/60 p-1 text-muted-foreground overflow-x-auto border border-border/50 shadow-sm w-full justify-start">
-            <TabsTrigger 
-              value="all" 
+            <TabsTrigger
+              value="all"
               className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
             >
               All Leads
             </TabsTrigger>
-            <TabsTrigger 
-              value="open" 
+            <TabsTrigger
+              value="open"
               className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
             >
               Open
             </TabsTrigger>
-            <TabsTrigger 
-              value="won" 
+            <TabsTrigger
+              value="won"
               className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
             >
               Won
             </TabsTrigger>
-            <TabsTrigger 
-              value="abandoned" 
+            <TabsTrigger
+              value="abandoned"
               className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
             >
               Abandoned
             </TabsTrigger>
-            <TabsTrigger 
-              value="lost" 
+            <TabsTrigger
+              value="lost"
               className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
             >
               Lost

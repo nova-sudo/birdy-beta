@@ -59,6 +59,7 @@ const StyledTable = ({
   setCustomMetrics,
   // NEW: Feature flag to enable enhanced extraction
   enableEnhancedExtraction = false,
+  isRowLoading,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -172,8 +173,11 @@ const StyledTable = ({
       const metaCpm = group.facebook?.metrics?.insights?.cpm ?? 0;
       const metaCpc = group.facebook?.metrics?.insights?.cpc ?? 0;
       const metaCtr = group.facebook?.metrics?.insights?.ctr ?? 0;
+
+      // ✅ FIXED: read from insights, not metrics root
       const metaCostPerResult = group.facebook?.metrics?.insights?.cost_per_result ?? 0;
-      const metaLeads = group.facebook?.metrics?.total_leads ?? 0;
+      const metaLeads = group.facebook?.metrics?.insights?.total_leads ?? 0;
+
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
       const base = {
@@ -245,7 +249,10 @@ const StyledTable = ({
 
         // Calculated metrics
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
-        base.cost_per_lead = metaLeads > 0 ? (metaSpend / metaLeads) : 0;
+
+        // ✅ FIXED: use pre-calculated backend value instead of recalculating
+        base.cost_per_lead = metaCostPerResult;
+
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
 
         // Data freshness
@@ -614,10 +621,6 @@ const StyledTable = ({
                               : "min-w-0 px-2"
                           }
                         >
-                          {/* Add spinner for first column when creating OR pending */}
-                          {colIdx === 0 && (row._isCreating || row._isPending) && (
-                            <div className="w-4 h-4 border-1 border-purple-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
-                          )}
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -634,6 +637,30 @@ const StyledTable = ({
                                     </button>
                                   ) : (
                                     col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                  )}
+
+                                  {/* Creation Spinner - after text */}
+                                  {colIdx === 0 && isRowLoading?.(row) && (
+                                    <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                                      <svg
+                                        className="animate-spin h-3 w-3 shrink-0"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                      >
+                                        <circle
+                                          className="opacity-25"
+                                          cx="12" cy="12" r="10"
+                                          stroke="currentColor"
+                                          strokeWidth="4"
+                                        />
+                                        <path
+                                          className="opacity-75"
+                                          fill="currentColor"
+                                          d="M4 12a8 8 0 018-8v8z"
+                                        />
+                                      </svg>
+                                      Setting up…
+                                    </span>
                                   )}
                                 </span>
                               </TooltipTrigger>
@@ -656,7 +683,7 @@ const StyledTable = ({
       </div>
 
       {/* Pagination Controls */}
-      {isClientMode && sortedData.length > 0 && (
+      {sortedData.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <Pagination>
             <PaginationContent>
