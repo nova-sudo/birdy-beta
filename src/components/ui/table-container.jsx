@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   Tooltip,
@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import {
   loadCustomMetrics,
@@ -61,6 +62,9 @@ const StyledTable = ({
   setCustomMetrics,
   enableEnhancedExtraction = false,
   isRowLoading,
+  enableSelection = false,
+  selectedRows = new Set(),
+  onSelectionChange,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -510,6 +514,30 @@ const StyledTable = ({
         <table className="text-sm">
           <thead className="top-0 z-40">
             <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
+              {/* Checkbox header column */}
+              {enableSelection && (
+                <th className="h-12 w-10 px-2 pr-0 min-w-0 bg-white" style={{ position: 'sticky', left: 0, zIndex: 51 }}>
+                  <div className="flex items-center">
+                    <Checkbox
+                      checked={
+                        paginatedData.length > 0 &&
+                        paginatedData.every((row) => selectedRows.has(row.id))
+                      }
+                      onCheckedChange={(checked) => {
+                        if (!onSelectionChange) return;
+                        const next = new Set(selectedRows);
+                        if (checked) {
+                          paginatedData.forEach((row) => next.add(row.id));
+                        } else {
+                          paginatedData.forEach((row) => next.delete(row.id));
+                        }
+                        onSelectionChange(next);
+                      }}
+                      aria-label="Select all rows"
+                    />
+                  </div>
+                </th>
+              )}
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -521,6 +549,7 @@ const StyledTable = ({
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
                     }`}
+                  style={enableSelection && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: 40 } : undefined}
                 >
                   <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
@@ -569,7 +598,12 @@ const StyledTable = ({
                   key={`skeleton-${idx}`}
                   className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
-                  {visibleColumns.map((col, colIdx) => (
+                  {enableSelection && (
+                    <td className="w-10 px-2 pr-0 min-w-0">
+                      <Skeleton className="h-4 w-4 rounded" />
+                    </td>
+                  )}
+                  {(visibleColumns.length > 0 ? visibleColumns : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))).map((col, colIdx) => (
                     <td
                       key={`skeleton-${idx}-${col.id}`}
                       className={`text-foreground truncate ${
@@ -579,6 +613,7 @@ const StyledTable = ({
                             : "fixed-column-even h-11"
                           : ""
                       }`}
+                      style={enableSelection && colIdx === 0 ? { left: 40 } : undefined}
                     >
                       <div
                         className={
@@ -597,7 +632,7 @@ const StyledTable = ({
               /* CASE 2: Done loading, no data → empty state message */
               <tr>
                 <td
-                  colSpan={visibleColumns.length}
+                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
@@ -624,16 +659,41 @@ const StyledTable = ({
               /* CASE 3: Has data → real rows */
               paginatedData.map((row, idx) => {
                 const globalIdx = (currentPage - 1) * pageSize + idx;
+                const isSelected = enableSelection && selectedRows.has(row.id);
                 return (
                   <tr
                     key={row.id || idx}
+                    data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
                     className={`border-b transition-colors ${(row._isCreating || row._isPending)
                         ? "bg-muted/30 cursor-wait opacity-60 w-fit"
                         : "hover:bg-muted/50 cursor-pointer w-fit"
                       } 
-                  ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                  ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}
+                  ${isSelected ? "!bg-primary/5" : ""}`}
                   >
+                    {/* Row checkbox */}
+                    {enableSelection && (
+                      <td
+                        className={`w-10 px-2 pr-0 min-w-0 ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"} ${isSelected ? "!bg-primary/5" : ""}`}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            if (!onSelectionChange) return;
+                            const next = new Set(selectedRows);
+                            if (checked) {
+                              next.add(row.id);
+                            } else {
+                              next.delete(row.id);
+                            }
+                            onSelectionChange(next);
+                          }}
+                          aria-label={`Select ${row.name || row.id}`}
+                        />
+                      </td>
+                    )}
                     {visibleColumns.map((col, colIdx) => (
                       <td
                         key={`${row.id || idx}-${col.id}`}
@@ -642,7 +702,8 @@ const StyledTable = ({
                               ? "fixed-column-odd h-11"
                               : "fixed-column-even h-11"
                             : ""
-                          }`}
+                          } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
+                        style={enableSelection && colIdx === 0 ? { left: 40 } : undefined}
                       >
                         <div
                           className={

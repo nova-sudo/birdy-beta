@@ -150,7 +150,7 @@ export default function ClientsPage() {
   // ── 🔥 DATE RANGE STATE ──────────────────────────────────────────────────
   const [selectedDateRange, setSelectedDateRange] = useState("maximum")
 
-  const [progress, setProgress] = useState(13)
+  const [progress, setProgress] = useState(0)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
   const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
@@ -292,16 +292,7 @@ export default function ClientsPage() {
     fetchClientGroups(false, selectedDateRange)
   }, [selectedDateRange])
 
-  useEffect(() => {
-    const intervals = [33, 50, 66, 80, 90];
-    let step = 0;
-    const timer = setInterval(() => {
-      setProgress(intervals[step]);
-      step += 1;
-      if (step >= intervals.length) clearInterval(timer);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Removed mount-time progress animation
 
   useEffect(() => {
     if (wizardOpen && wizardStep > 1) {
@@ -458,6 +449,12 @@ export default function ClientsPage() {
 
     toast.info(`Creating "${creatingGroupName}"...`)
 
+    setAddingClientGroup(true)
+    setProgress(10)
+    const progressInterval = setInterval(() => {
+      setProgress(prev => (prev >= 95 ? prev : prev + 5))
+    }, 500)
+
     try {
       const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
         method: "POST",
@@ -472,6 +469,9 @@ export default function ClientsPage() {
           notes: "",  // Add this; use empty string or a dynamic value if needed
         }),
       });
+
+      clearInterval(progressInterval)
+      setProgress(100)
 
       if (response.ok) {
         const data = await response.json()
@@ -504,11 +504,14 @@ export default function ClientsPage() {
         }
       }
     } catch (err) {
+      clearInterval(progressInterval)
       console.error("[v0] Error creating client group:", err)
 
       setClientGroups(prev => prev.filter(group => group.id !== tempId))
 
       toast.error("Failed to create client group")
+    } finally {
+      setTimeout(() => setAddingClientGroup(false), 500)
     }
   }
 
@@ -1153,8 +1156,15 @@ export default function ClientsPage() {
           enableEnhancedExtraction={true}
           getTagCount={getTagCount}
           isLoading={loading}
+          isRowLoading={(row) => row._isPending || row._isCreating}
         />
       </div>
+      {addingClientGroup && (
+        <Loading 
+          progress={progress} 
+          title="Setting up your client group..." 
+        />
+      )}
     </div>
   )
 }
