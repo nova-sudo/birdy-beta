@@ -153,6 +153,8 @@ export default function ClientsPage() {
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
   const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [duplicateGroupName, setDuplicateGroupName] = useState("")
   const [userCurrency, setUserCurrency] = useState(() => {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
@@ -327,7 +329,8 @@ export default function ClientsPage() {
       const data = await response.json()
       const groups = (data.client_groups || []).map(group => ({
         ...group,
-        _isPending: group.status === "pending"
+        _isPending: group.status === "pending",
+        _isCreating: group.status === "creating",
       }))
 
       setClientGroups(groups)
@@ -474,7 +477,9 @@ export default function ClientsPage() {
 
         setClientGroups(prev =>
           prev.map(group =>
-            group.id === tempId ? { ...data.client_group, _isCreating: false } : group
+            group.id === tempId
+              ? { ...data.client_group, _isCreating: false, _isPending: false }
+              : group
           )
         )
 
@@ -485,8 +490,14 @@ export default function ClientsPage() {
         const data = await response.json()
 
         setClientGroups(prev => prev.filter(group => group.id !== tempId))
+
         if (response.status === 402 && data.detail?.code === "CLIENT_LIMIT_REACHED") {
           setClientLimitDialogOpen(true)
+        } else if (response.status === 409) {
+          const detail = typeof data.detail === "string" ? data.detail : ""
+          const nameMatch = detail.match(/^A client group named "([^"]+)"/)
+          setDuplicateGroupName(nameMatch ? nameMatch[1] : "another client group")
+          setDuplicateDialogOpen(true)
         } else {
           toast.error(data.detail || "Failed to create client group")
         }
@@ -530,12 +541,18 @@ export default function ClientsPage() {
       return sum + spend
     }, 0)
 
+    // ← Read Meta leads, not GHL contacts
     const totalLeads = clientGroups.reduce((sum, group) => {
-      const ghlContacts = parseInt(group.gohighlevel?.metrics?.total_contacts) || 0
-      return ghlContacts
+      const leads = parseInt(group.facebook?.metrics?.insights?.total_leads) || 0
+      return sum + leads
     }, 0)
 
-    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
+    // ← Read pre-calculated CPL from backend instead of dividing manually
+    const totalCPL = clientGroups.reduce((sum, group) => {
+      const cpl = parseFloat(group.facebook?.metrics?.insights?.cost_per_result) || 0
+      return sum + cpl
+    }, 0)
+    const averageCPL = clientGroups.length > 0 ? totalCPL / clientGroups.filter(g => g.facebook?.metrics?.insights?.cost_per_result > 0).length : 0
 
     return {
       activeClients,
@@ -1000,6 +1017,31 @@ export default function ClientsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Duplicate Integration Dialog */}
+      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Integration Already in Use</AlertDialogTitle>
+            <AlertDialogDescription>
+              The selected GHL location or Meta ad account is already linked to{" "}
+              <span className="font-semibold text-foreground">
+                &ldquo;{duplicateGroupName}&rdquo;
+              </span>
+              . Each integration can only be connected to one client group at a time.
+              Please choose a different account, or remove it from the existing group first.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+              onClick={() => setDuplicateDialogOpen(false)}
+            >
+              Got it
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="w-full mx-auto py-6 space-y-6">
         {error && (
           <Alert variant="destructive">
@@ -1011,19 +1053,19 @@ export default function ClientsPage() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
-                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Users className="h-4 w-4 text-purple-600 font-bold" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeClients}</div>
-                <p className="text-xs text-[#71658B] text-muted-foreground ">
-                  <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                  <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                </p>
-              </CardContent>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
+              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+                <Users className="h-4 w-4 text-purple-600 font-bold" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.activeClients}</div>
+              <p className="text-xs text-[#71658B] text-muted-foreground ">
+                <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
+                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
+              </p>
+            </CardContent>
           </Card>
 
           <Card className="border rounded-lg shadow-sm">
@@ -1035,7 +1077,7 @@ export default function ClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-              {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
@@ -1069,7 +1111,7 @@ export default function ClientsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-              {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </div>
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">-5%</span>
@@ -1090,6 +1132,7 @@ export default function ClientsPage() {
           setCustomMetrics={setCustomMetrics}
           enableEnhancedExtraction={true}
           getTagCount={getTagCount}
+          isRowLoading={(row) => row._isCreating === true || row._isPending === true}
         />
       </div>
     </div>

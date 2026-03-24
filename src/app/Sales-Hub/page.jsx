@@ -74,8 +74,8 @@ function CallLogsDialog({ lead }) {
             <div className="pt-2 flex items-center gap-2">
               <Badge
                 className={`${lead.call_logs_count > 0
-                    ? "bg-purple-50/80 text-purple-700 border-purple-200"
-                    : "bg-gray-100/80 text-gray-700 border-gray-200"
+                  ? "bg-purple-50/80 text-purple-700 border-purple-200"
+                  : "bg-gray-100/80 text-gray-700 border-gray-200"
                   } border text-xs font-medium`}
                 variant="outline"
               >
@@ -122,8 +122,8 @@ function CallLogsDialog({ lead }) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge
                       className={`${callLog.call_status === "outbound"
-                          ? "bg-blue-100/80 text-blue-700 border-blue-200"
-                          : "bg-green-100/80 text-green-700 border-green-200"
+                        ? "bg-blue-100/80 text-blue-700 border-blue-200"
+                        : "bg-green-100/80 text-green-700 border-green-200"
                         } border text-xs font-medium`}
                       variant="outline"
                     >
