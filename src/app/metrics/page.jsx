@@ -666,7 +666,7 @@ const MetricsHub = () => {
                   <tbody className="divide-y">
                     {isLoading ? (
                       Array.from({ length: 8 }).map((_, idx) => (
-                        <tr key={`skeleton-${idx}`} className={`border-b bg-white}`}>
+                        <tr key={`skeleton-${idx}`} className="border-b bg-white">
                           <td className="px-4 py-3">
                             <Skeleton className="h-4 w-40 mb-2" />
                             <Skeleton className="h-3 w-64" />
@@ -676,7 +676,7 @@ const MetricsHub = () => {
                           <td className="px-4 py-3"><Skeleton className="h-8 w-24 rounded-md" /></td>
                         </tr>
                       ))
-                    ) : currentMetrics.length === 0 ? (
+                    ) : filteredMetrics.length === 0 ? (
                       <tr>
                         <td colSpan={4}>
                           <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
