@@ -829,7 +829,6 @@ const Campaigns = () => {
                 <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
               </div>
             ) : (
-              <div className="rounded-lg border bg-card overflow-hidden">
                 <StyledTable
                   columns={tableColumns}
                   data={getFilteredDataForTab()}
@@ -852,7 +851,6 @@ const Campaigns = () => {
                           undefined
                   }
                 />
-              </div>
             )}
           </TabsContent>
         </Tabs>
