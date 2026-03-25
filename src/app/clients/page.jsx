@@ -1159,12 +1159,7 @@ export default function ClientsPage() {
           isRowLoading={(row) => row._isPending || row._isCreating}
         />
       </div>
-      {addingClientGroup && (
-        <Loading 
-          progress={progress} 
-          title="Setting up your client group..." 
-        />
-      )}
+
     </div>
   )
 }

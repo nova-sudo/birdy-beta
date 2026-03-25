@@ -29,33 +29,33 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 // ── Date presets ─────────────────────────────────────────────────────────────
 const DATE_PRESETS = [
-  { value: "maximum",          label: "All Time" },
-  { value: "today",            label: "Today" },
-  { value: "yesterday",        label: "Yesterday" },
+  { value: "maximum", label: "All Time" },
+  { value: "today", label: "Today" },
+  { value: "yesterday", label: "Yesterday" },
   { value: "this_week_mon_today", label: "This Week" },
-  { value: "last_7d",          label: "Last 7 Days" },
-  { value: "last_14d",         label: "Last 14 Days" },
-  { value: "last_30d",         label: "Last 30 Days" },
-  { value: "this_month",       label: "This Month" },
-  { value: "last_month",       label: "Last Month" },
-  { value: "this_quarter",     label: "This Quarter" },
-  { value: "last_quarter",     label: "Last Quarter" },
-  { value: "this_year",        label: "This Year" },
-  { value: "last_year",        label: "Last Year" },
+  { value: "last_7d", label: "Last 7 Days" },
+  { value: "last_14d", label: "Last 14 Days" },
+  { value: "last_30d", label: "Last 30 Days" },
+  { value: "this_month", label: "This Month" },
+  { value: "last_month", label: "Last Month" },
+  { value: "this_quarter", label: "This Quarter" },
+  { value: "last_quarter", label: "Last Quarter" },
+  { value: "this_year", label: "This Year" },
+  { value: "last_year", label: "Last Year" },
 ]
 
 const getDateRangeFromPreset = (preset) => {
   const now = new Date()
   let start = new Date()
-  let end   = new Date()
+  let end = new Date()
 
   switch (preset) {
     case "today": break
     case "yesterday":
       start.setDate(now.getDate() - 1); end.setDate(now.getDate() - 1); break
-    case "last_7d":   start.setDate(now.getDate() - 7);  break
-    case "last_14d":  start.setDate(now.getDate() - 14); break
-    case "last_30d":  start.setDate(now.getDate() - 30); break
+    case "last_7d": start.setDate(now.getDate() - 7); break
+    case "last_14d": start.setDate(now.getDate() - 14); break
+    case "last_30d": start.setDate(now.getDate() - 30); break
     case "this_month": start.setDate(1); break
     case "this_week_mon_today": {
       const day = now.getDay()
@@ -72,10 +72,10 @@ const getDateRangeFromPreset = (preset) => {
       start.setMonth((cq - 1) * 3); start.setDate(1)
       end.setMonth(cq * 3); end.setDate(0); break
     }
-    case "this_year":  start.setMonth(0); start.setDate(1); break
+    case "this_year": start.setMonth(0); start.setDate(1); break
     case "last_year":
       start.setFullYear(now.getFullYear() - 1); start.setMonth(0); start.setDate(1)
-      end.setFullYear(now.getFullYear() - 1);   end.setMonth(11);  end.setDate(31); break
+      end.setFullYear(now.getFullYear() - 1); end.setMonth(11); end.setDate(31); break
     case "maximum":
       return { start: "2010-01-01", end: now.toISOString().split("T")[0] }
     default:
@@ -93,9 +93,9 @@ const getUserCurrency = () =>
 // FIX: non-empty defaults so skeletons always have columns
 const DEFAULT_VISIBLE_COLUMNS = {
   campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  adsets:    ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  ads:       ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  leads:     ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"],
+  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"],
 }
 
 // ── Breadcrumb bar component ──────────────────────────────────────────────────
@@ -165,32 +165,32 @@ const DrillDownBreadcrumb = ({
 const Campaigns = () => {
   const userCurrency = getUserCurrency()
 
-  const [customMetrics, setCustomMetrics]               = useState([])
-  const [clientGroups, setClientGroups]                 = useState([])
-  const [selectedClientGroup, setSelectedClientGroup]   = useState(null)
-  const [campaigns, setCampaigns]                       = useState([])
-  const [allAdSets, setAllAdSets]                       = useState([])
-  const [allAds, setAllAds]                             = useState([])
-  const [leads, setLeads]                               = useState([])
-  const [isLoading, setIsLoading]                       = useState(true)
-  const [error, setError]                               = useState(null)
-  const [activeTab, setActiveTab]                       = useState("campaigns")
-  const [searchTerm, setSearchTerm]                     = useState("")
-  const [filterConditions, setFilterConditions]         = useState([])
-  const [selectedDatePreset, setSelectedDatePreset]     = useState("last_7d")
+  const [customMetrics, setCustomMetrics] = useState([])
+  const [clientGroups, setClientGroups] = useState([])
+  const [selectedClientGroup, setSelectedClientGroup] = useState(null)
+  const [campaigns, setCampaigns] = useState([])
+  const [allAdSets, setAllAdSets] = useState([])
+  const [allAds, setAllAds] = useState([])
+  const [leads, setLeads] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [activeTab, setActiveTab] = useState("campaigns")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [filterConditions, setFilterConditions] = useState([])
+  const [selectedDatePreset, setSelectedDatePreset] = useState("last_7d")
 
   // ── Drill-down state: each holds the full row object for name display ──────
   const [selectedCampaign, setSelectedCampaign] = useState(null)  // campaign row
-  const [selectedAdSet, setSelectedAdSet]       = useState(null)  // adset row
-  const [selectedAd, setSelectedAd]             = useState(null)  // ad row
+  const [selectedAdSet, setSelectedAdSet] = useState(null)  // adset row
+  const [selectedAd, setSelectedAd] = useState(null)  // ad row
 
   // ── Multi-row checkbox selection (per-tab) ────────────────────────────────
   const [selectedCampaignIds, setSelectedCampaignIds] = useState(new Set())
-  const [selectedAdSetIds, setSelectedAdSetIds]       = useState(new Set())
-  const [selectedAdIds, setSelectedAdIds]             = useState(new Set())
+  const [selectedAdSetIds, setSelectedAdSetIds] = useState(new Set())
+  const [selectedAdIds, setSelectedAdIds] = useState(new Set())
 
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("campaigns")
-  const [visibleColumns, setVisibleColumns]     = useState(DEFAULT_VISIBLE_COLUMNS)
+  const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
 
   useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
@@ -203,8 +203,8 @@ const Campaigns = () => {
     })
   }, [viewsLoaded, savedColumns])
 
-  const [columnsOpen, setColumnsOpen]           = useState(false)
-  const [columnsSearch, setColumnsSearch]       = useState("")
+  const [columnsOpen, setColumnsOpen] = useState(false)
+  const [columnsSearch, setColumnsSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
 
   // ── Custom metrics ────────────────────────────────────────────────────────
@@ -216,10 +216,10 @@ const Campaigns = () => {
     const ids = customMetrics.map(m => m.id)
     setVisibleColumns(prev => {
       const updated = { ...prev }
-      ;["campaigns", "adsets", "ads"].forEach(tab => {
-        const existing = new Set(updated[tab] || [])
-        ids.forEach(id => { if (!existing.has(id)) updated[tab] = [...(updated[tab] || []), id] })
-      })
+        ;["campaigns", "adsets", "ads"].forEach(tab => {
+          const existing = new Set(updated[tab] || [])
+          ids.forEach(id => { if (!existing.has(id)) updated[tab] = [...(updated[tab] || []), id] })
+        })
       return updated
     })
   }, [customMetrics])
@@ -246,7 +246,7 @@ const Campaigns = () => {
       if (!groupsRes.ok) throw new Error(`Failed to load client groups: ${groupsRes.status}`)
 
       const groupsData = await groupsRes.json()
-      const groups     = groupsData.client_groups || []
+      const groups = groupsData.client_groups || []
 
       if (!groups.length) {
         setClientGroups([]); setCampaigns([]); setAllAdSets([]); setAllAds([]); setLeads([])
@@ -256,11 +256,11 @@ const Campaigns = () => {
       setClientGroups(groups)
 
       const processedCampaigns = []
-      const processedAdsets    = []
-      const processedAds       = []
+      const processedAdsets = []
+      const processedAds = []
 
       for (const group of groups) {
-        const fb        = group.facebook || {}
+        const fb = group.facebook || {}
         const groupMeta = {
           _groupId: group.id,
           clientGroup: group.name,
@@ -339,9 +339,9 @@ const Campaigns = () => {
       setAllAds(processedAds)
 
       // Leads
-      const groupIds          = groups.map(g => g.id).join(",")
-      const { start, end }    = getDateRangeFromPreset(selectedDatePreset)
-      const leadsRes          = await fetch(
+      const groupIds = groups.map(g => g.id).join(",")
+      const { start, end } = getDateRangeFromPreset(selectedDatePreset)
+      const leadsRes = await fetch(
         `https://birdy-backend.vercel.app/api/facebook-leads/filtered?groups=${groupIds}&limit=5000&start_date=${start}&end_date=${end}`,
         { credentials: "include", signal }
       )
@@ -388,8 +388,8 @@ const Campaigns = () => {
 
   // Clear handlers — each clears from that level downward
   const clearCampaign = () => { setSelectedCampaign(null); setSelectedAdSet(null); setSelectedAd(null); setSelectedCampaignIds(new Set()); setSelectedAdSetIds(new Set()); setSelectedAdIds(new Set()) }
-  const clearAdSet    = () => { setSelectedAdSet(null); setSelectedAd(null); setSelectedAdSetIds(new Set()); setSelectedAdIds(new Set()) }
-  const clearAd       = () => { setSelectedAd(null); setSelectedAdIds(new Set()) }
+  const clearAdSet = () => { setSelectedAdSet(null); setSelectedAd(null); setSelectedAdSetIds(new Set()); setSelectedAdIds(new Set()) }
+  const clearAd = () => { setSelectedAd(null); setSelectedAdIds(new Set()) }
 
   // ── Filtering ─────────────────────────────────────────────────────────────
   const isAllZerosRow = (item) => {
@@ -495,14 +495,14 @@ const Campaigns = () => {
             i.fullName || i.name || `${i.first_name || ""} ${i.last_name || ""}`.trim() || ""
         }
         if (typeof val === "string") {
-          if (c.operator === "equals")   return val.toLowerCase() === String(c.value).toLowerCase()
+          if (c.operator === "equals") return val.toLowerCase() === String(c.value).toLowerCase()
           if (c.operator === "contains") return val.toLowerCase().includes(String(c.value).toLowerCase())
         } else if (typeof val === "number") {
           const n = Number(c.value)
           if (isNaN(n)) return true
-          if (c.operator === "equals")      return val === n
+          if (c.operator === "equals") return val === n
           if (c.operator === "greaterThan") return val > n
-          if (c.operator === "lessThan")    return val < n
+          if (c.operator === "lessThan") return val < n
         }
         return true
       })
@@ -513,9 +513,9 @@ const Campaigns = () => {
 
   const getFilteredDataForTab = () => {
     if (activeTab === "campaigns") return applyFilters(campaigns)
-    if (activeTab === "adsets")   return applyFilters(allAdSets)
-    if (activeTab === "ads")      return applyFilters(allAds)
-    if (activeTab === "leads")    return applyFilters(leads)
+    if (activeTab === "adsets") return applyFilters(allAdSets)
+    if (activeTab === "ads") return applyFilters(allAds)
+    if (activeTab === "leads") return applyFilters(leads)
     return []
   }
 
@@ -531,11 +531,11 @@ const Campaigns = () => {
       ? ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"]
       : ["name", "clientGroup", ...baseColumns, ...customMetrics.map(m => m.id)]
 
-  const categories         = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "custom", label: "Custom" }]
-  const toggleableColumns  = getAvailableColumns().filter(col => col !== "name")
-  const metaCount          = toggleableColumns.filter(col => baseColumns.includes(col)).length
-  const customCount        = toggleableColumns.length - metaCount
-  const categoryCounts     = { all: toggleableColumns.length, meta: metaCount, custom: customCount }
+  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "custom", label: "Custom" }]
+  const toggleableColumns = getAvailableColumns().filter(col => col !== "name")
+  const metaCount = toggleableColumns.filter(col => baseColumns.includes(col)).length
+  const customCount = toggleableColumns.length - metaCount
+  const categoryCounts = { all: toggleableColumns.length, meta: metaCount, custom: customCount }
 
   const allColumnsForDropdown = toggleableColumns.map(col => ({
     id: col,
@@ -550,20 +550,20 @@ const Campaigns = () => {
   )
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
-  const columnVisibility         = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
+  const columnVisibility = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
 
   const toggleColumn = (col) => {
     setVisibleColumns(prev => {
-      const cur     = prev[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
+      const cur = prev[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
       const updated = cur.includes(col) ? cur.filter(c => c !== col) : [...cur, col]
       return { ...prev, [activeTab]: updated }
     })
   }
 
   const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
-  const clearAll  = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
-  const saveView  = async () => { await saveToDB(visibleColumns); setColumnsOpen(false) }
-  const getIcon   = (col) => (col.id === "clientGroup" || col.id === "name" ? Flask : metaa)
+  const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
+  const saveView = async () => { await saveToDB(visibleColumns); setColumnsOpen(false) }
+  const getIcon = (col) => (col.id === "clientGroup" || col.id === "name" ? Flask : metaa)
 
   const formatCellValue = (value, col, row) => {
     if (col === "full_name") {
@@ -591,13 +591,13 @@ const Campaigns = () => {
 
   // FIX: useMemo with non-empty fallback so StyledTable always has columns for skeletons
   const tableColumns = useMemo(() => {
-    const cols         = getCurrentVisibleColumns()
+    const cols = getCurrentVisibleColumns()
     const effectiveCols = cols.length > 0 ? cols : DEFAULT_VISIBLE_COLUMNS[activeTab]
     return effectiveCols.map(col => ({
       id: col, key: col,
       header: getMetricDisplayName(col),
-      label:  getMetricDisplayName(col),
-      icons:  col === "clientGroup" || col === "name" ? Flask : metaa,
+      label: getMetricDisplayName(col),
+      icons: col === "clientGroup" || col === "name" ? Flask : metaa,
       render: (value, row) => formatCellValue(value, col, row),
     }))
   }, [visibleColumns, activeTab, customMetrics, userCurrency])
@@ -607,18 +607,18 @@ const Campaigns = () => {
     let base = campaigns
     if (selectedClientGroup && selectedClientGroup !== "all")
       base = campaigns.filter(i => i._groupId === selectedClientGroup)
-    const totalSpend      = base.reduce((s, i) => s + (i.spend || 0), 0)
-    const totalLeads      = base.reduce((s, i) => s + (i.leads || 0), 0)
+    const totalSpend = base.reduce((s, i) => s + (i.spend || 0), 0)
+    const totalLeads = base.reduce((s, i) => s + (i.leads || 0), 0)
     const activeCampaigns = base.filter(i => String(i.status).toLowerCase() === "active").length
-    const avgCPL          = totalLeads > 0 ? totalSpend / totalLeads : 0
+    const avgCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
     return { totalSpend, totalLeads, activeCampaigns, avgCPL }
   }, [campaigns, selectedClientGroup])
 
   // ── Filter condition helpers ──────────────────────────────────────────────
-  const addFilterCondition    = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
+  const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
   const updateFilterCondition = (idx, field, val) => setFilterConditions(prev => prev.map((c, i) => i === idx ? { ...c, [field]: val } : c))
   const removeFilterCondition = (idx) => setFilterConditions(prev => prev.filter((_, i) => i !== idx))
-  const handleClearFilters    = () => { setFilterConditions([]); setSearchTerm("") }
+  const handleClearFilters = () => { setFilterConditions([]); setSearchTerm("") }
 
   // ── Tab count badges (shown when a drill-down is active) ──────────────────
   const tabBadge = (tab) => {
@@ -691,10 +691,10 @@ const Campaigns = () => {
         {/* Summary cards */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
-            { label: "Active Campaigns", icon: LayoutGrid,  value: metrics.activeCampaigns },
-            { label: "Total Ad Spend",   icon: DollarSign,  value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
-            { label: "Total Leads",      icon: Target,      value: metrics.totalLeads },
-            { label: "Average CPL",      icon: TrendingUp,  value: metrics.avgCPL > 0 ? `${getSymbolFromCurrency(userCurrency)}${metrics.avgCPL.toFixed(2)}` : "-" },
+            { label: "Active Campaigns", icon: LayoutGrid, value: metrics.activeCampaigns },
+            { label: "Total Ad Spend", icon: DollarSign, value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
+            { label: "Total Leads", icon: Target, value: metrics.totalLeads },
+            { label: "Average CPL", icon: TrendingUp, value: metrics.avgCPL > 0 ? `${getSymbolFromCurrency(userCurrency)}${metrics.avgCPL.toFixed(2)}` : "-" },
           ].map((c, i) => (
             <Card key={i} className="border shadow-sm rounded-lg">
               <CardHeader className="flex flex-row items-center justify-between">
@@ -718,10 +718,10 @@ const Campaigns = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0 shadow-sm overflow-x-auto">
             {[
-              { value: "campaigns", icon: LayoutGrid,   label: "Campaigns" },
-              { value: "adsets",    icon: Grid3X3,      label: "Ad Sets" },
-              { value: "ads",       icon: FileBarChart,  label: "Ads" },
-              { value: "leads",     icon: Users,         label: "Leads" },
+              { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
+              { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
+              { value: "ads", icon: FileBarChart, label: "Ads" },
+              { value: "leads", icon: Users, label: "Leads" },
             ].map(tab => {
               const badge = tabBadge(tab.value)
               return (
@@ -841,15 +841,15 @@ const Campaigns = () => {
                   enableSelection={activeTab !== "leads"}
                   selectedRows={
                     activeTab === "campaigns" ? selectedCampaignIds :
-                    activeTab === "adsets"    ? selectedAdSetIds :
-                    activeTab === "ads"       ? selectedAdIds :
-                    new Set()
+                      activeTab === "adsets" ? selectedAdSetIds :
+                        activeTab === "ads" ? selectedAdIds :
+                          new Set()
                   }
                   onSelectionChange={
                     activeTab === "campaigns" ? setSelectedCampaignIds :
-                    activeTab === "adsets"    ? setSelectedAdSetIds :
-                    activeTab === "ads"       ? setSelectedAdIds :
-                    undefined
+                      activeTab === "adsets" ? setSelectedAdSetIds :
+                        activeTab === "ads" ? setSelectedAdIds :
+                          undefined
                   }
                 />
               </div>
