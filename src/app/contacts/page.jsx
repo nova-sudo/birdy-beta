@@ -848,7 +848,6 @@ export default function ContactPage() {
                 />
                 <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
                   <SelectTrigger className="h-10 bg-white font-semibold">
-                    <Building className="h-4 w-4 hidden lg:inline" />
                     <SelectValue placeholder="All Groups" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
