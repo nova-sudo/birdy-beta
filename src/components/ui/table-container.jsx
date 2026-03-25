@@ -389,7 +389,7 @@ const StyledTable = ({
   /* ---------- FORMATTERS ---------- */
   const formatCurrency = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
-    return `${getSymbolFromCurrency(userCurrency)}${num.toFixed(2)}`;
+    return `${getSymbolFromCurrency(userCurrency)}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercentage = (v) => {
