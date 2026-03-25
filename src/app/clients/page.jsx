@@ -588,7 +588,7 @@ export default function ClientsPage() {
                   placeholder="Search clients..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className=" bg-white h-10 text-thin md:text-base"
+                  className=" bg-white h-10 text-thin text-sm font-medium"
                 />
 
                 {/* ── 🔥 DATE RANGE SELECTOR ───────────────────────────── */}

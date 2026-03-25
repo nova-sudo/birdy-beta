@@ -792,7 +792,7 @@ export default function ContactPage() {
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
             <div className="flex items-center gap-1">
               <Input
                 placeholder="Search contacts..."
@@ -857,7 +857,6 @@ export default function ContactPage() {
                     ))}
                   </SelectContent>
                 </Select>
-
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">
                     Clear
