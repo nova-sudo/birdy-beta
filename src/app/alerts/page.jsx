@@ -54,6 +54,7 @@ import {
   Users,
   Zap,
 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const API_BASE = "https://birdy-backend.vercel.app"
 
@@ -608,8 +609,13 @@ export default function AlertsPage() {
           </TabsList>
 
           {isLoading ? (
-            <div className="flex items-center justify-center py-24">
-              <RefreshCw className="h-6 w-6 animate-spin text-[#713cdd]" />
+            // <div className="flex items-center justify-center py-24">
+            //   <RefreshCw className="h-6 w-6 animate-spin text-[#713cdd]" />
+            // </div>
+            <div className="flex w-full mx-auto py-30 max-w-xs flex-col gap-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-3/4" />
             </div>
           ) : (
             <>

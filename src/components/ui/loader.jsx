@@ -3,9 +3,9 @@ import React from "react";
 import { Progress } from "@/components/ui/progress"; // Adjust import based on your project structure
 
 /**
- * @param {{ progress: number }} props
+ * @param {{ progress: number, title?: string }} props
  */
-export function Loading({ progress }) {
+export function Loading({ progress, title = "Loading your contacts" }) {
   return (
     <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
         <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
@@ -63,7 +63,7 @@ export function Loading({ progress }) {
   
               {/* Main text */}
           <div className="flex flex-col gap-3 text-center">
-            <h2 className="text-2xl font-bold text-foreground">Loading your contacts</h2>
+            <h2 className="text-2xl font-bold text-foreground">{title}</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Preparing your data. This should only take a moment.
             </p>
