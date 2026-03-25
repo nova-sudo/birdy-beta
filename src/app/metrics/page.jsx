@@ -19,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Command, CommandEmpty, CommandItem, CommandList } from "@/components/ui/command"
+import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
 import {
   discoverAllMetrics,
@@ -52,8 +52,9 @@ const operators = [
 
 const MetricSelector = ({ value, onChange, availableMetrics }) => {
   const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const [activeSource, setActiveSource] = useState("all")
 
-  // Group metrics by source
   const metricsBySource = availableMetrics.reduce((acc, metric) => {
     if (!acc[metric.category]) {
       acc[metric.category] = []
@@ -64,8 +65,24 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
 
   const currentName = availableMetrics.find((m) => m.id === value)?.label || "Select metric..."
 
+  const filterMetrics = (metrics) => {
+    if (!search) return metrics
+    const firstWord = search.trim().split(" ")[0].toLowerCase()
+    return metrics.filter((m) => m.label.toLowerCase().startsWith(firstWord))
+  }
+
+  const filteredAll = filterMetrics(availableMetrics)
+  const filteredBySource = Object.fromEntries(
+    Object.entries(metricsBySource).map(([source, metrics]) => [source, filterMetrics(metrics)])
+  )
+
+  const handleTabChange = (val) => {
+    setActiveSource(val)
+    setSearch("")
+  }
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch("") }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -78,7 +95,7 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="p-0 w-fit bg-white">
-        <Tabs defaultValue="all" className="w-fit">
+        <Tabs defaultValue="all" className="w-fit" onValueChange={handleTabChange}>
           <TabsList className="text-center w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
             <TabsTrigger value="all" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 data-[state=active]:border-b-purple-700 h-full">
               All {availableMetrics.length}
@@ -94,45 +111,54 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
             ))}
           </TabsList>
 
+          {/* Shared search input */}
+          <div className="px-2 py-2 border-b">
+            <Input
+              placeholder={activeSource === "all" ? "Search all metrics..." : `Search in ${activeSource}...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-sm"
+              autoFocus
+            />
+          </div>
+
           <TabsContent value="all" className="border-0 p-0">
-            <Command>
+            <Command shouldFilter={false}>
               <CommandList>
-                <CommandEmpty>No metric found.</CommandEmpty>
-                {availableMetrics.map((metric) => (
-                  <CommandItem
-                    key={metric.id}
-                    value={metric.label}
-                    onSelect={() => {
-                      onChange(metric.id)
-                      setOpen(false)
-                    }}
-                  >
-                    <Check className={metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"} />
-                    {metric.label}
-                  </CommandItem>
-                ))}
+                {filteredAll.length === 0
+                  ? <CommandEmpty>No metric found.</CommandEmpty>
+                  : filteredAll.map((metric) => (
+                    <CommandItem
+                      key={metric.id}
+                      value={metric.label}
+                      onSelect={() => { onChange(metric.id); setOpen(false) }}
+                    >
+                      <Check className={metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"} />
+                      {metric.label}
+                    </CommandItem>
+                  ))
+                }
               </CommandList>
             </Command>
           </TabsContent>
 
           {Object.entries(metricsBySource).map(([source, metrics]) => (
             <TabsContent key={source} value={source.toLowerCase()} className="border-0 p-0">
-              <Command>
+              <Command shouldFilter={false}>
                 <CommandList>
-                  <CommandEmpty>No metric found.</CommandEmpty>
-                  {metrics.map((metric) => (
-                    <CommandItem
-                      key={metric.id}
-                      value={metric.label}
-                      onSelect={() => {
-                        onChange(metric.id)
-                        setOpen(false)
-                      }}
-                    >
-                      <Check className={metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"} />
-                      {metric.label}
-                    </CommandItem>
-                  ))}
+                  {filteredBySource[source].length === 0
+                    ? <CommandEmpty>No metric found.</CommandEmpty>
+                    : filteredBySource[source].map((metric) => (
+                      <CommandItem
+                        key={metric.id}
+                        value={metric.label}
+                        onSelect={() => { onChange(metric.id); setOpen(false) }}
+                      >
+                        <Check className={metric.id === value ? "mr-2 h-4 w-4" : "mr-2 h-4 w-4 opacity-0"} />
+                        {metric.label}
+                      </CommandItem>
+                    ))
+                  }
                 </CommandList>
               </Command>
             </TabsContent>
