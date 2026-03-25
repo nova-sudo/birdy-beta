@@ -582,7 +582,7 @@ export default function ClientsPage() {
             </div>
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
               <div className="flex items-center gap-1">
                 <Input
                   placeholder="Search clients..."
@@ -1110,7 +1110,9 @@ export default function ClientsPage() {
                   <Skeleton className="h-4 w-1/2" />
                 </div>
               ) : (
-                <div className="text-2xl font-bold">{stats.totalLeads.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  {getSymbolFromCurrency(userCurrency)}{stats.totalLeads.toLocaleString('en-US',{ minimumFractionDigits:2,maximumFractionDigits:2})}
+                  </div>
               )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">
                 <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
