@@ -42,6 +42,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton"
+import { InboxIcon } from "lucide-react"
 
 const operators = [
   { value: "+", label: "Add (+)" },
@@ -180,6 +182,7 @@ const MetricsHub = () => {
   const [availableMetricsForFormulas, setAvailableMetricsForFormulas] = useState([])
   const [statistics, setStatistics] = useState(null)
   const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(true)
   const itemsPerPage = 15; // Adjust as needed
 
   // Form state for creating/editing metrics
@@ -204,6 +207,8 @@ const MetricsHub = () => {
         }
       } catch (error) {
         console.error("Error fetching client groups:", error)
+      } finally {
+        setIsLoading(false)
       }
     }
     fetchClientGroups()
@@ -659,8 +664,37 @@ const MetricsHub = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {currentMetrics.map((metric) => (
-                      <tr key={metric.id} className="hover:bg-muted/50">
+                    {isLoading ? (
+                      Array.from({ length: 8 }).map((_, idx) => (
+                        <tr key={`skeleton-${idx}`} className={`border-b bg-white}`}>
+                          <td className="px-4 py-3">
+                            <Skeleton className="h-4 w-40 mb-2" />
+                            <Skeleton className="h-3 w-64" />
+                          </td>
+                          <td className="px-4 py-3"><Skeleton className="h-6 w-28 rounded-full" /></td>
+                          <td className="px-4 py-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
+                          <td className="px-4 py-3"><Skeleton className="h-8 w-24 rounded-md" /></td>
+                        </tr>
+                      ))
+                    ) : currentMetrics.length === 0 ? (
+                      <tr>
+                        <td colSpan={4}>
+                          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
+                            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                              <InboxIcon className="h-6 w-6 text-muted-foreground/60" />
+                            </div>
+                            <p className="text-sm font-medium">No {activeTab} metrics found</p>
+                            <p className="text-xs text-muted-foreground/70">
+                              {activeTab === "custom"
+                                ? "Create your first custom metric using the + button above."
+                                : "No metrics are available for this category yet."}
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                    currentMetrics.map((metric, idx) => (
+                      <tr key={metric.id} className={`hover:bg-muted/50 bg-white`}>
                         <td className="px-4 py-2">
                           <div className="font-semibold text-foreground">{metric.name}</div>
                           <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
@@ -697,13 +731,13 @@ const MetricsHub = () => {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    ))
+                  )}
                   </tbody>
                 </table>
               </div>
-
             </div>
-            {totalPages > 1 && (
+            {!isLoading && totalPages > 1 && (
               <Pagination className="mt-4">
                 <PaginationContent>
                   <PaginationItem>
