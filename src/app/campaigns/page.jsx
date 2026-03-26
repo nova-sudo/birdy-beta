@@ -14,7 +14,6 @@ import {
   TrendingUp,
   DollarSign,
   Target,
-  ChevronRight,
 } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,13 +25,11 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import { DATE_PRESETS } from "@/lib/constants"
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
-
-// FIX: currency inside component, not at module level (avoids SSR crash)
-const getUserCurrency = () =>
-  typeof window !== "undefined" ? (localStorage.getItem("user_default_currency") ?? "USD") : "USD"
+import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
+import { useCurrency } from "@/hooks/useCurrency"
+import { DateRangeSelect } from "@/components/DateRangeSelect"
 
 // FIX: non-empty defaults so skeletons always have columns
 const DEFAULT_VISIBLE_COLUMNS = {
@@ -42,72 +39,9 @@ const DEFAULT_VISIBLE_COLUMNS = {
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"],
 }
 
-// ── Breadcrumb bar component ──────────────────────────────────────────────────
-// Displays the active campaign → adset → ad selection chain.
-// Each pill is clickable to jump back to that tab; the × clears from that level down.
-const DrillDownBreadcrumb = ({
-  selectedCampaign, selectedAdSet, selectedAd,
-  onClearCampaign, onClearAdSet, onClearAd,
-  onTabChange,
-}) => {
-  if (!selectedCampaign) return null
-
-  const Pill = ({ color, icon: Icon, label, onClick, onClear }) => (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${color}`}>
-      <button onClick={onClick} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
-        <Icon className="h-3 w-3" />
-        <span className="max-w-[160px] truncate">{label}</span>
-      </button>
-      <button onClick={onClear} className="ml-0.5 hover:opacity-60 transition-opacity">
-        <X className="h-3 w-3" />
-      </button>
-    </span>
-  )
-
-  return (
-    <div className="flex items-center flex-wrap gap-1.5 mb-3 px-1 py-2 bg-muted/40 rounded-lg border border-border/30">
-      <span className="text-xs font-medium text-muted-foreground mr-1">Filtering by:</span>
-
-      <Pill
-        color="bg-purple-100 text-purple-800"
-        icon={LayoutGrid}
-        label={selectedCampaign.name}
-        onClick={() => onTabChange("campaigns")}
-        onClear={onClearCampaign}
-      />
-
-      {selectedAdSet && (
-        <>
-          <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-          <Pill
-            color="bg-blue-100 text-blue-800"
-            icon={Grid3X3}
-            label={selectedAdSet.name}
-            onClick={() => onTabChange("adsets")}
-            onClear={onClearAdSet}
-          />
-        </>
-      )}
-
-      {selectedAd && (
-        <>
-          <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-          <Pill
-            color="bg-emerald-100 text-emerald-800"
-            icon={FileBarChart}
-            label={selectedAd.name}
-            onClick={() => onTabChange("ads")}
-            onClear={onClearAd}
-          />
-        </>
-      )}
-    </div>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 const Campaigns = () => {
-  const userCurrency = getUserCurrency()
+  const { currency: userCurrency, currencySymbol } = useCurrency()
 
   const [customMetrics, setCustomMetrics] = useState([])
   const [clientGroups, setClientGroups] = useState([])
@@ -598,14 +532,7 @@ const Campaigns = () => {
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
-              <Select value={selectedDatePreset} onValueChange={setSelectedDatePreset}>
-                <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {DATE_PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <DateRangeSelect value={selectedDatePreset} onChange={setSelectedDatePreset} />
               <ColumnVisibilityDropdown
                 isOpen={columnsOpen} setIsOpen={setColumnsOpen}
                 categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}

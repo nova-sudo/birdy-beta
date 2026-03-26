@@ -1,34 +1,9 @@
 "use client"
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
-import {
-  SlidersHorizontal,
-  Users,
-  Mail,
-  Phone,
-  Globe,
-  ChevronUp,
-  ChevronDown,
-  User,
-  MapPin,
-  Calendar,
-  Tag,
-  Building,
-  Search,
-  X,
-  Megaphone,
-  Layers,
-  AlertTriangle,
-  TrendingUp,
-  DollarSign,
-  Target,
-} from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { TiTag } from "react-icons/ti";
 import {
   Select,
   SelectContent,
@@ -36,408 +11,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import {
   Tabs,
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import { ghlIcon as ghl, labIcon as lab } from "@/lib/icons"
-import { Progress } from "@/components/ui/progress"
-import { Loading } from "@/components/ui/loader";
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
-import getSymbolFromCurrency from "currency-symbol-map";
+import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import StyledTable from "@/components/ui/table-container"
-import { Skeleton } from "@/components/ui/skeleton"
-import { DATE_PRESETS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
-
-const getUserCurrency = () =>
-  typeof window !== "undefined" ? (localStorage.getItem("user_default_currency") ?? "USD") : "USD"
-
-function toTitleCase(str) {
-  if (!str) return str;
-  return String(str).split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-}
-
-const buildContactColumns = () => [
-  {
-    id: "contactName",
-    header: "Name",
-    label: "Name",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (value) =>
-      !value || value === "Unknown" ? (
-        <span className="text-muted-foreground text-sm px-2">-</span>
-      ) : (
-        <span className="text-sm text-foreground text-left block">{toTitleCase(value)}</span>
-      ),
-  },
-  {
-    id: "groupName",
-    header: "Client Group",
-    label: "Group",
-    defaultVisible: true,
-    sortable: true,
-    icons: lab,
-    cell: (value) =>
-      !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
-      ) : (
-        <div className="truncate px-2" title={value}>
-          <span className="text-sm font-medium text-foreground">{value}</span>
-        </div>
-      ),
-  },
-  {
-    id: "email",
-    header: "Email",
-    label: "Email",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (value) =>
-      !value || value.startsWith("no_email_") ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
-      ) : (
-        <a
-          href={`mailto:${value}`}
-          className="text-sm text-foreground hover:text-primary font-bold hover:underline transition-colors"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {value}
-        </a>
-      ),
-  },
-  {
-    id: "phone",
-    header: "Phone",
-    label: "Phone",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (value) =>
-      !value ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
-      ) : (
-        <a
-          href={`tel:${value}`}
-          className="text-sm text-foreground hover:text-primary hover:underline transition-colors font-mono"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {value}
-        </a>
-      ),
-  },
-  {
-    id: "dateAdded",
-    header: "Date Added",
-    label: "Date Added",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (value) =>
-      !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
-      ) : (
-        <span className="text-sm text-foreground">
-          {new Date(value).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-          })}
-        </span>
-      ),
-  },
-  {
-    id: "tags",
-    header: "Tags",
-    label: "Tags",
-    defaultVisible: true,
-    icons: ghl,
-    cell: (value, row) => {
-      if (!value || value.length === 0)
-        return <span className="text-muted-foreground text-sm">-</span>
-      const tags = value
-      const mainTag = tags[0]
-      const hasMoreTags = tags.length > 1
-      const score = row?.score ? `+${row.score}` : null
-      return (
-        <div className="flex items-center justify-center gap-2 max-w-xs">
-          <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-            <TiTag className="w-3 h-3" />
-            {mainTag}
-          </Badge>
-          {score && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-              {score}
-            </span>
-          )}
-          {hasMoreTags && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{tags.length - 1}</Badge>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
-                {tags.slice(1).map((tag, tagIndex) => (
-                  <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
-                    <TiTag className="w-3 h-3" />{tag}
-                  </div>
-                ))}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      )
-    },
-  },
-  {
-    id: "type",
-    header: "Type",
-    label: "Type",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (value, row) => {
-      const type = value || row?.contactType
-      if (!type) return <span className="text-muted-foreground text-sm">-</span>
-      return <Badge variant="secondary" className="capitalize">{type}</Badge>
-    },
-  },
-  {
-    id: "opportunityStatus",
-    header: "Opportunity Status",
-    label: "Opportunity Status",
-    defaultVisible: true,
-    sortable: false,
-    icons: ghl,
-    cell: (value, row) => {
-      const opportunities = row?.opportunities || [];
-      if (!opportunities || opportunities.length === 0)
-        return <span className="text-muted-foreground text-sm">—</span>
-      const mainOpp = opportunities[0]
-      const hasMoreOpps = opportunities.length > 1
-      const oppStatus = mainOpp.status || "unknown"
-      const statusColors = {
-        open: "bg-[#DBEAFE] text-[#1D4ED8]",
-        won: "bg-[#DCFCE7] text-[#15803D]",
-        lost: "bg-[#FEE2E2] text-[#B91C1C]",
-        abandoned: "bg-[#FEF9C3] text-[#A16207]",
-      }
-      return (
-        <div className="flex items-center gap-2">
-          <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
-            {oppStatus}
-          </Badge>
-          {hasMoreOpps && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
-                {opportunities.slice(1).map((opp, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
-                      {opp.status}
-                    </Badge>
-                  </div>
-                ))}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      )
-    },
-  },
-  {
-    id: "opportunityValue",
-    header: "Opportunity Value",
-    label: "Opportunity Value",
-    defaultVisible: true,
-    sortable: false,
-    icons: ghl,
-    cell: (value, row) => {
-      const opportunities = row?.opportunities || [];
-      if (!opportunities || opportunities.length === 0)
-        return <span className="text-muted-foreground text-sm">—</span>
-      const mainOpp = opportunities[0]
-      const hasMoreOpps = opportunities.length > 1
-      const oppValue = mainOpp.monetaryValue || 0
-      return (
-        <div className="flex items-center gap-2">
-          {oppValue > 0 ? (
-            <span className="text-sm font-semibold text-green-600">
-              {getSymbolFromCurrency(getUserCurrency())}{oppValue.toLocaleString()}
-            </span>
-          ) : (
-            <span className="text-muted-foreground text-sm">—</span>
-          )}
-          {hasMoreOpps && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
-              </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
-                {opportunities.slice(1).map((opp, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    {opp.monetaryValue > 0 && (
-                      <span className="text-sm text-green-600">{getSymbolFromCurrency(getUserCurrency())}{opp.monetaryValue.toLocaleString()}</span>
-                    )}
-                    {opp.monetaryValue === 0 && (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </div>
-                ))}
-              </TooltipContent>
-            </Tooltip>
-          )}
-        </div>
-      )
-    },
-  },
-  { id: "firstName", header: "First Name", label: "First Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{toTitleCase(v) || "-"}</span> },
-  { id: "lastName", header: "Last Name", label: "Last Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{toTitleCase(v) || "-"}</span> },
-  {
-    id: "companyName",
-    header: "Company",
-    label: "Company",
-    defaultVisible: false,
-    sortable: true,
-    icons: ghl,
-    cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
-      : <span className="text-sm font-medium text-foreground">{toTitleCase(v)}</span>,
-  },
-  {
-    id: "source",
-    header: "Source",
-    label: "Source",
-    defaultVisible: false,
-    sortable: true,
-    icons: ghl,
-    cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
-      : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
-  },
-  { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "postalCode", header: "Postal Code", label: "Postal Code", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  {
-    id: "country",
-    header: "Country",
-    label: "Country",
-    defaultVisible: true,
-    sortable: true,
-    icons: ghl,
-    cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
-      : <div className="truncate px-2" title={v}><span className="text-sm font-medium text-foreground">{v}</span></div>,
-  },
-  {
-    id: "website",
-    header: "Website",
-    label: "Website",
-    defaultVisible: false,
-    sortable: true,
-    icons: ghl,
-    cell: (v) => {
-      if (!v) return <span className="text-muted-foreground text-sm">-</span>
-      const url = v.startsWith("http") ? v : `https://${v}`
-      return (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-foreground hover:text-primary hover:underline transition-colors max-w-xs truncate inline-block"
-          title={v}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {v}
-        </a>
-      )
-    },
-  },
-  {
-    id: "address1",
-    header: "Address",
-    label: "Address",
-    defaultVisible: false,
-    sortable: true,
-    icons: ghl,
-    cell: (v, row) => {
-      const addr = v || row?.address
-      if (!addr) return <span className="text-muted-foreground text-sm">-</span>
-      return (
-        <span className="text-sm text-foreground max-w-xs truncate block" title={addr}>
-          {addr}
-        </span>
-      )
-    },
-  },
-  { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-]
+import { buildContactColumns } from "@/lib/contact-columns"
+import { ContactStats } from "@/components/contacts/ContactStats"
+import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { ErrorBanner } from "@/components/ErrorBanner"
 
 const contactColumns = buildContactColumns()
-
-const DashboardStats = ({ contacts, filteredContacts, metaData, loading }) => {
-  // Calculate opportunity counts by status
-  const opportunitiesByStatus = filteredContacts.reduce((acc, c) => {
-    if (!c.opportunities || c.opportunities.length === 0) return acc
-    c.opportunities.forEach((opp) => {
-      const status = opp.status || "open"
-      acc[status] = (acc[status] || 0) + 1
-    })
-    return acc
-  }, {})
-
-  const wonCount = opportunitiesByStatus.won || 0
-  const lostCount = opportunitiesByStatus.lost || 0
-  const openCount = opportunitiesByStatus.open || 0
-  const totalOpportunities = wonCount + lostCount + openCount + (opportunitiesByStatus.abandoned || 0)
-  const conversionRate = totalOpportunities > 0 ? ((wonCount / totalOpportunities) * 100).toFixed(1) : 0
-
-  const stats = [
-    { title: "Total Leads", value: totalOpportunities, icon: Target },
-    { title: "Lost Leads", value: lostCount, icon: Target },
-    { title: "Open Leads", value: openCount, icon: Target },
-    { title: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp },
-  ]
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat, index) => (
-        <Card key={index} className="border shadow-sm rounded-lg">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-sm font-normal text-[#71658B] text-muted-foreground">{stat.title}</CardTitle>
-            <div className="w-8 h-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-              <stat.icon className="h-4 w-5 text-purple-600" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-                  <div className="w-full py-4">
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ) : (
-                  <div className="text-2xl font-bold">{stat.value}</div>
-)}
-            {stat.subtitle && <p className="text-xs text-muted-foreground mt-0">{stat.subtitle}</p>}
-            <p className="text-xs text-[#71658B] text-muted-foreground">Across all Leads</p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
 
 export default function ContactPage() {
   const [contacts, setContacts] = useState([])
@@ -713,7 +301,7 @@ export default function ContactPage() {
   return (
     <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
       <div className="flex flex-col gap-6">
-        {error && <Alert variant="destructive"><AlertTitle>Error</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+        <ErrorBanner error={error} />
 
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -736,19 +324,7 @@ export default function ContactPage() {
               )}
 
               <div className="flex gap-1 md:overflow-x-visible">
-                {/* ── Date preset selector (replaces date picker) ── */}
-                <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
-                  <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DATE_PRESETS.map((preset) => (
-                      <SelectItem key={preset.value} value={preset.value}>
-                        {preset.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <DateRangeSelect value={selectedDateRange} onChange={setSelectedDateRange} />
 
                 <ColumnVisibilityDropdown
                   isOpen={isDropdownOpen}
@@ -796,7 +372,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <DashboardStats contacts={contacts} filteredContacts={filteredAndSortedContacts} metaData={metaData} loading={loading} />
+        <ContactStats filteredContacts={filteredAndSortedContacts} loading={loading} />
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
@@ -834,7 +410,7 @@ export default function ContactPage() {
           </TabsList>
         </Tabs>
 
-       
+
           <StyledTable
             columns={contactColumns}
             data={filteredAndSortedContacts}

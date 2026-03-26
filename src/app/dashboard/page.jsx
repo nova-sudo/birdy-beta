@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { apiRequest } from "@/lib/api"
+import { ErrorBanner } from "@/components/ErrorBanner"
+import { StatsCard } from "@/components/StatsCard"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Users, Building2, TrendingUp, Target, AlertCircle, ArrowRight } from "lucide-react"
+import { Users, Building2, TrendingUp, Target, ArrowRight } from "lucide-react"
 
 export default function Dashboard() {
   const router = useRouter()
@@ -128,62 +129,14 @@ export default function Dashboard() {
       </div>
 
       <div className="max-w-7xl mx-auto p-6 space-y-6">
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+        <ErrorBanner error={error} />
 
         {/* Metric Cards */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Clients</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.totalClients}</div>
-              <p className="text-xs text-muted-foreground mt-1">Deduplicated across all sources</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">GHL Contacts</CardTitle>
-              <Building2 className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.ghlContactsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">From {dashboardData.ghlLocations.length} locations</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Meta Leads</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">{dashboardData.metaLeadsCount}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                From {dashboardData.metaAdAccounts.length} ad accounts
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Integrations</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-foreground">
-                {(dashboardData.ghlLocations.length > 0 ? 1 : 0) + (dashboardData.metaAdAccounts.length > 0 ? 1 : 0)}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">Active connections</p>
-            </CardContent>
-          </Card>
+          <StatsCard title="Total Clients" value={dashboardData.totalClients} icon={Users} subtitle="Deduplicated across all sources" />
+          <StatsCard title="GHL Contacts" value={dashboardData.ghlContactsCount} icon={Building2} subtitle={`From ${dashboardData.ghlLocations.length} locations`} />
+          <StatsCard title="Meta Leads" value={dashboardData.metaLeadsCount} icon={Target} subtitle={`From ${dashboardData.metaAdAccounts.length} ad accounts`} />
+          <StatsCard title="Integrations" value={(dashboardData.ghlLocations.length > 0 ? 1 : 0) + (dashboardData.metaAdAccounts.length > 0 ? 1 : 0)} icon={TrendingUp} subtitle="Active connections" />
         </div>
 
         {/* Charts Section */}
