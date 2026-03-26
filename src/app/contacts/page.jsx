@@ -792,13 +792,13 @@ export default function ContactPage() {
           </div>
 
           <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-1">
+            py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
             <div className="flex items-center gap-1">
               <Input
                 placeholder="Search contacts..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="text-gray-900 bg-white h-10 max-w-[200px] text-sm font-medium md:text-sm"
+                className="text-gray-900 bg-white h-10 w-fit md:w-55 text-sm font-medium md:text-sm"
               />
               {searchQuery && (
                 <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
@@ -807,20 +807,6 @@ export default function ContactPage() {
               )}
 
               <div className="flex gap-1 md:overflow-x-visible">
-                {/* Client group filter */}
-                <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                  <SelectTrigger className="h-10 bg-white font-semibold">
-                    <Building className="h-4 w-4 hidden lg:inline" />
-                    <SelectValue placeholder="All Groups" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {clientGroups.map(g => (
-                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
                 {/* ── Date preset selector (replaces date picker) ── */}
                 <Select value={selectedDateRange} onValueChange={setSelectedDateRange}>
                   <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
@@ -860,7 +846,17 @@ export default function ContactPage() {
                     setIsDropdownOpen(false)
                   }}
                 />
-
+                <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
+                  <SelectTrigger className="h-10 bg-white font-semibold">
+                    <SelectValue placeholder="All Groups" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {clientGroups.map(g => (
+                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {hasActiveFilters && (
                   <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">
                     Clear

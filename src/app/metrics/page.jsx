@@ -549,18 +549,19 @@ const MetricsHub = () => {
             </h1>
           </div>
 
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1">
+          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 
+          border rounded-lg py-1 px-1">
             <div className="relative">
               <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 type="search"
                 placeholder="Search metrics..."
-                className="bg-white rounded-lg h-10 px-2 pl-8"
+                className="bg-white rounded-lg w-fit md:w-55 h-10 px-2 pl-8"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" className="gap-2 bg-white h-10 font-semibold">
+            <Button variant="outline" size="sm" className=" bg-white h-10 font-semibold">
               <Filter className="h-4 w-4" />
             </Button>
             <Button
@@ -569,7 +570,7 @@ const MetricsHub = () => {
                 resetForm()
                 setIsCreateDialogOpen(true)
               }}
-              className="h-10 bg-purple-600 hover:bg-purple-700 gap-2"
+              className="h-10 bg-purple-600 hover:bg-purple-700 "
             >
               <Plus className="h-4 text-white w-4 border-2 rounded-xl" />
             </Button>

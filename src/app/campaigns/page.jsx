@@ -644,38 +644,16 @@ const Campaigns = () => {
                 Marketing Hub
               </h1>
             </div>
-
-            {clientGroups.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Label className="text-sm font-semibold whitespace-nowrap">Client Group:</Label>
-                <Select value={selectedClientGroup || "all"} onValueChange={setSelectedClientGroup}>
-                  <SelectTrigger className="w-48 bg-white"><SelectValue placeholder="Select a client group" /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
 
-          <div className="flex items-center gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
+          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
             <Input
               type="search"
               placeholder={`Search ${activeTab}...`}
-              className="h-10 bg-white w-fit md:w-65 rounded-md text-sm font-medium"
+              className="h-10 bg-white w-fit md:w-55 rounded-md text-sm font-medium"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
-            <div className="flex gap-1 overflow-x-auto lg:overflow-x-hidden">
-              <ColumnVisibilityDropdown
-                isOpen={columnsOpen} setIsOpen={setColumnsOpen}
-                categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-                categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
-                filteredColumns={filteredColumns} columnVisibility={columnVisibility}
-                toggleColumnVisibility={toggleColumn} getIcon={getIcon}
-                selectAll={selectAll} clearAll={clearAll} save={saveView}
-              />
               <Select value={selectedDatePreset} onValueChange={setSelectedDatePreset}>
                 <SelectTrigger className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm">
                   <SelectValue />
@@ -684,7 +662,23 @@ const Campaigns = () => {
                   {DATE_PRESETS.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </div>
+              <ColumnVisibilityDropdown
+                isOpen={columnsOpen} setIsOpen={setColumnsOpen}
+                categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+                categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
+                filteredColumns={filteredColumns} columnVisibility={columnVisibility}
+                toggleColumnVisibility={toggleColumn} getIcon={getIcon}
+                selectAll={selectAll} clearAll={clearAll} save={saveView}
+              />
+              {clientGroups.length > 0 && (
+                <Select value={selectedClientGroup || "all"} onValueChange={setSelectedClientGroup}>
+                  <SelectTrigger className="bg-white font-semibold h-10"><SelectValue placeholder="Select a client group" /></SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All Groups</SelectItem>
+                    {clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+            )}
           </div>
         </div>
 
