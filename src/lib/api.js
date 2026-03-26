@@ -1,49 +1,52 @@
-// lib/api.js
-const API_BASE_URL = 'https://birdy-backend.vercel.app'
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://birdy-backend.vercel.app"
 
 /**
- * Make authenticated API request
+ * Make an authenticated API request.
+ * Automatically includes auth token, credentials, and handles 401 → logout.
  */
 export async function apiRequest(endpoint, options = {}) {
-  const token = localStorage.getItem('auth_token')
+  const token = localStorage.getItem("auth_token")
 
   const headers = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   }
 
   if (token) {
-    headers['Authorization'] = `Bearer ${token}`
+    headers["Authorization"] = `Bearer ${token}`
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
     headers,
-    credentials: 'include',
+    credentials: "include",
   })
 
-  // Handle unauthorized
   if (response.status === 401) {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
-    document.cookie = 'client_auth_token=; path=/; max-age=0'
-    window.location.href = '/login'
-    throw new Error('Unauthorized')
+    localStorage.removeItem("auth_token")
+    localStorage.removeItem("refresh_token")
+    localStorage.removeItem("user")
+    document.cookie = "client_auth_token=; path=/; max-age=0"
+    window.location.href = "/login"
+    throw new Error("Unauthorized")
   }
 
   return response
 }
 
 /**
- * Example usage functions
+ * Make an unauthenticated API request (for login, register, public endpoints).
  */
-export async function getClients() {
-  const response = await apiRequest('/api/get_all_clients')
-  return response.json()
-}
+export async function publicRequest(endpoint, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  }
 
-export async function getLocationData() {
-  const response = await apiRequest('/api/location-data')
-  return response.json()
+  return fetch(`${API_BASE_URL}${endpoint}`, {
+    ...options,
+    headers,
+    credentials: "include",
+  })
 }

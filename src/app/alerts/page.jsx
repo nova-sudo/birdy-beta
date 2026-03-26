@@ -55,8 +55,7 @@ import {
   Zap,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
-
-const API_BASE = "https://birdy-backend.vercel.app"
+import { apiRequest } from "@/lib/api"
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -248,7 +247,7 @@ export default function AlertsPage() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/alerts`, { credentials: "include" })
+      const res = await apiRequest("/api/alerts")
       if (!res.ok) throw new Error("Failed to load alerts")
       const data = await res.json()
       setAlerts(data)
@@ -261,7 +260,7 @@ export default function AlertsPage() {
 
   const fetchClientGroups = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/client-groups`, { credentials: "include" })
+      const res = await apiRequest("/api/client-groups")
       if (!res.ok) return
       const data = await res.json()
       setClientGroups(data.client_groups || [])
@@ -315,13 +314,11 @@ export default function AlertsPage() {
         notification_channels: form.notification_channels,
       }
 
-      const url = editingAlert ? `${API_BASE}/api/alerts/${editingAlert.id}` : `${API_BASE}/api/alerts`
+      const url = editingAlert ? `/api/alerts/${editingAlert.id}` : `/api/alerts`
       const method = editingAlert ? "PATCH" : "POST"
 
-      const res = await fetch(url, {
+      const res = await apiRequest(url, {
         method,
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
 
@@ -342,7 +339,7 @@ export default function AlertsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     try {
-      await fetch(`${API_BASE}/api/alerts/${deleteTarget.id}`, { method: "DELETE", credentials: "include" })
+      await apiRequest(`/api/alerts/${deleteTarget.id}`, { method: "DELETE" })
       toast.success("Alert deleted")
       setDeleteTarget(null)
       fetchAlerts()
@@ -354,10 +351,8 @@ export default function AlertsPage() {
   const handleTogglePause = async (alert) => {
     const newStatus = alert.status === "active" || alert.status === "triggered" ? "paused" : "active"
     try {
-      await fetch(`${API_BASE}/api/alerts/${alert.id}`, {
+      await apiRequest(`/api/alerts/${alert.id}`, {
         method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       })
       toast.success(newStatus === "paused" ? "Alert paused" : "Alert activated")
@@ -370,10 +365,8 @@ export default function AlertsPage() {
   const handleSnooze = async () => {
     if (!snoozeTarget) return
     try {
-      await fetch(`${API_BASE}/api/alerts/${snoozeTarget.id}/snooze`, {
+      await apiRequest(`/api/alerts/${snoozeTarget.id}/snooze`, {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hours: snoozeHours }),
       })
       toast.success(`Alert snoozed for ${SNOOZE_OPTIONS.find(s => s.value === snoozeHours)?.label}`)
@@ -387,9 +380,8 @@ export default function AlertsPage() {
   const handleEvaluate = async (alert) => {
     setEvaluating(alert.id)
     try {
-      const res = await fetch(`${API_BASE}/api/alerts/${alert.id}/evaluate`, {
+      const res = await apiRequest(`/api/alerts/${alert.id}/evaluate`, {
         method: "POST",
-        credentials: "include",
       })
       const data = await res.json()
       const ev = data.evaluation

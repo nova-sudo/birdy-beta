@@ -47,92 +47,23 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
-import ghl from "../../../public/ghl_icon.png";
-import lab from "../../../public/lab.png";
+import { ghlIcon as ghl, labIcon as lab } from "@/lib/icons"
 import { Progress } from "@/components/ui/progress"
 import { Loading } from "@/components/ui/loader";
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter";
-import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, subQuarters, subYears } from "date-fns"
 import getSymbolFromCurrency from "currency-symbol-map";
 import StyledTable from "@/components/ui/table-container"
 import { Skeleton } from "@/components/ui/skeleton"
+import { DATE_PRESETS } from "@/lib/constants"
+import { presetToDateRange } from "@/lib/date-utils"
+import { apiRequest } from "@/lib/api"
 
-const userCurrency = localStorage.getItem("user_default_currency");
+const getUserCurrency = () =>
+  typeof window !== "undefined" ? (localStorage.getItem("user_default_currency") ?? "USD") : "USD"
 
-// ── Date preset definitions (mirrors Client Hub) ─────────────────────────────
-const DATE_PRESETS = [
-  { value: "maximum", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "this_week_mon_today", label: "This Week" },
-  { value: "last_7d", label: "Last 7 Days" },
-  { value: "last_14d", label: "Last 14 Days" },
-  { value: "last_30d", label: "Last 30 Days" },
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "this_quarter", label: "This Quarter" },
-  { value: "last_quarter", label: "Last Quarter" },
-  { value: "this_year", label: "This Year" },
-  { value: "last_year", label: "Last Year" },
-]
-
-/**
- * Convert a string to title case
- */
 function toTitleCase(str) {
   if (!str) return str;
   return String(str).split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-}
-
-/**
- * Convert a preset key into { start_date, end_date } strings (yyyy-MM-dd).
- * Returns { start_date: null, end_date: null } for "maximum" (all-time).
- */
-function presetToDateRange(preset) {
-  const today = new Date()
-  const fmt = (d) => format(d, "yyyy-MM-dd")
-
-  switch (preset) {
-    case "maximum":
-      return { start_date: null, end_date: null }
-    case "today":
-      return { start_date: fmt(today), end_date: fmt(today) }
-    case "yesterday": {
-      const y = subDays(today, 1)
-      return { start_date: fmt(y), end_date: fmt(y) }
-    }
-    case "this_week_mon_today":
-      return {
-        start_date: fmt(startOfWeek(today, { weekStartsOn: 1 })),
-        end_date: fmt(today),
-      }
-    case "last_7d":
-      return { start_date: fmt(subDays(today, 7)), end_date: fmt(today) }
-    case "last_14d":
-      return { start_date: fmt(subDays(today, 14)), end_date: fmt(today) }
-    case "last_30d":
-      return { start_date: fmt(subDays(today, 30)), end_date: fmt(today) }
-    case "this_month":
-      return { start_date: fmt(startOfMonth(today)), end_date: fmt(today) }
-    case "last_month": {
-      const lm = subMonths(today, 1)
-      return { start_date: fmt(startOfMonth(lm)), end_date: fmt(endOfMonth(lm)) }
-    }
-    case "this_quarter":
-      return { start_date: fmt(startOfQuarter(today)), end_date: fmt(today) }
-    case "last_quarter": {
-      const lq = subQuarters(today, 1)
-      return { start_date: fmt(startOfQuarter(lq)), end_date: fmt(endOfQuarter(lq)) }
-    }
-    case "this_year":
-      return { start_date: fmt(startOfYear(today)), end_date: fmt(today) }
-    case "last_year": {
-      const ly = subYears(today, 1)
-      return { start_date: fmt(startOfYear(ly)), end_date: fmt(endOfYear(ly)) }
-    }
-    default:
-      return { start_date: null, end_date: null }
-  }
 }
 
 const buildContactColumns = () => [
@@ -344,7 +275,7 @@ const buildContactColumns = () => [
         <div className="flex items-center gap-2">
           {oppValue > 0 ? (
             <span className="text-sm font-semibold text-green-600">
-              {getSymbolFromCurrency(userCurrency)}{oppValue.toLocaleString()}
+              {getSymbolFromCurrency(getUserCurrency())}{oppValue.toLocaleString()}
             </span>
           ) : (
             <span className="text-muted-foreground text-sm">—</span>
@@ -358,7 +289,7 @@ const buildContactColumns = () => [
                 {opportunities.slice(1).map((opp, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm py-1">
                     {opp.monetaryValue > 0 && (
-                      <span className="text-sm text-green-600">{getSymbolFromCurrency(userCurrency)}{opp.monetaryValue.toLocaleString()}</span>
+                      <span className="text-sm text-green-600">{getSymbolFromCurrency(getUserCurrency())}{opp.monetaryValue.toLocaleString()}</span>
                     )}
                     {opp.monetaryValue === 0 && (
                       <span className="text-xs text-muted-foreground">—</span>
@@ -553,7 +484,7 @@ export default function ContactPage() {
   useEffect(() => {
     const fetchClientGroups = async () => {
       try {
-        const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups`, { credentials: "include" })
+        const response = await apiRequest("/api/client-groups")
         if (response.ok) {
           const data = await response.json()
           const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
@@ -582,14 +513,12 @@ export default function ContactPage() {
       // Convert preset to concrete date strings
       const { start_date, end_date } = presetToDateRange(selectedDateRange)
 
-      let url = `https://birdy-backend.vercel.app/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=15`
+      let endpoint = `/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=15`
 
-      if (start_date) url += `&start_date=${start_date}`
-      if (end_date) url += `&end_date=${end_date}`
+      if (start_date) endpoint += `&start_date=${start_date}`
+      if (end_date) endpoint += `&end_date=${end_date}`
 
-      console.log("🔍 Fetching contacts:", { url, preset: selectedDateRange, start_date, end_date })
-
-      const response = await fetch(url, { credentials: "include" })
+      const response = await apiRequest(endpoint)
       if (!response.ok) throw new Error(`Failed: ${response.status}`)
 
       const data = await response.json()

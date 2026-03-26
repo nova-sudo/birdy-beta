@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { apiRequest } from "@/lib/api"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Users, Building2, TrendingUp, Target, AlertCircle, ArrowRight } from "lucide-react"
 
-export default function dashboard() {
+export default function Dashboard() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
@@ -33,9 +34,7 @@ export default function dashboard() {
 
     try {
       // Fetch clients data
-      const clientsRes = await fetch("https://birdy-backend.vercel.app/api/get_all_clients", {
-        credentials: "include",
-      })
+      const clientsRes = await apiRequest("/api/get_all_clients")
 
 
 
@@ -46,15 +45,11 @@ export default function dashboard() {
       const clientsData = await clientsRes.json()
 
       // Fetch GHL locations
-      const locationsRes = await fetch("https://birdy-backend.vercel.app/api/location-data", {
-        credentials: "include",
-      })
+      const locationsRes = await apiRequest("/api/location-data")
       const locationsData = locationsRes.ok ? await locationsRes.json() : { locations: [] }
 
       // Fetch Meta ad accounts
-      const adAccountsRes = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
-        credentials: "include",
-      })
+      const adAccountsRes = await apiRequest("/api/facebook/adaccounts")
       const adAccountsData = adAccountsRes.ok ? await adAccountsRes.json() : { data: { data: [] } }
 
       // Calculate source distribution

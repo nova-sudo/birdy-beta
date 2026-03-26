@@ -40,11 +40,9 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ghl from "../../../public/ghl_icon.png";
-import metaa from "../../../public/meta-icon-DH8jUhnM.png";
-import HP from "../../../public/hp_icon.png";
+import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP } from "@/lib/icons"
 import { Progress } from "@/components/ui/progress"
-import Flask from "../../../public/Flask.png";
+import { flaskIcon as Flask } from "@/lib/icons"
 import {
   Empty,
   EmptyDescription,
@@ -60,71 +58,11 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map";
 import { Skeleton } from "@/components/ui/skeleton"
 
-const STORAGE_KEY = "user_default_currency";
-const CACHE_DURATION = {
-  clientGroups: 120 * 60 * 1000,
-  ghlLocations: 60 * 60 * 1000,
-  metaAdAccounts: 60 * 60 * 1000,
-  hotProspectorGroups: 60 * 60 * 1000,
-}
+import { DATE_PRESETS, STORAGE_KEYS } from "@/lib/constants"
+import { getCachedData, clearCache } from "@/lib/cache"
+import { apiRequest, API_BASE_URL } from "@/lib/api"
 
-// ── Date preset helpers ──────────────────────────────────────────────────────
-
-// Maps to PRESET_ALIAS keys on the backend
-const DATE_PRESETS = [
-  { value: "maximum", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "this_week_mon_today", label: "This Week" },
-  { value: "last_7d", label: "Last 7 Days" },
-  { value: "last_14d", label: "Last 14 Days" },
-  { value: "last_30d", label: "Last 30 Days" },
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "this_quarter", label: "This Quarter" },
-  { value: "last_quarter", label: "Last Quarter" },
-  { value: "this_year", label: "This Year" },
-  { value: "last_year", label: "Last Year" },
-]
-
-// ── Cache helpers ────────────────────────────────────────────────────────────
-
-const getCachedData = (key) => {
-  try {
-    const cached = localStorage.getItem(key)
-    if (!cached) return null
-
-    const { data, timestamp } = JSON.parse(cached)
-    const now = Date.now()
-    const maxAge = CACHE_DURATION[key] || 5 * 60 * 1000
-
-    if (now - timestamp < maxAge) {
-      console.log(`✅ Cache hit for ${key} (age: ${Math.round((now - timestamp) / 1000)}s)`)
-      return data
-    }
-
-    console.log(`⏰ Cache expired for ${key}`)
-    localStorage.removeItem(key)
-    return null
-  } catch (error) {
-    console.error("Cache read error:", error)
-    return null
-  }
-}
-
-const clearCache = (pattern) => {
-  try {
-    const keys = Object.keys(localStorage)
-    keys.forEach((key) => {
-      if (key.includes(pattern)) {
-        localStorage.removeItem(key)
-      }
-    })
-    console.log(`🗑️ Cleared cache for pattern: ${pattern}`)
-  } catch (error) {
-    console.error("Cache clear error:", error)
-  }
-}
+const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -307,13 +245,7 @@ export default function ClientsPage() {
       setLoading(true)
       setError("")
 
-      const url = new URL("https://birdy-backend.vercel.app/api/client-groups")
-      // Always send date_preset — backend defaults to maximum anyway
-      url.searchParams.set("date_preset", datePreset || "maximum")
-
-      const response = await fetch(url.toString(), {
-        credentials: "include",
-      })
+      const response = await apiRequest(`/api/client-groups?date_preset=${datePreset || "maximum"}`)
 
       if (!response.ok) {
         throw new Error(`Failed to fetch client groups: ${response.status}`)
@@ -351,9 +283,7 @@ export default function ClientsPage() {
         }
       }
 
-      const response = await fetch("https://birdy-backend.vercel.app/api/subaccount/locations", {
-        credentials: "include",
-      })
+      const response = await apiRequest("/api/subaccount/locations")
 
       if (response.ok) {
         const data = await response.json()
@@ -375,9 +305,7 @@ export default function ClientsPage() {
 
   const fetchMetaAdAccounts = async (forceRefresh = false) => {
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/facebook/adaccounts", {
-        credentials: "include",
-      })
+      const response = await apiRequest("/api/facebook/adaccounts")
 
       if (response.ok) {
         const data = await response.json()
@@ -456,10 +384,8 @@ export default function ClientsPage() {
     }, 500)
 
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
+      const response = await apiRequest("/api/client-groups", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({
           name: creatingGroupName,
           ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,

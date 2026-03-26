@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ArrowLeft, Save, DollarSign, Construction } from "lucide-react"
 import { toast } from "sonner"
+import { apiRequest } from "@/lib/api"
 import {
   Bar,
   BarChart,
@@ -53,7 +54,7 @@ export default function ClientDetailsPage() {
   const fetchClientDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${clientId}`, { credentials: "include" })
+      const response = await apiRequest(`/api/client-groups/${clientId}`)
 
       if (!response.ok) {
         throw new Error("Failed to fetch client details")
@@ -74,10 +75,8 @@ export default function ClientDetailsPage() {
 
   const handleSaveNotes = async () => {
     try {
-      const response = await fetch(`https://birdy-backend.vercel.app/api/client-groups/${clientId}/notes`, {
+      const response = await apiRequest(`/api/client-groups/${clientId}/notes`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ notes }),
       })
 

@@ -29,10 +29,7 @@ import {
   searchMetrics,
   getAvailableMetricsForFormulas
 } from "@/lib/metrics-discovery"
-import ghl from "../../../public/ghl_icon.png";
-import metaa from "../../../public/meta-icon-DH8jUhnM.png";
-import HP from "../../../public/hp_icon.png";
-import Flask from "../../../public/Flask.png";
+import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP, flaskIcon as Flask } from "@/lib/icons"
 import {
   Pagination,
   PaginationContent,

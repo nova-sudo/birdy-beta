@@ -6,8 +6,8 @@ import {
   Plus, Minus, ExternalLink, AlertCircle,
   Loader2, Crown,
 } from "lucide-react";
+import { apiRequest } from "@/lib/api";
 
-const API_BASE = "https://birdy-backend.vercel.app";
 const PADDLE_CLIENT_TOKEN = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN ?? "";
 const PADDLE_ENVIRONMENT = process.env.NEXT_PUBLIC_PADDLE_ENVIRONMENT ?? "production";
 const EXTRA_CLIENT_PRICE_ID = process.env.NEXT_PUBLIC_PADDLE_PRICE_EXTRA_CLIENT ?? "";
@@ -336,7 +336,7 @@ export default function BillingPage() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/billing/status`, { credentials: "include" });
+      const res = await apiRequest("/api/billing/status");
       if (!res.ok) throw new Error("Failed to load billing status");
       setBillingStatus(await res.json());
     } catch (e) {
@@ -393,10 +393,8 @@ export default function BillingPage() {
     setLoadingPlanId(plan?.id ?? null);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/billing/change-plan`, {
+      const res = await apiRequest("/api/billing/change-plan", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ new_price_id: newPriceId, extra_clients: extras }),
       });
       const data = await res.json();
@@ -420,10 +418,8 @@ export default function BillingPage() {
       const currentExtra = billingStatus?.extra_clients_paid ?? 0;
       const newTotal = currentExtra + extras;
 
-      const res = await fetch(`${API_BASE}/api/billing/change-plan`, {
+      const res = await apiRequest("/api/billing/change-plan", {
         method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
         // Keep Scale price, bump total extra slots to currentExtra + new extras
         body: JSON.stringify({ new_price_id: scalePriceId, extra_clients: newTotal }),
       });
@@ -443,7 +439,7 @@ export default function BillingPage() {
     setLoadingPortal(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/billing/portal-url`, { credentials: "include" });
+      const res = await apiRequest("/api/billing/portal-url");
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? "Failed to open billing portal");
       if (data.portal_url) window.open(data.portal_url, "_blank", "noopener,noreferrer");

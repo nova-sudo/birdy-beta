@@ -2,15 +2,12 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { PUBLIC_ROUTES, PROTECTED_ROUTES } from '@/lib/constants';
 
 export default function ProtectedLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isClient, setIsClient] = useState(false);
-
-  // Define public and protected routes
-  const PUBLIC_ROUTES = ['/', '/login', '/register'];
-  const PROTECTED_ROUTES = ['/clients', '/call-center', '/settings', '/campaigns', '/contacts'];
 
   useEffect(() => {
     // Set isClient to true after mounting to ensure localStorage is accessible

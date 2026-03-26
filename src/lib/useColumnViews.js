@@ -15,8 +15,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://birdy-backend.vercel.app"
+import { API_BASE_URL } from "@/lib/api"
 
 export function useColumnViews(page) {
   const [savedColumns, setSavedColumns] = useState(null)
@@ -27,7 +26,7 @@ export function useColumnViews(page) {
 
     async function load() {
       try {
-        const res = await fetch(`${API_BASE}/api/user/views`, {
+        const res = await fetch(`${API_BASE_URL}/api/user/views`, {
           credentials: "include",
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -50,7 +49,7 @@ export function useColumnViews(page) {
   const saveView = useCallback(
     async (columns) => {
       try {
-        const res = await fetch(`${API_BASE}/api/user/views`, {
+        const res = await fetch(`${API_BASE_URL}/api/user/views`, {
           method: "PATCH",
           credentials: "include",
           headers: { "Content-Type": "application/json" },

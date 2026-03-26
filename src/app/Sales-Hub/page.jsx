@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { apiRequest } from "@/lib/api"
 import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
 import { Loading } from "@/components/ui/loader"
 import { useRouter } from "next/navigation"
@@ -36,8 +37,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
-import ghl from "../../../public/ghl.png";
-import HP from "../../../public/hp_icon.png";
+import { ghlLogo as ghl, hpIcon as HP } from "@/lib/icons"
 
 // Call Logs Dialog Component
 function CallLogsDialog({ lead }) {
@@ -273,12 +273,10 @@ export default function CallCenterPage() {
 
       // ✅ ALWAYS fetch from server - it handles cache internally
       const endpoint = forceRefresh
-        ? "https://birdy-backend.vercel.app/api/hotprospector/leads/refresh"
-        : `https://birdy-backend.vercel.app/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
+        ? "/api/hotprospector/leads/refresh"
+        : `/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
 
-      const response = await fetch(endpoint, {
-        credentials: "include",
-      })
+      const response = await apiRequest(endpoint)
 
       if (!response.ok) {
         throw new Error("Failed to fetch leads")
@@ -365,10 +363,7 @@ export default function CallCenterPage() {
       // ❌ REMOVE: Client cache check
       // const cachedMembers = getFromCache('hotprospector-members')
 
-      const response = await fetch(
-        "https://birdy-backend.vercel.app/api/hotprospector/members",
-        { credentials: "include" }
-      )
+      const response = await apiRequest("/api/hotprospector/members")
 
       if (!response.ok) {
         throw new Error("Failed to fetch members")

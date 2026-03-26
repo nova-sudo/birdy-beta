@@ -19,72 +19,16 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import metaa from "../../../public/meta-icon-DH8jUhnM.png"
-import Flask from "../../../public/Flask.png"
+import { metaIcon as metaa, flaskIcon as Flask } from "@/lib/icons"
 import { getMetricDisplayName } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
 
-// ── Date presets ─────────────────────────────────────────────────────────────
-const DATE_PRESETS = [
-  { value: "maximum", label: "All Time" },
-  { value: "today", label: "Today" },
-  { value: "yesterday", label: "Yesterday" },
-  { value: "this_week_mon_today", label: "This Week" },
-  { value: "last_7d", label: "Last 7 Days" },
-  { value: "last_14d", label: "Last 14 Days" },
-  { value: "last_30d", label: "Last 30 Days" },
-  { value: "this_month", label: "This Month" },
-  { value: "last_month", label: "Last Month" },
-  { value: "this_quarter", label: "This Quarter" },
-  { value: "last_quarter", label: "Last Quarter" },
-  { value: "this_year", label: "This Year" },
-  { value: "last_year", label: "Last Year" },
-]
-
-const getDateRangeFromPreset = (preset) => {
-  const now = new Date()
-  let start = new Date()
-  let end = new Date()
-
-  switch (preset) {
-    case "today": break
-    case "yesterday":
-      start.setDate(now.getDate() - 1); end.setDate(now.getDate() - 1); break
-    case "last_7d": start.setDate(now.getDate() - 7); break
-    case "last_14d": start.setDate(now.getDate() - 14); break
-    case "last_30d": start.setDate(now.getDate() - 30); break
-    case "this_month": start.setDate(1); break
-    case "this_week_mon_today": {
-      const day = now.getDay()
-      start.setDate(now.getDate() - day + (day === 0 ? -6 : 1)); break
-    }
-    case "last_month":
-      start.setMonth(now.getMonth() - 1); start.setDate(1); end.setDate(0); break
-    case "this_quarter": {
-      const q = Math.floor(now.getMonth() / 3)
-      start.setMonth(q * 3); start.setDate(1); break
-    }
-    case "last_quarter": {
-      const cq = Math.floor(now.getMonth() / 3)
-      start.setMonth((cq - 1) * 3); start.setDate(1)
-      end.setMonth(cq * 3); end.setDate(0); break
-    }
-    case "this_year": start.setMonth(0); start.setDate(1); break
-    case "last_year":
-      start.setFullYear(now.getFullYear() - 1); start.setMonth(0); start.setDate(1)
-      end.setFullYear(now.getFullYear() - 1); end.setMonth(11); end.setDate(31); break
-    case "maximum":
-      return { start: "2010-01-01", end: now.toISOString().split("T")[0] }
-    default:
-      start.setDate(now.getDate() - 7)
-  }
-
-  const fmt = (d) => d.toISOString().split("T")[0]
-  return { start: fmt(start), end: fmt(end) }
-}
+import { DATE_PRESETS } from "@/lib/constants"
+import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
+import { apiRequest } from "@/lib/api"
 
 // FIX: currency inside component, not at module level (avoids SSR crash)
 const getUserCurrency = () =>
@@ -239,9 +183,9 @@ const Campaigns = () => {
     setIsLoading(true)
     setError(null)
     try {
-      const groupsRes = await fetch(
-        `https://birdy-backend.vercel.app/api/client-groups?date_preset=${selectedDatePreset}`,
-        { credentials: "include", signal }
+      const groupsRes = await apiRequest(
+        `/api/client-groups?date_preset=${selectedDatePreset}`,
+        { signal }
       )
       if (!groupsRes.ok) throw new Error(`Failed to load client groups: ${groupsRes.status}`)
 
@@ -341,9 +285,9 @@ const Campaigns = () => {
       // Leads
       const groupIds = groups.map(g => g.id).join(",")
       const { start, end } = getDateRangeFromPreset(selectedDatePreset)
-      const leadsRes = await fetch(
-        `https://birdy-backend.vercel.app/api/facebook-leads/filtered?groups=${groupIds}&limit=5000&start_date=${start}&end_date=${end}`,
-        { credentials: "include", signal }
+      const leadsRes = await apiRequest(
+        `/api/facebook-leads/filtered?groups=${groupIds}&limit=5000&start_date=${start}&end_date=${end}`,
+        { signal }
       )
       const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
       setLeads(leadsData.leads || [])

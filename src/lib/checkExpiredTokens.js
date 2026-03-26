@@ -20,10 +20,7 @@
  *  string → path the caller should navigate to (all tokens are now fresh)
  */
 
-const API_BASE =
-  typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL
-    ? process.env.NEXT_PUBLIC_API_URL
-    : "https://birdy-backend.vercel.app"
+import { API_BASE_URL as API_BASE } from "./api"
 
 const STORAGE_KEY = "oauth_refresh_queue"
 

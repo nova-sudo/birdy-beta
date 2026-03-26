@@ -34,8 +34,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "https://birdy-backend.vercel.app"
+import { apiRequest } from "@/lib/api"
 
 function SettingsPageContent() {
   const router = useRouter()
@@ -125,7 +124,7 @@ function SettingsPageContent() {
         }
 
         // Normal load — backend is the source of truth
-        const res = await fetch(`${API_BASE}/api/status`, { credentials: "include" })
+        const res = await apiRequest("/api/status")
         if (!res.ok) throw new Error(`Status fetch failed: ${res.status}`)
         const data = await res.json()
 
@@ -158,7 +157,7 @@ function SettingsPageContent() {
         }
 
         // HotProspector
-        const hpRes = await fetch(`${API_BASE}/api/hotprospector/status`, { credentials: "include" })
+        const hpRes = await apiRequest("/api/hotprospector/status")
         if (hpRes.ok) setHotprospectorStatus(await hpRes.json())
 
       } catch (err) {
@@ -188,7 +187,7 @@ function SettingsPageContent() {
       setIsLoading(true)
       setError(null)
       const endpoint = integrationType === "gohighlevel" ? "/api/connect" : "/api/connect/facebook"
-      const res = await fetch(`${API_BASE}${endpoint}`, { credentials: "include" })
+      const res = await apiRequest(endpoint)
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
       const { auth_url } = await res.json()
       if (auth_url) window.location.href = auth_url
@@ -212,9 +211,8 @@ function SettingsPageContent() {
         hotprospector: "/api/integrations/hotprospector/remove",
       }
 
-      const res = await fetch(`${API_BASE}${endpointMap[integrationType]}`, {
+      const res = await apiRequest(endpointMap[integrationType], {
         method: "DELETE",
-        credentials: "include",
       })
 
       if (!res.ok) {
@@ -256,7 +254,7 @@ function SettingsPageContent() {
       setIsLoading(true)
       setError(null)
       const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
-      const res = await fetch(`${API_BASE}${endpoint}`, { credentials: "include" })
+      const res = await apiRequest(endpoint)
       if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
       toast.success("Test Successful", { description: "API test passed." })
     } catch (err) {
@@ -271,10 +269,8 @@ function SettingsPageContent() {
     try {
       setIsLoading(true)
       setError(null)
-      const res = await fetch(`${API_BASE}/api/hotprospector/connect`, {
+      const res = await apiRequest("/api/hotprospector/connect", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(hotprospectorCredentials),
       })
       if (!res.ok) {
