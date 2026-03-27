@@ -1,21 +1,12 @@
 import { Target, TrendingUp } from "lucide-react"
 import { StatsCard } from "@/components/StatsCard"
 
-export function ContactStats({ filteredContacts, loading }) {
-  const opportunitiesByStatus = filteredContacts.reduce((acc, c) => {
-    if (!c.opportunities || c.opportunities.length === 0) return acc
-    c.opportunities.forEach((opp) => {
-      const status = opp.status || "open"
-      acc[status] = (acc[status] || 0) + 1
-    })
-    return acc
-  }, {})
-
-  const wonCount = opportunitiesByStatus.won || 0
-  const lostCount = opportunitiesByStatus.lost || 0
-  const openCount = opportunitiesByStatus.open || 0
-  const totalOpportunities = wonCount + lostCount + openCount + (opportunitiesByStatus.abandoned || 0)
-  const conversionRate = totalOpportunities > 0 ? ((wonCount / totalOpportunities) * 100).toFixed(1) : 0
+export function ContactStats({ metaStats, loading }) {
+  const totalOpportunities = metaStats?.total_opportunities || 0
+  const wonCount = metaStats?.won || 0
+  const lostCount = metaStats?.lost || 0
+  const openCount = metaStats?.open || 0
+  const conversionRate = metaStats?.conversion_rate || 0
 
   const stats = [
     { title: "Total Leads", value: totalOpportunities, icon: Target, subtitle: "Across all Leads" },

@@ -11,7 +11,9 @@ export function getCachedData(key) {
 
     const { data, timestamp } = JSON.parse(cached)
     const now = Date.now()
-    const maxAge = CACHE_DURATION[key] || 5 * 60 * 1000
+    // Support prefixed keys: "clientGroups_last_7d" → lookup "clientGroups"
+    const baseKey = key.includes("_") ? key.substring(0, key.indexOf("_")) : key
+    const maxAge = CACHE_DURATION[key] || CACHE_DURATION[baseKey] || 5 * 60 * 1000
 
     if (now - timestamp < maxAge) {
       return data

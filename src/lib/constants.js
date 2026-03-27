@@ -16,8 +16,16 @@ export const DATE_PRESETS = [
   { value: "last_year", label: "Last Year" },
 ]
 
+export const DEFAULT_DATE_PRESET = "last_7d"
+
+export const CACHE_KEYS = {
+  CLIENT_GROUPS: "clientGroups",
+  USER_VIEWS: "userViews",
+}
+
 export const CACHE_DURATION = {
-  clientGroups: 120 * 60 * 1000,
+  clientGroups: 60 * 60 * 1000,
+  userViews: 24 * 60 * 60 * 1000,
   ghlLocations: 60 * 60 * 1000,
   metaAdAccounts: 60 * 60 * 1000,
   hotProspectorGroups: 60 * 60 * 1000,

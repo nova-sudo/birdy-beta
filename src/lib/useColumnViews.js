@@ -1,21 +1,12 @@
 // lib/useColumnViews.js
 // Shared hook for loading & saving per-page column views from the backend.
-//
-// Usage:
-//   const { savedColumns, saveView, viewsLoaded } = useColumnViews("campaigns")
-//
-// - savedColumns  : string[] | null  (null = no saved view for this page)
-// - viewsLoaded   : boolean          (true once the network call settles — success OR error)
-// - saveView(cols): async fn that PATCHes the backend and shows a toast
-//
-// IMPORTANT: viewsLoaded starts as false. Pages should render a
-// "Loading your custom view…" skeleton instead of the real table until
-// viewsLoaded is true. This prevents the default columns flashing before
-// the saved ones appear.
+// Now with localStorage cache — if views were prefetched at login, this returns instantly.
 
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
+import { getCachedData, setCachedData } from "@/lib/cache"
+import { CACHE_KEYS } from "@/lib/constants"
 
 export function useColumnViews(page) {
   const [savedColumns, setSavedColumns] = useState(null)
@@ -26,17 +17,31 @@ export function useColumnViews(page) {
 
     async function load() {
       try {
+        // Check cache first (populated by prefetchAfterLogin or a previous page visit)
+        const cached = getCachedData(CACHE_KEYS.USER_VIEWS)
+        if (cached) {
+          if (!cancelled) {
+            setSavedColumns(cached[page] ?? null)
+            setViewsLoaded(true)
+          }
+          return
+        }
+
+        // Cache miss — fetch from API
         const res = await fetch(`${API_BASE_URL}/api/user/views`, {
           credentials: "include",
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
+
+        // Cache the full response for all pages
+        setCachedData(CACHE_KEYS.USER_VIEWS, data)
+
         if (!cancelled) {
           setSavedColumns(data[page] ?? null)
         }
       } catch (err) {
         console.warn(`[useColumnViews] Could not load views for "${page}":`, err)
-        // savedColumns stays null → page will use its built-in defaults
       } finally {
         if (!cancelled) setViewsLoaded(true)
       }
@@ -57,6 +62,12 @@ export function useColumnViews(page) {
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         setSavedColumns(columns)
+
+        // Update cache in-place so other pages see the change
+        const cached = getCachedData(CACHE_KEYS.USER_VIEWS) || {}
+        cached[page] = columns
+        setCachedData(CACHE_KEYS.USER_VIEWS, cached)
+
         toast.success("View saved!")
       } catch (err) {
         console.error("[useColumnViews] Save failed:", err)

@@ -2,6 +2,8 @@
 import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { useClientGroups } from "@/lib/useClientGroups"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -36,8 +38,18 @@ export default function ContactPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("contacts")
 
-  // ── Date preset state (replaces dateRange / datePickerOpen) ──────────────
-  const [selectedDateRange, setSelectedDateRange] = useState("last_7d")
+  const {
+    clientGroups: allClientGroups,
+    loading: groupsLoading,
+    datePreset: selectedDateRange,
+    setDatePreset: setSelectedDateRange,
+  } = useClientGroups(DEFAULT_DATE_PRESET)
+
+  // Filter to GHL groups only (contacts page only shows GHL contacts)
+  const ghlClientGroups = useMemo(
+    () => allClientGroups.filter(g => g.ghl_location_id),
+    [allClientGroups]
+  )
 
   const [visibleColumns, setVisibleColumns] = useState(
     contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
@@ -54,7 +66,6 @@ export default function ContactPage() {
   const [selectedTags, setSelectedTags] = useState([])
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
-  const [clientGroups, setClientGroups] = useState([])
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState("columns")
   const [searchTerm, setSearchTerm] = useState("")
@@ -68,28 +79,12 @@ export default function ContactPage() {
     [visibleColumns]
   )
 
-  // Fetch client groups (for the group filter dropdown)
-  useEffect(() => {
-    const fetchClientGroups = async () => {
-      try {
-        const response = await apiRequest("/api/client-groups")
-        if (response.ok) {
-          const data = await response.json()
-          const ghlGroups = (data.client_groups || []).filter(g => g.ghl_location_id)
-          setClientGroups(ghlGroups)
-        }
-      } catch (error) {
-        console.error("Error fetching client groups:", error)
-      }
-    }
-    fetchClientGroups()
-  }, [])
 
   const fetchContacts = async (page = 1) => {
     setLoading(true)
     setError(null)
     try {
-      if (clientGroups.length === 0) {
+      if (ghlClientGroups.length === 0) {
         setContacts([])
         setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
         setLoading(false)
@@ -125,10 +120,10 @@ export default function ContactPage() {
 
   // Re-fetch whenever the preset, group filter, or group list changes
   useEffect(() => {
-    if (clientGroups.length > 0) {
+    if (ghlClientGroups.length > 0) {
       fetchContacts(1)
     }
-  }, [selectedClientGroup, clientGroups.length, selectedDateRange])
+  }, [selectedClientGroup, ghlClientGroups.length, selectedDateRange])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90]
@@ -357,7 +352,7 @@ export default function ContactPage() {
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     <SelectItem value="all">All Groups</SelectItem>
-                    {clientGroups.map(g => (
+                    {ghlClientGroups.map(g => (
                       <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -372,7 +367,7 @@ export default function ContactPage() {
           </div>
         </div>
 
-        <ContactStats filteredContacts={filteredAndSortedContacts} loading={loading} />
+        <ContactStats metaStats={metaData?.stats} loading={loading} />
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">

@@ -9,9 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
-
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ?? "https://birdy-backend.vercel.app"
+import { prefetchAfterLogin } from "@/lib/prefetch"
+import { publicRequest } from "@/lib/api"
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -40,11 +39,9 @@ export default function LoginForm() {
 
     try {
       // ── 1. Authenticate ──────────────────────────────────────────────────
-      const response = await fetch(`${API_BASE}/api/login`, {
+      const response = await publicRequest("/api/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
-        credentials: "include",
       })
 
       const data = await response.json()
@@ -71,7 +68,10 @@ export default function LoginForm() {
         localStorage.setItem("user_default_currency", data.user.default_currency)
       }
 
-      // ── 3. Check for expired integration tokens ──────────────────────────
+      // ── 3. Prefetch client-groups + views (fire-and-forget) ─────────────
+      prefetchAfterLogin()
+
+      // ── 4. Check for expired integration tokens ──────────────────────────
       const intendedRedirect = searchParams.get("redirect") || "/clients"
       const nextPath = await checkAndRefreshExpiredTokens(intendedRedirect)
 

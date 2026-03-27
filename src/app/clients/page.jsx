@@ -59,15 +59,24 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map";
 import { Skeleton } from "@/components/ui/skeleton"
 
-import { STORAGE_KEYS } from "@/lib/constants"
+import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
+import { useClientGroups } from "@/lib/useClientGroups"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
 export default function ClientsPage() {
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
+  const {
+    clientGroups: fetchedGroups,
+    loading,
+    error: fetchError,
+    datePreset: selectedDateRange,
+    setDatePreset: setSelectedDateRange,
+    invalidate: invalidateClientGroups,
+    refresh: refreshClientGroups,
+  } = useClientGroups(DEFAULT_DATE_PRESET)
   const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
@@ -86,8 +95,16 @@ export default function ClientsPage() {
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  // ── 🔥 DATE RANGE STATE ──────────────────────────────────────────────────
-  const [selectedDateRange, setSelectedDateRange] = useState("maximum")
+  // Sync hook data → local state (local state allows optimistic updates)
+  useEffect(() => {
+    if (fetchError) setError(fetchError)
+    const groups = fetchedGroups.map(group => ({
+      ...group,
+      _isPending: group.status === "pending",
+      _isCreating: group.status === "creating",
+    }))
+    setClientGroups(groups)
+  }, [fetchedGroups, fetchError])
 
   const [progress, setProgress] = useState(0)
   const [isOpen, setIsOpen] = useState(false);
@@ -228,50 +245,12 @@ export default function ClientsPage() {
   };
 
   useEffect(() => {
-    fetchClientGroups(false, selectedDateRange)
-  }, [selectedDateRange])
-
-  // Removed mount-time progress animation
-
-  useEffect(() => {
     if (wizardOpen && wizardStep > 1) {
       if (wizardStep === 2) fetchGhlLocations()
       if (wizardStep === 3) fetchMetaAdAccounts()
     }
   }, [wizardOpen, wizardStep])
 
-  // ── 🔥 fetchClientGroups accepts an optional datePreset override ─────────
-  const fetchClientGroups = async (forceRefresh = false, datePreset = selectedDateRange) => {
-    try {
-      setLoading(true)
-      setError("")
-
-      const response = await apiRequest(`/api/client-groups?date_preset=${datePreset || "maximum"}`)
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch client groups: ${response.status}`)
-      }
-      const data = await response.json()
-      const groups = (data.client_groups || []).map(group => ({
-        ...group,
-        _isPending: group.status === "pending",
-        _isCreating: group.status === "creating",
-      }))
-
-      setClientGroups(groups)
-      console.log("📥 Fetched client groups:", groups.length, "| preset:", datePreset);
-
-      if (forceRefresh) {
-        toast.success("Client groups refreshed")
-      }
-    } catch (err) {
-      console.error("[v0] Error fetching client groups:", err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-      setIsRefreshing(false)
-    }
-  }
 
   const fetchGhlLocations = async (forceRefresh = false) => {
     try {
@@ -324,8 +303,9 @@ export default function ClientsPage() {
 
   const handleRefresh = () => {
     setIsRefreshing(true)
-    clearCache("clientGroups")
-    fetchClientGroups(true, selectedDateRange)
+    invalidateClientGroups()
+    toast.success("Client groups refreshed")
+    setIsRefreshing(false)
   }
 
   const handleCreateClientGroup = async () => {
@@ -412,7 +392,7 @@ export default function ClientsPage() {
         )
 
         toast.success(`"${creatingGroupName}" created successfully!`)
-        clearCache("clientGroups")
+        invalidateClientGroups()
         clearCache("ghlLocations")
       } else {
         const data = await response.json()

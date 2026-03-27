@@ -10,7 +10,9 @@
       "Bash(python -c \"import py_compile; py_compile.compile\\(''routers/hotprospector.py'', doraise=True\\); print\\(''hotprospector.py OK''\\)\")",
       "Bash(python -c \"import py_compile; py_compile.compile\\(''services/hp_service.py'', doraise=True\\); print\\(''hp_service.py OK''\\)\")",
       "Bash(python -c \"import py_compile; py_compile.compile\\(''routers/ghl.py'', doraise=True\\); print\\(''ghl.py OK''\\)\")",
-      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/ghl_service.py'', doraise=True\\); print\\(''ghl_service.py OK''\\)\")"
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/ghl_service.py'', doraise=True\\); print\\(''ghl_service.py OK''\\)\")",
+      "Bash(grep -E \"\\\\.\\(py\\)$\")",
+      "Bash(wc -l /c/Users/ASUS/Desktop/Birdy/birdy-backend/routers/*.py)"
     ]
   }
 }

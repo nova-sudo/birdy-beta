@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { useClientGroups } from "@/lib/useClientGroups"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import {
   LayoutGrid,
   Grid3X3,
@@ -43,8 +45,12 @@ const DEFAULT_VISIBLE_COLUMNS = {
 const Campaigns = () => {
   const { currency: userCurrency, currencySymbol } = useCurrency()
 
+  const {
+    clientGroups, loading: groupsLoading, error: groupsError,
+    datePreset: selectedDatePreset, setDatePreset: setSelectedDatePreset,
+  } = useClientGroups(DEFAULT_DATE_PRESET)
+
   const [customMetrics, setCustomMetrics] = useState([])
-  const [clientGroups, setClientGroups] = useState([])
   const [selectedClientGroup, setSelectedClientGroup] = useState(null)
   const [campaigns, setCampaigns] = useState([])
   const [allAdSets, setAllAdSets] = useState([])
@@ -55,7 +61,6 @@ const Campaigns = () => {
   const [activeTab, setActiveTab] = useState("campaigns")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
-  const [selectedDatePreset, setSelectedDatePreset] = useState("last_7d")
 
   // ── Drill-down state: each holds the full row object for name display ──────
   const [selectedCampaign, setSelectedCampaign] = useState(null)  // campaign row
@@ -112,137 +117,133 @@ const Campaigns = () => {
     return base
   }
 
-  // ── Data fetch ────────────────────────────────────────────────────────────
-  const fetchAllData = async (signal) => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const groupsRes = await apiRequest(
-        `/api/client-groups?date_preset=${selectedDatePreset}`,
-        { signal }
-      )
-      if (!groupsRes.ok) throw new Error(`Failed to load client groups: ${groupsRes.status}`)
+  // ── Process client groups from hook into campaigns/adsets/ads ─────────────
+  useEffect(() => {
+    if (groupsLoading) return
 
-      const groupsData = await groupsRes.json()
-      const groups = groupsData.client_groups || []
+    if (!clientGroups.length) {
+      setCampaigns([]); setAllAdSets([]); setAllAds([])
+      return
+    }
 
-      if (!groups.length) {
-        setClientGroups([]); setCampaigns([]); setAllAdSets([]); setAllAds([]); setLeads([])
-        return
+    const processedCampaigns = []
+    const processedAdsets = []
+    const processedAds = []
+
+    for (const group of clientGroups) {
+      const fb = group.facebook || {}
+      const groupMeta = {
+        _groupId: group.id,
+        clientGroup: group.name,
+        adAccount: fb.ad_account_id || "",
+        account_currency: fb.currency || "USD",
       }
 
-      setClientGroups(groups)
-
-      const processedCampaigns = []
-      const processedAdsets = []
-      const processedAds = []
-
-      for (const group of groups) {
-        const fb = group.facebook || {}
-        const groupMeta = {
-          _groupId: group.id,
-          clientGroup: group.name,
-          adAccount: fb.ad_account_id || "",
-          account_currency: fb.currency || "USD",
-        }
-
-        // Campaigns
-        for (const c of (fb.campaigns || [])) {
-          processedCampaigns.push(enhanceWithCustomMetrics({
-            ...groupMeta,
-            id: c.id,
-            name: c.name,
-            status: (c.status || "inactive").toLowerCase(),
-            spend: c.spend || 0,
-            impressions: c.impressions || 0,
-            clicks: c.clicks || 0,
-            reach: c.reach || 0,
-            leads: c.results || 0,
-            ctr: c.ctr || 0,
-            cpc: c.cpc || 0,
-            cpm: c.cpm || 0,
-            cpp: c.reach > 0 ? c.spend / c.reach : 0,
-            frequency: c.reach > 0 ? c.impressions / c.reach : 0,
-          }))
-        }
-
-        // Ad sets — store _campaignId for drill-down filtering
-        for (const a of (fb.adsets || [])) {
-          processedAdsets.push(enhanceWithCustomMetrics({
-            ...groupMeta,
-            id: a.id,
-            name: a.name,
-            status: (a.status || "inactive").toLowerCase(),
-            _campaignId: a.campaign_id || "",   // ← parent campaign id
-            campaign_name: a.campaign_id || "",
-            spend: a.spend || 0,
-            impressions: a.impressions || 0,
-            clicks: a.clicks || 0,
-            reach: a.reach || 0,
-            leads: a.results || 0,
-            ctr: a.ctr || 0,
-            cpc: a.cpc || 0,
-            cpm: a.cpm || 0,
-            cpp: a.reach > 0 ? a.spend / a.reach : 0,
-            frequency: a.reach > 0 ? a.impressions / a.reach : 0,
-          }))
-        }
-
-        // Ads — store _campaignId and _adsetId for drill-down filtering
-        for (const ad of (fb.ads || [])) {
-          processedAds.push(enhanceWithCustomMetrics({
-            ...groupMeta,
-            id: ad.id,
-            name: ad.name,
-            status: (ad.status || "inactive").toLowerCase(),
-            _campaignId: ad.campaign_id || "",  // ← parent campaign id
-            _adsetId: ad.adset_id || "",         // ← parent adset id
-            campaign_name: ad.campaign_id || "",
-            spend: ad.spend || 0,
-            impressions: ad.impressions || 0,
-            clicks: ad.clicks || 0,
-            reach: ad.reach || 0,
-            leads: ad.results || 0,
-            ctr: ad.ctr || 0,
-            cpc: ad.cpc || 0,
-            cpm: ad.cpm || 0,
-            cpp: ad.reach > 0 ? ad.spend / ad.reach : 0,
-            frequency: ad.reach > 0 ? ad.impressions / ad.reach : 0,
-          }))
-        }
+      // Campaigns
+      for (const c of (fb.campaigns || [])) {
+        processedCampaigns.push(enhanceWithCustomMetrics({
+          ...groupMeta,
+          id: c.id,
+          name: c.name,
+          status: (c.status || "inactive").toLowerCase(),
+          spend: c.spend || 0,
+          impressions: c.impressions || 0,
+          clicks: c.clicks || 0,
+          reach: c.reach || 0,
+          leads: c.results || 0,
+          ctr: c.ctr || 0,
+          cpc: c.cpc || 0,
+          cpm: c.cpm || 0,
+          cpp: c.reach > 0 ? c.spend / c.reach : 0,
+          frequency: c.reach > 0 ? c.impressions / c.reach : 0,
+        }))
       }
 
-      setCampaigns(processedCampaigns)
-      setAllAdSets(processedAdsets)
-      setAllAds(processedAds)
+      // Ad sets — store _campaignId for drill-down filtering
+      for (const a of (fb.adsets || [])) {
+        processedAdsets.push(enhanceWithCustomMetrics({
+          ...groupMeta,
+          id: a.id,
+          name: a.name,
+          status: (a.status || "inactive").toLowerCase(),
+          _campaignId: a.campaign_id || "",   // ← parent campaign id
+          campaign_name: a.campaign_id || "",
+          spend: a.spend || 0,
+          impressions: a.impressions || 0,
+          clicks: a.clicks || 0,
+          reach: a.reach || 0,
+          leads: a.results || 0,
+          ctr: a.ctr || 0,
+          cpc: a.cpc || 0,
+          cpm: a.cpm || 0,
+          cpp: a.reach > 0 ? a.spend / a.reach : 0,
+          frequency: a.reach > 0 ? a.impressions / a.reach : 0,
+        }))
+      }
 
-      // Leads
-      const groupIds = groups.map(g => g.id).join(",")
-      const { start, end } = getDateRangeFromPreset(selectedDatePreset)
-      const leadsRes = await apiRequest(
-        `/api/facebook-leads/filtered?groups=${groupIds}&limit=5000&start_date=${start}&end_date=${end}`,
-        { signal }
-      )
-      const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
-      setLeads(leadsData.leads || [])
-
-    } catch (err) {
-      if (err.name === "AbortError") return
-      console.error("fetchAllData error:", err)
-      setError(err.message || "Failed to load marketing data")
-      setIsLoading(false)
-    } finally {
-      if (!signal.aborted) {
-        setIsLoading(false)
+      // Ads — store _campaignId and _adsetId for drill-down filtering
+      for (const ad of (fb.ads || [])) {
+        processedAds.push(enhanceWithCustomMetrics({
+          ...groupMeta,
+          id: ad.id,
+          name: ad.name,
+          status: (ad.status || "inactive").toLowerCase(),
+          _campaignId: ad.campaign_id || "",  // ← parent campaign id
+          _adsetId: ad.adset_id || "",         // ← parent adset id
+          campaign_name: ad.campaign_id || "",
+          spend: ad.spend || 0,
+          impressions: ad.impressions || 0,
+          clicks: ad.clicks || 0,
+          reach: ad.reach || 0,
+          leads: ad.results || 0,
+          ctr: ad.ctr || 0,
+          cpc: ad.cpc || 0,
+          cpm: ad.cpm || 0,
+          cpp: ad.reach > 0 ? ad.spend / ad.reach : 0,
+          frequency: ad.reach > 0 ? ad.impressions / ad.reach : 0,
+        }))
       }
     }
-  }
 
+    setCampaigns(processedCampaigns)
+    setAllAdSets(processedAdsets)
+    setAllAds(processedAds)
+  }, [clientGroups, groupsLoading])
+
+  // ── Leads fetch (depends on clientGroups from hook) ─────────────────────
   useEffect(() => {
+    if (groupsLoading || !clientGroups.length) {
+      setLeads([])
+      if (!groupsLoading) setIsLoading(false)
+      return
+    }
+
     const ctrl = new AbortController()
-    fetchAllData(ctrl.signal)
+    setIsLoading(true)
+    setError(null)
+
+    const fetchLeads = async () => {
+      try {
+        const groupIds = clientGroups.map(g => g.id).join(",")
+        const { start, end } = getDateRangeFromPreset(selectedDatePreset)
+        const leadsRes = await apiRequest(
+          `/api/facebook-leads/filtered?groups=${groupIds}&limit=5000&start_date=${start}&end_date=${end}`,
+          { signal: ctrl.signal }
+        )
+        const leadsData = leadsRes.ok ? await leadsRes.json() : { leads: [] }
+        setLeads(leadsData.leads || [])
+      } catch (err) {
+        if (err.name === "AbortError") return
+        console.error("fetchLeads error:", err)
+        setError(err.message || "Failed to load leads data")
+      } finally {
+        if (!ctrl.signal.aborted) setIsLoading(false)
+      }
+    }
+
+    fetchLeads()
     return () => ctrl.abort()
-  }, [selectedDatePreset])
+  }, [clientGroups, groupsLoading, selectedDatePreset])
 
   // ── Drill-down row-click handler ──────────────────────────────────────────
   // Clicking a campaign row selects it, clears downstream, and advances the tab.
