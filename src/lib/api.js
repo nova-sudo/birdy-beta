@@ -27,6 +27,7 @@ export async function apiRequest(endpoint, options = {}) {
     localStorage.removeItem("auth_token")
     localStorage.removeItem("refresh_token")
     localStorage.removeItem("user")
+    localStorage.removeItem("user_authenticated")
     document.cookie = "client_auth_token=; path=/; max-age=0"
     window.location.href = "/login"
     throw new Error("Unauthorized")

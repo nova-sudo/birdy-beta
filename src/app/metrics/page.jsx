@@ -691,46 +691,46 @@ const MetricsHub = () => {
                         </td>
                       </tr>
                     ) : (
-                    currentMetrics.map((metric, idx) => (
-                      <tr key={metric.id} className={`hover:bg-muted/50 bg-white`}>
-                        <td className="px-4 py-2">
-                          <div className="font-semibold text-foreground">{metric.name}</div>
-                          <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
-                          {metric.isDynamic && (
-                            <Badge variant="outline" className="mt-1 text-xs">Dynamic</Badge>
-                          )}
-                        </td>
-                        <td className="px-4 py-2">{getSourceBadge(metric.source)}</td>
-                        <td className="px-4 py-2">{getDashboardBadge(metric.dashboard)}</td>
-                        <td className="px-4 py-2">
-                          <div className="flex items-center gap-2">
-                            {metric.category === "custom" ? (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-9 px-3 bg-purple-600 text-white hover:bg-purple-700"
-                                  onClick={() => handleEditMetric(metric)}
-                                >
-                                  Edit Metric
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleDeleteMetric(metric.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </>
-                            ) : (
-                              <Badge variant="outline">Standard</Badge>
+                      currentMetrics.map((metric, idx) => (
+                        <tr key={metric.id} className={`hover:bg-muted/50 bg-white`}>
+                          <td className="px-4 py-2">
+                            <div className="font-semibold text-foreground">{metric.name}</div>
+                            <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
+                            {metric.isDynamic && (
+                              <Badge variant="outline" className="mt-1 text-xs">Dynamic</Badge>
                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                          </td>
+                          <td className="px-4 py-2">{getSourceBadge(metric.source)}</td>
+                          <td className="px-4 py-2">{getDashboardBadge(metric.dashboard)}</td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                              {metric.category === "custom" ? (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 px-3 bg-purple-600 text-white hover:bg-purple-700"
+                                    onClick={() => handleEditMetric(metric)}
+                                  >
+                                    Edit Metric
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleDeleteMetric(metric.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              ) : (
+                                <Badge variant="outline">Standard</Badge>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

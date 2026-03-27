@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/ASUS/Desktop/Birdy/**)",
+      "Bash(unzip -l \"C:/Users/ASUS/Desktop/Birdy/birdy-backend.zip\")",
+      "Bash(find . -type f -name \"*.py\" ! -path \"*/__pycache__/*\" -exec wc -l {} +)",
+      "Bash(grep \"async def.*:$\" main.py)",
+      "Bash(wc -l integrations/facebook_utils/*.py)",
+      "Bash(find . -type f -name \"*.py\" ! -path \"*/.git/*\" ! -path \"*/__pycache__/*\" ! -path \"./.vercel/*\" ! -path \"./.idea/*\" -exec wc -c {} +)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''routers/hotprospector.py'', doraise=True\\); print\\(''hotprospector.py OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/hp_service.py'', doraise=True\\); print\\(''hp_service.py OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''routers/ghl.py'', doraise=True\\); print\\(''ghl.py OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/ghl_service.py'', doraise=True\\); print\\(''ghl_service.py OK''\\)\")"
+    ]
+  }
+}
