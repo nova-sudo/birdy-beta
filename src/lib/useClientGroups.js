@@ -13,7 +13,9 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET) {
   const [meta, setMeta] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [hasIncompleteGroups, setHasIncompleteGroups] = useState(false)
   const abortRef = useRef(null)
+  const pollingRef = useRef(null)
 
   const fetchGroups = useCallback(async (preset, forceRefresh = false) => {
     if (!forceRefresh) {
@@ -45,7 +47,13 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET) {
       const groups = data.client_groups || []
       const responseMeta = data.meta || null
 
-      setCachedData(cacheKey(preset), { groups, meta: responseMeta })
+      // Only cache when all groups are fully loaded
+      const hasIncomplete = groups.some(g => g.status === "creating" || g.status === "pending")
+      if (!hasIncomplete) {
+        setCachedData(cacheKey(preset), { groups, meta: responseMeta })
+      }
+      setHasIncompleteGroups(hasIncomplete)
+
       setClientGroups(groups)
       setMeta(responseMeta)
     } catch (err) {
@@ -63,6 +71,21 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET) {
     fetchGroups(datePreset)
     return () => abortRef.current?.abort()
   }, [datePreset, fetchGroups])
+
+  // Poll every 10s while any group is still creating/pending
+  useEffect(() => {
+    if (hasIncompleteGroups) {
+      pollingRef.current = setInterval(() => {
+        fetchGroups(datePreset, true)
+      }, 10000)
+    }
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [hasIncompleteGroups, datePreset, fetchGroups])
 
   const invalidate = useCallback(() => {
     clearCache(CACHE_KEYS.CLIENT_GROUPS)

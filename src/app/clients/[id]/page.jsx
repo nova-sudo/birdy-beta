@@ -15,6 +15,7 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
+import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -53,6 +54,7 @@ export default function ClientDetailsPage() {
     loading: groupsLoading,
     datePreset,
     setDatePreset,
+    invalidate,
   } = useClientGroups(DEFAULT_DATE_PRESET)
 
   // Find this specific group from the cached list
@@ -190,6 +192,7 @@ export default function ClientDetailsPage() {
           <TabsTrigger value="marketing" className={tabTriggerClass}>Marketing</TabsTrigger>
           <TabsTrigger value="call-centre" className={tabTriggerClass}>Call Centre</TabsTrigger>
           <TabsTrigger value="leads" className={tabTriggerClass}>Leads</TabsTrigger>
+          <TabsTrigger value="integrations" className={tabTriggerClass}>Integrations</TabsTrigger>
         </TabsList>
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
@@ -402,6 +405,14 @@ export default function ClientDetailsPage() {
             setDatePreset={setDatePreset}
             showGroupFilter={false}
             showHeader={false}
+          />
+        </TabsContent>
+
+        {/* ── Integrations Tab ─────────────────────────────────────────────── */}
+        <TabsContent value="integrations" className="mt-6">
+          <IntegrationsContent
+            group={matchingGroup}
+            onRefreshComplete={invalidate}
           />
         </TabsContent>
       </Tabs>
