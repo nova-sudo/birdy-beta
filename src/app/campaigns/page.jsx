@@ -6,7 +6,7 @@ import { MarketingContent } from "@/components/campaigns/MarketingContent"
 export default function CampaignsPage() {
   const {
     clientGroups, loading: groupsLoading, error: groupsError,
-    datePreset, setDatePreset,
+    datePreset, setDatePreset, invalidate,
   } = useClientGroups(DEFAULT_DATE_PRESET)
 
   return (
@@ -18,6 +18,7 @@ export default function CampaignsPage() {
       setDatePreset={setDatePreset}
       showGroupFilter={true}
       showHeader={true}
+      onCacheInvalidate={invalidate}
     />
   )
 }

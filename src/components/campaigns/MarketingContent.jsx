@@ -24,6 +24,7 @@ import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
@@ -48,6 +49,7 @@ export function MarketingContent({
   setDatePreset,
   showGroupFilter = true,
   showHeader = true,
+  onCacheInvalidate,
 }) {
   const { currency: userCurrency, currencySymbol } = useCurrency()
 
@@ -72,6 +74,52 @@ export function MarketingContent({
   const [selectedCampaignIds, setSelectedCampaignIds] = useState(new Set())
   const [selectedAdSetIds, setSelectedAdSetIds] = useState(new Set())
   const [selectedAdIds, setSelectedAdIds] = useState(new Set())
+
+  // ── Status toggle (Active ↔ Paused) ──────────────────────────────────────
+  const [togglingRows, setTogglingRows] = useState(new Set())
+
+  const handleStatusToggle = async (objectId, currentStatus) => {
+    const newStatus = String(currentStatus).toLowerCase() === "active" ? "PAUSED" : "ACTIVE"
+    const objectType = activeTab === "campaigns" ? "campaign" : activeTab === "adsets" ? "adset" : "ad"
+
+    // Optimistic UI update
+    setTogglingRows(prev => new Set(prev).add(objectId))
+    const updateState = (setter) => setter(prev => prev.map(item =>
+      item.id === objectId ? { ...item, status: newStatus.toLowerCase() } : item
+    ))
+    if (activeTab === "campaigns") updateState(setCampaigns)
+    else if (activeTab === "adsets") updateState(setAllAdSets)
+    else if (activeTab === "ads") updateState(setAllAds)
+
+    try {
+      const res = await apiRequest("/api/facebook/update-status", {
+        method: "POST",
+        body: JSON.stringify({ object_id: objectId, object_type: objectType, status: newStatus }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.detail || "Failed to update status")
+      }
+      toast.success(`${objectType.charAt(0).toUpperCase() + objectType.slice(1)} ${newStatus === "ACTIVE" ? "activated" : "paused"}`)
+      onCacheInvalidate?.()
+    } catch (err) {
+      // Revert on error
+      const revertStatus = newStatus === "ACTIVE" ? "paused" : "active"
+      const revertState = (setter) => setter(prev => prev.map(item =>
+        item.id === objectId ? { ...item, status: revertStatus } : item
+      ))
+      if (activeTab === "campaigns") revertState(setCampaigns)
+      else if (activeTab === "adsets") revertState(setAllAdSets)
+      else if (activeTab === "ads") revertState(setAllAds)
+      toast.error(err.message || "Failed to update status")
+    } finally {
+      setTogglingRows(prev => {
+        const next = new Set(prev)
+        next.delete(objectId)
+        return next
+      })
+    }
+  }
 
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("campaigns")
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
@@ -726,6 +774,9 @@ export function MarketingContent({
                         activeTab === "ads" ? setSelectedAdIds :
                           undefined
                   }
+                  enableStatusToggle={activeTab !== "leads"}
+                  onStatusToggle={handleStatusToggle}
+                  togglingRows={togglingRows}
                 />
             )}
           </TabsContent>

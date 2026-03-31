@@ -388,6 +388,7 @@ export default function ClientDetailsPage() {
             setDatePreset={setDatePreset}
             showGroupFilter={false}
             showHeader={false}
+            onCacheInvalidate={invalidate}
           />
         </TabsContent>
 

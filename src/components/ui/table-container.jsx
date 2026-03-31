@@ -65,6 +65,9 @@ const StyledTable = ({
   enableSelection = false,
   selectedRows = new Set(),
   onSelectionChange,
+  enableStatusToggle = false,
+  onStatusToggle,
+  togglingRows = new Set(),
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -538,6 +541,12 @@ const StyledTable = ({
                   </div>
                 </th>
               )}
+              {/* Status toggle header */}
+              {enableStatusToggle && (
+                <th className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78" style={enableSelection ? { position: 'sticky', left: 40, zIndex: 50 } : { position: 'sticky', left: 0, zIndex: 50 }}>
+                  <div className="flex items-center justify-center">Status</div>
+                </th>
+              )}
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -549,7 +558,7 @@ const StyledTable = ({
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
                     }`}
-                  style={enableSelection && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: 40 } : undefined}
+                  style={(enableSelection || enableStatusToggle) && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
                 >
                   <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
@@ -694,6 +703,34 @@ const StyledTable = ({
                         />
                       </td>
                     )}
+                    {/* Status toggle cell */}
+                    {enableStatusToggle && (
+                      <td
+                        className={`w-[70px] min-w-[70px] px-1 ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"} ${isSelected ? "!bg-primary/5" : ""}`}
+                        style={enableSelection ? { position: 'sticky', left: 40, zIndex: 30 } : { position: 'sticky', left: 0, zIndex: 30 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {togglingRows.has(row.id) ? (
+                          <div className="flex items-center justify-center">
+                            <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => onStatusToggle?.(row.id, row.status)}
+                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                              String(row.status).toLowerCase() === "active"
+                                ? "bg-green-100 text-green-800 hover:bg-green-200"
+                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                            }`}
+                          >
+                            <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${
+                              String(row.status).toLowerCase() === "active" ? "bg-green-500" : "bg-gray-400"
+                            }`} />
+                            {String(row.status).toLowerCase() === "active" ? "Active" : "Paused"}
+                          </button>
+                        )}
+                      </td>
+                    )}
                     {visibleColumns.map((col, colIdx) => (
                       <td
                         key={`${row.id || idx}-${col.id}`}
@@ -703,7 +740,7 @@ const StyledTable = ({
                               : "fixed-column-even h-11"
                             : ""
                           } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
-                        style={enableSelection && colIdx === 0 ? { left: 40 } : undefined}
+                        style={(enableSelection || enableStatusToggle) && colIdx === 0 ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
                       >
                         <div
                           className={
