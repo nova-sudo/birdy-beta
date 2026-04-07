@@ -41,12 +41,13 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton"
 import { InboxIcon } from "lucide-react"
+import { RotateCcw, PlusSquare } from "lucide-react"
 
 const operators = [
-  { value: "+", label: "Add (+)" },
-  { value: "-", label: "Subtract (−)" },
-  { value: "*", label: "Multiply (×)" },
-  { value: "/", label: "Divide (÷)" },
+  { value: "+", label: "+" },
+  { value: "-", label: "−" },
+  { value: "*", label: "×" },
+  { value: "/", label: "/" },
 ]
 
 const MetricSelector = ({ value, onChange, availableMetrics }) => {
@@ -187,7 +188,7 @@ const MetricsHub = () => {
     name: "",
     description: "",
     group: "",
-    formulaParts: [{ type: "metric", value: "" }],
+    formulaParts: [{ type: "metric", value: " " }],
     displayOnDashboard: false,
   })
 
@@ -765,99 +766,238 @@ const MetricsHub = () => {
 
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl bg-white">
-            <DialogHeader>
-              <DialogTitle>{editingMetric ? "Edit Metric" : "Create New Metric"}</DialogTitle>
-              <DialogDescription>Build a custom metric by combining available metrics</DialogDescription>
+          <DialogContent className="sm:max-w-[900px] w-full p-0 gap-0 bg-background overflow-hidden rounded-2xl border border-border/60">
+
+            {/* Header */}
+            <DialogHeader className="px-6 pt-5 pb-4 border-b border-border/60 bg-white">
+              <DialogTitle className="text-lg font-semibold text-foreground">
+                {editingMetric ? "Edit Metric" : "Create Metric"}
+              </DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Build a formula by combining metrics and operations.
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="metric-name" className="pb-2">Metric Name *</Label>
-                <Input
-                  id="metric-name"
-                  placeholder="e.g., ROI, Cost per Conversion"
-                  value={metricForm.name}
-                  onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="metric-description" className="pb-2">Description</Label>
-                <Textarea
-                  id="metric-description"
-                  placeholder="Optional description"
-                  value={metricForm.description}
-                  onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="metric-group" className="pb-2">Dashboard *</Label>
-                <Select value={metricForm.group} onValueChange={(value) => setMetricForm({ ...metricForm, group: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select dashboard" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="Clients">Clients</SelectItem>
-                    <SelectItem value="Campaigns">Campaigns</SelectItem>
-                    <SelectItem value="Contacts">Contacts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="pb-2">Formula Builder</Label>
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
-                  {metricForm.formulaParts.map((part, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      {part.type === "metric" ? (
-                        <MetricSelector
-                          value={part.value}
-                          onChange={(newValue) => updateFormulaPart(index, newValue)}
-                          availableMetrics={availableMetricsForFormulas}
-                        />
-                      ) : (
-                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
-                          <SelectTrigger className="w-fit">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {operators.map((op) => (
-                              <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFormulaPart(index)}
-                        disabled={metricForm.formulaParts.length === 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addOperation} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" /> Add Operation
-                  </Button>
+            
+              <div className="px-6 pb-4 flex justify-center">
+                <div className="bg-white h-25 border border-border/60 rounded-xl p-4 my-4 w-full flex items-center justify-center">
+                  <p className="text-sm font-semibold">Your AI assist is coming soon</p>
                 </div>
               </div>
 
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="display-dashboard"
-                  checked={metricForm.displayOnDashboard}
-                  onCheckedChange={(checked) => setMetricForm({ ...metricForm, displayOnDashboard: checked })}
-                />
-                <Label htmlFor="display-dashboard">Display on dashboard</Label>
+              {/* Two-column body */}
+            <div className="px-6 pb-6 flex gap-4 items-start">
+
+              {/* Left column */}
+              <div className="flex-1 flex flex-col gap-4 overflow-y-auto max-h-[55vh]">
+
+                {/* Name + Description card */}
+                <div className="bg-white border border-border/60 rounded-xl p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="metric-name" className="text-base font-semibold text-black mb-0">
+                        Metric Name *
+                      </Label>
+                      <Input
+                        id="metric-name"
+                        placeholder="e.g., ROI, Cost per Conversion"
+                        value={metricForm.name}
+                        onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
+                        className="text-sm bg-[#F9F8FC] border-border/60 rounded-lg"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="metric-description" className="text-base font-semibold text-black mb-0">
+                        Description
+                      </Label>
+                      <Input
+                        id="metric-description"
+                        placeholder="Optional description"
+                        value={metricForm.description}
+                        onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
+                        className="text-sm bg-[#F9F8FC] border-border/60 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+               {/* Calculation Logic card */}
+                <div className="bg-white border border-border/60 rounded-xl p-4 flex flex-col gap-3">
+                  
+                  {/* Header with Reset */}
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">Calculation Logic</p>
+                    {metricForm.formulaParts.length > 0 && (
+                      <button
+                        onClick={() => setMetricForm({ ...metricForm, formulaParts: [] })}
+                        className="flex items-center gap-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium"
+                      >
+                        <RotateCcw className="h-3 w-3" />
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Formula chip area */}
+                  <div className="bg-background border border-dashed border-border/60 rounded-lg p-3 flex flex-wrap gap-2 items-center min-h-[60px]">
+                    {metricForm.formulaParts.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        Click "Add Metric" to start building your formula
+                      </p>
+                    ) : (
+                      <>
+                        {metricForm.formulaParts.map((part, index) =>
+                          part.type === "metric" ? (
+                            <div key={index} className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-border/60 text-foreground">
+                                <MetricSelector
+                                  value={part.value}
+                                  onChange={(newValue) => updateFormulaPart(index, newValue)}
+                                  availableMetrics={availableMetricsForFormulas}
+                                />
+                                <button
+                                  onClick={() => removeFormulaPart(index)}
+                                  className="ml-1 hover:opacity-70 text-muted-foreground hover:text-foreground"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
+                              {index < metricForm.formulaParts.length - 1 &&
+                                metricForm.formulaParts[index + 1]?.type === "metric" && (
+                                  <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 text-purple-600 text-sm font-semibold flex items-center justify-center mx-1">
+                                    +
+                                  </div>
+                                )}
+                            </div>
+                          ) : (
+                            <div
+                              key={index}
+                              onClick={() => removeFormulaPart(index)}
+                              className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 text-purple-600 text-sm font-semibold flex items-center justify-center mx-1 cursor-pointer hover:bg-red-100 hover:border-red-200 hover:text-red-500"
+                            >
+                              {part.value}
+                            </div>
+                          )
+                        )}
+
+                        {/* Dashed + at the end */}
+                        <button
+                          onClick={() => {
+                            const firstId = availableMetricsForFormulas[0]?.id || ""
+                            const newParts =
+                              metricForm.formulaParts.length > 0 &&
+                              metricForm.formulaParts[metricForm.formulaParts.length - 1].type === "metric"
+                                ? [...metricForm.formulaParts, { type: "operator", value: "+" }, { type: "metric", value: firstId }]
+                                : [...metricForm.formulaParts, { type: "metric", value: firstId }]
+                            setMetricForm({ ...metricForm, formulaParts: newParts })
+                          }}
+                          className="w-8 h-8 rounded-lg border-2 border-dashed border-border/60 text-muted-foreground hover:border-purple-400 hover:text-purple-500 flex items-center justify-center"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Bottom operator buttons + Add Metric */}
+                  <div className="flex items-center gap-2 justify-center flex-wrap pt-1">
+                    {operators.map((op) => (
+                      <button
+                        key={op.value}
+                        onClick={() => {
+                          if (
+                            metricForm.formulaParts.length === 0 ||
+                            metricForm.formulaParts[metricForm.formulaParts.length - 1].type === "operator"
+                          ) return
+                          setMetricForm({
+                            ...metricForm,
+                            formulaParts: [...metricForm.formulaParts, { type: "operator", value: op.value }],
+                          })
+                        }}
+                        className="w-9 h-9 rounded-full bg-[#713CDD1A] border border-purple-200 text-[#713CDD] text-sm font-semibold hover:bg-purple-200 flex items-center justify-center"
+                      >
+                        {op.label}
+                      </button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const firstId = availableMetricsForFormulas[0]?.id || ""
+                        const newParts =
+                          metricForm.formulaParts.length > 0 &&
+                          metricForm.formulaParts[metricForm.formulaParts.length - 1].type === "metric"
+                            ? [...metricForm.formulaParts, { type: "operator", value: "+" }, { type: "metric", value: firstId }]
+                            : [...metricForm.formulaParts, { type: "metric", value: firstId }]
+                        setMetricForm({ ...metricForm, formulaParts: newParts })
+                      }}
+                      className="text-xs gap-1.5 rounded-lg border-border/60"
+                    >
+                      <PlusSquare className="h-3.5 w-3.5" /> Add Metric
+                    </Button>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Right: preview card */}
+              <div className="w-[280px] shrink-0 bg-white border border-border/60 rounded-xl p-5 flex flex-col items-center gap-4 self-stretch">
+                <div className="flex-1 flex flex-col items-center justify-center text-center gap-1 w-full">
+                  <p className="text-4xl font-semibold text-foreground">
+                    {metricForm.formulaParts.some((p) => p.type === "metric") ? "0" : "—"}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {metricForm.name.trim() || "Unnamed Metric"}
+                  </p>
+                  <p className="text-xs text-muted-foreground/60 break-all mt-0.5">
+                    {metricForm.formulaParts.length > 0
+                      ? metricForm.formulaParts
+                          .map((p) => {
+                            if (p.type === "metric") {
+                              return availableMetricsForFormulas.find((m) => m.id === p.value)?.label?.replace(/\s/g, "_") || "metric"
+                            }
+                            return p.value
+                          })
+                          .join(" ")
+                      : "No formula"}
+                  </p>
+                </div>
+                <div className="flex gap-2 w-full">
+                  <Select defaultValue="Integer">
+                    <SelectTrigger className="flex-1 text-xs bg-white h-8 border-border/60 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="Integer">Integer</SelectItem>
+                      <SelectItem value="Decimal">Decimal</SelectItem>
+                      <SelectItem value="Percentage">Percentage</SelectItem>
+                      <SelectItem value="Currency">Currency</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select defaultValue="Total">
+                    <SelectTrigger className="flex-1 text-xs bg-white h-8 border-border/60 rounded-lg">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="Total">Total</SelectItem>
+                      <SelectItem value="Average">Average</SelectItem>
+                      <SelectItem value="Count">Count</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={resetForm}>Cancel</Button>
-              <Button onClick={handleCreateMetric} className="bg-purple-600 text-white hover:bg-purple-700">
+            {/* Footer */}
+            <DialogFooter className="px-6 py-4 border-t border-border/60 bg-white">
+              <Button variant="outline" onClick={resetForm} className="rounded-lg">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCreateMetric}
+                className="bg-purple-600 text-white hover:bg-purple-700 rounded-lg"
+              >
                 {editingMetric ? "Update" : "Create"}
               </Button>
             </DialogFooter>
