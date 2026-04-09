@@ -20,7 +20,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Check, ChevronDown } from "lucide-react"
+import { Check, ChevronDown,  FlaskConical } from "lucide-react"
 import {
   discoverAllMetrics,
   getMetricsStatistics,
@@ -50,15 +50,14 @@ const operators = [
   { value: "/", label: "/" },
 ]
 
-const MetricSelector = ({ value, onChange, availableMetrics }) => {
+
+const MetricSelector = ({ value, onChange, availableMetrics, onRemove }) => {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
   const [activeSource, setActiveSource] = useState("all")
 
   const metricsBySource = availableMetrics.reduce((acc, metric) => {
-    if (!acc[metric.category]) {
-      acc[metric.category] = []
-    }
+    if (!acc[metric.category]) acc[metric.category] = []
     acc[metric.category].push(metric)
     return acc
   }, {})
@@ -82,13 +81,14 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
   }
 
   return (
+  <div className="flex items-center">
     <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch("") }}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="flex-1 justify-between"
+          className="flex-1 justify-between rounded-r-none border-r-0"
         >
           {currentName}
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -97,7 +97,9 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
       <PopoverContent className="p-0 w-fit bg-white">
         <Tabs defaultValue="all" className="w-fit" onValueChange={handleTabChange}>
           <TabsList className="text-center w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
-            <TabsTrigger value="all" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 data-[state=active]:border-b-purple-700 h-full">
+            <TabsTrigger value="all" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] 
+            data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 
+            data-[state=active]:border-b-purple-700 h-full">
               All {availableMetrics.length}
             </TabsTrigger>
             {Object.keys(metricsBySource).map(source => (
@@ -110,8 +112,6 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
               </TabsTrigger>
             ))}
           </TabsList>
-
-          {/* Shared search input */}
           <div className="px-2 py-2 border-b">
             <Input
               placeholder={activeSource === "all" ? "Search all metrics..." : `Search in ${activeSource}...`}
@@ -121,7 +121,6 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
               autoFocus
             />
           </div>
-
           <TabsContent value="all" className="border-0 p-0">
             <Command shouldFilter={false}>
               <CommandList>
@@ -141,7 +140,6 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
               </CommandList>
             </Command>
           </TabsContent>
-
           {Object.entries(metricsBySource).map(([source, metrics]) => (
             <TabsContent key={source} value={source.toLowerCase()} className="border-0 p-0">
               <Command shouldFilter={false}>
@@ -166,6 +164,15 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
         </Tabs>
       </PopoverContent>
     </Popover>
+
+    <span
+      role="button"
+      onClick={onRemove}
+      className="h-9 flex items-center px-1.5 border border-l-0 rounded-r-md hover:opacity-70 text-muted-foreground hover:text-foreground cursor-pointer"
+    >
+      <X className="h-3.5 w-3.5" />
+    </span>
+  </div>
   )
 }
 
@@ -182,6 +189,8 @@ const MetricsHub = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true)
   const itemsPerPage = 15; // Adjust as needed
+  const [openOperatorIndex, setOpenOperatorIndex] = useState(null)
+  const [deleteConfirm, setDeleteConfirm] = useState(null) 
 
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
@@ -191,6 +200,37 @@ const MetricsHub = () => {
     formulaParts: [{ type: "metric", value: " " }],
     displayOnDashboard: false,
   })
+
+  const calculateFormulaPreview = () => {
+  if (metricForm.formulaParts.length === 0) return null
+
+  try {
+    const expression = metricForm.formulaParts
+      .map((p) => {
+        if (p.type === "metric") {
+          const metric = availableMetricsForFormulas.find((m) => m.id === p.value)
+          return metric?.sampleValue ?? metric?.value ?? 0
+        }
+        return p.value
+      })
+      .join(" ")
+
+    // eslint-disable-next-line no-new-func
+    const result = Function(`"use strict"; return (${expression})`)()
+    if (!isFinite(result)) return "∞"
+
+    if (metricForm.format === "Percentage") return `${result.toFixed(1)}%`
+    if (metricForm.format === "Currency") return `$${Number(result.toLocaleString())}`
+    if (metricForm.format === "Decimal") return result.toFixed(2)
+
+    // Integer - format with k/m suffix
+    if (Math.abs(result) >= 1_000_000) return `${(result / 1_000_000).toFixed(1)}m`
+    if (Math.abs(result) >= 1_000) return `${(result / 1_000).toFixed(1)}k`
+    return Math.round(result).toString()
+  } catch {
+    return "—"
+  }
+}
 
   // Fetch client groups on mount
   useEffect(() => {
@@ -229,6 +269,15 @@ const MetricsHub = () => {
       console.log("✅ Metrics discovery complete:", stats)
     }
   }, [clientGroups])
+
+  useEffect(() => {
+  if (availableMetricsForFormulas.length > 0 && metricForm.formulaParts.length === 0) {
+    setMetricForm((prev) => ({
+      ...prev,
+      formulaParts: [{ type: "metric", value: availableMetricsForFormulas[0].id }],
+    }))
+  }
+}, [availableMetricsForFormulas])
 
   // Load custom metrics from localStorage on mount
   useEffect(() => {
@@ -292,7 +341,7 @@ const MetricsHub = () => {
   }
 
   const handleCreateMetric = () => {
-    if (!metricForm.name || !metricForm.group) {
+    if (!metricForm.name) {
       alert("Please fill in all required fields")
       return
     }
@@ -328,8 +377,10 @@ const MetricsHub = () => {
       name: "",
       description: "",
       group: "",
-      formulaParts: [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
+      formulaParts: [],
       displayOnDashboard: false,
+      format: "Integer",       // 👈 add
+      aggregation: "Total",    // 👈 add
     })
     setIsCreateDialogOpen(false)
     setEditingMetric(null)
@@ -345,15 +396,20 @@ const MetricsHub = () => {
       group: metric.dashboard,
       formulaParts: metric.formulaParts || [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
       displayOnDashboard: metric.displayOnDashboard || false,
+      format: metric.format || "Integer",           // 👈 add
+      aggregation: metric.aggregation || "Total",   // 👈 add
     })
     setIsCreateDialogOpen(true)
   }
 
-  const handleDeleteMetric = (metricId) => {
-    if (confirm("Are you sure you want to delete this metric?")) {
-      setCustomMetrics(customMetrics.filter((m) => m.id !== metricId))
-    }
-  }
+const handleDeleteMetric = (metricId) => {
+  setDeleteConfirm(metricId)
+}
+
+const confirmDelete = () => {
+  setCustomMetrics(customMetrics.filter((m) => m.id !== deleteConfirm))
+  setDeleteConfirm(null)
+}
 
   const addOperation = () => {
     const firstMetricId = availableMetricsForFormulas[0]?.id || ""
@@ -763,7 +819,7 @@ const MetricsHub = () => {
             )}
           </TabsContent>
         </Tabs>
-
+  
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogContent className="sm:max-w-[900px] w-full p-0 gap-0 bg-background overflow-hidden rounded-2xl border border-border/60">
@@ -793,7 +849,7 @@ const MetricsHub = () => {
 
                 {/* Name + Description card */}
                 <div className="bg-white border border-border/60 rounded-xl p-4">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4"> 
                     <div className="flex flex-col gap-1.5">
                       <Label htmlFor="metric-name" className="text-base font-semibold text-black mb-0">
                         Metric Name *
@@ -817,6 +873,24 @@ const MetricsHub = () => {
                         onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
                         className="text-sm bg-[#F9F8FC] border-border/60 rounded-lg"
                       />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="metric-group" className="text-base font-semibold text-black mb-0">
+                        Dashboard *
+                      </Label>
+                      <Select
+                        value={metricForm.group}
+                        onValueChange={(val) => setMetricForm({ ...metricForm, group: val })}
+                      >
+                        <SelectTrigger id="metric-group" className="text-sm bg-[#F9F8FC] border-border/60 rounded-lg h-9">
+                          <SelectValue placeholder="Select dashboard..." />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white">
+                          <SelectItem value="Clients">Clients</SelectItem>
+                          <SelectItem value="Campaigns">Campaigns</SelectItem>
+                          <SelectItem value="Contacts">Contacts</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -849,36 +923,47 @@ const MetricsHub = () => {
                         {metricForm.formulaParts.map((part, index) =>
                           part.type === "metric" ? (
                             <div key={index} className="flex items-center gap-1">
-                              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-border/60 text-foreground">
-                                <MetricSelector
-                                  value={part.value}
-                                  onChange={(newValue) => updateFormulaPart(index, newValue)}
-                                  availableMetrics={availableMetricsForFormulas}
-                                />
-                                <button
-                                  onClick={() => removeFormulaPart(index)}
-                                  className="ml-1 hover:opacity-70 text-muted-foreground hover:text-foreground"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </div>
-
+                              <MetricSelector
+                                value={part.value}
+                                onChange={(newValue) => updateFormulaPart(index, newValue)}
+                                availableMetrics={availableMetricsForFormulas}
+                                onRemove={() => removeFormulaPart(index)}
+                              />
                               {index < metricForm.formulaParts.length - 1 &&
-                                metricForm.formulaParts[index + 1]?.type === "metric" && (
-                                  <div className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 text-purple-600 text-sm font-semibold flex items-center justify-center mx-1">
-                                    +
-                                  </div>
+                                metricForm.formulaParts[index + 1]?.type === "operator" && (
+                                  <Popover
+                                    open={openOperatorIndex === index}
+                                    onOpenChange={(o) => setOpenOperatorIndex(o ? index : null)}
+                                  >
+                                    <PopoverTrigger asChild>
+                                      <button className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 text-purple-600 text-sm font-semibold flex items-center justify-center mx-1 hover:bg-purple-200">
+                                        {operators.find(op => op.value === metricForm.formulaParts[index + 1]?.value)?.label || "+"}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="p-1 w-fit bg-white shadow-md rounded-lg">
+                                      <div className="flex flex-col">
+                                        {operators.map((op) => (
+                                          <button
+                                            key={op.value}
+                                            onClick={() => {
+                                              updateFormulaPart(index + 1, op.value)
+                                              setOpenOperatorIndex(null)
+                                            }}
+                                            className={`px-4 py-1.5 text-sm font-semibold rounded-md hover:bg-purple-50 hover:text-purple-700 text-center
+                                              ${metricForm.formulaParts[index + 1]?.value === op.value
+                                                ? "bg-purple-100 text-purple-700"
+                                                : "text-foreground"
+                                              }`}
+                                          >
+                                            {op.label}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                 )}
                             </div>
-                          ) : (
-                            <div
-                              key={index}
-                              onClick={() => removeFormulaPart(index)}
-                              className="w-8 h-8 rounded-full bg-purple-100 border border-purple-200 text-purple-600 text-sm font-semibold flex items-center justify-center mx-1 cursor-pointer hover:bg-red-100 hover:border-red-200 hover:text-red-500"
-                            >
-                              {part.value}
-                            </div>
-                          )
+                          ) : null
                         )}
 
                         {/* Dashed + at the end */}
@@ -906,16 +991,27 @@ const MetricsHub = () => {
                       <button
                         key={op.value}
                         onClick={() => {
-                          if (
-                            metricForm.formulaParts.length === 0 ||
-                            metricForm.formulaParts[metricForm.formulaParts.length - 1].type === "operator"
-                          ) return
-                          setMetricForm({
-                            ...metricForm,
-                            formulaParts: [...metricForm.formulaParts, { type: "operator", value: op.value }],
-                          })
+                          const parts = metricForm.formulaParts
+                          const lastOpIndex = parts.map(p => p.type).lastIndexOf("operator")
+
+                          if (parts.length === 0 || parts[parts.length - 1].type === "operator") return
+
+                          if (lastOpIndex !== -1) {
+                            const newParts = [...parts]
+                            newParts[lastOpIndex] = { type: "operator", value: op.value }
+                            setMetricForm({ ...metricForm, formulaParts: newParts })
+                          } else {
+                            setMetricForm({
+                              ...metricForm,
+                              formulaParts: [...parts, { type: "operator", value: op.value }],
+                            })
+                          }
                         }}
-                        className="w-9 h-9 rounded-full bg-[#713CDD1A] border border-purple-200 text-[#713CDD] text-sm font-semibold hover:bg-purple-200 flex items-center justify-center"
+                        className={`w-9 h-9 rounded-full border text-sm font-semibold flex items-center justify-center
+                          ${metricForm.formulaParts.find(p => p.type === "operator" && p.value === op.value)
+                            ? "bg-purple-600 border-purple-600 text-white"
+                            : "bg-[#713CDD1A] border-purple-200 text-[#713CDD] hover:bg-purple-200"
+                          }`}
                       >
                         {op.label}
                       </button>
@@ -944,27 +1040,33 @@ const MetricsHub = () => {
               {/* Right: preview card */}
               <div className="w-[280px] shrink-0 bg-white border border-border/60 rounded-xl p-5 flex flex-col items-center gap-4 self-stretch">
                 <div className="flex-1 flex flex-col items-center justify-center text-center gap-1 w-full">
-                  <p className="text-4xl font-semibold text-foreground">
-                    {metricForm.formulaParts.some((p) => p.type === "metric") ? "0" : "—"}
+                  <p className="text-4xl font-bold text-foreground">
+                    {metricForm.formulaParts.some((p) => p.type === "metric")
+                      ? calculateFormulaPreview() ?? "0"
+                      : "—"}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     {metricForm.name.trim() || "Unnamed Metric"}
                   </p>
-                  <p className="text-xs text-muted-foreground/60 break-all mt-0.5">
+                  <p className="text-xs text-muted-foreground/60 break-all mt-0.5 leading-relaxed">
                     {metricForm.formulaParts.length > 0
                       ? metricForm.formulaParts
                           .map((p) => {
                             if (p.type === "metric") {
-                              return availableMetricsForFormulas.find((m) => m.id === p.value)?.label?.replace(/\s/g, "_") || "metric"
+                              return availableMetricsForFormulas.find((m) => m.id === p.value)?.label || "metric"
                             }
                             return p.value
                           })
                           .join(" ")
-                      : "No formula"}
+                      : "No formula yet"}
                   </p>
                 </div>
-                <div className="flex gap-2 w-full">
-                  <Select defaultValue="Integer">
+
+                <div className="flex gap-2 w-full border-t pt-4">
+                  <Select
+                    value={metricForm.format || "Integer"}
+                    onValueChange={(val) => setMetricForm({ ...metricForm, format: val })}
+                  >
                     <SelectTrigger className="flex-1 text-xs bg-white h-8 border-border/60 rounded-lg">
                       <SelectValue />
                     </SelectTrigger>
@@ -975,7 +1077,10 @@ const MetricsHub = () => {
                       <SelectItem value="Currency">Currency</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select defaultValue="Total">
+                  <Select
+                    value={metricForm.aggregation || "Total"}
+                    onValueChange={(val) => setMetricForm({ ...metricForm, aggregation: val })}
+                  >
                     <SelectTrigger className="flex-1 text-xs bg-white h-8 border-border/60 rounded-lg">
                       <SelectValue />
                     </SelectTrigger>
@@ -1002,8 +1107,32 @@ const MetricsHub = () => {
               </Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
-      </div>
+      </Dialog>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl px-8 py-7 flex flex-col gap-3 w-[420px]">
+            <p className="text-lg font-semibold text-foreground">Are you sure you want to delete this metric?</p>
+            <p className="text-sm text-muted-foreground">This metric will be permanently removed and cannot be recovered.</p>
+            <div className="flex items-center justify-end gap-3 mt-2">
+              <Button
+                variant="outline"
+                className="rounded-lg px-5"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="rounded-lg px-5 bg-destructive hover:bg-destructive/90 text-white"
+                onClick={confirmDelete}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
     </div>
   )
 }
