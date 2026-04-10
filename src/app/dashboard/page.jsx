@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -9,9 +9,6 @@ import {
   Trash2,
   TrendingUp,
   DollarSign,
-  Users,
-  UserCheck,
-  Target,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,48 +17,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
 import getSymbolFromCurrency from "currency-symbol-map";
 
-// ─── Mock Alerts (replace with real API when available) ──────────────────────
-
-const MOCK_ALERTS = [
-  {
-    id: 1,
-    client: "Legal Solutions Inc",
-    platform: "Facebook",
-    type: "ads_not_running",
-    title: "Ads Not Running",
-    description: "Payment Error. Days not running: 7 days",
-    color: "red",
-  },
-  {
-    id: 2,
-    client: "Home Remodelers Co",
-    platform: "Facebook",
-    type: "performance",
-    title: "Ads Not Getting Reach",
-    description: "Zero impressions for 3 days",
-    color: "yellow",
-  },
-  {
-    id: 3,
-    client: "Fitness World",
-    platform: "Facebook",
-    type: "performance",
-    title: "Cost Per Lead is above threshold",
-    description: "Lead cost has been above £3 for over 3 days",
-    color: "yellow",
-  },
-  {
-    id: 4,
-    client: "Fitness World",
-    platform: "Facebook",
-    type: "client_wins",
-    title: "Creative Test Winner Found",
-    description: "Ad 'Summer Special' outperformed others by 45%",
-    color: "green",
-  },
-];
+// ─── Tab config ───────────────────────────────────────────────────────────────
 
 const TABS = ["All Alerts", "Ads Not Running", "Performance", "Client Wins"];
 
@@ -73,24 +33,26 @@ const TAB_FILTER = {
 };
 
 const ALERT_LEFT_BORDER = {
-  red: "border-l-red-400 bg-red-50/40",
-  yellow: "border-l-yellow-400 bg-yellow-50/40",
-  green: "border-l-green-400 bg-green-50/40",
+  red: "border-l-red-500 bg-red-50/50 hover:bg-background/80",
+  yellow: "border-l-amber-500 bg-amber-50/50 hover:bg-background/80",
+  green: "border-l-green-500 bg-green-50/50 hover:bg-background/80",
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function AlertIcon({ color }) {
-  if (color === "red") return (
-    <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-      <AlertTriangle className="w-4 h-4 text-red-500" />
-    </div>
-  );
-  if (color === "yellow") return (
-    <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
-      <DollarSign className="w-4 h-4 text-yellow-500" />
-    </div>
-  );
+  if (color === "red")
+    return (
+      <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
+      </div>
+    );
+  if (color === "yellow")
+    return (
+      <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+        <DollarSign className="w-4 h-4 text-yellow-500" />
+      </div>
+    );
   return (
     <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
       <Trophy className="w-4 h-4 text-green-500" />
@@ -98,53 +60,34 @@ function AlertIcon({ color }) {
   );
 }
 
-function StatCard({ title, value, icon: Icon, delta, deltaLabel, loading }) {
-  return (
-    <Card className="border rounded-lg shadow-sm bg-white">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-muted-foreground font-normal text-sm">{title}</CardTitle>
-        <div className="h-7 w-8 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-          <Icon className="h-4 w-4 text-purple-600" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-7 w-1/2 mb-2" />
-        ) : (
-          <div className="text-2xl font-bold">{value}</div>
-        )}
-        <p className="text-xs text-muted-foreground mt-1">
-          <span className={`text-[0.75rem] leading-4 ${delta?.startsWith("-") ? "text-red-500" : "text-green-500"}`}>
-            {delta}
-          </span>
-          <span className="ml-1 text-[0.75rem] leading-4 text-[#71658B]">{deltaLabel}</span>
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function ClientCard({ group, onClick }) {
-  const roas = group.facebook?.metrics?.insights?.purchase_roas
-    ? `${parseFloat(group.facebook.metrics.insights.purchase_roas).toFixed(2)}x`
+  const userCurrency = (() => {
+    try { 
+      const currency = localStorage.getItem("user_default_currency") ?? "USD";
+      if (!currency) throw new Error("Currency not fetched");
+      return currency;
+    } catch { 
+      return "USD"; 
+    }
+  })();
+  const symbol = getSymbolFromCurrency(userCurrency) || "$";
+
+  const ad_spend = group.facebook?.metrics?.insights?.spend
+    ? `${symbol}${parseFloat(group.facebook?.metrics?.insights?.spend)}`
     : "—";
 
-  const currency = group.ad_account_currency || "USD";
-  const symbol = getSymbolFromCurrency(currency) || "$";
+  
 
-  const cpl = group.facebook?.metrics?.insights?.cost_per_result
-    ? `${symbol}${parseFloat(group.facebook.metrics.insights.cost_per_result).toFixed(2)}`
-    : "—";
+  const ctr = group.facebook?.metrics?.insights?.ctr
+    ? `${group.facebook?.metrics?.insights?.ctr}%`
+    : "—";    
+  
 
-  const closeRate = group.gohighlevel?.metrics?.close_rate
-    ? `${(parseFloat(group.gohighlevel.metrics.close_rate) * 100).toFixed(1)}%`
-    : group.gohighlevel?.metrics?.conversion_rate
-    ? `${(parseFloat(group.gohighlevel.metrics.conversion_rate) * 100).toFixed(1)}%`
+  const clicks = group.facebook?.metrics?.insights?.clicks
+    ? `${(parseFloat(group.facebook.metrics.insights.clicks)).toFixed(0)}`
     : "—";
 
   const isPending = group._isPending || group._isCreating;
-
-  // Progress based on ROAS: 0–10x scale capped at 100%
   const roasRaw = parseFloat(group.facebook?.metrics?.insights?.purchase_roas) || 0;
   const progress = Math.min((roasRaw / 10) * 100, 100);
 
@@ -154,7 +97,6 @@ function ClientCard({ group, onClick }) {
       className={`bg-white border border-border/60 rounded-2xl p-5 flex flex-col gap-4 transition-all cursor-pointer
         ${isPending ? "opacity-60 pointer-events-none" : "hover:shadow-md hover:border-purple-200"}`}
     >
-      {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <p className="font-bold text-foreground text-base leading-tight">{group.name}</p>
@@ -170,12 +112,11 @@ function ClientCard({ group, onClick }) {
         </div>
       </div>
 
-      {/* Metrics */}
       <div className="grid grid-cols-3 gap-2">
         {[
-          { label: "ROAS", value: roas },
-          { label: "CPL", value: cpl },
-          { label: "Close Rate", value: closeRate },
+          { label: "Ad Spend", value: ad_spend },
+          { label: "CTR", value: ctr },
+          { label: "Clicks", value: clicks },
         ].map(({ label, value }) => (
           <div key={label}>
             <p className="text-xs text-muted-foreground">{label}</p>
@@ -184,7 +125,6 @@ function ClientCard({ group, onClick }) {
         ))}
       </div>
 
-      {/* Progress bar */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -205,7 +145,7 @@ export default function DashboardPage() {
   const { clientGroups, loading } = useClientGroups(DEFAULT_DATE_PRESET);
 
   const [activeTab, setActiveTab] = useState("All Alerts");
-  const [alerts, setAlerts] = useState(MOCK_ALERTS);
+  const [rawAlerts, setRawAlerts] = useState([]);
   const [query, setQuery] = useState("");
 
   const userCurrency = (() => {
@@ -213,29 +153,92 @@ export default function DashboardPage() {
   })();
   const symbol = getSymbolFromCurrency(userCurrency) || "$";
 
-  // ── Stats derived from real client data ──────────────────────────────────
+  // ── Fetch alerts ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await apiRequest("/api/alerts");
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = [
+          ...(data.active || []),
+          ...(data.triggered || []),
+          ...(data.paused || []),
+        ];
+        setRawAlerts(all);
+      } catch {
+        // non-critical
+      }
+    })();
+  }, []);
+
+  // ── Map DB shape → UI shape ─────────────────────────────────────────────────
+  const alerts = useMemo(() => {
+    return rawAlerts.map((alert) => ({
+      id: alert.id,
+      client: alert.name,
+      platform: alert.condition?.platform ?? "Facebook",
+      type:
+        alert.status === "triggered"
+          ? "performance"
+          : alert.status === "active"
+          ? "performance"
+          : "client_wins",
+      title: alert.metric_label,
+      description:
+        alert.last_eval_result?.message ??
+        `${alert.metric_label ?? ""} ${alert.condition_display ?? ""} per ${alert.condition?.period ?? ""}`,
+      color:
+        alert.status === "triggered"
+          ? "red"
+          : alert.status === "active"
+          ? "yellow"
+          : "green",
+    }));
+  }, [rawAlerts]);
+
+  // ── Delete alert ────────────────────────────────────────────────────────────
+  const dismissAlert = async (id) => {
+    try {
+      const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setRawAlerts((prev) => prev.filter((a) => a.id !== id));
+        toast.success("Alert deleted");
+      } else {
+        toast.error("Failed to delete alert");
+      }
+    } catch {
+      toast.error("Failed to delete alert");
+    }
+  };
+
+  // ── Stats from real client data ─────────────────────────────────────────────
   const stats = useMemo(() => {
     const activeClients = clientGroups.length;
 
-    const totalSpend = clientGroups.reduce((sum, g) =>
-      sum + (parseFloat(g.facebook?.metrics?.insights?.spend) || 0), 0);
+    const totalSpend = clientGroups.reduce(
+      (sum, g) => sum + (parseFloat(g.facebook?.metrics?.insights?.spend) || 0),
+      0
+    );
 
-    const totalLeads = clientGroups.reduce((sum, g) =>
-      sum + (parseInt(g.facebook?.metrics?.insights?.total_leads) || 0), 0);
+    const totalLeads = clientGroups.reduce(
+      (sum, g) => sum + (parseInt(g.facebook?.metrics?.insights?.total_leads) || 0),
+      0
+    );
 
     const cplValues = clientGroups
       .map((g) => parseFloat(g.facebook?.metrics?.insights?.cost_per_result))
       .filter((v) => !isNaN(v) && v > 0);
 
-    const averageCPL = cplValues.length > 0
-      ? cplValues.reduce((a, b) => a + b, 0) / cplValues.length
-      : 0;
+    const averageCPL =
+      cplValues.length > 0
+        ? cplValues.reduce((a, b) => a + b, 0) / cplValues.length
+        : 0;
 
     return { activeClients, totalSpend, totalLeads, averageCPL };
   }, [clientGroups]);
 
   const filteredAlerts = alerts.filter(TAB_FILTER[activeTab]);
-  const dismissAlert = (id) => setAlerts((prev) => prev.filter((a) => a.id !== id));
   const handleClientClick = (group) => router.push(`/clients/${group.id}`);
 
   return (
@@ -285,14 +288,13 @@ export default function DashboardPage() {
       {/* ── Action Required ─────────────────────────────────────────────── */}
       <div>
         <h2 className="text-lg font-bold text-foreground mb-3">Action Required</h2>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-4">
-          <TabsList className="w-full h-fit bg-muted/50 border border-border/60 rounded-xl px-1 py-2 grid grid-cols-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="!flex w-full h-fit bg-muted/50 border border-border/60 mb-4 rounded-xl px-1 py-2 overflow-x-auto scrollbar-none">
             {TABS.map((tab) => (
               <TabsTrigger
                 key={tab}
                 value={tab}
-                className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700 h-full"
+                className="!flex-1 min-w-[110px] text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
               >
                 {tab}
               </TabsTrigger>
@@ -307,8 +309,9 @@ export default function DashboardPage() {
             </div>
           ) : (
             filteredAlerts.map((alert) => (
-              <div key={alert.id}
-                className={`flex items-center gap-4 px-5 py-4 rounded-r-xl border-l-4 ${ALERT_LEFT_BORDER[alert.color]}`}
+              <div
+                key={alert.id}
+                className={`flex items-center gap-4 mb-4 p-4 rounded-lg shadow-sm border-l-4 ${ALERT_LEFT_BORDER[alert.color]}`}
               >
                 <AlertIcon color={alert.color} />
                 <div className="flex-1 min-w-0">
@@ -320,7 +323,16 @@ export default function DashboardPage() {
                   <p className="text-xs text-muted-foreground">{alert.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs">
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
+                    onClick={() => {
+                      const match = clientGroups.find((g) =>
+                        (rawAlerts.find((r) => r.id === alert.id)?.target_group_ids || []).includes(g.id)
+                      );
+                      if (match) router.push(`/clients/${match.id}`);
+                    }}
+                  >
                     Open Client
                   </Button>
                   <button
@@ -346,9 +358,9 @@ export default function DashboardPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white border border-border/60 rounded-2xl p-5 flex flex-col gap-4">
+              <div key={i} className="bg-white border border-border/60 rounded-2xl flex flex-col gap-4">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2">
                     <Skeleton className="h-4 w-36" />
@@ -371,7 +383,9 @@ export default function DashboardPage() {
         ) : clientGroups.length === 0 ? (
           <div className="text-sm text-muted-foreground text-center py-12 bg-white border border-border/60 rounded-2xl">
             No clients yet.{" "}
-            <Link href="/clients" className="text-purple-600 underline">Add your first client</Link>
+            <Link href="/clients" className="text-purple-600 underline">
+              Add your first client
+            </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
