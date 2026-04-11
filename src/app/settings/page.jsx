@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Paintbrush } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -45,6 +45,15 @@ function SettingsPageContent() {
   const [ghlStatus, setGhlStatus] = useState({ connected: false })
   const [facebookStatus, setFacebookStatus] = useState({ connected: false })
   const [hotprospectorStatus, setHotprospectorStatus] = useState({ connected: false })
+
+  const [refreshCycle, setRefreshCycle] = useState({ running: false, groups_done: 0, groups_total: 0, current_group: null })
+  const [refreshStarting, setRefreshStarting] = useState(false)
+  const [bytesDesign, setBytesDesign] = useState(false)
+
+  // Load bytes-design flag
+  useEffect(() => {
+    setBytesDesign(localStorage.getItem("birdy_bytes_design") === "true")
+  }, [])
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
@@ -160,6 +169,10 @@ function SettingsPageContent() {
         const hpRes = await apiRequest("/api/hotprospector/status")
         if (hpRes.ok) setHotprospectorStatus(await hpRes.json())
 
+        // Refresh cycle status
+        const cycleRes = await apiRequest("/api/client-groups/refresh-all/status")
+        if (cycleRes.ok) setRefreshCycle(await cycleRes.json())
+
       } catch (err) {
         console.error("init error:", err)
         setError(`Failed to fetch integration status: ${err.message}`)
@@ -181,6 +194,53 @@ function SettingsPageContent() {
 
     init()
   }, [searchParams])
+
+  // ── Refresh-all cycle polling ──────────────────────────────────────────
+  useEffect(() => {
+    if (!refreshCycle.running) return
+    const interval = setInterval(async () => {
+      try {
+        const res = await apiRequest("/api/client-groups/refresh-all/status")
+        if (res.ok) {
+          const data = await res.json()
+          setRefreshCycle(data)
+          if (!data.running) clearInterval(interval)
+        }
+      } catch { /* ignore */ }
+    }, 10_000)
+    return () => clearInterval(interval)
+  }, [refreshCycle.running])
+
+  const handleStartRefreshAll = async () => {
+    try {
+      setRefreshStarting(true)
+      const res = await apiRequest("/api/client-groups/refresh-all", { method: "POST" })
+      if (!res.ok) throw new Error("Failed to start")
+      const data = await res.json()
+      if (data.status === "already_running") {
+        toast.info("Refresh cycle is already running")
+      } else {
+        toast.success("Refresh cycle started", { description: "Groups will refresh one by one, every 15 minutes." })
+      }
+      // Fetch initial status
+      const statusRes = await apiRequest("/api/client-groups/refresh-all/status")
+      if (statusRes.ok) setRefreshCycle(await statusRes.json())
+    } catch (err) {
+      toast.error("Failed to start refresh", { description: err.message })
+    } finally {
+      setRefreshStarting(false)
+    }
+  }
+
+  const handleStopRefreshAll = async () => {
+    try {
+      await apiRequest("/api/client-groups/refresh-all", { method: "DELETE" })
+      setRefreshCycle(prev => ({ ...prev, running: false, current_group: null }))
+      toast.success("Refresh cycle stopped")
+    } catch (err) {
+      toast.error("Failed to stop", { description: err.message })
+    }
+  }
 
   const handleConnect = async (integrationType) => {
     try {
@@ -341,16 +401,9 @@ function SettingsPageContent() {
 
       <div>
         <Tabs defaultValue={defaultTab} className="space-y-6">
-          <TabsList className="inline-flex h-13 item-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+          <TabsList className="w-full justify-start">
             {["general", "integrations", "account"].map((tab) => (
-              <TabsTrigger
-                key={tab}
-                value={tab}
-                className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
-              >
+              <TabsTrigger key={tab} value={tab}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </TabsTrigger>
             ))}
@@ -359,11 +412,39 @@ function SettingsPageContent() {
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Manage your general application settings</CardDescription>
+                <CardTitle>Appearance</CardTitle>
+                <CardDescription>Customize the look and feel of the application</CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">General settings content goes here.</p>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shrink-0">
+                      <Paintbrush className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Modern Design Mode</p>
+                      <p className="text-xs text-muted-foreground">
+                        Neutral greys, larger radius, refined shadows, 15.5px base font
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant={bytesDesign ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      const next = !bytesDesign
+                      setBytesDesign(next)
+                      localStorage.setItem("birdy_bytes_design", String(next))
+                      if (next) {
+                        document.body.classList.add("bytes-design")
+                      } else {
+                        document.body.classList.remove("bytes-design")
+                      }
+                    }}
+                  >
+                    {bytesDesign ? "Enabled" : "Disabled"}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -575,6 +656,73 @@ function SettingsPageContent() {
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              <Separator className="my-4" />
+
+              {/* Refresh All Groups */}
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-1">Data Refresh</h2>
+                <p className="text-sm text-muted-foreground">Manually refresh cached data for all client groups</p>
+              </div>
+
+              <Card className="border-border/50">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0">
+                      <RefreshCw className={`h-6 w-6 text-white ${refreshCycle.running ? "animate-spin" : ""}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-base">Refresh All Groups</CardTitle>
+                        {refreshCycle.running && (
+                          <Badge variant="default" className="text-xs">
+                            <Loader2 className="h-3 w-3 animate-spin mr-1" />Running
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription className="text-sm">
+                        Refreshes Meta and GHL data for every client group, one at a time, every 15 minutes.
+                      </CardDescription>
+                      {refreshCycle.running && refreshCycle.current_group && (
+                        <div className="mt-2 space-y-1">
+                          <p className="text-xs text-muted-foreground">
+                            Currently refreshing: <span className="font-medium text-foreground">{refreshCycle.current_group}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Progress: {refreshCycle.groups_done} / {refreshCycle.groups_total} groups
+                          </p>
+                          {refreshCycle.groups_total > 0 && (
+                            <div className="w-full bg-muted rounded-full h-1.5 mt-1">
+                              <div
+                                className="bg-purple-500 h-1.5 rounded-full transition-all duration-500"
+                                style={{ width: `${(refreshCycle.groups_done / refreshCycle.groups_total) * 100}%` }}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    {refreshCycle.running ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                        onClick={handleStopRefreshAll}
+                      >
+                        Stop
+                      </Button>
+                    ) : (
+                      <Button size="sm" onClick={handleStartRefreshAll} disabled={refreshStarting}>
+                        {refreshStarting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                        Start Refresh Cycle
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

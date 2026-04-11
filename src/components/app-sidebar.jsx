@@ -1,4 +1,4 @@
-import { SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
+import { SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut, Sparkles } from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -35,6 +35,7 @@ import {
 
 const items = [
   { title: "Clients", url: "/clients", icon: SquareUserRound },
+  { title: "Ask Birdy", url: "/ask-birdy", icon: Sparkles },
   { title: "Marketing", url: "/campaigns", icon: ChartNoAxesColumnIncreasing },
   { title: "Sales", url: "/Sales-Hub", icon: Phone },
   { title: "Leads", url: "/contacts", icon: List },

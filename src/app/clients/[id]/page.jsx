@@ -16,6 +16,7 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
+import BirdyChat from "@/components/chat/BirdyChat"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -31,8 +32,7 @@ function ComingSoon({ title }) {
 }
 
 // ── Tab trigger style ────────────────────────────────────────────────────────
-const tabTriggerClass =
-  "flex-1 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+const tabTriggerClass = ""
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -185,7 +185,7 @@ export default function ClientDetailsPage() {
 
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs defaultValue="overview" className="flex-1 flex flex-col">
-        <TabsList className="inline-flex h-13 items-center w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
+        <TabsList className="w-full justify-start">
           <TabsTrigger value="overview" className={tabTriggerClass}>Overview</TabsTrigger>
           <TabsTrigger value="insights" className={tabTriggerClass}>Insights</TabsTrigger>
           <TabsTrigger value="ask-birdy" className={tabTriggerClass}>Ask Birdy</TabsTrigger>
@@ -375,7 +375,7 @@ export default function ClientDetailsPage() {
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
         <TabsContent value="ask-birdy" className="mt-6">
-          <ComingSoon title="Ask Birdy" />
+          <BirdyChat />
         </TabsContent>
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}

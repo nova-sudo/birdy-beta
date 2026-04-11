@@ -12,7 +12,30 @@
       "Bash(python -c \"import py_compile; py_compile.compile\\(''routers/ghl.py'', doraise=True\\); print\\(''ghl.py OK''\\)\")",
       "Bash(python -c \"import py_compile; py_compile.compile\\(''services/ghl_service.py'', doraise=True\\); print\\(''ghl_service.py OK''\\)\")",
       "Bash(grep -E \"\\\\.\\(py\\)$\")",
-      "Bash(wc -l /c/Users/ASUS/Desktop/Birdy/birdy-backend/routers/*.py)"
+      "Bash(wc -l /c/Users/ASUS/Desktop/Birdy/birdy-backend/routers/*.py)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"try { require\\(''''lucide-react''''\\); console.log\\(''''ok''''\\) } catch\\(e\\) { console.log\\(e.message\\) }\")",
+      "Bash(node -e \"const l = require\\(''lucide-react''\\); console.log\\(''Slack'' in l, ''MessageSquare'' in l, ''Hash'' in l\\)\")",
+      "Bash(node -e \"const l = require\\(''lucide-react''\\); console.log\\(''Target'' in l, ''Search'' in l, ''ChevronDown'' in l\\)\")",
+      "Bash(npx next:*)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/alert_service.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/alert_service.py'', doraise=True\\); py_compile.compile\\(''routers/alerts.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''ai/tools/alert_tools.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(find C:/Users/ASUS/Desktop/Birdy/birdy-beta -name *enhanced*column* -o -name *column*config*)",
+      "Bash(grep -E \"\\\\.\\(jsx?|tsx?\\)$\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/alert_service.py'', doraise=True\\); py_compile.compile\\(''ai/tools/alert_tools.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(ls /c/Users/ASUS/Desktop/Birdy/birdy-beta/src/components/ui/*.jsx)",
+      "Bash(python -c \"from ai.prompts.birdy import get_system_prompt; p = get_system_prompt\\(\\); print\\(''OK, length:'', len\\(p\\)\\)\")",
+      "Bash(grep -r \"cpl\\\\|cost_per_result\\\\|cost_per_lead\" C:UsersASUSDesktopBirdybirdy-betasrc --include=*.js --include=*.jsx --include=*.ts --include=*.tsx)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''services/meta_service.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\(''jobs/scheduler.py'', doraise=True\\); print\\(''OK''\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('core/models.py', doraise=True\\); py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('services/alert_service.py', doraise=True\\); py_compile.compile\\('ai/tools/alert_tools.py', doraise=True\\); py_compile.compile\\('main.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(find /c/Users/ASUS/Desktop/Birdy/birdy-beta -type f \\\\\\( -name \"*.jsx\" -o -name \"*.js\" -o -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"revenue\\\\|total_value\\\\|monetaryValue\\\\|opportunity.*stats\\\\|won.*value\" {} \\\\;)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('services/ghl_service.py', doraise=True\\); py_compile.compile\\('services/alert_service.py', doraise=True\\); py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('core/constants.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('routers/client_groups.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python3 -c ':*)",
+      "Bash(node -e ':*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }

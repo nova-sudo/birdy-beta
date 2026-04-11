@@ -106,14 +106,11 @@ export async function checkAndRefreshExpiredTokens(intendedRedirect = "/clients"
 
     const needsRefresh = []
 
-    // GoHighLevel — refresh if absent, not connected, or token expired
+    // GoHighLevel — only re-auth if NOT connected at all.
+    // If connected but expired, the backend auto-refreshes via refresh_token
+    // in /api/status, so we don't need to force a full OAuth re-auth.
     const ghlAgency = status?.gohighlevel?.agency ?? {}
-    const ghlNeedsRefresh =
-      !ghlAgency.connected ||
-      ghlAgency.token_expired === true ||
-      (ghlAgency.expires_at && new Date(ghlAgency.expires_at) < new Date())
-
-    if (ghlNeedsRefresh) {
+    if (!ghlAgency.connected) {
       needsRefresh.push("gohighlevel")
     }
 
