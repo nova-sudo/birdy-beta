@@ -24,8 +24,9 @@ import { buildContactColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { ErrorBanner } from "@/components/ErrorBanner"
+import { flaskIcon as Flask } from "@/lib/icons"
 
-const contactColumns = buildContactColumns()
+const baseContactColumns = buildContactColumns()
 
 export function LeadsContent({
   clientGroups,
@@ -40,6 +41,24 @@ export function LeadsContent({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [progress, setProgress] = useState(13)
+  const [customMetrics, setCustomMetrics] = useState([])
+
+  // Fetch custom metrics for leads dashboard
+  useEffect(() => {
+    apiRequest("/api/custom-metrics").then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      setCustomMetrics((data.custom_metrics || []).filter(m =>
+        (m.dashboards || []).includes("leads")
+      ).map(m => ({
+        id: m.id, name: m.name, description: m.description || "",
+        source: "Custom Formula", dashboard: "leads",
+        dashboards: m.dashboards || [], formula: m.formula_display || "",
+        formulaParts: m.formula_parts || [], formatType: m.format_type || "integer",
+        displayOnDashboard: true, category: "custom", enabled: true,
+      })))
+    }).catch(() => {})
+  }, [])
   const [currentPage, setCurrentPage] = useState(1)
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("contacts")
 
@@ -49,8 +68,22 @@ export function LeadsContent({
     [clientGroups]
   )
 
+  const contactColumns = useMemo(() => {
+    const custom = customMetrics.map(m => ({
+      id: m.id,
+      header: m.name,
+      label: m.name,
+      defaultVisible: true,
+      sortable: true,
+      icons: Flask,
+      category: "custom",
+      cell: (row) => row?.[m.id] ?? "–",
+    }))
+    return [...baseContactColumns, ...custom]
+  }, [customMetrics])
+
   const [visibleColumns, setVisibleColumns] = useState(
-    contactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
+    baseContactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
   )
   useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
@@ -340,37 +373,12 @@ export function LeadsContent({
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <TabsList className="inline-flex h-auto items-center rounded-lg bg-muted/60 p-1 text-muted-foreground overflow-x-auto border border-border/50 shadow-sm flex-1 justify-start">
-            <TabsTrigger
-              value="all"
-              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
-            >
-              All Leads
-            </TabsTrigger>
-            <TabsTrigger
-              value="open"
-              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
-            >
-              Open
-            </TabsTrigger>
-            <TabsTrigger
-              value="won"
-              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
-            >
-              Won
-            </TabsTrigger>
-            <TabsTrigger
-              value="abandoned"
-              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
-            >
-              Abandoned
-            </TabsTrigger>
-            <TabsTrigger
-              value="lost"
-              className="inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md px-4 py-2.5 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border-r last:border-r-0 border-b-2 border-transparent hover:bg-background/80 hover:text-foreground/90 data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-primary relative box-border"
-            >
-              Lost
-            </TabsTrigger>
+          <TabsList className="flex-1 justify-start overflow-x-auto">
+            <TabsTrigger value="all">All Leads</TabsTrigger>
+            <TabsTrigger value="open">Open</TabsTrigger>
+            <TabsTrigger value="won">Won</TabsTrigger>
+            <TabsTrigger value="abandoned">Abandoned</TabsTrigger>
+            <TabsTrigger value="lost">Lost</TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
