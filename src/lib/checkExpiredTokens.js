@@ -73,7 +73,7 @@ async function redirectToOAuth(integration, queue, intendedRedirect) {
  * @param {string} intendedRedirect  Where to send the user once all tokens are fresh
  * @returns {Promise<string|null>}
  */
-export async function checkAndRefreshExpiredTokens(intendedRedirect = "/clients") {
+export async function checkAndRefreshExpiredTokens(intendedRedirect = "/dashboard") {
   try {
     // ── CASE A: Resuming from a stored queue (mid-chain OAuth callback) ──────
     const stored = loadQueue()

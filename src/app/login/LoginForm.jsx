@@ -72,7 +72,7 @@ export default function LoginForm() {
       prefetchAfterLogin()
 
       // ── 4. Check for expired integration tokens ──────────────────────────
-      const intendedRedirect = searchParams.get("redirect") || "/clients"
+      const intendedRedirect = searchParams.get("redirect") || "/dashboard"
       const nextPath = await checkAndRefreshExpiredTokens(intendedRedirect)
 
       if (nextPath !== null) {

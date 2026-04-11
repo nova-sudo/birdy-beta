@@ -242,12 +242,12 @@ export default function DashboardPage() {
   const handleClientClick = (group) => router.push(`/clients/${group.id}`);
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div className="flex flex-col gap-6 w-full">
 
       {/* ── Welcome + AI Search ─────────────────────────────────────────── */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Welcome to Birdy</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
+        <p className="text-sm text-muted-foreground mt-1">
           Your AI Marketing Manager – Ask questions about your marketing performance
         </p>
 
@@ -287,7 +287,7 @@ export default function DashboardPage() {
 
       {/* ── Action Required ─────────────────────────────────────────────── */}
       <div>
-        <h2 className="text-lg font-bold text-foreground mb-3">Action Required</h2>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Action Required</h2>
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="!flex w-full h-fit bg-muted/50 border border-border/60 mb-4 rounded-xl px-1 py-2 overflow-x-auto scrollbar-none">
             {TABS.map((tab) => (
@@ -302,7 +302,7 @@ export default function DashboardPage() {
           </TabsList>
         </Tabs>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col mb-4">
           {filteredAlerts.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
               No alerts in this category
@@ -315,11 +315,11 @@ export default function DashboardPage() {
               >
                 <AlertIcon color={alert.color} />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-sm font-semibold text-purple-600">{alert.client}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-[#713CDDE6]">{alert.client}</span>
                     <Badge variant="outline" className="text-xs rounded-full px-2">{alert.platform}</Badge>
                   </div>
-                  <p className="text-sm font-semibold text-foreground">{alert.title}</p>
+                  <p className="text-sm font-semibold mb-1 text-foreground">{alert.title}</p>
                   <p className="text-xs text-muted-foreground">{alert.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -351,14 +351,14 @@ export default function DashboardPage() {
       {/* ── Clients Grid ────────────────────────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-bold text-foreground">Clients</h2>
+          <h2 className="text-xl font-semibold text-foreground">Clients</h2>
           <Link href="/clients" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
             View all →
           </Link>
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="bg-white border border-border/60 rounded-2xl flex flex-col gap-4">
                 <div className="flex items-start justify-between">
