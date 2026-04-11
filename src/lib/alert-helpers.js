@@ -1,30 +1,54 @@
 import { Badge } from "@/components/ui/badge"
 import { Clock, Zap } from "lucide-react"
+import { ghlIcon, metaIcon } from "@/lib/icons"
 
 export const METRIC_OPTIONS = [
-  { value: "lead_count", label: "Lead Count" },
-  { value: "spend", label: "Total Spend" },
-  { value: "ctr", label: "CTR (%)" },
-  { value: "cpc", label: "CPC ($)" },
-  { value: "cpm", label: "CPM ($)" },
-  { value: "impressions", label: "Impressions" },
-  { value: "clicks", label: "Clicks" },
-  { value: "roas", label: "ROAS" },
-  { value: "roi", label: "ROI" },
+  // ── Meta Ads metrics ──
+  { value: "spend",            label: "Total Spend",           source: "meta", icon: metaIcon },
+  { value: "impressions",      label: "Impressions",           source: "meta", icon: metaIcon },
+  { value: "clicks",           label: "Clicks",                source: "meta", icon: metaIcon },
+  { value: "reach",            label: "Reach",                 source: "meta", icon: metaIcon },
+  { value: "ctr",              label: "CTR (%)",               source: "meta", icon: metaIcon },
+  { value: "cpc",              label: "CPC ($)",               source: "meta", icon: metaIcon },
+  { value: "cpm",              label: "CPM ($)",               source: "meta", icon: metaIcon },
+  { value: "meta_leads",       label: "Leads",                 source: "meta", icon: metaIcon },
+  { value: "meta_conversion",  label: "Conversion Rate (%)",   source: "meta", icon: metaIcon },
+  { value: "cpl",              label: "Cost Per Lead ($)",      source: "meta", icon: metaIcon },
+  { value: "cost_per_result",  label: "Cost Per Result ($)",    source: "meta", icon: metaIcon },
+  { value: "frequency",        label: "Ad Frequency",          source: "meta", icon: metaIcon },
+  // ── GHL metrics ──
+  { value: "ghl_leads",        label: "Leads",                 source: "ghl",  icon: ghlIcon },
+  { value: "ghl_conversion",   label: "Conversion Rate (%)",   source: "ghl",  icon: ghlIcon },
+  { value: "ghl_revenue",      label: "Revenue",               source: "ghl",  icon: ghlIcon },
+]
+
+export const TYPE_OPTIONS = [
+  { value: "win", label: "Win" },
+  { value: "warning", label: "Warning" },
 ]
 
 export const OPERATOR_OPTIONS = [
-  { value: "gt", label: "Greater than  (>)" },
-  { value: "lt", label: "Less than  (<)" },
-  { value: "eq", label: "Equals  (=)" },
-  { value: "pct_drop", label: "Drops by  (↓ %)" },
-  { value: "pct_rise", label: "Rises by  (↑ %)" },
+  { value: "gt", label: "Greater than" },
+  { value: "lt", label: "Less than" },
+  { value: "eq", label: "Equal to" },
+  { value: "neq", label: "Not equal to" },
+  { value: "pct_rise", label: "Rises by (↑ %)" },
+  { value: "pct_drop", label: "Drops by (↓ %)" },
 ]
 
 export const PERIOD_OPTIONS = [
-  { value: "day", label: "Previous day" },
-  { value: "week", label: "Previous week" },
-  { value: "month", label: "Previous month" },
+  { value: "today", label: "Today" },
+  { value: "day", label: "Yesterday" },
+  { value: "week", label: "Last 7 Days" },
+  { value: "month", label: "Last 30 Days" },
+  { value: "custom", label: "Custom period" },
+]
+
+export const FREQUENCY_OPTIONS = [
+  { value: "realtime", label: "Real-time" },
+  { value: "hourly", label: "Hourly" },
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
 ]
 
 export const SNOOZE_OPTIONS = [
@@ -67,6 +91,7 @@ export function conditionSummary(alert) {
   if (op === "gt") return `> ${val}`
   if (op === "lt") return `< ${val}`
   if (op === "eq") return `= ${val}`
+  if (op === "neq") return `≠ ${val}`
   return `${op} ${val}`
 }
 
@@ -104,12 +129,19 @@ export function ProgressToTrigger({ alert }) {
     return <span className="text-xs text-muted-foreground italic">Not evaluated yet</span>
   }
 
-  const isCurrency = ["spend", "cpc", "cpm"].includes(alert.condition?.metric)
-  const isPct = ["ctr", "pct_drop", "pct_rise"].includes(alert.condition?.metric) || ["pct_drop", "pct_rise"].includes(operator)
-  const fmt = (v) => {
-    if (isCurrency) return `$${Number(v).toFixed(2)}`
-    if (isPct) return `${Number(v).toFixed(1)}%`
+  const isPctOperator = ["pct_drop", "pct_rise"].includes(operator)
+  const isCurrency = !isPctOperator && ["spend", "cpc", "cpm", "cpl", "cost_per_result", "ghl_revenue"].includes(alert.condition?.metric)
+  const isPct = isPctOperator || ["ctr", "meta_conversion", "ghl_conversion"].includes(alert.condition?.metric)
+  const fmt = (v, forceType) => {
+    // For pct operators: current_value is always a % change, threshold is always a %
+    if (forceType === "pct" || isPct) return `${Number(v).toFixed(1)}%`
+    if (forceType === "currency" || isCurrency) return `$${Number(v).toFixed(2)}`
     return Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })
+  }
+  // For pct operators the threshold is a percentage, but display it as %
+  const fmtThreshold = (v) => {
+    if (isPctOperator) return `${Number(v).toFixed(1)}%`
+    return fmt(v)
   }
 
   const barColor = triggered
@@ -120,7 +152,7 @@ export function ProgressToTrigger({ alert }) {
         ? "bg-yellow-400"
         : "bg-[#713cdd]/40"
 
-  const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "pct_drop" ? "↓" : "↑"
+  const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "neq" ? "≠" : operator === "pct_drop" ? "↓" : "↑"
 
   return (
     <div className="space-y-1 min-w-[140px] max-w-[180px]">
@@ -130,15 +162,15 @@ export function ProgressToTrigger({ alert }) {
       <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${Math.min(pct, 100)}%` }}
+          style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
         />
       </div>
       <div className="text-xs text-muted-foreground">
         {triggered
           ? <span className="text-red-500 font-medium">⚡ Triggered</span>
-          : `${pct.toFixed(0)}% to trigger`
+          : `${Math.max(0, pct).toFixed(0)}% to trigger`
         }
-        <span className="text-muted-foreground">{opLabel} {fmt(threshold)}</span>
+        <span className="text-muted-foreground"> {opLabel} {fmtThreshold(threshold)}</span>
       </div>
     </div>
   )
@@ -153,10 +185,12 @@ export function metricIcon(metricValue) {
 export const EMPTY_FORM = {
   name: "",
   description: "",
-  metric: "lead_count",
-  operator: "pct_drop",
-  value: "30",
-  period: "week",
+  type: "warning",
+  metric: "spend",
+  operator: "gt",
+  value: "0",
+  period: "day",
   target_group_ids: [],
   notification_channels: ["in_app"],
+  frequency: "daily",
 }
