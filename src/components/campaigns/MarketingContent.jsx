@@ -3,7 +3,8 @@ import { useState, useEffect, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { loadCustomMetrics, evaluateFormula, formatMetricValue } from "@/lib/metrics"
+import { loadCustomMetrics, evaluateFormula, formatMetricValue, setCustomMetricsCache } from "@/lib/metrics"
+import { apiRequest } from "@/lib/api"
 import { useColumnViews } from "@/lib/useColumnViews"
 import {
   LayoutGrid,
@@ -27,16 +28,15 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
-import { apiRequest } from "@/lib/api"
 import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
-  campaigns: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  adsets: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
-  ads: ["name", "spend", "impressions", "reach", "clicks", "ctr"],
+  campaigns: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
+  adsets: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
+  ads: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"],
 }
 
@@ -139,9 +139,21 @@ export function MarketingContent({
   const [columnsSearch, setColumnsSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
 
-  // ── Custom metrics ────────────────────────────────────────────────────────
+  // ── Custom metrics (load from API) ─────────────────────────────────────────
   useEffect(() => {
-    setCustomMetrics(loadCustomMetrics().filter(m => m.enabled && m.dashboard === "Campaigns"))
+    apiRequest("/api/custom-metrics").then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      const all = (data.custom_metrics || []).map(m => ({
+        id: m.id, name: m.name, description: m.description || "",
+        source: "Custom Formula", dashboard: (m.dashboards || []).join(", "),
+        dashboards: m.dashboards || [], formula: m.formula_display || "",
+        formulaParts: m.formula_parts || [], formatType: m.format_type || "integer",
+        displayOnDashboard: true, category: "custom", enabled: true,
+      }))
+      setCustomMetricsCache(all)
+      setCustomMetrics(all.filter(m => m.dashboards?.includes("campaigns") || m.dashboard === "Campaigns"))
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -158,9 +170,7 @@ export function MarketingContent({
 
   const enhanceWithCustomMetrics = (item) => {
     const base = { ...item }
-    loadCustomMetrics()
-      .filter(m => m.enabled && m.dashboard === "Campaigns")
-      .forEach(metric => {
+    customMetrics.forEach(metric => {
         if (metric.formulaParts) base[metric.id] = evaluateFormula(metric.formulaParts, base)
       })
     return base
@@ -190,65 +200,86 @@ export function MarketingContent({
 
       // Campaigns
       for (const c of (fb.campaigns || [])) {
+        const cResults = c.results || 0
+        const cSpend = c.spend || 0
+        const cClicks = c.clicks || 0
         processedCampaigns.push(enhanceWithCustomMetrics({
           ...groupMeta,
           id: c.id,
           name: c.name,
           status: (c.status || "inactive").toLowerCase(),
-          spend: c.spend || 0,
+          spend: cSpend,
           impressions: c.impressions || 0,
-          clicks: c.clicks || 0,
+          clicks: cClicks,
           reach: c.reach || 0,
-          leads: c.results || 0,
+          leads: cResults,
+          results: cResults,
+          cpl: cResults > 0 ? cSpend / cResults : 0,
+          cost_per_result: cResults > 0 ? cSpend / cResults : 0,
+          conversion_rate: cClicks > 0 ? (cResults / cClicks * 100) : 0,
           ctr: c.ctr || 0,
           cpc: c.cpc || 0,
           cpm: c.cpm || 0,
-          cpp: c.reach > 0 ? c.spend / c.reach : 0,
+          cpp: c.reach > 0 ? cSpend / c.reach : 0,
           frequency: c.reach > 0 ? c.impressions / c.reach : 0,
         }))
       }
 
       // Ad sets — store _campaignId for drill-down filtering
       for (const a of (fb.adsets || [])) {
+        const aResults = a.results || 0
+        const aSpend = a.spend || 0
+        const aClicks = a.clicks || 0
         processedAdsets.push(enhanceWithCustomMetrics({
           ...groupMeta,
           id: a.id,
           name: a.name,
           status: (a.status || "inactive").toLowerCase(),
-          _campaignId: a.campaign_id || "",   // ← parent campaign id
+          _campaignId: a.campaign_id || "",
           campaign_name: a.campaign_id || "",
-          spend: a.spend || 0,
+          spend: aSpend,
           impressions: a.impressions || 0,
-          clicks: a.clicks || 0,
+          clicks: aClicks,
           reach: a.reach || 0,
-          leads: a.results || 0,
+          leads: aResults,
+          results: aResults,
+          cpl: aResults > 0 ? aSpend / aResults : 0,
+          cost_per_result: aResults > 0 ? aSpend / aResults : 0,
+          conversion_rate: aClicks > 0 ? (aResults / aClicks * 100) : 0,
           ctr: a.ctr || 0,
           cpc: a.cpc || 0,
           cpm: a.cpm || 0,
-          cpp: a.reach > 0 ? a.spend / a.reach : 0,
+          cpp: a.reach > 0 ? aSpend / a.reach : 0,
           frequency: a.reach > 0 ? a.impressions / a.reach : 0,
         }))
       }
 
       // Ads — store _campaignId and _adsetId for drill-down filtering
       for (const ad of (fb.ads || [])) {
+        const adResults = ad.results || 0
+        const adSpend = ad.spend || 0
+        const adClicks = ad.clicks || 0
         processedAds.push(enhanceWithCustomMetrics({
           ...groupMeta,
           id: ad.id,
           name: ad.name,
           status: (ad.status || "inactive").toLowerCase(),
-          _campaignId: ad.campaign_id || "",  // ← parent campaign id
-          _adsetId: ad.adset_id || "",         // ← parent adset id
+          _campaignId: ad.campaign_id || "",
+          _adsetId: ad.adset_id || "",
           campaign_name: ad.campaign_id || "",
-          spend: ad.spend || 0,
+          spend: adSpend,
           impressions: ad.impressions || 0,
-          clicks: ad.clicks || 0,
+          clicks: adClicks,
           reach: ad.reach || 0,
-          leads: ad.results || 0,
+          leads: adResults,
+          results: adResults,
+          cpl: adResults > 0 ? adSpend / adResults : 0,
+          cost_per_result: adResults > 0 ? adSpend / adResults : 0,
+          conversion_rate: adClicks > 0 ? (adResults / adClicks * 100) : 0,
           ctr: ad.ctr || 0,
           cpc: ad.cpc || 0,
           cpm: ad.cpm || 0,
-          cpp: ad.reach > 0 ? ad.spend / ad.reach : 0,
+          cpp: ad.reach > 0 ? adSpend / ad.reach : 0,
           frequency: ad.reach > 0 ? ad.impressions / ad.reach : 0,
         }))
       }
@@ -449,7 +480,8 @@ export function MarketingContent({
 
   // ── Column definitions ────────────────────────────────────────────────────
   const baseColumns = [
-    "adAccount", "spend", "social_spend", "impressions", "clicks",
+    "adAccount", "spend", "results", "cpl", "cost_per_result", "conversion_rate",
+    "social_spend", "impressions", "clicks",
     "cpc", "cpp", "reach", "ctr", "cpm", "frequency",
     "conversion_rate_ranking", "account_currency",
   ]
@@ -501,9 +533,9 @@ export function MarketingContent({
     }
     if (value === null || value === undefined || value === "") return "-"
     if (customMetrics.some(m => m.id === col)) return formatMetricValue(value, col)
-    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col))
+    if (["spend", "cpc", "cpm", "cpp", "social_spend", "cpl", "cost_per_result"].includes(col))
       return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
-    if (col === "ctr") return `${Number(value).toFixed(2)}%`
+    if (col === "ctr" || col === "conversion_rate") return `${Number(value).toFixed(2)}%`
     if (col === "account_currency") return value.toUpperCase()
     if (col === "conversion_rate_ranking") return value.replace(/_/g, " ")
     if (col === "created_time" && value) {
@@ -621,7 +653,7 @@ export function MarketingContent({
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <TabsList className="inline-flex h-13 item-center flex-1 justify-start p-1 bg-[#F3F1F999] border border-border/60 gap-4 md:gap-0 shadow-sm overflow-x-auto">
+          <TabsList className="flex-1 justify-start overflow-x-auto">
             {[
               { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
               { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
@@ -633,7 +665,7 @@ export function MarketingContent({
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="gap-2 text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-r-0 data-[state=active]:rounded-md data-[state=active]:border-b-2 data-[state=active]:border-b-purple-600"
+                  className="gap-2"
                 >
                   <tab.icon className="h-4 w-4" />
                   {tab.label}

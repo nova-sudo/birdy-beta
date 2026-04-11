@@ -89,34 +89,55 @@ export function getMetricMapping() {
 // Export for backwards compatibility
 export const METRIC_ID_TO_DATA_KEY = BASE_METRIC_MAPPING;
 
-// Load custom metrics from localStorage
+// ── Custom metrics cache (populated from API by consumer components) ──
+let _customMetricsCache = []
+
+export function setCustomMetricsCache(metrics) {
+  _customMetricsCache = Array.isArray(metrics) ? metrics : []
+}
+
 export function loadCustomMetrics() {
-  try {
-    const stored = localStorage.getItem("customMetrics")
-    console.log("Loading custom metrics from localStorage:", stored)
-    if (!stored) return []
-    const metrics = JSON.parse(stored)
-    console.log("Parsed custom metrics:", metrics)
-    return Array.isArray(metrics) ? metrics : []
-  } catch (err) {
-    console.error("Failed to load custom metrics:", err)
-    return []
-  }
+  return _customMetricsCache
 }
 
 // Get custom metric by ID
 export function getCustomMetricById(metricId) {
-  const customMetrics = loadCustomMetrics()
-  return customMetrics.find(m => m.id === metricId)
+  return _customMetricsCache.find(m => m.id === metricId)
 }
 
 // Get display name for a metric (handles both standard and custom metrics)
+const METRIC_DISPLAY_NAMES = {
+  results: "Results",
+  cpl: "CPL",
+  cost_per_result: "Cost Per Result",
+  conversion_rate: "Conv. Rate",
+  spend: "Spend",
+  impressions: "Impressions",
+  clicks: "Clicks",
+  reach: "Reach",
+  ctr: "CTR",
+  cpc: "CPC",
+  cpm: "CPM",
+  cpp: "CPP",
+  frequency: "Frequency",
+  social_spend: "Social Spend",
+  adAccount: "Ad Account",
+  clientGroup: "Client Group",
+  account_currency: "Currency",
+  conversion_rate_ranking: "Conv. Rate Ranking",
+}
+
 export function getMetricDisplayName(metricId) {
+  // Check explicit display names first
+  if (METRIC_DISPLAY_NAMES[metricId]) {
+    return METRIC_DISPLAY_NAMES[metricId]
+  }
+
   const customMetric = getCustomMetricById(metricId)
   if (customMetric) {
     return customMetric.name
   }
-  
+
   // Check if it's a tag metric
   if (metricId.startsWith('tag_')) {
     const tagName = metricId
@@ -127,7 +148,7 @@ export function getMetricDisplayName(metricId) {
       .join(' ');
     return `Tag: ${tagName}`;
   }
-  
+
   // Fallback to formatting the ID
   return metricId
     .split("_")
