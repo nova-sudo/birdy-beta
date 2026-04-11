@@ -169,6 +169,7 @@ const StyledTable = ({
 
     return data.map((group) => {
       const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
+      const ghlRevenue = group.gohighlevel?.metrics?.opportunity_stats?.won_revenue ?? 0;
       const metaCampaigns = group.facebook?.metrics?.total_campaigns ?? 0;
       const metaAdsets = group.facebook?.metrics?.total_adsets ?? 0;
       const metaAds = group.facebook?.metrics?.total_ads ?? 0;
@@ -176,18 +177,23 @@ const StyledTable = ({
       const metaImpressions = group.facebook?.metrics?.insights?.impressions ?? 0;
       const metaClicks = group.facebook?.metrics?.insights?.clicks ?? 0;
       const metaReach = group.facebook?.metrics?.insights?.reach ?? 0;
-      const metaResults = group.facebook?.metrics?.insights?.results ?? 0;
+      // Use insights.results first; if 0, sum from campaigns array as fallback
+      let metaResults = group.facebook?.metrics?.insights?.results ?? 0;
+      if (!metaResults && group.facebook?.campaigns?.length) {
+        metaResults = group.facebook.campaigns.reduce((sum, c) => sum + (c.results || 0), 0);
+      }
       const metaCpm = group.facebook?.metrics?.insights?.cpm ?? 0;
       const metaCpc = group.facebook?.metrics?.insights?.cpc ?? 0;
       const metaCtr = group.facebook?.metrics?.insights?.ctr ?? 0;
       const metaCostPerResult = group.facebook?.metrics?.insights?.cost_per_result ?? 0;
-      const metaLeads = group.facebook?.metrics?.insights?.total_leads ?? 0;
+      const metaLeads = metaResults || group.facebook?.metrics?.insights?.total_leads || 0;
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
       const base = {
         id: group.id,
         name: group.name || "Unnamed Group",
         ghl_contacts: ghlContacts,
+        ghl_revenue: ghlRevenue,
         meta_campaigns: metaCampaigns,
         meta_adsets: metaAdsets,
         meta_ads: metaAds,
@@ -246,7 +252,7 @@ const StyledTable = ({
         base.best_ad_ctr = bestAd?.ctr ?? 0;
 
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
-        base.cost_per_lead = metaCostPerResult;
+        base.cost_per_lead = metaLeads > 0 ? (metaSpend / metaLeads) : 0;
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
 
         base.meta_freshness = getDataFreshness(group.last_meta_refresh);

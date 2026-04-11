@@ -12,6 +12,7 @@ export const BASE_CLIENT_COLUMNS = [
   
   // GoHighLevel
   { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_revenue", label: "GHL Revenue", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "ghl_location_id", label: "GHL Location ID", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "ghl_address", label: "Location Address", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "total_tags", label: "Total Tags", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
@@ -232,6 +233,7 @@ export const buildFormulaMetrics = (clientGroups) => {
   const baseMetrics = [
     // GoHighLevel
     { id: "ghl_contacts", label: "GHL Leads", category: "GoHighLevel" },
+    { id: "ghl_revenue", label: "GHL Revenue", category: "GoHighLevel" },
     { id: "total_tags", label: "Total Tags", category: "GoHighLevel" },
     
     // Meta Ads
