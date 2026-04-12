@@ -35,7 +35,11 @@
       "Bash(python -c \"import py_compile; py_compile.compile\\('routers/client_groups.py', doraise=True\\); print\\('OK'\\)\")",
       "Bash(python3 -c ':*)",
       "Bash(node -e ':*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(gh pr:*)",
+      "Bash(gh api:*)",
+      "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const r=JSON.parse\\(d\\);r.forEach\\(v=>console.log\\(v.user.login+' — '+v.state+': '+\\(v.body||''\\).slice\\(0,200\\)\\)\\)\")",
+      "Bash(python -c \"from ai.prompts.birdy import get_system_prompt; p = get_system_prompt\\(\\); print\\('OK, length:', len\\(p\\)\\)\")"
     ]
   }
 }

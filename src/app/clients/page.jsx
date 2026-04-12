@@ -1014,7 +1014,7 @@ export default function ClientsPage() {
                 </div>
               ) : (
                 <div className="text-2xl font-bold">
-                  {getSymbolFromCurrency(userCurrency)}{stats.totalLeads.toLocaleString('en-US',{ minimumFractionDigits:2,maximumFractionDigits:2})}
+                 {stats.totalLeads}
                   </div>
               )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">
