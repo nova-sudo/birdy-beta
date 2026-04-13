@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Paintbrush } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -48,12 +48,6 @@ function SettingsPageContent() {
 
   const [refreshCycle, setRefreshCycle] = useState({ running: false, groups_done: 0, groups_total: 0, current_group: null })
   const [refreshStarting, setRefreshStarting] = useState(false)
-  const [bytesDesign, setBytesDesign] = useState(false)
-
-  // Load bytes-design flag
-  useEffect(() => {
-    setBytesDesign(localStorage.getItem("birdy_bytes_design") === "true")
-  }, [])
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
@@ -412,39 +406,11 @@ function SettingsPageContent() {
           <TabsContent value="general" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Appearance</CardTitle>
-                <CardDescription>Customize the look and feel of the application</CardDescription>
+                <CardTitle>General Settings</CardTitle>
+                <CardDescription>Manage your general application settings</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shrink-0">
-                      <Paintbrush className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Modern Design Mode</p>
-                      <p className="text-xs text-muted-foreground">
-                        Neutral greys, larger radius, refined shadows, 15.5px base font
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant={bytesDesign ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      const next = !bytesDesign
-                      setBytesDesign(next)
-                      localStorage.setItem("birdy_bytes_design", String(next))
-                      if (next) {
-                        document.body.classList.add("bytes-design")
-                      } else {
-                        document.body.classList.remove("bytes-design")
-                      }
-                    }}
-                  >
-                    {bytesDesign ? "Enabled" : "Disabled"}
-                  </Button>
-                </div>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">General settings content goes here.</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -659,6 +625,7 @@ function SettingsPageContent() {
                   </div>
                 </CardContent>
               </Card>
+
               <Separator className="my-4" />
 
               {/* Refresh All Groups */}

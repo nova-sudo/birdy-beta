@@ -6,9 +6,10 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
-import { Bell, UserRound, Bird, Search } from 'lucide-react';
+import { useState } from "react";
+import { Bell, UserRound, Search } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
+import BirdyLogo from "@/components/BirdyLogo";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -22,21 +23,6 @@ export default function RootLayout({ children }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
   const [headerInput, setHeaderInput] = useState("");
-  const [bytesDesign, setBytesDesign] = useState(false);
-
-  // Feature flag: bytes-design
-  useEffect(() => {
-    const stored = localStorage.getItem("birdy_bytes_design");
-    if (stored === "true") setBytesDesign(true);
-  }, []);
-
-  useEffect(() => {
-    if (bytesDesign) {
-      document.body.classList.add("bytes-design");
-    } else {
-      document.body.classList.remove("bytes-design");
-    }
-  }, [bytesDesign]);
 
   const handleHeaderSubmit = (e) => {
     e.preventDefault();
@@ -58,12 +44,9 @@ export default function RootLayout({ children }) {
                 {/* Top Header */}
                 <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                   <div className="flex items-center gap-2">
-                    <SidebarTrigger className="md:hidden"/>
-                    <div className="flex items-center gap-1.5">
-                      <div className="bg-sidebar-primary text-sidebar-primary-foreground rounded-md flex aspect-square size-8 items-center justify-center">
-                        <Bird className="size-6" />
-                      </div>
-                      <span className="font-bold text-[#713CDD] text-lg tracking-tight">Birdy</span>
+                    <SidebarTrigger className="md:hidden" />
+                    <div className="flex items-center gap-2">
+                      <BirdyLogo variant="lockup" theme="light" size={75} priority />
                       <span className="text-xs bg-accent px-2 py-0.5 rounded-md font-semibold">Beta 1.0</span>
                     </div>
                   </div>

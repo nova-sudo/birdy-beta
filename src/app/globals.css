@@ -10,7 +10,7 @@
 /* ── Custom Scrollbar (global) ──────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(260 50% 72%) transparent;
+  scrollbar-color: hsl(0 0% 75%) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -23,13 +23,13 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: hsl(260 50% 78%);
+  background: hsl(0 0% 80%);
   border-radius: 9999px;
   transition: background 0.2s;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: hsl(260 60% 60%);
+  background: hsl(0 0% 60%);
 }
 
 *::-webkit-scrollbar-corner {
@@ -38,61 +38,58 @@
 
 @layer base {
   :root {
-    /* ── Core Semantic Tokens ─────────────────────────────────── */
-    --background: hsl(260 40% 98%);
-    /* #F8F7FC — very light lavender */
-    --foreground: hsl(260 47% 11%);
-    /* #17122C — deep purple-black */
+    /* ── Core Semantic Tokens (Bytes design system) ──────────── */
+    --background: hsl(0 0% 100%);           /* white */
+    --foreground: hsl(0 0% 9%);             /* near-black */
 
     --card: hsl(0 0% 100%);
-    /* #FFFFFF */
-    --card-foreground: hsl(260 47% 11%);
-    /* #17122C */
+    --card-foreground: hsl(0 0% 9%);
 
     --popover: hsl(0 0% 100%);
-    /* #FFFFFF */
-    --popover-foreground: hsl(260 47% 11%);
+    --popover-foreground: hsl(0 0% 9%);
 
     --primary: hsl(260 70% 55%);
-    /* #7C4DFF — vibrant purple */
-    --primary-foreground: hsl(260 40% 98%);
-    /* #F8F7FC */
+    /* #7C4DFF — Birdy purple (kept) */
+    --primary-foreground: hsl(0 0% 100%);
 
-    --secondary: hsl(260 40% 96%);
-    /* #F1F0FB — pale lavender */
-    --secondary-foreground: hsl(260 47% 11%);
+    --secondary: hsl(0 0% 96%);
+    --secondary-foreground: hsl(0 0% 12%);
 
-    --muted: hsl(260 40% 96%);
-    /* #F1F0FB */
-    --muted-foreground: hsl(260 16% 47%);
-    /* #6E6B7B — medium grey-purple */
+    --muted: hsl(0 0% 96%);
+    --muted-foreground: hsl(0 0% 40%);
 
-    --accent: hsl(260 80% 93%);
-    /* #E8DEFF — light purple tint */
-    --accent-foreground: hsl(260 47% 11%);
+    --accent: hsl(0 0% 92%);
+    --accent-foreground: hsl(0 0% 0%);
 
     --destructive: hsl(0 84% 60%);
-    /* #EF4444 — red */
-    --destructive-foreground: hsl(260 40% 98%);
+    --destructive-foreground: hsl(0 0% 100%);
 
-    --border: hsl(260 32% 91%);
-    /* #E6E1EF — soft purple-grey border */
-    --input: hsl(260 32% 91%);
-    --ring: hsl(260 70% 55%);
-    /* matches --primary */
+    --border: hsl(0 0% 90%);
+    --input: hsl(0 0% 90%);
+    --ring: hsl(0 0% 55%);
 
-    --radius: 0.5rem;
-    /* 8px base radius */
+    --radius: 1rem;
+    /* 16px base radius */
 
-    /* ── Sidebar Tokens ──────────────────────────────────────── */
-    --sidebar: hsl(260 40% 96%);
-    --sidebar-foreground: hsl(260 47% 11%);
+    /* ── Sidebar Tokens — neutral ────────────────────────────── */
+    --sidebar: hsl(0 0% 98%);
+    --sidebar-foreground: hsl(0 0% 9%);
     --sidebar-primary: hsl(260 70% 55%);
-    --sidebar-primary-foreground: hsl(260 40% 98%);
-    --sidebar-accent: hsl(260 80% 93%);
-    --sidebar-accent-foreground: hsl(260 47% 11%);
-    --sidebar-border: hsl(260 32% 91%);
-    --sidebar-ring: hsl(260 70% 55%);
+    --sidebar-primary-foreground: hsl(0 0% 100%);
+    --sidebar-accent: hsl(0 0% 96%);
+    --sidebar-accent-foreground: hsl(0 0% 12%);
+    --sidebar-border: hsl(0 0% 90%);
+    --sidebar-ring: hsl(0 0% 55%);
+
+    /* ── Multi-layer shadow system ──────────────────────────── */
+    --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
+    --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
+    --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
+    --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
+    --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 2px 4px -1px hsl(0 0% 0% / 0.16);
+    --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
+    --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
+    --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.4);
 
     /* ── Extended Purple Palette ─────────────────────────────── */
     --purple-50: #f5f3ff;
@@ -254,78 +251,26 @@
     border-color: var(--border);
   }
 
+  html {
+    font-size: 15.5px;
+  }
+
   body {
     @apply text-foreground;
     background-color: var(--background);
     font-family: var(--font-outfit), 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    transition: background-color 0.5s ease, color 0.5s ease;
   }
 
-  /* Bytes design override — inside @layer base so it wins over the body rule above */
-  body.bytes-design {
-    background-color: var(--background);
+  ::selection {
+    color: var(--primary-foreground);
+    background-color: var(--primary);
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   BYTES DESIGN — Feature Flag Override
-   Toggle via body.bytes-design class
-   Matches the Bytes Dashboard geometry/sizing/shadows EXACTLY.
-   Colours are kept from Birdy's own palette.
-   ═══════════════════════════════════════════════════════════════ */
-
-body.bytes-design {
-  font-size: 15.5px;
-  transition: background-color 0.5s ease, color 0.5s ease;
-
-  /* ── Geometry ────────────────────────────────────────────── */
-  --radius: 1rem;
-
-  /* ── Neutral backgrounds & borders (match Bytes)
-       Primary/destructive colours stay Birdy purple ────────── */
-  --background: hsl(0 0% 100%);           /* white */
-  --foreground: hsl(0 0% 9%);             /* near-black */
-  --card: hsl(0 0% 100%);
-  --card-foreground: hsl(0 0% 9%);
-  --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(0 0% 9%);
-  --secondary: hsl(0 0% 96%);
-  --secondary-foreground: hsl(0 0% 12%);
-  --muted: hsl(0 0% 96%);
-  --muted-foreground: hsl(0 0% 40%);
-  --accent: hsl(0 0% 92%);
-  --accent-foreground: hsl(0 0% 0%);
-  --border: hsl(0 0% 90%);
-  --input: hsl(0 0% 90%);
-  --ring: hsl(0 0% 55%);
-
-  /* Sidebar — neutral */
-  --sidebar: hsl(0 0% 98%);
-  --sidebar-foreground: hsl(0 0% 9%);
-  --sidebar-accent: hsl(0 0% 96%);
-  --sidebar-accent-foreground: hsl(0 0% 12%);
-  --sidebar-border: hsl(0 0% 90%);
-  --sidebar-ring: hsl(0 0% 55%);
-
-  /* ── Multi-layer shadow system ──────────────────────────── */
-  --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
-  --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
-  --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
-  --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
-  --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 2px 4px -1px hsl(0 0% 0% / 0.16);
-  --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
-  --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
-  --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.4);
-}
-
-/* Text selection */
-.bytes-design ::selection {
-  color: var(--primary-foreground);
-  background-color: var(--primary);
-}
-
-/* Scrollbar hiding */
-.bytes-design .scrollbar-none::-webkit-scrollbar { display: none; }
-.bytes-design .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+/* Scrollbar hiding utility */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    Magical Shimmer Input (AskBirdy search)
@@ -388,4 +333,27 @@ body.bytes-design {
 .dashboard-card:hover {
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   /* shadow-md */
+}
+/* ---------- Birdy logo flap animation ---------- */
+@keyframes birdy-flap {
+  0%   { transform: rotate(0deg)  scaleY(1)    translateY(0); }
+  20%  { transform: rotate(-7deg) scaleY(0.88) translateY(1px); }
+  45%  { transform: rotate(4deg)  scaleY(1.1)  translateY(-3px); }
+  70%  { transform: rotate(-3deg) scaleY(0.95) translateY(0); }
+  100% { transform: rotate(0deg)  scaleY(1)    translateY(0); }
+}
+
+.birdy-flap {
+  transform-origin: 40% 65%;
+  transition: transform 0.2s ease;
+  will-change: transform;
+  display: inline-block;
+}
+
+.birdy-flap:hover {
+  animation: birdy-flap 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birdy-flap:hover { animation: none; }
 }
