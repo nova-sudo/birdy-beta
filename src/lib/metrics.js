@@ -9,7 +9,7 @@ import { extractUniqueTags } from './enhanced-columns-config';
 // Base metric ID to data key mapping
 const BASE_METRIC_MAPPING = {
   // Clients dashboard (GoHighLevel & Meta Ads)
-  leads: "ghl_contacts",
+  leads: "leads",
   bookings: "bookings",
   "total-revenue": "total_revenue",
   "upsell-revenue": "upsell_revenue",
