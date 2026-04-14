@@ -169,7 +169,13 @@ const StyledTable = ({
 
     return data.map((group) => {
       const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
-      const ghlRevenue = group.gohighlevel?.metrics?.opportunity_stats?.won_revenue ?? 0;
+      const ghlOppStats = group.gohighlevel?.metrics?.opportunity_stats || {}
+      const ghlRevenue = ghlOppStats.won_revenue ?? 0;
+      const ghlWonOpps = ghlOppStats.won ?? 0;
+      const ghlLostOpps = ghlOppStats.lost ?? 0;
+      const ghlOpenOpps = ghlOppStats.open ?? 0;
+      const ghlAbandonedOpps = ghlOppStats.abandoned ?? 0;
+      const ghlTotalOpps = ghlOppStats.total_opportunities ?? 0;
       const metaCampaigns = group.facebook?.metrics?.total_campaigns ?? 0;
       const metaAdsets = group.facebook?.metrics?.total_adsets ?? 0;
       const metaAds = group.facebook?.metrics?.total_ads ?? 0;
@@ -194,6 +200,11 @@ const StyledTable = ({
         name: group.name || "Unnamed Group",
         ghl_contacts: ghlContacts,
         ghl_revenue: ghlRevenue,
+        ghl_won_opps: ghlWonOpps,
+        ghl_lost_opps: ghlLostOpps,
+        ghl_open_opps: ghlOpenOpps,
+        ghl_abandoned_opps: ghlAbandonedOpps,
+        ghl_total_opps: ghlTotalOpps,
         meta_campaigns: metaCampaigns,
         meta_adsets: metaAdsets,
         meta_ads: metaAds,
@@ -437,8 +448,13 @@ const StyledTable = ({
       return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     }
 
-    if (customMetrics?.some((m) => m.id === columnId)) {
-      return formatMetricValue(value, columnId);
+    const customMatch = customMetrics?.find((m) => m.id === columnId);
+    if (customMatch) {
+      const fmt = customMatch.formatType || customMatch.format_type || "integer";
+      if (fmt === "currency") return formatCurrency(value);
+      if (fmt === "percentage") return `${Number(value).toFixed(2)}%`;
+      if (fmt === "decimal") return Number(value).toFixed(2);
+      return Number(value).toLocaleString();
     }
 
     if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per")) {
@@ -721,19 +737,25 @@ const StyledTable = ({
                             <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                           </div>
                         ) : (
-                          <button
-                            onClick={() => onStatusToggle?.(row.id, row.status)}
-                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                              String(row.status).toLowerCase() === "active"
-                                ? "bg-green-100 text-green-800 hover:bg-green-200"
-                                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                            }`}
-                          >
-                            <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${
-                              String(row.status).toLowerCase() === "active" ? "bg-green-500" : "bg-gray-400"
-                            }`} />
-                            {String(row.status).toLowerCase() === "active" ? "Active" : "Paused"}
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => onStatusToggle?.(row.id, row.status)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                                String(row.status).toLowerCase() === "active"
+                                  ? "bg-green-500"
+                                  : "bg-gray-300"
+                              }`}
+                            >
+                              <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                                String(row.status).toLowerCase() === "active" ? "translate-x-[18px]" : "translate-x-[3px]"
+                              }`} />
+                            </button>
+                            <span className={`text-[11px] font-medium ${
+                              String(row.status).toLowerCase() === "active" ? "text-green-700" : "text-gray-500"
+                            }`}>
+                              {String(row.status).toLowerCase() === "active" ? "Active" : "Paused"}
+                            </span>
+                          </div>
                         )}
                       </td>
                     )}

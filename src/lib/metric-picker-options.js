@@ -27,6 +27,11 @@ export function buildMetricPickerOptions({ availableTags = [], customMetrics = [
     { id: "ghl_leads",        label: "GHL Leads",             category: "GoHighLevel", icon: ghlIcon },
     { id: "ghl_conversion",   label: "GHL Conversion (%)",    category: "GoHighLevel", icon: ghlIcon },
     { id: "ghl_revenue",      label: "GHL Revenue",           category: "GoHighLevel", icon: ghlIcon },
+    { id: "ghl_won_opps",     label: "Won Opps",              category: "GoHighLevel", icon: ghlIcon },
+    { id: "ghl_lost_opps",    label: "Lost Opps",             category: "GoHighLevel", icon: ghlIcon },
+    { id: "ghl_open_opps",    label: "Open Opps",             category: "GoHighLevel", icon: ghlIcon },
+    { id: "ghl_abandoned_opps", label: "Abandoned Opps",      category: "GoHighLevel", icon: ghlIcon },
+    { id: "ghl_total_opps",   label: "Total Opps",            category: "GoHighLevel", icon: ghlIcon },
   ]
 
   // Tags

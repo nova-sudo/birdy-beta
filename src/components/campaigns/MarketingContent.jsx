@@ -37,7 +37,7 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   campaigns: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
   adsets: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
   ads: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
-  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"],
+  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -152,9 +152,33 @@ export function MarketingContent({
         displayOnDashboard: true, category: "custom", enabled: true,
       }))
       setCustomMetricsCache(all)
-      setCustomMetrics(all.filter(m => m.dashboards?.includes("campaigns") || m.dashboard === "Campaigns"))
+      // Store all metrics — filter per-tab at render time
+      setCustomMetrics(all.filter(m =>
+        m.dashboards?.some(d => ["campaigns", "adsets", "ads", "marketing_leads"].includes(d)) ||
+        m.dashboard === "Campaigns"
+      ))
     }).catch(() => {})
   }, [])
+
+  // ── Tag rollup data for campaign/adset/ad level ──────────────────────────
+  const [tagRollup, setTagRollup] = useState({ by_campaign: {}, by_adset: {}, by_ad: {} })
+  const [availableTags, setAvailableTags] = useState([])
+
+  useEffect(() => {
+    if (!clientGroups?.length) return
+    const groupIds = clientGroups.map(g => g.id).join(",")
+    apiRequest(`/api/campaigns/tag-rollup?groups=${groupIds}`).then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      setTagRollup(data)
+      // Discover all unique tags from the rollup data
+      const allTags = new Set()
+      for (const tags of Object.values(data.by_campaign || {})) for (const t of Object.keys(tags)) allTags.add(t)
+      for (const tags of Object.values(data.by_adset || {})) for (const t of Object.keys(tags)) allTags.add(t)
+      for (const tags of Object.values(data.by_ad || {})) for (const t of Object.keys(tags)) allTags.add(t)
+      setAvailableTags([...allTags].sort())
+    }).catch(() => {})
+  }, [clientGroups])
 
   useEffect(() => {
     const ids = customMetrics.map(m => m.id)
@@ -486,22 +510,36 @@ export function MarketingContent({
     "conversion_rate_ranking", "account_currency",
   ]
 
+  // Map Marketing Hub tab → dashboard key for filtering custom metrics
+  const TAB_TO_DASHBOARD = { campaigns: "campaigns", adsets: "adsets", ads: "ads", leads: "marketing_leads" }
+  const tabDashboardKey = TAB_TO_DASHBOARD[activeTab] || "campaigns"
+  const activeTabMetrics = customMetrics.filter(m =>
+    m.dashboards?.includes(tabDashboardKey) || m.dashboard === "Campaigns"
+  )
+
+  // Tag column IDs for campaign/adset/ad tabs
+  const tagColumnIds = availableTags.map(t => `tag_${t.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`)
+
   const getAvailableColumns = () =>
     activeTab === "leads"
-      ? ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name"]
-      : ["name", "clientGroup", ...baseColumns, ...customMetrics.map(m => m.id)]
+      ? ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name",
+         "ghl_matched", "ghl_opportunity_status", "ghl_opportunity_value", "ghl_tags"]
+      : ["name", "clientGroup", ...baseColumns, ...tagColumnIds, ...activeTabMetrics.map(m => m.id)]
 
-  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "custom", label: "Custom" }]
+  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "tags", label: "Tags" }, { id: "custom", label: "Custom" }]
   const toggleableColumns = getAvailableColumns().filter(col => col !== "name")
   const metaCount = toggleableColumns.filter(col => baseColumns.includes(col)).length
-  const customCount = toggleableColumns.length - metaCount
-  const categoryCounts = { all: toggleableColumns.length, meta: metaCount, custom: customCount }
+  const tagsCount = toggleableColumns.filter(col => tagColumnIds.includes(col)).length
+  const customCount = toggleableColumns.length - metaCount - tagsCount
+  const categoryCounts = { all: toggleableColumns.length, meta: metaCount, tags: tagsCount, custom: customCount }
 
   const allColumnsForDropdown = toggleableColumns.map(col => ({
     id: col,
-    label: getMetricDisplayName(col),
+    label: tagColumnIds.includes(col)
+      ? `Tag: ${availableTags[tagColumnIds.indexOf(col)] || col}`
+      : getMetricDisplayName(col),
     visible: (visibleColumns[activeTab] || []).includes(col),
-    type: baseColumns.includes(col) ? "meta" : "custom",
+    type: baseColumns.includes(col) ? "meta" : tagColumnIds.includes(col) ? "tags" : "custom",
   }))
 
   const filteredColumns = allColumnsForDropdown.filter(col =>
@@ -526,13 +564,46 @@ export function MarketingContent({
   const getIcon = (col) => (col.id === "clientGroup" || col.id === "name" ? Flask : metaa)
 
   const formatCellValue = (value, col, row) => {
+    // Tag rollup columns — look up count from tagRollup data
+    if (tagColumnIds.includes(col)) {
+      const tagIdx = tagColumnIds.indexOf(col)
+      const tagName = availableTags[tagIdx]
+      if (!tagName) return "-"
+
+      let rollupMap = {}
+      if (activeTab === "campaigns") rollupMap = tagRollup.by_campaign?.[row?.id] || {}
+      else if (activeTab === "adsets") rollupMap = tagRollup.by_adset?.[row?.name] || {}
+      else if (activeTab === "ads") rollupMap = tagRollup.by_ad?.[row?.id] || {}
+
+      const count = rollupMap[tagName]
+      return count ? count.toLocaleString() : "-"
+    }
+    // GHL enrichment columns on Meta leads tab
+    if (col === "ghl_matched") return value ? "✅" : "–"
+    if (col === "ghl_opportunity_status") {
+      if (!value) return "–"
+      const colors = { won: "text-green-600 bg-green-50", lost: "text-red-600 bg-red-50", open: "text-blue-600 bg-blue-50", abandoned: "text-gray-600 bg-gray-50" }
+      return <span className={`${colors[value] || ""} px-2 py-0.5 rounded-full text-xs font-medium capitalize`}>{value}</span>
+    }
+    if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"
+    if (col === "ghl_tags") {
+      if (!value || !Array.isArray(value) || value.length === 0) return "–"
+      return value.slice(0, 2).join(", ") + (value.length > 2 ? ` +${value.length - 2}` : "")
+    }
     if (col === "full_name") {
       value = value || row?.field_data?.["full name"] || row?.field_data?.full_name ||
         row?.full_name || row?.fullName || row?.name ||
         (row?.first_name || row?.last_name ? `${row?.first_name || ""} ${row?.last_name || ""}`.trim() : null)
     }
     if (value === null || value === undefined || value === "") return "-"
-    if (customMetrics.some(m => m.id === col)) return formatMetricValue(value, col)
+    const customMatch = customMetrics.find(m => m.id === col)
+    if (customMatch) {
+      const fmt = customMatch.formatType || customMatch.format_type || "integer"
+      if (fmt === "currency") return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
+      if (fmt === "percentage") return `${Number(value).toFixed(2)}%`
+      if (fmt === "decimal") return Number(value).toFixed(2)
+      return Number(value).toLocaleString()
+    }
     if (["spend", "cpc", "cpm", "cpp", "social_spend", "cpl", "cost_per_result"].includes(col))
       return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
     if (col === "ctr" || col === "conversion_rate") return `${Number(value).toFixed(2)}%`

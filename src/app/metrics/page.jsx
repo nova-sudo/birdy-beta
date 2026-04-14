@@ -874,40 +874,89 @@ const MetricsHub = () => {
                       </div>
                     </div>
 
-                    {/* Dashboard selector */}
+                    {/* Dashboard selector — auto-restricted by metric level */}
                     <div className="rounded-lg border border-border bg-card p-6">
                       <h4 className="text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          { value: "clients", label: "Client Groups" },
-                          { value: "campaigns", label: "Marketing Hub" },
-                          { value: "leads", label: "Leads" },
-                        ].map(d => {
-                          const checked = metricForm.dashboards.includes(d.value)
-                          return (
-                            <label
-                              key={d.value}
-                              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors ${
-                                checked ? "bg-purple-50 border-purple-300 text-purple-700" : "bg-white border-border hover:border-purple-200"
-                              }`}
-                            >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(c) => {
-                                  setMetricForm(f => ({
-                                    ...f,
-                                    dashboards: c
-                                      ? [...f.dashboards, d.value]
-                                      : f.dashboards.filter(x => x !== d.value),
-                                  }))
-                                }}
-                                className="h-3.5 w-3.5"
-                              />
-                              {d.label}
-                            </label>
-                          )
-                        })}
-                      </div>
+                      {(() => {
+                        // Detect the level from formula metrics
+                        const LEVEL_MAP = {
+                          meta_spend: "group", meta_impressions: "group", meta_clicks: "group",
+                          meta_reach: "group", meta_results: "group", meta_ctr: "group",
+                          meta_cpc: "group", meta_cpm: "group", meta_leads: "group",
+                          ghl_contacts: "group", ghl_revenue: "group", ghl_conversion: "group",
+                          conversion_rate: "group", cost_per_lead: "group", engagement_rate: "group",
+                          spend: "campaign", impressions: "campaign", clicks: "campaign",
+                          reach: "campaign", results: "campaign", leads: "campaign",
+                          ctr: "campaign", cpc: "campaign", cpm: "campaign",
+                          frequency: "campaign", cpl: "campaign", cost_per_result: "campaign",
+                          opportunityValue: "lead",
+                        }
+                        const LEVEL_DASHBOARDS = {
+                          group: ["clients"],
+                          campaign: ["campaigns", "adsets", "ads"],
+                          lead: ["leads", "marketing_leads"],
+                        }
+                        const formulaMetricIds = metricForm.formulaParts
+                          .filter(p => p.type === "metric" && p.value)
+                          .map(p => p.value)
+                        const levels = new Set(formulaMetricIds.map(id => LEVEL_MAP[id]).filter(Boolean))
+                        const detectedLevel = levels.size === 1 ? [...levels][0] : null
+                        const mixedLevels = levels.size > 1
+                        const allowedDashboards = detectedLevel ? new Set(LEVEL_DASHBOARDS[detectedLevel]) : null
+
+                        const DASHBOARD_OPTIONS = [
+                          { value: "clients", label: "Client Groups", group: "Group Level" },
+                          { value: "campaigns", label: "Campaigns", group: "Campaign Level" },
+                          { value: "adsets", label: "Ad Sets", group: "Campaign Level" },
+                          { value: "ads", label: "Ads", group: "Campaign Level" },
+                          { value: "leads", label: "Leads Hub", group: "Lead Level" },
+                          { value: "marketing_leads", label: "Marketing Hub — Leads", group: "Lead Level" },
+                        ]
+
+                        let lastGroup = ""
+                        return (
+                          <div className="space-y-2">
+                            {mixedLevels && (
+                              <p className="text-xs text-red-500 font-medium">Cannot mix group-level and campaign-level metrics in the same formula.</p>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {DASHBOARD_OPTIONS.map(d => {
+                                const checked = metricForm.dashboards.includes(d.value)
+                                const disabled = mixedLevels || (allowedDashboards && !allowedDashboards.has(d.value))
+                                const showGroup = d.group !== lastGroup
+                                lastGroup = d.group
+                                return (
+                                  <label
+                                    key={d.value}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                                      disabled
+                                        ? "opacity-40 cursor-not-allowed bg-muted border-border"
+                                        : checked
+                                          ? "bg-purple-50 border-purple-300 text-purple-700 cursor-pointer"
+                                          : "bg-white border-border hover:border-purple-200 cursor-pointer"
+                                    }`}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={disabled}
+                                      onCheckedChange={(c) => {
+                                        setMetricForm(f => ({
+                                          ...f,
+                                          dashboards: c
+                                            ? [...f.dashboards, d.value]
+                                            : f.dashboards.filter(x => x !== d.value),
+                                        }))
+                                      }}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    {d.label}
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
 
                     {/* Calculation Logic */}

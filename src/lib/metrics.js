@@ -125,6 +125,11 @@ const METRIC_DISPLAY_NAMES = {
   clientGroup: "Client Group",
   account_currency: "Currency",
   conversion_rate_ranking: "Conv. Rate Ranking",
+  ghl_matched: "GHL Match",
+  ghl_opportunity_status: "Opp. Status",
+  ghl_opportunity_value: "Opp. Value",
+  ghl_tags: "GHL Tags",
+  ghl_date_added: "GHL Date Added",
 }
 
 export function getMetricDisplayName(metricId) {
