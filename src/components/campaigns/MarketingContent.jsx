@@ -140,9 +140,10 @@ export function MarketingContent({
   const [selectedCategory, setSelectedCategory] = useState("all")
 
   // ── Custom metrics (load from API) ─────────────────────────────────────────
+  const [metricsLoaded, setMetricsLoaded] = useState(false)
   useEffect(() => {
     apiRequest("/api/custom-metrics").then(async res => {
-      if (!res.ok) return
+      if (!res.ok) { setMetricsLoaded(true); return }
       const data = await res.json()
       const all = (data.custom_metrics || []).map(m => ({
         id: m.id, name: m.name, description: m.description || "",
@@ -152,12 +153,12 @@ export function MarketingContent({
         displayOnDashboard: true, category: "custom", enabled: true,
       }))
       setCustomMetricsCache(all)
-      // Store all metrics — filter per-tab at render time
       setCustomMetrics(all.filter(m =>
         m.dashboards?.some(d => ["campaigns", "adsets", "ads", "marketing_leads"].includes(d)) ||
         m.dashboard === "Campaigns"
       ))
-    }).catch(() => {})
+      setMetricsLoaded(true)
+    }).catch(() => setMetricsLoaded(true))
   }, [])
 
   // ── Tag rollup data for campaign/adset/ad level ──────────────────────────
@@ -192,15 +193,9 @@ export function MarketingContent({
     })
   }, [customMetrics])
 
-  const enhanceWithCustomMetrics = (item) => {
-    const base = { ...item }
-    customMetrics.forEach(metric => {
-        if (metric.formulaParts) base[metric.id] = evaluateFormula(metric.formulaParts, base)
-      })
-    return base
-  }
-
   // ── Process client groups from props into campaigns/adsets/ads ─────────────
+  // NOTE: This processes BASE data only. Custom metrics are applied separately
+  // via useMemo below to avoid race conditions with the async metrics API.
   useEffect(() => {
     if (groupsLoading) return
 
@@ -222,7 +217,6 @@ export function MarketingContent({
         clientGroup: group.name,
         adAccount: fb.ad_account_id || "",
         account_currency: fb.currency || "USD",
-        // GHL group-level metrics (available for formulas on campaign rows)
         ghl_contacts: ghlMetrics.total_contacts || 0,
         ghl_revenue: oppStats.won_revenue || 0,
         ghl_won_opps: oppStats.won || 0,
@@ -230,7 +224,6 @@ export function MarketingContent({
         ghl_open_opps: oppStats.open || 0,
         ghl_abandoned_opps: oppStats.abandoned || 0,
         ghl_total_opps: oppStats.total_opportunities || 0,
-        // Meta group-level metrics (aliased for formula compat)
         meta_spend: fb.metrics?.insights?.spend || 0,
         meta_impressions: fb.metrics?.insights?.impressions || 0,
         meta_clicks: fb.metrics?.insights?.clicks || 0,
@@ -239,90 +232,64 @@ export function MarketingContent({
         meta_leads: fb.metrics?.insights?.results || fb.metrics?.insights?.total_leads || 0,
       }
 
-      // Campaigns
       for (const c of (fb.campaigns || [])) {
         const cResults = c.results || 0
         const cSpend = c.spend || 0
         const cClicks = c.clicks || 0
-        processedCampaigns.push(enhanceWithCustomMetrics({
+        processedCampaigns.push({
           ...groupMeta,
-          id: c.id,
-          name: c.name,
+          id: c.id, name: c.name,
           status: (c.status || "inactive").toLowerCase(),
-          spend: cSpend,
-          impressions: c.impressions || 0,
-          clicks: cClicks,
-          reach: c.reach || 0,
-          leads: cResults,
-          results: cResults,
+          spend: cSpend, impressions: c.impressions || 0, clicks: cClicks,
+          reach: c.reach || 0, leads: cResults, results: cResults,
           cpl: cResults > 0 ? cSpend / cResults : 0,
           cost_per_result: cResults > 0 ? cSpend / cResults : 0,
           conversion_rate: cClicks > 0 ? (cResults / cClicks * 100) : 0,
-          ctr: c.ctr || 0,
-          cpc: c.cpc || 0,
-          cpm: c.cpm || 0,
+          ctr: c.ctr || 0, cpc: c.cpc || 0, cpm: c.cpm || 0,
           cpp: c.reach > 0 ? cSpend / c.reach : 0,
           frequency: c.reach > 0 ? c.impressions / c.reach : 0,
-        }))
+        })
       }
 
-      // Ad sets — store _campaignId for drill-down filtering
       for (const a of (fb.adsets || [])) {
         const aResults = a.results || 0
         const aSpend = a.spend || 0
         const aClicks = a.clicks || 0
-        processedAdsets.push(enhanceWithCustomMetrics({
+        processedAdsets.push({
           ...groupMeta,
-          id: a.id,
-          name: a.name,
+          id: a.id, name: a.name,
           status: (a.status || "inactive").toLowerCase(),
-          _campaignId: a.campaign_id || "",
-          campaign_name: a.campaign_id || "",
-          spend: aSpend,
-          impressions: a.impressions || 0,
-          clicks: aClicks,
-          reach: a.reach || 0,
-          leads: aResults,
-          results: aResults,
+          _campaignId: a.campaign_id || "", campaign_name: a.campaign_id || "",
+          spend: aSpend, impressions: a.impressions || 0, clicks: aClicks,
+          reach: a.reach || 0, leads: aResults, results: aResults,
           cpl: aResults > 0 ? aSpend / aResults : 0,
           cost_per_result: aResults > 0 ? aSpend / aResults : 0,
           conversion_rate: aClicks > 0 ? (aResults / aClicks * 100) : 0,
-          ctr: a.ctr || 0,
-          cpc: a.cpc || 0,
-          cpm: a.cpm || 0,
+          ctr: a.ctr || 0, cpc: a.cpc || 0, cpm: a.cpm || 0,
           cpp: a.reach > 0 ? aSpend / a.reach : 0,
           frequency: a.reach > 0 ? a.impressions / a.reach : 0,
-        }))
+        })
       }
 
-      // Ads — store _campaignId and _adsetId for drill-down filtering
       for (const ad of (fb.ads || [])) {
         const adResults = ad.results || 0
         const adSpend = ad.spend || 0
         const adClicks = ad.clicks || 0
-        processedAds.push(enhanceWithCustomMetrics({
+        processedAds.push({
           ...groupMeta,
-          id: ad.id,
-          name: ad.name,
+          id: ad.id, name: ad.name,
           status: (ad.status || "inactive").toLowerCase(),
-          _campaignId: ad.campaign_id || "",
-          _adsetId: ad.adset_id || "",
+          _campaignId: ad.campaign_id || "", _adsetId: ad.adset_id || "",
           campaign_name: ad.campaign_id || "",
-          spend: adSpend,
-          impressions: ad.impressions || 0,
-          clicks: adClicks,
-          reach: ad.reach || 0,
-          leads: adResults,
-          results: adResults,
+          spend: adSpend, impressions: ad.impressions || 0, clicks: adClicks,
+          reach: ad.reach || 0, leads: adResults, results: adResults,
           cpl: adResults > 0 ? adSpend / adResults : 0,
           cost_per_result: adResults > 0 ? adSpend / adResults : 0,
           conversion_rate: adClicks > 0 ? (adResults / adClicks * 100) : 0,
-          ctr: ad.ctr || 0,
-          cpc: ad.cpc || 0,
-          cpm: ad.cpm || 0,
+          ctr: ad.ctr || 0, cpc: ad.cpc || 0, cpm: ad.cpm || 0,
           cpp: ad.reach > 0 ? adSpend / ad.reach : 0,
           frequency: ad.reach > 0 ? ad.impressions / ad.reach : 0,
-        }))
+        })
       }
     }
 
@@ -330,6 +297,36 @@ export function MarketingContent({
     setAllAdSets(processedAdsets)
     setAllAds(processedAds)
   }, [clientGroups, groupsLoading])
+
+  // ── Apply custom metrics as a SEPARATE reactive layer ─────────────────────
+  // This useMemo recomputes whenever campaigns or customMetrics change,
+  // so custom metric values appear as soon as the API responds — no race condition.
+  const enhancedCampaigns = useMemo(() => {
+    if (!customMetrics.length) return campaigns
+    return campaigns.map(item => {
+      const row = { ...item }
+      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      return row
+    })
+  }, [campaigns, customMetrics])
+
+  const enhancedAdSets = useMemo(() => {
+    if (!customMetrics.length) return allAdSets
+    return allAdSets.map(item => {
+      const row = { ...item }
+      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      return row
+    })
+  }, [allAdSets, customMetrics])
+
+  const enhancedAds = useMemo(() => {
+    if (!customMetrics.length) return allAds
+    return allAds.map(item => {
+      const row = { ...item }
+      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      return row
+    })
+  }, [allAds, customMetrics])
 
   // ── Leads fetch (depends on clientGroups from props) ─────────────────────
   useEffect(() => {
@@ -364,7 +361,7 @@ export function MarketingContent({
 
     fetchLeads()
     return () => ctrl.abort()
-  }, [clientGroups, groupsLoading, datePreset, customMetrics])
+  }, [clientGroups, groupsLoading, datePreset])
 
   // ── Drill-down row-click handler ──────────────────────────────────────────
   // Clicking a campaign row selects it, clears downstream, and advances the tab.
@@ -512,9 +509,9 @@ export function MarketingContent({
   }
 
   const getFilteredDataForTab = () => {
-    if (activeTab === "campaigns") return applyFilters(campaigns)
-    if (activeTab === "adsets") return applyFilters(allAdSets)
-    if (activeTab === "ads") return applyFilters(allAds)
+    if (activeTab === "campaigns") return applyFilters(enhancedCampaigns)
+    if (activeTab === "adsets") return applyFilters(enhancedAdSets)
+    if (activeTab === "ads") return applyFilters(enhancedAds)
     if (activeTab === "leads") return applyFilters(leads)
     return []
   }
