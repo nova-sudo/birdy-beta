@@ -737,25 +737,18 @@ const StyledTable = ({
                             <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => onStatusToggle?.(row.id, row.status)}
-                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                                String(row.status).toLowerCase() === "active"
-                                  ? "bg-green-500"
-                                  : "bg-gray-300"
-                              }`}
-                            >
-                              <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                                String(row.status).toLowerCase() === "active" ? "translate-x-[18px]" : "translate-x-[3px]"
-                              }`} />
-                            </button>
-                            <span className={`text-[11px] font-medium ${
-                              String(row.status).toLowerCase() === "active" ? "text-green-700" : "text-gray-500"
-                            }`}>
-                              {String(row.status).toLowerCase() === "active" ? "Active" : "Paused"}
-                            </span>
-                          </div>
+                          <button
+                            onClick={() => onStatusToggle?.(row.id, row.status)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                              String(row.status).toLowerCase() === "active"
+                                ? "bg-purple-600"
+                                : "bg-gray-300"
+                            }`}
+                          >
+                            <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                              String(row.status).toLowerCase() === "active" ? "translate-x-[18px]" : "translate-x-[3px]"
+                            }`} />
+                          </button>
                         )}
                       </td>
                     )}

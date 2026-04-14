@@ -40,8 +40,19 @@ const BASE_METRIC_MAPPING = {
   ctr: "ctr",
   frequency: "frequency",
   cpm: "cpm",
+  results: "results",
   "campaign-results": "results",
   "campaign-leads": "leads",
+  cpl: "cpl",
+  cost_per_result: "cost_per_result",
+  // GHL metrics (available on campaign rows via groupMeta)
+  ghl_revenue: "ghl_revenue",
+  ghl_won_opps: "ghl_won_opps",
+  ghl_lost_opps: "ghl_lost_opps",
+  ghl_open_opps: "ghl_open_opps",
+  ghl_abandoned_opps: "ghl_abandoned_opps",
+  ghl_total_opps: "ghl_total_opps",
+  meta_results: "meta_results",
   
   // Contacts page
   "lead-value": "leadValue",

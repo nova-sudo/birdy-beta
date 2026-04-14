@@ -215,11 +215,28 @@ export function MarketingContent({
 
     for (const group of clientGroups) {
       const fb = group.facebook || {}
+      const ghlMetrics = group.gohighlevel?.metrics || {}
+      const oppStats = ghlMetrics.opportunity_stats || {}
       const groupMeta = {
         _groupId: group.id,
         clientGroup: group.name,
         adAccount: fb.ad_account_id || "",
         account_currency: fb.currency || "USD",
+        // GHL group-level metrics (available for formulas on campaign rows)
+        ghl_contacts: ghlMetrics.total_contacts || 0,
+        ghl_revenue: oppStats.won_revenue || 0,
+        ghl_won_opps: oppStats.won || 0,
+        ghl_lost_opps: oppStats.lost || 0,
+        ghl_open_opps: oppStats.open || 0,
+        ghl_abandoned_opps: oppStats.abandoned || 0,
+        ghl_total_opps: oppStats.total_opportunities || 0,
+        // Meta group-level metrics (aliased for formula compat)
+        meta_spend: fb.metrics?.insights?.spend || 0,
+        meta_impressions: fb.metrics?.insights?.impressions || 0,
+        meta_clicks: fb.metrics?.insights?.clicks || 0,
+        meta_reach: fb.metrics?.insights?.reach || 0,
+        meta_results: fb.metrics?.insights?.results || 0,
+        meta_leads: fb.metrics?.insights?.results || fb.metrics?.insights?.total_leads || 0,
       }
 
       // Campaigns
@@ -347,7 +364,7 @@ export function MarketingContent({
 
     fetchLeads()
     return () => ctrl.abort()
-  }, [clientGroups, groupsLoading, datePreset])
+  }, [clientGroups, groupsLoading, datePreset, customMetrics])
 
   // ── Drill-down row-click handler ──────────────────────────────────────────
   // Clicking a campaign row selects it, clears downstream, and advances the tab.
@@ -533,14 +550,17 @@ export function MarketingContent({
   const customCount = toggleableColumns.length - metaCount - tagsCount
   const categoryCounts = { all: toggleableColumns.length, meta: metaCount, tags: tagsCount, custom: customCount }
 
-  const allColumnsForDropdown = toggleableColumns.map(col => ({
-    id: col,
-    label: tagColumnIds.includes(col)
-      ? `Tag: ${availableTags[tagColumnIds.indexOf(col)] || col}`
-      : getMetricDisplayName(col),
-    visible: (visibleColumns[activeTab] || []).includes(col),
-    type: baseColumns.includes(col) ? "meta" : tagColumnIds.includes(col) ? "tags" : "custom",
-  }))
+  const allColumnsForDropdown = toggleableColumns.map(col => {
+    const customMatch = customMetrics.find(m => m.id === col)
+    return {
+      id: col,
+      label: tagColumnIds.includes(col)
+        ? `Tag: ${availableTags[tagColumnIds.indexOf(col)] || col}`
+        : customMatch ? customMatch.name : getMetricDisplayName(col),
+      visible: (visibleColumns[activeTab] || []).includes(col),
+      type: baseColumns.includes(col) ? "meta" : tagColumnIds.includes(col) ? "tags" : "custom",
+    }
+  })
 
   const filteredColumns = allColumnsForDropdown.filter(col =>
     (selectedCategory === "all" || col.type === selectedCategory) &&
@@ -624,13 +644,18 @@ export function MarketingContent({
   const tableColumns = useMemo(() => {
     const cols = getCurrentVisibleColumns()
     const effectiveCols = cols.length > 0 ? cols : DEFAULT_VISIBLE_COLUMNS[activeTab]
-    return effectiveCols.map(col => ({
-      id: col, key: col,
-      header: getMetricDisplayName(col),
-      label: getMetricDisplayName(col),
-      icons: col === "clientGroup" || col === "name" ? Flask : metaa,
-      render: (value, row) => formatCellValue(value, col, row),
-    }))
+    return effectiveCols.map(col => {
+      // Resolve custom metric names from local state (not global cache)
+      const customMatch = customMetrics.find(m => m.id === col)
+      const displayName = customMatch ? customMatch.name : getMetricDisplayName(col)
+      return {
+        id: col, key: col,
+        header: displayName,
+        label: displayName,
+        icons: col === "clientGroup" || col === "name" ? Flask : metaa,
+        render: (value, row) => formatCellValue(value, col, row),
+      }
+    })
   }, [visibleColumns, activeTab, customMetrics, userCurrency])
 
   // ── Summary cards ─────────────────────────────────────────────────────────
