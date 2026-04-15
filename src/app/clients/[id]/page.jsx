@@ -19,6 +19,7 @@ import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import BirdyChat from "@/components/chat/BirdyChat"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -182,7 +183,15 @@ export default function ClientDetailsPage() {
   }
 
   // ── Loading / Error states ─────────────────────────────────────────────────
-  if (loading) return <Loading progress={progress} />
+  if (loading) return (
+    <div className="flex w-full mx-auto my-auto max-w-xs flex-col gap-2 items-center justify-center">
+      
+        <Skeleton className="h-10 w-80" />
+        <Skeleton className="h-10 w-80" />
+        <Skeleton className="h-10 w-60" />
+      
+    </div>
+  )
 
   if (!clientData) {
     return (
