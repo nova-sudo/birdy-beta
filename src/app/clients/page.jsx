@@ -969,10 +969,7 @@ export default function ClientsPage() {
                 ) : (
                   <div className="text-2xl font-bold">{stats.activeClients}</div>
                 )}
-                <p className="text-xs text-[#71658B] text-muted-foreground ">
-                  <span className="text-green-500 text-[0.75rem] leading-4">+8%</span>
-                  <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-                </p>
+                <p className="text-xs text-[#71658B] mt-1">Connected client groups across all integrations</p>
               </CardContent>
           </Card>
 
@@ -993,10 +990,7 @@ export default function ClientsPage() {
                   {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-              <p className="text-xs text-[#71658B] text-muted-foreground ">
-                <span className="text-green-500 text-[0.75rem] leading-4">+15%</span>
-                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-              </p>
+              <p className="text-xs text-[#71658B] mt-1">Combined Meta ad spend across all clients</p>
             </CardContent>
           </Card>
 
@@ -1017,10 +1011,7 @@ export default function ClientsPage() {
                  {stats.totalLeads}
                   </div>
               )}
-              <p className="text-xs text-[#71658B] text-muted-foreground ">
-                <span className="text-green-500 text-[0.75rem] leading-4">+12%</span>
-                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-              </p>
+              <p className="text-xs text-[#71658B] mt-1">Total results from all active Meta campaigns</p>
             </CardContent>
           </Card>
 
@@ -1041,10 +1032,7 @@ export default function ClientsPage() {
                   {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </div>
               )}
-              <p className="text-xs text-[#71658B] text-muted-foreground ">
-                <span className="text-green-500 text-[0.75rem] leading-4">-5%</span>
-                <span className="text-muted-foreground ml-1 text-[0.75rem] leading-4 text-[#71658B]">vs. last period</span>
-              </p>
+              <p className="text-xs text-[#71658B] mt-1">Average cost per lead across all clients</p>
             </CardContent>
           </Card>
         </div>
