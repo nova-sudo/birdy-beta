@@ -36,6 +36,7 @@ import {
 const items = [
   {title: "Dashboard", url: "/dashboard", icon: House },
   { title: "Clients", url: "/clients", icon: SquareUserRound },
+  { title: "Ask Birdy", url: "/ask-birdy", icon: Sparkles },
   { title: "Marketing", url: "/campaigns", icon: ChartNoAxesColumnIncreasing },
   { title: "Sales", url: "/Sales-Hub", icon: Phone },
   { title: "Leads", url: "/contacts", icon: List },

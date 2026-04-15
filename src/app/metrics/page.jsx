@@ -1,5 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
+import { apiRequest } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon } from "lucide-react"
+import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon, Zap, SquarePlus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
@@ -29,7 +30,8 @@ import {
   searchMetrics,
   getAvailableMetricsForFormulas
 } from "@/lib/metrics-discovery"
-import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP, flaskIcon as Flask } from "@/lib/icons"
+import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP, flaskIcon as Flask, ghlIcon, metaIcon } from "@/lib/icons"
+import MetricPicker from "@/components/ui/MetricPicker"
 import {
   Pagination,
   PaginationContent,
@@ -95,16 +97,12 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
       </PopoverTrigger>
       <PopoverContent className="p-0 w-fit bg-white">
         <Tabs defaultValue="all" className="w-fit" onValueChange={handleTabChange}>
-          <TabsList className="text-center w-fit h-fit grid-cols-4 bg-muted/50 border-b px-1 py-2">
-            <TabsTrigger value="all" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 data-[state=active]:border-b-purple-700 h-full">
+          <TabsList className="w-fit">
+            <TabsTrigger value="all">
               All {availableMetrics.length}
             </TabsTrigger>
             {Object.keys(metricsBySource).map(source => (
-              <TabsTrigger
-                key={source}
-                value={source.toLowerCase()}
-                className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-3 data-[state=active]:border-b-purple-700 h-full"
-              >
+              <TabsTrigger key={source} value={source.toLowerCase()}>
                 {source} {metricsBySource[source].length}
               </TabsTrigger>
             ))}
@@ -182,71 +180,95 @@ const MetricsHub = () => {
   const [isLoading, setIsLoading] = useState(true)
   const itemsPerPage = 15; // Adjust as needed
 
+  const [saving, setSaving] = useState(false)
+
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
     name: "",
     description: "",
-    group: "",
+    dashboards: [],
     formulaParts: [{ type: "metric", value: "" }],
-    displayOnDashboard: false,
+    formatType: "integer",
+    aggregation: "total",
   })
 
-  // Fetch client groups on mount
+  // Fetch available fields (lightweight) and custom metrics on mount
   useEffect(() => {
-    const fetchClientGroups = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch("https://birdy-backend.vercel.app/api/client-groups", {
-          credentials: "include",
-        })
-        if (response.ok) {
-          const data = await response.json()
-          setClientGroups(data.client_groups || [])
+        const [fieldsRes, metricsRes] = await Promise.all([
+          apiRequest("/api/custom-metrics/available-fields"),
+          apiRequest("/api/custom-metrics"),
+        ])
+        if (fieldsRes.ok) {
+          const data = await fieldsRes.json()
+          // Build availableMetricsForFormulas from the lightweight response
+          const metrics = (data.base_metrics || []).map(m => ({
+            id: m.id,
+            label: m.label,
+            category: m.category,
+          }))
+          // Add tags
+          for (const tag of (data.tags || [])) {
+            const tagId = `tag_${tag.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
+            metrics.push({ id: tagId, label: `Tag: ${tag}`, category: "Tags" })
+          }
+          setAvailableMetricsForFormulas(metrics)
+          // Build discovered metrics for the table display (map to expected field names)
+          setDiscoveredMetrics(metrics.map(m => ({
+            id: m.id,
+            name: m.label,
+            label: m.label,
+            source: m.category,
+            dashboard: m.category === "Campaigns" ? "Marketing Hub" : m.category === "Tags" ? "Clients" : "All",
+            description: "",
+            category: m.category === "custom" ? "custom" : "standard",
+            enabled: true,
+          })))
+          setStatistics({ total: metrics.length })
+        }
+        if (metricsRes.ok) {
+          const data = await metricsRes.json()
+          const dbMetrics = (data.custom_metrics || []).map(m => ({
+            id: m.id,
+            name: m.name,
+            description: m.description || "",
+            source: "Custom Formula",
+            dashboard: (m.dashboards || []).join(", "),
+            dashboards: m.dashboards || [],
+            formula: m.formula_display || "",
+            formulaParts: m.formula_parts || [],
+            formatType: m.format_type || "integer",
+            aggregation: m.aggregation || "total",
+            displayOnDashboard: true,
+            category: "custom",
+            enabled: true,
+          }))
+          setCustomMetrics(dbMetrics)
         }
       } catch (error) {
-        console.error("Error fetching client groups:", error)
+        console.error("Error fetching data:", error)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchClientGroups()
+    fetchData()
   }, [])
 
-  // Discover metrics when client groups are loaded
+  // Sync custom metrics cache for other modules (metrics.js)
   useEffect(() => {
-    if (clientGroups.length > 0) {
-      console.log("🔍 Discovering metrics with", clientGroups.length, "client groups")
-
-      const metrics = discoverAllMetrics(clientGroups)
-      setDiscoveredMetrics(metrics)
-
-      const formulaMetrics = getAvailableMetricsForFormulas(clientGroups)
-      setAvailableMetricsForFormulas(formulaMetrics)
-
-      const stats = getMetricsStatistics(clientGroups)
-      setStatistics(stats)
-
-      console.log("✅ Metrics discovery complete:", stats)
-    }
-  }, [clientGroups])
-
-  // Load custom metrics from localStorage on mount
-  useEffect(() => {
-    const stored = localStorage.getItem("customMetrics")
-    if (stored) {
-      try {
-        setCustomMetrics(JSON.parse(stored))
-      } catch (e) {
-        console.error("Failed to load custom metrics:", e)
-      }
-    }
-  }, [])
-
-  // Save custom metrics to localStorage whenever they change
-  useEffect(() => {
-    if (customMetrics.length > 0) {
-      localStorage.setItem("customMetrics", JSON.stringify(customMetrics))
-    }
+    const { setCustomMetricsCache } = require("@/lib/metrics")
+    setCustomMetricsCache(customMetrics)
   }, [customMetrics])
+
+  // Enrich formula metrics with icons for MetricPicker
+  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask }
+  const formulaMetricOptions = useMemo(() =>
+    availableMetricsForFormulas.map(m => ({
+      ...m,
+      icon: ICON_MAP[m.category] || null,
+    })),
+  [availableMetricsForFormulas])
 
   // Combine discovered and custom metrics
   const allMetrics = [...discoveredMetrics, ...customMetrics]
@@ -261,9 +283,9 @@ const MetricsHub = () => {
 
     const matchesSearch =
       searchQuery === "" ||
-      metric.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      metric.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      metric.source.toLowerCase().includes(searchQuery.toLowerCase())
+      (metric.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (metric.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (metric.source || "").toLowerCase().includes(searchQuery.toLowerCase())
 
     return matchesTab && matchesSearch
   })
@@ -290,45 +312,77 @@ const MetricsHub = () => {
       .join(" ")
   }
 
-  const handleCreateMetric = () => {
-    if (!metricForm.name || !metricForm.group) {
-      alert("Please fill in all required fields")
+  const handleCreateMetric = async () => {
+    if (!metricForm.name || metricForm.dashboards.length === 0) {
+      alert("Please fill in a name and select at least one dashboard")
       return
     }
 
+    setSaving(true)
     const formulaString = buildFormulaString(metricForm.formulaParts)
 
-    const newMetric = {
-      id: `custom-${Date.now()}`,
+    const payload = {
       name: metricForm.name,
-      description: metricForm.description || `Custom metric: ${metricForm.name}`,
-      source: "Custom Formula",
-      dashboard: metricForm.group,
-      formula: formulaString,
-      formulaParts: metricForm.formulaParts,
-      displayOnDashboard: metricForm.displayOnDashboard,
-      category: "custom",
-      enabled: true,
+      description: metricForm.description || "",
+      formula_parts: metricForm.formulaParts,
+      formula_display: formulaString,
+      dashboards: metricForm.dashboards,
+      format_type: metricForm.formatType || "integer",
+      aggregation: metricForm.aggregation || "total",
     }
 
-    if (editingMetric) {
-      setCustomMetrics(
-        customMetrics.map((m) => (m.id === editingMetric.id ? { ...newMetric, id: editingMetric.id } : m)),
-      )
-    } else {
-      setCustomMetrics([...customMetrics, newMetric])
+    try {
+      if (editingMetric) {
+        const res = await apiRequest(`/api/custom-metrics/${editingMetric.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("Failed to update metric")
+        setCustomMetrics(customMetrics.map(m =>
+          m.id === editingMetric.id
+            ? { ...m, ...payload, formula: formulaString, dashboard: payload.dashboards.join(", "), formatType: payload.format_type, aggregation: payload.aggregation }
+            : m
+        ))
+      } else {
+        const res = await apiRequest("/api/custom-metrics", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        })
+        if (!res.ok) throw new Error("Failed to create metric")
+        const data = await res.json()
+        const newMetric = {
+          id: data.metric.id,
+          name: payload.name,
+          description: payload.description,
+          source: "Custom Formula",
+          dashboard: payload.dashboards.join(", "),
+          dashboards: payload.dashboards,
+          formula: formulaString,
+          formulaParts: payload.formula_parts,
+          formatType: payload.format_type,
+          aggregation: payload.aggregation,
+          displayOnDashboard: true,
+          category: "custom",
+          enabled: true,
+        }
+        setCustomMetrics([...customMetrics, newMetric])
+      }
+      resetForm()
+    } catch (err) {
+      alert("Failed to save metric: " + err.message)
+    } finally {
+      setSaving(false)
     }
-
-    resetForm()
   }
 
   const resetForm = () => {
     setMetricForm({
       name: "",
       description: "",
-      group: "",
+      dashboards: [],
       formulaParts: [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
-      displayOnDashboard: false,
+      formatType: "integer",
+      aggregation: "total",
     })
     setIsCreateDialogOpen(false)
     setEditingMetric(null)
@@ -340,17 +394,23 @@ const MetricsHub = () => {
     setEditingMetric(metric)
     setMetricForm({
       name: metric.name,
-      description: metric.description,
-      group: metric.dashboard,
+      description: metric.description || "",
+      dashboards: metric.dashboards || (metric.dashboard ? [metric.dashboard.toLowerCase()] : []),
       formulaParts: metric.formulaParts || [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
-      displayOnDashboard: metric.displayOnDashboard || false,
+      formatType: metric.formatType || "integer",
+      aggregation: metric.aggregation || "total",
     })
     setIsCreateDialogOpen(true)
   }
 
-  const handleDeleteMetric = (metricId) => {
-    if (confirm("Are you sure you want to delete this metric?")) {
-      setCustomMetrics(customMetrics.filter((m) => m.id !== metricId))
+  const handleDeleteMetric = async (metricId) => {
+    if (!confirm("Are you sure you want to delete this metric?")) return
+    try {
+      const res = await apiRequest(`/api/custom-metrics/${metricId}`, { method: "DELETE" })
+      if (!res.ok) throw new Error("Failed to delete")
+      setCustomMetrics(customMetrics.filter(m => m.id !== metricId))
+    } catch (err) {
+      alert("Failed to delete metric")
     }
   }
 
@@ -537,7 +597,7 @@ const MetricsHub = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f8fa] w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+    <div className="min-h-screen  w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -634,19 +694,11 @@ const MetricsHub = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-0">
-          <TabsList className="inline-flex h-13 w-full justify-start p-1 bg-[#F3F1F999] border border-border/60 shadow-sm overflow-x-auto md:overflow-x-hidden gap-2 md:gap-0">
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="all">
-              All Metrics
-            </TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="standard">
-              Standard Metrics
-            </TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="webhook">
-              Webhook Metrics
-            </TabsTrigger>
-            <TabsTrigger className="text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-white data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700" value="custom">
-              Custom Formulas
-            </TabsTrigger>
+          <TabsList className="w-full justify-start overflow-x-auto">
+            <TabsTrigger value="all">All Metrics</TabsTrigger>
+            <TabsTrigger value="standard">Standard Metrics</TabsTrigger>
+            <TabsTrigger value="webhook">Webhook Metrics</TabsTrigger>
+            <TabsTrigger value="custom">Custom Formulas</TabsTrigger>
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
@@ -765,102 +817,324 @@ const MetricsHub = () => {
 
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogContent className="max-w-2xl bg-white">
-            <DialogHeader>
-              <DialogTitle>{editingMetric ? "Edit Metric" : "Create New Metric"}</DialogTitle>
-              <DialogDescription>Build a custom metric by combining available metrics</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="metric-name" className="pb-2">Metric Name *</Label>
-                <Input
-                  id="metric-name"
-                  placeholder="e.g., ROI, Cost per Conversion"
-                  value={metricForm.name}
-                  onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="metric-description" className="pb-2">Description</Label>
-                <Textarea
-                  id="metric-description"
-                  placeholder="Optional description"
-                  value={metricForm.description}
-                  onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="metric-group" className="pb-2">Dashboard *</Label>
-                <Select value={metricForm.group} onValueChange={(value) => setMetricForm({ ...metricForm, group: value })}>
-                  <SelectTrigger className="bg-white">
-                    <SelectValue placeholder="Select dashboard" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="Clients">Clients</SelectItem>
-                    <SelectItem value="Campaigns">Campaigns</SelectItem>
-                    <SelectItem value="Contacts">Contacts</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label className="pb-2">Formula Builder</Label>
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
-                  {metricForm.formulaParts.map((part, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      {part.type === "metric" ? (
-                        <MetricSelector
-                          value={part.value}
-                          onChange={(newValue) => updateFormulaPart(index, newValue)}
-                          availableMetrics={availableMetricsForFormulas}
-                        />
-                      ) : (
-                        <Select value={part.value} onValueChange={(value) => updateFormulaPart(index, value)}>
-                          <SelectTrigger className="w-fit">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white">
-                            {operators.map((op) => (
-                              <SelectItem key={op.value} value={op.value}>{op.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFormulaPart(index)}
-                        disabled={metricForm.formulaParts.length === 1}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button variant="outline" size="sm" onClick={addOperation} className="w-full">
-                    <Plus className="h-4 w-4 mr-2" /> Add Operation
-                  </Button>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="display-dashboard"
-                  checked={metricForm.displayOnDashboard}
-                  onCheckedChange={(checked) => setMetricForm({ ...metricForm, displayOnDashboard: checked })}
-                />
-                <Label htmlFor="display-dashboard">Display on dashboard</Label>
+          <DialogContent
+            className="w-[90vw] max-w-none overflow-y-auto max-h-[90vh] p-0 gap-0 bg-background sm:!max-w-none !max-w-none"
+            showCloseButton={false}
+          >
+            {/* Header */}
+            <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg">
+              <div className="flex flex-col text-center sm:text-left space-y-1">
+                <DialogTitle>{editingMetric ? "Edit Metric" : "Create Metric"}</DialogTitle>
+                <DialogDescription>Build a formula by combining metrics and operations.</DialogDescription>
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={resetForm}>Cancel</Button>
-              <Button onClick={handleCreateMetric} className="bg-purple-600 text-white hover:bg-purple-700">
-                {editingMetric ? "Update" : "Create"}
-              </Button>
-            </DialogFooter>
+            {/* Body */}
+            <div className="p-6">
+              <div className="flex flex-col gap-6">
+                {/* Ask Birdy — Coming Soon */}
+                <div className="rounded-lg border border-border bg-card p-6 shadow-sm relative overflow-hidden">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-foreground">Need help? Ask Birdy to build it for you!</h3>
+                      <Badge className="bg-purple-100 text-purple-700 border-0 text-xs font-medium">Coming Soon</Badge>
+                    </div>
+                    <div className="flex gap-2 mt-3 opacity-50 pointer-events-none">
+                      <Input className="flex-1 h-11 rounded-lg" placeholder="e.g. 'Calculate my cost per booking'" disabled />
+                      <Button className="h-11 w-11 rounded-lg bg-primary text-primary-foreground shrink-0" disabled>
+                        <Zap className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Two-column layout */}
+                <div className="flex flex-col lg:flex-row gap-6 items-stretch">
+                  {/* Left column */}
+                  <div className="w-full lg:w-2/3 flex-1 space-y-4">
+                    {/* Name + Description */}
+                    <div className="rounded-lg border border-border bg-card p-6 grid grid-cols-2 gap-4">
+                      <div>
+                        <Label htmlFor="metric-name" className="block text-base font-semibold mb-1">Metric Name</Label>
+                        <Input
+                          id="metric-name"
+                          placeholder="e.g., Lead-to-Close Ratio"
+                          value={metricForm.name}
+                          onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="metric-description" className="block text-base font-semibold mb-1">Description</Label>
+                        <Input
+                          id="metric-description"
+                          placeholder="Describe what this metric measures"
+                          value={metricForm.description}
+                          onChange={(e) => setMetricForm({ ...metricForm, description: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Dashboard selector — auto-restricted by metric level */}
+                    <div className="rounded-lg border border-border bg-card p-6">
+                      <h4 className="text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
+                      {(() => {
+                        // Detect the level from formula metrics
+                        const LEVEL_MAP = {
+                          meta_spend: "group", meta_impressions: "group", meta_clicks: "group",
+                          meta_reach: "group", meta_results: "group", meta_ctr: "group",
+                          meta_cpc: "group", meta_cpm: "group", meta_leads: "group",
+                          ghl_contacts: "group", ghl_revenue: "group", ghl_conversion: "group",
+                          conversion_rate: "group", cost_per_lead: "group", engagement_rate: "group",
+                          spend: "campaign", impressions: "campaign", clicks: "campaign",
+                          reach: "campaign", results: "campaign", leads: "campaign",
+                          ctr: "campaign", cpc: "campaign", cpm: "campaign",
+                          frequency: "campaign", cpl: "campaign", cost_per_result: "campaign",
+                          opportunityValue: "lead",
+                        }
+                        const LEVEL_DASHBOARDS = {
+                          group: ["clients"],
+                          campaign: ["campaigns", "adsets", "ads"],
+                          lead: ["leads", "marketing_leads"],
+                        }
+                        const formulaMetricIds = metricForm.formulaParts
+                          .filter(p => p.type === "metric" && p.value)
+                          .map(p => p.value)
+                        const levels = new Set(formulaMetricIds.map(id => LEVEL_MAP[id]).filter(Boolean))
+                        const detectedLevel = levels.size === 1 ? [...levels][0] : null
+                        const mixedLevels = levels.size > 1
+                        const allowedDashboards = detectedLevel ? new Set(LEVEL_DASHBOARDS[detectedLevel]) : null
+
+                        const DASHBOARD_OPTIONS = [
+                          { value: "clients", label: "Client Groups", group: "Group Level" },
+                          { value: "campaigns", label: "Campaigns", group: "Campaign Level" },
+                          { value: "adsets", label: "Ad Sets", group: "Campaign Level" },
+                          { value: "ads", label: "Ads", group: "Campaign Level" },
+                          { value: "leads", label: "Leads Hub", group: "Lead Level" },
+                          { value: "marketing_leads", label: "Marketing Hub — Leads", group: "Lead Level" },
+                        ]
+
+                        let lastGroup = ""
+                        return (
+                          <div className="space-y-2">
+                            {mixedLevels && (
+                              <p className="text-xs text-red-500 font-medium">Cannot mix group-level and campaign-level metrics in the same formula.</p>
+                            )}
+                            <div className="flex flex-wrap gap-2">
+                              {DASHBOARD_OPTIONS.map(d => {
+                                const checked = metricForm.dashboards.includes(d.value)
+                                const disabled = mixedLevels || (allowedDashboards && !allowedDashboards.has(d.value))
+                                const showGroup = d.group !== lastGroup
+                                lastGroup = d.group
+                                return (
+                                  <label
+                                    key={d.value}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                                      disabled
+                                        ? "opacity-40 cursor-not-allowed bg-muted border-border"
+                                        : checked
+                                          ? "bg-purple-50 border-purple-300 text-purple-700 cursor-pointer"
+                                          : "bg-white border-border hover:border-purple-200 cursor-pointer"
+                                    }`}
+                                  >
+                                    <Checkbox
+                                      checked={checked}
+                                      disabled={disabled}
+                                      onCheckedChange={(c) => {
+                                        setMetricForm(f => ({
+                                          ...f,
+                                          dashboards: c
+                                            ? [...f.dashboards, d.value]
+                                            : f.dashboards.filter(x => x !== d.value),
+                                        }))
+                                      }}
+                                      className="h-3.5 w-3.5"
+                                    />
+                                    {d.label}
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+
+                    {/* Calculation Logic */}
+                    <div className="rounded-lg border border-border bg-card p-6 flex-1">
+                      <h4 className="text-base font-semibold text-foreground mb-3">Calculation Logic</h4>
+                      <div className="min-h-[80px] rounded-xl border border-dashed border-border/60 bg-muted/30 p-4 flex flex-wrap gap-2 items-center">
+                        {metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value) ? (
+                          <span className="text-sm text-muted-foreground">Click &quot;Add Metric&quot; to start building your formula</span>
+                        ) : (
+                          metricForm.formulaParts.map((part, index) => {
+                            if (part.type === "operator") {
+                              return (
+                                <span key={index} className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-semibold">
+                                  {part.value === "*" ? "×" : part.value === "/" ? "÷" : part.value}
+                                </span>
+                              )
+                            }
+                            const metricLabel = availableMetricsForFormulas.find(m => m.id === part.value)?.label || part.value
+                            return (
+                              <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-border text-sm font-medium shadow-sm">
+                                {metricLabel}
+                                <button
+                                  type="button"
+                                  onClick={() => removeFormulaPart(index)}
+                                  className="text-muted-foreground hover:text-red-500 transition-colors"
+                                  disabled={metricForm.formulaParts.length === 1}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </span>
+                            )
+                          })
+                        )}
+                      </div>
+                      <div className="flex items-center justify-center gap-3 mt-4">
+                        {/* Operator buttons — only enabled when last part is a metric */}
+                        <div className="flex items-center gap-1.5">
+                          {["+", "-", "×", "/"].map(op => {
+                            const lastPart = metricForm.formulaParts[metricForm.formulaParts.length - 1]
+                            const canAddOp = lastPart?.type === "metric" && lastPart?.value
+                            return (
+                              <button
+                                key={op}
+                                type="button"
+                                disabled={!canAddOp}
+                                onClick={() => {
+                                  const opVal = op === "×" ? "*" : op === "÷" || op === "/" ? "/" : op
+                                  setMetricForm(f => ({
+                                    ...f,
+                                    formulaParts: [...f.formulaParts, { type: "operator", value: opVal }],
+                                  }))
+                                }}
+                                className="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                {op}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {/* Add Metric — only enabled when formula is empty or last part is an operator */}
+                        {(() => {
+                          const lastPart = metricForm.formulaParts[metricForm.formulaParts.length - 1]
+                          const isEmpty = metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value)
+                          const canAddMetric = isEmpty || lastPart?.type === "operator"
+                          return (
+                            <MetricPicker
+                              metrics={formulaMetricOptions}
+                              value=""
+                              disabled={!canAddMetric}
+                              placeholder="+ Add Metric"
+                              triggerClassName="text-xs h-9 gap-1.5 w-auto"
+                              onChange={(metricId) => {
+                                if (isEmpty) {
+                                  setMetricForm(f => ({ ...f, formulaParts: [{ type: "metric", value: metricId }] }))
+                                } else {
+                                  setMetricForm(f => ({
+                                    ...f,
+                                    formulaParts: [...f.formulaParts, { type: "metric", value: metricId }],
+                                  }))
+                                }
+                              }}
+                            />
+                          )
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right column — Preview */}
+                  <div className="w-full lg:w-1/3 flex-shrink-0 self-stretch">
+                    <div className="rounded-lg border text-card-foreground shadow-sm bg-card h-full flex flex-col">
+                      <div className="p-6 pt-6 flex-1 flex flex-col justify-between">
+                        <div className="text-center p-4 flex-1 flex flex-col justify-center">
+                          <div className="text-4xl font-bold">
+                            {(() => {
+                              // Compute a preview with sample data
+                              const parts = metricForm.formulaParts
+                              if (!parts.length || !parts[0].value) return "–"
+                              // Check if formula is complete (doesn't end with an operator)
+                              const lastPart = parts[parts.length - 1]
+                              if (lastPart.type === "operator") return "–"
+                              const sampleData = {
+                                meta_spend: 1000, spend: 1000, meta_impressions: 50000, impressions: 50000,
+                                meta_clicks: 1500, clicks: 1500, meta_reach: 20000, reach: 20000,
+                                meta_results: 120, results: 120, leads: 120, meta_leads: 120,
+                                meta_ctr: 3.0, ctr: 3.0, meta_cpc: 0.67, cpc: 0.67,
+                                meta_cpm: 20.0, cpm: 20.0, ghl_contacts: 200, frequency: 2.5,
+                                conversion_rate: 8.0, cost_per_lead: 8.33, engagement_rate: 3.24,
+                              }
+                              try {
+                                const expr = parts.map(p => {
+                                  if (p.type === "operator") return p.value === "×" ? "*" : p.value === "÷" ? "/" : p.value
+                                  return String(sampleData[p.value] ?? 100)
+                                }).join(" ")
+                                const result = Function(`"use strict"; return (${expr})`)()
+                                if (!isFinite(result)) return "–"
+                                const fmt = metricForm.formatType
+                                if (fmt === "currency") return `$${result.toFixed(2)}`
+                                if (fmt === "percentage") return `${result.toFixed(1)}%`
+                                if (fmt === "decimal") return result.toFixed(2)
+                                return Math.round(result).toLocaleString()
+                              } catch { return "–" }
+                            })()}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground/50 mt-1">sample preview</div>
+                          <div className="text-sm text-muted-foreground mt-3">{metricForm.name || "Unnamed Metric"}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {metricForm.formulaParts.length > 0 && metricForm.formulaParts[0].value
+                              ? buildFormulaString(metricForm.formulaParts)
+                              : "No formula"}
+                          </div>
+                        </div>
+                        <div className="border-t border-border pt-4 mt-2">
+                          <div className="grid grid-cols-2 gap-3">
+                            <Select
+                              value={metricForm.formatType}
+                              onValueChange={v => setMetricForm(f => ({ ...f, formatType: v }))}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                <SelectItem value="integer">Integer</SelectItem>
+                                <SelectItem value="currency">Currency</SelectItem>
+                                <SelectItem value="percentage">Percentage</SelectItem>
+                                <SelectItem value="decimal">Decimal</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={metricForm.aggregation}
+                              onValueChange={v => setMetricForm(f => ({ ...f, aggregation: v }))}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white">
+                                <SelectItem value="total">Total</SelectItem>
+                                <SelectItem value="average">Average</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg">
+              <div className="flex flex-row justify-end gap-2">
+                <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
+                <Button onClick={handleCreateMetric} disabled={saving} className="bg-purple-600 hover:bg-purple-700 text-white">
+                  {saving ? "Saving..." : (editingMetric ? "Update Metric" : "Save Metric")}
+                </Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

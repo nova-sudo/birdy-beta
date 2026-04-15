@@ -11,6 +11,7 @@ import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
 import { publicRequest } from "@/lib/api"
+import BirdyLogo from "@/components/BirdyLogo"
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -87,12 +88,12 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4">
-      <div className="w-[calc(100dvw-0px)] max-w-md">
+    <div className="w-full">
+      <div className="w-full">
         <Card className="shadow-md border bg-white">
           <CardHeader className="space-y-1 text-center pb-8">
-            <div className="mx-auto w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mb-4">
-              <Lock className="w-6 h-6 text-white" />
+            <div className="mx-auto mb-4 flex justify-center">
+              <BirdyLogo variant="icon" theme="light" size={56} priority />
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">Welcome back</CardTitle>
             <CardDescription className="text-gray-600">

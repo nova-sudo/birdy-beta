@@ -25,7 +25,7 @@ function TabsList({
     <TabsPrimitive.List
       data-slot="tabs-list"
       className={cn(
-        "bg-muted text-muted-foreground inline-flex h-9 w-fit items-center justify-center rounded-lg p-[3px]",
+        "relative z-0 flex w-fit items-center justify-center gap-x-0.5 rounded-xl bg-muted p-1.5 text-muted-foreground/72 data-[orientation=vertical]:flex-col data-[orientation=vertical]:px-1 data-[orientation=horizontal]:py-1",
         className
       )}
       {...props} />
@@ -40,7 +40,10 @@ function TabsTrigger({
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       className={cn(
-        "data-[state=active]:  focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:outline-ring  text-foreground  inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-[color,box-shadow] focus-visible:ring-[3px] focus-visible:outline-1 disabled:pointer-events-none disabled:opacity-100 data-[state=active]:shadow-sm [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "[&_svg]:-mx-0.5 flex shrink-0 grow cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-transparent font-medium text-base outline-none transition-[color,background-color,box-shadow] focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 sm:text-sm [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        "text-muted-foreground hover:text-foreground/80 data-[state=active]:text-foreground data-[state=active]:bg-background data-[state=active]:shadow-sm",
+        "h-9 gap-1.5 px-2.5 sm:h-8",
+        "data-[orientation=vertical]:w-full data-[orientation=vertical]:justify-start",
         className
       )}
       {...props} />
@@ -55,9 +58,9 @@ function TabsContent({
     <TabsPrimitive.Content
       data-slot="tabs-content"
       className={cn("flex-1 outline-none", className)}
-      {...props} 
-      
-      />
+      {...props}
+
+    />
   );
 }
 

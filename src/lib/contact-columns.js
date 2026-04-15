@@ -1,7 +1,8 @@
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TiTag } from "react-icons/ti"
-import { ghlIcon as ghl, labIcon as lab } from "@/lib/icons"
+import { ghlIcon as ghl, metaIcon as meta, hpIcon as hp, labIcon as lab } from "@/lib/icons"
+import Image from "next/image"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { STORAGE_KEYS } from "@/lib/constants"
 
@@ -337,4 +338,65 @@ export const buildContactColumns = () => [
   },
   { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
   { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+
+  // Cross-source matching columns
+  {
+    id: "sources",
+    header: "Sources",
+    label: "Sources",
+    defaultVisible: true,
+    sortable: false,
+    icons: lab,
+    category: "sources",
+    cell: (_, row) => {
+      const s = row?.sources || {}
+      return (
+        <div className="flex items-center gap-2">
+          {s.ghl ? <Image src={ghl} alt="GHL" width={16} height={16} title="GHL" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
+          {s.meta ? <Image src={meta} alt="Meta" width={16} height={16} title="Meta" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
+          {s.hp ? <Image src={hp} alt="HP" width={16} height={16} title="HotProspector" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
+        </div>
+      )
+    },
+  },
+  {
+    id: "metaCampaign",
+    header: "Meta Campaign",
+    label: "Meta Campaign",
+    defaultVisible: true,
+    sortable: true,
+    icons: meta,
+    category: "sources",
+    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.campaign_name || ""}>{row?.meta_enrichment?.campaign_name || "–"}</span>,
+  },
+  {
+    id: "metaAdName",
+    header: "Meta Ad",
+    label: "Meta Ad",
+    defaultVisible: true,
+    sortable: true,
+    icons: meta,
+    category: "sources",
+    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.ad_name || ""}>{row?.meta_enrichment?.ad_name || "–"}</span>,
+  },
+  {
+    id: "metaAdsetName",
+    header: "Meta Ad Set",
+    label: "Meta Ad Set",
+    defaultVisible: false,
+    sortable: true,
+    icons: meta,
+    category: "sources",
+    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.adset_name || ""}>{row?.meta_enrichment?.adset_name || "–"}</span>,
+  },
+  {
+    id: "hpCallCount",
+    header: "HP Calls",
+    label: "HP Calls",
+    defaultVisible: false,
+    sortable: true,
+    icons: hp,
+    category: "sources",
+    cell: (_, row) => <span className="text-sm">{row?.hp_enrichment?.call_logs_count ?? "–"}</span>,
+  },
 ]

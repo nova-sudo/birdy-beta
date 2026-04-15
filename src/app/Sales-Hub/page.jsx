@@ -606,27 +606,12 @@ export default function CallCenterPage() {
 
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
-              <TabsList className="inline-flex h-13 items-center w-full justify-start  p-1 bg-[#F3F1F999] border border-border/60 shadow-sm">
-                <TabsTrigger value="leads"
-                  className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700" >
+              <TabsList className="w-full justify-start">
+                <TabsTrigger value="leads">
                   <Phone className="h-4 w-4 mr-2" />
                   Leads
                 </TabsTrigger>
-                <TabsTrigger value="members" className="text-[#71658B] font-semibold hover:bg-[#FBFAFE]
-                  data-[state=active]:bg-white
-                  data-[state=active]:text-foreground
-                  data-[state=active]:shadow-sm
-                  data-[state=active]:border-r-0
-                  data-[state=active]:rounded-md
-                  data-[state=active]:border-b-2
-                  data-[state=active]:border-b-purple-700" >
+                <TabsTrigger value="members">
                   <Users className="h-4 w-4 mr-2" />
                   Members
                 </TabsTrigger>

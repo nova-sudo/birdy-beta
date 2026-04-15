@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { Progress } from "@/components/ui/progress"
 import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
@@ -15,7 +16,36 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleString()
 }
 
-function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshStatus, onRefresh }) {
+function RefreshProgress({ progress }) {
+  if (!progress || progress.status === "complete") return null
+
+  const { presets_done = 0, presets_total = 13, presets_failed = 0, leads_status, current_step, attempt, max_attempts, next_retry_at } = progress
+  const pct = presets_total > 0 ? Math.round((presets_done / presets_total) * 100) : 0
+
+  const stepLabel = {
+    presets: `Fetching presets (${presets_done}/${presets_total})`,
+    leads: "Fetching leads...",
+    lead_counts: "Calculating lead counts...",
+    done: "Finalizing...",
+  }[current_step] || "Processing..."
+
+  return (
+    <div className="space-y-2 mt-2">
+      <Progress value={current_step === "leads" ? 85 : current_step === "lead_counts" ? 95 : pct} className="h-1.5" />
+      <p className="text-[11px] text-muted-foreground">{stepLabel}</p>
+      {presets_failed > 0 && (
+        <p className="text-[11px] text-amber-600">{presets_failed} preset(s) will retry</p>
+      )}
+      {progress.status === "partial" && next_retry_at && (
+        <p className="text-[11px] text-blue-600">
+          Retrying automatically (attempt {attempt}/{max_attempts})
+        </p>
+      )}
+    </div>
+  )
+}
+
+function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshStatus, refreshProgress, refreshError, onRefresh }) {
   const isRefreshing = refreshStatus === "running"
 
   return (
@@ -70,15 +100,26 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
               )}
             </Button>
 
+            {isRefreshing && refreshProgress && (
+              <RefreshProgress progress={refreshProgress} />
+            )}
+
             {refreshStatus === "complete" && (
               <p className="text-xs text-green-600 flex items-center gap-1 justify-center">
                 <CheckCircle className="h-3 w-3" /> Refresh completed
               </p>
             )}
             {refreshStatus === "error" && (
-              <p className="text-xs text-red-600 flex items-center gap-1 justify-center">
-                <XCircle className="h-3 w-3" /> Refresh failed
-              </p>
+              <div className="text-center">
+                <p className="text-xs text-red-600 flex items-center gap-1 justify-center">
+                  <XCircle className="h-3 w-3" /> Refresh failed
+                </p>
+                {refreshError && (
+                  <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-full" title={refreshError}>
+                    {refreshError}
+                  </p>
+                )}
+              </div>
             )}
           </>
         ) : (
@@ -93,6 +134,9 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
 
 export default function IntegrationsContent({ group, onRefreshComplete }) {
   const [refreshStatus, setRefreshStatus] = useState({ meta: "idle", ghl: "idle" })
+  const [metaProgress, setMetaProgress] = useState(null)
+  const [metaError, setMetaError] = useState(null)
+  const [ghlError, setGhlError] = useState(null)
   const pollingRef = useRef(null)
 
   // Poll refresh status while any integration is running
@@ -106,29 +150,48 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
           if (!res.ok) return
           const data = await res.json()
 
+          // Capture granular progress
+          if (data.meta_refresh_progress) {
+            setMetaProgress(data.meta_refresh_progress)
+          }
+          if (data.meta_refresh_error) setMetaError(data.meta_refresh_error)
+          if (data.ghl_refresh_error) setGhlError(data.ghl_refresh_error)
+
           setRefreshStatus(prev => {
-            const updated = {
-              meta: data.meta_refresh_status || "idle",
-              ghl: data.ghl_refresh_status || "idle",
+            const metaStatus = data.meta_refresh_status || "idle"
+            const ghlStatus = data.ghl_refresh_status || "idle"
+
+            // Treat "partial" as done for polling purposes — the scheduler
+            // handles retries automatically, no need to keep polling.
+            const metaDone = metaStatus !== "running"
+            const ghlDone = ghlStatus !== "running"
+
+            // Notify on transitions
+            if (prev.meta === "running" && metaDone) {
+              if (metaStatus === "complete") {
+                toast.success("Meta data refresh complete")
+                onRefreshComplete?.()
+              } else if (metaStatus === "error" || metaStatus === "failed") {
+                toast.error(data.meta_refresh_error || "Meta data refresh failed")
+              } else if (metaStatus === "partial") {
+                toast.info("Meta refresh partially complete — retrying failed steps automatically")
+                onRefreshComplete?.()
+              }
+              setMetaProgress(null)
+            }
+            if (prev.ghl === "running" && ghlDone) {
+              if (ghlStatus === "complete") {
+                toast.success("GHL data refresh complete")
+                onRefreshComplete?.()
+              } else if (ghlStatus === "error") {
+                toast.error(data.ghl_refresh_error || "GHL data refresh failed")
+              }
             }
 
-            // If something just finished, notify
-            if (prev.meta === "running" && updated.meta === "complete") {
-              toast.success("Meta data refresh complete")
-              onRefreshComplete?.()
+            return {
+              meta: metaDone ? metaStatus : "running",
+              ghl: ghlDone ? ghlStatus : "running",
             }
-            if (prev.ghl === "running" && updated.ghl === "complete") {
-              toast.success("GHL data refresh complete")
-              onRefreshComplete?.()
-            }
-            if (prev.meta === "running" && updated.meta === "error") {
-              toast.error("Meta data refresh failed")
-            }
-            if (prev.ghl === "running" && updated.ghl === "error") {
-              toast.error("GHL data refresh failed")
-            }
-
-            return updated
           })
         } catch {
           // Silently retry on next interval
@@ -193,6 +256,8 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
         ]}
         lastRefresh={group.last_meta_refresh}
         refreshStatus={refreshStatus.meta}
+        refreshProgress={metaProgress}
+        refreshError={metaError}
         onRefresh={() => handleRefresh("meta")}
       />
 

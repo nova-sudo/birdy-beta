@@ -109,6 +109,19 @@ export default function ClientsPage() {
   const [progress, setProgress] = useState(0)
   const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
+  useEffect(() => {
+    apiRequest("/api/custom-metrics").then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      setCustomMetrics((data.custom_metrics || []).map(m => ({
+        id: m.id, name: m.name, description: m.description || "",
+        source: "Custom Formula", dashboard: (m.dashboards || []).join(", "),
+        dashboards: m.dashboards || [], formula: m.formula_display || "",
+        formulaParts: m.formula_parts || [], formatType: m.format_type || "integer",
+        displayOnDashboard: true, category: "custom", enabled: true,
+      })))
+    }).catch(() => {})
+  }, [])
   const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
   const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
   const [duplicateGroupName, setDuplicateGroupName] = useState("")
@@ -128,7 +141,7 @@ export default function ClientsPage() {
 
     // Add custom formula metrics
     const custom = customMetrics
-      .filter((m) => m.enabled && m.dashboard === "Clients")
+      .filter((m) => m.enabled && (m.dashboards?.includes("clients") || m.dashboard === "Clients"))
       .map((m) => ({
         id: m.id,
         label: m.name,
@@ -452,18 +465,18 @@ export default function ClientsPage() {
       return sum + spend
     }, 0)
 
-    // ← Read Meta leads, not GHL contacts
+    // Use results from insights, fallback to summing campaign results, then total_leads
     const totalLeads = clientGroups.reduce((sum, group) => {
-      const leads = parseInt(group.facebook?.metrics?.insights?.total_leads) || 0
-      return sum + leads
+      let results = parseInt(group.facebook?.metrics?.insights?.results) || 0
+      if (!results && group.facebook?.campaigns?.length) {
+        results = group.facebook.campaigns.reduce((s, c) => s + (c.results || 0), 0)
+      }
+      if (!results) results = parseInt(group.facebook?.metrics?.insights?.total_leads) || 0
+      return sum + results
     }, 0)
 
-    // ← Read pre-calculated CPL from backend instead of dividing manually
-    const totalCPL = clientGroups.reduce((sum, group) => {
-      const cpl = parseFloat(group.facebook?.metrics?.insights?.cost_per_result) || 0
-      return sum + cpl
-    }, 0)
-    const averageCPL = clientGroups.length > 0 ? totalCPL / clientGroups.filter(g => g.facebook?.metrics?.insights?.cost_per_result > 0).length : 0
+    // CPL = total spend / total results
+    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
 
     return {
       activeClients,
@@ -476,8 +489,8 @@ export default function ClientsPage() {
   const stats = calculateStats()
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto bg-[#f6f8fa] gap-6">
-      <div className="bg-[#f6f8fa]">
+    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto gap-6">
+      <div className="">
         <div className="h-auto mx-auto">
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
@@ -1001,7 +1014,7 @@ export default function ClientsPage() {
                 </div>
               ) : (
                 <div className="text-2xl font-bold">
-                  {getSymbolFromCurrency(userCurrency)}{stats.totalLeads.toLocaleString('en-US',{ minimumFractionDigits:2,maximumFractionDigits:2})}
+                 {stats.totalLeads}
                   </div>
               )}
               <p className="text-xs text-[#71658B] text-muted-foreground ">

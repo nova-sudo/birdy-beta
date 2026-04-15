@@ -9,7 +9,7 @@ import { extractUniqueTags } from './enhanced-columns-config';
 // Base metric ID to data key mapping
 const BASE_METRIC_MAPPING = {
   // Clients dashboard (GoHighLevel & Meta Ads)
-  leads: "ghl_contacts",
+  leads: "leads",
   bookings: "bookings",
   "total-revenue": "total_revenue",
   "upsell-revenue": "upsell_revenue",
@@ -40,8 +40,19 @@ const BASE_METRIC_MAPPING = {
   ctr: "ctr",
   frequency: "frequency",
   cpm: "cpm",
+  results: "results",
   "campaign-results": "results",
   "campaign-leads": "leads",
+  cpl: "cpl",
+  cost_per_result: "cost_per_result",
+  // GHL metrics (available on campaign rows via groupMeta)
+  ghl_revenue: "ghl_revenue",
+  ghl_won_opps: "ghl_won_opps",
+  ghl_lost_opps: "ghl_lost_opps",
+  ghl_open_opps: "ghl_open_opps",
+  ghl_abandoned_opps: "ghl_abandoned_opps",
+  ghl_total_opps: "ghl_total_opps",
+  meta_results: "meta_results",
   
   // Contacts page
   "lead-value": "leadValue",
@@ -89,34 +100,60 @@ export function getMetricMapping() {
 // Export for backwards compatibility
 export const METRIC_ID_TO_DATA_KEY = BASE_METRIC_MAPPING;
 
-// Load custom metrics from localStorage
+// ── Custom metrics cache (populated from API by consumer components) ──
+let _customMetricsCache = []
+
+export function setCustomMetricsCache(metrics) {
+  _customMetricsCache = Array.isArray(metrics) ? metrics : []
+}
+
 export function loadCustomMetrics() {
-  try {
-    const stored = localStorage.getItem("customMetrics")
-    console.log("Loading custom metrics from localStorage:", stored)
-    if (!stored) return []
-    const metrics = JSON.parse(stored)
-    console.log("Parsed custom metrics:", metrics)
-    return Array.isArray(metrics) ? metrics : []
-  } catch (err) {
-    console.error("Failed to load custom metrics:", err)
-    return []
-  }
+  return _customMetricsCache
 }
 
 // Get custom metric by ID
 export function getCustomMetricById(metricId) {
-  const customMetrics = loadCustomMetrics()
-  return customMetrics.find(m => m.id === metricId)
+  return _customMetricsCache.find(m => m.id === metricId)
 }
 
 // Get display name for a metric (handles both standard and custom metrics)
+const METRIC_DISPLAY_NAMES = {
+  results: "Results",
+  cpl: "CPL",
+  cost_per_result: "Cost Per Result",
+  conversion_rate: "Conv. Rate",
+  spend: "Spend",
+  impressions: "Impressions",
+  clicks: "Clicks",
+  reach: "Reach",
+  ctr: "CTR",
+  cpc: "CPC",
+  cpm: "CPM",
+  cpp: "CPP",
+  frequency: "Frequency",
+  social_spend: "Social Spend",
+  adAccount: "Ad Account",
+  clientGroup: "Client Group",
+  account_currency: "Currency",
+  conversion_rate_ranking: "Conv. Rate Ranking",
+  ghl_matched: "GHL Match",
+  ghl_opportunity_status: "Opp. Status",
+  ghl_opportunity_value: "Opp. Value",
+  ghl_tags: "GHL Tags",
+  ghl_date_added: "GHL Date Added",
+}
+
 export function getMetricDisplayName(metricId) {
+  // Check explicit display names first
+  if (METRIC_DISPLAY_NAMES[metricId]) {
+    return METRIC_DISPLAY_NAMES[metricId]
+  }
+
   const customMetric = getCustomMetricById(metricId)
   if (customMetric) {
     return customMetric.name
   }
-  
+
   // Check if it's a tag metric
   if (metricId.startsWith('tag_')) {
     const tagName = metricId
@@ -127,7 +164,7 @@ export function getMetricDisplayName(metricId) {
       .join(' ');
     return `Tag: ${tagName}`;
   }
-  
+
   // Fallback to formatting the ID
   return metricId
     .split("_")

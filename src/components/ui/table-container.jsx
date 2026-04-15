@@ -65,6 +65,9 @@ const StyledTable = ({
   enableSelection = false,
   selectedRows = new Set(),
   onSelectionChange,
+  enableStatusToggle = false,
+  onStatusToggle,
+  togglingRows = new Set(),
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -166,6 +169,13 @@ const StyledTable = ({
 
     return data.map((group) => {
       const ghlContacts = group.gohighlevel?.metrics?.total_contacts ?? 0;
+      const ghlOppStats = group.gohighlevel?.metrics?.opportunity_stats || {}
+      const ghlRevenue = ghlOppStats.won_revenue ?? 0;
+      const ghlWonOpps = ghlOppStats.won ?? 0;
+      const ghlLostOpps = ghlOppStats.lost ?? 0;
+      const ghlOpenOpps = ghlOppStats.open ?? 0;
+      const ghlAbandonedOpps = ghlOppStats.abandoned ?? 0;
+      const ghlTotalOpps = ghlOppStats.total_opportunities ?? 0;
       const metaCampaigns = group.facebook?.metrics?.total_campaigns ?? 0;
       const metaAdsets = group.facebook?.metrics?.total_adsets ?? 0;
       const metaAds = group.facebook?.metrics?.total_ads ?? 0;
@@ -173,18 +183,28 @@ const StyledTable = ({
       const metaImpressions = group.facebook?.metrics?.insights?.impressions ?? 0;
       const metaClicks = group.facebook?.metrics?.insights?.clicks ?? 0;
       const metaReach = group.facebook?.metrics?.insights?.reach ?? 0;
-      const metaResults = group.facebook?.metrics?.insights?.results ?? 0;
+      // Use insights.results first; if 0, sum from campaigns array as fallback
+      let metaResults = group.facebook?.metrics?.insights?.results ?? 0;
+      if (!metaResults && group.facebook?.campaigns?.length) {
+        metaResults = group.facebook.campaigns.reduce((sum, c) => sum + (c.results || 0), 0);
+      }
       const metaCpm = group.facebook?.metrics?.insights?.cpm ?? 0;
       const metaCpc = group.facebook?.metrics?.insights?.cpc ?? 0;
       const metaCtr = group.facebook?.metrics?.insights?.ctr ?? 0;
       const metaCostPerResult = group.facebook?.metrics?.insights?.cost_per_result ?? 0;
-      const metaLeads = group.facebook?.metrics?.insights?.total_leads ?? 0;
+      const metaLeads = metaResults || group.facebook?.metrics?.insights?.total_leads || 0;
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
       const base = {
         id: group.id,
         name: group.name || "Unnamed Group",
         ghl_contacts: ghlContacts,
+        ghl_revenue: ghlRevenue,
+        ghl_won_opps: ghlWonOpps,
+        ghl_lost_opps: ghlLostOpps,
+        ghl_open_opps: ghlOpenOpps,
+        ghl_abandoned_opps: ghlAbandonedOpps,
+        ghl_total_opps: ghlTotalOpps,
         meta_campaigns: metaCampaigns,
         meta_adsets: metaAdsets,
         meta_ads: metaAds,
@@ -243,7 +263,7 @@ const StyledTable = ({
         base.best_ad_ctr = bestAd?.ctr ?? 0;
 
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
-        base.cost_per_lead = metaCostPerResult;
+        base.cost_per_lead = metaLeads > 0 ? (metaSpend / metaLeads) : 0;
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
 
         base.meta_freshness = getDataFreshness(group.last_meta_refresh);
@@ -428,8 +448,13 @@ const StyledTable = ({
       return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
     }
 
-    if (customMetrics?.some((m) => m.id === columnId)) {
-      return formatMetricValue(value, columnId);
+    const customMatch = customMetrics?.find((m) => m.id === columnId);
+    if (customMatch) {
+      const fmt = customMatch.formatType || customMatch.format_type || "integer";
+      if (fmt === "currency") return formatCurrency(value);
+      if (fmt === "percentage") return `${Number(value).toFixed(2)}%`;
+      if (fmt === "decimal") return Number(value).toFixed(2);
+      return Number(value).toLocaleString();
     }
 
     if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per")) {
@@ -538,6 +563,12 @@ const StyledTable = ({
                   </div>
                 </th>
               )}
+              {/* Status toggle header */}
+              {enableStatusToggle && (
+                <th className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78" style={enableSelection ? { position: 'sticky', left: 40, zIndex: 50 } : { position: 'sticky', left: 0, zIndex: 50 }}>
+                  <div className="flex items-center justify-center">Status</div>
+                </th>
+              )}
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -549,7 +580,7 @@ const StyledTable = ({
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
                     }`}
-                  style={enableSelection && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: 40 } : undefined}
+                  style={(enableSelection || enableStatusToggle) && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
                 >
                   <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
@@ -694,6 +725,33 @@ const StyledTable = ({
                         />
                       </td>
                     )}
+                    {/* Status toggle cell */}
+                    {enableStatusToggle && (
+                      <td
+                        className={`w-[70px] min-w-[70px] px-1 ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"} ${isSelected ? "!bg-primary/5" : ""}`}
+                        style={enableSelection ? { position: 'sticky', left: 40, zIndex: 30 } : { position: 'sticky', left: 0, zIndex: 30 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {togglingRows.has(row.id) ? (
+                          <div className="flex items-center justify-center">
+                            <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => onStatusToggle?.(row.id, row.status)}
+                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
+                              String(row.status).toLowerCase() === "active"
+                                ? "bg-purple-600"
+                                : "bg-gray-300"
+                            }`}
+                          >
+                            <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                              String(row.status).toLowerCase() === "active" ? "translate-x-[18px]" : "translate-x-[3px]"
+                            }`} />
+                          </button>
+                        )}
+                      </td>
+                    )}
                     {visibleColumns.map((col, colIdx) => (
                       <td
                         key={`${row.id || idx}-${col.id}`}
@@ -703,7 +761,7 @@ const StyledTable = ({
                               : "fixed-column-even h-11"
                             : ""
                           } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
-                        style={enableSelection && colIdx === 0 ? { left: 40 } : undefined}
+                        style={(enableSelection || enableStatusToggle) && colIdx === 0 ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
                       >
                         <div
                           className={
