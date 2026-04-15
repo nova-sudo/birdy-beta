@@ -441,7 +441,7 @@ const StyledTable = ({
       return formatMetricValue(value, columnId);
     }
 
-    if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per")) {
+    if (columnId.includes("spend") || columnId.includes("cpc") || columnId.includes("cpm") || columnId.includes("cost_per") || columnId.includes("revenue")) {
       return formatCurrency(value);
     }
     if (columnId.includes("ctr") || columnId.includes("rate")) {

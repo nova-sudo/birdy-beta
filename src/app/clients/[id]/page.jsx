@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Save, DollarSign, Construction, Clock, Trash2 } from "lucide-react"
+import { ArrowLeft, Save, DollarSign, Clock, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { Loading } from "@/components/ui/loader"
@@ -17,6 +17,8 @@ import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import BirdyChat from "@/components/chat/BirdyChat"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -47,6 +49,10 @@ export default function ClientDetailsPage() {
   const [clientData, setClientData] = useState(null)
   const [notes, setNotes] = useState("")
   const [alerts, setAlerts] = useState([])
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteInput, setDeleteInput] = useState("")
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState("")
 
   // ── Shared date preset for Marketing & Leads tabs ──────────────────────────
   const {
@@ -152,6 +158,29 @@ export default function ClientDetailsPage() {
     }
   }
 
+  // ── Delete group ───────────────────────────────────────────────────────────
+  const handleDeleteGroup = async () => {
+    if (deleteInput.trim() !== groupName?.trim()) {
+      setDeleteError("Name does not match. Please try again.")
+      return
+    }
+    try {
+      setDeleteLoading(true)
+      const res = await apiRequest(`/api/client-groups/${clientId}`, { method: "DELETE" })
+      localStorage.removeItem(`clientGroups_last_7d`)
+      if (res.ok) {
+        toast.success("Client group deleted")
+        router.push("/clients")
+      } else {
+        toast.error("Failed to delete client group")
+      }
+    } catch {
+      toast.error("Failed to delete client group")
+    } finally {
+      setDeleteLoading(false)
+    }
+  }
+
   // ── Loading / Error states ─────────────────────────────────────────────────
   if (loading) return <Loading progress={progress} />
 
@@ -168,6 +197,7 @@ export default function ClientDetailsPage() {
     )
   }
 
+  // groupName is declared HERE — after early returns, inside the return below is safe
   const groupName = clientData.group_info?.name || "Client"
 
   return (
@@ -410,12 +440,103 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Integrations Tab ─────────────────────────────────────────────── */}
-        <TabsContent value="integrations" className="mt-6">
+        <TabsContent value="integrations" className="mt-6 space-y-6">
           <IntegrationsContent
             group={matchingGroup}
             onRefreshComplete={invalidate}
           />
+
+          {/* ── Danger Zone ───────────────────────────────────────────────────── */}
+          <Card className="border-red-200 bg-red-50/40">
+            <CardHeader>
+              <CardTitle className="text-base text-red-700">Danger Zone</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Remove Client Group</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Permanently delete this client group and all associated GHL contacts. This cannot be undone.
+                  </p>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="shrink-0 gap-2"
+                  onClick={() => {
+                    setDeleteInput("")
+                    setDeleteError("")
+                    setDeleteModalOpen(true)
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove Client Group
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Confirmation Modal ─────────────────────────────────────────────── */}
+          <Dialog open={deleteModalOpen} onOpenChange={(v) => { if (!deleteLoading) setDeleteModalOpen(v) }}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <DialogTitle className="text-xl">Delete Client Group</DialogTitle>
+                </div>
+                <DialogDescription className="text-sm leading-relaxed">
+                  This action is <span className="font-semibold text-foreground">permanent and irreversible</span>. It will delete:
+                </DialogDescription>
+              </DialogHeader>
+
+              <ul className="text-sm text-muted-foreground space-y-1.5 pl-4 list-disc">
+                <li>All <span className="text-foreground font-medium">GHL contacts</span> linked to this group</li>
+                <li>The <span className="text-foreground font-medium">client group</span> and all its configuration</li>
+              </ul>
+
+              <div className="space-y-2 pt-1">
+                <p className="text-sm">
+                  Type{" "}
+                  <span className="font-mono text-xs font-semibold bg-muted px-1 py-0.5 rounded">{groupName}</span>
+                  {" "}to confirm:
+                </p>
+                <Input
+                  value={deleteInput}
+                  onChange={(e) => { setDeleteInput(e.target.value); setDeleteError("") }}
+                  placeholder={groupName}
+                  className={`font-mono text-sm ${deleteError ? "border-red-400" : ""}`}
+                  disabled={deleteLoading}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleDeleteGroup() }}
+                  autoComplete="off"
+                />
+                {deleteError && (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3" /> {deleteError}
+                  </p>
+                )}
+              </div>
+
+              <DialogFooter className="flex gap-2 pt-2">
+                <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading} className="flex-1">
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={handleDeleteGroup}
+                  disabled={deleteInput.trim() !== groupName?.trim() || deleteLoading}
+                  className="flex-1 gap-2"
+                >
+                  {deleteLoading
+                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
+                    : <><Trash2 className="h-4 w-4" /> Delete Group</>}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
+
       </Tabs>
     </div>
   )
