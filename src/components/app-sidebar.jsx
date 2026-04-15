@@ -1,4 +1,4 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut } from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut, Sparkles} from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
