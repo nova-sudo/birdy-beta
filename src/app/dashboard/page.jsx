@@ -1,296 +1,401 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
-import { ErrorBanner } from "@/components/ErrorBanner"
-import { StatsCard } from "@/components/StatsCard"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"
-import { Users, Building2, TrendingUp, Target, ArrowRight } from "lucide-react"
+import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  AlertTriangle,
+  Trophy,
+  Trash2,
+  TrendingUp,
+  DollarSign,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useClientGroups } from "@/lib/useClientGroups";
+import { DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { apiRequest } from "@/lib/api";
+import { toast } from "sonner";
+import getSymbolFromCurrency from "currency-symbol-map";
 
-export default function Dashboard() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [dashboardData, setDashboardData] = useState({
-    totalClients: 0,
-    ghlContactsCount: 0,
-    metaLeadsCount: 0,
-    ghlLocations: [],
-    metaAdAccounts: [],
-    sourceDistribution: [],
-  })
+// ─── Tab config ───────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
+const TABS = ["All Alerts", "Ads Not Running", "Performance", "Client Wins"];
 
-  const fetchDashboardData = async () => {
-    setLoading(true)
-    setError("")
+const TAB_FILTER = {
+  "All Alerts": () => true,
+  "Ads Not Running": (a) => a.type === "ads_not_running",
+  "Performance": (a) => a.type === "performance",
+  "Client Wins": (a) => a.type === "client_wins",
+};
 
-    try {
-      // Fetch clients data
-      const clientsRes = await apiRequest("/api/get_all_clients")
+const ALERT_LEFT_BORDER = {
+  red: "border-l-red-500 bg-red-50/50 hover:bg-background/80",
+  yellow: "border-l-amber-500 bg-amber-50/50 hover:bg-background/80",
+  green: "border-l-green-500 bg-green-50/50 hover:bg-background/80",
+};
 
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-
-      if (!clientsRes.ok) {
-        throw new Error("Failed to fetch clients data")
-      }
-
-      const clientsData = await clientsRes.json()
-
-      // Fetch GHL locations
-      const locationsRes = await apiRequest("/api/location-data")
-      const locationsData = locationsRes.ok ? await locationsRes.json() : { locations: [] }
-
-      // Fetch Meta ad accounts
-      const adAccountsRes = await apiRequest("/api/facebook/adaccounts")
-      const adAccountsData = adAccountsRes.ok ? await adAccountsRes.json() : { data: { data: [] } }
-
-      // Calculate source distribution
-      const sourceCount = { GHL: 0, Meta: 0, Both: 0 }
-      clientsData.clients.forEach((client) => {
-        if (client.source.includes(",")) {
-          sourceCount.Both++
-        } else if (client.source === "GHL") {
-          sourceCount.GHL++
-        } else if (client.source === "Meta") {
-          sourceCount.Meta++
-        }
-      })
-
-      const sourceDistribution = [
-        { name: "GHL Only", value: sourceCount.GHL, color: "#000000" },
-        { name: "Meta Only", value: sourceCount.Meta, color: "#000000" },
-        { name: "Both", value: sourceCount.Both, color: "#000000" },
-      ]
-
-      setDashboardData({
-        totalClients: clientsData.meta.total_clients,
-        ghlContactsCount: clientsData.meta.ghl_contacts_count,
-        metaLeadsCount: clientsData.meta.meta_leads_count,
-        ghlLocations: locationsData.locations || [],
-        metaAdAccounts: adAccountsData.data?.data || [],
-        sourceDistribution,
-      })
-    } catch (err) {
-      console.error("[v0] Error fetching dashboard data:", err)
-      setError(err.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
+function AlertIcon({ color }) {
+  if (color === "red")
     return (
-      <div className="min-h-dvh  p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <Skeleton className="h-12 w-64" />
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-32" />
-            ))}
-          </div>
-          <Skeleton className="h-96" />
-        </div>
+      <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+        <AlertTriangle className="w-4 h-4 text-red-500" />
       </div>
-    )
-  }
+    );
+  if (color === "yellow")
+    return (
+      <div className="w-9 h-9 rounded-full bg-yellow-100 flex items-center justify-center shrink-0">
+        <DollarSign className="w-4 h-4 text-yellow-500" />
+      </div>
+    );
+  return (
+    <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+      <Trophy className="w-4 h-4 text-green-500" />
+    </div>
+  );
+}
 
+function ClientCard({ group, onClick }) {
+  const userCurrency = (() => {
+    try { 
+      const currency = localStorage.getItem("user_default_currency") ?? "USD";
+      if (!currency) throw new Error("Currency not fetched");
+      return currency;
+    } catch { 
+      return "USD"; 
+    }
+  })();
+  const symbol = getSymbolFromCurrency(userCurrency) || "$";
 
+  const ad_spend = group.facebook?.metrics?.insights?.spend
+    ? `${symbol}${parseFloat(group.facebook?.metrics?.insights?.spend)}`
+    : "—";
 
+  
+
+  const ctr = group.facebook?.metrics?.insights?.ctr
+    ? `${group.facebook?.metrics?.insights?.ctr}%`
+    : "—";    
+  
+
+  const clicks = group.facebook?.metrics?.insights?.clicks
+    ? `${(parseFloat(group.facebook.metrics.insights.clicks)).toFixed(0)}`
+    : "—";
+
+  const isPending = group._isPending || group._isCreating;
+  const roasRaw = parseFloat(group.facebook?.metrics?.insights?.purchase_roas) || 0;
+  const progress = Math.min((roasRaw / 10) * 100, 100);
 
   return (
-    <div className="min-h-dvh ">
-      <div className="border-b bg-card">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">General Dashboard</h1>
-              <p className="text-muted-foreground mt-1">Overview of all your integrations</p>
-            </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={() => router.push("/settings")}>
-                Settings
-              </Button>
-              <Button onClick={() => router.push("/clients")}>
-                View All Clients
-                <ArrowRight className="ml-2 h-4 w-4 " />
-              </Button>
-            </div>
+    <div
+      onClick={() => !isPending && onClick(group)}
+      className={`bg-white border border-border/60 rounded-2xl p-5 flex flex-col gap-4 transition-all cursor-pointer
+        ${isPending ? "opacity-60 pointer-events-none" : "hover:shadow-md hover:border-purple-200"}`}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="font-bold text-foreground text-base leading-tight">{group.name}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {group.niche || group.gohighlevel?.location?.business_type || "Marketing Agency"}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 bg-gray-50 border border-border/60 rounded-full px-2.5 py-1 shrink-0">
+          <span className={`w-2 h-2 rounded-full shrink-0 ${isPending ? "bg-yellow-400" : "bg-green-500"}`} />
+          <span className="text-xs font-medium text-foreground">
+            {isPending ? "Syncing..." : "Healthy"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Ad Spend", value: ad_spend },
+          { label: "CTR", value: ctr },
+          { label: "Clicks", value: clicks },
+        ].map(({ label, value }) => (
+          <div key={label}>
+            <p className="text-xs text-muted-foreground">{label}</p>
+            <p className="text-base font-bold text-foreground mt-0.5">{value}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-purple-600 rounded-full transition-all duration-500"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <TrendingUp className="w-4 h-4 text-purple-400 shrink-0" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Dashboard Page ───────────────────────────────────────────────────────────
+
+export default function DashboardPage() {
+  const router = useRouter();
+  const { clientGroups, loading } = useClientGroups(DEFAULT_DATE_PRESET);
+
+  const [activeTab, setActiveTab] = useState("All Alerts");
+  const [rawAlerts, setRawAlerts] = useState([]);
+  const [query, setQuery] = useState("");
+
+  const userCurrency = (() => {
+    try { return localStorage.getItem("defaultCurrency") ?? "USD"; } catch { return "USD"; }
+  })();
+  const symbol = getSymbolFromCurrency(userCurrency) || "$";
+
+  // ── Fetch alerts ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const res = await apiRequest("/api/alerts");
+        if (!res.ok) return;
+        const data = await res.json();
+        const all = [
+          ...(data.active || []),
+          ...(data.triggered || []),
+          ...(data.paused || []),
+        ];
+        setRawAlerts(all);
+      } catch {
+        // non-critical
+      }
+    })();
+  }, []);
+
+  // ── Map DB shape → UI shape ─────────────────────────────────────────────────
+  const alerts = useMemo(() => {
+    return rawAlerts.map((alert) => ({
+      id: alert.id,
+      client: alert.name,
+      platform: alert.condition?.platform ?? "Facebook",
+      type:
+        alert.status === "triggered"
+          ? "performance"
+          : alert.status === "active"
+          ? "performance"
+          : "client_wins",
+      title: alert.metric_label,
+      description:
+        alert.last_eval_result?.message ??
+        `${alert.metric_label ?? ""} ${alert.condition_display ?? ""} per ${alert.condition?.period ?? ""}`,
+      color:
+        alert.status === "triggered"
+          ? "red"
+          : alert.status === "active"
+          ? "yellow"
+          : "green",
+    }));
+  }, [rawAlerts]);
+
+  // ── Delete alert ────────────────────────────────────────────────────────────
+  const dismissAlert = async (id) => {
+    try {
+      const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setRawAlerts((prev) => prev.filter((a) => a.id !== id));
+        toast.success("Alert deleted");
+      } else {
+        toast.error("Failed to delete alert");
+      }
+    } catch {
+      toast.error("Failed to delete alert");
+    }
+  };
+
+  // ── Stats from real client data ─────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const activeClients = clientGroups.length;
+
+    const totalSpend = clientGroups.reduce(
+      (sum, g) => sum + (parseFloat(g.facebook?.metrics?.insights?.spend) || 0),
+      0
+    );
+
+    const totalLeads = clientGroups.reduce(
+      (sum, g) => sum + (parseInt(g.facebook?.metrics?.insights?.total_leads) || 0),
+      0
+    );
+
+    const cplValues = clientGroups
+      .map((g) => parseFloat(g.facebook?.metrics?.insights?.cost_per_result))
+      .filter((v) => !isNaN(v) && v > 0);
+
+    const averageCPL =
+      cplValues.length > 0
+        ? cplValues.reduce((a, b) => a + b, 0) / cplValues.length
+        : 0;
+
+    return { activeClients, totalSpend, totalLeads, averageCPL };
+  }, [clientGroups]);
+
+  const filteredAlerts = alerts.filter(TAB_FILTER[activeTab]);
+  const handleClientClick = (group) => router.push(`/clients/${group.id}`);
+
+  return (
+    <div className="flex flex-col gap-6 w-full">
+
+      {/* ── Welcome + AI Search ─────────────────────────────────────────── */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Welcome to Birdy</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Your AI Marketing Manager – Ask questions about your marketing performance
+        </p>
+
+        <div className="mt-4 bg-[#F3F0FD] rounded-2xl p-5">
+          <div className="relative max-w-2xl mx-auto">
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Ask about your marketing metrics, client performance, or campaign insights..."
+              className="w-full bg-white border border-border/60 rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm"
+            />
+            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3 max-w-2xl mx-auto">
+            <span className="text-xs text-muted-foreground">Try asking:</span>
+            {[
+              "Why are bookings down this week?",
+              "Which tag gave the best cost per booking?",
+              "Show ROAS breakdown by campaign",
+            ].map((s) => (
+              <button
+                key={s}
+                onClick={() => setQuery(s)}
+                className="text-xs bg-white border border-border/60 rounded-lg px-3 py-1.5 hover:bg-purple-50 hover:border-purple-300 transition-colors text-foreground"
+              >
+                {s}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto p-6 space-y-6">
-        <ErrorBanner error={error} />
+      {/* ── Action Required ─────────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xl font-semibold text-foreground mb-4">Action Required</h2>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="!flex w-full h-fit bg-muted/50 border border-border/60 mb-4 rounded-xl px-1 py-2 overflow-x-auto scrollbar-none">
+            {TABS.map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="!flex-1 min-w-[110px] text-[#71658B] font-semibold hover:bg-[#FBFAFE] data-[state=active]:bg-purple-100/50 data-[state=active]:text-foreground data-[state=active]:border-b-2 data-[state=active]:border-b-purple-700"
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
 
-        {/* Metric Cards */}
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <StatsCard title="Total Clients" value={dashboardData.totalClients} icon={Users} subtitle="Deduplicated across all sources" />
-          <StatsCard title="GHL Contacts" value={dashboardData.ghlContactsCount} icon={Building2} subtitle={`From ${dashboardData.ghlLocations.length} locations`} />
-          <StatsCard title="Meta Leads" value={dashboardData.metaLeadsCount} icon={Target} subtitle={`From ${dashboardData.metaAdAccounts.length} ad accounts`} />
-          <StatsCard title="Integrations" value={(dashboardData.ghlLocations.length > 0 ? 1 : 0) + (dashboardData.metaAdAccounts.length > 0 ? 1 : 0)} icon={TrendingUp} subtitle="Active connections" />
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Source Distribution Pie Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Client Source Distribution</CardTitle>
-              <CardDescription>Breakdown of clients by integration source</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={dashboardData.sourceDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, value }) => `${name}: ${value}`}
-                    outerRadius={100}
-                    fill="#000000"
-                    dataKey="value"
-                  >
-                    {dashboardData.sourceDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Integration Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Integration Status</CardTitle>
-              <CardDescription>Connected services and their status</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-zinc-500/10 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-zinc-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">GoHighLevel</p>
-                    <p className="text-sm text-muted-foreground">{dashboardData.ghlLocations.length} locations</p>
-                  </div>
-                </div>
-                <Badge variant={dashboardData.ghlLocations.length > 0 ? "default" : "secondary"}>
-                  {dashboardData.ghlLocations.length > 0 ? "Connected" : "Not Connected"}
-                </Badge>
-              </div>
-
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-full bg-zinc-500/10 flex items-center justify-center">
-                    <Target className="h-5 w-5 text-zinc-500" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Meta (Facebook)</p>
-                    <p className="text-sm text-muted-foreground">{dashboardData.metaAdAccounts.length} ad accounts</p>
-                  </div>
-                </div>
-                <Badge variant={dashboardData.metaAdAccounts.length > 0 ? "default" : "secondary"}>
-                  {dashboardData.metaAdAccounts.length > 0 ? "Connected" : "Not Connected"}
-                </Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* GHL Locations */}
-        {dashboardData.ghlLocations.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>GoHighLevel Locations</CardTitle>
-              <CardDescription>Your connected GHL subaccounts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {dashboardData.ghlLocations.map((location) => (
-                  <div key={location.id} className="p-4 border rounded-lg space-y-2">
-                    <div className="flex items-start justify-between">
-                      <h3 className="font-medium text-foreground">{location.name}</h3>
-                      <Badge variant={location.token_expired ? "destructive" : "default"} className="text-xs">
-                        {location.token_expired ? "Expired" : "Active"}
-                      </Badge>
-                    </div>
-                    {location.address && <p className="text-sm text-muted-foreground">{location.address}</p>}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Meta Ad Accounts */}
-        {dashboardData.metaAdAccounts.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Meta Ad Accounts</CardTitle>
-              <CardDescription>Your connected Facebook ad accounts</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {dashboardData.metaAdAccounts.map((account) => (
-                  <div key={account.id} className="p-4 border rounded-lg space-y-2">
-                    <h3 className="font-medium text-foreground">{account.name}</h3>
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Currency:</span>
-                      <span className="font-medium text-foreground">{account.currency}</span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2 bg-transparent"
-                      onClick={() => router.push(`/campaigns?account=${account.id}`)}
-                    >
-                      View Campaigns
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Navigate to key sections</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-3 md:grid-cols-3">
-              <Button variant="outline" onClick={() => router.push("/clients")} className="justify-start">
-                <Users className="mr-2 h-4 w-4" />
-                View All Clients
-              </Button>
-              <Button variant="outline" onClick={() => router.push("/campaigns")} className="justify-start">
-                <Target className="mr-2 h-4 w-4" />
-                View Campaigns
-              </Button>
-              <Button variant="outline" onClick={() => router.push("/settings")} className="justify-start">
-                <Building2 className="mr-2 h-4 w-4" />
-                Manage Integrations
-              </Button>
+        <div className="flex flex-col mb-4">
+          {filteredAlerts.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
+              No alerts in this category
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            filteredAlerts.map((alert) => (
+              <div
+                key={alert.id}
+                className={`flex items-center gap-4 mb-4 p-4 rounded-lg shadow-sm border-l-4 ${ALERT_LEFT_BORDER[alert.color]}`}
+              >
+                <AlertIcon color={alert.color} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-[#713CDDE6]">{alert.client}</span>
+                    <Badge variant="outline" className="text-xs rounded-full px-2">{alert.platform}</Badge>
+                  </div>
+                  <p className="text-sm font-semibold mb-1 text-foreground">{alert.title}</p>
+                  <p className="text-xs text-muted-foreground">{alert.description}</p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
+                    onClick={() => {
+                      const match = clientGroups.find((g) =>
+                        (rawAlerts.find((r) => r.id === alert.id)?.target_group_ids || []).includes(g.id)
+                      );
+                      if (match) router.push(`/clients/${match.id}`);
+                    }}
+                  >
+                    Open Client
+                  </Button>
+                  <button
+                    onClick={() => dismissAlert(alert.id)}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
+
+      {/* ── Clients Grid ────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xl font-semibold text-foreground">Clients</h2>
+          <Link href="/clients" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+            View all →
+          </Link>
+        </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-white border border-border/60 rounded-2xl flex flex-col gap-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex flex-col gap-2">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[0, 1, 2].map((j) => (
+                    <div key={j} className="flex flex-col gap-1">
+                      <Skeleton className="h-3 w-12" />
+                      <Skeleton className="h-5 w-16" />
+                    </div>
+                  ))}
+                </div>
+                <Skeleton className="h-1.5 w-full rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : clientGroups.length === 0 ? (
+          <div className="text-sm text-muted-foreground text-center py-12 bg-white border border-border/60 rounded-2xl">
+            No clients yet.{" "}
+            <Link href="/clients" className="text-purple-600 underline">
+              Add your first client
+            </Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {clientGroups.slice(0, 6).map((group) => (
+              <ClientCard key={group.id} group={group} onClick={handleClientClick} />
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
-  )
+  );
 }
