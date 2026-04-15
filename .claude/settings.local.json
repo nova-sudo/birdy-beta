@@ -39,7 +39,29 @@
       "Bash(gh pr:*)",
       "Bash(gh api:*)",
       "Bash(node -e \"const d=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\);const r=JSON.parse\\(d\\);r.forEach\\(v=>console.log\\(v.user.login+' — '+v.state+': '+\\(v.body||''\\).slice\\(0,200\\)\\)\\)\")",
-      "Bash(python -c \"from ai.prompts.birdy import get_system_prompt; p = get_system_prompt\\(\\); print\\('OK, length:', len\\(p\\)\\)\")"
+      "Bash(python -c \"from ai.prompts.birdy import get_system_prompt; p = get_system_prompt\\(\\); print\\('OK, length:', len\\(p\\)\\)\")",
+      "WebFetch(domain:reactbits.dev)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(npx -y skillfish add plosson/siteio logo-creator)",
+      "Bash(file \"/c/Users/ASUS/Desktop/Bytes/bytes-dashboard/apps/dashboard/public/images/brand\"/*)",
+      "Read(//c/Users/ASUS/Downloads/**)",
+      "Bash(unzip -o \"C:/Users/ASUS/Downloads/BirdyBranding.zip\")",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj.png\" icon-light.png)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(1\\).png\" icon-dark.png)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(2\\).png\" icon-badge.png)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(3\\).png\" logo-light.png)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(4\\).png\" logo-dark.png)",
+      "Bash(python -c \"from PIL import Image; print\\('pillow ok'\\)\")",
+      "Bash(pip install:*)",
+      "Bash(python scripts/process_brand.py)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(5\\).png\" wordmark-light.png)",
+      "Bash(mv \"Gemini_Generated_Image_w1qj3aw1qj3aw1qj \\(6\\).png\" wordmark-dark.png)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('services/ghl_service.py', doraise=True\\); py_compile.compile\\('integrations/facebook_utils/facebook_leads.py', doraise=True\\); py_compile.compile\\('integrations/hotprospector.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('scripts/backfill_match_keys.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python -m scripts.backfill_match_keys)",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('routers/client_groups.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('routers/meta.py', doraise=True\\); print\\('OK'\\)\")",
+      "Bash(python -c \"import py_compile; py_compile.compile\\('services/alert_service.py', doraise=True\\); py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('core/constants.py', doraise=True\\); print\\('OK'\\)\")"
     ]
   }
 }

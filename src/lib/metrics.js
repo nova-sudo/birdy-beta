@@ -9,7 +9,7 @@ import { extractUniqueTags } from './enhanced-columns-config';
 // Base metric ID to data key mapping
 const BASE_METRIC_MAPPING = {
   // Clients dashboard (GoHighLevel & Meta Ads)
-  leads: "ghl_contacts",
+  leads: "leads",
   bookings: "bookings",
   "total-revenue": "total_revenue",
   "upsell-revenue": "upsell_revenue",
@@ -40,8 +40,19 @@ const BASE_METRIC_MAPPING = {
   ctr: "ctr",
   frequency: "frequency",
   cpm: "cpm",
+  results: "results",
   "campaign-results": "results",
   "campaign-leads": "leads",
+  cpl: "cpl",
+  cost_per_result: "cost_per_result",
+  // GHL metrics (available on campaign rows via groupMeta)
+  ghl_revenue: "ghl_revenue",
+  ghl_won_opps: "ghl_won_opps",
+  ghl_lost_opps: "ghl_lost_opps",
+  ghl_open_opps: "ghl_open_opps",
+  ghl_abandoned_opps: "ghl_abandoned_opps",
+  ghl_total_opps: "ghl_total_opps",
+  meta_results: "meta_results",
   
   // Contacts page
   "lead-value": "leadValue",
@@ -125,6 +136,11 @@ const METRIC_DISPLAY_NAMES = {
   clientGroup: "Client Group",
   account_currency: "Currency",
   conversion_rate_ranking: "Conv. Rate Ranking",
+  ghl_matched: "GHL Match",
+  ghl_opportunity_status: "Opp. Status",
+  ghl_opportunity_value: "Opp. Value",
+  ghl_tags: "GHL Tags",
+  ghl_date_added: "GHL Date Added",
 }
 
 export function getMetricDisplayName(metricId) {

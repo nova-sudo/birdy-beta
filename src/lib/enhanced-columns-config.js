@@ -13,6 +13,11 @@ export const BASE_CLIENT_COLUMNS = [
   // GoHighLevel
   { id: "ghl_contacts", label: "GHL Leads", visible: true, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "ghl_revenue", label: "GHL Revenue", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_won_opps", label: "Won Opps", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_lost_opps", label: "Lost Opps", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_open_opps", label: "Open Opps", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_abandoned_opps", label: "Abandoned Opps", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
+  { id: "ghl_total_opps", label: "Total Opps", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "ghl_location_id", label: "GHL Location ID", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "ghl_address", label: "Location Address", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
   { id: "total_tags", label: "Total Tags", visible: false, sortable: true, icons: ghl, category: 'gohighlevel', type: 'data' },
@@ -234,6 +239,11 @@ export const buildFormulaMetrics = (clientGroups) => {
     // GoHighLevel
     { id: "ghl_contacts", label: "GHL Leads", category: "GoHighLevel" },
     { id: "ghl_revenue", label: "GHL Revenue", category: "GoHighLevel" },
+    { id: "ghl_won_opps", label: "Won Opps", category: "GoHighLevel" },
+    { id: "ghl_lost_opps", label: "Lost Opps", category: "GoHighLevel" },
+    { id: "ghl_open_opps", label: "Open Opps", category: "GoHighLevel" },
+    { id: "ghl_abandoned_opps", label: "Abandoned Opps", category: "GoHighLevel" },
+    { id: "ghl_total_opps", label: "Total Opps", category: "GoHighLevel" },
     { id: "total_tags", label: "Total Tags", category: "GoHighLevel" },
     
     // Meta Ads

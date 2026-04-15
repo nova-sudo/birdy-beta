@@ -24,7 +24,7 @@ import { buildContactColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { ErrorBanner } from "@/components/ErrorBanner"
-import { flaskIcon as Flask } from "@/lib/icons"
+import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 
 const baseContactColumns = buildContactColumns()
 
@@ -68,19 +68,43 @@ export function LeadsContent({
     [clientGroups]
   )
 
+  // Extract unique tags from client groups for individual tag columns
+  const availableTags = useMemo(() => {
+    const tagSet = new Set()
+    for (const g of clientGroups) {
+      const breakdown = g.gohighlevel?.metrics?.tag_breakdown || g.gohighlevel_cache?.metrics?.tag_breakdown || {}
+      for (const tag of Object.keys(breakdown)) tagSet.add(tag)
+    }
+    return [...tagSet].sort()
+  }, [clientGroups])
+
   const contactColumns = useMemo(() => {
     const custom = customMetrics.map(m => ({
       id: m.id,
       header: m.name,
       label: m.name,
-      defaultVisible: true,
+      defaultVisible: false,
       sortable: true,
       icons: Flask,
       category: "custom",
       cell: (row) => row?.[m.id] ?? "–",
     }))
-    return [...baseContactColumns, ...custom]
-  }, [customMetrics])
+
+    // Individual tag presence columns — ✅ if lead has tag, – if not
+    const tagCols = availableTags.map(tag => ({
+      id: `tag_${tag.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`,
+      header: tag,
+      label: `Tag: ${tag}`,
+      defaultVisible: false,
+      sortable: true,
+      icons: ghl,
+      category: "tags",
+      _tagName: tag,
+      cell: (_, row) => row?.tags?.includes(tag) ? "✅" : "–",
+    }))
+
+    return [...baseContactColumns, ...custom, ...tagCols]
+  }, [customMetrics, availableTags])
 
   const [visibleColumns, setVisibleColumns] = useState(
     baseContactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
@@ -133,7 +157,7 @@ export function LeadsContent({
       // Convert preset to concrete date strings
       const { start_date, end_date } = presetToDateRange(datePreset)
 
-      let endpoint = `/api/contacts/ghl-paginated?groups=${groupsParam}&page=${page}&limit=15`
+      let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
 
       if (start_date) endpoint += `&start_date=${start_date}`
       if (end_date) endpoint += `&end_date=${end_date}`
