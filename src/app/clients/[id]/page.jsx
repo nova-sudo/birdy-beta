@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, Save, DollarSign, Clock, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
-import { Loading } from "@/components/ui/loader"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
@@ -34,6 +33,57 @@ function ComingSoon({ title }) {
   )
 }
 
+// ── Stat Cards Skeleton ──────────────────────────────────────────────────────
+function StatCardsSkeleton() {
+  return (
+    <div className="grid gap-4 md:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i} className="bg-white">
+          <CardContent className="pt-0">
+            <div className="flex justify-between items-start">
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-7 w-32" />
+              </div>
+              <Skeleton className="h-7 w-7 rounded-md" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+// ── Alerts Skeleton ──────────────────────────────────────────────────────────
+function AlertsSkeleton() {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 2 }).map((_, i) => (
+        <div key={i} className="p-4 border rounded-lg space-y-2">
+          <div className="flex justify-between items-start">
+            <div className="space-y-1.5 flex-1">
+              <Skeleton className="h-4 w-36" />
+              <Skeleton className="h-3 w-52" />
+            </div>
+            <Skeleton className="h-5 w-16 rounded-full" />
+          </div>
+          <Skeleton className="h-2 w-full rounded-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Notes Skeleton ───────────────────────────────────────────────────────────
+function NotesSkeleton() {
+  return (
+    <div className="space-y-4">
+      <Skeleton className="h-[200px] w-full rounded-md" />
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  )
+}
+
 // ── Tab trigger style ────────────────────────────────────────────────────────
 const tabTriggerClass = ""
 
@@ -42,14 +92,12 @@ export default function ClientDetailsPage() {
   const params = useParams()
   const clientId = decodeURIComponent(params?.id || "")
 
-  // ── Loading state ──────────────────────────────────────────────────────────
-  const [progress, setProgress] = useState(10)
-  const [loading, setLoading] = useState(true)
-
   // ── Overview data ──────────────────────────────────────────────────────────
   const [clientData, setClientData] = useState(null)
+  const [clientLoading, setClientLoading] = useState(true)
   const [notes, setNotes] = useState("")
   const [alerts, setAlerts] = useState([])
+  const [alertsLoading, setAlertsLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteInput, setDeleteInput] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -84,32 +132,21 @@ export default function ClientDetailsPage() {
     return { totalSpend, totalClicks, totalImpressions, avgCtr }
   }, [matchingGroup])
 
-  // ── Progress animation ─────────────────────────────────────────────────────
-  useEffect(() => {
-    if (loading) {
-      const interval = setInterval(() => {
-        setProgress((prev) => (prev >= 90 ? prev : prev + 10))
-      }, 200)
-      return () => clearInterval(interval)
-    }
-  }, [loading])
-
   // ── Fetch client details (for notes) ───────────────────────────────────────
   useEffect(() => {
     if (!clientId) return
     ;(async () => {
       try {
-        setLoading(true)
+        setClientLoading(true)
         const response = await apiRequest(`/api/client-groups/${clientId}`)
         if (!response.ok) throw new Error("Failed to fetch client details")
         const result = await response.json()
         setClientData(result.data)
         setNotes(result.data?.group_info?.notes || "")
-        setProgress(100)
       } catch {
         toast.error("Failed to load client details")
       } finally {
-        setTimeout(() => setLoading(false), 300)
+        setClientLoading(false)
       }
     })()
   }, [clientId])
@@ -119,6 +156,7 @@ export default function ClientDetailsPage() {
     if (!clientId) return
     ;(async () => {
       try {
+        setAlertsLoading(true)
         const res = await apiRequest("/api/alerts")
         if (!res.ok) return
         const data = await res.json()
@@ -126,6 +164,8 @@ export default function ClientDetailsPage() {
         setAlerts(all.filter((a) => (a.target_group_ids || []).includes(clientId)))
       } catch {
         // Alerts are non-critical — silently fail
+      } finally {
+        setAlertsLoading(false)
       }
     })()
   }, [clientId])
@@ -182,18 +222,8 @@ export default function ClientDetailsPage() {
     }
   }
 
-  // ── Loading / Error states ─────────────────────────────────────────────────
-  if (loading) return (
-    <div className="flex w-full mx-auto my-auto max-w-xs flex-col gap-2 items-center justify-center">
-      
-        <Skeleton className="h-10 w-80" />
-        <Skeleton className="h-10 w-80" />
-        <Skeleton className="h-10 w-60" />
-      
-    </div>
-  )
-
-  if (!clientData) {
+  // ── Error state (only shown if client data fails entirely) ─────────────────
+  if (!clientLoading && !clientData) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
         <div className="text-center">
@@ -206,8 +236,7 @@ export default function ClientDetailsPage() {
     )
   }
 
-  // groupName is declared HERE — after early returns, inside the return below is safe
-  const groupName = clientData.group_info?.name || "Client"
+  const groupName = clientData?.group_info?.name || "Client"
 
   return (
     <div className="flex flex-col gap-4 w-full">
@@ -217,7 +246,11 @@ export default function ClientDetailsPage() {
           <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
+          {clientLoading ? (
+            <Skeleton className="h-8 w-48" />
+          ) : (
+            <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
+          )}
         </div>
         <DateRangeSelect value={datePreset} onChange={setDatePreset} />
       </div>
@@ -237,70 +270,74 @@ export default function ClientDetailsPage() {
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
         <TabsContent value="overview" className="mt-6 space-y-6">
           {/* Stat Cards */}
-          <div className="grid gap-4 md:grid-cols-4">
-            <Card className="bg-white border-purple-100">
-              <CardContent className="pt-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-muted-foreground text-sm text-[#71658B]">Total Spend</p>
-                    <h3 className="text-2xl font-bold mt-1">${metrics.totalSpend.toFixed(2)}</h3>
+          {groupsLoading ? (
+            <StatCardsSkeleton />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card className="bg-white border-purple-100">
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Spend</p>
+                      <h3 className="text-2xl font-bold mt-1">${metrics.totalSpend.toFixed(2)}</h3>
+                    </div>
+                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
+                      <DollarSign className="h-4 w-4 text-purple-500" />
+                    </div>
                   </div>
-                  <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                    <DollarSign className="h-4 w-4 text-purple-500" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-white border-blue-100">
-              <CardContent className="pt-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-muted-foreground text-sm text-[#71658B]">Total Impressions</p>
-                    <h3 className="text-2xl font-bold mt-1">{metrics.totalImpressions.toLocaleString()}</h3>
+              <Card className="bg-white border-blue-100">
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Impressions</p>
+                      <h3 className="text-2xl font-bold mt-1">{metrics.totalImpressions.toLocaleString()}</h3>
+                    </div>
+                    <div className="h-7 w-7 bg-blue-100 rounded-md flex items-center justify-center">
+                      <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="h-7 w-7 bg-blue-100 rounded-md flex items-center justify-center">
-                    <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-white border-green-100">
-              <CardContent className="pt-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-muted-foreground text-sm text-[#71658B]">Total Clicks</p>
-                    <h3 className="text-2xl font-bold mt-1">{metrics.totalClicks.toLocaleString()}</h3>
+              <Card className="bg-white border-green-100">
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Clicks</p>
+                      <h3 className="text-2xl font-bold mt-1">{metrics.totalClicks.toLocaleString()}</h3>
+                    </div>
+                    <div className="h-7 w-7 bg-green-100 rounded-md flex items-center justify-center">
+                      <svg className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="h-7 w-7 bg-green-100 rounded-md flex items-center justify-center">
-                    <svg className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
 
-            <Card className="bg-white border-orange-100">
-              <CardContent className="pt-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-muted-foreground text-sm text-[#71658B]">Avg CTR</p>
-                    <h3 className="text-2xl font-bold mt-1">{metrics.avgCtr}%</h3>
+              <Card className="bg-white border-orange-100">
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Avg CTR</p>
+                      <h3 className="text-2xl font-bold mt-1">{metrics.avgCtr}%</h3>
+                    </div>
+                    <div className="h-7 w-7 bg-orange-100 rounded-md flex items-center justify-center">
+                      <svg className="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                    </div>
                   </div>
-                  <div className="h-7 w-7 bg-orange-100 rounded-md flex items-center justify-center">
-                    <svg className="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
 
           {/* Alerts + History Book side by side */}
           <div className="grid gap-6 md:grid-cols-2">
@@ -310,7 +347,9 @@ export default function ClientDetailsPage() {
                 <CardTitle className="text-lg">Client Alerts</CardTitle>
               </CardHeader>
               <CardContent>
-                {alerts.length === 0 ? (
+                {alertsLoading ? (
+                  <AlertsSkeleton />
+                ) : alerts.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-4 text-center">No alerts for now.</p>
                 ) : (
                   <div className="space-y-3 max-h-[350px] overflow-y-auto">
@@ -390,18 +429,22 @@ export default function ClientDetailsPage() {
                 <CardTitle className="text-lg">History Book</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <Textarea
-                    className="min-h-[200px] resize-none bg-muted/20"
-                    placeholder="Add notes about this client..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                  />
-                  <Button onClick={handleSaveNotes} className="w-full text-white bg-[#713CDD]">
-                    <Save className="text-white mr-2 h-4 w-4" />
-                    Save Notes
-                  </Button>
-                </div>
+                {clientLoading ? (
+                  <NotesSkeleton />
+                ) : (
+                  <div className="space-y-4">
+                    <Textarea
+                      className="min-h-[200px] resize-none bg-muted/20"
+                      placeholder="Add notes about this client..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                    />
+                    <Button onClick={handleSaveNotes} className="w-full text-white bg-[#713CDD]">
+                      <Save className="text-white mr-2 h-4 w-4" />
+                      Save Notes
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
