@@ -383,8 +383,8 @@ const StyledTable = ({
   };
 
   /* ---------- DRAG-AND-DROP ---------- */
-  const handleDragStart = (e, columnId) => {
-    if (columnId === "name") return;
+  const handleDragStart = (e, columnId, colIdx) => {
+    if (colIdx === 0) return;
     setDraggedColumn(columnId);
     e.dataTransfer.effectAllowed = "move";
   };
@@ -394,9 +394,9 @@ const StyledTable = ({
     e.dataTransfer.dropEffect = "move";
   };
 
-  const handleDrop = (e, targetId) => {
+  const handleDrop = (e, targetId, targetColIdx) => {
     e.preventDefault();
-    if (!draggedColumn || draggedColumn === targetId || targetId === "name") {
+    if (!draggedColumn || draggedColumn === targetId || targetColIdx === 0) {
       setDraggedColumn(null);
       return;
     }
@@ -495,6 +495,7 @@ const StyledTable = ({
             min-width: 200px;
             font-weight: 565;
             max-width: 245px;
+            width: 245px;
           }
           .fixed-column-odd {
             text-align: left;
@@ -505,6 +506,7 @@ const StyledTable = ({
             min-width: 200px;
             font-weight: 565;
             max-width: 245px;
+            width: 245px;
           }
           .fixed-header {
             position: sticky;
@@ -512,7 +514,8 @@ const StyledTable = ({
             z-index: 40;
             background: white;
             min-width: 200px;
-            width: 5%;
+            max-width: 245px;
+            width: 245px;
           }
         }
 
@@ -522,6 +525,8 @@ const StyledTable = ({
             text-align: left;
             background: white;
             min-width: 200px;
+            max-width: 245px;
+            width: 245px;
             font-weight: 575;
           }
           .fixed-column-odd {
@@ -529,8 +534,9 @@ const StyledTable = ({
           }
           .fixed-header {
             background: white;
-            min-width: 150px;
-            width: 100%;
+            min-width: 200px;
+            max-width: 245px;
+            width: 245px;
           }
         }
 
@@ -545,6 +551,7 @@ const StyledTable = ({
           width: max-content;
         }
       `}</style>
+
       {/* Table */}
       <div
         className="table-container border rounded-md"
@@ -592,15 +599,15 @@ const StyledTable = ({
                 </th>
               )}
 
-              {visibleColumns.map((col) => (
+              {visibleColumns.map((col, colIdx) => (
                 <th
                   key={col.id}
-                  draggable={col.id !== "name"}
-                  onDragStart={(e) => handleDragStart(e, col.id)}
+                  draggable={colIdx !== 0}
+                  onDragStart={(e) => handleDragStart(e, col.id, colIdx)}
                   onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, col.id)}
+                  onDrop={(e) => handleDrop(e, col.id, colIdx)}
                   className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
-                    col.id === "name" || col.id === "full_name" || col.id === "contactName"
+                    colIdx === 0
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
                   }`}
