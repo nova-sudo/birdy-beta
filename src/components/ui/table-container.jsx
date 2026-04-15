@@ -48,7 +48,14 @@ export const TableContainer = ({ children, title, description }) => (
     <CardContent className="p-0 overflow-x-auto">{children}</CardContent>
   </Card>
 )
+
 const userCurrency = localStorage.getItem("user_default_currency");
+
+// ── Compute the total left offset for the sticky name column ────────────────
+// checkbox = 40px, status toggle = 70px
+const getNameStickyLeft = (enableSelection, enableStatusToggle) =>
+  (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0);
+
 const StyledTable = ({
   columns = [],
   data = [],
@@ -73,10 +80,12 @@ const StyledTable = ({
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState([]);
-  // FIX: only true when Client Hub explicitly passes BOTH customMetrics array AND setCustomMetrics setter
   const isClientMode = Array.isArray(customMetrics) && setCustomMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
+
+  // Derived sticky left for the name column
+  const nameStickyLeft = getNameStickyLeft(enableSelection, enableStatusToggle);
 
   /* ---------- LOAD CUSTOM METRICS ---------- */
   useEffect(() => {
@@ -161,7 +170,7 @@ const StyledTable = ({
     return tagBreakdown[tagName] || 0;
   };
 
-  /* ---------- FLATTENED DATA (BACKWARD COMPATIBLE + ENHANCED + TAGS) ---------- */
+  /* ---------- FLATTENED DATA ---------- */
   const flattenedData = useMemo(() => {
     if (!isClientMode) {
       return data;
@@ -183,7 +192,6 @@ const StyledTable = ({
       const metaImpressions = group.facebook?.metrics?.insights?.impressions ?? 0;
       const metaClicks = group.facebook?.metrics?.insights?.clicks ?? 0;
       const metaReach = group.facebook?.metrics?.insights?.reach ?? 0;
-      // Use insights.results first; if 0, sum from campaigns array as fallback
       let metaResults = group.facebook?.metrics?.insights?.results ?? 0;
       if (!metaResults && group.facebook?.campaigns?.length) {
         metaResults = group.facebook.campaigns.reduce((sum, c) => sum + (c.results || 0), 0);
@@ -222,8 +230,6 @@ const StyledTable = ({
         original: group,
         _isCreating: group._isCreating || false,
         _isPending: group._isPending || false,
-
-        // ALIASES for formula compatibility
         leads: ghlContacts,
         "ad-spend": metaSpend,
         clicks: metaClicks,
@@ -240,7 +246,6 @@ const StyledTable = ({
         base.last_ghl_refresh = group.last_ghl_refresh ?? "";
         base.last_meta_refresh = group.last_meta_refresh ?? "";
         base.last_hp_refresh = group.last_hp_refresh ?? "";
-
         base.ghl_address = group.gohighlevel?.address ?? "";
         base.ghl_name = group.gohighlevel?.name ?? "";
         base.total_tags = getTotalTagCount(group);
@@ -484,9 +489,9 @@ const StyledTable = ({
           .fixed-column-even {
             text-align: left;
             position: sticky;
-            left: 0;
+            left: var(--name-sticky-left, 0px);
             background: white;
-            z-index: 50;
+            z-index: 30;
             min-width: 200px;
             font-weight: 565;
             max-width: 245px;
@@ -494,17 +499,17 @@ const StyledTable = ({
           .fixed-column-odd {
             text-align: left;
             position: sticky;
-            left: 0;
+            left: var(--name-sticky-left, 0px);
             background: #f4f3f9;
-            z-index: 50;
+            z-index: 30;
             min-width: 200px;
             font-weight: 565;
             max-width: 245px;
           }
           .fixed-header {
             position: sticky;
-            left: 0;
-            z-index: 50;
+            left: var(--name-sticky-left, 0px);
+            z-index: 40;
             background: white;
             min-width: 200px;
             width: 5%;
@@ -533,15 +538,28 @@ const StyledTable = ({
           position: relative;
           overflow: auto;
         }
+
+        /* Ensure the table stretches full width so the last column always has a background */
+        .table-container table {
+          min-width: 100%;
+          width: max-content;
+        }
       `}</style>
       {/* Table */}
-      <div className="table-container border rounded-md">
-        <table className="text-sm">
+      <div
+        className="table-container border rounded-md"
+        style={{ "--name-sticky-left": `${nameStickyLeft}px` }}
+      >
+        <table className="text-sm w-full">
           <thead className="top-0 z-40">
             <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
-              {/* Checkbox header column */}
+
+              {/* ── FIX 3: Checkbox header — sticky at left: 0 ── */}
               {enableSelection && (
-                <th className="h-12 w-10 px-2 pr-0 min-w-0 bg-white" style={{ position: 'sticky', left: 0, zIndex: 51 }}>
+                <th
+                  className="h-12 w-10 px-2 pr-0 min-w-0 bg-white"
+                  style={{ position: 'sticky', left: 0, zIndex: 51 }}
+                >
                   <div className="flex items-center">
                     <Checkbox
                       checked={
@@ -563,12 +581,17 @@ const StyledTable = ({
                   </div>
                 </th>
               )}
-              {/* Status toggle header */}
+
+              {/* ── Status toggle header — sticky after checkbox ── */}
               {enableStatusToggle && (
-                <th className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78" style={enableSelection ? { position: 'sticky', left: 40, zIndex: 50 } : { position: 'sticky', left: 0, zIndex: 50 }}>
+                <th
+                  className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78"
+                  style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 51 }}
+                >
                   <div className="flex items-center justify-center">Status</div>
                 </th>
               )}
+
               {visibleColumns.map((col) => (
                 <th
                   key={col.id}
@@ -576,20 +599,19 @@ const StyledTable = ({
                   onDragStart={(e) => handleDragStart(e, col.id)}
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDrop(e, col.id)}
-                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${col.id === "name" || col.id === "full_name" || col.id === "contactName"
+                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
+                    col.id === "name" || col.id === "full_name" || col.id === "contactName"
                       ? "fixed-header"
                       : "min-w-[135px] whitespace-nowrap"
-                    }`}
-                  style={(enableSelection || enableStatusToggle) && (col.id === "name" || col.id === "full_name" || col.id === "contactName") ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
+                  }`}
                 >
                   <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
                     <div className="flex items-center gap-1 min-w-0">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
-                        className={`truncate align-middle text-left items-center gap-1 ${col.sortable
-                            ? "hover:text-foreground cursor-pointer"
-                            : "cursor-default"
-                          }`}
+                        className={`truncate align-middle text-left items-center gap-1 ${
+                          col.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                        }`}
                       >
                         {typeof col.header === "function" ? col.header() : col.header}
                         {col.sortable && sortConfig.key === col.id && (
@@ -629,12 +651,33 @@ const StyledTable = ({
                   key={`skeleton-${idx}`}
                   className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
+                  {/* ── FIX 3: Sticky checkbox skeleton ── */}
                   {enableSelection && (
-                    <td className="w-10 px-2 pr-0 min-w-0">
+                    <td
+                      className={`w-10 px-2 pr-0 min-w-0 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                      style={{ position: 'sticky', left: 0, zIndex: 30 }}
+                    >
                       <Skeleton className="h-4 w-4 rounded" />
                     </td>
                   )}
-                  {(visibleColumns.length > 0 ? visibleColumns : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))).map((col, colIdx) => (
+
+                  {/* ── FIX 3: Sticky status skeleton ── */}
+                  {enableStatusToggle && (
+                    <td
+                      className={`w-[70px] min-w-[70px] px-1 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                      style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
+                    >
+                      <div className="flex items-center justify-center">
+                        <Skeleton className="h-5 w-9 rounded-full" />
+                      </div>
+                    </td>
+                  )}
+
+                  {/* ── FIX 2: All columns get a skeleton — including the last one ── */}
+                  {(visibleColumns.length > 0
+                    ? visibleColumns
+                    : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))
+                  ).map((col, colIdx) => (
                     <td
                       key={`skeleton-${idx}-${col.id}`}
                       className={`text-foreground truncate ${
@@ -644,15 +687,15 @@ const StyledTable = ({
                             : "fixed-column-even h-11"
                           : ""
                       }`}
-                      style={enableSelection && colIdx === 0 ? { left: 40 } : undefined}
                     >
                       <div
                         className={
                           colIdx === 0
                             ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
-                            : "flex items-center justify-center px-2 h-11"
+                            : "flex items-center px-2 h-11"
                         }
                       >
+                        {/* ── FIX 2: Always render skeleton — every column including last ── */}
                         <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
                       </div>
                     </td>
@@ -660,10 +703,10 @@ const StyledTable = ({
                 </tr>
               ))
             ) : paginatedData.length === 0 ? (
-              /* CASE 2: Done loading, no data → empty state message */
+              /* CASE 2: Done loading, no data */
               <tr>
                 <td
-                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0)}
+                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (enableStatusToggle ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
@@ -687,26 +730,28 @@ const StyledTable = ({
                 </td>
               </tr>
             ) : (
-              /* CASE 3: Has data → real rows */
+              /* CASE 3: Has data */
               paginatedData.map((row, idx) => {
                 const globalIdx = (currentPage - 1) * pageSize + idx;
                 const isSelected = enableSelection && selectedRows.has(row.id);
+                const rowBg = globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white";
+
                 return (
                   <tr
                     key={row.id || idx}
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
-                    className={`border-b transition-colors ${(row._isCreating || row._isPending)
+                    className={`border-b transition-colors ${
+                      (row._isCreating || row._isPending)
                         ? "bg-muted/30 cursor-wait opacity-60 w-fit"
                         : "hover:bg-muted/50 cursor-pointer w-fit"
-                      } 
-                  ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}
-                  ${isSelected ? "!bg-primary/5" : ""}`}
+                    } ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
                   >
-                    {/* Row checkbox */}
+                    {/* ── FIX 3: Sticky checkbox cell ── */}
                     {enableSelection && (
                       <td
-                        className={`w-10 px-2 pr-0 min-w-0 ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"} ${isSelected ? "!bg-primary/5" : ""}`}
+                        className={`w-10 px-2 pr-0 min-w-0 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
+                        style={{ position: 'sticky', left: 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -714,22 +759,20 @@ const StyledTable = ({
                           onCheckedChange={(checked) => {
                             if (!onSelectionChange) return;
                             const next = new Set(selectedRows);
-                            if (checked) {
-                              next.add(row.id);
-                            } else {
-                              next.delete(row.id);
-                            }
+                            if (checked) next.add(row.id);
+                            else next.delete(row.id);
                             onSelectionChange(next);
                           }}
                           aria-label={`Select ${row.name || row.id}`}
                         />
                       </td>
                     )}
-                    {/* Status toggle cell */}
+
+                    {/* ── FIX 3: Sticky status toggle cell ── */}
                     {enableStatusToggle && (
                       <td
-                        className={`w-[70px] min-w-[70px] px-1 ${globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"} ${isSelected ? "!bg-primary/5" : ""}`}
-                        style={enableSelection ? { position: 'sticky', left: 40, zIndex: 30 } : { position: 'sticky', left: 0, zIndex: 30 }}
+                        className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
+                        style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {togglingRows.has(row.id) ? (
@@ -752,21 +795,22 @@ const StyledTable = ({
                         )}
                       </td>
                     )}
+
                     {visibleColumns.map((col, colIdx) => (
                       <td
                         key={`${row.id || idx}-${col.id}`}
-                        className={`text-foreground truncate  ${colIdx === 0
+                        className={`text-foreground truncate ${
+                          colIdx === 0
                             ? globalIdx % 2 === 0
                               ? "fixed-column-odd h-11"
                               : "fixed-column-even h-11"
                             : ""
-                          } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
-                        style={(enableSelection || enableStatusToggle) && colIdx === 0 ? { left: (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0) } : undefined}
+                        } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
                       >
                         <div
                           className={
                             colIdx === 0
-                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 "
+                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
                               : "min-w-0 px-2"
                           }
                         >
@@ -774,8 +818,9 @@ const StyledTable = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span
-                                  className={`truncate min-w-0 ${row._isCreating || row._isPending ? "text-muted-foreground" : ""
-                                    }`}
+                                  className={`truncate min-w-0 ${
+                                    row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                  }`}
                                 >
                                   {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                                     <button
@@ -788,25 +833,11 @@ const StyledTable = ({
                                     col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
                                   )}
 
-                                  {/* Creation Spinner - after text */}
                                   {colIdx === 0 && isRowLoading?.(row) && (
                                     <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
-                                      <svg
-                                        className="animate-spin h-3 w-3 shrink-0"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                      >
-                                        <circle
-                                          className="opacity-25"
-                                          cx="12" cy="12" r="10"
-                                          stroke="currentColor"
-                                          strokeWidth="4"
-                                        />
-                                        <path
-                                          className="opacity-75"
-                                          fill="currentColor"
-                                          d="M4 12a8 8 0 018-8v8z"
-                                        />
+                                      <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                       </svg>
                                       Setting up…
                                     </span>
@@ -881,7 +912,6 @@ const StyledTable = ({
           </Pagination>
         </div>
       )}
-
     </div>
   );
 }
