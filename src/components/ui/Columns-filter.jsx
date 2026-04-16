@@ -1,7 +1,8 @@
 'use client';
 
+import { useState, useMemo, useEffect, useRef } from "react"
 import Image from "next/image"
-import { Eye, ChevronDown } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { SlidersHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -10,7 +11,6 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 
 export default function ColumnVisibilityDropdown({
   isOpen,
@@ -21,8 +21,9 @@ export default function ColumnVisibilityDropdown({
   setSelectedCategory,
   categoryCounts,
 
-  searchTerm,
-  setSearchTerm,
+  // Accept but no longer require external search state
+  searchTerm: _externalSearch,
+  setSearchTerm: _externalSetSearch,
 
   filteredColumns,
   columnVisibility,
@@ -34,6 +35,30 @@ export default function ColumnVisibilityDropdown({
   clearAll,
   save,
 }) {
+  // ── Local search state (avoids re-rendering the entire parent on each keystroke) ──
+  const [localSearch, setLocalSearch] = useState("")
+  const inputRef = useRef(null)
+
+  // Reset local search when dropdown opens/closes or category changes
+  useEffect(() => {
+    setLocalSearch("")
+  }, [isOpen, selectedCategory])
+
+  // Also sync to parent if it expects it (backward compat)
+  useEffect(() => {
+    _externalSetSearch?.(localSearch)
+  }, [localSearch])
+
+  // Filter columns locally so the parent doesn't need to recompute
+  const displayColumns = useMemo(() => {
+    if (!localSearch) return filteredColumns
+    const q = localSearch.toLowerCase()
+    return filteredColumns.filter(col =>
+      col.label?.toLowerCase().includes(q) ||
+      col.id?.toLowerCase().includes(q)
+    )
+  }, [filteredColumns, localSearch])
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
@@ -64,22 +89,25 @@ export default function ColumnVisibilityDropdown({
           ))}
         </div>
 
-        {/* Search */}
-        <div className="px-2 mt-2 mb-2">
-          <Input
-            className="w-full"
+        {/* Search — fully local, no parent re-render */}
+        <div className="px-2 mt-2 mb-2" onFocusCapture={(e) => e.stopPropagation()}>
+          <input
+            ref={inputRef}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             placeholder={`Search in ${
               categories.find(c => c.id === selectedCategory)?.label ||
               "All Metrics"
             }...`}
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            autoComplete="off"
           />
         </div>
 
         {/* Columns */}
         <div className="max-h-80 overflow-y-auto px-2 pb-2 border-t">
-          {filteredColumns.map((col) => {
+          {displayColumns.map((col) => {
             const Icon = getIcon?.(col)
 
             return (
