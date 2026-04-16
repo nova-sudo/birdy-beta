@@ -61,7 +61,16 @@
       "Bash(python -m scripts.backfill_match_keys)",
       "Bash(python -c \"import py_compile; py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('routers/client_groups.py', doraise=True\\); print\\('OK'\\)\")",
       "Bash(python -c \"import py_compile; py_compile.compile\\('routers/meta.py', doraise=True\\); print\\('OK'\\)\")",
-      "Bash(python -c \"import py_compile; py_compile.compile\\('services/alert_service.py', doraise=True\\); py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('core/constants.py', doraise=True\\); print\\('OK'\\)\")"
+      "Bash(python -c \"import py_compile; py_compile.compile\\('services/alert_service.py', doraise=True\\); py_compile.compile\\('routers/metrics.py', doraise=True\\); py_compile.compile\\('core/constants.py', doraise=True\\); print\\('OK'\\)\")",
+      "WebFetch(domain:highlevel.stoplight.io)",
+      "WebSearch",
+      "WebFetch(domain:marketplace.gohighlevel.com)",
+      "WebFetch(domain:doc.clickup.com)",
+      "WebFetch(domain:developers.gohighlevel.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:api.github.com)",
+      "Bash(python -m scripts.backfill_opportunity_stats)",
+      "Bash(python -c ':*)"
     ]
   }
 }

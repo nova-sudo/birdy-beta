@@ -462,7 +462,12 @@ function SettingsPageContent() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {ghlStatus.connected ? (
                       <>
-
+                        {ghlStatus.token_expired && (
+                          <Button size="sm" variant="destructive" onClick={() => handleConnect("gohighlevel")} disabled={isLoading}>
+                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            Reconnect
+                          </Button>
+                        )}
                         <RemoveButton integrationType="gohighlevel" label="GoHighLevel" />
                       </>
                     ) : (
@@ -514,6 +519,12 @@ function SettingsPageContent() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {facebookStatus.connected ? (
                       <>
+                        {facebookStatus.token_expired && (
+                          <Button size="sm" variant="destructive" onClick={() => handleConnect("facebook")} disabled={isLoading}>
+                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                            Reconnect
+                          </Button>
+                        )}
                         <RemoveButton integrationType="facebook" label="Meta (Facebook)" />
                       </>
                     ) : (

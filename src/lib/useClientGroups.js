@@ -41,7 +41,17 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET) {
         `/api/client-groups?date_preset=${preset}`,
         { signal: controller.signal }
       )
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        // Try to extract a meaningful error message from the response
+        let detail = `HTTP ${res.status}`
+        try {
+          const body = await res.json()
+          detail = body.detail || body.error || detail
+        } catch {}
+        const err = new Error(detail)
+        err.status = res.status
+        throw err
+      }
 
       const data = await res.json()
       const groups = data.client_groups || []

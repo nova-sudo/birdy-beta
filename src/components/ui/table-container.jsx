@@ -457,7 +457,7 @@ const StyledTable = ({
     if (customMatch) {
       const fmt = customMatch.formatType || customMatch.format_type || "integer";
       if (fmt === "currency") return formatCurrency(value);
-      if (fmt === "percentage") return `${Number(value).toFixed(2)}%`;
+      if (fmt === "percentage") return `${(Number(value) * 100).toFixed(2)}%`;
       if (fmt === "decimal") return Number(value).toFixed(2);
       return Number(value).toLocaleString();
     }
