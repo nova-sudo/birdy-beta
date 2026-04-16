@@ -19,7 +19,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { metaIcon as metaa, flaskIcon as Flask } from "@/lib/icons"
+import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
 import { getMetricDisplayName } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
@@ -517,12 +517,17 @@ export function MarketingContent({
   }
 
   // ── Column definitions ────────────────────────────────────────────────────
-  const baseColumns = [
+  const metaColumns = [
     "adAccount", "spend", "results", "cpl", "cost_per_result", "conversion_rate",
     "social_spend", "impressions", "clicks",
     "cpc", "cpp", "reach", "ctr", "cpm", "frequency",
     "conversion_rate_ranking", "account_currency",
   ]
+  const ghlColumns = [
+    "ghl_contacts", "ghl_revenue", "ghl_won_opps", "ghl_lost_opps",
+    "ghl_open_opps", "ghl_abandoned_opps", "ghl_total_opps",
+  ]
+  const baseColumns = [...metaColumns, ...ghlColumns]
 
   // Map Marketing Hub tab → dashboard key for filtering custom metrics
   const TAB_TO_DASHBOARD = { campaigns: "campaigns", adsets: "adsets", ads: "ads", leads: "marketing_leads" }
@@ -540,12 +545,23 @@ export function MarketingContent({
          "ghl_matched", "ghl_opportunity_status", "ghl_opportunity_value", "ghl_tags"]
       : ["name", "clientGroup", ...baseColumns, ...tagColumnIds, ...activeTabMetrics.map(m => m.id)]
 
-  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "tags", label: "Tags" }, { id: "custom", label: "Custom" }]
+  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "ghl", label: "GHL" }, { id: "tags", label: "Tags" }, { id: "custom", label: "Custom" }]
   const toggleableColumns = getAvailableColumns().filter(col => col !== "name")
-  const metaCount = toggleableColumns.filter(col => baseColumns.includes(col)).length
+  const metaColCount = toggleableColumns.filter(col => metaColumns.includes(col)).length
+  const ghlColCount = toggleableColumns.filter(col => ghlColumns.includes(col)).length
   const tagsCount = toggleableColumns.filter(col => tagColumnIds.includes(col)).length
-  const customCount = toggleableColumns.length - metaCount - tagsCount
-  const categoryCounts = { all: toggleableColumns.length, meta: metaCount, tags: tagsCount, custom: customCount }
+  const customCount = toggleableColumns.length - metaColCount - ghlColCount - tagsCount
+  const categoryCounts = { all: toggleableColumns.length, meta: metaColCount, ghl: ghlColCount, tags: tagsCount, custom: customCount }
+
+  const getColType = (col) => {
+    if (metaColumns.includes(col)) return "meta"
+    if (ghlColumns.includes(col) || col.startsWith("ghl_")) return "ghl"
+    if (tagColumnIds.includes(col)) return "tags"
+    // Leads tab: Meta-sourced columns
+    if (["ad_name", "adset_name", "campaign_name", "platform", "created_time"].includes(col)) return "meta"
+    if (customMetrics.some(m => m.id === col)) return "custom"
+    return "meta"
+  }
 
   const allColumnsForDropdown = toggleableColumns.map(col => {
     const customMatch = customMetrics.find(m => m.id === col)
@@ -555,7 +571,7 @@ export function MarketingContent({
         ? `Tag: ${availableTags[tagColumnIds.indexOf(col)] || col}`
         : customMatch ? customMatch.name : getMetricDisplayName(col),
       visible: (visibleColumns[activeTab] || []).includes(col),
-      type: baseColumns.includes(col) ? "meta" : tagColumnIds.includes(col) ? "tags" : "custom",
+      type: getColType(col),
     }
   })
 
@@ -578,7 +594,15 @@ export function MarketingContent({
   const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
   const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
   const saveView = async () => { await saveToDB(visibleColumns); setColumnsOpen(false) }
-  const getIcon = (col) => (col.id === "clientGroup" || col.id === "name" ? Flask : metaa)
+  const getIcon = (col) => {
+    if (col.id === "clientGroup" || col.id === "name") return null
+    // GHL metrics (opp stats, contacts, revenue, tags)
+    if (col.id.startsWith("ghl_") || col.id.startsWith("tag_")) return ghlIco
+    // Custom formula metrics
+    if (customMetrics.some(m => m.id === col.id)) return Flask
+    // Everything else is Meta
+    return metaa
+  }
 
   const formatCellValue = (value, col, row) => {
     // Tag rollup columns — look up count from tagRollup data
@@ -617,7 +641,7 @@ export function MarketingContent({
     if (customMatch) {
       const fmt = customMatch.formatType || customMatch.format_type || "integer"
       if (fmt === "currency") return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
-      if (fmt === "percentage") return `${Number(value).toFixed(2)}%`
+      if (fmt === "percentage") return `${(Number(value) * 100).toFixed(2)}%`
       if (fmt === "decimal") return Number(value).toFixed(2)
       return Number(value).toLocaleString()
     }
@@ -645,11 +669,17 @@ export function MarketingContent({
       // Resolve custom metric names from local state (not global cache)
       const customMatch = customMetrics.find(m => m.id === col)
       const displayName = customMatch ? customMatch.name : getMetricDisplayName(col)
+      // Determine source icon for table header
+      let colIcon = metaa
+      if (col === "clientGroup" || col === "name" || col === "full_name") colIcon = null
+      else if (col.startsWith("ghl_") || col.startsWith("tag_")) colIcon = ghlIco
+      else if (customMatch) colIcon = Flask
+
       return {
         id: col, key: col,
         header: displayName,
         label: displayName,
-        icons: col === "clientGroup" || col === "name" ? Flask : metaa,
+        icons: colIcon,
         render: (value, row) => formatCellValue(value, col, row),
       }
     })

@@ -1075,7 +1075,7 @@ const MetricsHub = () => {
                                 if (!isFinite(result)) return "–"
                                 const fmt = metricForm.formatType
                                 if (fmt === "currency") return `$${result.toFixed(2)}`
-                                if (fmt === "percentage") return `${result.toFixed(1)}%`
+                                if (fmt === "percentage") return `${(result * 100).toFixed(1)}%`
                                 if (fmt === "decimal") return result.toFixed(2)
                                 return Math.round(result).toLocaleString()
                               } catch { return "–" }

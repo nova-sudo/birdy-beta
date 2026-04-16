@@ -23,6 +23,7 @@ import { apiRequest } from "@/lib/api"
 import { buildContactColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
 import { ErrorBanner } from "@/components/ErrorBanner"
 import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 
@@ -432,6 +433,14 @@ export function LeadsContent({
               toggleColumnVisibility={toggleColumnVisibility}
               selectAll={selectAll}
               clearAll={clearAll}
+              getIcon={(col) => {
+                const META_COLS = ["ad_name", "adset_name", "campaign_name", "platform", "created_time", "metaCampaign", "metaAdName", "metaAdsetName"]
+                if (META_COLS.includes(col.id)) return metaIco
+                if (col.id.startsWith("ghl_") || col.id.startsWith("tag_")) return ghlIco
+                if (selectedCategory === "tags") return ghlIco
+                if (col.id?.startsWith("custom_")) return flaskIco
+                return null
+              }}
               save={async () => {
                 await saveToDB(visibleColumns)
                 setIsDropdownOpen(false)
