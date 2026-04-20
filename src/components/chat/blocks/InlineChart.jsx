@@ -82,12 +82,12 @@ export default function InlineChart({ payload }) {
     (orientation === "auto" && (normalized.length > 5 || longestLabel > 12))
   )
 
-  const rowHeight = 26
+  const rowHeight = 28
   const chartHeight = isHorizontal
-    ? Math.min(Math.max(normalized.length * rowHeight + 30, 140), 520)
+    ? Math.min(Math.max(normalized.length * rowHeight + 40, 160), 560)
     : isMultiSeries
-      ? 240
-      : 200
+      ? 320
+      : 260
 
   // Whether we need a dual-axis composed chart
   const hasRightAxis = isMultiSeries && seriesList.some(s => s.axis === "right")
