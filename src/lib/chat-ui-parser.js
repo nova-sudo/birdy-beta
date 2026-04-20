@@ -1,39 +1,60 @@
 /**
- * Parses AI message content to extract :::ui blocks.
+ * Parses AI message content to extract structured fenced blocks.
  *
- * Input:  "Some text\n\n:::ui\n[{...}]\n:::\n\nMore text"
- * Output: { segments: [ {type:"text", content:"Some text"}, {type:"ui", fields:[...]}, {type:"text", content:"More text"} ] }
+ * Recognised block types:
+ *   :::ui       — interactive form fields  (payload: array of field specs)
+ *   :::metric   — single headline KPI card
+ *   :::chart    — inline bar/line/donut chart
+ *   :::status   — colored status badge
+ *   :::stats    — compact multi-KPI grid
+ *
+ * Everything else is returned as {type: "text"} segments so plain markdown
+ * keeps rendering exactly as before. Unknown block types are rendered
+ * as their raw text to stay forward-compatible.
  */
+
+const BLOCK_TYPES = ["ui", "metric", "chart", "status", "stats"]
+const BLOCK_REGEX = new RegExp(`:::(${BLOCK_TYPES.join("|")})\\s*\\n([\\s\\S]*?)\\n:::`, "g")
+
+
 export function parseChatUI(content) {
-  if (!content || !content.includes(":::ui")) {
+  if (!content || !BLOCK_TYPES.some(t => content.includes(`:::${t}`))) {
     return { segments: [{ type: "text", content }] }
   }
 
   const segments = []
-  const regex = /:::ui\s*\n([\s\S]*?)\n:::/g
   let lastIndex = 0
   let match
 
-  while ((match = regex.exec(content)) !== null) {
-    // Text before this UI block
+  // Reset lastIndex because we use the global regex
+  BLOCK_REGEX.lastIndex = 0
+
+  while ((match = BLOCK_REGEX.exec(content)) !== null) {
+    // Text before this block
     const textBefore = content.slice(lastIndex, match.index).trim()
     if (textBefore) {
       segments.push({ type: "text", content: textBefore })
     }
 
-    // Parse the JSON inside the :::ui block
+    const blockType = match[1]
+    const rawPayload = match[2]
+
     try {
-      const fields = JSON.parse(match[1])
-      segments.push({ type: "ui", fields: Array.isArray(fields) ? fields : [fields] })
+      const parsed = JSON.parse(rawPayload)
+      if (blockType === "ui") {
+        segments.push({ type: "ui", fields: Array.isArray(parsed) ? parsed : [parsed] })
+      } else {
+        segments.push({ type: blockType, payload: parsed })
+      }
     } catch (e) {
-      // If JSON parsing fails, treat it as text
+      // Malformed JSON — fall back to showing the raw block as text
       segments.push({ type: "text", content: match[0] })
     }
 
     lastIndex = match.index + match[0].length
   }
 
-  // Text after the last UI block
+  // Text after the last block
   const textAfter = content.slice(lastIndex).trim()
   if (textAfter) {
     segments.push({ type: "text", content: textAfter })

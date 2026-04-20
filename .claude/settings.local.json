@@ -70,7 +70,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:api.github.com)",
       "Bash(python -m scripts.backfill_opportunity_stats)",
-      "Bash(python -c ':*)"
+      "Bash(python -c ':*)",
+      "WebFetch(domain:developers.facebook.com)",
+      "Bash(find . -name \"*.py\" -exec grep -l \"graph.facebook.com/v23.0\\\\|graph.facebook.com/v18.0\\\\|facebook.com/v18.0\\\\|facebook.com/v23.0\" {} \\\\;)",
+      "Bash(timeout 60 node -e ':*)"
     ]
   }
 }

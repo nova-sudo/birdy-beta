@@ -6,8 +6,8 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Bell, UserRound, Search } from 'lucide-react';
+import { useState, useRef, useEffect } from "react";
+import { Bell, UserRound, Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import BirdyLogo from "@/components/BirdyLogo";
 
@@ -23,6 +23,27 @@ export default function RootLayout({ children }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
   const [headerInput, setHeaderInput] = useState("");
+  const headerInputRef = useRef(null);
+  const [isMac, setIsMac] = useState(false);
+
+  useEffect(() => {
+    if (typeof navigator !== "undefined") {
+      setIsMac(/Mac|iPhone|iPad|iPod/i.test(navigator.platform));
+    }
+  }, []);
+
+  // ⌘K / Ctrl+K focuses the header search bar (only when chat modal is closed)
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key.toLowerCase() === "k" && !chatOpen) {
+        e.preventDefault();
+        headerInputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chatOpen]);
 
   const handleHeaderSubmit = (e) => {
     e.preventDefault();
@@ -51,21 +72,34 @@ export default function RootLayout({ children }) {
                     </div>
                   </div>
 
-                  {/* Center search bar */}
+                  {/* Center Ask-Birdy search bar */}
                   <div className="mx-auto flex-1 flex justify-center max-w-2xl px-4">
-                    <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md">
+                    <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md group">
+                      <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-purple-500 pointer-events-none" />
                       <input
+                        ref={headerInputRef}
                         value={headerInput}
                         onChange={(e) => setHeaderInput(e.target.value)}
-                        className="w-full h-[42px] pl-4 pr-10 text-sm rounded-full bg-white border border-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+                        className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-white border border-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition"
                         placeholder="Ask Birdy about your marketing data..."
+                        aria-label="Ask Birdy"
                       />
+                      {!headerInput && (
+                        <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border/60 bg-muted/40 text-[10px] font-medium text-muted-foreground font-sans pointer-events-none">
+                          {isMac ? "⌘" : "Ctrl"}K
+                        </kbd>
+                      )}
                       <button
                         type="submit"
                         disabled={!headerInput.trim()}
-                        className="absolute top-1/2 -translate-y-1/2 right-2 h-7 w-7 flex items-center justify-center rounded-md hover:bg-accent transition disabled:opacity-40"
+                        className={`absolute top-1/2 -translate-y-1/2 right-1.5 h-8 w-8 flex items-center justify-center rounded-full transition ${
+                          headerInput.trim()
+                            ? "bg-purple-600 text-white hover:bg-purple-700"
+                            : "bg-muted/60 text-muted-foreground"
+                        }`}
+                        aria-label="Ask Birdy"
                       >
-                        <Search className="h-4 w-4 text-muted-foreground" />
+                        <Search className="h-4 w-4" />
                       </button>
                     </form>
                   </div>
