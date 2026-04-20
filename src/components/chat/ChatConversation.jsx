@@ -48,10 +48,16 @@ export default function ChatConversation({
     if (stored) setSessionId(stored)
   }, [sessionKey])
 
-  // Notify parent of messages changes
+  // Notify parent of messages changes. Store the callback in a ref so
+  // callers can pass an inline function without causing an infinite loop
+  // (inline functions are fresh identities each render; only `messages`
+  // should drive this effect).
+  const onMessagesChangeRef = useRef(onMessagesChange)
+  useEffect(() => { onMessagesChangeRef.current = onMessagesChange }, [onMessagesChange])
   useEffect(() => {
-    onMessagesChange?.(messages)
-  }, [messages, onMessagesChange])
+    onMessagesChangeRef.current?.(messages)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages])
 
   // Auto-scroll to latest
   useEffect(() => {
