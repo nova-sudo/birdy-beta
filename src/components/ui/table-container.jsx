@@ -698,7 +698,7 @@ const StyledTable = ({
                       <div
                         className={
                           colIdx === 0
-                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0 w-full"
                             : "flex items-center px-2 h-11"
                         }
                       >
@@ -817,15 +817,14 @@ const StyledTable = ({
                         <div
                           className={
                             colIdx === 0
-                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center min-w-0 w-full"
                               : "min-w-0 px-2"
                           }
                         >
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span
-                                  className={`truncate min-w-0 ${
+                                <span className={`flex items-center justify-between w-full min-w-0 ${
                                     row._isCreating || row._isPending ? "text-muted-foreground" : ""
                                   }`}
                                 >

@@ -20,6 +20,7 @@ import { Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Tar
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 
 import {
   ENHANCED_CLIENT_COLUMNS,
@@ -94,6 +95,7 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [statusFilter, setStatusFilter] = useState("all")
 
   // Sync hook data → local state (local state allows optimistic updates)
   useEffect(() => {
@@ -135,9 +137,32 @@ export default function ClientsPage() {
   const columns = useMemo(() => {
     console.log("🔄 Rebuilding columns with", clientGroups.length, "client groups");
 
-    // Build dynamic columns including tags from client groups data
     const dynamicColumns = buildDynamicColumns(clientGroups);
     console.log("📊 Dynamic columns built:", dynamicColumns.length, "total columns");
+
+    // ── Override name column to show client_status badge ──
+    const nameColIdx = dynamicColumns.findIndex(c => c.id === "name");
+    if (nameColIdx !== -1) {
+      dynamicColumns[nameColIdx] = {
+        ...dynamicColumns[nameColIdx],
+        render: (value, row) => {
+          const status = row.original?.client_status ?? row.client_status
+          const isActive = String(status).toLowerCase() === "active"
+          return (
+            <div className="flex items-center justify-between w-full">
+              <span className="font-medium truncate">{value ?? row.name}</span>
+              {status && (
+                <span className={`ml-2 shrink-0 text-xs font-medium px-3 py-1 rounded-full ${
+                  isActive ? "bg-green-100 text-green-700" : "bg-[#FEF9C3] text-[#A16207]"
+                }`}>
+                  {status}
+                </span>
+              )}
+            </div>
+          )
+        },
+      }
+    }
 
     // Add custom formula metrics
     const custom = customMetrics
@@ -164,6 +189,14 @@ export default function ClientsPage() {
     console.log("✅ Final columns:", deduplicated.length);
     return deduplicated;
   }, [customMetrics, clientGroups]);
+
+  const filteredByStatus = useMemo(() => {
+  if (statusFilter === "all") return clientGroups
+  return clientGroups.filter(g => {
+    const s = (g.client_status ?? "Active").toLowerCase()
+    return s === statusFilter
+  })
+}, [clientGroups, statusFilter])
 
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
@@ -1036,21 +1069,46 @@ export default function ClientsPage() {
             </CardContent>
           </Card>
         </div>
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full space-y-3">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <TabsList className="justify-start overflow-x-auto w-full">
+              {[
+                { key: "all",      label: "All Clients" },
+                { key: "active",   label: "Active" },
+                { key: "inactive", label: "Inactive" },
+              ].map(({ key, label }) => {
+                const count = key === "all"
+                  ? clientGroups.length
+                  : clientGroups.filter(g => (g.client_status ?? "Active").toLowerCase() === key).length
 
-        {/* 🔥 KEY FIX: Pass getTagCount function to StyledTable */}
-        <StyledTable
-          data={clientGroups}
-          onRowClick={handleClientGroupClick}
-          columns={columns}
-          searchQuery={searchQuery}
-          columnVisibility={columnVisibility}
-          customMetrics={customMetrics}
-          setCustomMetrics={setCustomMetrics}
-          enableEnhancedExtraction={true}
-          getTagCount={getTagCount}
-          isLoading={loading}
-          isRowLoading={(row) => row._isPending || row._isCreating}
-        />
+                return (
+                  <TabsTrigger key={key} value={key} className="gap-2">
+                    {label}
+                    <span className="ml-1 bg-purple-100 text-purple-700 rounded-full px-1.5 text-[10px] font-semibold leading-4">
+                      {count}
+                    </span>
+                  </TabsTrigger>
+                )
+              })}
+            </TabsList>
+          </div>
+
+          <TabsContent value={statusFilter} className="mt-0">
+            <StyledTable
+              data={filteredByStatus}
+              onRowClick={handleClientGroupClick}
+              columns={columns}
+              searchQuery={searchQuery}
+              columnVisibility={columnVisibility}
+              customMetrics={customMetrics}
+              setCustomMetrics={setCustomMetrics}
+              enableEnhancedExtraction={true}
+              getTagCount={getTagCount}
+              isLoading={loading}
+              isRowLoading={(row) => row._isPending || row._isCreating}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
 
     </div>

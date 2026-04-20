@@ -103,6 +103,10 @@ export default function ClientDetailsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
 
+  // ── Client status ──────────────────────────────────────────────────────────
+  const [clientStatus, setClientStatus] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(false)
+
   // ── Shared date preset for Marketing & Leads tabs ──────────────────────────
   const {
     clientGroups: allGroups,
@@ -143,6 +147,7 @@ export default function ClientDetailsPage() {
         const result = await response.json()
         setClientData(result.data)
         setNotes(result.data?.group_info?.notes || "")
+        setClientStatus(result.data?.group_info?.client_status ?? "Active")
       } catch {
         toast.error("Failed to load client details")
       } finally {
@@ -199,6 +204,29 @@ export default function ClientDetailsPage() {
     }
   }
 
+  // ── Toggle client status ───────────────────────────────────────────────────
+  const handleToggleStatus = async () => {
+    const newStatus = clientStatus === "Active" ? "Inactive" : "Active"
+    setStatusLoading(true)
+    try {
+      const res = await apiRequest(`/api/client-groups/${clientId}/client-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ client_status: newStatus }),
+      })
+      if (res.ok) {
+        setClientStatus(newStatus)
+        toast.success(`Client marked as ${newStatus}`)
+        invalidate()
+      } else {
+        toast.error("Failed to update status")
+      }
+    } catch {
+      toast.error("Failed to update status")
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
   // ── Delete group ───────────────────────────────────────────────────────────
   const handleDeleteGroup = async () => {
     if (deleteInput.trim() !== groupName?.trim()) {
@@ -247,9 +275,32 @@ export default function ClientDetailsPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           {clientLoading ? (
-            <Skeleton className="h-8 w-48" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-48" />
+              <Skeleton className="h-6 w-16 rounded-full" />
+            </div>
           ) : (
-            <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
+              <button
+                onClick={handleToggleStatus}
+                disabled={statusLoading || clientLoading}
+                className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-full transition-all ${
+                  clientStatus === "Active"
+                    ? "bg-[#DCFCE7] text-[#15803D] hover:bg-[#DCFCE7]/80"
+                    : "bg-[#FEF9C3] text-[#A16207] hover:bg-[#FEF9C3]/80"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+              >
+                {statusLoading ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <span className={`h-1.5 w-1.5 rounded-full ${
+                    clientStatus === "Active" ? "bg-[#15803D]" : "bg-[#A16207]"
+                  }`} />
+                )}
+                {clientStatus ?? "Active"}
+              </button>
+            </div>
           )}
         </div>
         <DateRangeSelect value={datePreset} onChange={setDatePreset} />
