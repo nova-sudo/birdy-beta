@@ -60,30 +60,46 @@ export const mdComponents = {
       {children}
     </a>
   ),
-  code: ({ inline, children, className }) => {
-    // Inline code stays inline
-    if (inline) {
-      return <code className="px-1 py-0.5 rounded bg-muted/60 text-[0.85em] font-mono">{children}</code>
-    }
-    const raw = Array.isArray(children) ? children.join("") : String(children || "")
-    // Detect the common LLM mistake of wrapping prose in ```markdown ... ```
-    // or bare ``` fences. Re-render as markdown so it looks like the rest of
-    // the response instead of a big dark code block.
-    const langMatch = /language-(\w+)/.exec(className || "")
+  // Override `pre` so we can detect & rescue markdown-in-fence at the wrapper
+  // level. The default react-markdown output for fenced blocks is
+  //   <pre><code class="language-xxx">…</code></pre>
+  // If that inner content looks like prose-markdown we want to escape the
+  // <pre> wrapper entirely (otherwise font-family: monospace + white-space:
+  // pre make everything look like a terminal dump).
+  pre: ({ children }) => {
+    // children is (usually) a single <code> React element
+    const child = Array.isArray(children) ? children[0] : children
+    const childProps = (child && child.props) || {}
+    const className = childProps.className || ""
+    const rawChildren = childProps.children
+    const raw = Array.isArray(rawChildren) ? rawChildren.join("") : String(rawChildren || "")
+
+    const langMatch = /language-(\w+)/.exec(className)
     const lang = langMatch ? langMatch[1].toLowerCase() : ""
     const isMarkdownLang = lang === "markdown" || lang === "md"
+
     if (isMarkdownLang || (!lang && _looksLikeMarkdown(raw))) {
+      // Render AS markdown, not as a code block
       return (
         <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
           {raw}
         </ReactMarkdown>
       )
     }
+
     return (
       <pre className="my-3 p-3 rounded-lg bg-slate-900 text-slate-100 text-xs overflow-x-auto">
-        <code className={className}>{children}</code>
+        {children}
       </pre>
     )
+  },
+  code: ({ inline, children, className }) => {
+    // Inline code (single backticks)
+    if (inline) {
+      return <code className="px-1 py-0.5 rounded bg-muted/60 text-[0.85em] font-mono">{children}</code>
+    }
+    // Fenced code — styling comes from our `pre` override; just render the <code>
+    return <code className={className}>{children}</code>
   },
   strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
