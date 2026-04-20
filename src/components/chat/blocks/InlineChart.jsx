@@ -1,9 +1,32 @@
 "use client"
+import { Component } from "react"
 import {
   BarChart, Bar, LineChart, Line, ComposedChart, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, Legend,
 } from "recharts"
 import { formatCompact } from "@/lib/format-metric"
+
+// Tiny error boundary so a recharts crash doesn't silently wipe the chart.
+// If anything throws, we fall back to a compact data table so the user sees
+// the numbers instead of a blank bubble.
+class ChartErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  componentDidCatch(error, info) {
+    if (typeof console !== "undefined") console.error("InlineChart render error:", error, info)
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="my-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+          <div className="font-medium mb-1">Chart failed to render</div>
+          <div className="opacity-75">{String(this.state.error?.message || this.state.error)}</div>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 const PALETTE = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#14b8a6", "#a855f7", "#f97316"]
 
@@ -25,7 +48,21 @@ const PALETTE = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#14b8a6
  *   }
  */
 export default function InlineChart({ payload }) {
-  if (!payload || !Array.isArray(payload.data) || payload.data.length === 0) return null
+  return (
+    <ChartErrorBoundary>
+      <InlineChartInner payload={payload} />
+    </ChartErrorBoundary>
+  )
+}
+
+function InlineChartInner({ payload }) {
+  if (!payload || !Array.isArray(payload.data) || payload.data.length === 0) {
+    return (
+      <div className="my-3 rounded-xl border border-dashed border-border/50 bg-white p-4 text-xs text-muted-foreground text-center">
+        Chart data is empty.
+      </div>
+    )
+  }
 
   const {
     type = "bar",

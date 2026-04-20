@@ -3,6 +3,30 @@
  * Used by MessageBubble so all three chat surfaces render markdown identically.
  */
 "use client"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
+
+// Heuristic: does a "code block" content actually look like markdown that
+// the model accidentally wrapped in triple backticks?  We check for common
+// markdown constructs and NO code-like syntax (semicolons, braces, etc.).
+function _looksLikeMarkdown(s) {
+  if (!s || typeof s !== "string") return false
+  const text = s.trim()
+  if (!text) return false
+  // Obvious markdown signals
+  const mdSignal =
+    /^#{1,6}\s/m.test(text) ||           // headers
+    /^\s*[-*+]\s+\*\*/m.test(text) ||    // bulleted bold items
+    /^\s*\d+\.\s+\*\*/m.test(text) ||    // numbered bold items
+    /\*\*[^*\n]+\*\*/.test(text)         // inline bold
+  if (!mdSignal) return false
+  // Code-like signals (skip the heuristic if present)
+  const codeSignal =
+    /[{};]$/m.test(text) ||
+    /=>|==|!=|&&|\|\|/.test(text) ||
+    /^\s*(import|const|let|var|function|class|def|return)\b/m.test(text)
+  return !codeSignal
+}
 
 export const mdComponents = {
   h1: ({ children }) => <h1 className="text-base font-semibold mt-3 mb-2">{children}</h1>,
@@ -36,14 +60,31 @@ export const mdComponents = {
       {children}
     </a>
   ),
-  code: ({ inline, children }) =>
-    inline ? (
-      <code className="px-1 py-0.5 rounded bg-muted/60 text-[0.85em] font-mono">{children}</code>
-    ) : (
+  code: ({ inline, children, className }) => {
+    // Inline code stays inline
+    if (inline) {
+      return <code className="px-1 py-0.5 rounded bg-muted/60 text-[0.85em] font-mono">{children}</code>
+    }
+    const raw = Array.isArray(children) ? children.join("") : String(children || "")
+    // Detect the common LLM mistake of wrapping prose in ```markdown ... ```
+    // or bare ``` fences. Re-render as markdown so it looks like the rest of
+    // the response instead of a big dark code block.
+    const langMatch = /language-(\w+)/.exec(className || "")
+    const lang = langMatch ? langMatch[1].toLowerCase() : ""
+    const isMarkdownLang = lang === "markdown" || lang === "md"
+    if (isMarkdownLang || (!lang && _looksLikeMarkdown(raw))) {
+      return (
+        <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+          {raw}
+        </ReactMarkdown>
+      )
+    }
+    return (
       <pre className="my-3 p-3 rounded-lg bg-slate-900 text-slate-100 text-xs overflow-x-auto">
-        <code>{children}</code>
+        <code className={className}>{children}</code>
       </pre>
-    ),
+    )
+  },
   strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
 }
