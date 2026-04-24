@@ -147,6 +147,7 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("All Alerts");
   const [rawAlerts, setRawAlerts] = useState([]);
   const [query, setQuery] = useState("");
+  const [dismissingIds, setDismissingIds] = useState(new Set())
 
   const userCurrency = (() => {
     try { return localStorage.getItem("defaultCurrency") ?? "USD"; } catch { return "USD"; }
@@ -311,7 +312,9 @@ export default function DashboardPage() {
             filteredAlerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`flex items-center gap-4 mb-4 p-4 rounded-lg shadow-sm border-l-4 ${ALERT_LEFT_BORDER[alert.color]}`}
+                className={`flex items-center gap-4 mb-4 p-4 rounded-lg shadow-sm border-l-4 overflow-hidden transition-all duration-800 ${ALERT_LEFT_BORDER[alert.color]} ${
+                  dismissingIds.has(alert.id) ? "-translate-x-full opacity-0" : "translate-x-0 opacity-100"
+                }`}
               >
                 <AlertIcon color={alert.color} />
                 <div className="flex-1 min-w-0">
@@ -336,10 +339,29 @@ export default function DashboardPage() {
                     Open Client
                   </Button>
                   <button
-                    onClick={() => dismissAlert(alert.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 text-muted-foreground hover:text-destructive transition-colors"
+                    onClick={() => {
+                      setDismissingIds(prev => new Set([...prev, alert.id]));
+                      setTimeout(() => dismissAlert(alert.id), 600);
+                    }}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 transition-colors group"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                      dismissingIds.has(alert.id)
+                        ? "bg-green-500 border-green-500 scale-110"
+                        : "border-muted-foreground/40 hover:border-green-500"
+                    }`}>
+                      <svg
+                        className={`w-3 h-3 text-white transition-all duration-200 ${
+                          dismissingIds.has(alert.id) ? "opacity-100 scale-100" : "opacity-0 scale-0"
+                        }`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
                   </button>
                 </div>
               </div>
