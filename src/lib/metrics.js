@@ -213,6 +213,8 @@ export function evaluateFormula(formulaParts, rowData, getTagCount = null) {
       value = value ?? 0;
       
       expression += value;
+    } else if (part.type === "number") {
+      expression += part.value;
     } else if (part.type === "operator") {
       expression += ` ${part.value} `;
     }
