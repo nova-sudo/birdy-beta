@@ -173,33 +173,57 @@ export function getMetricDisplayName(metricId) {
 }
 
 /**
- * Evaluate a formula with dynamic tag support
- * @param {Array} formulaParts - Array of formula parts (metrics and operators)
- * @param {Object} rowData - Data row to evaluate against
- * @param {Function} getTagCount - Optional function to get tag counts
- * @returns {number} Evaluated result
+ * Evaluate a formula with dynamic tag support and custom-metric recursion.
+ *
+ * @param {Array}    formulaParts - Array of {type: "metric"|"operator", value}
+ * @param {Object}   rowData      - Row of base metric values
+ * @param {Function} getTagCount  - Optional fn(rowData, tagName) for tag metrics
+ * @param {Set}      _evaluating  - INTERNAL — tracks custom metric ids currently
+ *                                   on the eval stack to break cycles
+ * @returns {number} Evaluated result, 0 on error
  */
-export function evaluateFormula(formulaParts, rowData, getTagCount = null) {
+export function evaluateFormula(formulaParts, rowData, getTagCount = null, _evaluating = null) {
   if (!formulaParts?.length) {
     return 0
   }
-  
+
+  // Track in-flight custom metric ids to detect cycles
+  if (_evaluating === null) _evaluating = new Set();
+
   let expression = ""
-  
+
   for (const part of formulaParts) {
     if (part.type === "metric") {
       let value;
-      
-      // Check if it's a tag metric
-      if (part.value.startsWith('tag_') && getTagCount) {
+
+      // Custom metric reference — recurse
+      if (part.value && part.value.startsWith('custom_')) {
+        if (_evaluating.has(part.value)) {
+          // Cycle: bail out
+          value = 0;
+        } else {
+          const cm = (_customMetricsCache || []).find(m => m.id === part.value);
+          if (cm && cm.formulaParts && cm.formulaParts.length) {
+            const next = new Set(_evaluating);
+            next.add(part.value);
+            value = evaluateFormula(cm.formulaParts, rowData, getTagCount, next);
+          } else {
+            // Cached row may already hold the result; otherwise 0
+            value = rowData[part.value] ?? 0;
+          }
+        }
+      }
+      // Tag metric
+      else if (part.value && part.value.startsWith('tag_') && getTagCount) {
         const tagName = part.value
           .replace('tag_', '')
           .replace(/_/g, ' ');
         value = getTagCount(rowData, tagName);
-      } else {
-        // First try the metric ID directly (this works for campaigns data)
+      }
+      // Built-in / direct
+      else {
         value = rowData[part.value];
-        
+
         // If not found, try the mapped data key
         if (value === undefined || value === null) {
           const dataKey = CACHED_METRIC_MAPPING[part.value];
@@ -208,16 +232,16 @@ export function evaluateFormula(formulaParts, rowData, getTagCount = null) {
           }
         }
       }
-      
+
       // Default to 0 if still not found
       value = value ?? 0;
-      
+
       expression += value;
     } else if (part.type === "operator") {
       expression += ` ${part.value} `;
     }
   }
-  
+
   try {
     // Use Function constructor instead of eval for safer evaluation
     const result = new Function(`return ${expression}`)();
