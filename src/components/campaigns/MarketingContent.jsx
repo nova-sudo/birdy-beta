@@ -965,6 +965,13 @@ export function MarketingContent({
                   enableStatusToggle={activeTab !== "leads"}
                   onStatusToggle={handleStatusToggle}
                   togglingRows={togglingRows}
+                  // Persist column order per-tab. visibleColumns[activeTab] is
+                  // already an ordered array of visible IDs — feed it as the
+                  // initial order, and any drag updates the same slot.
+                  initialColumnOrder={visibleColumns[activeTab] || []}
+                  onColumnOrderChange={(newOrder) =>
+                    setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
+                  }
                 />
             )}
           </TabsContent>

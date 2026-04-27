@@ -75,11 +75,20 @@ const StyledTable = ({
   enableStatusToggle = false,
   onStatusToggle,
   togglingRows = new Set(),
+  initialColumnOrder = [],
+  onColumnOrderChange,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [draggedColumn, setDraggedColumn] = useState(null);
-  const [columnOrder, setColumnOrder] = useState([]);
+  const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
+
+  // Sync with external order changes (e.g. parent loads saved view post-mount)
+  useEffect(() => {
+    if (Array.isArray(initialColumnOrder) && initialColumnOrder.length > 0) {
+      setColumnOrder(initialColumnOrder);
+    }
+  }, [initialColumnOrder]);
   const isClientMode = Array.isArray(customMetrics) && setCustomMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
@@ -409,6 +418,11 @@ const StyledTable = ({
 
     setColumnOrder(newOrder);
     setDraggedColumn(null);
+
+    // Notify parent so it can persist the new order. We pass only the
+    // currently-visible IDs in their new sequence; the parent decides how
+    // to merge this with hidden columns when saving.
+    onColumnOrderChange?.(newOrder);
   };
 
   /* ---------- FORMATTERS ---------- */
