@@ -28,7 +28,8 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      const response = await fetch("http://localhost:8001/api/register", {
+      const response = await fetch("http://https://birdy-
+backend.vercel.apr/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

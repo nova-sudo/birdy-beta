@@ -93,9 +93,17 @@ export default function MessageBubble({
 
         {!isUser && message.tools_used?.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-border/30">
-            {message.tools_used.map((tool, i) => (
-              <ToolPill key={`${tool}-${i}`} name={tool} />
-            ))}
+            {(() => {
+              // Dedupe repeated tool calls (e.g. 12 monthly fetches of
+              // get_meta_insights_live) and show a x<n> suffix on the pill.
+              const counts = new Map()
+              for (const t of message.tools_used) {
+                counts.set(t, (counts.get(t) || 0) + 1)
+              }
+              return [...counts.entries()].map(([tool, n]) => (
+                <ToolPill key={tool} name={tool} count={n > 1 ? n : undefined} />
+              ))
+            })()}
           </div>
         )}
       </div>

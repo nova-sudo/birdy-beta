@@ -687,6 +687,13 @@ export function LeadsContent({
           searchQuery=""
           clickableFirstColumn={false}
           isLoading={loading}
+            // visibleColumns IS the ordered list — feed it as the initial order
+            // and let drags update the same array (saved on next "Save view").
+            initialColumnOrder={visibleColumns}
+            onColumnOrderChange={(newOrder) => {
+              // Keep hidden columns out of the ordered list (only visible drag)
+              setVisibleColumns(newOrder)
+            }}
         />
 
         <div className="flex justify-center gap-4">
