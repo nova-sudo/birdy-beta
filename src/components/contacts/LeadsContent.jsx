@@ -1,5 +1,6 @@
 "use client"
-import { ChevronLeft, ChevronRight, X } from "lucide-react"
+
+import { ChevronLeft, ChevronRight, X, SlidersHorizontal, Check, Search, ChevronDown } from "lucide-react"
 import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { Button } from "@/components/ui/button"
@@ -16,6 +17,11 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import StyledTable from "@/components/ui/table-container"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -26,9 +32,219 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
 import { ErrorBanner } from "@/components/ErrorBanner"
 import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
-import { FilterPanel } from "@/components/ui/Filterpanel"
 
 const baseContactColumns = buildContactColumns()
+
+// ─── FilterPanel Component ───────────────────────────────────────────────────
+function FilterPanel({
+  sources = [],
+  allTags = [],
+  selectedSources = [],
+  setSelectedSources,
+  selectedTags = [],
+  setSelectedTags,
+}) {
+  const [open, setOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("sources")
+  const [search, setSearch] = useState("")
+
+  // Draft state — only committed to parent on "Apply"
+  const [draftSources, setDraftSources] = useState(selectedSources)
+  const [draftTags, setDraftTags] = useState(selectedTags)
+
+  // Sync draft when parent resets from outside
+  useEffect(() => { setDraftSources(selectedSources) }, [selectedSources])
+  useEffect(() => { setDraftTags(selectedTags) }, [selectedTags])
+
+  // Reset search on tab change
+  useEffect(() => { setSearch("") }, [activeTab])
+
+  // Counts (based on draft)
+  const sourceCount = draftSources.length
+  const tagCount = draftTags.length
+  const totalActive = sourceCount + tagCount
+
+  const tabs = [
+    { id: "sources", label: "Sources", count: sourceCount },
+    { id: "tags",    label: "Tags",    count: tagCount },
+  ]
+
+  const getItems = () => {
+    switch (activeTab) {
+      case "sources": return sources
+      case "tags":    return allTags
+      default:        return []
+    }
+  }
+
+  const isChecked = (item) => {
+    switch (activeTab) {
+      case "sources": return draftSources.includes(item)
+      case "tags":    return draftTags.includes(item)
+      default:        return false
+    }
+  }
+
+  const toggle = (item) => {
+    switch (activeTab) {
+      case "sources":
+        setDraftSources((prev) =>
+          prev.includes(item) ? prev.filter((s) => s !== item) : [...prev, item]
+        )
+        break
+      case "tags":
+        setDraftTags((prev) =>
+          prev.includes(item) ? prev.filter((t) => t !== item) : [...prev, item]
+        )
+        break
+    }
+  }
+
+  const handleClear = () => {
+    switch (activeTab) {
+      case "sources": setDraftSources([]); break
+      case "tags":    setDraftTags([]);    break
+    }
+  }
+
+  const handleApply = () => {
+    setSelectedSources?.(draftSources)
+    setSelectedTags?.(draftTags)
+    setOpen(false) // Close panel after apply
+  }
+
+  const filteredItems = getItems().filter((item) =>
+    item.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label ?? "Filters"
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <button className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-9 text-sm rounded-lg border border-gray-200 transition-colors duration-150 cursor-pointer">
+          <SlidersHorizontal size={14} />
+          Filters
+          {totalActive > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-violet-700">
+              {totalActive}
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4 text-gray-500" />
+        </button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        sideOffset={8}
+        className="w-[340px] rounded-2xl border border-gray-200 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden p-0 flex flex-col"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {/* Tab bar */}
+        <div className="flex gap-1.5 px-3 pt-2.5 pb-1 shrink-0">
+          {tabs.map((tab) => {
+            const active = tab.id === activeTab
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={[
+                  "flex-1 inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full",
+                  "text-[12px] font-medium cursor-pointer transition-all duration-150 whitespace-nowrap",
+                  active ? "bg-violet-700 text-white" : "bg-gray-100 text-gray-700",
+                ].join(" ")}
+              >
+                {tab.label}
+                {tab.count > 0 && (
+                  <span className={[
+                    "inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full px-1",
+                    "text-[10px] font-bold text-white",
+                    active ? "bg-white/25" : "bg-violet-700",
+                  ].join(" ")}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Search */}
+        <div
+          className="px-3 py-1.5 border-t border-gray-200 shrink-0"
+          onFocusCapture={(e) => e.stopPropagation()}
+        >
+          <div className="relative flex items-center">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder={`Search ${activeTabLabel}…`}
+              autoComplete="off"
+              className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-2.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none p-0"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1">
+          {filteredItems.length === 0 ? (
+            <p className="text-center text-gray-400 text-[12px] py-5">No results</p>
+          ) : (
+            filteredItems.map((item) => {
+              const checked = isChecked(item)
+              return (
+                <label
+                  key={item}
+                  onClick={() => toggle(item)}
+                  className="flex items-center gap-2.5 px-1.5 py-[7px] rounded-lg cursor-pointer hover:bg-violet-50 transition-colors duration-100"
+                >
+                  <span
+                    className={[
+                      "shrink-0 w-[16px] h-[16px] rounded-[4px] flex items-center justify-center transition-all duration-150",
+                      checked ? "bg-violet-700 border-0" : "bg-white border border-gray-300",
+                    ].join(" ")}
+                  >
+                    {checked && <Check size={10} color="#fff" strokeWidth={3} />}
+                  </span>
+                  <span className="text-[13px] text-gray-900 flex-1 select-none">
+                    {item}
+                  </span>
+                </label>
+              )
+            })
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 bg-white shrink-0">
+          <button
+            onClick={handleClear}
+            className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[12px] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
+          >
+            Clear
+          </button>
+          <button
+            onClick={handleApply}
+            className="flex-1 h-8 rounded-lg border-0 bg-violet-700 text-white text-[12px] font-semibold hover:bg-violet-800 cursor-pointer transition-colors duration-150"
+          >
+            Apply filters
+          </button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+// ─── Main LeadsContent Component ─────────────────────────────────────────────
 
 export function LeadsContent({
   clientGroups,
@@ -65,7 +281,7 @@ export function LeadsContent({
   const [currentPage, setCurrentPage] = useState(1)
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("contacts")
 
-  // Filter to GHL groups only (contacts page only shows GHL contacts)
+  // Filter to GHL groups only
   const ghlClientGroups = useMemo(
     () => clientGroups.filter(g => g.ghl_location_id),
     [clientGroups]
@@ -83,26 +299,15 @@ export function LeadsContent({
 
   const contactColumns = useMemo(() => {
     const custom = customMetrics.map(m => ({
-      id: m.id,
-      header: m.name,
-      label: m.name,
-      defaultVisible: false,
-      sortable: true,
-      icons: Flask,
-      category: "custom",
+      id: m.id, header: m.name, label: m.name, defaultVisible: false,
+      sortable: true, icons: Flask, category: "custom",
       cell: (row) => row?.[m.id] ?? "–",
     }))
 
-    // Individual tag presence columns — ✅ if lead has tag, – if not
     const tagCols = availableTags.map(tag => ({
       id: `tag_${tag.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`,
-      header: tag,
-      label: `Tag: ${tag}`,
-      defaultVisible: false,
-      sortable: true,
-      icons: ghl,
-      category: "tags",
-      _tagName: tag,
+      header: tag, label: `Tag: ${tag}`, defaultVisible: false,
+      sortable: true, icons: ghl, category: "tags", _tagName: tag,
       cell: (_, row) => row?.tags?.includes(tag) ? "✅" : "–",
     }))
 
@@ -118,48 +323,48 @@ export function LeadsContent({
   }, [viewsLoaded, savedColumns])
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSource, setSelectedSource] = useState("all")
+  
+  // ── Changed to multi-select array ──
+  const [selectedSources, setSelectedSources] = useState([])
   const [selectedType, setSelectedType] = useState("all")
   const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
   const [selectedTags, setSelectedTags] = useState([])
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
+  
   const [selectedClientGroup, setSelectedClientGroup] = useState(() => {
-    if (!showGroupFilter && clientGroups.length === 1) {
-      return clientGroups[0].id
-    }
+    if (!showGroupFilter && clientGroups.length === 1) return clientGroups[0].id
     return "all"
   })
+  
   const [selectedCategory, setSelectedCategory] = useState("columns")
   const [searchTerm, setSearchTerm] = useState("")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  // ── Filter options — fetched from server (full dataset, not just current page) ──
+  // ── Filter options fetched from server ──
   const [sources, setSources] = useState([])
   const [types, setTypes] = useState([])
   const [allTags, setAllTags] = useState([])
+  const opportunityStatuses = ["open", "won", "lost", "abandoned"]
 
   useEffect(() => {
-  if (ghlClientGroups.length === 0) return
-  const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-  const { start_date, end_date } = presetToDateRange(datePreset) // ✅ add this
+    if (ghlClientGroups.length === 0) return
+    const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+    const { start_date, end_date } = presetToDateRange(datePreset)
 
-  let url = `/api/leads/filter-options?groups=${groupsParam}`
-  if (start_date) url += `&start_date=${start_date}`  // ✅ add this
-  if (end_date)   url += `&end_date=${end_date}`       // ✅ add this
+    let url = `/api/leads/filter-options?groups=${groupsParam}`
+    if (start_date) url += `&start_date=${start_date}`
+    if (end_date) url += `&end_date=${end_date}`
 
-  apiRequest(url)
-    .then(r => r.json())
-    .then(data => {
-      setSources(data.sources || [])
-      setTypes(data.types || [])
-      setAllTags(data.tags || [])
-    })
-    .catch(() => {})
-}, [selectedClientGroup, ghlClientGroups.length, datePreset]) // ✅ add datePreset
-
-  // opportunityStatuses are fixed known values — no need to fetch
-  const opportunityStatuses = ["open", "won", "lost", "abandoned"]
+    apiRequest(url)
+      .then(r => r.json())
+      .then(data => {
+        setSources(data.sources || [])
+        setTypes(data.types || [])
+        setAllTags(data.tags || [])
+      })
+      .catch(() => {})
+  }, [selectedClientGroup, ghlClientGroups.length, datePreset])
 
   const columnVisibilityMap = useMemo(
     () => contactColumns.reduce(
@@ -188,13 +393,16 @@ export function LeadsContent({
       if (start_date) endpoint += `&start_date=${start_date}`
       if (end_date) endpoint += `&end_date=${end_date}`
 
-      // ── server-side filters ──────────────────────────────────────────────
-      if (selectedSource !== "all") endpoint += `&source=${encodeURIComponent(selectedSource)}`
+      // ── Server-side filters ──
+      // FIX: Send each source as a separate param so backend receives an array
+      if (selectedSources.length > 0) {
+        const sourcesParam = selectedSources.join("|")  // use | as separator, not comma
+        endpoint += `&source=${encodeURIComponent(sourcesParam)}`
+      }
       if (selectedType !== "all") endpoint += `&contact_type=${encodeURIComponent(selectedType)}`
       if (selectedOpportunityStatus !== "all") endpoint += `&opportunity_status=${encodeURIComponent(selectedOpportunityStatus)}`
       if (selectedTags.length > 0) endpoint += `&tags=${selectedTags.map(encodeURIComponent).join(",")}`
       if (searchQuery) endpoint += `&search=${encodeURIComponent(searchQuery)}`
-      // ────────────────────────────────────────────────────────────────────
 
       const response = await apiRequest(endpoint)
       if (!response.ok) throw new Error(`Failed: ${response.status}`)
@@ -213,27 +421,22 @@ export function LeadsContent({
     }
   }
 
-  // When embedded for a single group, auto-select it once groups load
+  // Auto-select single group if embedded
   useEffect(() => {
     if (!showGroupFilter && ghlClientGroups.length === 1 && selectedClientGroup === "all") {
       setSelectedClientGroup(ghlClientGroups[0].id)
     }
   }, [showGroupFilter, ghlClientGroups, selectedClientGroup])
 
-  // Re-fetch whenever filters, preset, group filter, or group list changes
+  // Re-fetch whenever committed filters change
   useEffect(() => {
     if (ghlClientGroups.length > 0) {
       fetchContacts(1)
     }
   }, [
-    selectedClientGroup,
-    ghlClientGroups.length,
-    datePreset,
-    selectedSource,
-    selectedType,
-    selectedOpportunityStatus,
-    selectedTags,
-    searchQuery,
+    selectedClientGroup, ghlClientGroups.length, datePreset,
+    selectedSources, selectedType, selectedOpportunityStatus,
+    selectedTags, searchQuery,
   ])
 
   useEffect(() => {
@@ -247,10 +450,9 @@ export function LeadsContent({
     return () => clearInterval(timer)
   }, [])
 
-  // ── Client-side sort only (filtering is now server-side) ─────────────────
+  // Client-side sort
   const filteredAndSortedContacts = useMemo(() => {
     let sorted = [...contacts]
-
     if (sortColumn) {
       sorted.sort((a, b) => {
         let aVal = a[sortColumn] ?? ""
@@ -264,13 +466,12 @@ export function LeadsContent({
         return (aVal < bVal ? -1 : 1) * (sortDirection === "asc" ? 1 : -1)
       })
     }
-
     return sorted
   }, [contacts, sortColumn, sortDirection])
 
   const clearAllFilters = () => {
     setSearchQuery("")
-    setSelectedSource("all")
+    setSelectedSources([])
     setSelectedType("all")
     setSelectedOpportunityStatus("all")
     if (setDatePreset) setDatePreset("last_7d")
@@ -280,9 +481,14 @@ export function LeadsContent({
     setSortDirection("asc")
   }
 
-  const hasActiveFilters = searchQuery || selectedSource !== "all" || selectedType !== "all" ||
-    selectedOpportunityStatus !== "all" || selectedClientGroup !== "all" ||
-    selectedTags.length > 0 || datePreset !== "last_7d"
+  const hasActiveFilters = 
+    searchQuery || 
+    selectedSources.length > 0 || 
+    selectedType !== "all" ||
+    selectedOpportunityStatus !== "all" || 
+    selectedClientGroup !== "all" ||
+    selectedTags.length > 0 || 
+    datePreset !== "last_7d"
 
   const categories = [
     { id: "columns", label: "Columns" },
@@ -301,7 +507,7 @@ export function LeadsContent({
       case "sources":
         return sources
           .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(s => ({ id: s, label: s, visible: selectedSource === s }))
+          .map(s => ({ id: s, label: s, visible: selectedSources.includes(s) }))
       case "types":
         return types
           .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -317,7 +523,7 @@ export function LeadsContent({
       default:
         return []
     }
-  }, [selectedCategory, searchTerm, sources, types, opportunityStatuses, allTags, selectedSource, selectedType, selectedOpportunityStatus, selectedTags])
+  }, [selectedCategory, searchTerm, sources, types, opportunityStatuses, allTags, selectedSources, selectedType, selectedOpportunityStatus, selectedTags, contactColumns])
 
   const toggleColumnVisibility = (id) => {
     switch (selectedCategory) {
@@ -325,7 +531,7 @@ export function LeadsContent({
         setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
         break
       case "sources":
-        setSelectedSource(prev => prev === id ? "all" : id)
+        setSelectedSources(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
         break
       case "types":
         setSelectedType(prev => prev === id ? "all" : id)
@@ -342,7 +548,8 @@ export function LeadsContent({
   const selectAll = () => {
     switch (selectedCategory) {
       case "columns": setVisibleColumns(contactColumns.map(c => c.id)); break
-      case "tags": setSelectedTags(allTags); break
+      case "sources": setSelectedSources([...sources]); break
+      case "tags": setSelectedTags([...allTags]); break
       default: break
     }
   }
@@ -350,7 +557,7 @@ export function LeadsContent({
   const clearAll = () => {
     switch (selectedCategory) {
       case "columns": setVisibleColumns([]); break
-      case "sources": setSelectedSource("all"); break
+      case "sources": setSelectedSources([]); break
       case "types": setSelectedType("all"); break
       case "opportunities": setSelectedOpportunityStatus("all"); break
       case "tags": setSelectedTags([]); break
@@ -403,7 +610,6 @@ export function LeadsContent({
 
         <ContactStats metaStats={metaData?.stats} loading={loading} />
 
-        {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
             <TabsList className="flex-1 justify-start overflow-x-auto">
@@ -421,23 +627,16 @@ export function LeadsContent({
                 onChange={e => setSearchQuery(e.target.value)}
                 className="text-gray-900 bg-white h-10 w-fit md:w-55 text-sm font-medium"
               />
+              
               <FilterPanel
                 sources={sources}
-                types={types}
-                opportunityStatuses={opportunityStatuses}
                 allTags={allTags}
-
-                selectedSource={selectedSource}
-                setSelectedSource={setSelectedSource}
-                selectedType={selectedType}
-                setSelectedType={setSelectedType}
-                selectedOpportunityStatus={selectedOpportunityStatus}
-                setSelectedOpportunityStatus={setSelectedOpportunityStatus}
+                selectedSources={selectedSources}
+                setSelectedSources={setSelectedSources}
                 selectedTags={selectedTags}
                 setSelectedTags={setSelectedTags}
-
-                onClearAll={clearAllFilters}
               />
+
               <ColumnVisibilityDropdown
                 isOpen={isDropdownOpen}
                 setIsOpen={setIsDropdownOpen}
@@ -471,6 +670,7 @@ export function LeadsContent({
                   setIsDropdownOpen(false)
                 }}
               />
+              
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">
                   Clear

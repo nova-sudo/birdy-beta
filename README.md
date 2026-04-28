@@ -14,7 +14,7 @@ pnpm dev
 bun dev
 ```
 
-Open [https://birdy-backend.vercel.app](https://birdy-backend.vercel.app) with your browser to see the result.
+Open [http://localhost:8001](http://localhost:8001) with your browser to see the result.
 
 You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
 
