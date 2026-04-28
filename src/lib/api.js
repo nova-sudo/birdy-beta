@@ -1,6 +1,6 @@
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://https://birdy-
-backend.vercel.apr"
+  process.env.NEXT_PUBLIC_API_URL || "https://birdy-
+backend.vercel.app"
 
 /**
  * Make an authenticated API request.
