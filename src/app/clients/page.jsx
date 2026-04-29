@@ -170,6 +170,10 @@ export default function ClientsPage() {
     columns.forEach((c) => (map[c.id] = c.visible));
     return map;
   });
+  // The saved view is a flat ordered array — its sequence implies BOTH which
+  // columns are visible (those present) AND the order they should render in.
+  const [columnOrder, setColumnOrder] = useState([])
+
   useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
     setColumnVisibility(prev => {
@@ -178,6 +182,10 @@ export default function ClientsPage() {
       savedColumns.forEach(id => { updated[id] = true })
       return updated
     })
+    // Hydrate column order from the saved sequence
+    if (Array.isArray(savedColumns) && savedColumns.length > 0) {
+      setColumnOrder(savedColumns)
+    }
   }, [viewsLoaded, savedColumns])
 
   useEffect(() => {
@@ -239,11 +247,23 @@ export default function ClientsPage() {
   };
 
   const save = async () => {
-    localStorage.setItem('clients-columnVisibility', JSON.stringify(columnVisibility))
-    const visibleIds = Object.entries(columnVisibility)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-    await saveToDB(visibleIds)
+    // Save as an ordered list. The order is derived from the user's
+    // drag-reordered columnOrder when present, otherwise from the natural
+    // columns sequence. Hidden columns are excluded.
+    const visibleSet = new Set(
+      Object.entries(columnVisibility).filter(([, v]) => v).map(([k]) => k)
+    )
+    let orderedIds
+    if (columnOrder && columnOrder.length > 0) {
+      // Start from the user-defined order, then append any newly-visible
+      // columns the order list doesn't yet know about.
+      const known = new Set(columnOrder)
+      const tail = [...visibleSet].filter(id => !known.has(id))
+      orderedIds = [...columnOrder.filter(id => visibleSet.has(id)), ...tail]
+    } else {
+      orderedIds = columns.filter(c => visibleSet.has(c.id)).map(c => c.id)
+    }
+    await saveToDB(orderedIds)
     setIsOpen(false)
   }
 
@@ -1050,6 +1070,8 @@ export default function ClientsPage() {
           getTagCount={getTagCount}
           isLoading={loading}
           isRowLoading={(row) => row._isPending || row._isCreating}
+          initialColumnOrder={columnOrder}
+          onColumnOrderChange={setColumnOrder}
         />
       </div>
 

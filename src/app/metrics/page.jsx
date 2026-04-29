@@ -262,14 +262,28 @@ const MetricsHub = () => {
     setCustomMetricsCache(customMetrics)
   }, [customMetrics])
 
-  // Enrich formula metrics with icons for MetricPicker
-  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask }
-  const formulaMetricOptions = useMemo(() =>
-    availableMetricsForFormulas.map(m => ({
+  // Enrich formula metrics with icons for MetricPicker, and merge user's
+  // existing custom metrics so they can be referenced inside another formula.
+  // (E.g. create CPA = Meta Spend / Won Opps, then use CPA in another metric.)
+  // The metric currently being edited is excluded so users can't directly
+  // reference themselves; deeper cycles are caught server-side on save.
+  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask }
+  const formulaMetricOptions = useMemo(() => {
+    const baseOptions = availableMetricsForFormulas.map(m => ({
       ...m,
       icon: ICON_MAP[m.category] || null,
-    })),
-  [availableMetricsForFormulas])
+    }))
+    const editingId = editingMetric?.id
+    const customOptions = customMetrics
+      .filter(cm => cm.id !== editingId)
+      .map(cm => ({
+        id: cm.id,
+        label: cm.name,
+        category: "Custom",
+        icon: Flask,
+      }))
+    return [...baseOptions, ...customOptions]
+  }, [availableMetricsForFormulas, customMetrics, editingMetric])
 
   // Combine discovered and custom metrics
   const allMetrics = [...discoveredMetrics, ...customMetrics]
@@ -987,7 +1001,10 @@ const MetricsHub = () => {
                                 </span>
                               )
                             }
-                            const metricLabel = availableMetricsForFormulas.find(m => m.id === part.value)?.label || part.value
+                            const metricLabel =
+                              availableMetricsForFormulas.find(m => m.id === part.value)?.label
+                              || customMetrics.find(cm => cm.id === part.value)?.name
+                              || part.value
                             return (
                               <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-border text-sm font-medium shadow-sm">
                                 {metricLabel}
@@ -1125,11 +1142,34 @@ const MetricsHub = () => {
                                 meta_cpm: 20.0, cpm: 20.0, ghl_contacts: 200, frequency: 2.5,
                                 conversion_rate: 8.0, cost_per_lead: 8.33, engagement_rate: 3.24,
                               }
+                              // Recursively resolve a metric reference's sample value.
+                              // For built-ins, look up sampleData. For custom metrics
+                              // (id starts with "custom_"), recurse into their formula.
+                              // `seen` prevents infinite loops on cycles.
+                              const resolveMetricSample = (id, seen = new Set()) => {
+                                if (sampleData[id] !== undefined) return Number(sampleData[id])
+                                if (seen.has(id)) return 0  // cycle guard
+                                if (id?.startsWith("custom_")) {
+                                  const cm = customMetrics.find(m => m.id === id)
+                                  if (cm?.formulaParts?.length) {
+                                    const sub = new Set(seen).add(id)
+                                    try {
+                                      const subExpr = cm.formulaParts.map(p => {
+                                        if (p.type === "operator") return p.value === "×" ? "*" : p.value === "÷" ? "/" : p.value
+                                        return String(resolveMetricSample(p.value, sub))
+                                      }).join(" ")
+                                      const subResult = Function(`"use strict"; return (${subExpr})`)()
+                                      return isFinite(subResult) ? subResult : 0
+                                    } catch { return 0 }
+                                  }
+                                }
+                                return 100  // default sample for unknown ids
+                              }
                               try {
                                 const expr = parts.map(p => {
                                   if (p.type === "operator") return p.value === "×" ? "*" : p.value === "÷" ? "/" : p.value
                                   if (p.type === "number") return String(p.value)
-                                  return String(sampleData[p.value] ?? 100)
+                                  return String(resolveMetricSample(p.value))
                                 }).join(" ")
                                 const result = Function(`"use strict"; return (${expr})`)()
                                 if (!isFinite(result)) return "–"
