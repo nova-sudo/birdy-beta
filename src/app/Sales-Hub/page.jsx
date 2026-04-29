@@ -1,8 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { apiRequest } from "@/lib/api"
-import { saveToCache, getFromCache, clearCache } from "@/utils/cacheHelper"
+import { mockFetchLeads, mockFetchMembers } from "./mockData"
 import { Loading } from "@/components/ui/loader"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -256,35 +255,19 @@ export default function CallCenterPage() {
 
 
 
-  const fetchAllLeads = async (page = 1, forceRefresh = false) => {
+  // Demo mode: pulls from src/app/Sales-Hub/mockData.js — no API calls.
+  // The data shape mirrors the real /api/hotprospector/leads response so all
+  // the existing tables, dialogs, columns, pagination and search work
+  // unchanged. Swap mockFetchLeads → apiRequest("/api/hotprospector/leads…")
+  // when the integration comes back online.
+  const fetchAllLeads = async (page = 1, _forceRefresh = false) => {
     try {
       setIsLoading(true)
       setError(null)
 
-      // ❌ REMOVE: No more client-side cache checking
-      // const cacheKey = `hotprospector-leads-page-${page}`
-      // const cachedData = getFromCache(cacheKey)
-
       const skip = (page - 1) * leadsPerPage
+      const data = await mockFetchLeads({ skip, limit: leadsPerPage })
 
-      if (page === 1) {
-        toast.loading("Loading leads from server...", { id: "fetch-leads" })
-      }
-
-      // ✅ ALWAYS fetch from server - it handles cache internally
-      const endpoint = forceRefresh
-        ? "/api/hotprospector/leads/refresh"
-        : `/api/hotprospector/leads?skip=${skip}&limit=${leadsPerPage}&include_call_logs=true`
-
-      const response = await apiRequest(endpoint)
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch leads")
-      }
-
-      const data = await response.json()
-
-      // Transform the lead data
       const mappedLeads = (data.data || []).map((lead) => ({
         id: lead.id,
         client: lead.client_name || "Unknown Client",
@@ -304,72 +287,22 @@ export default function CallCenterPage() {
         call_logs: lead.call_logs || [],
       }))
 
-      // ❌ REMOVE: No more client-side caching
-      // saveToCache(cacheKey, { leads: mappedLeads, total: data.meta?.total || 0 })
-
       setLeads(mappedLeads)
       setTotalLeads(data.meta?.total || 0)
       setCurrentPage(page)
       setLocationStats(data.meta?.location_stats || {})
-
-      const totalCalls = data.meta?.total_calls || 0
-      const cacheStatus = data.meta?.cache_status || "unknown"
-      const freshFromCache = data.meta?.fresh_from_cache || 0
-      const fetchedFresh = data.meta?.fetched_fresh || 0
-
-      // Show cache info in toast
-      let toastMessage = ""
-      if (forceRefresh) {
-        toastMessage = `Refreshed ${mappedLeads.length} leads with ${totalCalls} calls`
-      } else {
-        if (cacheStatus === "full_cache") {
-          toastMessage = `✨ Loaded ${mappedLeads.length} leads from cache (instant)`
-        } else if (cacheStatus === "partial_cache") {
-          toastMessage = `Loaded ${mappedLeads.length} leads (${freshFromCache} cached, ${fetchedFresh} fresh)`
-        } else {
-          toastMessage = `Loaded ${mappedLeads.length} fresh leads with ${totalCalls} calls`
-        }
-      }
-
-      toast.success(toastMessage, { id: "fetch-leads" })
-
-      console.log("[HotProspector] Fetched leads:", {
-        page,
-        returned: mappedLeads.length,
-        total: data.meta?.total,
-        cacheStatus,
-        freshFromCache,
-        fetchedFresh,
-        responseTime: data.meta?.response_time_ms,
-      })
-
     } catch (err) {
-      console.error("Error fetching leads:", err)
+      console.error("Error loading mock leads:", err)
       setError(err.message)
-      toast.error("Failed to fetch leads. Please check your HotProspector connection.", {
-        id: "fetch-leads"
-      })
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
     }
   }
 
-  // ❌ REMOVE: prefetchRemainingPages function entirely
-  // We don't need client-side prefetching anymore
-
-  const fetchMembers = async (forceRefresh = false) => {
+  const fetchMembers = async (_forceRefresh = false) => {
     try {
-      // ❌ REMOVE: Client cache check
-      // const cachedMembers = getFromCache('hotprospector-members')
-
-      const response = await apiRequest("/api/hotprospector/members")
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch members")
-      }
-
-      const data = await response.json()
+      const data = await mockFetchMembers()
       const mappedMembers = (data.data || []).map((member) => ({
         id: member.memberId,
         name: `${member.first_name} ${member.last_name}`.trim(),
@@ -381,22 +314,9 @@ export default function CallCenterPage() {
         company: member.company,
         country: member.country,
       }))
-
-      // ❌ REMOVE: Client cache save
-      // saveToCache('hotprospector-members', mappedMembers)
-
       setMembers(mappedMembers)
-
-      if (forceRefresh) {
-        toast.success("Members refreshed")
-      }
-
-      console.log("[HotProspector] Fetched members:", mappedMembers.length)
     } catch (err) {
-      console.error("Error fetching members:", err)
-      if (forceRefresh) {
-        toast.error("Failed to refresh members")
-      }
+      console.error("Error loading mock members:", err)
     }
   }
 
@@ -452,21 +372,17 @@ export default function CallCenterPage() {
   // Calculate total calls across all leads
   const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
 
-  const UnderConstruction = ({ title, message }) => (
-    <Card className="border-dashed border-2 py-24 flex flex-col items-center justify-center text-muted-foreground bg-muted/5">
-      <Construction className="w-12 h-12 mb-4 opacity-20" />
-      <h3 className="font-semibold text-lg text-foreground">{title}</h3>
-      <p className="text-sm max-w-xs text-center">{message}</p>
-    </Card>
-  )
-
   return (
     <div className="w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
-      <UnderConstruction
-        title="Sales Hub Coming Soon"
-        message="This section will feature live call tracking, recording playback, and agent performance metrics."
-      />
-      <div className="invisible">
+      {/* Demo mode banner — make it obvious nothing is wired to real data */}
+      <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-2 text-sm text-amber-800">
+        <Construction className="h-4 w-4 shrink-0" />
+        <span>
+          <span className="font-semibold">Demo data.</span>{" "}
+          Sales Hub is showing mock leads & members while the HotProspector integration is offline.
+        </span>
+      </div>
+      <div>
         <div>
           <div className="">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
@@ -644,7 +560,7 @@ export default function CallCenterPage() {
                             {visibleColumns.name && <TableHead className="border-r border-border">
                               <div className="flex items-center justify-between w-full">
                                 <span>Name</span>
-                                <Image src={HP} alt="hp logo" className="w-4 h-4" />
+                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
                               </div>
                             </TableHead>}
                             {visibleColumns.client && <TableHead className="border-r border-border">
