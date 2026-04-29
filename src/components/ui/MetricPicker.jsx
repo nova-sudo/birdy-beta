@@ -7,6 +7,20 @@ import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { ChevronDown, Check } from "lucide-react"
 
+/**
+ * MetricPicker — Reusable tabbed/searchable metric selector.
+ *
+ * Props:
+ *  metrics       — array of { id, label, category, icon? } (icon is an imported image or null)
+ *  value         — currently selected metric id
+ *  onChange(id)  — callback when a metric is selected
+ *  placeholder   — placeholder text when nothing selected
+ *  triggerClassName — optional className for the trigger button
+ *  disabled      — optional disable flag
+ *  extraCategories — additional categories beyond auto-detected (e.g. for custom metrics, tags)
+ *  width         — popover width (default "w-[360px]")
+ */
+
 export default function MetricPicker({
   metrics = [],
   value,
