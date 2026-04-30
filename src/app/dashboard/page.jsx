@@ -220,19 +220,29 @@ export default function DashboardPage() {
   }, [rawAlerts]);
 
   // ── Delete alert ────────────────────────────────────────────────────────────
-  const dismissAlert = async (id) => {
-    try {
-      const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setRawAlerts((prev) => prev.filter((a) => a.id !== id));
-        toast.success("Alert deleted");
-      } else {
+     const dismissAlert = async (id) => {
+      try {
+        const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          setRawAlerts((prev) => prev.filter((a) => a.id !== id));
+          toast.success("Alert deleted");
+        } else {
+          setDismissingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          toast.error("Failed to delete alert");
+        }
+      } catch {
+        setDismissingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         toast.error("Failed to delete alert");
       }
-    } catch {
-      toast.error("Failed to delete alert");
-    }
-  };
+    };
 
   // ── Stats from real client data ─────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -333,12 +343,12 @@ export default function DashboardPage() {
             </div>
           ) : (
             filteredAlerts.map((alert) => (
-              <div
+             <div
                 key={alert.id}
                 className={`transition-all duration-500 ease-in-out overflow-hidden ${
                   dismissingIds.has(alert.id)
                     ? "max-h-0 opacity-0 mb-0"
-                    : "max-h-40 opacity-100 mb-4"
+                    : "max-h-96 opacity-100 mb-4"  // was max-h-40
                 }`}
               >
                 <div
@@ -369,12 +379,14 @@ export default function DashboardPage() {
                       Open Client
                     </Button>
                     <button
-                      onClick={() => {
+                      disabled={dismissingIds.has(alert.id)}
+                       onClick={() => {
+                        if (dismissingIds.has(alert.id)) return;
                         setDismissingIds(prev => new Set([...prev, alert.id]));
                         setTimeout(() => dismissAlert(alert.id), 800);
                       }}
-                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 transition-colors group"
-                    >
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 transition-colors group disabled:cursor-not-allowed"
+                     >                    
                       <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
                         dismissingIds.has(alert.id)
                           ? "bg-green-500 border-green-500 scale-110"
