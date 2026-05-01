@@ -103,6 +103,10 @@ export default function ClientDetailsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
 
+  // ── Client status (used in Integrations tab) ──────────────────────────────
+  const [clientStatus, setClientStatus] = useState(null)
+  const [statusLoading, setStatusLoading] = useState(false)
+
   // ── Shared date preset for Marketing & Leads tabs ──────────────────────────
   const {
     clientGroups: allGroups,
@@ -143,6 +147,7 @@ export default function ClientDetailsPage() {
         const result = await response.json()
         setClientData(result.data)
         setNotes(result.data?.group_info?.notes || "")
+        setClientStatus(result.data?.group_info?.client_status ?? "Active")
       } catch {
         toast.error("Failed to load client details")
       } finally {
@@ -199,6 +204,29 @@ export default function ClientDetailsPage() {
     }
   }
 
+  // ── Toggle client status (used in Integrations tab) ────────────────────────
+  const handleToggleStatus = async () => {
+    const newStatus = clientStatus === "Active" ? "Inactive" : "Active"
+    setStatusLoading(true)
+    try {
+      const res = await apiRequest(`/api/client-groups/${clientId}/client-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ client_status: newStatus }),
+      })
+      if (res.ok) {
+        setClientStatus(newStatus)
+        toast.success(`Client marked as ${newStatus}`)
+        invalidate()
+      } else {
+        toast.error("Failed to update status")
+      }
+    } catch {
+      toast.error("Failed to update status")
+    } finally {
+      setStatusLoading(false)
+    }
+  }
+
   // ── Delete group ───────────────────────────────────────────────────────────
   const handleDeleteGroup = async () => {
     if (deleteInput.trim() !== groupName?.trim()) {
@@ -247,7 +275,9 @@ export default function ClientDetailsPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           {clientLoading ? (
-            <Skeleton className="h-8 w-48" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-48" />
+            </div>
           ) : (
             <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
           )}
@@ -493,6 +523,42 @@ export default function ClientDetailsPage() {
 
         {/* ── Integrations Tab ─────────────────────────────────────────────── */}
         <TabsContent value="integrations" className="mt-6 space-y-6">
+          {/* ── Client Status Toggle Card ── */}
+          <Card>
+            <CardContent >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                    clientStatus === "Active" ? "bg-[#DCFCE7]" : "bg-[#FEF9C3]"
+                  }`}>
+                    <span className={`h-2.5 w-2.5 rounded-full ${
+                      clientStatus === "Active" ? "bg-[#15803D]" : "bg-[#A16207]"
+                    }`} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Client Status</p>
+                    <p className="text-xs text-muted-foreground">
+                      {clientStatus === "Active"
+                        ? "This client is currently active and receiving data"
+                        : "This client is paused — data refresh is suspended"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleToggleStatus}
+                  disabled={statusLoading || clientLoading}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                    clientStatus === "Active" ? "bg-[#713CDD]" : "bg-gray-300"
+                  }`}
+                >
+                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
+                    clientStatus === "Active" ? "translate-x-[22px]" : "translate-x-[4px]"
+                  }`} />
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           <IntegrationsContent
             group={matchingGroup}
             onRefreshComplete={invalidate}
