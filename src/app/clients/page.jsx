@@ -63,6 +63,11 @@ import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
@@ -94,6 +99,10 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [togglingRows, setTogglingRows] = useState(new Set())
+
+  // ── Status filter ─────────────────────────────────────────────────────────
+  const [statusFilter, setStatusFilter] = useState("all")
 
   // Sync hook data → local state (local state allows optimistic updates)
   useEffect(() => {
@@ -131,12 +140,25 @@ export default function ClientsPage() {
   const [currencyLoading, setCurrencyLoading] = useState(true);
   const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("clients")
 
-  // Build dynamic columns when clientGroups changes
-  const columns = useMemo(() => {
-    console.log("🔄 Rebuilding columns with", clientGroups.length, "client groups");
+  // ── Filter groups by status ───────────────────────────────────────────────
+  const filteredByStatus = useMemo(() => {
+    if (statusFilter === "all") return clientGroups
+    return clientGroups.filter(g => (g.client_status ?? "Active") === statusFilter)
+  }, [clientGroups, statusFilter])
 
-    // Build dynamic columns including tags from client groups data
-    const dynamicColumns = buildDynamicColumns(clientGroups);
+  // ── Status counts for filter badges ───────────────────────────────────────
+  const statusCounts = useMemo(() => {
+    const all = clientGroups.length
+    const active = clientGroups.filter(g => (g.client_status ?? "Active") === "Active").length
+    const inactive = all - active
+    return { all, active, inactive }
+  }, [clientGroups])
+
+  // Build dynamic columns when filteredByStatus changes
+  const columns = useMemo(() => {
+    console.log("🔄 Rebuilding columns with", filteredByStatus.length, "client groups");
+
+    const dynamicColumns = buildDynamicColumns(filteredByStatus);
     console.log("📊 Dynamic columns built:", dynamicColumns.length, "total columns");
 
     // Add custom formula metrics
@@ -163,7 +185,7 @@ export default function ClientsPage() {
 
     console.log("✅ Final columns:", deduplicated.length);
     return deduplicated;
-  }, [customMetrics, clientGroups]);
+  }, [customMetrics, filteredByStatus]);
 
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
@@ -341,6 +363,37 @@ export default function ClientsPage() {
     setIsRefreshing(false)
   }
 
+  // ── Status toggle handler ────────────────────────────────────────────────
+  const handleStatusToggle = async (groupId, currentStatus) => {
+    const newStatus = String(currentStatus).toLowerCase() === "active" ? "Inactive" : "Active"
+
+    setTogglingRows(prev => new Set(prev).add(groupId))
+
+    try {
+      const res = await apiRequest(`/api/client-groups/${groupId}/client-status`, {
+        method: "PATCH",
+        body: JSON.stringify({ client_status: newStatus }),
+      })
+
+      if (res.ok) {
+        setClientGroups(prev => prev.map(g =>
+          g.id === groupId ? { ...g, client_status: newStatus } : g
+        ))
+        toast.success(`Client marked as ${newStatus}`)
+      } else {
+        toast.error("Failed to update client status")
+      }
+    } catch {
+      toast.error("Failed to update client status")
+    } finally {
+      setTogglingRows(prev => {
+        const next = new Set(prev)
+        next.delete(groupId)
+        return next
+      })
+    }
+  }
+
   const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
       toast.error("Please enter a client group name")
@@ -370,6 +423,7 @@ export default function ClientsPage() {
       notes: "",
       created_at: new Date().toISOString(),
       status: "pending",
+      client_status: "Active",
       _isPending: true,
       gohighlevel: {},
       facebook: {},
@@ -405,8 +459,8 @@ export default function ClientsPage() {
           ghl_location_id: newGhlLocationId || selectedGhlLocation?.locationId || null,
           meta_ad_account_id: selectedMetaAdAccount?.id || null,
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
-          ad_account_currency: selectedMetaAdAccount?.currency || null,  // Add this; fallback to null if unavailable
-          notes: "",  // Add this; use empty string or a dynamic value if needed
+          ad_account_currency: selectedMetaAdAccount?.currency || null,
+          notes: "",
         }),
       });
 
@@ -477,6 +531,7 @@ export default function ClientsPage() {
       String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()),
   )
 
+  // ── Calculate stats from ALL groups (unfiltered) ──────────────────────────
   const calculateStats = () => {
     const activeClients = clientGroups.length
 
@@ -507,6 +562,13 @@ export default function ClientsPage() {
   }
 
   const stats = calculateStats()
+
+  // ── Filter tab config ─────────────────────────────────────────────────────
+  const filterTabs = [
+    { key: "all", label: "All Clients", count: statusCounts.all },
+    { key: "Active", label: "Active", count: statusCounts.active },
+    { key: "Inactive", label: "Inactive", count: statusCounts.inactive },
+  ]
 
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto gap-6">
@@ -1057,9 +1119,26 @@ export default function ClientsPage() {
           </Card>
         </div>
 
-        {/* 🔥 KEY FIX: Pass getTagCount function to StyledTable */}
+        {/* ── Status Filter Bar: All Clients | Active | Inactive ────────── */}
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
+          <TabsList className="flex-1 justify-start overflow-x-auto w-full">
+            {filterTabs.map((tab) => (
+              <TabsTrigger
+                key={tab.key}
+                value={tab.key}
+              >
+                {tab.label}
+                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                  {tab.count}
+                </span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        {/* StyledTable — receives filtered data */}
         <StyledTable
-          data={clientGroups}
+          data={filteredByStatus}
           onRowClick={handleClientGroupClick}
           columns={columns}
           searchQuery={searchQuery}
@@ -1072,6 +1151,9 @@ export default function ClientsPage() {
           isRowLoading={(row) => row._isPending || row._isCreating}
           initialColumnOrder={columnOrder}
           onColumnOrderChange={setColumnOrder}
+          enableStatusToggle={true}
+          onStatusToggle={handleStatusToggle}
+          togglingRows={togglingRows}
         />
       </div>
 

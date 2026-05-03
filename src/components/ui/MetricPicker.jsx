@@ -20,6 +20,7 @@ import { ChevronDown, Check } from "lucide-react"
  *  extraCategories — additional categories beyond auto-detected (e.g. for custom metrics, tags)
  *  width         — popover width (default "w-[360px]")
  */
+
 export default function MetricPicker({
   metrics = [],
   value,
@@ -33,7 +34,6 @@ export default function MetricPicker({
   const [search, setSearch] = useState("")
   const [activeCategory, setActiveCategory] = useState("all")
 
-  // Build categories from metric data
   const categories = useMemo(() => {
     const cats = new Map()
     for (const m of metrics) {
@@ -47,7 +47,6 @@ export default function MetricPicker({
     return result
   }, [metrics])
 
-  // Filter metrics by category + search
   const filtered = useMemo(() => {
     return metrics.filter(m => {
       if (activeCategory !== "all" && m.category !== activeCategory) return false
@@ -56,11 +55,19 @@ export default function MetricPicker({
     })
   }, [metrics, activeCategory, search])
 
-  // Find selected metric label
   const selectedMetric = metrics.find(m => m.id === value)
 
   return (
-    <Popover open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSearch(""); setActiveCategory("all") } }}>
+    <Popover
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (!o) {
+          setSearch("")
+          setActiveCategory("all")
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -83,15 +90,29 @@ export default function MetricPicker({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className={`${width} p-0 bg-white`} align="start">
+      <PopoverContent
+        className={`${width} p-0 bg-white`}
+        align="start"
+        onWheel={e => e.stopPropagation()}
+      >
         {/* Category tabs */}
-        <div className="flex flex-nowrap gap-1 p-2 border-b overflow-x-auto">
+        <div
+          className="flex flex-nowrap gap-1 p-2 border-b overflow-x-auto overscroll-x-contain"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
           {categories.map(cat => (
             <Button
               key={cat.id}
               variant={activeCategory === cat.id ? "default" : "secondary"}
               size="sm"
-              onClick={() => { setActiveCategory(cat.id); setSearch("") }}
+              onClick={() => {
+                setActiveCategory(cat.id)
+                setSearch("")
+              }}
               className="flex-shrink-0 text-xs h-7 px-2.5"
             >
               {cat.label} <span className="ml-1 opacity-60">{cat.count}</span>
@@ -111,7 +132,10 @@ export default function MetricPicker({
         </div>
 
         {/* Metric list */}
-        <div className="max-h-[240px] overflow-y-auto px-1 pb-2">
+        <div
+          className="max-h-[240px] overflow-y-auto overscroll-contain px-1 pb-2"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           {filtered.length === 0 ? (
             <div className="text-center text-sm text-muted-foreground py-4">No metrics found</div>
           ) : (
@@ -119,7 +143,10 @@ export default function MetricPicker({
               <button
                 key={m.id}
                 type="button"
-                onClick={() => { onChange(m.id); setOpen(false) }}
+                onClick={() => {
+                  onChange(m.id)
+                  setOpen(false)
+                }}
                 className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-md transition-colors text-left ${
                   m.id === value
                     ? "bg-purple-50 text-purple-700 font-medium"

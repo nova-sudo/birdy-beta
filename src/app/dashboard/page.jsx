@@ -60,14 +60,34 @@ function AlertIcon({ color }) {
   );
 }
 
+function AlertSkeletonItem() {
+  return (
+    <div className="flex items-center gap-4 mb-4 p-4 rounded-lg border-l-4 border-l-muted bg-white shadow-sm">
+      <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+      <div className="flex-1 min-w-0 flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-4 w-14 rounded-full" />
+        </div>
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-3 w-64" />
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Skeleton className="h-8 w-24 rounded-lg" />
+        <Skeleton className="w-8 h-8 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 function ClientCard({ group, onClick }) {
   const userCurrency = (() => {
-    try { 
+    try {
       const currency = localStorage.getItem("user_default_currency") ?? "USD";
       if (!currency) throw new Error("Currency not fetched");
       return currency;
-    } catch { 
-      return "USD"; 
+    } catch {
+      return "USD";
     }
   })();
   const symbol = getSymbolFromCurrency(userCurrency) || "$";
@@ -76,15 +96,12 @@ function ClientCard({ group, onClick }) {
     ? `${symbol}${parseFloat(group.facebook?.metrics?.insights?.spend)}`
     : "—";
 
-  
-
   const ctr = group.facebook?.metrics?.insights?.ctr
     ? `${group.facebook?.metrics?.insights?.ctr}%`
-    : "—";    
-  
+    : "—";
 
   const clicks = group.facebook?.metrics?.insights?.clicks
-    ? `${(parseFloat(group.facebook.metrics.insights.clicks)).toFixed(0)}`
+    ? `${parseFloat(group.facebook.metrics.insights.clicks).toFixed(0)}`
     : "—";
 
   const isPending = group._isPending || group._isCreating;
@@ -146,7 +163,9 @@ export default function DashboardPage() {
 
   const [activeTab, setActiveTab] = useState("All Alerts");
   const [rawAlerts, setRawAlerts] = useState([]);
+  const [alertsLoading, setAlertsLoading] = useState(true);
   const [query, setQuery] = useState("");
+  const [dismissingIds, setDismissingIds] = useState(new Set());
 
   const userCurrency = (() => {
     try { return localStorage.getItem("defaultCurrency") ?? "USD"; } catch { return "USD"; }
@@ -155,8 +174,9 @@ export default function DashboardPage() {
 
   // ── Fetch alerts ────────────────────────────────────────────────────────────
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
+        setAlertsLoading(true);
         const res = await apiRequest("/api/alerts");
         if (!res.ok) return;
         const data = await res.json();
@@ -168,6 +188,8 @@ export default function DashboardPage() {
         setRawAlerts(all);
       } catch {
         // non-critical
+      } finally {
+        setAlertsLoading(false);
       }
     })();
   }, []);
@@ -198,19 +220,29 @@ export default function DashboardPage() {
   }, [rawAlerts]);
 
   // ── Delete alert ────────────────────────────────────────────────────────────
-  const dismissAlert = async (id) => {
-    try {
-      const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
-      if (res.ok) {
-        setRawAlerts((prev) => prev.filter((a) => a.id !== id));
-        toast.success("Alert deleted");
-      } else {
+     const dismissAlert = async (id) => {
+      try {
+        const res = await apiRequest(`/api/alerts/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          setRawAlerts((prev) => prev.filter((a) => a.id !== id));
+          toast.success("Alert deleted");
+        } else {
+          setDismissingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(id);
+            return next;
+          });
+          toast.error("Failed to delete alert");
+        }
+      } catch {
+        setDismissingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
         toast.error("Failed to delete alert");
       }
-    } catch {
-      toast.error("Failed to delete alert");
-    }
-  };
+    };
 
   // ── Stats from real client data ─────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -303,44 +335,77 @@ export default function DashboardPage() {
         </Tabs>
 
         <div className="flex flex-col mb-4">
-          {filteredAlerts.length === 0 ? (
+          {alertsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => <AlertSkeletonItem key={i} />)
+          ) : filteredAlerts.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
               No alerts in this category
             </div>
           ) : (
             filteredAlerts.map((alert) => (
-              <div
+             <div
                 key={alert.id}
-                className={`flex items-center gap-4 mb-4 p-4 rounded-lg shadow-sm border-l-4 ${ALERT_LEFT_BORDER[alert.color]}`}
+                className={`transition-all duration-500 ease-in-out overflow-hidden ${
+                  dismissingIds.has(alert.id)
+                    ? "max-h-0 opacity-0 mb-0"
+                    : "max-h-96 opacity-100 mb-4"  // was max-h-40
+                }`}
               >
-                <AlertIcon color={alert.color} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-[#713CDDE6]">{alert.client}</span>
-                    <Badge variant="outline" className="text-xs rounded-full px-2">{alert.platform}</Badge>
+                <div
+                  className={`flex items-center gap-4 p-4 rounded-lg shadow-sm border-l-4 overflow-hidden transition-all duration-300 ease-in-out ${ALERT_LEFT_BORDER[alert.color]} ${
+                    dismissingIds.has(alert.id) ? "-translate-x-full" : "translate-x-0"
+                  }`}
+                >
+                  <AlertIcon color={alert.color} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-[#713CDDE6]">{alert.client}</span>
+                      <Badge variant="outline" className="text-xs rounded-full px-2">{alert.platform}</Badge>
+                    </div>
+                    <p className="text-sm font-semibold mb-1 text-foreground">{alert.title}</p>
+                    <p className="text-xs text-muted-foreground">{alert.description}</p>
                   </div>
-                  <p className="text-sm font-semibold mb-1 text-foreground">{alert.title}</p>
-                  <p className="text-xs text-muted-foreground">{alert.description}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button
-                    size="sm"
-                    className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
-                    onClick={() => {
-                      const match = clientGroups.find((g) =>
-                        (rawAlerts.find((r) => r.id === alert.id)?.target_group_ids || []).includes(g.id)
-                      );
-                      if (match) router.push(`/clients/${match.id}`);
-                    }}
-                  >
-                    Open Client
-                  </Button>
-                  <button
-                    onClick={() => dismissAlert(alert.id)}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 text-muted-foreground hover:text-destructive transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
+                      onClick={() => {
+                        const match = clientGroups.find((g) =>
+                          (rawAlerts.find((r) => r.id === alert.id)?.target_group_ids || []).includes(g.id)
+                        );
+                        if (match) router.push(`/clients/${match.id}`);
+                      }}
+                    >
+                      Open Client
+                    </Button>
+                    <button
+                      disabled={dismissingIds.has(alert.id)}
+                       onClick={() => {
+                        if (dismissingIds.has(alert.id)) return;
+                        setDismissingIds(prev => new Set([...prev, alert.id]));
+                        setTimeout(() => dismissAlert(alert.id), 800);
+                      }}
+                      className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/60 transition-colors group disabled:cursor-not-allowed"
+                     >                    
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
+                        dismissingIds.has(alert.id)
+                          ? "bg-green-500 border-green-500 scale-110"
+                          : "border-muted-foreground/40 hover:border-green-500"
+                      }`}>
+                        <svg
+                          className={`w-3 h-3 text-white transition-all duration-200 ${
+                            dismissingIds.has(alert.id) ? "opacity-100 scale-100" : "opacity-0 scale-0"
+                          }`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={3}
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
