@@ -52,9 +52,8 @@ export const TableContainer = ({ children, title, description }) => (
 const userCurrency = localStorage.getItem("user_default_currency");
 
 // ── Compute the total left offset for the sticky name column ────────────────
-// checkbox = 40px, status toggle = 70px
-const getNameStickyLeft = (enableSelection, enableStatusToggle) =>
-  (enableSelection ? 40 : 0) + (enableStatusToggle ? 70 : 0);
+const getNameStickyLeft = (enableSelection, showToggleCol) =>
+  (enableSelection ? 40 : 0) + (showToggleCol ? 70 : 0);
 
 const StyledTable = ({
   columns = [],
@@ -83,7 +82,6 @@ const StyledTable = ({
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
 
-  // Sync with external order changes (e.g. parent loads saved view post-mount)
   useEffect(() => {
     if (Array.isArray(initialColumnOrder) && initialColumnOrder.length > 0) {
       setColumnOrder(initialColumnOrder);
@@ -93,8 +91,10 @@ const StyledTable = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
 
-  // Derived sticky left for the name column
-  const nameStickyLeft = getNameStickyLeft(enableSelection, enableStatusToggle);
+  // Toggle column is only visible when NOT in client mode
+  const showToggleCol = !isClientMode && enableStatusToggle;
+
+  const nameStickyLeft = getNameStickyLeft(enableSelection, showToggleCol);
 
   /* ---------- LOAD CUSTOM METRICS ---------- */
   useEffect(() => {
@@ -215,6 +215,7 @@ const StyledTable = ({
       const base = {
         id: group.id,
         name: group.name || "Unnamed Group",
+        status: group.client_status ?? "Active",
         ghl_contacts: ghlContacts,
         ghl_revenue: ghlRevenue,
         ghl_won_opps: ghlWonOpps,
@@ -419,9 +420,6 @@ const StyledTable = ({
     setColumnOrder(newOrder);
     setDraggedColumn(null);
 
-    // Notify parent so it can persist the new order. We pass only the
-    // currently-visible IDs in their new sequence; the parent decides how
-    // to merge this with hidden columns when saving.
     onColumnOrderChange?.(newOrder);
   };
 
@@ -559,7 +557,6 @@ const StyledTable = ({
           overflow: auto;
         }
 
-        /* Ensure the table stretches full width so the last column always has a background */
         .table-container table {
           min-width: 100%;
           width: max-content;
@@ -575,7 +572,7 @@ const StyledTable = ({
           <thead className="top-0 z-40">
             <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
 
-              {/* ── FIX 3: Checkbox header — sticky at left: 0 ── */}
+              {/* Checkbox header — sticky at left: 0 */}
               {enableSelection && (
                 <th
                   className="h-12 w-10 px-2 pr-0 min-w-0 bg-white"
@@ -603,8 +600,8 @@ const StyledTable = ({
                 </th>
               )}
 
-              {/* ── Status toggle header — sticky after checkbox ── */}
-              {enableStatusToggle && (
+              {/* ── Status toggle column — ONLY when NOT isClientMode ── */}
+              {showToggleCol && (
                 <th
                   className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78"
                   style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 51 }}
@@ -672,7 +669,6 @@ const StyledTable = ({
                   key={`skeleton-${idx}`}
                   className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                 >
-                  {/* ── FIX 3: Sticky checkbox skeleton ── */}
                   {enableSelection && (
                     <td
                       className={`w-10 px-2 pr-0 min-w-0 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
@@ -682,8 +678,7 @@ const StyledTable = ({
                     </td>
                   )}
 
-                  {/* ── FIX 3: Sticky status skeleton ── */}
-                  {enableStatusToggle && (
+                  {showToggleCol && (
                     <td
                       className={`w-[70px] min-w-[70px] px-1 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
                       style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
@@ -694,7 +689,6 @@ const StyledTable = ({
                     </td>
                   )}
 
-                  {/* ── FIX 2: All columns get a skeleton — including the last one ── */}
                   {(visibleColumns.length > 0
                     ? visibleColumns
                     : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))
@@ -716,7 +710,6 @@ const StyledTable = ({
                             : "flex items-center px-2 h-11"
                         }
                       >
-                        {/* ── FIX 2: Always render skeleton — every column including last ── */}
                         <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
                       </div>
                     </td>
@@ -727,7 +720,7 @@ const StyledTable = ({
               /* CASE 2: Done loading, no data */
               <tr>
                 <td
-                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (enableStatusToggle ? 1 : 0)}
+                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
@@ -756,6 +749,8 @@ const StyledTable = ({
                 const globalIdx = (currentPage - 1) * pageSize + idx;
                 const isSelected = enableSelection && selectedRows.has(row.id);
                 const rowBg = globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white";
+                const isToggling = showToggleCol && togglingRows.has(row.id);
+                const isActive = String(row.status).toLowerCase() === "active";
 
                 return (
                   <tr
@@ -768,7 +763,7 @@ const StyledTable = ({
                         : "hover:bg-muted/50 cursor-pointer w-fit"
                     } ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
                   >
-                    {/* ── FIX 3: Sticky checkbox cell ── */}
+                    {/* Checkbox cell */}
                     {enableSelection && (
                       <td
                         className={`w-10 px-2 pr-0 min-w-0 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
@@ -789,8 +784,8 @@ const StyledTable = ({
                       </td>
                     )}
 
-                    {/* ── FIX 3: Sticky status toggle cell ── */}
-                    {enableStatusToggle && (
+                    {/* ── Toggle switch cell — ONLY when NOT isClientMode ── */}
+                    {showToggleCol && (
                       <td
                         className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
                         style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
@@ -804,13 +799,11 @@ const StyledTable = ({
                           <button
                             onClick={() => onStatusToggle?.(row.id, row.status)}
                             className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                              String(row.status).toLowerCase() === "active"
-                                ? "bg-purple-600"
-                                : "bg-gray-300"
+                              isActive ? "bg-purple-600" : "bg-gray-300"
                             }`}
                           >
                             <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                              String(row.status).toLowerCase() === "active" ? "translate-x-[18px]" : "translate-x-[3px]"
+                              isActive ? "translate-x-[18px]" : "translate-x-[3px]"
                             }`} />
                           </button>
                         )}
@@ -839,7 +832,7 @@ const StyledTable = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span
-                                  className={`truncate min-w-0 ${
+                                  className={`truncate min-w-0 flex items-center justify-between gap-2 w-full ${
                                     row._isCreating || row._isPending ? "text-muted-foreground" : ""
                                   }`}
                                 >
@@ -855,13 +848,59 @@ const StyledTable = ({
                                   )}
 
                                   {colIdx === 0 && isRowLoading?.(row) && (
-                                    <span className="ml-2 inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
                                       <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                                       </svg>
                                       Setting up…
                                     </span>
+                                  )}
+
+                                  {/* ── Read-only badge (isClientMode) OR clickable badge (!isClientMode) ── */}
+                                  {colIdx === 0 && !isRowLoading?.(row) && row.status && (
+                                    isClientMode ? (
+                                      /* Read-only badge for client hub */
+                                      <span
+                                        className={`ml-auto shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
+                                          isActive
+                                            ? "bg-[#DCFCE7] text-[#15803D]"
+                                            : "bg-[#FEF9C3] text-[#A16207]"
+                                        }`}
+                                      >
+                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                          isActive ? "bg-[#15803D]" : "bg-[#A16207]"
+                                        }`} />
+                                        <span className="hidden sm:inline">{row.status}</span>
+                                      </span>
+                                    ) : (
+                                      /* Clickable badge for non-client tables */
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          onStatusToggle?.(row.id, row.status)
+                                        }}
+                                        disabled={isToggling}
+                                        title={`Click to toggle status (currently ${row.status || "Active"})`}
+                                        className={`ml-auto shrink-0 inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-full transition-all cursor-pointer ${
+                                          isActive
+                                            ? "bg-[#DCFCE7] text-[#15803D] hover:bg-[#DCFCE7]/70"
+                                            : "bg-[#FEF9C3] text-[#A16207] hover:bg-[#FEF9C3]/70"
+                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                                      >
+                                        {isToggling ? (
+                                          <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                                          </svg>
+                                        ) : (
+                                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                            isActive ? "bg-[#15803D]" : "bg-[#A16207]"
+                                          }`} />
+                                        )}
+                                        <span className="hidden sm:inline">{row.status || "Active"}</span>
+                                      </button>
+                                    )
                                   )}
                                 </span>
                               </TooltipTrigger>
