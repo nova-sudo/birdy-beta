@@ -43,7 +43,6 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton"
 import { InboxIcon } from "lucide-react"
-import {Hash} from "lucide-react"
 
 const operators = [
   { value: "+", label: "Add (+)" },
@@ -889,10 +888,11 @@ const MetricsHub = () => {
                       </div>
                     </div>
 
-                    {/* Dashboard selector */}
+                    {/* Dashboard selector — auto-restricted by metric level */}
                     <div className="rounded-lg border border-border bg-card p-6">
                       <h4 className="text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
                       {(() => {
+                        // Detect the level from formula metrics
                         const LEVEL_MAP = {
                           meta_spend: "group", meta_impressions: "group", meta_clicks: "group",
                           meta_reach: "group", meta_results: "group", meta_ctr: "group",
@@ -937,6 +937,7 @@ const MetricsHub = () => {
                               {DASHBOARD_OPTIONS.map(d => {
                                 const checked = metricForm.dashboards.includes(d.value)
                                 const disabled = mixedLevels || (allowedDashboards && !allowedDashboards.has(d.value))
+                                const showGroup = d.group !== lastGroup
                                 lastGroup = d.group
                                 return (
                                   <label
@@ -987,20 +988,6 @@ const MetricsHub = () => {
                                 </span>
                               )
                             }
-                            if (part.type === "number") {
-                              return (
-                                <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-sm font-medium shadow-sm text-amber-700">
-                                  {part.label ?? part.value}
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFormulaPart(index)}
-                                    className="text-amber-400 hover:text-red-500 transition-colors"
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </button>
-                                </span>
-                              )
-                            }
                             const metricLabel =
                               availableMetricsForFormulas.find(m => m.id === part.value)?.label
                               || customMetrics.find(cm => cm.id === part.value)?.name
@@ -1022,11 +1009,11 @@ const MetricsHub = () => {
                         )}
                       </div>
                       <div className="flex items-center justify-center gap-3 mt-4">
-                        {/* Operator buttons */}
+                        {/* Operator buttons — only enabled when last part is a metric */}
                         <div className="flex items-center gap-1.5">
                           {["+", "-", "×", "/"].map(op => {
                             const lastPart = metricForm.formulaParts[metricForm.formulaParts.length - 1]
-                            const canAddOp = (lastPart?.type === "metric" && lastPart?.value) || lastPart?.type === "number"
+                            const canAddOp = lastPart?.type === "metric" && lastPart?.value
                             return (
                               <button
                                 key={op}
@@ -1046,8 +1033,7 @@ const MetricsHub = () => {
                             )
                           })}
                         </div>
-
-                        {/* Add Metric */}
+                        {/* Add Metric — only enabled when formula is empty or last part is an operator */}
                         {(() => {
                           const lastPart = metricForm.formulaParts[metricForm.formulaParts.length - 1]
                           const isEmpty = metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value)
@@ -1072,53 +1058,6 @@ const MetricsHub = () => {
                             />
                           )
                         })()}
-
-                        {/* Add Number */}
-                        {(() => {
-                          const lastPart = metricForm.formulaParts[metricForm.formulaParts.length - 1]
-                          const isEmpty = metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value)
-                          const canAddNumber = isEmpty || lastPart?.type === "operator"
-                          return (
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  disabled={!canAddNumber}
-                                  className="text-xs h-9 gap-1.5 w-auto disabled:opacity-30"
-                                >
-                                  + Add Number
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-48 p-3 bg-white">
-                                <Input
-                                  type="number"
-                                  placeholder="e.g. 100"
-                                  className="h-8 text-sm"
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      const val = parseFloat(e.target.value)
-                                      if (!isNaN(val)) {
-                                        setMetricForm(f => {
-                                          const currentParts = f.formulaParts
-                                          const currentIsEmpty = currentParts.length === 0 || (currentParts.length === 1 && !currentParts[0].value)
-                                          return {
-                                            ...f,
-                                            formulaParts: currentIsEmpty
-                                              ? [{ type: "number", value: val, label: String(val) }]
-                                              : [...currentParts, { type: "number", value: val, label: String(val) }],
-                                          }
-                                        })
-                                        e.target.value = ""
-                                      }
-                                    }
-                                  }}
-                                />
-                                <p className="text-[10px] text-muted-foreground mt-1.5">Press Enter to add</p>
-                              </PopoverContent>
-                            </Popover>
-                          )
-                        })()}
                       </div>
                     </div>
                   </div>
@@ -1130,8 +1069,10 @@ const MetricsHub = () => {
                         <div className="text-center p-4 flex-1 flex flex-col justify-center">
                           <div className="text-4xl font-bold">
                             {(() => {
+                              // Compute a preview with sample data
                               const parts = metricForm.formulaParts
                               if (!parts.length || !parts[0].value) return "–"
+                              // Check if formula is complete (doesn't end with an operator)
                               const lastPart = parts[parts.length - 1]
                               if (lastPart.type === "operator") return "–"
                               const sampleData = {
@@ -1168,7 +1109,6 @@ const MetricsHub = () => {
                               try {
                                 const expr = parts.map(p => {
                                   if (p.type === "operator") return p.value === "×" ? "*" : p.value === "÷" ? "/" : p.value
-                                  if (p.type === "number") return String(p.value)
                                   return String(resolveMetricSample(p.value))
                                 }).join(" ")
                                 const result = Function(`"use strict"; return (${expr})`)()
