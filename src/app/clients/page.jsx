@@ -1049,7 +1049,7 @@ export default function ClientsPage() {
                     <Skeleton className="h-4 w-1/2" />
                   </div>
                 ) : (
-                  <div className="text-2xl font-bold">{stats.activeClients}</div>
+                  <div className="text-2xl font-bold">{statusCounts.active}</div>
                 )}
                 <p className="text-xs text-[#71658B] mt-1">Connected client groups across all integrations</p>
               </CardContent>

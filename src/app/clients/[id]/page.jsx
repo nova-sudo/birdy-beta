@@ -523,6 +523,13 @@ export default function ClientDetailsPage() {
 
         {/* ── Integrations Tab ─────────────────────────────────────────────── */}
         <TabsContent value="integrations" className="mt-6 space-y-6">
+          
+
+          <IntegrationsContent
+            group={matchingGroup}
+            onRefreshComplete={invalidate}
+          />
+
           {/* ── Client Status Toggle Card ── */}
           <Card>
             <CardContent >
@@ -558,11 +565,6 @@ export default function ClientDetailsPage() {
               </div>
             </CardContent>
           </Card>
-
-          <IntegrationsContent
-            group={matchingGroup}
-            onRefreshComplete={invalidate}
-          />
 
           {/* ── Danger Zone ───────────────────────────────────────────────────── */}
           <Card className="border-red-200 bg-red-50/40">

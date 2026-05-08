@@ -784,7 +784,7 @@ const StyledTable = ({
                       </td>
                     )}
 
-                    {/* ── Toggle switch cell — ONLY when NOT isClientMode ── */}
+                    {/* Toggle switch cell */}
                     {showToggleCol && (
                       <td
                         className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
@@ -832,21 +832,25 @@ const StyledTable = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span
-                                  className={`truncate min-w-0 flex items-center justify-between gap-2 w-full ${
+                                  className={`min-w-0 flex items-center gap-2 w-full ${
                                     row._isCreating || row._isPending ? "text-muted-foreground" : ""
                                   }`}
                                 >
-                                  {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                                    <button
-                                      onClick={() => onFirstColumnClick?.(row)}
-                                      className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
-                                    >
-                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                                    </button>
-                                  ) : (
-                                    col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                                  )}
+                                  {/* Name — truncates and takes remaining space */}
+                                  <span className="truncate min-w-0 flex-1">
+                                    {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                      <button
+                                        onClick={() => onFirstColumnClick?.(row)}
+                                        className="text-left font-semibold text-primary hover:underline cursor-pointer w-full truncate"
+                                      >
+                                        {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                      </button>
+                                    ) : (
+                                      col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
+                                    )}
+                                  </span>
 
+                                  {/* Spinner when row is setting up */}
                                   {colIdx === 0 && isRowLoading?.(row) && (
                                     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
                                       <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -857,12 +861,12 @@ const StyledTable = ({
                                     </span>
                                   )}
 
-                                  {/* ── Read-only badge (isClientMode) OR clickable badge (!isClientMode) ── */}
+                                  {/* Status badge */}
                                   {colIdx === 0 && !isRowLoading?.(row) && row.status && (
                                     isClientMode ? (
-                                      /* Read-only badge for client hub */
+                                      /* Read-only badge for client hub — aligned left after name */
                                       <span
-                                        className={`ml-auto shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
+                                        className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
                                           isActive
                                             ? "bg-[#DCFCE7] text-[#15803D]"
                                             : "bg-[#FEF9C3] text-[#A16207]"
@@ -877,12 +881,12 @@ const StyledTable = ({
                                       /* Clickable badge for non-client tables */
                                       <button
                                         onClick={(e) => {
-                                          e.stopPropagation()
-                                          onStatusToggle?.(row.id, row.status)
+                                          e.stopPropagation();
+                                          onStatusToggle?.(row.id, row.status);
                                         }}
                                         disabled={isToggling}
                                         title={`Click to toggle status (currently ${row.status || "Active"})`}
-                                        className={`ml-auto shrink-0 inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-full transition-all cursor-pointer ${
+                                        className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-full transition-all cursor-pointer ${
                                           isActive
                                             ? "bg-[#DCFCE7] text-[#15803D] hover:bg-[#DCFCE7]/70"
                                             : "bg-[#FEF9C3] text-[#A16207] hover:bg-[#FEF9C3]/70"
