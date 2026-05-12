@@ -565,9 +565,9 @@ export default function ClientsPage() {
 
   // ── Filter tab config ─────────────────────────────────────────────────────
   const filterTabs = [
-    { key: "all", label: "All Clients", count: statusCounts.all },
     { key: "Active", label: "Active", count: statusCounts.active },
     { key: "Inactive", label: "Inactive", count: statusCounts.inactive },
+    { key: "all", label: "All Clients", count: statusCounts.all },
   ]
 
   return (
