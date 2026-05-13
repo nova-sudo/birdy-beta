@@ -250,7 +250,12 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
         icon={metaIcon}
         connected={metaConnected}
         details={[
-          { label: "Account", value: group.facebook?.name || "—" },
+          { 
+            label: "Account", 
+            value: (group.facebook?.name && group.facebook.name !== "Unknown Ad Account")
+              ? group.facebook.name 
+              : group.name
+          },
           { label: "Account ID", value: group.facebook?.ad_account_id || group.meta_ad_account_id || "—" },
           { label: "Currency", value: group.facebook?.currency || group.ad_account_currency || "—" },
         ]}
