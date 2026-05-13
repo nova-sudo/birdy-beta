@@ -832,35 +832,26 @@ const StyledTable = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span
-                                  className={`truncate min-w-0 flex items-center justify-between gap-2 w-full ${
+                                  className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
                                     row._isCreating || row._isPending ? "text-muted-foreground" : ""
                                   }`}
                                 >
                                   {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                                     <button
                                       onClick={() => onFirstColumnClick?.(row)}
-                                      className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                      className="text-left font-semibold text-primary hover:underline cursor-pointer truncate min-w-0"
                                     >
                                       {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                     </button>
                                   ) : (
-                                    col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                                  )}
-
-                                  {colIdx === 0 && isRowLoading?.(row) && (
-                                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                                      <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                      </svg>
-                                      Setting up…
+                                    <span className="truncate min-w-0 block">
+                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                     </span>
                                   )}
 
                                   {/* ── Read-only badge (isClientMode) OR clickable badge (!isClientMode) ── */}
-                                  {colIdx === 0 && !isRowLoading?.(row) && row.status && (
-                                    isClientMode ? (
-                                      /* Read-only badge for client hub */
+                                  {/* ── Read-only status badge — clients page only ── */}
+                                    {colIdx === 0 && isClientMode && !isRowLoading?.(row) && row.status && (
                                       <span
                                         className={`ml-auto shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
                                           isActive
@@ -873,40 +864,12 @@ const StyledTable = ({
                                         }`} />
                                         <span className="hidden sm:inline">{row.status}</span>
                                       </span>
-                                    ) : (
-                                      /* Clickable badge for non-client tables */
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          onStatusToggle?.(row.id, row.status)
-                                        }}
-                                        disabled={isToggling}
-                                        title={`Click to toggle status (currently ${row.status || "Active"})`}
-                                        className={`ml-auto shrink-0 inline-flex items-center gap-1 text-[11px] font-medium px-2 py-[3px] rounded-full transition-all cursor-pointer ${
-                                          isActive
-                                            ? "bg-[#DCFCE7] text-[#15803D] hover:bg-[#DCFCE7]/70"
-                                            : "bg-[#FEF9C3] text-[#A16207] hover:bg-[#FEF9C3]/70"
-                                        } disabled:opacity-50 disabled:cursor-not-allowed`}
-                                      >
-                                        {isToggling ? (
-                                          <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                          </svg>
-                                        ) : (
-                                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                            isActive ? "bg-[#15803D]" : "bg-[#A16207]"
-                                          }`} />
-                                        )}
-                                        <span className="hidden sm:inline">{row.status || "Active"}</span>
-                                      </button>
-                                    )
-                                  )}
+                                    )}
                                 </span>
                               </TooltipTrigger>
-                              {colIdx === 0 && !col.cell && (
+                              {colIdx === 0 && (
                                 <TooltipContent>
-                                  <p>{getCellValue(row, col.id)}</p>
+                                  <p>{col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}</p>
                                 </TooltipContent>
                               )}
                             </Tooltip>
