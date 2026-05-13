@@ -533,15 +533,16 @@ export default function ClientsPage() {
 
   // ── Calculate stats from ALL groups (unfiltered) ──────────────────────────
   const calculateStats = () => {
-    const activeClients = clientGroups.length
+    const activeClients = clientGroups.filter(g => (g.client_status ?? "Active") === "Active").length
 
-    const totalSpend = clientGroups.reduce((sum, group) => {
+    const activeGroups = clientGroups.filter(g => (g.client_status ?? "Active") === "Active")
+    const totalSpend = activeGroups.reduce((sum, group) => {
       const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
       return sum + spend
     }, 0)
 
     // Use results from insights, fallback to summing campaign results, then total_leads
-    const totalLeads = clientGroups.reduce((sum, group) => {
+    const totalLeads = activeGroups.reduce((sum, group) => {
       let results = parseInt(group.facebook?.metrics?.insights?.results) || 0
       if (!results && group.facebook?.campaigns?.length) {
         results = group.facebook.campaigns.reduce((s, c) => s + (c.results || 0), 0)

@@ -832,28 +832,20 @@ const StyledTable = ({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <span
-                                  className={`truncate min-w-0 flex items-center justify-between gap-2 w-full ${
+                                  className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
                                     row._isCreating || row._isPending ? "text-muted-foreground" : ""
                                   }`}
                                 >
                                   {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                                     <button
                                       onClick={() => onFirstColumnClick?.(row)}
-                                      className="text-left font-semibold text-primary hover:underline cursor-pointer w-full"
+                                      className="text-left font-semibold text-primary hover:underline cursor-pointer truncate min-w-0"
                                     >
                                       {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                     </button>
                                   ) : (
-                                    col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)
-                                  )}
-
-                                  {colIdx === 0 && isRowLoading?.(row) && (
-                                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                                      <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                                      </svg>
-                                      Setting up…
+                                    <span className="truncate min-w-0 block">
+                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                     </span>
                                   )}
 
@@ -875,9 +867,9 @@ const StyledTable = ({
                                     )}
                                 </span>
                               </TooltipTrigger>
-                              {colIdx === 0 && !col.cell && (
+                              {colIdx === 0 && (
                                 <TooltipContent>
-                                  <p>{getCellValue(row, col.id)}</p>
+                                  <p>{col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}</p>
                                 </TooltipContent>
                               )}
                             </Tooltip>
