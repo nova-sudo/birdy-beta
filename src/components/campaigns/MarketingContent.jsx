@@ -680,7 +680,7 @@ export function MarketingContent({
         header: displayName,
         label: displayName,
         icons: colIcon,
-        sortable: true,           // ← add this
+        sortable: true,           // ← add thisز
         render: (value, row) => formatCellValue(value, col, row),
       }
     })
