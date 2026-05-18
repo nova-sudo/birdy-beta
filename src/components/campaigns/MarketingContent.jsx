@@ -181,6 +181,32 @@ export function MarketingContent({
     }).catch(() => {})
   }, [clientGroups])
 
+  // ── GHL opportunity attribution per campaign/adset/ad ────────────────────
+  // Drives the GHL columns (won/lost/open/abandoned/total/revenue/contacts)
+  // by walking each lead's GHL match in the selected date range. Recomputes
+  // whenever the date preset changes so the columns track the leads tab.
+  const [oppRollup, setOppRollup] = useState({ by_campaign: {}, by_adset: {}, by_ad: {} })
+
+  useEffect(() => {
+    if (!clientGroups?.length) {
+      setOppRollup({ by_campaign: {}, by_adset: {}, by_ad: {} })
+      return
+    }
+    const groupIds = clientGroups.map(g => g.id).join(",")
+    const { start, end } = getDateRangeFromPreset(datePreset)
+    apiRequest(
+      `/api/campaigns/opp-rollup?groups=${groupIds}&start_date=${start}&end_date=${end}`
+    ).then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      setOppRollup({
+        by_campaign: data.by_campaign || {},
+        by_adset: data.by_adset || {},
+        by_ad: data.by_ad || {},
+      })
+    }).catch(() => {})
+  }, [clientGroups, datePreset])
+
   useEffect(() => {
     const ids = customMetrics.map(m => m.id)
     setVisibleColumns(prev => {
@@ -208,22 +234,29 @@ export function MarketingContent({
     const processedAdsets = []
     const processedAds = []
 
+    // GHL columns come from oppRollup — per-row, attributed via Meta leads →
+    // GHL contacts → opportunities. Group-level totals would duplicate the
+    // sub-account total onto every row (which was the old bug).
+    const ghlFor = (rollup, id) => {
+      const b = rollup?.[id] || {}
+      return {
+        ghl_contacts: b.contacts || 0,
+        ghl_revenue: b.revenue || 0,
+        ghl_won_opps: b.won || 0,
+        ghl_lost_opps: b.lost || 0,
+        ghl_open_opps: b.open || 0,
+        ghl_abandoned_opps: b.abandoned || 0,
+        ghl_total_opps: b.total || 0,
+      }
+    }
+
     for (const group of clientGroups) {
       const fb = group.facebook || {}
-      const ghlMetrics = group.gohighlevel?.metrics || {}
-      const oppStats = ghlMetrics.opportunity_stats || {}
       const groupMeta = {
         _groupId: group.id,
         clientGroup: group.name,
         adAccount: fb.ad_account_id || "",
         account_currency: fb.currency || "USD",
-        ghl_contacts: ghlMetrics.total_contacts || 0,
-        ghl_revenue: oppStats.won_revenue || 0,
-        ghl_won_opps: oppStats.won || 0,
-        ghl_lost_opps: oppStats.lost || 0,
-        ghl_open_opps: oppStats.open || 0,
-        ghl_abandoned_opps: oppStats.abandoned || 0,
-        ghl_total_opps: oppStats.total_opportunities || 0,
         meta_spend: fb.metrics?.insights?.spend || 0,
         meta_impressions: fb.metrics?.insights?.impressions || 0,
         meta_clicks: fb.metrics?.insights?.clicks || 0,
@@ -238,6 +271,7 @@ export function MarketingContent({
         const cClicks = c.clicks || 0
         processedCampaigns.push({
           ...groupMeta,
+          ...ghlFor(oppRollup.by_campaign, c.id),
           id: c.id, name: c.name,
           status: (c.status || "inactive").toLowerCase(),
           spend: cSpend, impressions: c.impressions || 0, clicks: cClicks,
@@ -257,6 +291,7 @@ export function MarketingContent({
         const aClicks = a.clicks || 0
         processedAdsets.push({
           ...groupMeta,
+          ...ghlFor(oppRollup.by_adset, a.id),
           id: a.id, name: a.name,
           status: (a.status || "inactive").toLowerCase(),
           _campaignId: a.campaign_id || "", campaign_name: a.campaign_id || "",
@@ -277,6 +312,7 @@ export function MarketingContent({
         const adClicks = ad.clicks || 0
         processedAds.push({
           ...groupMeta,
+          ...ghlFor(oppRollup.by_ad, ad.id),
           id: ad.id, name: ad.name,
           status: (ad.status || "inactive").toLowerCase(),
           _campaignId: ad.campaign_id || "", _adsetId: ad.adset_id || "",
@@ -296,7 +332,7 @@ export function MarketingContent({
     setCampaigns(processedCampaigns)
     setAllAdSets(processedAdsets)
     setAllAds(processedAds)
-  }, [clientGroups, groupsLoading])
+  }, [clientGroups, groupsLoading, oppRollup])
 
   // ── Apply custom metrics as a SEPARATE reactive layer ─────────────────────
   // This useMemo recomputes whenever campaigns or customMetrics change,
