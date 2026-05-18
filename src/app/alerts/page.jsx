@@ -53,7 +53,10 @@ import {
   Clock,
   Mail,
   Slack,
-  Calculator,
+  Layers,
+  User,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import Image from "next/image"
@@ -67,7 +70,583 @@ import {
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
 } from "@/lib/alert-helpers"
 
-// ── Main page ─────────────────────────────────────────────────
+// ── Tracking mode toggle ──────────────────────────────────────────────────────
+
+function TrackingModeToggle({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-1 p-1 rounded-lg bg-muted border border-border w-fit">
+      <button
+        type="button"
+        onClick={() => onChange("total")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+          value === "total"
+            ? "bg-white text-foreground shadow-sm border border-border/60"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <Layers className="h-3.5 w-3.5" />
+        Total
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange("per_client")}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+          value === "per_client"
+            ? "bg-white text-foreground shadow-sm border border-border/60"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <User className="h-3.5 w-3.5" />
+        Per Client
+      </button>
+    </div>
+  )
+}
+
+// ── Progress bar ──────────────────────────────────────────────────────────────
+
+function ClientProgressBar({ pct }) {
+  const clamped = Math.min(100, Math.max(0, pct ?? 0))
+  const color =
+    clamped >= 100 ? "bg-red-500" :
+    clamped >= 75  ? "bg-orange-400" :
+    clamped >= 50  ? "bg-yellow-400" :
+    "bg-emerald-400"
+  return (
+    <div className="flex items-center gap-2 min-w-[100px]">
+      <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${clamped}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">{clamped.toFixed(0)}%</span>
+    </div>
+  )
+}
+
+// ── Group triggered rows by parent alert ──────────────────────────────────────
+
+function groupTriggeredRows(rows) {
+  const map = new Map()
+  for (const row of rows) {
+    if (!row._virtual) {
+      const key = `real_${row.id}`
+      map.set(key, { parentAlert: row, children: [] })
+      continue
+    }
+    const key = String(row.id)
+    if (!map.has(key)) {
+      map.set(key, {
+        parentAlert: {
+          id: row.id,
+          name: row.name,
+          description: row.description,
+          condition: row.condition,
+          tracking_mode: row.tracking_mode,
+          target_group_ids: row.target_group_ids,
+          target_group_names: row.target_group_names,
+          updated_at: row.updated_at,
+          last_triggered_at: row.last_triggered_at,
+          status: "triggered",
+          _isGroup: true,
+        },
+        children: [],
+      })
+    }
+    map.get(key).children.push(row)
+  }
+  return [...map.values()]
+}
+
+// ── Sub-alert row (client inside an expanded group) ───────────────────────────
+
+function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
+  const isEval = evaluating === row._virtual_id
+  return (
+    <tr className="border-b bg-purple-50/40 hover:bg-purple-50/70 transition-colors h-12">
+      {/* Name — indented */}
+      <td className="py-3 px-4 align-middle min-w-[180px]">
+        <div className="flex items-start gap-2 pl-8">
+          <div className="w-0.5 self-stretch rounded-full bg-purple-300 shrink-0" />
+          <div>
+            <div className="flex items-center gap-1.5">
+              <User className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+              <span className="font-semibold text-sm text-purple-900">{row._client_name}</span>
+            </div>
+          </div>
+        </div>
+      </td>
+
+      {/* Metric */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{metricIcon(row.condition?.metric)}</span>
+          <span>{METRIC_OPTIONS.find(m => m.value === row.condition?.metric)?.label || row.condition?.metric}</span>
+        </div>
+      </td>
+
+      {/* Condition + actual */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="text-sm font-mono font-medium">{conditionSummary(row)}</div>
+        {row._client_value != null && (
+          <div className="text-xs text-red-500 font-mono mt-0.5">actual: {row._client_value?.toFixed(2)}</div>
+        )}
+      </td>
+
+      {/* Progress */}
+      <td className="py-3 px-4 align-middle">
+        <ClientProgressBar pct={row._client_progress} />
+      </td>
+
+      {/* Status */}
+      <td className="py-3 px-4 align-middle">
+        <Badge variant="destructive" className="gap-1 text-xs">
+          <BellRing className="h-3 w-3" /> Triggered
+        </Badge>
+      </td>
+
+      {/* Targets */}
+      <td className="py-3 px-4 align-middle">
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1">
+          <User className="h-2.5 w-2.5" /> Per Client
+        </Badge>
+      </td>
+
+      {/* Last updated */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="text-sm text-muted-foreground">{formatRelative(new Date(row.updated_at))}</div>
+        {row.last_triggered_at && (
+          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+            <BellRing className="h-3 w-3" />
+            {formatRelative(new Date(row.last_triggered_at))}
+          </div>
+        )}
+      </td>
+
+      {/* Actions */}
+      <td className="py-3 px-4 align-middle">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Ellipsis className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 bg-white">
+            <DropdownMenuItem
+              onClick={() => onEvaluate(row)}
+              disabled={!!evaluating}
+              className="gap-2 cursor-pointer"
+            >
+              {isEval ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Evaluate now
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onSnooze(row)} className="gap-2 cursor-pointer">
+              <BellOff className="h-4 w-4" /> Snooze Client
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(row)}
+              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Entry
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
+    </tr>
+  )
+}
+
+// ── Group header row ──────────────────────────────────────────────────────────
+
+function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvaluate, evaluating, onDelete }) {
+  const { parentAlert, children } = group
+  const isEval = evaluating === parentAlert.id
+  const childCount = children.length
+
+  return (
+    <tr
+      className="border-b bg-white hover:bg-muted/40 transition-colors h-12 cursor-pointer"
+      onClick={onToggle}
+    >
+      {/* Name */}
+      <td className="py-3 px-4 align-middle min-w-[180px]">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
+            onClick={e => { e.stopPropagation(); onToggle() }}
+          >
+            {isExpanded
+              ? <ChevronDown className="h-4 w-4" />
+              : <ChevronRight className="h-4 w-4" />}
+          </button>
+          <div>
+            <div className="font-semibold text-md flex items-center gap-2">
+              {parentAlert.name}
+              <Badge className="bg-red-100 text-red-700 border-0 text-[10px] font-semibold px-1.5 py-0 gap-1">
+                <BellRing className="h-2.5 w-2.5" />
+                {childCount} client{childCount !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+            {parentAlert.description && (
+              <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">
+                {parentAlert.description}
+              </div>
+            )}
+          </div>
+        </div>
+      </td>
+
+      {/* Metric */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{metricIcon(parentAlert.condition?.metric)}</span>
+          <span>{METRIC_OPTIONS.find(m => m.value === parentAlert.condition?.metric)?.label || parentAlert.condition?.metric}</span>
+        </div>
+      </td>
+
+      {/* Condition */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+        <div className="text-sm font-mono font-medium">{conditionSummary(parentAlert)}</div>
+        {parentAlert.condition?.period && (
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {["pct_drop", "pct_rise"].includes(parentAlert.condition?.operator) ? "vs " : "window: "}
+            {parentAlert.condition.period}
+          </div>
+        )}
+      </td>
+
+      {/* Progress — show worst client */}
+      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+        <ClientProgressBar pct={Math.max(...children.map(c => c._client_progress ?? 0))} />
+      </td>
+
+      {/* Status */}
+      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+        <Badge variant="destructive" className="gap-1 text-xs">
+          <BellRing className="h-3 w-3" /> Triggered
+        </Badge>
+      </td>
+
+      {/* Targets */}
+      <td className="py-3 px-4 align-middle min-w-[140px]" onClick={e => e.stopPropagation()}>
+        <div className="flex flex-col gap-0.5 max-w-[180px]">
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1 w-fit">
+            <User className="h-2.5 w-2.5" /> Per Client
+          </Badge>
+          {(parentAlert.target_group_names?.length ? parentAlert.target_group_names : parentAlert.target_group_ids || [])
+            .slice(0, 2)
+            .map((name, i) => <span key={i} className="text-sm truncate">{name}</span>)}
+          {(parentAlert.target_group_ids?.length ?? 0) > 2 && (
+            <span className="text-xs text-muted-foreground">+{parentAlert.target_group_ids.length - 2} more</span>
+          )}
+        </div>
+      </td>
+
+      {/* Last updated */}
+      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
+        <div className="text-sm text-muted-foreground">{formatRelative(new Date(parentAlert.updated_at))}</div>
+        {parentAlert.last_triggered_at && (
+          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+            <BellRing className="h-3 w-3" />
+            {formatRelative(new Date(parentAlert.last_triggered_at))}
+          </div>
+        )}
+      </td>
+
+      {/* Actions */}
+      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Ellipsis className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 bg-white">
+            <DropdownMenuItem onClick={() => onEdit(parentAlert)} className="gap-2 cursor-pointer">
+              <Pencil className="h-4 w-4" /> Edit Alert
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => onEvaluate(parentAlert)}
+              disabled={!!evaluating}
+              className="gap-2 cursor-pointer"
+            >
+              {isEval ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Evaluate now
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onSnooze(parentAlert)} className="gap-2 cursor-pointer">
+              <BellOff className="h-4 w-4" /> Snooze All
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(parentAlert)}
+              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" /> Delete Alert
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
+    </tr>
+  )
+}
+
+// ── Regular (non-grouped) alert row ──────────────────────────────────────────
+
+function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete }) {
+  const isVirtual = !!alert._virtual
+  const isEval    = evaluating === (alert._virtual_id ?? alert.id)
+
+  return (
+    <tr className={`border-b transition-colors hover:bg-muted/50 h-12 ${isVirtual ? "bg-purple-50/40" : "bg-white"}`}>
+      <td className="py-3 px-4 align-middle min-w-[180px]">
+        <div>
+          <div className="font-semibold text-md">{alert.name}</div>
+          {alert.description && (
+            <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">{alert.description}</div>
+          )}
+        </div>
+      </td>
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">{metricIcon(alert.condition?.metric)}</span>
+          <span>{METRIC_OPTIONS.find(m => m.value === alert.condition?.metric)?.label || alert.condition?.metric}</span>
+        </div>
+      </td>
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="text-sm font-mono font-medium">{conditionSummary(alert)}</div>
+        {alert.condition?.period && (
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {["pct_drop", "pct_rise"].includes(alert.condition?.operator) ? "vs " : "window: "}
+            {alert.condition.period}
+          </div>
+        )}
+      </td>
+      <td className="py-3 px-4 align-middle"><ProgressToTrigger alert={alert} /></td>
+      <td className="py-3 px-4 align-middle min-w-[120px]">{statusBadge(alert.status, alert.snoozed_until)}</td>
+      <td className="py-3 px-4 align-middle min-w-[140px]">
+        {alert.target_group_ids?.length ? (
+          <div className="flex flex-col gap-0.5 max-w-[180px]">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              {alert.tracking_mode === "per_client" ? (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1">
+                  <User className="h-2.5 w-2.5" /> Per Client
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-blue-700 border-blue-200 bg-blue-50 gap-1">
+                  <Layers className="h-2.5 w-2.5" /> Total
+                </Badge>
+              )}
+            </div>
+            {(alert.target_group_names?.length ? alert.target_group_names : alert.target_group_ids)
+              .slice(0, 2).map((name, i) => <span key={i} className="text-sm truncate">{name}</span>)}
+            {alert.target_group_ids.length > 2 && (
+              <span className="text-xs text-muted-foreground">+{alert.target_group_ids.length - 2} more</span>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-0.5">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-blue-700 border-blue-200 bg-blue-50 gap-1 w-fit">
+              <Layers className="h-2.5 w-2.5" /> Total
+            </Badge>
+            <span className="text-sm text-muted-foreground">Global (All)</span>
+          </div>
+        )}
+      </td>
+      <td className="py-3 px-4 align-middle whitespace-nowrap">
+        <div className="text-sm text-muted-foreground">{formatRelative(new Date(alert.updated_at))}</div>
+        {alert.last_triggered_at && (
+          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+            <BellRing className="h-3 w-3" />
+            {formatRelative(new Date(alert.last_triggered_at))}
+          </div>
+        )}
+      </td>
+      <td className="py-3 px-4 align-middle">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2"><Ellipsis className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 bg-white">
+            <DropdownMenuItem onClick={() => onEdit(alert)} className="gap-2 cursor-pointer">
+              <Pencil className="h-4 w-4" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onEvaluate(alert)} disabled={!!evaluating} className="gap-2 cursor-pointer">
+              {isEval ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
+              Evaluate now
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onTogglePause(alert)} className="gap-2 cursor-pointer">
+              {alert.status === "paused" ? <><Play className="h-4 w-4" /> Activate</> : <><Pause className="h-4 w-4" /> Pause</>}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onSnooze(alert)} className="gap-2 cursor-pointer">
+              <BellOff className="h-4 w-4" /> Snooze
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(alert)}
+              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </td>
+    </tr>
+  )
+}
+
+function EmptyState({ label }) {
+  return (
+    <tr>
+      <td colSpan={8} className="py-16 text-center">
+        <Bell className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+        <p className="text-sm text-muted-foreground">No {label} alerts</p>
+      </td>
+    </tr>
+  )
+}
+
+// ── Standard alert table (active / paused tabs) ───────────────────────────────
+
+function AlertTable({ rows, emptyLabel, evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete }) {
+  return (
+    <div className="relative w-full overflow-auto rounded-md border border-border/60">
+      <table className="w-full caption-bottom text-sm">
+        <thead className="bg-white sticky top-0 z-20">
+          <tr className="border-b h-11">
+            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
+              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
+          {rows.length === 0
+            ? <EmptyState label={emptyLabel} />
+            : rows.map(a => (
+                <AlertRow
+                  key={a._virtual_id ?? a.id}
+                  alert={a}
+                  evaluating={evaluating}
+                  onEdit={onEdit}
+                  onEvaluate={onEvaluate}
+                  onTogglePause={onTogglePause}
+                  onSnooze={onSnooze}
+                  onDelete={onDelete}
+                />
+              ))
+          }
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Triggered table — grouped by parent alert ─────────────────────────────────
+
+function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete, onDeleteSub }) {
+  const [expandedGroups, setExpandedGroups] = useState(new Set())
+
+  const groups = useMemo(() => groupTriggeredRows(rows), [rows])
+
+  const toggleGroup = (key) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev)
+      next.has(key) ? next.delete(key) : next.add(key)
+      return next
+    })
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="relative w-full overflow-auto rounded-md border border-border/60">
+        <table className="w-full caption-bottom text-sm">
+          <thead className="bg-white sticky top-0 z-20">
+            <tr className="border-b h-11">
+              {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
+                <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody><EmptyState label="triggered" /></tbody>
+        </table>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative w-full overflow-auto rounded-md border border-border/60">
+      <table className="w-full caption-bottom text-sm">
+        <thead className="bg-white sticky top-0 z-20">
+          <tr className="border-b h-11">
+            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
+              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="[&_tr:last-child]:border-0">
+          {groups.map(group => {
+            const groupKey = group.children.length > 0
+              ? `group_${group.parentAlert.id}`
+              : `real_${group.parentAlert.id}`
+            const isExpanded = expandedGroups.has(groupKey)
+            const hasChildren = group.children.length > 0
+
+            if (!hasChildren) {
+              return (
+                <AlertRow
+                  key={groupKey}
+                  alert={group.parentAlert}
+                  evaluating={evaluating}
+                  onEdit={onEdit}
+                  onEvaluate={onEvaluate}
+                  onTogglePause={onTogglePause}
+                  onSnooze={onSnooze}
+                  onDelete={onDelete}
+                />
+              )
+            }
+
+            return [
+              <GroupHeaderRow
+                key={groupKey}
+                group={group}
+                isExpanded={isExpanded}
+                onToggle={() => toggleGroup(groupKey)}
+                onEdit={onEdit}
+                onSnooze={onSnooze}
+                onEvaluate={onEvaluate}
+                evaluating={evaluating}
+                onDelete={onDelete}
+              />,
+              ...(isExpanded
+                ? group.children.map(child => (
+                    <SubAlertRow
+                      key={child._virtual_id ?? `${child.id}_${child._client_id}`}
+                      row={child}
+                      evaluating={evaluating}
+                      onEvaluate={onEvaluate}
+                      onSnooze={onSnooze}
+                      onDelete={onDeleteSub}
+                    />
+                  ))
+                : []
+              ),
+            ]
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
+const EXTENDED_EMPTY_FORM = {
+  ...EMPTY_FORM,
+  tracking_mode: "total",
+}
 
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState({ active: [], triggered: [], paused: [], counts: {} })
@@ -77,10 +656,11 @@ export default function AlertsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAlert, setEditingAlert] = useState(null)
   const [deleteTarget, setDeleteTarget] = useState(null)
+  const [deleteSubTarget, setDeleteSubTarget] = useState(null)
   const [snoozeTarget, setSnoozeTarget] = useState(null)
   const [snoozeHours, setSnoozeHours] = useState(24)
   const [evaluating, setEvaluating] = useState(null)
-  const [form, setForm] = useState(EMPTY_FORM)
+  const [form, setForm] = useState(EXTENDED_EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [clientSearch, setClientSearch] = useState("")
   const [birdyInput, setBirdyInput] = useState("")
@@ -147,30 +727,32 @@ export default function AlertsPage() {
 
   const openCreate = () => {
     setEditingAlert(null)
-    setForm(EMPTY_FORM)
+    setForm(EXTENDED_EMPTY_FORM)
     setClientSearch("")
     setBirdyInput("")
     setDialogOpen(true)
   }
 
-  const openEdit = (alert) => {
-    setEditingAlert(alert)
+  const openEdit = useCallback((alert) => {
+    const realAlert = alert._virtual || alert._isGroup ? { ...alert } : alert
+    setEditingAlert(realAlert)
     setForm({
-      name: alert.name || "",
-      description: alert.description || "",
-      type: alert.type || "warning",
-      metric: alert.condition?.metric || "lead_count",
-      operator: alert.condition?.operator || "gt",
-      value: String(alert.condition?.value ?? "0"),
-      period: alert.condition?.period || "day",
-      target_group_ids: alert.target_group_ids || [],
-      notification_channels: alert.notification_channels || ["in_app"],
-      frequency: alert.frequency || "daily",
+      name: realAlert.name || "",
+      description: realAlert.description || "",
+      type: realAlert.type || "warning",
+      metric: realAlert.condition?.metric || "lead_count",
+      operator: realAlert.condition?.operator || "gt",
+      value: String(realAlert.condition?.value ?? "0"),
+      period: realAlert.condition?.period || "day",
+      target_group_ids: realAlert.target_group_ids || [],
+      notification_channels: realAlert.notification_channels || ["in_app"],
+      frequency: realAlert.frequency || "daily",
+      tracking_mode: realAlert.tracking_mode || "total",
     })
     setClientSearch("")
     setBirdyInput("")
     setDialogOpen(true)
-  }
+  }, [])
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Alert name is required"); return }
@@ -191,6 +773,7 @@ export default function AlertsPage() {
         target_group_ids: form.target_group_ids,
         notification_channels: form.notification_channels,
         frequency: form.frequency,
+        tracking_mode: form.tracking_mode,
       }
 
       const url = editingAlert ? `/api/alerts/${editingAlert.id}` : `/api/alerts`
@@ -213,12 +796,19 @@ export default function AlertsPage() {
     }
   }
 
-  // ── Actions ──────────────────────────────────────────────────
+  // ── Actions ───────────────────────────────────────────────────────────────
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return
+  const handleDeleteRequest = useCallback((alert) => {
+    setDeleteTarget(alert)
+  }, [])
+
+  const handleDeleteConfirm = async () => {
+    const target = deleteTarget
+    if (!target) return
+    setDeleteTarget(null)
     try {
-      await apiRequest(`/api/alerts/${deleteTarget.id}`, { method: "DELETE" })
+      const res = await apiRequest(`/api/alerts/${target.id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error(await res.text())
       toast.success("Alert deleted")
       setDeleteTarget(null)
       fetchAlerts()
@@ -227,7 +817,31 @@ export default function AlertsPage() {
     }
   }
 
-  const handleTogglePause = async (alert) => {
+  // Sub-alert delete: calls dismiss-client endpoint to surgically remove the
+  // client entry from per_client_results (backend auto-flips alert to active
+  // if no triggered clients remain)
+  const handleDeleteSubRequest = useCallback((row) => {
+    setDeleteSubTarget(row)
+  }, [])
+
+  const handleDeleteSubConfirm = async () => {
+    const target = deleteSubTarget
+    if (!target) return
+    setDeleteSubTarget(null)
+    try {
+      const res = await apiRequest(`/api/alerts/${target.id}/dismiss-client`, {
+        method: "POST",
+        body: JSON.stringify({ client_id: target._client_id }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success(`Removed triggered entry for ${target._client_name}`)
+      fetchAlerts()
+    } catch {
+      toast.error("Failed to remove triggered entry")
+    }
+  }
+
+  const handleTogglePause = useCallback(async (alert) => {
     const newStatus = alert.status === "active" || alert.status === "triggered" ? "paused" : "active"
     try {
       await apiRequest(`/api/alerts/${alert.id}`, {
@@ -239,16 +853,34 @@ export default function AlertsPage() {
     } catch {
       toast.error("Failed to update alert")
     }
-  }
+  }, [fetchAlerts])
 
-  const handleSnooze = async () => {
-    if (!snoozeTarget) return
+  const handleSnoozeRequest = useCallback((alert) => {
+    setSnoozeTarget(alert)
+    setSnoozeHours(24)
+  }, [])
+
+  const handleSnoozeConfirm = async () => {
+    const target = snoozeTarget
+    if (!target) return
     try {
-      await apiRequest(`/api/alerts/${snoozeTarget.id}/snooze`, {
-        method: "POST",
-        body: JSON.stringify({ hours: snoozeHours }),
-      })
-      toast.success(`Alert snoozed for ${SNOOZE_OPTIONS.find(s => s.value === snoozeHours)?.label}`)
+      if (target._virtual && target._client_id) {
+        await apiRequest(`/api/alerts/${target.id}/snooze-client`, {
+          method: "POST",
+          body: JSON.stringify({ client_id: target._client_id, hours: snoozeHours }),
+        })
+      } else {
+        await apiRequest(`/api/alerts/${target.id}/snooze`, {
+          method: "POST",
+          body: JSON.stringify({ hours: snoozeHours }),
+        })
+      }
+      const label = SNOOZE_OPTIONS.find(s => s.value === snoozeHours)?.label
+      toast.success(
+        target._virtual
+          ? `${target._client_name} snoozed for ${label}`
+          : `Alert snoozed for ${label}`
+      )
       setSnoozeTarget(null)
       fetchAlerts()
     } catch {
@@ -256,8 +888,8 @@ export default function AlertsPage() {
     }
   }
 
-  const handleEvaluate = async (alert) => {
-    setEvaluating(alert.id)
+  const handleEvaluate = useCallback(async (alert) => {
+    setEvaluating(alert._virtual_id ?? alert.id)
     try {
       const res = await apiRequest(`/api/alerts/${alert.id}/evaluate`, {
         method: "POST",
@@ -276,7 +908,7 @@ export default function AlertsPage() {
     } finally {
       setEvaluating(null)
     }
-  }
+  }, [fetchAlerts])
 
   const toggleGroup = (id) => {
     setForm(f => ({
@@ -287,150 +919,14 @@ export default function AlertsPage() {
     }))
   }
 
-  // ── Render rows ───────────────────────────────────────────────
-
-  const AlertRow = ({ alert }) => (
-    <tr className="border-b transition-colors hover:bg-muted/50 h-12 bg-white">
-      {/* Name */}
-      <td className="py-3 px-4 align-middle min-w-[180px]">
-        <div className="font-semibold text-md">{alert.name}</div>
-        {alert.description && (
-          <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">{alert.description}</div>
-        )}
-      </td>
-
-      {/* Metric */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{metricIcon(alert.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === alert.condition?.metric)?.label || alert.condition?.metric}</span>
-        </div>
-      </td>
-
-      {/* Condition */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm font-mono font-medium">{conditionSummary(alert)}</div>
-        {alert.condition?.period && (
-          <div className="text-xs text-muted-foreground mt-0.5">
-            {["pct_drop", "pct_rise"].includes(alert.condition?.operator) ? "vs " : "window: "}
-            {alert.condition.period}
-          </div>
-        )}
-      </td>
-
-      {/* Progress to trigger */}
-      <td className="py-3 px-4 align-middle">
-        <ProgressToTrigger alert={alert} />
-      </td>
-
-      {/* Status */}
-      <td className="py-3 px-4 align-middle min-w-[120px]">
-        {statusBadge(alert.status, alert.snoozed_until)}
-      </td>
-
-      {/* Targets */}
-      <td className="py-3 px-4 align-middle min-w-[140px]">
-        {alert.target_group_ids?.length ? (
-          <div className="flex flex-col gap-0.5 max-w-[180px]">
-            {(alert.target_group_names?.length ? alert.target_group_names : alert.target_group_ids)
-              .slice(0, 2)
-              .map((name, i) => (
-                <span key={i} className="text-sm truncate">{name}</span>
-              ))}
-            {alert.target_group_ids.length > 2 && (
-              <span className="text-xs text-muted-foreground">+{alert.target_group_ids.length - 2} more</span>
-            )}
-          </div>
-        ) : (
-          <span className="text-sm text-muted-foreground">Global (All)</span>
-        )}
-      </td>
-
-      {/* Last updated */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm text-muted-foreground">{formatRelative(new Date(alert.updated_at))}</div>
-        {alert.last_triggered_at && (
-          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
-            <BellRing className="h-3 w-3" />
-            {formatRelative(new Date(alert.last_triggered_at))}
-          </div>
-        )}
-      </td>
-
-      {/* Actions */}
-      <td className="py-3 px-4 align-middle">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <Ellipsis className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 bg-white">
-            <DropdownMenuItem onClick={() => openEdit(alert)} className="gap-2 cursor-pointer">
-              <Pencil className="h-4 w-4" /> Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => handleEvaluate(alert)}
-              disabled={evaluating === alert.id}
-              className="gap-2 cursor-pointer"
-            >
-              {evaluating === alert.id
-                ? <RefreshCw className="h-4 w-4 animate-spin" />
-                : <Zap className="h-4 w-4" />}
-              Evaluate now
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => handleTogglePause(alert)} className="gap-2 cursor-pointer">
-              {alert.status === "paused"
-                ? <><Play className="h-4 w-4" /> Activate</>
-                : <><Pause className="h-4 w-4" /> Pause</>}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { setSnoozeTarget(alert); setSnoozeHours(24) }} className="gap-2 cursor-pointer">
-              <BellOff className="h-4 w-4" /> Snooze
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => setDeleteTarget(alert)}
-              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" /> Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </td>
-    </tr>
-  )
-
-  const EmptyState = ({ label }) => (
-    <tr>
-      <td colSpan={8} className="py-16 text-center">
-        <Bell className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-muted-foreground">No {label} alerts</p>
-      </td>
-    </tr>
-  )
-
-  const AlertTable = ({ rows, emptyLabel }) => (
-    <div className="relative w-full overflow-auto rounded-md border border-border/60">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="bg-white sticky top-0 z-20">
-          <tr className="border-b h-11">
-            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="[&_tr:last-child]:border-0">
-          {rows.length === 0
-            ? <EmptyState label={emptyLabel} />
-            : rows.map(a => <AlertRow key={a.id} alert={a} />)
-          }
-        </tbody>
-      </table>
-    </div>
-  )
+  const rowHandlers = {
+    evaluating,
+    onEdit: openEdit,
+    onEvaluate: handleEvaluate,
+    onTogglePause: handleTogglePause,
+    onSnooze: handleSnoozeRequest,
+    onDelete: handleDeleteRequest,
+  }
 
   return (
     <main className="min-h-screen w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
@@ -488,9 +984,24 @@ export default function AlertsPage() {
             </div>
           ) : (
             <>
-              <TabsContent value="active" className="mt-2"><AlertTable rows={alerts.active || []} emptyLabel="active" /></TabsContent>
-              <TabsContent value="triggered" className="mt-2"><AlertTable rows={alerts.triggered || []} emptyLabel="triggered" /></TabsContent>
-              <TabsContent value="paused" className="mt-2"><AlertTable rows={alerts.paused || []} emptyLabel="paused" /></TabsContent>
+              <TabsContent value="active" className="mt-2">
+                <AlertTable rows={alerts.active || []} emptyLabel="active" {...rowHandlers} />
+              </TabsContent>
+              <TabsContent value="triggered" className="mt-2">
+                <TriggeredTable
+                  rows={alerts.triggered || []}
+                  evaluating={evaluating}
+                  onEdit={openEdit}
+                  onEvaluate={handleEvaluate}
+                  onTogglePause={handleTogglePause}
+                  onSnooze={handleSnoozeRequest}
+                  onDelete={handleDeleteRequest}
+                  onDeleteSub={handleDeleteSubRequest}
+                />
+              </TabsContent>
+              <TabsContent value="paused" className="mt-2">
+                <AlertTable rows={alerts.paused || []} emptyLabel="paused" {...rowHandlers} />
+              </TabsContent>
             </>
           )}
         </Tabs>
@@ -588,25 +1099,25 @@ export default function AlertsPage() {
                     <h3 className="text-base font-semibold">Condition</h3>
                     <div className="grid grid-cols-[2fr_1fr_80px_1fr] gap-4">
                       <div className="space-y-2">
-                        <MetricPicker
-                          metrics={alertMetricOptions}
-                          value={form.metric}
-                          onChange={v => setForm(f => ({ ...f, metric: v }))}
-                          placeholder="Select metric..."
-                          triggerClassName="w-full"
-                        />
+                      <MetricPicker
+                        metrics={alertMetricOptions}
+                        value={form.metric}
+                        onChange={v => setForm(f => ({ ...f, metric: v }))}
+                        placeholder="Select metric..."
+                        triggerClassName="w-full"
+                      />
                       </div>
                       <div className="space-y-2">
-                        <Select value={form.operator} onValueChange={v => setForm(f => ({ ...f, operator: v }))}>
+                      <Select value={form.operator} onValueChange={v => setForm(f => ({ ...f, operator: v }))}>
                           <SelectTrigger className="h-10">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                        <SelectContent className="bg-white">
                             {OPERATOR_OPTIONS.map(o => (
                               <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                        </SelectContent>
+                      </Select>
                       </div>
                       <div className="space-y-2">
                         <Input
@@ -619,59 +1130,57 @@ export default function AlertsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Select value={form.period} onValueChange={v => setForm(f => ({ ...f, period: v }))}>
+                      <Select value={form.period} onValueChange={v => setForm(f => ({ ...f, period: v }))}>
                           <SelectTrigger className="h-10">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                        <SelectContent className="bg-white">
                             {PERIOD_OPTIONS.map(p => (
                               <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                        </SelectContent>
+                      </Select>
                       </div>
                     </div>
                   </div>
 
                   {/* Target Client Groups */}
                   <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-                    <h3 className="text-base font-semibold">Target Client Groups</h3>
-                    <div className="space-y-4">
-                      <Input
-                        placeholder="Search clients..."
-                        value={clientSearch}
-                        onChange={e => setClientSearch(e.target.value)}
-                      />
-                      <div className="max-h-[200px] overflow-y-auto border rounded-md divide-y">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <h3 className="text-base font-semibold">Target Client Groups</h3>
+                      <div className="flex flex-col items-end gap-1">
+                        <TrackingModeToggle value={form.tracking_mode} onChange={v => setForm(f => ({ ...f, tracking_mode: v }))} />
+                        <p className="text-xs text-muted-foreground max-w-[280px] text-right">
+                          {form.tracking_mode === "total"
+                            ? "Alert triggers when the combined value across all selected clients crosses the threshold."
+                            : "Alert triggers separately for each client that crosses the threshold on their own."}
+                        </p>
+                      </div>
+                    </div>
+                    <Input placeholder="Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
+                    <div className="max-h-[200px] overflow-y-auto border rounded-md divide-y">
                         {/* Select All */}
-                        <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors font-medium bg-muted/30">
-                          <Checkbox
-                            checked={clientGroups.length > 0 && form.target_group_ids.length === clientGroups.length}
+                      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors font-medium bg-muted/30">
+                        <Checkbox
+                          checked={clientGroups.length > 0 && form.target_group_ids.length === clientGroups.length}
                             onCheckedChange={(checked) => {
                               setForm(f => ({
                                 ...f,
                                 target_group_ids: checked ? clientGroups.map(g => g.id) : [],
                               }))
                             }}
-                          />
-                          <span className="text-sm font-medium">Target All Client Groups</span>
-                        </label>
+                        />
+                        <span className="text-sm font-medium">Target All Client Groups</span>
+                      </label>
                         {/* Client groups */}
-                        {clientGroups
-                          .filter(g => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
-                          .map(g => {
-                            const selected = form.target_group_ids.includes(g.id)
-                            return (
-                              <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors">
-                                <Checkbox
-                                  checked={selected}
-                                  onCheckedChange={() => toggleGroup(g.id)}
-                                />
-                                <span className="text-sm">{g.name}</span>
-                              </label>
-                            )
-                          })}
-                      </div>
+                      {clientGroups
+                        .filter(g => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                        .map(g => (
+                          <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors">
+                            <Checkbox checked={form.target_group_ids.includes(g.id)} onCheckedChange={() => toggleGroup(g.id)} />
+                            <span className="text-sm">{g.name}</span>
+                          </label>
+                        ))}
                     </div>
                   </div>
                 </div>
@@ -706,20 +1215,21 @@ export default function AlertsPage() {
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
-                            <Users className="h-4 w-4" />
-                            <span>Targets</span>
+                            {form.tracking_mode === "per_client" ? <User className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
+                            <span>Tracking</span>
                           </div>
-                          <span className="font-medium">
-                            {form.target_group_ids.length
-                              ? `${form.target_group_ids.length} selected`
-                              : "None"}
-                          </span>
+                          {form.tracking_mode === "per_client" ? (
+                            <Badge variant="outline" className="text-purple-700 border-purple-200 bg-purple-50 gap-1 text-xs"><User className="h-3 w-3" /> Per Client</Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50 gap-1 text-xs"><Layers className="h-3 w-3" /> Total</Badge>
+                          )}
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Clock className="h-4 w-4" />
-                            <span>Frequency</span>
-                          </div>
+                          <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /><span>Targets</span></div>
+                          <span className="font-medium">{form.target_group_ids.length ? `${form.target_group_ids.length} selected` : "None"}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-4 w-4" /><span>Frequency</span></div>
                           <Select value={form.frequency} onValueChange={v => setForm(f => ({ ...f, frequency: v }))}>
                             <SelectTrigger className="w-[120px] h-8 text-xs">
                               <SelectValue />
@@ -759,10 +1269,10 @@ export default function AlertsPage() {
                             checked={form.notification_channels.includes("in_app")}
                             onCheckedChange={(checked) => {
                               setForm(f => ({
-                                ...f,
-                                notification_channels: checked
-                                  ? [...f.notification_channels.filter(c => c !== "in_app"), "in_app"]
-                                  : f.notification_channels.filter(c => c !== "in_app"),
+                              ...f,
+                              notification_channels: checked
+                                ? [...f.notification_channels.filter(c => c !== "in_app"), "in_app"]
+                                : f.notification_channels.filter(c => c !== "in_app"),
                               }))
                             }}
                           />
@@ -832,9 +1342,23 @@ export default function AlertsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 text-white hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 text-white hover:bg-red-700">Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Delete sub-alert (client triggered entry) ─────────── */}
+      <AlertDialog open={!!deleteSubTarget} onOpenChange={open => { if (!open) setDeleteSubTarget(null) }}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove triggered entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will dismiss the triggered entry for <strong>{deleteSubTarget?._client_name}</strong>. The alert will re-trigger if the condition is met again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSubConfirm} className="bg-red-600 text-white hover:bg-red-700">Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -845,7 +1369,10 @@ export default function AlertsPage() {
           <DialogHeader>
             <DialogTitle>Snooze Alert</DialogTitle>
             <DialogDescription>
-              Temporarily silence <strong>"{snoozeTarget?.name}"</strong>.
+              {snoozeTarget?._virtual
+                ? <>Silence <strong>{snoozeTarget._client_name}</strong> for this alert.</>
+                : <>Temporarily silence <strong>"{snoozeTarget?.name}"</strong>.</>
+              }
             </DialogDescription>
           </DialogHeader>
           <div className="py-2 space-y-3">
@@ -863,8 +1390,9 @@ export default function AlertsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSnoozeTarget(null)}>Cancel</Button>
-            <Button onClick={handleSnooze} className="bg-[#713cdd] hover:bg-[#5f2fc0] text-white gap-2">
-              <BellOff className="h-4 w-4" /> Snooze
+            <Button onClick={handleSnoozeConfirm} className="bg-[#713cdd] hover:bg-[#5f2fc0] text-white gap-2">
+              <BellOff className="h-4 w-4" />
+              {snoozeTarget?._virtual ? "Snooze Client" : "Snooze"}
             </Button>
           </DialogFooter>
         </DialogContent>
