@@ -193,4 +193,5 @@ export const EMPTY_FORM = {
   target_group_ids: [],
   notification_channels: ["in_app"],
   frequency: "daily",
+  tracking_mode: "total",
 }
