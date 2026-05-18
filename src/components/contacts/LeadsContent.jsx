@@ -1,6 +1,6 @@
 "use client"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,11 +44,24 @@ export function LeadsContent({
   const [error, setError] = useState(null)
   const [progress, setProgress] = useState(13)
   const [customMetrics, setCustomMetrics] = useState([])
+  const [gridOpen, setGridOpen] = useState(false)
+  const [groupSearch, setGroupSearch] = useState("")
+  const gridRef = useRef(null)
 
-  // Filter options fetched from backend
   const [filterOptions, setFilterOptions] = useState({ sources: [], types: [], tags: [] })
 
-  // Fetch custom metrics for leads dashboard
+  // Close grid on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (gridRef.current && !gridRef.current.contains(e.target)) {
+        setGridOpen(false)
+        setGroupSearch("")
+      }
+    }
+    if (gridOpen) document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [gridOpen])
+
   useEffect(() => {
     apiRequest("/api/custom-metrics").then(async res => {
       if (!res.ok) return
@@ -120,7 +133,7 @@ export function LeadsContent({
   }, [viewsLoaded, savedColumns])
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [selectedSources, setSelectedSources] = useState([])   // ← multi-select array
+  const [selectedSources, setSelectedSources] = useState([])
   const [selectedType, setSelectedType] = useState("all")
   const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
   const [selectedTags, setSelectedTags] = useState([])
@@ -179,45 +192,44 @@ export function LeadsContent({
   )
 
   const fetchContacts = async (page = 1, overrides = {}) => {
-  setLoading(true)
-  setError(null)
-  try {
-    if (ghlClientGroups.length === 0) {
+    setLoading(true)
+    setError(null)
+    try {
+      if (ghlClientGroups.length === 0) {
+        setContacts([])
+        setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
+        setLoading(false)
+        return
+      }
+
+      const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
+      const { start_date, end_date } = presetToDateRange(datePreset)
+
+      const activeSources = overrides.sources ?? selectedSources
+      const activeTags = overrides.tags ?? selectedTags
+
+      let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
+      if (start_date) endpoint += `&start_date=${start_date}`
+      if (end_date) endpoint += `&end_date=${end_date}`
+      activeSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
+      activeTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
+
+      const response = await apiRequest(endpoint)
+      if (!response.ok) throw new Error(`Failed: ${response.status}`)
+
+      const data = await response.json()
+      setContacts(data.contacts || [])
+      setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
+      setCurrentPage(page)
+
+    } catch (err) {
+      setError(err.message)
       setContacts([])
-      setMetaData({ total_contacts: 0, has_next: false, has_prev: false })
+      setMetaData(null)
+    } finally {
       setLoading(false)
-      return
     }
-
-    const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-    const { start_date, end_date } = presetToDateRange(datePreset)
-
-    const activeSources = overrides.sources ?? selectedSources
-    const activeTags = overrides.tags ?? selectedTags
-
-
-    let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
-    if (start_date) endpoint += `&start_date=${start_date}`
-    if (end_date) endpoint += `&end_date=${end_date}`
-    activeSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
-    activeTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
-
-    const response = await apiRequest(endpoint)
-    if (!response.ok) throw new Error(`Failed: ${response.status}`)
-
-    const data = await response.json()
-    setContacts(data.contacts || [])
-    setMetaData(data.meta || { total_contacts: 0, has_next: false, has_prev: false })
-    setCurrentPage(page)
-
-  } catch (err) {
-    setError(err.message)
-    setContacts([])
-    setMetaData(null)
-  } finally {
-    setLoading(false)
   }
-}
 
   // When embedded for a single group, auto-select it once groups load
   useEffect(() => {
@@ -245,56 +257,56 @@ export function LeadsContent({
   }, [])
 
   const filteredAndSortedContacts = useMemo(() => {
-  let filtered = [...contacts]
+    let filtered = [...contacts]
 
-  if (searchQuery) {
-    const q = searchQuery.toLowerCase()
-    filtered = filtered.filter(c =>
-      c.contactName?.toLowerCase().includes(q) ||
-      c.email?.toLowerCase().includes(q) ||
-      c.phone?.includes(q) ||
-      c.website?.toLowerCase().includes(q) ||
-      c.address1?.toLowerCase().includes(q) ||
-      c.country?.toLowerCase().includes(q) ||
-      c.groupName?.toLowerCase().includes(q) ||
-      c.tags?.some(t => t.toLowerCase().includes(q))
-    )
-  }
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      filtered = filtered.filter(c =>
+        c.contactName?.toLowerCase().includes(q) ||
+        c.email?.toLowerCase().includes(q) ||
+        c.phone?.includes(q) ||
+        c.website?.toLowerCase().includes(q) ||
+        c.address1?.toLowerCase().includes(q) ||
+        c.country?.toLowerCase().includes(q) ||
+        c.groupName?.toLowerCase().includes(q) ||
+        c.tags?.some(t => t.toLowerCase().includes(q))
+      )
+    }
 
-  if (selectedType !== "all") {
-    filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
-  }
+    if (selectedType !== "all") {
+      filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
+    }
 
-  if (selectedOpportunityStatus !== "all") {
-    filtered = filtered.filter(c =>
-      c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
-    )
-  }
+    if (selectedOpportunityStatus !== "all") {
+      filtered = filtered.filter(c =>
+        c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
+      )
+    }
 
-  if (sortColumn) {
-    filtered.sort((a, b) => {
-      let aVal = a[sortColumn] ?? ""
-      let bVal = b[sortColumn] ?? ""
-      if (sortColumn === "dateAdded") {
-        aVal = aVal ? new Date(aVal).getTime() : 0
-        bVal = bVal ? new Date(bVal).getTime() : 0
-      }
-      if (sortColumn === "leadValue") {
-        aVal = aVal || 0
-        bVal = bVal || 0
-      }
-      if (typeof aVal === "string") {
-        aVal = aVal.toLowerCase()
-        bVal = bVal.toLowerCase()
-      }
-      return (aVal < bVal ? -1 : 1) * (sortDirection === "asc" ? 1 : -1)
-    })
-  }
+    if (sortColumn) {
+      filtered.sort((a, b) => {
+        let aVal = a[sortColumn] ?? ""
+        let bVal = b[sortColumn] ?? ""
+        if (sortColumn === "dateAdded") {
+          aVal = aVal ? new Date(aVal).getTime() : 0
+          bVal = bVal ? new Date(bVal).getTime() : 0
+        }
+        if (sortColumn === "leadValue") {
+          aVal = aVal || 0
+          bVal = bVal || 0
+        }
+        if (typeof aVal === "string") {
+          aVal = aVal.toLowerCase()
+          bVal = bVal.toLowerCase()
+        }
+        return (aVal < bVal ? -1 : 1) * (sortDirection === "asc" ? 1 : -1)
+      })
+    }
 
-  return filtered
-}, [contacts, searchQuery, selectedType, selectedOpportunityStatus, sortColumn, sortDirection])
+    return filtered
+  }, [contacts, searchQuery, selectedType, selectedOpportunityStatus, sortColumn, sortDirection])
 
- const clearAllFilters = () => {
+  const clearAllFilters = () => {
     setSearchQuery("")
     setSelectedSources([])
     setSelectedType("all")
@@ -395,6 +407,23 @@ export function LeadsContent({
     if (metaData?.has_next) fetchContacts(currentPage + 1)
   }
 
+  const gridItems = useMemo(() => [
+    { id: "all", name: "All Groups" },
+    ...ghlClientGroups.slice(0, 49),
+  ], [ghlClientGroups])
+
+  const selectedGroupLabel = useMemo(() => {
+    if (selectedClientGroup === "all" || !selectedClientGroup) return "All Groups"
+    return ghlClientGroups.find(g => g.id === selectedClientGroup)?.name ?? "All Groups"
+  }, [selectedClientGroup, ghlClientGroups])
+
+  const filteredGridItems = useMemo(() =>
+    gridItems.filter(item =>
+      item.name.toLowerCase().includes(groupSearch.toLowerCase())
+    ),
+    [gridItems, groupSearch]
+  )
+
   return (
     <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
       <div className="flex flex-col gap-6">
@@ -403,7 +432,9 @@ export function LeadsContent({
         {showHeader && (
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Lead Hub</h1>
+              <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                Lead Hub
+              </h1>
             </div>
 
             <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
@@ -413,18 +444,81 @@ export function LeadsContent({
                   {setDatePreset && (
                     <DateRangeSelect value={datePreset} onChange={setDatePreset} />
                   )}
+
+                  {/* ── Group Grid Picker ── */}
                   {showGroupFilter && (
-                    <Select value={selectedClientGroup} onValueChange={setSelectedClientGroup}>
-                      <SelectTrigger className="h-10 bg-white font-semibold">
-                        <SelectValue placeholder="All Groups" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All Groups</SelectItem>
-                        {ghlClientGroups.map(g => (
-                          <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="relative" ref={gridRef}>
+                      {/* Trigger */}
+                      <button
+                        onClick={() => setGridOpen(prev => !prev)}
+                        className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
+                      >
+                        <span className="truncate flex-1 text-left text-gray-800">
+                          {selectedGroupLabel}
+                        </span>
+                        <svg
+                          className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
+                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+
+                      {/* Dropdown */}
+                      {gridOpen && (
+                        <div className="absolute z-50 mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-max">
+
+                          {/* Search */}
+                          <div className="mb-2 relative">
+                            <input
+                              type="text"
+                              placeholder="Search groups..."
+                              value={groupSearch}
+                              onChange={e => setGroupSearch(e.target.value)}
+                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            />
+                          </div>
+
+                          {/* Grid */}
+                          {filteredGridItems.length > 0 ? (
+                            <div
+                              className="grid gap-1"
+                              style={{ gridTemplateColumns: "repeat(5, minmax(100px, 1fr))" }}
+                            >
+                              {filteredGridItems.map(item => {
+                                const isSelected =
+                                  item.id === "all"
+                                    ? selectedClientGroup === "all" || !selectedClientGroup
+                                    : selectedClientGroup === item.id
+
+                                return (
+                                  <button
+                                    key={item.id}
+                                    onClick={() => {
+                                      setSelectedClientGroup(item.id)
+                                      setGridOpen(false)
+                                      setGroupSearch("")
+                                    }}
+                                    title={item.name}
+                                    className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors whitespace-nowrap
+                                      ${isSelected
+                                        ? "bg-purple-600 text-white border-purple-600 font-semibold"
+                                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                                      }`}
+                                  >
+                                    {item.name}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 text-center py-3 px-6">
+                              No groups found
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
