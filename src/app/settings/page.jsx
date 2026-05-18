@@ -35,7 +35,6 @@ import {
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { apiRequest } from "@/lib/api"
-import { Crown, ExternalLink as ExternalLinkIcon, AlertCircle as AlertCircleIcon } from "lucide-react"
 
 function SettingsPageContent() {
   const router = useRouter()
@@ -49,9 +48,6 @@ function SettingsPageContent() {
 
   const [refreshCycle, setRefreshCycle] = useState({ running: false, groups_done: 0, groups_total: 0, current_group: null })
   const [refreshStarting, setRefreshStarting] = useState(false)
-
-  const [billingStatus, setBillingStatus] = useState(null)
-  const [loadingPortal, setLoadingPortal] = useState(false)
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
@@ -69,27 +65,6 @@ function SettingsPageContent() {
 
   const clearCookie = (name) => {
     document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax`
-  }
-  
-  useEffect(() => {
-    apiRequest("/api/billing/status")
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data) setBillingStatus(data) })
-      .catch(() => {})
-  }, [])
-
-  const handlePortal = async () => {
-    setLoadingPortal(true)
-    try {
-      const res = await apiRequest("/api/billing/portal-url")
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail ?? "Failed to open billing portal")
-      if (data.portal_url) window.open(data.portal_url, "_blank", "noopener,noreferrer")
-    } catch (err) {
-      toast.error("Billing Portal Error", { description: err.message })
-    } finally {
-      setLoadingPortal(false)
-    }
   }
 
   useEffect(() => {
@@ -733,100 +708,6 @@ function SettingsPageContent() {
           </TabsContent>
 
           <TabsContent value="account" className="space-y-6">
-            {/* ── Current Plan Card ── */}
-            {billingStatus?.subscribed && (() => {
-              const PLANS = [
-                { id: "starter", name: "Starter", color: "blue",    maxClients: 3  },
-                { id: "growth",  name: "Growth",  color: "purple",  maxClients: 10 },
-                { id: "scale",   name: "Scale",   color: "emerald", maxClients: 25 },
-              ]
-              const COLOR_CLASSES = {
-                blue:    { border: "border-blue-500",    light: "bg-blue-50",    text: "text-blue-600",    bg: "bg-blue-600"    },
-                purple:  { border: "border-purple-500",  light: "bg-purple-50",  text: "text-purple-600",  bg: "bg-purple-600"  },
-                emerald: { border: "border-emerald-500", light: "bg-emerald-50", text: "text-emerald-600", bg: "bg-emerald-600" },
-              }
-              const STATUS_STYLES = {
-                active:   "bg-green-100 text-green-700 border-green-200",
-                trialing: "bg-blue-100 text-blue-700 border-blue-200",
-                past_due: "bg-amber-100 text-amber-700 border-amber-200",
-                canceled: "bg-red-100 text-red-700 border-red-200",
-                inactive: "bg-gray-100 text-gray-600 border-gray-200",
-              }
-              const STATUS_LABELS = { active: "Active", trialing: "Trial", past_due: "Past Due", canceled: "Canceled", inactive: "No Plan" }
-
-              const plan = PLANS.find(p => p.id === billingStatus.plan?.id)
-              if (!plan) return null
-              const c = COLOR_CLASSES[plan.color]
-              const usagePct = Math.min(100, (billingStatus.client_count / Math.max(billingStatus.client_limit, 1)) * 100)
-
-              return (
-                <div className={`rounded-2xl border-2 ${c.border} ${c.light} p-5`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Crown className={`w-6 h-6 ${c.text}`} />
-                      <div>
-                        <p className="text-xs text-gray-500 font-medium">Current Plan</p>
-                        <h3 className={`text-xl font-bold ${c.text}`}>{plan.name}</h3>
-                      </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLES[billingStatus.status] ?? STATUS_STYLES.inactive}`}>
-                        {STATUS_LABELS[billingStatus.status] ?? billingStatus.status}
-                      </span>
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Client groups</span>
-                        <span className="font-medium text-gray-700">
-                          {billingStatus.client_count} / {billingStatus.client_limit}
-                          {billingStatus.extra_clients_paid > 0 && (
-                            <span className="ml-1 text-emerald-600">(+{billingStatus.extra_clients_paid} extra)</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-white rounded-full border border-gray-200 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${usagePct >= 90 ? "bg-red-500" : c.bg}`}
-                          style={{ width: `${usagePct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {billingStatus.current_period_end && (
-                      <div className="text-sm text-gray-600 shrink-0">
-                        <p className="text-xs text-gray-400 mb-0.5">
-                          {billingStatus.cancel_at_period_end ? "Cancels" : "Renews"}
-                        </p>
-                        <p className="font-medium">
-                          {new Date(billingStatus.current_period_end).toLocaleDateString("en-US", {
-                            month: "short", day: "numeric", year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handlePortal}
-                      disabled={loadingPortal}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-white transition-colors disabled:opacity-60 shrink-0"
-                    >
-                      {loadingPortal
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <ExternalLink className="w-4 h-4" />
-                      }
-                      Manage Billing
-                    </button>
-                  </div>
-
-                  {billingStatus.cancel_at_period_end && (
-                    <div className="mt-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      Your subscription will cancel at the end of this billing period.
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
             <Card>
               <CardHeader>
                 <CardTitle className="text-semibold text-2xl">Account Information</CardTitle>
