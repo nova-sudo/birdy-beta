@@ -696,7 +696,7 @@ function SettingsPageContent() {
                         Stop
                       </Button>
                     ) : (
-                      <Button size="sm" onClick={handleStartRefreshAll} disabled={refreshStarting}>
+                      <Button size="sm" onClick={handleStartRefreshAll} disabled={true}>
                         {refreshStarting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                         Start Refresh Cycle
                       </Button>
