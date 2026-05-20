@@ -754,7 +754,7 @@ const StyledTable = ({
 
                 return (
                   <tr
-                    key={row.id || idx}
+                    key={`${row.id ?? 'row'}-${idx}`}
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
                     className={`border-b transition-colors ${
