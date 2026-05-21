@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
-import { getCachedData, setCachedData } from "@/lib/cache"
+import { getCachedData, setCachedData, clearCache } from "@/lib/cache"
 import { CACHE_KEYS } from "@/lib/constants"
 
 export function useColumnViews(page) {
@@ -63,11 +63,21 @@ export function useColumnViews(page) {
           body: JSON.stringify({ page, visible_columns: columns }),
         })
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
+
+        // Update local state immediately so the current page reflects the save
         setSavedColumns(columns)
 
-        // FIX: merge into existing cache instead of overwriting the whole object
+        // Merge the new value into the cache so other hook instances that are
+        // still mounted get the updated columns without a full refetch.
+        // Then invalidate (clear) the cache so the NEXT fresh load re-fetches
+        // from the API — this prevents any stale data surviving across sessions
+        // or page navigations.
         const cached = getCachedData(CACHE_KEYS.USER_VIEWS) || {}
-        setCachedData(CACHE_KEYS.USER_VIEWS, { ...cached, [page]: columns })
+        const updated = { ...cached, [page]: columns }
+        setCachedData(CACHE_KEYS.USER_VIEWS, updated)
+
+        // Invalidate so the next mount always gets server-fresh data
+        clearCache(CACHE_KEYS.USER_VIEWS)
 
         toast.success("View saved!")
       } catch (err) {
