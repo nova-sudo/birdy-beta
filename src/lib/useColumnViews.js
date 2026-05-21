@@ -51,6 +51,8 @@ export function useColumnViews(page) {
     return () => { cancelled = true }
   }, [page])
 
+  // Original signature: saveView(columns) — saves the current page's columns.
+  // FIX: cache update now merges instead of overwriting, so other pages aren't wiped.
   const saveView = useCallback(
     async (columns) => {
       try {
@@ -63,10 +65,9 @@ export function useColumnViews(page) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         setSavedColumns(columns)
 
-        // Update cache in-place so other pages see the change
+        // FIX: merge into existing cache instead of overwriting the whole object
         const cached = getCachedData(CACHE_KEYS.USER_VIEWS) || {}
-        cached[page] = columns
-        setCachedData(CACHE_KEYS.USER_VIEWS, cached)
+        setCachedData(CACHE_KEYS.USER_VIEWS, { ...cached, [page]: columns })
 
         toast.success("View saved!")
       } catch (err) {

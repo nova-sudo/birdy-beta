@@ -66,9 +66,9 @@ export function MarketingContent({
   const [filterConditions, setFilterConditions] = useState([])
 
   // ── Drill-down state: each holds the full row object for name display ──────
-  const [selectedCampaign, setSelectedCampaign] = useState(null)  // campaign row
-  const [selectedAdSet, setSelectedAdSet] = useState(null)  // adset row
-  const [selectedAd, setSelectedAd] = useState(null)  // ad row
+  const [selectedCampaign, setSelectedCampaign] = useState(null)
+  const [selectedAdSet, setSelectedAdSet] = useState(null)
+  const [selectedAd, setSelectedAd] = useState(null)
 
   // ── Multi-row checkbox selection (per-tab) ────────────────────────────────
   const [selectedCampaignIds, setSelectedCampaignIds] = useState(new Set())
@@ -121,19 +121,35 @@ export function MarketingContent({
     }
   }
 
-  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("campaigns")
+  // One stable hook instance per tab — page keys never change between renders,
+  // so hook call order is always the same (Rules of Hooks satisfied).
+  const { savedColumns: savedCampaigns, saveView: saveCampaigns, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
+  const { savedColumns: savedAdsets,    saveView: saveAdsets,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
+  const { savedColumns: savedAds,       saveView: saveAds,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
+  const { savedColumns: savedLeads,     saveView: saveLeads,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
+
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
 
+  // Hydrate each tab's columns as soon as its view loads — all stable deps
   useEffect(() => {
-    if (!viewsLoaded || !savedColumns) return
-    setVisibleColumns(prev => {
-      const merged = { ...prev, ...savedColumns }
-      Object.keys(DEFAULT_VISIBLE_COLUMNS).forEach(tab => {
-        if (!merged[tab] || merged[tab].length === 0) merged[tab] = DEFAULT_VISIBLE_COLUMNS[tab]
-      })
-      return merged
-    })
-  }, [viewsLoaded, savedColumns])
+    if (!loadedCampaigns || !savedCampaigns) return
+    setVisibleColumns(prev => ({ ...prev, campaigns: savedCampaigns }))
+  }, [loadedCampaigns, savedCampaigns])
+
+  useEffect(() => {
+    if (!loadedAdsets || !savedAdsets) return
+    setVisibleColumns(prev => ({ ...prev, adsets: savedAdsets }))
+  }, [loadedAdsets, savedAdsets])
+
+  useEffect(() => {
+    if (!loadedAds || !savedAds) return
+    setVisibleColumns(prev => ({ ...prev, ads: savedAds }))
+  }, [loadedAds, savedAds])
+
+  useEffect(() => {
+    if (!loadedLeads || !savedLeads) return
+    setVisibleColumns(prev => ({ ...prev, leads: savedLeads }))
+  }, [loadedLeads, savedLeads])
 
   const [columnsOpen, setColumnsOpen] = useState(false)
   const [columnsSearch, setColumnsSearch] = useState("")
@@ -364,7 +380,7 @@ export function MarketingContent({
     })
   }, [allAds, customMetrics])
 
-  // ── Leads fetch (depends on clientGroups from props) ─────────────────────
+  // ── Leads fetch ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (groupsLoading || !clientGroups.length) {
       setLeads([])
@@ -629,7 +645,17 @@ export function MarketingContent({
 
   const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
   const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
-  const saveView = async () => { await saveToDB(visibleColumns); setColumnsOpen(false) }
+
+  // Dispatch to the correct per-tab saver
+  const saveView = async () => {
+    const cols = visibleColumns[activeTab]
+    if (activeTab === "campaigns") await saveCampaigns(cols)
+    else if (activeTab === "adsets")  await saveAdsets(cols)
+    else if (activeTab === "ads")     await saveAds(cols)
+    else if (activeTab === "leads")   await saveLeads(cols)
+    setColumnsOpen(false)
+  }
+
   const getIcon = (col) => {
     if (col.id === "clientGroup" || col.id === "name") return null
     // GHL metrics (opp stats, contacts, revenue, tags)
@@ -716,7 +742,7 @@ export function MarketingContent({
         header: displayName,
         label: displayName,
         icons: colIcon,
-        sortable: true, 
+        sortable: true,
         render: (value, row) => formatCellValue(value, col, row),
       }
     })
@@ -740,7 +766,7 @@ export function MarketingContent({
   const removeFilterCondition = (idx) => setFilterConditions(prev => prev.filter((_, i) => i !== idx))
   const handleClearFilters = () => { setFilterConditions([]); setSearchTerm("") }
 
-  // ── Tab count badges (shown when a drill-down is active) ──────────────────
+  // ── Tab count badges ──────────────────────────────────────────────────────
   const tabBadge = (tab) => {
     if (tab === "adsets" && selectedCampaign)
       return allAdSets.filter(a => a._campaignId === selectedCampaign.id).length
@@ -784,7 +810,7 @@ export function MarketingContent({
         </div>
         )}
 
-        {/* Meta reconnect banner — shown on API error OR when any group has a token error flag */}
+        {/* Meta reconnect banner */}
         {(() => {
           const hasTokenError = clientGroups.some(g => g.meta_token_error)
           const errorText = groupsError || ""
@@ -1016,4 +1042,4 @@ export function MarketingContent({
       </div>
     </div>
   )
-}
+} 
