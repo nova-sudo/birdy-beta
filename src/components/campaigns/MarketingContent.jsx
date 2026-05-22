@@ -130,20 +130,36 @@ export function MarketingContent({
 
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
 
-  // Hydrate each tab's columns as soon as its view loads — all stable deps
+  // ── Track which tabs have been hydrated from the server ───────────────────
+  // This prevents the custom-metrics append effect from stomping over a saved
+  // view that was just loaded from the DB.
+  const [hydratedTabs, setHydratedTabs] = useState(new Set())
+
+  // Hydrate each tab independently — stable deps, no dynamic array size
   useEffect(() => {
-    if (!loadedCampaigns || !savedCampaigns) return
-    setVisibleColumns(prev => ({ ...prev, campaigns: savedCampaigns }))
+    if (!loadedCampaigns) return
+    if (savedCampaigns) {
+      setVisibleColumns(prev => ({ ...prev, campaigns: savedCampaigns }))
+    }
+    // Mark as hydrated regardless — even if savedCampaigns is null (no saved
+    // view), we still don't want the auto-append to run after the fact.
+    setHydratedTabs(prev => new Set(prev).add("campaigns"))
   }, [loadedCampaigns, savedCampaigns])
 
   useEffect(() => {
-    if (!loadedAdsets || !savedAdsets) return
-    setVisibleColumns(prev => ({ ...prev, adsets: savedAdsets }))
+    if (!loadedAdsets) return
+    if (savedAdsets) {
+      setVisibleColumns(prev => ({ ...prev, adsets: savedAdsets }))
+    }
+    setHydratedTabs(prev => new Set(prev).add("adsets"))
   }, [loadedAdsets, savedAdsets])
 
   useEffect(() => {
-    if (!loadedAds || !savedAds) return
-    setVisibleColumns(prev => ({ ...prev, ads: savedAds }))
+    if (!loadedAds) return
+    if (savedAds) {
+      setVisibleColumns(prev => ({ ...prev, ads: savedAds }))
+    }
+    setHydratedTabs(prev => new Set(prev).add("ads"))
   }, [loadedAds, savedAds])
 
   useEffect(() => {
@@ -223,17 +239,25 @@ export function MarketingContent({
     }).catch(() => {})
   }, [clientGroups, datePreset])
 
+  // ── Append custom metric IDs only for tabs that have NOT been hydrated ────
+  // If a tab was loaded from the DB, the user's saved columns already include
+  // whichever custom metrics they want — don't append anything.
+  // If a tab has no saved view, auto-append so new custom metrics are visible.
   useEffect(() => {
     const ids = customMetrics.map(m => m.id)
+    if (!ids.length) return
     setVisibleColumns(prev => {
       const updated = { ...prev }
-        ;["campaigns", "adsets", "ads"].forEach(tab => {
-          const existing = new Set(updated[tab] || [])
-          ids.forEach(id => { if (!existing.has(id)) updated[tab] = [...(updated[tab] || []), id] })
-        })
+      ;["campaigns", "adsets", "ads"].forEach(tab => {
+        // Skip tabs already hydrated from the server — their columns are
+        // exactly what the user saved and must not be modified.
+        if (hydratedTabs.has(tab)) return
+        const existing = new Set(updated[tab] || [])
+        ids.forEach(id => { if (!existing.has(id)) updated[tab] = [...(updated[tab] || []), id] })
+      })
       return updated
     })
-  }, [customMetrics])
+  }, [customMetrics, hydratedTabs])
 
   // ── Process client groups from props into campaigns/adsets/ads ─────────────
   // NOTE: This processes BASE data only. Custom metrics are applied separately
@@ -588,8 +612,21 @@ export function MarketingContent({
     m.dashboards?.includes(tabDashboardKey) || m.dashboard === "Campaigns"
   )
 
-  // Tag column IDs for campaign/adset/ad tabs
-  const tagColumnIds = availableTags.map(t => `tag_${t.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`)
+  // ── Deduplicated tag columns ───────────────────────────────────────────────
+  const { tagColumnIds, dedupedTags } = useMemo(() => {
+    const seen = new Set()
+    const ids = []
+    const tags = []
+    for (const t of availableTags) {
+      const id = `tag_${t.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`
+      if (!seen.has(id)) {
+        seen.add(id)
+        ids.push(id)
+        tags.push(t)
+      }
+    }
+    return { tagColumnIds: ids, dedupedTags: tags }
+  }, [availableTags])
 
   const getAvailableColumns = () =>
     activeTab === "leads"
@@ -620,7 +657,7 @@ export function MarketingContent({
     return {
       id: col,
       label: tagColumnIds.includes(col)
-        ? `Tag: ${availableTags[tagColumnIds.indexOf(col)] || col}`
+        ? `Tag: ${dedupedTags[tagColumnIds.indexOf(col)] || col}`
         : customMatch ? customMatch.name : getMetricDisplayName(col),
       visible: (visibleColumns[activeTab] || []).includes(col),
       type: getColType(col),
@@ -670,9 +707,8 @@ export function MarketingContent({
     // Tag rollup columns — look up count from tagRollup data
     if (tagColumnIds.includes(col)) {
       const tagIdx = tagColumnIds.indexOf(col)
-      const tagName = availableTags[tagIdx]
+      const tagName = dedupedTags[tagIdx]
       if (!tagName) return "-"
-
       let rollupMap = {}
       if (activeTab === "campaigns") rollupMap = tagRollup.by_campaign?.[row?.id] || {}
       else if (activeTab === "adsets") rollupMap = tagRollup.by_adset?.[row?.name] || {}
@@ -784,16 +820,16 @@ export function MarketingContent({
 
         {/* Header */}
         {showHeader && (
-        <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
-            <div className="whitespace-nowrap">
-              <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                Marketing Hub
-              </h1>
+          <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
+              <div className="whitespace-nowrap">
+                <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+                  Marketing Hub
+                </h1>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
+            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
               {setDatePreset && (
                 <DateRangeSelect value={datePreset} onChange={setDatePreset} />
               )}
@@ -805,9 +841,9 @@ export function MarketingContent({
                     {clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-            )}
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Meta reconnect banner */}
@@ -872,49 +908,49 @@ export function MarketingContent({
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
-          <TabsList className="flex-1 justify-start overflow-x-auto">
-            {[
-              { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
-              { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
-              { value: "ads", icon: FileBarChart, label: "Ads" },
-              { value: "leads", icon: Users, label: "Leads" },
-            ].map(tab => {
-              const badge = tabBadge(tab.value)
-              return (
+            <TabsList className="flex-1 justify-start overflow-x-auto">
+              {[
+                { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
+                { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
+                { value: "ads", icon: FileBarChart, label: "Ads" },
+                { value: "leads", icon: Users, label: "Leads" },
+              ].map(tab => {
+                const badge = tabBadge(tab.value)
+                return (
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
                   className="gap-2"
                 >
-                  <tab.icon className="h-4 w-4" />
-                  {tab.label}
-                  {badge !== null && (
+                    <tab.icon className="h-4 w-4" />
+                    {tab.label}
+                    {badge !== null && (
                     <span className="ml-1 bg-purple-100 text-purple-700 rounded-full px-1.5 text-[10px] font-semibold leading-4">
                       {badge}
                     </span>
-                  )}
-                </TabsTrigger>
-              )
-            })}
-          </TabsList>
+                    )}
+                  </TabsTrigger>
+                )
+              })}
+            </TabsList>
 
-          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
-            <Input
-              type="search"
-              placeholder={`Search ${activeTab}...`}
-              className="h-10 bg-white w-fit md:w-55 rounded-md text-sm font-medium"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-            />
-            <ColumnVisibilityDropdown
-              isOpen={columnsOpen} setIsOpen={setColumnsOpen}
-              categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-              categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
-              filteredColumns={filteredColumns} columnVisibility={columnVisibility}
-              toggleColumnVisibility={toggleColumn} getIcon={getIcon}
-              selectAll={selectAll} clearAll={clearAll} save={saveView}
-            />
-          </div>
+            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+              <Input
+                type="search"
+                placeholder={`Search ${activeTab}...`}
+                className="h-10 bg-white w-fit md:w-55 rounded-md text-sm font-medium"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+              />
+              <ColumnVisibilityDropdown
+                isOpen={columnsOpen} setIsOpen={setColumnsOpen}
+                categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
+                categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
+                filteredColumns={filteredColumns} columnVisibility={columnVisibility}
+                toggleColumnVisibility={toggleColumn} getIcon={getIcon}
+                selectAll={selectAll} clearAll={clearAll} save={saveView}
+              />
+            </div>
           </div>
 
           <TabsContent value={activeTab} className="mt-4" key={activeTab}>
@@ -1004,42 +1040,42 @@ export function MarketingContent({
                 <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
               </div>
             ) : (
-                <StyledTable
-                  columns={tableColumns}
-                  data={getFilteredDataForTab()}
-                  columnVisibility={columnVisibility}
-                  isLoading={isLoading}
+              <StyledTable
+                columns={tableColumns}
+                data={getFilteredDataForTab()}
+                columnVisibility={columnVisibility}
+                isLoading={isLoading}
                   // Drill-down: campaigns/adsets/ads rows are clickable; leads are not
-                  onRowClick={activeTab !== "leads" ? handleRowClick : undefined}
+                onRowClick={activeTab !== "leads" ? handleRowClick : undefined}
                   // Multi-row checkbox selection (not on leads tab)
-                  enableSelection={activeTab !== "leads"}
-                  selectedRows={
-                    activeTab === "campaigns" ? selectedCampaignIds :
-                      activeTab === "adsets" ? selectedAdSetIds :
+                enableSelection={activeTab !== "leads"}
+                selectedRows={
+                  activeTab === "campaigns" ? selectedCampaignIds :
+                  activeTab === "adsets" ? selectedAdSetIds :
                         activeTab === "ads" ? selectedAdIds :
                           new Set()
-                  }
-                  onSelectionChange={
-                    activeTab === "campaigns" ? setSelectedCampaignIds :
-                      activeTab === "adsets" ? setSelectedAdSetIds :
+                }
+                onSelectionChange={
+                  activeTab === "campaigns" ? setSelectedCampaignIds :
+                  activeTab === "adsets" ? setSelectedAdSetIds :
                         activeTab === "ads" ? setSelectedAdIds :
                           undefined
-                  }
-                  enableStatusToggle={activeTab !== "leads"}
-                  onStatusToggle={handleStatusToggle}
-                  togglingRows={togglingRows}
+                }
+                enableStatusToggle={activeTab !== "leads"}
+                onStatusToggle={handleStatusToggle}
+                togglingRows={togglingRows}
                   // Persist column order per-tab. visibleColumns[activeTab] is
                   // already an ordered array of visible IDs — feed it as the
                   // initial order, and any drag updates the same slot.
-                  initialColumnOrder={visibleColumns[activeTab] || []}
-                  onColumnOrderChange={(newOrder) =>
-                    setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
-                  }
-                />
+                initialColumnOrder={visibleColumns[activeTab] || []}
+                onColumnOrderChange={(newOrder) =>
+                  setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
+                }
+              />
             )}
           </TabsContent>
         </Tabs>
       </div>
     </div>
   )
-} 
+}
