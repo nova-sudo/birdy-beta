@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -136,6 +136,9 @@ export function MarketingContent({
   }, [viewsLoaded, savedColumns])
 
   const [columnsOpen, setColumnsOpen] = useState(false)
+  const [gridOpen, setGridOpen] = useState(false)
+  const [groupSearch, setGroupSearch] = useState("")
+  const gridRef = useRef(null)
   const [columnsSearch, setColumnsSearch] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
 
@@ -180,6 +183,17 @@ export function MarketingContent({
       setAvailableTags([...allTags].sort())
     }).catch(() => {})
   }, [clientGroups])
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (gridRef.current && !gridRef.current.contains(e.target)) {
+        setGridOpen(false)
+        setGroupSearch("")
+      }
+    }
+    if (gridOpen) document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [gridOpen])
 
   // ── GHL opportunity attribution per campaign/adset/ad ────────────────────
   // Drives the GHL columns (won/lost/open/abandoned/total/revenue/contacts)
@@ -776,6 +790,25 @@ export function MarketingContent({
     return null
   }
 
+  const ghlClientGroups = clientGroups // Marketing uses all groups (not filtered by ghl_location_id)
+
+  const gridItems = useMemo(() => [
+    { id: "all", name: "All Groups" },
+    ...clientGroups.slice(0, 49),
+  ], [clientGroups])
+
+  const selectedGroupLabel = useMemo(() => {
+    if (!selectedClientGroup || selectedClientGroup === "all") return "All Groups"
+    return clientGroups.find(g => g.id === selectedClientGroup)?.name ?? "All Groups"
+  }, [selectedClientGroup, clientGroups])
+
+  const filteredGridItems = useMemo(() =>
+    gridItems.filter(item =>
+      item.name.toLowerCase().includes(groupSearch.toLowerCase())
+    ),
+    [gridItems, groupSearch]
+  )
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] mx-auto md:w-[calc(100dvw-130px)]">
@@ -797,14 +830,74 @@ export function MarketingContent({
                 <DateRangeSelect value={datePreset} onChange={setDatePreset} />
               )}
               {showGroupFilter && clientGroups.length > 0 && (
-                <Select value={selectedClientGroup || "all"} onValueChange={setSelectedClientGroup}>
-                  <SelectTrigger className="bg-white font-semibold h-10"><SelectValue placeholder="Select a client group" /></SelectTrigger>
-                  <SelectContent className="bg-white">
-                    <SelectItem value="all">All Groups</SelectItem>
-                    {clientGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-            )}
+                <div className="relative" ref={gridRef}>
+                  <button
+                    onClick={() => setGridOpen(prev => !prev)}
+                    className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="truncate flex-1 text-left text-gray-800">
+                      {selectedGroupLabel}
+                    </span>
+                    <svg
+                      className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {gridOpen && (
+                    <div className="absolute z-50 mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-max">
+                      <div className="mb-2">
+                        <input
+                          type="text"
+                          placeholder="Search groups..."
+                          value={groupSearch}
+                          onChange={e => setGroupSearch(e.target.value)}
+                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        />
+                      </div>
+
+                      {filteredGridItems.length > 0 ? (
+                        <div
+                          className="grid gap-1"
+                          style={{ gridTemplateColumns: "repeat(5, minmax(100px, 1fr))" }}
+                        >
+                          {filteredGridItems.map(item => {
+                            const isSelected =
+                              item.id === "all"
+                                ? !selectedClientGroup || selectedClientGroup === "all"
+                                : selectedClientGroup === item.id
+
+                            return (
+                              <button
+                                key={item.id}
+                                onClick={() => {
+                                  setSelectedClientGroup(item.id)
+                                  setGridOpen(false)
+                                  setGroupSearch("")
+                                }}
+                                title={item.name}
+                                className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors whitespace-nowrap
+                                  ${isSelected
+                                    ? "bg-purple-600 text-white border-purple-600 font-semibold"
+                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                                  }`}
+                              >
+                                {item.name}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 text-center py-3 px-6">
+                          No groups found
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
         </div>
         )}
