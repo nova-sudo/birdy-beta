@@ -352,28 +352,51 @@ export function MarketingContent({
   // This useMemo recomputes whenever campaigns or customMetrics change,
   // so custom metric values appear as soon as the API responds — no race condition.
   const enhancedCampaigns = useMemo(() => {
-    if (!customMetrics.length) return campaigns
-    return campaigns.map(item => {
+    const source = campaigns
+    return source.map(item => {
       const row = { ...item }
-      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      if (customMetrics.length) {
+        customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      }
+      // Sanitize all Infinity/NaN values
+      Object.keys(row).forEach(key => {
+        const val = row[key]
+        if (typeof val === "number" && (!isFinite(val) || isNaN(val))) {
+          row[key] = null
+        }
+      })
       return row
     })
   }, [campaigns, customMetrics])
 
   const enhancedAdSets = useMemo(() => {
-    if (!customMetrics.length) return allAdSets
     return allAdSets.map(item => {
       const row = { ...item }
-      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      if (customMetrics.length) {
+        customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      }
+      Object.keys(row).forEach(key => {
+        const val = row[key]
+        if (typeof val === "number" && (!isFinite(val) || isNaN(val))) {
+          row[key] = null
+        }
+      })
       return row
     })
   }, [allAdSets, customMetrics])
 
   const enhancedAds = useMemo(() => {
-    if (!customMetrics.length) return allAds
     return allAds.map(item => {
       const row = { ...item }
-      customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      if (customMetrics.length) {
+        customMetrics.forEach(m => { if (m.formulaParts) row[m.id] = evaluateFormula(m.formulaParts, row) })
+      }
+      Object.keys(row).forEach(key => {
+        const val = row[key]
+        if (typeof val === "number" && (!isFinite(val) || isNaN(val))) {
+          row[key] = null
+        }
+      })
       return row
     })
   }, [allAds, customMetrics])
@@ -656,6 +679,8 @@ export function MarketingContent({
 
   const formatCellValue = (value, col, row) => {
     // Tag rollup columns — look up count from tagRollup data
+    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return "-"
+
     if (tagColumnIds.includes(col)) {
       const tagIdx = tagColumnIds.indexOf(col)
       const tagName = availableTags[tagIdx]
