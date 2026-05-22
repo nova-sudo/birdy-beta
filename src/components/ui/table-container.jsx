@@ -426,16 +426,19 @@ const StyledTable = ({
   /* ---------- FORMATTERS ---------- */
   const formatCurrency = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    if (!isFinite(num)) return "-";
     return `${getSymbolFromCurrency(userCurrency)}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercentage = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    if (!isFinite(num)) return "-";
     return `${num.toFixed(2)}%`;
   };
 
   const formatNumber = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
+    if (!isFinite(num)) return "-";
     return num.toLocaleString();
   };
 
@@ -454,6 +457,7 @@ const StyledTable = ({
     if (value === undefined || value === null) {
       return "—";
     }
+    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return "-";
 
     if (typeof value === "object") {
       console.warn(`Object detected in cell for column ${columnId}:`, value);
