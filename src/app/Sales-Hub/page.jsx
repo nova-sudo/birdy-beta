@@ -17,7 +17,11 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { apiRequest } from "@/lib/api"
+import { useClientGroups } from "@/lib/useClientGroups"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import {
   Users,
   Phone,
@@ -236,10 +240,47 @@ export default function CallCenterPage() {
   const [leadsPerPage] = useState(100)
   const [locationStats, setLocationStats] = useState({})
 
-  // Fetch leads on mount
+  // ── Per-client routing ───────────────────────────────────────────────────
+  // Sales-Hub data is now scoped to one client at a time. The selected
+  // client's call_log_provider field decides whether we read from the new
+  // call_logs collection (GHL) or short-circuit to an empty/coming-soon
+  // state (HotProspector — endpoints not ready yet).
+  const { clientGroups, loading: clientGroupsLoading } = useClientGroups(DEFAULT_DATE_PRESET)
+  const [selectedGroupId, setSelectedGroupId] = useState(null)
+  const [providerComingSoon, setProviderComingSoon] = useState(false)
+
+  // Default-select the first client once they load (or restore from session).
   useEffect(() => {
-    fetchAllLeads()
+    if (clientGroupsLoading) return
+    if (!clientGroups || clientGroups.length === 0) return
+    if (selectedGroupId && clientGroups.some((g) => g.id === selectedGroupId)) return
+    const remembered = (typeof window !== "undefined") ? sessionStorage.getItem("salesHub.selectedGroupId") : null
+    const fallback = clientGroups.find((g) => g.id === remembered)?.id || clientGroups[0].id
+    setSelectedGroupId(fallback)
+  }, [clientGroups, clientGroupsLoading, selectedGroupId])
+
+  // Persist selection so the page survives a refresh.
+  useEffect(() => {
+    if (selectedGroupId && typeof window !== "undefined") {
+      sessionStorage.setItem("salesHub.selectedGroupId", selectedGroupId)
+    }
+  }, [selectedGroupId])
+
+  const selectedGroup = (clientGroups || []).find((g) => g.id === selectedGroupId) || null
+  const selectedProvider = (selectedGroup?.call_log_provider || "ghl").toLowerCase()
+
+  // Re-fetch whenever the selected client changes.
+  useEffect(() => {
+    if (!selectedGroupId) return
+    fetchAllLeads(1)
+    // members data is still HP-mock for now — leave alone
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGroupId])
+
+  // Fetch members on mount (mock data — independent of provider for now).
+  useEffect(() => {
     fetchMembers()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -255,45 +296,109 @@ export default function CallCenterPage() {
 
 
 
-  // Demo mode: pulls from src/app/Sales-Hub/mockData.js — no API calls.
-  // The data shape mirrors the real /api/hotprospector/leads response so all
-  // the existing tables, dialogs, columns, pagination and search work
-  // unchanged. Swap mockFetchLeads → apiRequest("/api/hotprospector/leads…")
-  // when the integration comes back online.
+  // Provider-aware fetch.
+  //   - hotprospector → empty + coming-soon flag (endpoints not ready)
+  //   - ghl          → GET /api/call_logs?group_id=… → flat call rows that we
+  //                    group by contact so the existing leads/CallLogsDialog
+  //                    UI keeps working unchanged.
   const fetchAllLeads = async (page = 1, _forceRefresh = false) => {
+    if (!selectedGroupId) {
+      setLeads([])
+      setTotalLeads(0)
+      setLocationStats({})
+      return
+    }
+
+    const group = (clientGroups || []).find((g) => g.id === selectedGroupId)
+    if (!group) return
+
+    const provider = (group.call_log_provider || "ghl").toLowerCase()
+
+    // HotProspector short-circuit — show coming-soon, no data fetch.
+    if (provider === "hotprospector") {
+      setProviderComingSoon(true)
+      setLeads([])
+      setTotalLeads(0)
+      setLocationStats({})
+      setCurrentPage(1)
+      setIsLoading(false)
+      setIsRefreshing(false)
+      return
+    }
+
+    setProviderComingSoon(false)
+
     try {
       setIsLoading(true)
       setError(null)
 
       const skip = (page - 1) * leadsPerPage
-      const data = await mockFetchLeads({ skip, limit: leadsPerPage })
+      const res = await apiRequest(
+        `/api/call_logs?group_id=${encodeURIComponent(selectedGroupId)}&skip=${skip}&limit=${leadsPerPage}`
+      )
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.detail || `HTTP ${res.status}`)
+      }
+      const data = await res.json()
 
-      const mappedLeads = (data.data || []).map((lead) => ({
-        id: lead.id,
-        client: lead.client_name || "Unknown Client",
-        ghlLocation: lead.ghl_location_name || "Unknown Location",
-        ghlLocationId: lead.ghl_location_id,
-        name: `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || "N/A",
-        email: lead.email || "N/A",
-        phone:
-          lead.phone || lead.mobile
-            ? `${lead.country_code || ""}${lead.mobile || lead.phone || ""}`.trim()
-            : "N/A",
-        company: lead.company || "N/A",
-        location: [lead.city, lead.state, lead.country_code].filter(Boolean).join(", ") || "N/A",
-        tags: lead.tags || [],
-        status: "Active",
-        call_logs_count: lead.call_logs_count || 0,
-        call_logs: lead.call_logs || [],
-      }))
+      // Group flat GHL call rows by contact (id, then phone fallback) so each
+      // row in the existing table represents one contact with all their calls
+      // nested — matching the HP-shaped UI the page was built for.
+      const byContact = new Map()
+      for (const log of data.data || []) {
+        const key = log.contact_id || log.contact_phone || `unknown_${log.id}`
+        if (!byContact.has(key)) {
+          byContact.set(key, {
+            id: key,
+            client: group.name || "Unknown Client",
+            ghlLocation: group.name || "Unknown Location",
+            ghlLocationId: log.location_id,
+            name: log.contact_id || log.contact_phone || "—",
+            email: log.contact_email || "N/A",
+            phone: log.contact_phone || "N/A",
+            company: "N/A",
+            location: "N/A",
+            tags: [],
+            status: "Active",
+            call_logs_count: 0,
+            call_logs: [],
+          })
+        }
+        const lead = byContact.get(key)
+        const isOutbound = (log.direction || "").toLowerCase() === "outbound"
+        lead.call_logs.push({
+          call_time: log.started_at,
+          call_status: log.direction,
+          duration: log.duration_seconds || 0,
+          speed_to_lead: 0,
+          from_number: isOutbound ? "" : (log.contact_phone || ""),
+          to_number: isOutbound ? (log.contact_phone || "") : "",
+          recording_url: log.recording_url,
+          caller_name: log.contact_id || log.contact_phone || "Unknown",
+          group: group.name || "",
+          location_name: group.name || "",
+          transfer: false,
+        })
+        lead.call_logs_count += 1
+      }
+
+      const mappedLeads = Array.from(byContact.values())
 
       setLeads(mappedLeads)
-      setTotalLeads(data.meta?.total || 0)
+      setTotalLeads(data.meta?.total ?? mappedLeads.length)
       setCurrentPage(page)
-      setLocationStats(data.meta?.location_stats || {})
+      setLocationStats({
+        [group.ghl_location_id || group.id]: {
+          name: group.name,
+          count: mappedLeads.length,
+        },
+      })
     } catch (err) {
-      console.error("Error loading mock leads:", err)
-      setError(err.message)
+      console.error("Error loading call logs:", err)
+      setError(err?.message || "Failed to load call logs")
+      setLeads([])
+      setTotalLeads(0)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -374,14 +479,6 @@ export default function CallCenterPage() {
 
   return (
     <div className="w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
-      {/* Demo mode banner — make it obvious nothing is wired to real data */}
-      <div className="mb-4 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50/80 px-4 py-2 text-sm text-amber-800">
-        <Construction className="h-4 w-4 shrink-0" />
-        <span>
-          <span className="font-semibold">Demo data.</span>{" "}
-          Sales Hub is showing mock leads & members while the HotProspector integration is offline.
-        </span>
-      </div>
       <div>
         <div>
           <div className="">
@@ -391,8 +488,38 @@ export default function CallCenterPage() {
                 <div>
                   <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Sales Hub</h1>
                   <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
-                    Manage leads and team members from HotProspector
+                    {selectedGroup
+                      ? <>Call logs for <span className="font-medium text-foreground">{selectedGroup.name}</span> &middot; provider: <span className="font-medium text-foreground">{selectedProvider === "hotprospector" ? "Hot Prospector" : "GoHighLevel"}</span></>
+                      : "Pick a client to view their call logs"}
                   </p>
+                </div>
+                {/* Per-client picker — decides which data source we read */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground hidden md:inline">Client:</span>
+                  <Select
+                    value={selectedGroupId || ""}
+                    onValueChange={(v) => setSelectedGroupId(v)}
+                    disabled={clientGroupsLoading || !clientGroups || clientGroups.length === 0}
+                  >
+                    <SelectTrigger className="bg-white h-10 min-w-[220px]">
+                      <SelectValue placeholder={clientGroupsLoading ? "Loading clients…" : "Pick a client"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(clientGroups || []).map((g) => {
+                        const p = (g.call_log_provider || "ghl").toLowerCase()
+                        return (
+                          <SelectItem key={g.id} value={g.id}>
+                            <span className="flex items-center gap-2">
+                              <span>{g.name}</span>
+                              <span className="text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 border border-border text-muted-foreground">
+                                {p === "hotprospector" ? "HP" : "GHL"}
+                              </span>
+                            </span>
+                          </SelectItem>
+                        )
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -459,6 +586,24 @@ export default function CallCenterPage() {
 
         <div>
           <div className="bg-card rounded-lg mt-6 mb-12 ">
+            {/* Hot Prospector coming-soon placeholder for HP-provider clients */}
+            {providerComingSoon && (
+              <div className="my-4 p-10 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/60 text-center">
+                <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                  <Construction className="w-8 h-8 text-amber-700" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground mb-2">Hot Prospector &mdash; Coming Soon</h2>
+                <p className="text-muted-foreground max-w-md mx-auto">
+                  This client&apos;s call logs are configured to come from <span className="font-medium">Hot Prospector</span>.
+                  The HP integration is still in progress &mdash; call data will appear here once their endpoints are wired up.
+                </p>
+                {selectedGroup && (
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Selected client: <span className="font-medium text-foreground">{selectedGroup.name}</span>
+                  </p>
+                )}
+              </div>
+            )}
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="border rounded-lg shadow-sm ">
@@ -541,7 +686,9 @@ export default function CallCenterPage() {
                   <div className="text-center py-12 border-2 border-dashed rounded-lg">
                     <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">
-                      No leads found. Make sure you have HotProspector connected and GHL locations configured.
+                      {selectedGroup
+                        ? <>No call logs yet for <span className="font-medium">{selectedGroup.name}</span>. Once a call event fires through the GHL workflow webhook, it&apos;ll appear here.</>
+                        : "Pick a client above to view their call logs."}
                     </p>
                     <Button
                       variant="outline"

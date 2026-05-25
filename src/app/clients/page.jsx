@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useMemo } from "react"
+import { Fragment, useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search } from "lucide-react"
+import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
@@ -98,6 +98,12 @@ export default function ClientsPage() {
   const [metaSearchQuery, setMetaSearchQuery] = useState("")
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
+  // ── Step 4: call log provider ────────────────────────────────────────────
+  const [callLogProvider, setCallLogProvider] = useState(null) // null | "ghl" | "hotprospector"
+  const [hpApiUid, setHpApiUid] = useState("")
+  const [hpApiKey, setHpApiKey] = useState("")
+  const [hpTestStatus, setHpTestStatus] = useState("idle") // "idle" | "testing" | "success" | "error"
+  const [hpTestError, setHpTestError] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [togglingRows, setTogglingRows] = useState(new Set())
 
@@ -394,6 +400,29 @@ export default function ClientsPage() {
     }
   }
 
+  const testHotProspectorConnection = async () => {
+    if (!hpApiUid || !hpApiKey) return
+    setHpTestStatus("testing")
+    setHpTestError("")
+    try {
+      const res = await apiRequest("/api/hotprospector/connect", {
+        method: "POST",
+        body: JSON.stringify({ api_uid: hpApiUid, api_key: hpApiKey }),
+      })
+      if (res.ok) {
+        setHpTestStatus("success")
+        toast.success("Hot Prospector connected")
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setHpTestStatus("error")
+        setHpTestError(data.detail || "Invalid credentials")
+      }
+    } catch (err) {
+      setHpTestStatus("error")
+      setHpTestError(err?.message || "Connection failed")
+    }
+  }
+
   const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
       toast.error("Please enter a client group name")
@@ -407,8 +436,12 @@ export default function ClientsPage() {
       toast.error("Please select a Meta ad account or skip this step")
       return
     }
+    if (wizardStep === 4 && !callLogProvider) {
+      toast.error("Please choose a call log provider (GoHighLevel or Hot Prospector)")
+      return
+    }
 
-    if (wizardStep < 3) {
+    if (wizardStep < 4) {
       setWizardStep(wizardStep + 1)
       return
     }
@@ -442,6 +475,11 @@ export default function ClientsPage() {
     setLocationSearchQuery("")
     setMetaSearchQuery("")
     setHotProspectorSearchQuery("")
+    setCallLogProvider(null)
+    setHpApiUid("")
+    setHpApiKey("")
+    setHpTestStatus("idle")
+    setHpTestError("")
 
     toast.info(`Creating "${creatingGroupName}"...`)
 
@@ -460,6 +498,7 @@ export default function ClientsPage() {
           meta_ad_account_id: selectedMetaAdAccount?.id || null,
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
           ad_account_currency: selectedMetaAdAccount?.currency || null,
+          call_log_provider: callLogProvider || "ghl",
           notes: "",
         }),
       });
@@ -640,50 +679,104 @@ export default function ClientsPage() {
             setLocationSearchQuery("")
             setMetaSearchQuery("")
             setHotProspectorSearchQuery("")
+            setCallLogProvider(null)
+            setHpApiUid("")
+            setHpApiKey("")
+            setHpTestStatus("idle")
+            setHpTestError("")
           }
         }}
       >
-        {/* Add client */}
-        <DialogContent className="sm:max-w-2xl bg-zinc-50 p-0 overflow-hidden border-0 shadow-2xl">
-          <DialogHeader className="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-5">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-2 rounded-lg">
-                <Building2 className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-semibold text-white">Client Linking Wizard</DialogTitle>
-                <p className="text-purple-100 text-sm">
-                  Step {wizardStep} of 3:{" "}
-                  {
-                    [
-                      "Name your client group",
-                      "Select or add GHL subaccount",
-                      "Select Meta ad account",
-                      "Select Hot Prospector group",
-                    ][wizardStep - 1]
-                  }
-                </p>
-              </div>
-            </div>
+        <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-4 md:p-6">
+          {/* sr-only title so Radix Dialog has accessible labelling */}
+          <DialogHeader className="sr-only">
+            <DialogTitle>Birdy Linking Wizard</DialogTitle>
           </DialogHeader>
-          <div className="h-auto bg-white">
-            {wizardStep === 1 && (
-              <div className="space-y-2 p-2">
-                <div>
-                  <label className="text-sm font-medium text-foreground">Client Group Name</label>
-                  <Input
-                    type="text"
-                    placeholder="Enter client group name"
-                    value={clientGroupName}
-                    onChange={(e) => setClientGroupName(e.target.value)}
-                    className="mt-1"
-                    autoFocus
-                  />
+
+          <div className="w-full py-2">
+            <div className="w-full max-w-xl mx-auto space-y-6 flex flex-col">
+              {/* ── Top stepper (responsive) ────────────────────── */}
+              <div className="w-full overflow-hidden">
+                <div className="flex items-start gap-1 sm:gap-2 w-full">
+                  {[
+                    { num: 1, short: "Name", full: "Client Name" },
+                    { num: 2, short: "GHL", full: "GHL" },
+                    { num: 3, short: "Meta", full: "Meta" },
+                    { num: 4, short: "Calls", full: "Sales Calls" },
+                  ].map((s, i, arr) => (
+                    <Fragment key={s.num}>
+                      <div className="flex flex-col items-center flex-shrink-0">
+                        <div
+                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${wizardStep > s.num
+                            ? "stepper-completed"
+                            : wizardStep === s.num
+                              ? "stepper-active"
+                              : "stepper-pending"
+                            }`}
+                        >
+                          {wizardStep > s.num
+                            ? <Check className="w-4 h-4 sm:w-5 sm:h-5" />
+                            : <span>{s.num}</span>}
+                        </div>
+                        <div className="mt-2 text-center px-1">
+                          <div
+                            className={`text-[10px] sm:text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${wizardStep > s.num
+                              ? "text-success"
+                              : wizardStep === s.num
+                                ? "text-primary"
+                                : "text-muted-foreground"
+                              }`}
+                          >
+                            <span className="sm:hidden">{s.short}</span>
+                            <span className="hidden sm:inline">{s.full}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {i < arr.length - 1 && (
+                        <div className="flex-1 min-w-[8px] mt-[14px] sm:mt-5">
+                          <div
+                            className={`h-0.5 rounded-full transition-all duration-500 ${wizardStep > s.num ? "bg-success" : "bg-border"
+                              }`}
+                          />
+                        </div>
+                      )}
+                    </Fragment>
+                  ))}
                 </div>
               </div>
-            )}
+
+              {/* ── Card-wrapped step content ──────────────────── */}
+              <div
+                key={wizardStep}
+                className="rounded-lg bg-card text-card-foreground card-gradient border-0 shadow-card animate-slide-in"
+              >
+                <div className="p-6 md:p-8 space-y-6">
+                  {/* === Step 1: Client name === */}
+                  {wizardStep === 1 && (
+                    <div className="max-w-md mx-auto space-y-4">
+                      <div className="text-center space-y-2">
+                        <h2 className="text-2xl font-bold text-foreground">Name your client group</h2>
+                        <p className="text-muted-foreground">A short label you'll use to find this client later.</p>
+                      </div>
+                      <div className="space-y-2 text-left">
+                        <label className="text-sm font-medium leading-none" htmlFor="client-group-name">Client Group Name</label>
+                        <Input
+                          id="client-group-name"
+                          type="text"
+                          placeholder="e.g. Acme Dental"
+                          value={clientGroupName}
+                          onChange={(e) => setClientGroupName(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                    </div>
+                  )}
             {wizardStep === 2 && (
-              <div className="space-y-4 p-4 ">
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-bold text-foreground">Link a GoHighLevel subaccount</h2>
+                  <p className="text-muted-foreground">Pick the GHL location for this client&apos;s contacts &amp; opportunities.</p>
+                </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
                   <Input
@@ -721,7 +814,7 @@ export default function ClientsPage() {
                               </h3>
                             </div>
                             <p
-                              className={`text-xs font-mono ${selectedGhlLocation?.locationId === location.locationId
+                              className={`text-xs font-mono truncate ${selectedGhlLocation?.locationId === location.locationId
                                 ? "text-purple-600"
                                 : "text-muted-foreground"
                                 }`}
@@ -773,8 +866,12 @@ export default function ClientsPage() {
               </div>
             )}
             {wizardStep === 3 && (
-              <div className="space-y-2 p-4">
-                <div className="relative ">
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-bold text-foreground">Link a Meta ad account</h2>
+                  <p className="text-muted-foreground">Pick the ad account for this client&apos;s campaigns &amp; spend.</p>
+                </div>
+                <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     type="text"
@@ -808,7 +905,7 @@ export default function ClientsPage() {
                               </h3>
                             </div>
                             <p
-                              className={`text-xs font-mono ${selectedMetaAdAccount?.id === account.id
+                              className={`text-xs font-mono truncate ${selectedMetaAdAccount?.id === account.id
                                 ? "text-purple-600"
                                 : "text-muted-foreground"
                                 }`}
@@ -859,127 +956,162 @@ export default function ClientsPage() {
                 )}
               </div>
             )}
-            {/* {wizardStep === 4 && (
-                      <div className="space-y-4">
-                        <div className="relative">
-                          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                          <Input
-                            type="text"
-                            placeholder="Search Hot Prospector groups by name or ID..."
-                            value={hotProspectorSearchQuery}
-                            onChange={(e) => setHotProspectorSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-3"
-                          />
-                        </div>
-                        <div className="space-y-2 max-h-80 overflow-y-auto">
-                          {filteredHotProspectorGroups.length > 0 ? (
-                            filteredHotProspectorGroups.map((group) => (
-                              <div
-                                key={group.id}
-                                onClick={() => setSelectedHotProspectorGroup(group)}
-                                className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${
-                                  selectedHotProspectorGroup?.id === group.id
-                                    ? "border-purple-500 bg-purple-50 shadow-md"
-                                    : "border-border hover:border-muted-foreground bg-card"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <h3
-                                        className={`font-semibold truncate ${
-                                          selectedHotProspectorGroup?.id === group.id
-                                            ? "text-purple-900"
-                                            : "text-foreground"
-                                        }`}
-                                      >
-                                        {group.name || "Unnamed Group"}
-                                      </h3>
-                                    </div>
-                                    <p
-                                      className={`text-xs font-mono ${
-                                        selectedHotProspectorGroup?.id === group.id
-                                          ? "text-purple-600"
-                                          : "text-muted-foreground"
-                                      }`}
-                                    >
-                                      ID: {group.id}
-                                    </p>
-                                  </div>
-                                  <div
-                                    className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-                                      selectedHotProspectorGroup?.id === group.id
-                                        ? "bg-purple-600 border-purple-600"
-                                        : "border-border group-hover:border-muted-foreground"
-                                    }`}
-                                  >
-                                    {selectedHotProspectorGroup?.id === group.id && (
-                                      <Check className="w-3 h-3 text-white" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-center py-12 text-muted-foreground">
-                              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted" />
-                              <p>No Hot Prospector groups found</p>
-                              <p className="text-sm">Try adjusting your search terms</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )} */}
-          </div>
-          <div className="bg-muted/50 p-4 flex items-center justify-between border-t border-border">
-            <p className="text-sm text-muted-foreground">
-              {wizardStep === 2 &&
-                `${filteredGhlLocations.length} location${filteredGhlLocations.length !== 1 ? "s" : ""} available`}
-              {wizardStep === 3 &&
-                `${filteredMetaAdAccounts.length} ad account${filteredMetaAdAccounts.length !== 1 ? "s" : ""} available`}
-              {/* {wizardStep === 4 &&
-                        `${filteredHotProspectorGroups.length} group${filteredHotProspectorGroups.length !== 1 ? "s" : ""} available`} */}
-            </p>
-            <div className="flex items-center ">
-              {wizardStep > 1 && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setWizardStep(wizardStep - 1)}
-                  className="text-muted-foreground hover:bg-muted"
-                >
-                  Back
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                onClick={() => setWizardOpen(false)}
-                disabled={addingClientGroup}
-                className="text-muted-foreground hover:bg-muted"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleCreateClientGroup}
-                disabled={addingClientGroup || (wizardStep === 1 && !clientGroupName)}
-                className="bg-purple-600 hover:bg-purple-700 text-white min-w-[120px]"
-              >
-                {addingClientGroup ? (
+            {/* === Step 4: Call log provider === */}
+            {wizardStep === 4 && (
+              <div className="max-w-md mx-auto space-y-6">
+                {!callLogProvider && (
                   <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                    Creating...
-                  </>
-                ) : wizardStep < 3 ? (
-                  <>
-                    <ChevronRight className="w-4 h-4 mr-2" />
-                    Next
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Create Client Group
+                    <div className="text-center space-y-2">
+                      <h2 className="text-2xl font-bold text-foreground">Where do calls come from?</h2>
+                      <p className="text-muted-foreground">Pick which provider feeds this client&apos;s Sales Hub call logs.</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setCallLogProvider("ghl")}
+                        className="p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                      >
+                        <div className="font-semibold text-foreground mb-1">GoHighLevel</div>
+                        <div className="text-xs text-muted-foreground">Uses your GHL workflow webhook.</div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCallLogProvider("hotprospector")}
+                        className="p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                      >
+                        <div className="font-semibold text-foreground mb-1">Hot Prospector</div>
+                        <div className="text-xs text-muted-foreground">Coming soon &mdash; credentials saved now.</div>
+                      </button>
+                    </div>
                   </>
                 )}
-              </Button>
+
+                {callLogProvider === "ghl" && (
+                  <>
+                    <div className="text-center space-y-2">
+                      <h2 className="text-2xl font-bold text-foreground">Using GoHighLevel</h2>
+                      <p className="text-muted-foreground">Calls will arrive via your GHL workflow webhook on the linked subaccount.</p>
+                    </div>
+                    <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
+                      <Check className="w-5 h-5 text-success shrink-0" />
+                      <span className="text-sm text-foreground">Ready &mdash; no extra setup needed at this step.</span>
+                    </div>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setCallLogProvider(null)}
+                        className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                      >
+                        Change provider
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {callLogProvider === "hotprospector" && (
+                  <>
+                    <div className="text-center space-y-2">
+                      <h2 className="text-2xl font-bold text-foreground">Connect Hot Prospector</h2>
+                      <p className="text-muted-foreground">Enter your Hot Prospector API credentials.</p>
+                    </div>
+                    <div className="space-y-4 text-left">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none" htmlFor="hp-api-uid">API UID</label>
+                        <Input
+                          id="hp-api-uid"
+                          type="text"
+                          placeholder="Enter your API UID"
+                          value={hpApiUid}
+                          onChange={(e) => { setHpApiUid(e.target.value); setHpTestStatus("idle") }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium leading-none" htmlFor="hp-api-key">API Key</label>
+                        <Input
+                          id="hp-api-key"
+                          type="password"
+                          placeholder="Enter your API Key"
+                          value={hpApiKey}
+                          onChange={(e) => { setHpApiKey(e.target.value); setHpTestStatus("idle") }}
+                        />
+                      </div>
+                      {hpTestStatus === "success" && (
+                        <div className="flex items-center gap-2 text-sm text-success">
+                          <Check className="w-4 h-4" />
+                          Connected successfully.
+                        </div>
+                      )}
+                      {hpTestStatus === "error" && (
+                        <div className="text-sm text-destructive">
+                          {hpTestError || "Could not verify credentials."}
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setCallLogProvider(null)}
+                          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                        >
+                          Change provider
+                        </button>
+                        <Button
+                          type="button"
+                          className="btn-gradient gap-2"
+                          onClick={testHotProspectorConnection}
+                          disabled={hpTestStatus === "testing" || !hpApiUid || !hpApiKey}
+                        >
+                          {hpTestStatus === "testing" ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Testing...
+                            </>
+                          ) : (
+                            "Test Connection"
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+                </div>
+              </div>
+
+              {/* ── Footer: Back / Next-or-Create ──────────────── */}
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={wizardStep === 1 || addingClientGroup}
+                  onClick={() => setWizardStep(Math.max(1, wizardStep - 1))}
+                  className="gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleCreateClientGroup}
+                  disabled={
+                    addingClientGroup
+                    || (wizardStep === 1 && !clientGroupName)
+                    || (wizardStep === 4 && !callLogProvider)
+                    || (wizardStep === 4 && callLogProvider === "hotprospector" && hpTestStatus !== "success")
+                  }
+                  className="btn-gradient gap-2 h-10 px-4 rounded-md min-w-[160px] justify-center"
+                >
+                  {addingClientGroup ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Creating...
+                    </>
+                  ) : wizardStep < 4 ? (
+                    <>Next <ArrowRight className="w-4 h-4" /></>
+                  ) : (
+                    <><Plus className="w-4 h-4" /> Create Client Group</>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>
