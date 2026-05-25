@@ -78,7 +78,7 @@ const StyledTable = ({
   onColumnOrderChange,
 }) => {
   /* ---------- STATE ---------- */
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
 

@@ -502,14 +502,14 @@ export function MarketingContent({
   const clearAd = () => { setSelectedAd(null); setSelectedAdIds(new Set()) }
 
   // ── Filtering ─────────────────────────────────────────────────────────────
-  const isAllZerosRow = (item) => {
-    if (activeTab === "leads") return false
-    const fields = ["spend", "impressions", "clicks", "reach", "leads", "ctr", "cpc", "cpm", "cpp", "frequency"]
-    return !fields.some(f => { const v = item[f]; return v !== undefined && v !== null && Number(v) !== 0 })
-  }
+  // const isAllZerosRow = (item) => {
+  //   if (activeTab === "leads") return false
+  //   const fields = ["spend", "impressions", "clicks", "reach", "leads", "ctr", "cpc", "cpm", "cpp", "frequency"]
+  //   return !fields.some(f => { const v = item[f]; return v !== undefined && v !== null && Number(v) !== 0 })
+  // }
 
   const applyFilters = (data) => {
-    let filtered = data.filter(item => !isAllZerosRow(item))
+    let filtered = [...data]
 
     // Client group
     if (selectedClientGroup && selectedClientGroup !== "all") {
