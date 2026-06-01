@@ -123,10 +123,19 @@ export function MarketingContent({
 
   // One stable hook instance per tab — page keys never change between renders,
   // so hook call order is always the same (Rules of Hooks satisfied).
-  const { savedColumns: savedCampaigns, saveView: saveCampaigns, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
-  const { savedColumns: savedAdsets,    saveView: saveAdsets,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
-  const { savedColumns: savedAds,       saveView: saveAds,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
-  const { savedColumns: savedLeads,     saveView: saveLeads,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
+  const { savedColumns: savedCampaigns, saveView: saveCampaigns, saveViewDebounced: saveCampaignsDebounced, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
+  const { savedColumns: savedAdsets,    saveView: saveAdsets,    saveViewDebounced: saveAdsetsDebounced,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
+  const { savedColumns: savedAds,       saveView: saveAds,       saveViewDebounced: saveAdsDebounced,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
+  const { savedColumns: savedLeads,     saveView: saveLeads,     saveViewDebounced: saveLeadsDebounced,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
+
+  // Per-tab debounced-save lookup, used by the table's onColumnOrderChange to
+  // auto-persist drag-reorder events without needing a manual "Save View".
+  const saveDebouncedByTab = {
+    campaigns: saveCampaignsDebounced,
+    adsets:    saveAdsetsDebounced,
+    ads:       saveAdsDebounced,
+    leads:     saveLeadsDebounced,
+  }
 
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
 
@@ -1186,9 +1195,11 @@ export function MarketingContent({
                   // already an ordered array of visible IDs — feed it as the
                   // initial order, and any drag updates the same slot.
                 initialColumnOrder={visibleColumns[activeTab] || []}
-                onColumnOrderChange={(newOrder) =>
+                onColumnOrderChange={(newOrder) => {
                   setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
-                }
+                  // Auto-persist the new order for the active tab (debounced).
+                  saveDebouncedByTab[activeTab]?.(newOrder)
+                }}
               />
             )}
           </TabsContent>

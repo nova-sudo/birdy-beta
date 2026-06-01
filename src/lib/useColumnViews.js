@@ -2,7 +2,7 @@
 // Shared hook for loading & saving per-page column views from the backend.
 // Now with localStorage cache — if views were prefetched at login, this returns instantly.
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { API_BASE_URL } from "@/lib/api"
 import { getCachedData, setCachedData, clearCache } from "@/lib/cache"
@@ -88,5 +88,31 @@ export function useColumnViews(page) {
     [page]
   )
 
-  return { savedColumns, saveView, viewsLoaded }
+  // ── Debounced auto-save ──────────────────────────────────────────────────
+  // Used by pages to persist column order changes (drag-reorder events) the
+  // moment they happen — no need for the user to click "Save View". Rapid
+  // consecutive reorders are collapsed into a single API call after `delay`
+  // ms of silence so the network doesn't get hammered.
+  const debounceTimerRef = useRef(null)
+
+  const saveViewDebounced = useCallback(
+    (columns, delay = 600) => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = setTimeout(() => {
+        saveView(columns)
+        debounceTimerRef.current = null
+      }, delay)
+    },
+    [saveView]
+  )
+
+  // Clear any pending debounced save when the component unmounts so we don't
+  // fire a PATCH against a navigated-away page.
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
+    }
+  }, [])
+
+  return { savedColumns, saveView, saveViewDebounced, viewsLoaded }
 }
