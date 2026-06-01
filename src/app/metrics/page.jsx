@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, PieChart, X, CalculatorIcon, Zap, SquarePlus } from "lucide-react"
+import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, Copy, PieChart, X, CalculatorIcon, Zap, SquarePlus } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
@@ -173,6 +173,10 @@ const MetricsHub = () => {
   const [customMetrics, setCustomMetrics] = useState([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [editingMetric, setEditingMetric] = useState(null)
+  // Source metric when the dialog is open in "duplicate" mode (null otherwise).
+  // We track it separately from editingMetric so save still POSTs as a new row
+  // — duplicating must never overwrite the source.
+  const [duplicatingFrom, setDuplicatingFrom] = useState(null)
   const [clientGroups, setClientGroups] = useState([])
   const [discoveredMetrics, setDiscoveredMetrics] = useState([])
   const [availableMetricsForFormulas, setAvailableMetricsForFormulas] = useState([])
@@ -328,8 +332,23 @@ const MetricsHub = () => {
   }
 
   const handleCreateMetric = async () => {
-    if (!metricForm.name || metricForm.dashboards.length === 0) {
+    const trimmedName = (metricForm.name || "").trim()
+    if (!trimmedName || metricForm.dashboards.length === 0) {
       alert("Please fill in a name and select at least one dashboard")
+      return
+    }
+
+    // Uniqueness check on custom metric names (case-insensitive).
+    // When editing, exclude the metric being edited. When duplicating or
+    // creating, any case-insensitive match is a duplicate — this is what
+    // enforces "you have to change the name" on duplicate.
+    const lowerName = trimmedName.toLowerCase()
+    const conflict = customMetrics.find(m =>
+      (m.name || "").trim().toLowerCase() === lowerName &&
+      m.id !== editingMetric?.id
+    )
+    if (conflict) {
+      alert(`A metric named "${trimmedName}" already exists. Please choose a different name.`)
       return
     }
 
@@ -401,17 +420,52 @@ const MetricsHub = () => {
     })
     setIsCreateDialogOpen(false)
     setEditingMetric(null)
+    setDuplicatingFrom(null)
   }
 
   const handleEditMetric = (metric) => {
     if (metric.category !== "custom") return
 
     setEditingMetric(metric)
+    setDuplicatingFrom(null)
     setMetricForm({
       name: metric.name,
       description: metric.description || "",
       dashboards: metric.dashboards || (metric.dashboard ? [metric.dashboard.toLowerCase()] : []),
       formulaParts: metric.formulaParts || [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
+      formatType: metric.formatType || "integer",
+      aggregation: metric.aggregation || "total",
+    })
+    setIsCreateDialogOpen(true)
+  }
+
+  const handleDuplicateMetric = (metric) => {
+    if (metric.category !== "custom") return
+
+    // Pre-fill with "{name} (copy)", incrementing the suffix if needed so the
+    // suggested name doesn't collide with an existing metric. The user can
+    // still type their own name; the uniqueness check in handleCreateMetric
+    // is what actually enforces "the name must change".
+    const baseName = `${metric.name} (copy)`
+    const existingNames = new Set(
+      customMetrics.map(m => (m.name || "").trim().toLowerCase())
+    )
+    let suggestedName = baseName
+    let counter = 2
+    while (existingNames.has(suggestedName.trim().toLowerCase())) {
+      suggestedName = `${metric.name} (copy ${counter})`
+      counter += 1
+    }
+
+    setEditingMetric(null)       // explicitly NOT edit mode — save will POST
+    setDuplicatingFrom(metric)
+    setMetricForm({
+      name: suggestedName,
+      description: metric.description || "",
+      dashboards: [...(metric.dashboards || [])],
+      formulaParts: metric.formulaParts
+        ? metric.formulaParts.map(p => ({ ...p }))
+        : [{ type: "metric", value: availableMetricsForFormulas[0]?.id || "" }],
       formatType: metric.formatType || "integer",
       aggregation: metric.aggregation || "total",
     })
@@ -611,6 +665,17 @@ const MetricsHub = () => {
     return items;
   };
 
+  // ── Derived validation used by the metric dialog ─────────────────────────
+  // Case-insensitive duplicate-name check across custom metrics. When editing,
+  // the metric being edited is excluded. When duplicating or creating, any
+  // match counts as a duplicate. Drives both the inline error message and
+  // the Save button's disabled state.
+  const _trimmedFormName = (metricForm.name || "").trim()
+  const isNameDuplicate = !!_trimmedFormName && customMetrics.some(m =>
+    (m.name || "").trim().toLowerCase() === _trimmedFormName.toLowerCase() &&
+    m.id !== editingMetric?.id
+  )
+
   return (
     <div className="min-h-screen  w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div className="flex flex-col gap-6">
@@ -784,6 +849,15 @@ const MetricsHub = () => {
                                   <Button
                                     variant="ghost"
                                     size="icon"
+                                    className="h-9 w-9 text-muted-foreground hover:bg-muted"
+                                    onClick={() => handleDuplicateMetric(metric)}
+                                    title="Duplicate metric"
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     className="h-9 w-9 text-destructive hover:bg-destructive/10"
                                     onClick={() => handleDeleteMetric(metric.id)}
                                   >
@@ -839,8 +913,18 @@ const MetricsHub = () => {
             {/* Header */}
             <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg">
               <div className="flex flex-col text-center sm:text-left space-y-1">
-                <DialogTitle>{editingMetric ? "Edit Metric" : "Create Metric"}</DialogTitle>
-                <DialogDescription>Build a formula by combining metrics and operations.</DialogDescription>
+                <DialogTitle>
+                  {editingMetric
+                    ? "Edit Metric"
+                    : duplicatingFrom
+                      ? "Duplicate Metric"
+                      : "Create Metric"}
+                </DialogTitle>
+                <DialogDescription>
+                  {duplicatingFrom
+                    ? <>Editing a copy of <span className="font-medium text-foreground">&ldquo;{duplicatingFrom.name}&rdquo;</span> &mdash; choose a unique name before saving.</>
+                    : "Build a formula by combining metrics and operations."}
+                </DialogDescription>
               </div>
             </div>
 
@@ -876,7 +960,13 @@ const MetricsHub = () => {
                           placeholder="e.g., Lead-to-Close Ratio"
                           value={metricForm.name}
                           onChange={(e) => setMetricForm({ ...metricForm, name: e.target.value })}
+                          className={isNameDuplicate ? "border-destructive focus-visible:ring-destructive/30" : ""}
                         />
+                        {isNameDuplicate && (
+                          <p className="mt-1 text-xs text-destructive">
+                            A metric with this name already exists. Pick a different name.
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="metric-description" className="block text-base font-semibold mb-1">Description</Label>
@@ -1230,8 +1320,18 @@ const MetricsHub = () => {
             <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg">
               <div className="flex flex-row justify-end gap-2">
                 <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
-                <Button onClick={handleCreateMetric} disabled={saving} className="bg-purple-600 hover:bg-purple-700 text-white">
-                  {saving ? "Saving..." : (editingMetric ? "Update Metric" : "Save Metric")}
+                <Button
+                  onClick={handleCreateMetric}
+                  disabled={saving || isNameDuplicate || !_trimmedFormName}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingMetric
+                      ? "Update Metric"
+                      : duplicatingFrom
+                        ? "Save Duplicate"
+                        : "Save Metric"}
                 </Button>
               </div>
             </div>
