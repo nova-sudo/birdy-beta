@@ -20,7 +20,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
-import { getMetricDisplayName } from "@/lib/metrics"
+import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -816,10 +816,12 @@ export function MarketingContent({
       const customMatch = customMetrics.find(m => m.id === col)
       const displayName = customMatch ? customMatch.name : getMetricDisplayName(col)
       // Determine source icon for table header
+      // Use global cache so metrics filtered from local state (different dashboard) still get Flask icon
+      const isCustomMetric = customMatch || !!getCustomMetricById(col)
       let colIcon = metaa
       if (col === "clientGroup" || col === "name" || col === "full_name") colIcon = null
       else if (col.startsWith("ghl_") || col.startsWith("tag_")) colIcon = ghlIco
-      else if (customMatch) colIcon = Flask
+      else if (isCustomMetric) colIcon = Flask
 
       return {
         id: col, key: col,
