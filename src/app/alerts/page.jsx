@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
+import { useSearchParams } from "next/navigation"
 import {
   Dialog,
   DialogContent,
@@ -664,6 +665,8 @@ export default function AlertsPage() {
   const [saving, setSaving] = useState(false)
   const [clientSearch, setClientSearch] = useState("")
   const [birdyInput, setBirdyInput] = useState("")
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "all")
 
   // Extract unique tags from all client groups for the tag metric picker
   const availableTags = useMemo(() => {
@@ -945,7 +948,7 @@ export default function AlertsPage() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="active" className="w-full gap-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-4">  
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="active">
               Active Alerts
