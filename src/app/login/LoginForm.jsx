@@ -17,7 +17,6 @@ export default function LoginForm() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    rememberMe: false,
   })
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -53,10 +52,12 @@ export default function LoginForm() {
       }
 
       // ── 2. Persist session ───────────────────────────────────────────────
+      // Client-side auth flag matches the backend JWT_EXPIRY_MINUTES (30 days).
+      // We used to give un-remembered logins a 1-hour TTL here, but that flag
+      // is what ProtectedLayout reads to gate the app — so users were getting
+      // bounced to /login every hour even though their cookie was still valid.
       const now = new Date()
-      const expiresAt = formData.rememberMe
-        ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
-        : new Date(now.getTime() + 60 * 60 * 1000)            // 1 hour
+      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days
 
       localStorage.setItem("user", JSON.stringify(data.user))
       localStorage.setItem(

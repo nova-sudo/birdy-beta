@@ -51,6 +51,8 @@
     --primary: hsl(260 70% 55%);
     /* #7C4DFF — Birdy purple (kept) */
     --primary-foreground: hsl(0 0% 100%);
+    --primary-glow: hsl(280 80% 65%);
+    /* lighter companion for gradient washes (btn-gradient, headings) */
 
     --secondary: hsl(0 0% 96%);
     --secondary-foreground: hsl(0 0% 12%);
@@ -63,6 +65,9 @@
 
     --destructive: hsl(0 84% 60%);
     --destructive-foreground: hsl(0 0% 100%);
+
+    --success: hsl(142 70% 42%);
+    --success-foreground: hsl(0 0% 100%);
 
     --border: hsl(0 0% 90%);
     --input: hsl(0 0% 90%);
@@ -121,8 +126,11 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -166,6 +174,7 @@
   --animate-pulse-gentle: pulse-gentle 2s infinite;
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-fade-out: fadeOut 0.3s ease-out;
+  --animate-slide-in: slide-in 0.35s ease-out;
 
   @keyframes accordion-down {
     from {
@@ -220,6 +229,18 @@
     to {
       opacity: 0;
       transform: translateY(10px);
+    }
+  }
+
+  @keyframes slide-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
     }
   }
 }
@@ -356,4 +377,61 @@
 
 @media (prefers-reduced-motion: reduce) {
   .birdy-flap:hover { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Linking Wizard — stepper, card, gradient button
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Stepper node states — applied to a w-10 h-10 rounded-full container */
+.stepper-pending {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border: 2px solid var(--border);
+}
+
+.stepper-completed {
+  background-color: var(--success);
+  color: var(--success-foreground);
+  border: 2px solid var(--success);
+}
+
+.stepper-active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 4px hsl(260 70% 55% / 0.18);
+}
+
+/* Card panel housing the active step body */
+.card-gradient {
+  background-image: linear-gradient(135deg, var(--card) 0%, hsl(0 0% 98%) 100%);
+}
+
+.shadow-card {
+  box-shadow:
+    0 1px 3px 0 hsl(0 0% 0% / 0.06),
+    0 8px 24px -6px hsl(0 0% 0% / 0.10);
+}
+
+/* Gradient primary button — used for Test Connection, Next, Create */
+.btn-gradient {
+  background-image: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
+  border: none;
+  color: var(--primary-foreground);
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.btn-gradient:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 18px -6px hsl(260 70% 55% / 0.45);
+}
+
+.btn-gradient:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-gradient:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
