@@ -144,7 +144,7 @@ export default function ClientsPage() {
     try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
   });
   const [currencyLoading, setCurrencyLoading] = useState(true);
-  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("clients")
+  const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
 
   // ── Filter groups by status ───────────────────────────────────────────────
   const filteredByStatus = useMemo(() => {
@@ -1283,7 +1283,13 @@ export default function ClientsPage() {
           isLoading={loading}
           isRowLoading={(row) => row._isPending || row._isCreating}
           initialColumnOrder={columnOrder}
-          onColumnOrderChange={setColumnOrder}
+          onColumnOrderChange={(newOrder) => {
+            setColumnOrder(newOrder)
+            // Auto-persist column order so a drag-reorder survives a refresh
+            // without the user having to click "Save View". Debounced inside
+            // the hook so a flurry of drags collapses to a single API call.
+            saveViewDebounced(newOrder)
+          }}
           enableStatusToggle={true}
           onStatusToggle={handleStatusToggle}
           togglingRows={togglingRows}

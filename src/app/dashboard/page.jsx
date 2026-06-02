@@ -235,13 +235,14 @@ function GroupHeaderRow({ group, isExpanded, onToggle, dismissingIds, onDismissC
         </div>
 
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
-            onClick={onOpenClient}
-          >
-            View All
-          </Button>
+          <a href={`/alerts?tab=${parent.color === "red" ? "triggered" : parent.color === "yellow" ? "active" : "paused"}`}>
+            <Button
+              size="sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-4 text-xs"
+            >
+              View All
+            </Button>
+          </a> 
         </div>
       </div>
 
@@ -634,7 +635,7 @@ export default function DashboardPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="bg-white border border-border/60 rounded-2xl flex flex-col gap-4">
+              <div key={i} className="bg-white border border-border/60 rounded-2xl flex flex-col gap-4 p-5">
                 <div className="flex items-start justify-between">
                   <div className="flex flex-col gap-2">
                     <Skeleton className="h-4 w-36" />

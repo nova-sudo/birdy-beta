@@ -79,7 +79,7 @@ export function LeadsContent({
   }, [])
 
   const [currentPage, setCurrentPage] = useState(1)
-  const { savedColumns, saveView: saveToDB, viewsLoaded } = useColumnViews("contacts")
+  const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("contacts")
 
   // Filter to GHL groups only
   const ghlClientGroups = useMemo(
@@ -610,6 +610,8 @@ export function LeadsContent({
           initialColumnOrder={visibleColumns}
           onColumnOrderChange={(newOrder) => {
             setVisibleColumns(newOrder)
+            // Auto-persist on drag-reorder (debounced inside the hook).
+            saveViewDebounced(newOrder)
           }}
         />
 
