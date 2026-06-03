@@ -1,5 +1,5 @@
 "use client"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, CircleCheck } from "lucide-react"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { Button } from "@/components/ui/button"
@@ -118,7 +118,7 @@ export function LeadsContent({
       icons: ghl,
       category: "tags",
       _tagName: tag,
-      cell: (_, row) => row?.tags?.includes(tag) ? "✅" : "–",
+      cell: (_, row) => row?.tags?.includes(tag) ? <CircleCheck className="w-4 h-4 text-green-600" /> : "–",
     }))
 
     return [...baseContactColumns, ...custom, ...tagCols]
