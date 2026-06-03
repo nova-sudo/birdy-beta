@@ -33,6 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import getSymbolFromCurrency from "currency-symbol-map";
+import { CircleSlash } from "lucide-react";
 
 /**
  * Reusable container for dashboard tables with glassmorphism styling
@@ -426,28 +427,28 @@ const StyledTable = ({
   /* ---------- FORMATTERS ---------- */
   const formatCurrency = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
-    if (!isFinite(num)) return "-";
+    if (!isFinite(num)) return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     return `${getSymbolFromCurrency(userCurrency)}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercentage = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
-    if (!isFinite(num)) return "-";
+    if (!isFinite(num)) return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     return `${num.toFixed(2)}%`;
   };
 
   const formatNumber = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
-    if (!isFinite(num)) return "-";
+    if (!isFinite(num)) return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     return num.toLocaleString();
   };
 
   const formatDate = (v) => {
-    if (!v) return "—";
+    if (!v) return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     try {
       return new Date(v).toLocaleDateString();
     } catch {
-      return "—";
+      return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     }
   };
 
@@ -455,13 +456,13 @@ const StyledTable = ({
     const value = row[columnId];
 
     if (value === undefined || value === null) {
-      return "—";
+      return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     }
-    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return "-";
+    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
 
     if (typeof value === "object") {
       console.warn(`Object detected in cell for column ${columnId}:`, value);
-      return "—";
+      return <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     }
 
     if (columnId === "name" || columnId === "full_name" || columnId === "contactName") {
@@ -488,7 +489,7 @@ const StyledTable = ({
       return formatDate(value);
     }
     if (columnId.includes("freshness")) {
-      return value || "—";
+      return value || <CircleSlash className="w-4 h-4 text-muted-foreground" />;
     }
     if (typeof value === "number") {
       return formatNumber(value);

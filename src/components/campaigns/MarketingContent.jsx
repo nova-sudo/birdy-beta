@@ -15,6 +15,7 @@ import {
   TrendingUp,
   DollarSign,
   Target,
+  CircleSlash,
 } from "lucide-react"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -751,30 +752,31 @@ export function MarketingContent({
 
   const formatCellValue = (value, col, row) => {
     // Tag rollup columns — look up count from tagRollup data
-    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return "-"
+    const empty = <CircleSlash className="w-4 h-4 text-muted-foreground" />
+    if (typeof value === "number" && (!isFinite(value) || isNaN(value))) return empty
 
     if (tagColumnIds.includes(col)) {
       const tagIdx = tagColumnIds.indexOf(col)
       const tagName = dedupedTags[tagIdx]
-      if (!tagName) return "-"
+      if (!tagName) return empty
       let rollupMap = {}
       if (activeTab === "campaigns") rollupMap = tagRollup.by_campaign?.[row?.id] || {}
       else if (activeTab === "adsets") rollupMap = tagRollup.by_adset?.[row?.name] || {}
       else if (activeTab === "ads") rollupMap = tagRollup.by_ad?.[row?.id] || {}
 
       const count = rollupMap[tagName]
-      return count ? count.toLocaleString() : "-"
+      return count ? count.toLocaleString() : empty
     }
     // GHL enrichment columns on Meta leads tab
-    if (col === "ghl_matched") return value ? "✅" : "–"
+    if (col === "ghl_matched") return value ? "✅" : empty
     if (col === "ghl_opportunity_status") {
-      if (!value) return "–"
+      if (!value) return empty
       const colors = { won: "text-green-600 bg-green-50", lost: "text-red-600 bg-red-50", open: "text-blue-600 bg-blue-50", abandoned: "text-gray-600 bg-gray-50" }
       return <span className={`${colors[value] || ""} px-2 py-0.5 rounded-full text-xs font-medium capitalize`}>{value}</span>
     }
-    if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"
+    if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : empty
     if (col === "ghl_tags") {
-      if (!value || !Array.isArray(value) || value.length === 0) return "–"
+      if (!value || !Array.isArray(value) || value.length === 0) return empty
       return value.slice(0, 2).join(", ") + (value.length > 2 ? ` +${value.length - 2}` : "")
     }
     if (col === "full_name") {
@@ -782,7 +784,7 @@ export function MarketingContent({
         row?.full_name || row?.fullName || row?.name ||
         (row?.first_name || row?.last_name ? `${row?.first_name || ""} ${row?.last_name || ""}`.trim() : null)
     }
-    if (value === null || value === undefined || value === "") return "-"
+    if (value === null || value === undefined || value === "") return empty
     const customMatch = customMetrics.find(m => m.id === col)
     if (customMatch) {
       const fmt = customMatch.formatType || customMatch.format_type || "integer"

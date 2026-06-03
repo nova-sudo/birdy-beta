@@ -1,5 +1,5 @@
 "use client"
-import { ChevronLeft, ChevronRight, CircleCheck } from "lucide-react"
+import { ChevronLeft, ChevronRight, CircleCheck, CircleSlash } from "lucide-react"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { Button } from "@/components/ui/button"
@@ -106,7 +106,7 @@ export function LeadsContent({
       sortable: true,
       icons: Flask,
       category: "custom",
-      cell: (row) => row?.[m.id] ?? "–",
+      cell: (row) => row?.[m.id] != null ? row[m.id] : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
     }))
 
     const tagCols = availableTags.map(tag => ({
@@ -118,7 +118,7 @@ export function LeadsContent({
       icons: ghl,
       category: "tags",
       _tagName: tag,
-      cell: (_, row) => row?.tags?.includes(tag) ? <CircleCheck className="w-4 h-4 text-green-600" /> : "–",
+      cell: (_, row) => row?.tags?.includes(tag) ? <CircleCheck className="w-4 h-4 text-green-600" /> : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
     }))
 
     return [...baseContactColumns, ...custom, ...tagCols]

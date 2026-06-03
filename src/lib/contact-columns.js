@@ -1,3 +1,4 @@
+import { CircleSlash } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { TiTag } from "react-icons/ti"
@@ -29,7 +30,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value || value === "Unknown" ? (
-        <span className="text-muted-foreground text-sm px-2">-</span>
+        <CircleSlash className="w-4 h-4 text-muted-foreground" />
       ) : (
         <span className="text-sm text-foreground text-left block">{toTitleCase(value)}</span>
       ),
@@ -43,7 +44,7 @@ export const buildContactColumns = () => [
     icons: lab,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
+        <CircleSlash className="w-4 h-4 text-muted-foreground" />
       ) : (
         <div className="truncate px-2" title={value}>
           <span className="text-sm font-medium text-foreground">{value}</span>
@@ -59,7 +60,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value || value.startsWith("no_email_") ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
+        <CircleSlash className="w-4 h-4 text-muted-foreground" />
       ) : (
         <a
           href={`mailto:${value}`}
@@ -79,7 +80,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
+        <CircleSlash className="w-4 h-4 text-muted-foreground" />
       ) : (
         <a
           href={`tel:${value}`}
@@ -99,7 +100,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
+        <CircleSlash className="w-4 h-4 text-muted-foreground" />
       ) : (
         <span className="text-sm text-foreground">
           {new Date(value).toLocaleDateString("en-US", {
@@ -118,7 +119,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       if (!value || value.length === 0)
-        return <span className="text-muted-foreground text-sm">-</span>
+        return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       const tags = value
       const mainTag = tags[0]
       const hasMoreTags = tags.length > 1
@@ -161,7 +162,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       const type = value || row?.contactType
-      if (!type) return <span className="text-muted-foreground text-sm">-</span>
+      if (!type) return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       return <Badge variant="secondary" className="capitalize">{type}</Badge>
     },
   },
@@ -175,7 +176,7 @@ export const buildContactColumns = () => [
     cell: (value, row) => {
       const opportunities = row?.opportunities || []
       if (!opportunities || opportunities.length === 0)
-        return <span className="text-muted-foreground text-sm">—</span>
+        return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppStatus = mainOpp.status || "unknown"
@@ -220,7 +221,7 @@ export const buildContactColumns = () => [
     cell: (value, row) => {
       const opportunities = row?.opportunities || []
       if (!opportunities || opportunities.length === 0)
-        return <span className="text-muted-foreground text-sm">—</span>
+        return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppValue = mainOpp.monetaryValue || 0
@@ -232,7 +233,7 @@ export const buildContactColumns = () => [
               {sym}{oppValue.toLocaleString()}
             </span>
           ) : (
-            <span className="text-muted-foreground text-sm">—</span>
+            <CircleSlash className="w-4 h-4 text-muted-foreground" />
           )}
           {hasMoreOpps && (
             <Tooltip>
@@ -246,7 +247,7 @@ export const buildContactColumns = () => [
                       <span className="text-sm text-green-600">{sym}{opp.monetaryValue.toLocaleString()}</span>
                     )}
                     {opp.monetaryValue === 0 && (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <CircleSlash className="w-4 h-4 text-muted-foreground" />
                     )}
                   </div>
                 ))}
@@ -257,8 +258,8 @@ export const buildContactColumns = () => [
       )
     },
   },
-  { id: "firstName", header: "First Name", label: "First Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{toTitleCase(v) || "-"}</span> },
-  { id: "lastName", header: "Last Name", label: "Last Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{toTitleCase(v) || "-"}</span> },
+  { id: "firstName", header: "First Name", label: "First Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => toTitleCase(v) ? <span className="text-sm">{toTitleCase(v)}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
+  { id: "lastName", header: "Last Name", label: "Last Name", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => toTitleCase(v) ? <span className="text-sm">{toTitleCase(v)}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
   {
     id: "companyName",
     header: "Company",
@@ -267,7 +268,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <CircleSlash className="w-4 h-4 text-muted-foreground" />
       : <span className="text-sm font-medium text-foreground">{toTitleCase(v)}</span>,
   },
   {
@@ -278,12 +279,12 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <CircleSlash className="w-4 h-4 text-muted-foreground" />
       : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
   },
-  { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "postalCode", header: "Postal Code", label: "Postal Code", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => v ? <span className="text-sm">{v}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
+  { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => v ? <span className="text-sm">{v}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
+  { id: "postalCode", header: "Postal Code", label: "Postal Code", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => v ? <span className="text-sm">{v}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
   {
     id: "country",
     header: "Country",
@@ -292,7 +293,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <CircleSlash className="w-4 h-4 text-muted-foreground" />
       : <div className="truncate px-2" title={v}><span className="text-sm font-medium text-foreground">{v}</span></div>,
   },
   {
@@ -303,7 +304,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: ghl,
     cell: (v) => {
-      if (!v) return <span className="text-muted-foreground text-sm">-</span>
+      if (!v) return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       const url = v.startsWith("http") ? v : `https://${v}`
       return (
         <a
@@ -328,7 +329,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (v, row) => {
       const addr = v || row?.address
-      if (!addr) return <span className="text-muted-foreground text-sm">-</span>
+      if (!addr) return <CircleSlash className="w-4 h-4 text-muted-foreground" />
       return (
         <span className="text-sm text-foreground max-w-xs truncate block" title={addr}>
           {addr}
@@ -336,8 +337,8 @@ export const buildContactColumns = () => [
       )
     },
   },
-  { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
-  { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
+  { id: "dateOfBirth", header: "Date of Birth", label: "Date of Birth", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => v ? <span className="text-sm">{v}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
+  { id: "assignedTo", header: "Assigned To", label: "Assigned To", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => v ? <span className="text-sm">{v}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" /> },
 
   // Cross-source matching columns
   {
@@ -352,9 +353,9 @@ export const buildContactColumns = () => [
       const s = row?.sources || {}
       return (
         <div className="flex items-center gap-2">
-          {s.ghl ? <Image src={ghl} alt="GHL" width={16} height={16} title="GHL" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
-          {s.meta ? <Image src={meta} alt="Meta" width={16} height={16} title="Meta" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
-          {s.hp ? <Image src={hp} alt="HP" width={16} height={16} title="HotProspector" /> : <span className="w-4 h-4 text-xs text-muted-foreground">–</span>}
+          {s.ghl ? <Image src={ghl} alt="GHL" width={16} height={16} title="GHL" /> : <CircleSlash className="w-4 h-4 text-muted-foreground" />}
+          {s.meta ? <Image src={meta} alt="Meta" width={16} height={16} title="Meta" /> : <CircleSlash className="w-4 h-4 text-muted-foreground" />}
+          {s.hp ? <Image src={hp} alt="HP" width={16} height={16} title="HotProspector" /> : <CircleSlash className="w-4 h-4 text-muted-foreground" />}
         </div>
       )
     },
@@ -367,7 +368,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: meta,
     category: "sources",
-    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.campaign_name || ""}>{row?.meta_enrichment?.campaign_name || "–"}</span>,
+    cell: (_, row) => row?.meta_enrichment?.campaign_name ? <span className="text-sm truncate max-w-[200px]" title={row.meta_enrichment.campaign_name}>{row.meta_enrichment.campaign_name}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
   },
   {
     id: "metaAdName",
@@ -377,7 +378,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: meta,
     category: "sources",
-    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.ad_name || ""}>{row?.meta_enrichment?.ad_name || "–"}</span>,
+    cell: (_, row) => row?.meta_enrichment?.ad_name ? <span className="text-sm truncate max-w-[200px]" title={row.meta_enrichment.ad_name}>{row.meta_enrichment.ad_name}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
   },
   {
     id: "metaAdsetName",
@@ -387,7 +388,7 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: meta,
     category: "sources",
-    cell: (_, row) => <span className="text-sm truncate max-w-[200px]" title={row?.meta_enrichment?.adset_name || ""}>{row?.meta_enrichment?.adset_name || "–"}</span>,
+    cell: (_, row) => row?.meta_enrichment?.adset_name ? <span className="text-sm truncate max-w-[200px]" title={row.meta_enrichment.adset_name}>{row.meta_enrichment.adset_name}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
   },
   {
     id: "hpCallCount",
@@ -397,6 +398,6 @@ export const buildContactColumns = () => [
     sortable: true,
     icons: hp,
     category: "sources",
-    cell: (_, row) => <span className="text-sm">{row?.hp_enrichment?.call_logs_count ?? "–"}</span>,
+    cell: (_, row) => row?.hp_enrichment?.call_logs_count != null ? <span className="text-sm">{row.hp_enrichment.call_logs_count}</span> : <CircleSlash className="w-4 h-4 text-muted-foreground" />,
   },
 ]
