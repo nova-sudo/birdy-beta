@@ -228,7 +228,7 @@ export const buildContactColumns = () => [
       return (
         <div className="flex items-center gap-2">
           {oppValue > 0 ? (
-            <span className="text-sm font-semibold text-green-600">
+            <span className="text-sm text-foreground">
               {sym}{oppValue.toLocaleString()}
             </span>
           ) : (
@@ -243,7 +243,7 @@ export const buildContactColumns = () => [
                 {opportunities.slice(1).map((opp, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm py-1">
                     {opp.monetaryValue > 0 && (
-                      <span className="text-sm text-green-600">{sym}{opp.monetaryValue.toLocaleString()}</span>
+                      <span className="text-sm text-foreground">{sym}{opp.monetaryValue.toLocaleString()}</span>
                     )}
                     {opp.monetaryValue === 0 && (
                       <span className="text-xs text-muted-foreground">—</span>
