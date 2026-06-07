@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { mockFetchLeads, mockFetchMembers } from "./mockData"
 import { Loading } from "@/components/ui/loader"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -35,8 +34,7 @@ import {
   Play,
   Download,
   User,
-  Mail,
-  Construction
+  Mail
 } from "lucide-react"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
@@ -237,6 +235,7 @@ export default function CallCenterPage() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [totalLeads, setTotalLeads] = useState(0)
+  const [totalCalls, setTotalCalls] = useState(0)
   const [leadsPerPage] = useState(100)
   const [locationStats, setLocationStats] = useState({})
 
@@ -247,7 +246,6 @@ export default function CallCenterPage() {
   // state (HotProspector — endpoints not ready yet).
   const { clientGroups, loading: clientGroupsLoading } = useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedGroupId, setSelectedGroupId] = useState(null)
-  const [providerComingSoon, setProviderComingSoon] = useState(false)
 
   // Default-select the first client once they load (or restore from session).
   useEffect(() => {
@@ -305,6 +303,7 @@ export default function CallCenterPage() {
     if (!selectedGroupId) {
       setLeads([])
       setTotalLeads(0)
+      setTotalCalls(0)
       setLocationStats({})
       return
     }
@@ -314,19 +313,83 @@ export default function CallCenterPage() {
 
     const provider = (group.call_log_provider || "ghl").toLowerCase()
 
-    // HotProspector short-circuit — show coming-soon, no data fetch.
+    // HotProspector — fetch live call-center data scoped to this client's GHL location.
     if (provider === "hotprospector") {
-      setProviderComingSoon(true)
-      setLeads([])
-      setTotalLeads(0)
-      setLocationStats({})
-      setCurrentPage(1)
-      setIsLoading(false)
-      setIsRefreshing(false)
+      const locationId = group.ghl_location_id
+      if (!locationId) {
+        setLeads([])
+        setTotalLeads(0)
+        setTotalCalls(0)
+        setLocationStats({})
+        setCurrentPage(1)
+        setError("This Hot Prospector client has no linked GHL location. Link one in Settings to pull call data.")
+        setIsLoading(false)
+        setIsRefreshing(false)
+        return
+      }
+
+      try {
+        setIsLoading(true)
+        setError(null)
+
+        const skip = (page - 1) * leadsPerPage
+        const qs = new URLSearchParams({
+          location_id: locationId,
+          skip: String(skip),
+          limit: String(leadsPerPage),
+        })
+        if (_forceRefresh) qs.set("refresh", "true")
+
+        const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}))
+          throw new Error(body.detail || `HTTP ${res.status}`)
+        }
+        const data = await res.json()
+
+        // HP leads already arrive lead-centric with nested call_logs (leads with
+        // no calls included). Map to the table's shape; call_logs already match
+        // the CallLogsDialog fields.
+        const mappedLeads = (data.data || []).map((lead) => {
+          const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
+          return {
+            id: lead.id,
+            client: lead.client_name || group.name || "Unknown Client",
+            ghlLocation: lead.ghl_location_name || group.name || "Unknown Location",
+            ghlLocationId: lead.ghl_location_id || locationId,
+            name: fullName || lead.phone || lead.email || "—",
+            email: lead.email || "N/A",
+            phone: lead.phone || lead.mobile || "N/A",
+            company: lead.company || "N/A",
+            location: [lead.city, lead.state].filter(Boolean).join(", ") || "N/A",
+            tags: lead.tags || [],
+            status: "Active",
+            call_logs_count: lead.call_logs_count ?? (lead.call_logs?.length || 0),
+            call_logs: lead.call_logs || [],
+          }
+        })
+
+        setLeads(mappedLeads)
+        setTotalLeads(data.meta?.total ?? mappedLeads.length)
+        setTotalCalls(data.meta?.total_calls ?? mappedLeads.reduce((s, l) => s + l.call_logs_count, 0))
+        setCurrentPage(page)
+        setLocationStats(
+          data.meta?.location_stats || {
+            [locationId]: { name: group.name, count: mappedLeads.length },
+          },
+        )
+      } catch (err) {
+        console.error("Error loading Hot Prospector call logs:", err)
+        setError(err?.message || "Failed to load call logs")
+        setLeads([])
+        setTotalLeads(0)
+        setTotalCalls(0)
+      } finally {
+        setIsLoading(false)
+        setIsRefreshing(false)
+      }
       return
     }
-
-    setProviderComingSoon(false)
 
     try {
       setIsLoading(true)
@@ -387,6 +450,7 @@ export default function CallCenterPage() {
 
       setLeads(mappedLeads)
       setTotalLeads(data.meta?.total ?? mappedLeads.length)
+      setTotalCalls(mappedLeads.reduce((sum, l) => sum + l.call_logs_count, 0))
       setCurrentPage(page)
       setLocationStats({
         [group.ghl_location_id || group.id]: {
@@ -399,6 +463,7 @@ export default function CallCenterPage() {
       setError(err?.message || "Failed to load call logs")
       setLeads([])
       setTotalLeads(0)
+      setTotalCalls(0)
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)
@@ -407,12 +472,18 @@ export default function CallCenterPage() {
 
   const fetchMembers = async (_forceRefresh = false) => {
     try {
-      const data = await mockFetchMembers()
+      const res = await apiRequest("/api/hotprospector/members")
+      if (!res.ok) {
+        // Not connected / no members yet — show empty rather than erroring the page.
+        setMembers([])
+        return
+      }
+      const data = await res.json()
       const mappedMembers = (data.data || []).map((member) => ({
         id: member.memberId,
-        name: `${member.first_name} ${member.last_name}`.trim(),
+        name: `${member.first_name || ""} ${member.last_name || ""}`.trim(),
         email: member.email,
-        phone: member.mobile || member.inbound_phone || "N/A",
+        phone: member.mobile || member.direct_number || member.inbound_phone || "N/A",
         extension: member.phone_extension,
         status: member.member_status,
         title: member.title,
@@ -421,7 +492,8 @@ export default function CallCenterPage() {
       }))
       setMembers(mappedMembers)
     } catch (err) {
-      console.error("Error loading mock members:", err)
+      console.error("Error loading members:", err)
+      setMembers([])
     }
   }
 
@@ -473,9 +545,6 @@ export default function CallCenterPage() {
 
   // Calculate total clients
   const totalClients = Object.keys(locationStats).length
-
-  // Calculate total calls across all leads
-  const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
 
   return (
     <div className="w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
@@ -586,24 +655,6 @@ export default function CallCenterPage() {
 
         <div>
           <div className="bg-card rounded-lg mt-6 mb-12 ">
-            {/* Hot Prospector coming-soon placeholder for HP-provider clients */}
-            {providerComingSoon && (
-              <div className="my-4 p-10 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/60 text-center">
-                <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <Construction className="w-8 h-8 text-amber-700" />
-                </div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Hot Prospector &mdash; Coming Soon</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  This client&apos;s call logs are configured to come from <span className="font-medium">Hot Prospector</span>.
-                  The HP integration is still in progress &mdash; call data will appear here once their endpoints are wired up.
-                </p>
-                {selectedGroup && (
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Selected client: <span className="font-medium text-foreground">{selectedGroup.name}</span>
-                  </p>
-                )}
-              </div>
-            )}
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <Card className="border rounded-lg shadow-sm ">
@@ -687,7 +738,7 @@ export default function CallCenterPage() {
                     <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <p className="text-muted-foreground">
                       {selectedGroup
-                        ? <>No call logs yet for <span className="font-medium">{selectedGroup.name}</span>. Once a call event fires through the GHL workflow webhook, it&apos;ll appear here.</>
+                        ? <>No call logs yet for <span className="font-medium">{selectedGroup.name}</span>. {selectedProvider === "hotprospector" ? "Once calls are logged in Hot Prospector, they'll appear here." : "Once a call event fires through the GHL workflow webhook, it'll appear here."}</>
                         : "Pick a client above to view their call logs."}
                     </p>
                     <Button
