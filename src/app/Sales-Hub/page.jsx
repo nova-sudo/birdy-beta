@@ -194,6 +194,8 @@ const CALLS_CELL = (_v, row) =>
     <span className="text-sm text-muted-foreground">No calls</span>
   )
 
+const DATE_CELL = (v) => (v ? new Date(v).toLocaleDateString() : "—")
+
 const LEAD_COLUMNS = [
   { id: "name", label: "Name", sortable: true },
   { id: "client", label: "Client", sortable: true, icons: HP },
@@ -201,6 +203,8 @@ const LEAD_COLUMNS = [
   { id: "phone", label: "Phone", icons: HP },
   { id: "company", label: "Company", icons: HP },
   { id: "location", label: "Location", icons: HP },
+  { id: "first_call", label: "First Call", sortable: true, icons: HP, cell: DATE_CELL },
+  { id: "last_call", label: "Last Call", sortable: true, icons: HP, cell: DATE_CELL },
   { id: "calls", label: "Call Logs", icons: HP, cell: CALLS_CELL },
   { id: "status", label: "Status", cell: STATUS_CELL },
 ]
@@ -369,6 +373,9 @@ export default function CallCenterPage() {
 
   const mapLead = (lead) => {
     const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
+    const logs = lead.call_logs || []
+    // Only dates a HP lead carries are its call times; expose first/last (windowed).
+    const isos = logs.map((l) => l.call_time_iso).filter(Boolean).sort()
     return {
       id: lead.id,
       name: fullName || lead.phone || lead.email || "—",
@@ -377,8 +384,10 @@ export default function CallCenterPage() {
       phone: lead.phone || lead.mobile || "—",
       company: lead.company || "—",
       location: [lead.city, lead.state].filter(Boolean).join(", ") || "—",
-      call_logs: lead.call_logs || [],
-      call_logs_count: lead.call_logs_count ?? (lead.call_logs?.length || 0),
+      first_call: isos[0] || null,
+      last_call: isos[isos.length - 1] || null,
+      call_logs: logs,
+      call_logs_count: lead.call_logs_count ?? logs.length,
       status: "Active",
     }
   }
