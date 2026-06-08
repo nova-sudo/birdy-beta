@@ -213,8 +213,14 @@ const MEMBER_COLUMNS = [
   { id: "name", label: "Name", sortable: true },
   { id: "email", label: "Email", icons: HP },
   { id: "phone", label: "Phone", icons: HP },
-  { id: "extension", label: "Extension", icons: HP },
   { id: "status", label: "Status", icons: HP, cell: STATUS_CELL },
+  { id: "outbound", label: "Outbound", sortable: true, icons: HP },
+  { id: "inbound", label: "Inbound", sortable: true, icons: HP },
+  { id: "answered", label: "Answered", sortable: true, icons: HP },
+  { id: "answer_rate", label: "Answer Rate", icons: HP },
+  { id: "convos", label: "Convos", sortable: true, icons: HP },
+  { id: "appts", label: "Appts", sortable: true, icons: HP },
+  { id: "talk_min", label: "Talk (min)", sortable: true, icons: HP },
 ]
 
 const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS }
@@ -339,12 +345,16 @@ export default function CallCenterPage() {
     }
   }, [activeTab, datePreset, selectedLocationId, leadsPage])
 
-  // ── Fetch members once ──
+  // ── Fetch members (team + per-day dashboard metrics) on preset change ──
+  //    getMemberDashboardData is a per-day snapshot, so we pass the selected
+  //    window's end date (today when "maximum"/no end date).
   useEffect(() => {
     let cancelled = false
     const run = async () => {
       try {
-        const res = await apiRequest("/api/hotprospector/members")
+        const { end_date } = presetToDateRange(datePreset)
+        const qs = end_date ? `?date=${encodeURIComponent(end_date)}` : ""
+        const res = await apiRequest(`/api/hotprospector/members/dashboard${qs}`)
         if (!res.ok) {
           if (!cancelled) setMembers([])
           return
@@ -352,14 +362,23 @@ export default function CallCenterPage() {
         const data = await res.json()
         if (cancelled) return
         setMembers(
-          (data.data || []).map((m) => ({
-            id: m.memberId,
-            name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || "—",
-            email: m.email || "—",
-            phone: m.mobile || m.direct_number || m.inbound_phone || "—",
-            extension: m.phone_extension || "—",
-            status: m.member_status || "Active",
-          })),
+          (data.data || []).map((m) => {
+            const db = m.dashboard || {}
+            return {
+              id: m.memberId,
+              name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || m.email || "—",
+              email: m.email || "—",
+              phone: m.mobile || m.direct_number || m.inbound_phone || "—",
+              status: m.member_status || "Active",
+              outbound: Number(db.outboundCall) || 0,
+              inbound: Number(db.inboundCall) || 0,
+              answered: Number(db.answered_calls) || 0,
+              answer_rate: db.answer_rate || "—",
+              convos: Number(db.convos) || 0,
+              appts: Number(db.Appts) || 0,
+              talk_min: Number(db.talkMin) || 0,
+            }
+          }),
         )
       } catch {
         if (!cancelled) setMembers([])
@@ -369,7 +388,7 @@ export default function CallCenterPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [datePreset])
 
   const mapLead = (lead) => {
     const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
