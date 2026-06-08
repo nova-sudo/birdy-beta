@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,6 +27,7 @@ import {
   Mail,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   X,
 } from "lucide-react"
 
@@ -236,8 +237,11 @@ export default function CallCenterPage() {
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsPage, setLeadsPage] = useState(1)
   const [leadsTotal, setLeadsTotal] = useState(0)
-  const [drillLocationId, setDrillLocationId] = useState(null)
-  const [drillClientName, setDrillClientName] = useState(null)
+  // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
+  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
+  const [gridOpen, setGridOpen] = useState(false)
+  const [groupSearch, setGroupSearch] = useState("")
+  const gridRef = useRef(null)
 
   // Members tab (account-wide HotProspector team).
   const [members, setMembers] = useState([])
@@ -245,30 +249,43 @@ export default function CallCenterPage() {
   // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
   const overviewRows = useMemo(
     () =>
-      (clientGroups || [])
-        .filter((g) => (g.call_log_provider || "ghl").toLowerCase() === "hotprospector")
-        .map((g) => {
-          const cs = g.hotprospector?.call_stats || {}
-          const m = g.hotprospector?.metrics || {}
-          return {
-            id: g.id,
-            name: g.name || "Unnamed Client",
-            ghl_location_id: g.ghl_location_id,
-            leads: cs.total_leads ?? m.total_leads ?? 0,
-            total_calls: cs.total_calls ?? 0,
-            inbound: cs.inbound_count ?? 0,
-            outbound: cs.outbound_count ?? 0,
-            transfers: cs.transfers ?? 0,
-            original: g,
-          }
-        }),
+      (clientGroups || []).map((g) => {
+        const cs = g.hotprospector?.call_stats || {}
+        const m = g.hotprospector?.metrics || {}
+        return {
+          id: g.id,
+          name: g.name || "Unnamed Client",
+          ghl_location_id: g.ghl_location_id,
+          leads: cs.total_leads ?? m.total_leads ?? 0,
+          total_calls: cs.total_calls ?? 0,
+          inbound: cs.inbound_count ?? 0,
+          outbound: cs.outbound_count ?? 0,
+          transfers: cs.transfers ?? 0,
+          original: g,
+        }
+      }),
     [clientGroups],
   )
+
+  // Apply the top-right client-filter selection to the Overview.
+  const filteredOverview = useMemo(
+    () =>
+      selectedClientGroup === "all"
+        ? overviewRows
+        : overviewRows.filter((r) => r.id === selectedClientGroup),
+    [overviewRows, selectedClientGroup],
+  )
+
+  // The selected client's GHL location id (drives the Leads fetch); null for "all".
+  const selectedLocationId = useMemo(() => {
+    if (selectedClientGroup === "all") return null
+    return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.ghl_location_id || null
+  }, [clientGroups, selectedClientGroup])
 
   // ── Stat cards: windowed totals across clients ──
   const totals = useMemo(
     () =>
-      overviewRows.reduce(
+      filteredOverview.reduce(
         (acc, r) => ({
           leads: acc.leads + (r.leads || 0),
           calls: acc.calls + (r.total_calls || 0),
@@ -277,7 +294,7 @@ export default function CallCenterPage() {
         }),
         { leads: 0, calls: 0, inbound: 0, outbound: 0 },
       ),
-    [overviewRows],
+    [filteredOverview],
   )
 
   // ── Fetch leads (Leads tab) whenever the window / drill / page changes ──
@@ -292,7 +309,7 @@ export default function CallCenterPage() {
           skip: String((leadsPage - 1) * LEADS_PER_PAGE),
           limit: String(LEADS_PER_PAGE),
         })
-        if (drillLocationId) qs.set("location_id", drillLocationId)
+        if (selectedLocationId) qs.set("location_id", selectedLocationId)
         if (start_date) qs.set("start_date", start_date)
         if (end_date) qs.set("end_date", end_date)
         const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
@@ -314,7 +331,7 @@ export default function CallCenterPage() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, datePreset, drillLocationId, leadsPage])
+  }, [activeTab, datePreset, selectedLocationId, leadsPage])
 
   // ── Fetch members once ──
   useEffect(() => {
@@ -370,19 +387,45 @@ export default function CallCenterPage() {
     setLeadsPage(1)
   }
 
-  // ── Drill from an Overview client row into the Leads tab ──
-  const handleDrillIn = (group) => {
-    if (!group?.ghl_location_id) return
-    setDrillLocationId(group.ghl_location_id)
-    setDrillClientName(group.name)
+  // ── Top-right client picker (mirrors the Leads hub group picker) ──
+  const clientGridItems = useMemo(
+    () => [
+      { id: "all", name: "All Clients" },
+      ...(clientGroups || []).map((g) => ({ id: g.id, name: g.name || "Unnamed Client" })),
+    ],
+    [clientGroups],
+  )
+  const filteredClientGrid = useMemo(
+    () => clientGridItems.filter((it) => it.name.toLowerCase().includes(groupSearch.toLowerCase())),
+    [clientGridItems, groupSearch],
+  )
+  const selectedClientLabel = useMemo(() => {
+    if (selectedClientGroup === "all") return "All Clients"
+    return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.name || "All Clients"
+  }, [selectedClientGroup, clientGroups])
+  const pickClient = (id) => {
+    setSelectedClientGroup(id)
+    setGridOpen(false)
+    setGroupSearch("")
     setLeadsPage(1)
-    setActiveTab("leads")
   }
 
-  const clearDrill = () => {
-    setDrillLocationId(null)
-    setDrillClientName(null)
+  // Close the picker on outside click.
+  useEffect(() => {
+    if (!gridOpen) return
+    const onDocClick = (e) => {
+      if (gridRef.current && !gridRef.current.contains(e.target)) setGridOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [gridOpen])
+
+  // ── Drill from an Overview client row into the Leads tab ──
+  const handleDrillIn = (group) => {
+    if (!group?.id) return
+    setSelectedClientGroup(group.id)
     setLeadsPage(1)
+    setActiveTab("leads")
   }
 
   // ── Column-visibility dropdown wiring (operates on the active tab's columns) ──
@@ -434,6 +477,54 @@ export default function CallCenterPage() {
 
           <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
             <DateRangeSelect value={datePreset} onChange={handlePresetChange} />
+
+            {/* Client picker — filters the Overview and scopes the Leads tab */}
+            <div className="relative" ref={gridRef}>
+              <button
+                onClick={() => setGridOpen((p) => !p)}
+                className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[130px] max-w-[200px] hover:bg-gray-50 transition-colors"
+              >
+                <span className="truncate flex-1 text-left text-gray-800">{selectedClientLabel}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${gridOpen ? "rotate-180" : ""}`} />
+              </button>
+              {gridOpen && (
+                <div className="absolute z-50 mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-max">
+                  <div className="mb-2">
+                    <input
+                      type="text"
+                      placeholder="Search clients..."
+                      value={groupSearch}
+                      onChange={(e) => setGroupSearch(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  {filteredClientGrid.length > 0 ? (
+                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(4, minmax(110px, 1fr))" }}>
+                      {filteredClientGrid.map((item) => {
+                        const isSel = item.id === selectedClientGroup
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => pickClient(item.id)}
+                            title={item.name}
+                            className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors whitespace-nowrap ${
+                              isSel
+                                ? "bg-purple-600 text-white border-purple-600 font-semibold"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                            }`}
+                          >
+                            {item.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-3 px-6">No clients found</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             <Input
               placeholder="Search..."
               value={searchQuery}
@@ -487,7 +578,7 @@ export default function CallCenterPage() {
           <TabsContent value="overview" className="mt-4">
             <StyledTable
               columns={OVERVIEW_COLUMNS}
-              data={overviewRows}
+              data={filteredOverview}
               columnVisibility={colVis.overview}
               searchQuery={searchQuery}
               isLoading={groupsLoading}
@@ -497,11 +588,11 @@ export default function CallCenterPage() {
 
           {/* Leads — one row per lead, windowed call logs */}
           <TabsContent value="leads" className="mt-4">
-            {drillClientName && (
+            {selectedClientGroup !== "all" && (
               <div className="mb-3 flex items-center gap-2">
                 <Badge variant="outline" className="gap-2 bg-purple-50 text-purple-700 border-purple-200">
-                  Client: <span className="font-semibold">{drillClientName}</span>
-                  <button onClick={clearDrill} className="ml-1 hover:text-purple-900" aria-label="Clear client filter">
+                  Client: <span className="font-semibold">{selectedClientLabel}</span>
+                  <button onClick={() => pickClient("all")} className="ml-1 hover:text-purple-900" aria-label="Show all clients">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </Badge>
