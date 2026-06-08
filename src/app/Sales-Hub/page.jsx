@@ -477,7 +477,7 @@ export default function CallCenterPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
+          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
             <DateRangeSelect value={datePreset} onChange={handlePresetChange} />
 
             {/* Client picker — filters the Overview and scopes the Leads tab */}
@@ -501,7 +501,7 @@ export default function CallCenterPage() {
                     />
                   </div>
                   {filteredClientGrid.length > 0 ? (
-                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(4, minmax(110px, 1fr))" }}>
+                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(5, minmax(100px, 1fr))" }}>
                       {filteredClientGrid.map((item) => {
                         const isSel = item.id === selectedClientGroup
                         return (
@@ -527,27 +527,6 @@ export default function CallCenterPage() {
               )}
             </div>
 
-            <Input
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-white h-10"
-            />
-            <ColumnVisibilityDropdown
-              isOpen={colMenuOpen}
-              setIsOpen={setColMenuOpen}
-              categories={[{ id: "all", label: "All" }]}
-              selectedCategory="all"
-              setSelectedCategory={() => {}}
-              categoryCounts={{ all: activeColumns.length }}
-              filteredColumns={activeColumns}
-              columnVisibility={activeVis}
-              toggleColumnVisibility={toggleCol}
-              getIcon={(col) => (col.icons ? col.icons.src || col.icons : null)}
-              selectAll={selectAllCols}
-              clearAll={clearCols}
-              save={() => setColMenuOpen(false)}
-            />
           </div>
         </div>
 
@@ -561,20 +540,46 @@ export default function CallCenterPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="overview">
-              <Users className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="leads">
-              <Phone className="h-4 w-4 mr-2" />
-              Leads
-            </TabsTrigger>
-            <TabsTrigger value="members">
-              <User className="h-4 w-4 mr-2" />
-              Members
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <TabsList className="flex-1 justify-start overflow-x-auto">
+              <TabsTrigger value="overview">
+                <Users className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="leads">
+                <Phone className="h-4 w-4 mr-2" />
+                Leads
+              </TabsTrigger>
+              <TabsTrigger value="members">
+                <User className="h-4 w-4 mr-2" />
+                Members
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white h-10 w-fit md:w-48 text-sm"
+              />
+              <ColumnVisibilityDropdown
+                isOpen={colMenuOpen}
+                setIsOpen={setColMenuOpen}
+                categories={[{ id: "all", label: "All" }]}
+                selectedCategory="all"
+                setSelectedCategory={() => {}}
+                categoryCounts={{ all: activeColumns.length }}
+                filteredColumns={activeColumns}
+                columnVisibility={activeVis}
+                toggleColumnVisibility={toggleCol}
+                getIcon={(col) => (col.icons ? col.icons.src || col.icons : null)}
+                selectAll={selectAllCols}
+                clearAll={clearCols}
+                save={() => setColMenuOpen(false)}
+              />
+            </div>
+          </div>
 
           {/* Overview — one row per client, windowed KPIs (click to drill into Leads) */}
           <TabsContent value="overview" className="mt-4">
