@@ -99,11 +99,9 @@ export default function ClientsPage() {
   const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   // ── Step 4: call log provider ────────────────────────────────────────────
+  // Credentials are account-wide and live in Settings → Integrations; the wizard
+  // only records which provider feeds this client's call logs.
   const [callLogProvider, setCallLogProvider] = useState(null) // null | "ghl" | "hotprospector"
-  const [hpApiUid, setHpApiUid] = useState("")
-  const [hpApiKey, setHpApiKey] = useState("")
-  const [hpTestStatus, setHpTestStatus] = useState("idle") // "idle" | "testing" | "success" | "error"
-  const [hpTestError, setHpTestError] = useState("")
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [togglingRows, setTogglingRows] = useState(new Set())
 
@@ -400,29 +398,6 @@ export default function ClientsPage() {
     }
   }
 
-  const testHotProspectorConnection = async () => {
-    if (!hpApiUid || !hpApiKey) return
-    setHpTestStatus("testing")
-    setHpTestError("")
-    try {
-      const res = await apiRequest("/api/hotprospector/connect", {
-        method: "POST",
-        body: JSON.stringify({ api_uid: hpApiUid, api_key: hpApiKey }),
-      })
-      if (res.ok) {
-        setHpTestStatus("success")
-        toast.success("Hot Prospector connected")
-      } else {
-        const data = await res.json().catch(() => ({}))
-        setHpTestStatus("error")
-        setHpTestError(data.detail || "Invalid credentials")
-      }
-    } catch (err) {
-      setHpTestStatus("error")
-      setHpTestError(err?.message || "Connection failed")
-    }
-  }
-
   const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
       toast.error("Please enter a client group name")
@@ -476,10 +451,6 @@ export default function ClientsPage() {
     setMetaSearchQuery("")
     setHotProspectorSearchQuery("")
     setCallLogProvider(null)
-    setHpApiUid("")
-    setHpApiKey("")
-    setHpTestStatus("idle")
-    setHpTestError("")
 
     toast.info(`Creating "${creatingGroupName}"...`)
 
@@ -980,7 +951,7 @@ export default function ClientsPage() {
                         className="p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
                       >
                         <div className="font-semibold text-foreground mb-1">Hot Prospector</div>
-                        <div className="text-xs text-muted-foreground">Coming soon &mdash; credentials saved now.</div>
+                        <div className="text-xs text-muted-foreground">Calls sync from your account&apos;s Hot Prospector connection.</div>
                       </button>
                     </div>
                   </>
@@ -1011,65 +982,21 @@ export default function ClientsPage() {
                 {callLogProvider === "hotprospector" && (
                   <>
                     <div className="text-center space-y-2">
-                      <h2 className="text-2xl font-bold text-foreground">Connect Hot Prospector</h2>
-                      <p className="text-muted-foreground">Enter your Hot Prospector API credentials.</p>
+                      <h2 className="text-2xl font-bold text-foreground">Using Hot Prospector</h2>
+                      <p className="text-muted-foreground">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
                     </div>
-                    <div className="space-y-4 text-left">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none" htmlFor="hp-api-uid">API UID</label>
-                        <Input
-                          id="hp-api-uid"
-                          type="text"
-                          placeholder="Enter your API UID"
-                          value={hpApiUid}
-                          onChange={(e) => { setHpApiUid(e.target.value); setHpTestStatus("idle") }}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium leading-none" htmlFor="hp-api-key">API Key</label>
-                        <Input
-                          id="hp-api-key"
-                          type="password"
-                          placeholder="Enter your API Key"
-                          value={hpApiKey}
-                          onChange={(e) => { setHpApiKey(e.target.value); setHpTestStatus("idle") }}
-                        />
-                      </div>
-                      {hpTestStatus === "success" && (
-                        <div className="flex items-center gap-2 text-sm text-success">
-                          <Check className="w-4 h-4" />
-                          Connected successfully.
-                        </div>
-                      )}
-                      {hpTestStatus === "error" && (
-                        <div className="text-sm text-destructive">
-                          {hpTestError || "Could not verify credentials."}
-                        </div>
-                      )}
-                      <div className="flex justify-between items-center pt-2">
-                        <button
-                          type="button"
-                          onClick={() => setCallLogProvider(null)}
-                          className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
-                        >
-                          Change provider
-                        </button>
-                        <Button
-                          type="button"
-                          className="btn-gradient gap-2"
-                          onClick={testHotProspectorConnection}
-                          disabled={hpTestStatus === "testing" || !hpApiUid || !hpApiKey}
-                        >
-                          {hpTestStatus === "testing" ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                              Testing...
-                            </>
-                          ) : (
-                            "Test Connection"
-                          )}
-                        </Button>
-                      </div>
+                    <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
+                      <Check className="w-5 h-5 text-success shrink-0" />
+                      <span className="text-sm text-foreground">Account-wide credentials power every client — nothing to enter here.</span>
+                    </div>
+                    <div className="text-center">
+                      <button
+                        type="button"
+                        onClick={() => setCallLogProvider(null)}
+                        className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                      >
+                        Change provider
+                      </button>
                     </div>
                   </>
                 )}
@@ -1096,7 +1023,6 @@ export default function ClientsPage() {
                     addingClientGroup
                     || (wizardStep === 1 && !clientGroupName)
                     || (wizardStep === 4 && !callLogProvider)
-                    || (wizardStep === 4 && callLogProvider === "hotprospector" && hpTestStatus !== "success")
                   }
                   className="btn-gradient gap-2 h-10 px-4 rounded-md min-w-[160px] justify-center"
                 >

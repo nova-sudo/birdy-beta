@@ -1,52 +1,41 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { mockFetchLeads, mockFetchMembers } from "./mockData"
-import { Loading } from "@/components/ui/loader"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import StyledTable from "@/components/ui/table-container"
+import { DateRangeSelect } from "@/components/DateRangeSelect"
+import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { apiRequest } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { presetToDateRange } from "@/lib/date-utils"
+import { hpIcon as HP } from "@/lib/icons"
 import {
   Users,
   Phone,
-  Eye,
-  Settings2,
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight,
-  Building2,
+  PhoneIncoming,
+  PhoneOutgoing,
   Clock,
   Play,
   Download,
   User,
   Mail,
-  Construction
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  X,
 } from "lucide-react"
-import { toast } from "sonner"
-import { Progress } from "@/components/ui/progress"
-import { ghlLogo as ghl, hpIcon as HP } from "@/lib/icons"
 
-// Call Logs Dialog Component
+// ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
 function CallLogsDialog({ lead }) {
   const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
+    const mins = Math.floor((seconds || 0) / 60)
+    const secs = (seconds || 0) % 60
     return `${mins}m ${secs}s`
   }
 
@@ -58,8 +47,7 @@ function CallLogsDialog({ lead }) {
           {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white from-background via-background to-muted/10">
-        {/* Header Section */}
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
         <div className="pb-6 border-b">
           <DialogHeader className="space-y-3">
             <DialogTitle className="text-2xl font-bold text-foreground">{lead.name}</DialogTitle>
@@ -74,31 +62,17 @@ function CallLogsDialog({ lead }) {
                 <span>{lead.phone}</span>
               </div>
             </div>
-            <div className="pt-2 flex items-center gap-2">
-              <Badge
-                className={`${lead.call_logs_count > 0
-                  ? "bg-purple-50/80 text-purple-700 border-purple-200"
-                  : "bg-gray-100/80 text-gray-700 border-gray-200"
-                  } border text-xs font-medium`}
-                variant="outline"
-              >
-                {lead.call_logs_count > 0
-                  ? `${lead.call_logs_count} ${lead.call_logs_count === 1 ? "call" : "calls"}`
-                  : "No calls"}
-              </Badge>
-            </div>
           </DialogHeader>
         </div>
 
-        {/* Main Content */}
         {lead.call_logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
               <Phone className="h-8 w-8 text-muted-foreground/50" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Call Logs Yet</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Call Logs</h3>
             <p className="text-sm text-muted-foreground max-w-xs">
-              No recorded calls for this lead. Once calls are made, they will appear here.
+              No recorded calls for this lead in the selected period.
             </p>
           </div>
         ) : (
@@ -106,9 +80,8 @@ function CallLogsDialog({ lead }) {
             {lead.call_logs.map((callLog, index) => (
               <div
                 key={index}
-                className="group relative p-5 rounded-lg border border-border bg-card hover:border-purple-200 hover:shadow-md hover:bg-card/95 transition-all duration-200"
+                className="group relative p-5 rounded-lg border border-border bg-card hover:border-purple-200 hover:shadow-md transition-all duration-200"
               >
-                {/* Call Header */}
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3 flex-1">
                     <div className="w-10 h-10 rounded-full bg-purple-100/80 flex items-center justify-center">
@@ -143,7 +116,6 @@ function CallLogsDialog({ lead }) {
                   </div>
                 </div>
 
-                {/* Call Details Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-lg bg-muted/30">
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Duration</p>
@@ -155,47 +127,31 @@ function CallLogsDialog({ lead }) {
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Group</p>
-                    <p className="text-sm font-semibold text-foreground">{callLog.group}</p>
-                  </div>
-                  <div className="space-y-1 col-span-2 md:col-span-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</p>
-                    <p className="text-sm font-semibold text-foreground truncate">{callLog.location_name}</p>
+                    <p className="text-sm font-semibold text-foreground">{callLog.group || "—"}</p>
                   </div>
                 </div>
 
-                {/* Phone Numbers */}
                 <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-muted/40 border border-border/50">
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground mb-1">From</p>
-                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.from_number}</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.from_number || "—"}</p>
                   </div>
                   <div className="text-muted-foreground/30">→</div>
                   <div className="flex-1">
                     <p className="text-xs text-muted-foreground mb-1">To</p>
-                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.to_number}</p>
+                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.to_number || "—"}</p>
                   </div>
                 </div>
 
-                {/* Recording Controls */}
                 {callLog.recording_url && (
                   <div className="flex gap-2 pt-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
-                    >
+                    <Button variant="outline" size="sm" asChild className="flex-1 bg-transparent hover:bg-purple-50">
                       <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
                         <Play className="h-4 w-4 mr-2" />
-                        Play Recording
+                        Play
                       </a>
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                      className="flex-1 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors bg-transparent"
-                    >
+                    <Button variant="outline" size="sm" asChild className="flex-1 bg-transparent hover:bg-purple-50">
                       <a href={callLog.recording_url} download>
                         <Download className="h-4 w-4 mr-2" />
                         Download
@@ -212,734 +168,527 @@ function CallLogsDialog({ lead }) {
   )
 }
 
+// ── Column definitions per tab ───────────────────────────────────────────────
+const OVERVIEW_COLUMNS = [
+  { id: "name", label: "Client", sortable: true },
+  { id: "leads", label: "Leads Called", sortable: true, icons: HP },
+  { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
+  { id: "inbound", label: "Inbound", sortable: true, icons: HP },
+  { id: "outbound", label: "Outbound", sortable: true, icons: HP },
+  { id: "transfers", label: "Transfers", sortable: true, icons: HP },
+]
+
+const STATUS_CELL = (_v, row) => (
+  <Badge
+    variant="outline"
+    className={`border-0 rounded-full font-semibold ${row.status === "Inactive" ? "bg-[#FEE2E2] text-[#991B1B]" : "bg-[#DCFCE7] text-[#166534]"}`}
+  >
+    {row.status || "Active"}
+  </Badge>
+)
+
+const CALLS_CELL = (_v, row) =>
+  row.call_logs_count > 0 ? (
+    <CallLogsDialog lead={row} />
+  ) : (
+    <span className="text-sm text-muted-foreground">No calls</span>
+  )
+
+const DATE_CELL = (v) => (v ? new Date(v).toLocaleDateString() : "—")
+
+const LEAD_COLUMNS = [
+  { id: "name", label: "Name", sortable: true },
+  { id: "client", label: "Client", sortable: true, icons: HP },
+  { id: "email", label: "Email", icons: HP },
+  { id: "phone", label: "Phone", icons: HP },
+  { id: "company", label: "Company", icons: HP },
+  { id: "location", label: "Location", icons: HP },
+  { id: "first_call", label: "First Call", sortable: true, icons: HP, cell: DATE_CELL },
+  { id: "last_call", label: "Last Call", sortable: true, icons: HP, cell: DATE_CELL },
+  { id: "calls", label: "Call Logs", icons: HP, cell: CALLS_CELL },
+  { id: "status", label: "Status", cell: STATUS_CELL },
+]
+
+const MEMBER_COLUMNS = [
+  { id: "name", label: "Name", sortable: true },
+  { id: "email", label: "Email", icons: HP },
+  { id: "phone", label: "Phone", icons: HP },
+  { id: "status", label: "Status", icons: HP, cell: STATUS_CELL },
+  { id: "outbound", label: "Outbound", sortable: true, icons: HP },
+  { id: "inbound", label: "Inbound", sortable: true, icons: HP },
+  { id: "answered", label: "Answered", sortable: true, icons: HP },
+  { id: "answer_rate", label: "Answer Rate", icons: HP },
+  { id: "convos", label: "Convos", sortable: true, icons: HP },
+  { id: "appts", label: "Appts", sortable: true, icons: HP },
+  { id: "talk_min", label: "Talk (min)", sortable: true, icons: HP },
+]
+
+const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS }
+const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
+
+const LEADS_PER_PAGE = 15
+
 export default function CallCenterPage() {
-  const router = useRouter()
-  const [activeTab, setActiveTab] = useState("leads")
-  const [leads, setLeads] = useState([])
-  const [members, setMembers] = useState([])
+  const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET)
+
+  const [activeTab, setActiveTab] = useState("overview")
   const [searchQuery, setSearchQuery] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [progress, setProgress] = useState(13)
-  const [error, setError] = useState(null)
-  const [visibleColumns, setVisibleColumns] = useState({
-    client: true,
-    ghlLocation: true,
-    name: true,
-    email: true,
-    phone: true,
-    company: true,
-    location: true,
-    calls: true,
-    status: true,
+
+  // Column visibility (one map per tab) + the shared dropdown's open state.
+  const [colVis, setColVis] = useState({
+    overview: allVisible(OVERVIEW_COLUMNS),
+    leads: allVisible(LEAD_COLUMNS),
+    members: allVisible(MEMBER_COLUMNS),
   })
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [colMenuOpen, setColMenuOpen] = useState(false)
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1)
-  const [totalLeads, setTotalLeads] = useState(0)
-  const [leadsPerPage] = useState(100)
-  const [locationStats, setLocationStats] = useState({})
+  // Leads tab (server-paginated, windowed by the date preset).
+  const [leads, setLeads] = useState([])
+  const [leadsLoading, setLeadsLoading] = useState(false)
+  const [leadsPage, setLeadsPage] = useState(1)
+  const [leadsTotal, setLeadsTotal] = useState(0)
+  // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
+  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
+  const [gridOpen, setGridOpen] = useState(false)
+  const [groupSearch, setGroupSearch] = useState("")
+  const gridRef = useRef(null)
 
-  // ── Per-client routing ───────────────────────────────────────────────────
-  // Sales-Hub data is now scoped to one client at a time. The selected
-  // client's call_log_provider field decides whether we read from the new
-  // call_logs collection (GHL) or short-circuit to an empty/coming-soon
-  // state (HotProspector — endpoints not ready yet).
-  const { clientGroups, loading: clientGroupsLoading } = useClientGroups(DEFAULT_DATE_PRESET)
-  const [selectedGroupId, setSelectedGroupId] = useState(null)
-  const [providerComingSoon, setProviderComingSoon] = useState(false)
+  // Members tab (account-wide HotProspector team).
+  const [members, setMembers] = useState([])
 
-  // Default-select the first client once they load (or restore from session).
-  useEffect(() => {
-    if (clientGroupsLoading) return
-    if (!clientGroups || clientGroups.length === 0) return
-    if (selectedGroupId && clientGroups.some((g) => g.id === selectedGroupId)) return
-    const remembered = (typeof window !== "undefined") ? sessionStorage.getItem("salesHub.selectedGroupId") : null
-    const fallback = clientGroups.find((g) => g.id === remembered)?.id || clientGroups[0].id
-    setSelectedGroupId(fallback)
-  }, [clientGroups, clientGroupsLoading, selectedGroupId])
-
-  // Persist selection so the page survives a refresh.
-  useEffect(() => {
-    if (selectedGroupId && typeof window !== "undefined") {
-      sessionStorage.setItem("salesHub.selectedGroupId", selectedGroupId)
-    }
-  }, [selectedGroupId])
-
-  const selectedGroup = (clientGroups || []).find((g) => g.id === selectedGroupId) || null
-  const selectedProvider = (selectedGroup?.call_log_provider || "ghl").toLowerCase()
-
-  // Re-fetch whenever the selected client changes.
-  useEffect(() => {
-    if (!selectedGroupId) return
-    fetchAllLeads(1)
-    // members data is still HP-mock for now — leave alone
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedGroupId])
-
-  // Fetch members on mount (mock data — independent of provider for now).
-  useEffect(() => {
-    fetchMembers()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  useEffect(() => {
-    const timer = setTimeout(() => setProgress(66), 500)
-    return () => clearTimeout(timer)
-  }, [])
-
-  // Save active tab to sessionStorage
-  useEffect(() => {
-    sessionStorage.setItem("activeTab", activeTab)
-  }, [activeTab])
-
-
-
-
-  // Provider-aware fetch.
-  //   - hotprospector → empty + coming-soon flag (endpoints not ready)
-  //   - ghl          → GET /api/call_logs?group_id=… → flat call rows that we
-  //                    group by contact so the existing leads/CallLogsDialog
-  //                    UI keeps working unchanged.
-  const fetchAllLeads = async (page = 1, _forceRefresh = false) => {
-    if (!selectedGroupId) {
-      setLeads([])
-      setTotalLeads(0)
-      setLocationStats({})
-      return
-    }
-
-    const group = (clientGroups || []).find((g) => g.id === selectedGroupId)
-    if (!group) return
-
-    const provider = (group.call_log_provider || "ghl").toLowerCase()
-
-    // HotProspector short-circuit — show coming-soon, no data fetch.
-    if (provider === "hotprospector") {
-      setProviderComingSoon(true)
-      setLeads([])
-      setTotalLeads(0)
-      setLocationStats({})
-      setCurrentPage(1)
-      setIsLoading(false)
-      setIsRefreshing(false)
-      return
-    }
-
-    setProviderComingSoon(false)
-
-    try {
-      setIsLoading(true)
-      setError(null)
-
-      const skip = (page - 1) * leadsPerPage
-      const res = await apiRequest(
-        `/api/call_logs?group_id=${encodeURIComponent(selectedGroupId)}&skip=${skip}&limit=${leadsPerPage}`
-      )
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
-        throw new Error(body.detail || `HTTP ${res.status}`)
-      }
-      const data = await res.json()
-
-      // Group flat GHL call rows by contact (id, then phone fallback) so each
-      // row in the existing table represents one contact with all their calls
-      // nested — matching the HP-shaped UI the page was built for.
-      const byContact = new Map()
-      for (const log of data.data || []) {
-        const key = log.contact_id || log.contact_phone || `unknown_${log.id}`
-        if (!byContact.has(key)) {
-          byContact.set(key, {
-            id: key,
-            client: group.name || "Unknown Client",
-            ghlLocation: group.name || "Unknown Location",
-            ghlLocationId: log.location_id,
-            name: log.contact_id || log.contact_phone || "—",
-            email: log.contact_email || "N/A",
-            phone: log.contact_phone || "N/A",
-            company: "N/A",
-            location: "N/A",
-            tags: [],
-            status: "Active",
-            call_logs_count: 0,
-            call_logs: [],
-          })
+  // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
+  const overviewRows = useMemo(
+    () =>
+      (clientGroups || []).map((g) => {
+        const cs = g.hotprospector?.call_stats || {}
+        return {
+          id: g.id,
+          name: g.name || "Unnamed Client",
+          ghl_location_id: g.ghl_location_id,
+          // Windowed "leads" = leads contacted in the period. HP leads have no
+          // creation date, so call activity is the only windowable lead metric;
+          // total_leads (full pool) is the same across presets by design.
+          leads: cs.leads_with_calls ?? 0,
+          total_calls: cs.total_calls ?? 0,
+          inbound: cs.inbound_count ?? 0,
+          outbound: cs.outbound_count ?? 0,
+          transfers: cs.transfers ?? 0,
+          original: g,
         }
-        const lead = byContact.get(key)
-        const isOutbound = (log.direction || "").toLowerCase() === "outbound"
-        lead.call_logs.push({
-          call_time: log.started_at,
-          call_status: log.direction,
-          duration: log.duration_seconds || 0,
-          speed_to_lead: 0,
-          from_number: isOutbound ? "" : (log.contact_phone || ""),
-          to_number: isOutbound ? (log.contact_phone || "") : "",
-          recording_url: log.recording_url,
-          caller_name: log.contact_id || log.contact_phone || "Unknown",
-          group: group.name || "",
-          location_name: group.name || "",
-          transfer: false,
+      }),
+    [clientGroups],
+  )
+
+  // Apply the top-right client-filter selection to the Overview.
+  const filteredOverview = useMemo(
+    () =>
+      selectedClientGroup === "all"
+        ? overviewRows
+        : overviewRows.filter((r) => r.id === selectedClientGroup),
+    [overviewRows, selectedClientGroup],
+  )
+
+  // The selected client's GHL location id (drives the Leads fetch); null for "all".
+  const selectedLocationId = useMemo(() => {
+    if (selectedClientGroup === "all") return null
+    return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.ghl_location_id || null
+  }, [clientGroups, selectedClientGroup])
+
+  // ── Stat cards: windowed totals across clients ──
+  const totals = useMemo(
+    () =>
+      filteredOverview.reduce(
+        (acc, r) => ({
+          leads: acc.leads + (r.leads || 0),
+          calls: acc.calls + (r.total_calls || 0),
+          inbound: acc.inbound + (r.inbound || 0),
+          outbound: acc.outbound + (r.outbound || 0),
+        }),
+        { leads: 0, calls: 0, inbound: 0, outbound: 0 },
+      ),
+    [filteredOverview],
+  )
+
+  // ── Fetch leads (Leads tab) whenever the window / drill / page changes ──
+  useEffect(() => {
+    if (activeTab !== "leads") return
+    let cancelled = false
+    const run = async () => {
+      setLeadsLoading(true)
+      try {
+        const { start_date, end_date } = presetToDateRange(datePreset)
+        const qs = new URLSearchParams({
+          skip: String((leadsPage - 1) * LEADS_PER_PAGE),
+          limit: String(LEADS_PER_PAGE),
         })
-        lead.call_logs_count += 1
+        if (selectedLocationId) qs.set("location_id", selectedLocationId)
+        if (start_date) qs.set("start_date", start_date)
+        if (end_date) qs.set("end_date", end_date)
+        const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (cancelled) return
+        setLeads((data.data || []).map(mapLead))
+        setLeadsTotal(data.meta?.total ?? 0)
+      } catch (err) {
+        if (cancelled) return
+        console.error("Error loading call-center leads:", err)
+        setLeads([])
+        setLeadsTotal(0)
+      } finally {
+        if (!cancelled) setLeadsLoading(false)
       }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, datePreset, selectedLocationId, leadsPage])
 
-      const mappedLeads = Array.from(byContact.values())
+  // ── Fetch members (team + per-day dashboard metrics) on preset change ──
+  //    getMemberDashboardData is a per-day snapshot, so we pass the selected
+  //    window's end date (today when "maximum"/no end date).
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      try {
+        const { start_date, end_date } = presetToDateRange(datePreset)
+        const params = new URLSearchParams()
+        if (start_date) params.set("start_date", start_date)
+        if (end_date) params.set("end_date", end_date)
+        const q = params.toString()
+        const res = await apiRequest(`/api/hotprospector/members/dashboard${q ? `?${q}` : ""}`)
+        if (!res.ok) {
+          if (!cancelled) setMembers([])
+          return
+        }
+        const data = await res.json()
+        if (cancelled) return
+        setMembers(
+          (data.data || []).map((m) => {
+            const db = m.dashboard || {}
+            return {
+              id: m.memberId,
+              name: `${m.first_name || ""} ${m.last_name || ""}`.trim() || m.email || "—",
+              email: m.email || "—",
+              phone: m.mobile || m.direct_number || m.inbound_phone || "—",
+              status: m.member_status || "Active",
+              outbound: Number(db.outboundCall) || 0,
+              inbound: Number(db.inboundCall) || 0,
+              answered: Number(db.answered_calls) || 0,
+              answer_rate: db.answer_rate || "—",
+              convos: Number(db.convos) || 0,
+              appts: Number(db.Appts) || 0,
+              talk_min: Number(db.talkMin) || 0,
+            }
+          }),
+        )
+      } catch {
+        if (!cancelled) setMembers([])
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [datePreset])
 
-      setLeads(mappedLeads)
-      setTotalLeads(data.meta?.total ?? mappedLeads.length)
-      setCurrentPage(page)
-      setLocationStats({
-        [group.ghl_location_id || group.id]: {
-          name: group.name,
-          count: mappedLeads.length,
-        },
-      })
-    } catch (err) {
-      console.error("Error loading call logs:", err)
-      setError(err?.message || "Failed to load call logs")
-      setLeads([])
-      setTotalLeads(0)
-    } finally {
-      setIsLoading(false)
-      setIsRefreshing(false)
+  const mapLead = (lead) => {
+    const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
+    const logs = lead.call_logs || []
+    // Only dates a HP lead carries are its call times; expose first/last (windowed).
+    const isos = logs.map((l) => l.call_time_iso).filter(Boolean).sort()
+    return {
+      id: lead.id,
+      name: fullName || lead.phone || lead.email || "—",
+      client: lead.client_name || "—",
+      email: lead.email || "—",
+      phone: lead.phone || lead.mobile || "—",
+      company: lead.company || "—",
+      location: [lead.city, lead.state].filter(Boolean).join(", ") || "—",
+      first_call: isos[0] || null,
+      last_call: isos[isos.length - 1] || null,
+      call_logs: logs,
+      call_logs_count: lead.call_logs_count ?? logs.length,
+      status: "Active",
     }
   }
 
-  const fetchMembers = async (_forceRefresh = false) => {
-    try {
-      const data = await mockFetchMembers()
-      const mappedMembers = (data.data || []).map((member) => ({
-        id: member.memberId,
-        name: `${member.first_name} ${member.last_name}`.trim(),
-        email: member.email,
-        phone: member.mobile || member.inbound_phone || "N/A",
-        extension: member.phone_extension,
-        status: member.member_status,
-        title: member.title,
-        company: member.company,
-        country: member.country,
-      }))
-      setMembers(mappedMembers)
-    } catch (err) {
-      console.error("Error loading mock members:", err)
-    }
+  // ── Date preset change: reset leads paging ──
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset)
+    setLeadsPage(1)
   }
 
-  const handleRefresh = () => {
-    setIsRefreshing(true)
-
-    if (activeTab === "leads") {
-      // Force API refresh (bypasses server cache)
-      fetchAllLeads(1, true)
-    } else if (activeTab === "members") {
-      fetchMembers(true)
-    }
-  }
-
-
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) {
-      const newPage = currentPage - 1
-      fetchAllLeads(newPage)
-    }
-  }
-
-  const handleNextPage = () => {
-    if (currentPage * leadsPerPage < totalLeads) {
-      const newPage = currentPage + 1
-      fetchAllLeads(newPage)
-    }
-  }
-
-  const filteredLeads = leads.filter(
-    (lead) =>
-      lead.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.client?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.ghlLocation?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchQuery.toLowerCase()),
+  // ── Top-right client picker (mirrors the Leads hub group picker) ──
+  const clientGridItems = useMemo(
+    () => [
+      { id: "all", name: "All Clients" },
+      ...(clientGroups || []).map((g) => ({ id: g.id, name: g.name || "Unnamed Client" })),
+    ],
+    [clientGroups],
   )
-
-  const filteredMembers = members.filter(
-    (member) =>
-      member.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      member.email?.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredClientGrid = useMemo(
+    () => clientGridItems.filter((it) => it.name.toLowerCase().includes(groupSearch.toLowerCase())),
+    [clientGridItems, groupSearch],
   )
+  const selectedClientLabel = useMemo(() => {
+    if (selectedClientGroup === "all") return "All Clients"
+    return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.name || "All Clients"
+  }, [selectedClientGroup, clientGroups])
+  const pickClient = (id) => {
+    setSelectedClientGroup(id)
+    setGridOpen(false)
+    setGroupSearch("")
+    setLeadsPage(1)
+  }
 
-  const totalPages = Math.ceil(totalLeads / leadsPerPage)
-  const hasMoreLeads = currentPage * leadsPerPage < totalLeads
+  // Close the picker on outside click.
+  useEffect(() => {
+    if (!gridOpen) return
+    const onDocClick = (e) => {
+      if (gridRef.current && !gridRef.current.contains(e.target)) setGridOpen(false)
+    }
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [gridOpen])
 
-  // Calculate total clients
-  const totalClients = Object.keys(locationStats).length
+  // ── Drill from an Overview client row into the Leads tab ──
+  const handleDrillIn = (group) => {
+    if (!group?.id) return
+    setSelectedClientGroup(group.id)
+    setLeadsPage(1)
+    setActiveTab("leads")
+  }
 
-  // Calculate total calls across all leads
-  const totalCalls = leads.reduce((sum, lead) => sum + lead.call_logs_count, 0)
+  // ── Column-visibility dropdown wiring (operates on the active tab's columns) ──
+  const activeColumns = TAB_COLUMNS[activeTab]
+  const activeVis = colVis[activeTab]
+  const toggleCol = (id) =>
+    setColVis((prev) => ({
+      ...prev,
+      [activeTab]: { ...prev[activeTab], [id]: !(prev[activeTab][id] ?? true) },
+    }))
+  const selectAllCols = () => setColVis((prev) => ({ ...prev, [activeTab]: allVisible(activeColumns) }))
+  const clearCols = () =>
+    setColVis((prev) => ({
+      ...prev,
+      // keep the first (name) column — StyledTable always shows it anyway
+      [activeTab]: Object.fromEntries(activeColumns.map((c, i) => [c.id, i === 0])),
+    }))
+
+  const leadsTotalPages = Math.max(1, Math.ceil(leadsTotal / LEADS_PER_PAGE))
+
+  const StatCard = ({ label, value, desc, Icon }) => (
+    <Card className="border rounded-lg shadow-sm">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="text-sm text-[#71658B] font-medium">{label}</CardTitle>
+        <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+          <Icon className="h-5 w-5 text-purple-500" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{groupsLoading ? "—" : value.toLocaleString()}</div>
+        <p className="text-xs text-[#71658B] text-muted-foreground mt-1">{desc}</p>
+      </CardContent>
+    </Card>
+  )
 
   return (
-    <div className="w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
-      <div>
-        <div>
-          <div className="">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between ">
+    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+      <div className="flex flex-col gap-6">
+        {/* Header + toolbar */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+              Sales Hub
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
+              Call-center performance across your Hot Prospector clients
+            </p>
+          </div>
 
-              <div className="flex  gap-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">Sales Hub</h1>
-                  <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
-                    {selectedGroup
-                      ? <>Call logs for <span className="font-medium text-foreground">{selectedGroup.name}</span> &middot; provider: <span className="font-medium text-foreground">{selectedProvider === "hotprospector" ? "Hot Prospector" : "GoHighLevel"}</span></>
-                      : "Pick a client to view their call logs"}
-                  </p>
-                </div>
-                {/* Per-client picker — decides which data source we read */}
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground hidden md:inline">Client:</span>
-                  <Select
-                    value={selectedGroupId || ""}
-                    onValueChange={(v) => setSelectedGroupId(v)}
-                    disabled={clientGroupsLoading || !clientGroups || clientGroups.length === 0}
-                  >
-                    <SelectTrigger className="bg-white h-10 min-w-[220px]">
-                      <SelectValue placeholder={clientGroupsLoading ? "Loading clients…" : "Pick a client"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(clientGroups || []).map((g) => {
-                        const p = (g.call_log_provider || "ghl").toLowerCase()
+          <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
+            <DateRangeSelect value={datePreset} onChange={handlePresetChange} />
+
+            {/* Client picker — filters the Overview and scopes the Leads tab */}
+            <div className="relative" ref={gridRef}>
+              <button
+                onClick={() => setGridOpen((p) => !p)}
+                className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[130px] max-w-[200px] hover:bg-gray-50 transition-colors"
+              >
+                <span className="truncate flex-1 text-left text-gray-800">{selectedClientLabel}</span>
+                <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${gridOpen ? "rotate-180" : ""}`} />
+              </button>
+              {gridOpen && (
+                <div className="absolute z-50 mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-max">
+                  <div className="mb-2">
+                    <input
+                      type="text"
+                      placeholder="Search clients..."
+                      value={groupSearch}
+                      onChange={(e) => setGroupSearch(e.target.value)}
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  {filteredClientGrid.length > 0 ? (
+                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(5, minmax(100px, 1fr))" }}>
+                      {filteredClientGrid.map((item) => {
+                        const isSel = item.id === selectedClientGroup
                         return (
-                          <SelectItem key={g.id} value={g.id}>
-                            <span className="flex items-center gap-2">
-                              <span>{g.name}</span>
-                              <span className="text-[10px] uppercase tracking-wider rounded px-1.5 py-0.5 border border-border text-muted-foreground">
-                                {p === "hotprospector" ? "HP" : "GHL"}
-                              </span>
-                            </span>
-                          </SelectItem>
+                          <button
+                            key={item.id}
+                            onClick={() => pickClient(item.id)}
+                            title={item.name}
+                            className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors whitespace-nowrap ${
+                              isSel
+                                ? "bg-purple-600 text-white border-purple-600 font-semibold"
+                                : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
+                            }`}
+                          >
+                            {item.name}
+                          </button>
                         )
                       })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-           py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1">
-
-                <Input
-                  placeholder="Search..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white h-10"
-                />
-                <div className="flex gap-1 bg-[#F3F1F9] py-1 px-1 flex-nowrap overflow-x-auto md:gap-2 lg:overflow-x-visible md:py-1  md:px-1 md:flex-nowrap">
-                  {activeTab === "leads" && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button className="bg-white h-10 font-semibold md:px-2 lg:px-3" variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
-                          <span className="inline md:hidden lg:inline">Columns</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white">
-                        {Object.keys(visibleColumns).map((column) => (
-                          <DropdownMenuCheckboxItem
-                            key={column}
-                            checked={visibleColumns[column]}
-                            onCheckedChange={(checked) => setVisibleColumns((prev) => ({ ...prev, [column]: checked }))}
-                          >
-                            {column === "ghlLocation"
-                              ? "GHL Location"
-                              : column === "calls"
-                                ? "Call Logs"
-                                : column.charAt(0).toUpperCase() + column.slice(1)}
-                          </DropdownMenuCheckboxItem>
-                        ))}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center py-3 px-6">No clients found</p>
                   )}
-
-
-                  {/* <Button
-                  variant="outline"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="bg-white font-semibold h-10 md:px-2 lg:px-3"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-2 md:mr-0 lg:mr-2 ${isRefreshing ? "animate-spin" : ""}`} />
-                  <span className="inline md:hidden lg:inline">Refresh</span>
-                </Button> */}
-                  <Button
-                    className="bg-white font-semibold h-10 md:px-2 lg:px-3"
-                    variant="outline"
-                    onClick={() => router.push("/settings?tab=integrations")}
-                  >
-                    <Settings2 className="h-4 w-4 mr-2 md:mr-0 lg:mr-2" />
-                    <span className="inline md:hidden lg:inline">Settings</span>
-                  </Button></div>
-
-
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="bg-card rounded-lg mt-6 mb-12 ">
-            {/* Hot Prospector coming-soon placeholder for HP-provider clients */}
-            {providerComingSoon && (
-              <div className="my-4 p-10 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/60 text-center">
-                <div className="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                  <Construction className="w-8 h-8 text-amber-700" />
                 </div>
-                <h2 className="text-2xl font-bold text-foreground mb-2">Hot Prospector &mdash; Coming Soon</h2>
-                <p className="text-muted-foreground max-w-md mx-auto">
-                  This client&apos;s call logs are configured to come from <span className="font-medium">Hot Prospector</span>.
-                  The HP integration is still in progress &mdash; call data will appear here once their endpoints are wired up.
-                </p>
-                {selectedGroup && (
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Selected client: <span className="font-medium text-foreground">{selectedGroup.name}</span>
-                  </p>
-                )}
-              </div>
-            )}
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <Card className="border rounded-lg shadow-sm ">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-[#71658B] font-medium">Total Clients</CardTitle>
-                  <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-muted-foreground text-purple-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalClients}</div>
-                  <p className="text-xs text-[#71658B] text-muted-foreground mt-1">GHL locations connected</p>
-                </CardContent>
-              </Card>
-              <Card className="border rounded-lg shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-[#71658B] font-medium">Total Leads</CardTitle>
-                  <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                    <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalLeads}</div>
-                  <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Across all clients</p>
-                </CardContent>
-              </Card>
-              <Card className="border rounded-lg shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-[#71658B] font-medium">Total Calls</CardTitle>
-                  <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                    <Phone className="h-5 w-5 text-muted-foreground text-purple-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{totalCalls}</div>
-                  <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Call logs recorded</p>
-                </CardContent>
-              </Card>
-              <Card className="border rounded-lg shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-[#71658B] font-medium">Team Members</CardTitle>
-                  <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                    <Users className="h-5 w-5 text-muted-foreground text-purple-500" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{members.length}</div>
-                  <p className="text-xs text-[#71658B] text-muted-foreground mt-1">Active call center agents</p>
-                </CardContent>
-              </Card>
+              )}
             </div>
 
-            {error && (
-              <div className="p-6">
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
+          </div>
+        </div>
+
+        {/* Stat cards (windowed) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
+          <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
+          <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
+          <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex flex-col md:flex-row md:items-center gap-3">
+            <TabsList className="flex-1 justify-start overflow-x-auto">
+              <TabsTrigger value="overview">
+                <Users className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="leads">
+                <Phone className="h-4 w-4 mr-2" />
+                Leads
+              </TabsTrigger>
+              <TabsTrigger value="members">
+                <User className="h-4 w-4 mr-2" />
+                Members
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+              <Input
+                placeholder="Search..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="bg-white h-10 w-fit md:w-48 text-sm"
+              />
+              <ColumnVisibilityDropdown
+                isOpen={colMenuOpen}
+                setIsOpen={setColMenuOpen}
+                categories={[{ id: "all", label: "All" }]}
+                selectedCategory="all"
+                setSelectedCategory={() => {}}
+                categoryCounts={{ all: activeColumns.length }}
+                filteredColumns={activeColumns}
+                columnVisibility={activeVis}
+                toggleColumnVisibility={toggleCol}
+                getIcon={(col) => (col.icons ? col.icons.src || col.icons : null)}
+                selectAll={selectAllCols}
+                clearAll={clearCols}
+                save={() => setColMenuOpen(false)}
+              />
+            </div>
+          </div>
+
+          {/* Overview — one row per client, windowed KPIs (click to drill into Leads) */}
+          <TabsContent value="overview" className="mt-4">
+            <StyledTable
+              columns={OVERVIEW_COLUMNS}
+              data={filteredOverview}
+              columnVisibility={colVis.overview}
+              searchQuery={searchQuery}
+              isLoading={groupsLoading}
+              onRowClick={handleDrillIn}
+            />
+          </TabsContent>
+
+          {/* Leads — one row per lead, windowed call logs */}
+          <TabsContent value="leads" className="mt-4">
+            {selectedClientGroup !== "all" && (
+              <div className="mb-3 flex items-center gap-2">
+                <Badge variant="outline" className="gap-2 bg-purple-50 text-purple-700 border-purple-200">
+                  Client: <span className="font-semibold">{selectedClientLabel}</span>
+                  <button onClick={() => pickClient("all")} className="ml-1 hover:text-purple-900" aria-label="Show all clients">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </Badge>
+                <span className="text-xs text-muted-foreground">Showing this client only</span>
               </div>
             )}
 
+            <StyledTable
+              columns={LEAD_COLUMNS}
+              data={leads}
+              columnVisibility={colVis.leads}
+              searchQuery={searchQuery}
+              isLoading={leadsLoading}
+            />
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="pt-6 w-full">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="leads">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Leads
-                </TabsTrigger>
-                <TabsTrigger value="members">
-                  <Users className="h-4 w-4 mr-2" />
-                  Members
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="leads" className="mt-0">
-
-
-                {isLoading ? (
-                  <Loading progress={progress} />
-                ) : filteredLeads.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                    <Phone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">
-                      {selectedGroup
-                        ? <>No call logs yet for <span className="font-medium">{selectedGroup.name}</span>. Once a call event fires through the GHL workflow webhook, it&apos;ll appear here.</>
-                        : "Pick a client above to view their call logs."}
-                    </p>
-                    <Button
-                      variant="outline"
-                      className="mt-4 bg-transparent"
-                      onClick={() => router.push("/settings?tab=integrations")}
-                    >
-                      Go to Settings
-                    </Button>
+            {leadsTotal > LEADS_PER_PAGE && (
+              <div className="flex items-center justify-center p-4">
+                <div className="flex items-center gap-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLeadsPage((p) => Math.max(1, p - 1))}
+                    disabled={leadsPage === 1 || leadsLoading}
+                    className="hover:bg-purple-200 gap-2"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <div className="text-sm font-medium px-4">
+                    Page {leadsPage} of {leadsTotalPages}
                   </div>
-                ) : (
-                  <>
-                    <div className="border rounded-md mt-3">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="bg-muted/50 border-r border-border">
-                            {visibleColumns.name && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Name</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.client && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Client</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.email && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Email</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.phone && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Phone</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.company && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Company</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.location && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Location</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.calls && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Call Logs</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                            {visibleColumns.status && <TableHead className="border-r border-border">
-                              <div className="flex items-center justify-between w-full">
-                                <span>Status</span>
-                                <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                              </div>
-                            </TableHead>}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredLeads.map((lead, index) => (
-                            <TableRow
-                              key={lead.id || index}
-                              className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12"
-                            >
-                              {visibleColumns.name && (
-                                <TableCell className="font-medium">
-                                  {lead.name === "N/A" ? "-" : lead.name || "-"}
-                                </TableCell>
-                              )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLeadsPage((p) => Math.min(leadsTotalPages, p + 1))}
+                    disabled={leadsPage >= leadsTotalPages || leadsLoading}
+                    className="hover:bg-purple-200 gap-2"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </TabsContent>
 
-                              {visibleColumns.client && (
-                                <TableCell className="font-medium">
-                                  <div className="flex items-center gap-2">
-                                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                                    {lead.client === "N/A" ? "-" : lead.client || "-"}
-                                  </div>
-                                </TableCell>
-                              )}
-
-                              {visibleColumns.email && (
-                                <TableCell>{lead.email === "N/A" ? "-" : lead.email || "-"}</TableCell>
-                              )}
-
-                              {visibleColumns.phone && (
-                                <TableCell>{lead.phone === "N/A" ? "-" : lead.phone || "-"}</TableCell>
-                              )}
-
-                              {visibleColumns.company && (
-                                <TableCell>{lead.company === "N/A" ? "-" : lead.company || "-"}</TableCell>
-                              )}
-
-                              {visibleColumns.location && (
-                                <TableCell>{lead.location === "N/A" ? "-" : lead.location || "-"}
-                                </TableCell>
-                              )}
-
-                              {visibleColumns.calls && (
-                                <TableCell>
-                                  {lead.call_logs_count > 0 ? (
-                                    <CallLogsDialog lead={lead} />
-                                  ) : (
-                                    <span className="text-sm text-muted-foreground">No calls</span>
-                                  )}
-                                </TableCell>
-                              )}
-
-                              {visibleColumns.status && (
-                                <TableCell>
-                                  <Badge
-                                    variant="outline"
-                                    className={
-                                      `
-                                      border-0 rounded-full font-semibold
-                                      ${lead.status === "Inactive"
-                                        ? "bg-[#FEE2E2] text-[#991B1B]"   // Red for inactive
-                                        : "bg-[#DCFCE7] text-[#166534]"}  // Green for active
-                                    `
-                                    }
-                                  >
-                                    {lead.status || "Active"}
-                                  </Badge>
-                                </TableCell>
-                              )}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-
-                      </Table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    <div className="flex items-center justify-center p-4">
-                      <div className="flex items-center gap-4">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handlePreviousPage}
-                          disabled={currentPage === 1 || isLoading}
-                          className="hover:bg-purple-200 gap-2"
-                        >
-                          <ChevronLeft className="h-4 w-4 mr-1" />
-                          Previous
-                        </Button>
-                        <div className="text-sm font-medium px-4">
-                          Page {currentPage} of {totalPages}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={handleNextPage}
-                          disabled={!hasMoreLeads || isLoading}
-                          className="hover:bg-purple-200 gap-2"
-                        >
-                          {isLoading ? (
-                            <Progress value={33} />
-                          ) : (
-                            <>
-                              Next
-                              <ChevronRight className="h-4 w-4 ml-1" />
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </TabsContent>
-
-              <TabsContent value="members" className="mt-5">
-                {isLoading ? (
-                  <Loading progress={progress} />
-                ) : filteredMembers.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed rounded-lg">
-                    <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground">No team members found</p>
-                  </div>
-                ) : (
-                  <div className=" border rounded-md ">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-muted/50">
-                          <TableHead className="border-r border-border">
-                            <div className="flex items-center justify-between w-full">
-                              <span>Name</span>
-                              <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="border-r border-border">
-                            <div className="flex items-center justify-between w-full">
-                              <span>Email</span>
-                              <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="border-r border-border">
-                            <div className="flex items-center justify-between w-full">
-                              <span>phone</span>
-                              <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="border-r border-border">
-                            <div className="flex items-center justify-between w-full">
-                              <span>Extension</span>
-                              <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                            </div>
-                          </TableHead>
-                          <TableHead className="border-r border-border">
-                            <div className="flex items-center justify-between w-full">
-                              <span>Status</span>
-                              <img src={HP.src} alt="hp logo" className="w-4 h-4" />
-                            </div>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredMembers.map((member) => (
-                          <TableRow key={member.id} className="hover:bg-muted/50 even:bg-white odd:bg-[#F4F3F9] h-12">
-                            <TableCell className="font-medium">{member.name === "N/A" ? "-" : member.name || "-"}</TableCell>
-                            <TableCell>{member.email === "N/A" ? "-" : member.email || "-"}</TableCell>
-                            <TableCell>{member.phone === "N/A" ? "-" : member.phone || "-"}</TableCell>
-                            <TableCell>{member.extension === "N/A" ? "-" : member.extension || "-"}</TableCell>
-                            <TableCell>
-                              <Badge variant={member.status === "Active" ? "default" : "secondary"}
-                                className={`
-                                  border-0 rounded-full font-semibold
-                                  ${member.status === "Inactive"
-                                    ? "bg-[#FEE2E2] text-[#991B1B]"   // Red for inactive
-                                    : "bg-[#DCFCE7] text-[#166534]"}  // Green for active
-                                `
-                                }>
-                                {member.status === "N/A" ? "-" : member.status || "-"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
-        </div>
+          {/* Members — account-wide HotProspector team */}
+          <TabsContent value="members" className="mt-4">
+            <StyledTable
+              columns={MEMBER_COLUMNS}
+              data={members}
+              columnVisibility={colVis.members}
+              searchQuery={searchQuery}
+              isLoading={false}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
-
     </div>
   )
 }
