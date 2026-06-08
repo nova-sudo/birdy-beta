@@ -171,7 +171,7 @@ function CallLogsDialog({ lead }) {
 // ── Column definitions per tab ───────────────────────────────────────────────
 const OVERVIEW_COLUMNS = [
   { id: "name", label: "Client", sortable: true },
-  { id: "leads", label: "Leads", sortable: true, icons: HP },
+  { id: "leads", label: "Leads Called", sortable: true, icons: HP },
   { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
   { id: "inbound", label: "Inbound", sortable: true, icons: HP },
   { id: "outbound", label: "Outbound", sortable: true, icons: HP },
@@ -251,12 +251,14 @@ export default function CallCenterPage() {
     () =>
       (clientGroups || []).map((g) => {
         const cs = g.hotprospector?.call_stats || {}
-        const m = g.hotprospector?.metrics || {}
         return {
           id: g.id,
           name: g.name || "Unnamed Client",
           ghl_location_id: g.ghl_location_id,
-          leads: cs.total_leads ?? m.total_leads ?? 0,
+          // Windowed "leads" = leads contacted in the period. HP leads have no
+          // creation date, so call activity is the only windowable lead metric;
+          // total_leads (full pool) is the same across presets by design.
+          leads: cs.leads_with_calls ?? 0,
           total_calls: cs.total_calls ?? 0,
           inbound: cs.inbound_count ?? 0,
           outbound: cs.outbound_count ?? 0,
@@ -551,7 +553,7 @@ export default function CallCenterPage() {
 
         {/* Stat cards (windowed) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Total Leads" value={totals.leads} desc="Across Hot Prospector clients" Icon={Users} />
+          <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
           <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
           <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
           <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
