@@ -352,9 +352,12 @@ export default function CallCenterPage() {
     let cancelled = false
     const run = async () => {
       try {
-        const { end_date } = presetToDateRange(datePreset)
-        const qs = end_date ? `?date=${encodeURIComponent(end_date)}` : ""
-        const res = await apiRequest(`/api/hotprospector/members/dashboard${qs}`)
+        const { start_date, end_date } = presetToDateRange(datePreset)
+        const params = new URLSearchParams()
+        if (start_date) params.set("start_date", start_date)
+        if (end_date) params.set("end_date", end_date)
+        const q = params.toString()
+        const res = await apiRequest(`/api/hotprospector/members/dashboard${q ? `?${q}` : ""}`)
         if (!res.ok) {
           if (!cancelled) setMembers([])
           return
