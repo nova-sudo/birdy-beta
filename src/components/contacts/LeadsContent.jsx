@@ -207,12 +207,14 @@ export function LeadsContent({
 
       const activeSources = overrides.sources ?? selectedSources
       const activeTags = overrides.tags ?? selectedTags
+      const activeStatus = overrides.opportunityStatus ?? selectedOpportunityStatus
 
       let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
       if (start_date) endpoint += `&start_date=${start_date}`
       if (end_date) endpoint += `&end_date=${end_date}`
       activeSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
       activeTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
+      if (activeStatus && activeStatus !== "all") endpoint += `&opportunity_status=${encodeURIComponent(activeStatus)}`
 
       const response = await apiRequest(endpoint)
       if (!response.ok) throw new Error(`Failed: ${response.status}`)
@@ -243,7 +245,7 @@ export function LeadsContent({
     if (ghlClientGroups.length > 0) {
       fetchContacts(1)
     }
-  }, [selectedClientGroup, ghlClientGroups.length, datePreset, selectedSources, selectedTags])
+  }, [selectedClientGroup, ghlClientGroups.length, datePreset, selectedSources, selectedTags, selectedOpportunityStatus])
 
   useEffect(() => {
     const intervals = [33, 50, 66, 80, 90]
@@ -275,12 +277,6 @@ export function LeadsContent({
 
     if (selectedType !== "all") {
       filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
-    }
-
-    if (selectedOpportunityStatus !== "all") {
-      filtered = filtered.filter(c =>
-        c.opportunities?.some(opp => opp.status === selectedOpportunityStatus)
-      )
     }
 
     if (sortColumn) {
