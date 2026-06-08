@@ -983,20 +983,11 @@ export default function ClientsPage() {
                   <>
                     <div className="text-center space-y-2">
                       <h2 className="text-2xl font-bold text-foreground">Using Hot Prospector</h2>
-                      <p className="text-muted-foreground">Calls for this client sync from your account&apos;s Hot Prospector connection.</p>
+                      <p className="text-muted-foreground">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-primary/5 border border-border space-y-3 text-left">
-                      <p className="text-sm text-foreground">
-                        Hot Prospector credentials are account-wide — one API UID &amp; key powers every client.
-                        Add or update them in <span className="font-medium">Settings → Integrations</span>.
-                      </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => router.push("/settings?tab=integrations")}
-                      >
-                        Open Settings
-                      </Button>
+                    <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
+                      <Check className="w-5 h-5 text-success shrink-0" />
+                      <span className="text-sm text-foreground">Account-wide credentials power every client — nothing to enter here.</span>
                     </div>
                     <div className="text-center">
                       <button
