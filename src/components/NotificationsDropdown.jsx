@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Bell, BellRing, X, ExternalLink, User, ChevronDown, ChevronRight } from "lucide-react"
+import { Bell, BellRing, X, ExternalLink, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { apiRequest } from "@/lib/api"
 import { formatRelative } from "@/lib/alert-helpers"
@@ -64,13 +64,13 @@ export default function NotificationsDropdown() {
   const [open, setOpen] = useState(false)
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(false)
-  const [expanded, setExpanded] = useState({})
   const ref = useRef(null)
   const router = useRouter()
 
   const groups = groupTriggeredRows(alerts)
-  // Badge count: number of top-level groups (parent alerts)
-  const badgeCount = groups.length
+
+  // Total count = sub-alerts for parent groups + 1 per simple alert
+  const totalCount = groups.reduce((sum, { children }) => sum + (children.length > 0 ? children.length : 1), 0)
 
   useEffect(() => {
     if (!open) return
@@ -85,6 +85,17 @@ export default function NotificationsDropdown() {
       .finally(() => setLoading(false))
   }, [open])
 
+  // Also fetch count when closed (for the badge)
+  useEffect(() => {
+    apiRequest("/api/alerts")
+      .then((res) => (res.ok ? res.json() : {}))
+      .then((data) => {
+        const triggeredList = Array.isArray(data.triggered) ? data.triggered : []
+        setAlerts(triggeredList)
+      })
+      .catch(() => {})
+  }, [])
+
   // Close on outside click
   useEffect(() => {
     if (!open) return
@@ -95,9 +106,6 @@ export default function NotificationsDropdown() {
     return () => document.removeEventListener("mousedown", handler)
   }, [open])
 
-  const toggleExpand = (id) =>
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
-
   const goToAlerts = () => {
     setOpen(false)
     router.push("/alerts?tab=triggered")
@@ -105,27 +113,32 @@ export default function NotificationsDropdown() {
 
   return (
     <div className="relative" ref={ref}>
+      {/* Outer bell button with total count badge */}
       <button
         className="relative p-1.5 rounded-full hover:bg-gray-100 transition"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
       >
         <Bell className="w-5 h-5 text-black" />
-        {badgeCount > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+        {totalCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+            {totalCount > 99 ? "99+" : totalCount}
+          </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-84 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden" style={{ width: 340 }}>
-          {/* Header */}
+        <div
+          className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
+          style={{ width: 340 }}
+        >
+          {/* Header — no bell icon, just text */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-2">
-              <BellRing className="w-4 h-4 text-red-500" />
               <span className="font-semibold text-sm">Notifications</span>
-              {badgeCount > 0 && (
+              {totalCount > 0 && (
                 <span className="bg-red-100 text-red-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                  {badgeCount}
+                  {totalCount}
                 </span>
               )}
             </div>
@@ -155,59 +168,40 @@ export default function NotificationsDropdown() {
               <ul className="divide-y divide-gray-100">
                 {groups.map(({ parentAlert, children }) => {
                   const hasChildren = children.length > 0
-                  const isOpen = expanded[parentAlert.id]
 
+                  // ── Parent with sub-alerts: show sub-alerts directly, no parent label ──
+                  if (hasChildren) {
+                    return children.map((child) => (
+                      <li key={child._virtual_id ?? `${child.id}_${child._client_id}`}>
+                        <button
+                          onClick={goToAlerts}
+                          className="w-full text-left px-4 py-3 hover:bg-red-50/60 transition-colors flex items-start gap-2.5"
+                        >
+                          <BellRing className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {child._client_name}
+                            </p>
+                            <TriggerMeta dateStr={child.last_triggered_at} />
+                          </div>
+                        </button>
+                      </li>
+                    ))
+                  }
+
+                  // ── Simple alert (no sub-alerts) ──
                   return (
-                    <li key={`${parentAlert._isGroup ? "group" : "real"}_${parentAlert.id}`}>
-                      {/* Parent row — clickable, redirects to alerts page */}
+                    <li key={`real_${parentAlert.id}`}>
                       <button
-                        onClick={hasChildren ? () => toggleExpand(parentAlert.id) : goToAlerts}
+                        onClick={goToAlerts}
                         className="w-full text-left px-4 py-3 hover:bg-red-50/50 transition-colors flex items-start gap-2.5"
                       >
                         <BellRing className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">{parentAlert.name}</p>
-                            {hasChildren && (
-                              <span className="flex items-center gap-0.5 text-xs text-gray-400 shrink-0">
-                                <span className="bg-red-100 text-red-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                                  {children.length}
-                                </span>
-                                {isOpen
-                                  ? <ChevronDown className="w-3.5 h-3.5" />
-                                  : <ChevronRight className="w-3.5 h-3.5" />}
-                              </span>
-                            )}
-                          </div>
+                          <p className="text-sm font-medium text-gray-900 truncate">{parentAlert.name}</p>
                           <TriggerMeta dateStr={parentAlert.last_triggered_at} />
                         </div>
                       </button>
-
-                      {/* Sub-alert rows (per-client children) */}
-                      {hasChildren && isOpen && (
-                        <ul className="bg-red-50/30 border-t border-red-100">
-                          {children.map((child) => (
-                            <li key={child._virtual_id ?? `${child.id}_${child._client_id}`}>
-                              <button
-                                onClick={goToAlerts}
-                                className="w-full text-left px-4 py-2.5 hover:bg-red-50/70 transition-colors flex items-start gap-2.5"
-                              >
-                                {/* indent line */}
-                                <div className="flex items-start gap-2 pl-5 w-full min-w-0">
-                                  <div className="w-0.5 self-stretch rounded-full bg-red-300 shrink-0 mt-0.5" />
-                                  <User className="w-3.5 h-3.5 text-red-400 mt-0.5 shrink-0" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-semibold text-red-900 truncate">
-                                      {child._client_name}
-                                    </p>
-                                    <TriggerMeta dateStr={child.last_triggered_at} />
-                                  </div>
-                                </div>
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
                     </li>
                   )
                 })}
