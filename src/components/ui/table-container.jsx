@@ -76,6 +76,7 @@ const StyledTable = ({
   togglingRows = new Set(),
   initialColumnOrder = [],
   onColumnOrderChange,
+  emptyMessage,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -742,8 +743,8 @@ const StyledTable = ({
                         d="M9.75 9.75h.008v.008H9.75V9.75zm4.5 0h.008v.008h-.008V9.75zM12 3a9 9 0 100 18A9 9 0 0012 3zm0 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
                       />
                     </svg>
-                    <p className="text-sm font-medium">No data available</p>
-                    <p className="text-xs opacity-60">Try adjusting your filters or date range</p>
+                    <p className="text-sm font-medium">{emptyMessage?.title ?? "No data available"}</p>
+                    <p className="text-xs opacity-60">{emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}</p>
                   </div>
                 </td>
               </tr>

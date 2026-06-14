@@ -1174,6 +1174,11 @@ export function MarketingContent({
                 data={getFilteredDataForTab()}
                 columnVisibility={columnVisibility}
                 isLoading={isLoading}
+                emptyMessage={
+                  activeTab === "leads" && datePreset === "last_year"
+                    ? { title: "We currently don't hold your last year lead data", subtitle: "Last year lead data is not available at this time" }
+                    : undefined
+                }
                   // Drill-down: campaigns/adsets/ads rows are clickable; leads are not
                 onRowClick={activeTab !== "leads" ? handleRowClick : undefined}
                   // Multi-row checkbox selection (not on leads tab)
