@@ -212,13 +212,18 @@ const MetricsHub = () => {
             id: m.id,
             label: m.label,
             category: m.category,
+            level: m.level,
           }))
           // Add tags
           for (const tag of (data.tags || [])) {
             const tagId = `tag_${tag.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
-            metrics.push({ id: tagId, label: `Tag: ${tag}`, category: "Tags" })
+            metrics.push({ id: tagId, label: `Tag: ${tag}`, category: "Tags", level: "group" })
           }
-          setAvailableMetricsForFormulas(metrics)
+          // Account-level metrics (e.g. per-agent call-center KPIs) are account-wide
+          // and can't be resolved per client group, so they'd silently evaluate to 0
+          // inside a custom formula — exclude them from the formula builder. They
+          // still appear in the catalog table (discoveredMetrics) below.
+          setAvailableMetricsForFormulas(metrics.filter(m => m.level !== "account"))
           // Build discovered metrics for the table display (map to expected field names)
           setDiscoveredMetrics(metrics.map(m => ({
             id: m.id,
@@ -271,7 +276,7 @@ const MetricsHub = () => {
   // (E.g. create CPA = Meta Spend / Won Opps, then use CPA in another metric.)
   // The metric currently being edited is excluded so users can't directly
   // reference themselves; deeper cycles are caught server-side on save.
-  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask }
+  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask, "HotProspector": HP, "Call Center": HP, "Call Center Agents": HP }
   const formulaMetricOptions = useMemo(() => {
     const baseOptions = availableMetricsForFormulas.map(m => ({
       ...m,
@@ -539,6 +544,14 @@ const MetricsHub = () => {
       },
       "HotProspector": {
         color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
+        image: HP
+      },
+      "Call Center": {
+        color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
+        image: HP
+      },
+      "Call Center Agents": {
+        color: "text-[#DB2777] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
         image: HP
       },
     }

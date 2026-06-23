@@ -212,6 +212,15 @@ const StyledTable = ({
       const metaLeads = metaResults || group.facebook?.metrics?.insights?.total_leads || 0;
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
+      // Call Center (HotProspector) — per-preset windowed stats from call_stats
+      const hpStats = group.hotprospector?.call_stats || {};
+      const hpTotalCalls = hpStats.total_calls ?? 0;
+      const hpLeadsWithCalls = hpStats.leads_with_calls ?? 0;
+      const hpTotalLeads = hpStats.total_leads ?? hpLeads;
+      const hpAnswered = hpStats.answered_calls ?? 0;
+      const hpConnectRate = hpTotalLeads > 0 ? (hpLeadsWithCalls / hpTotalLeads) * 100 : 0;
+      const hpAnswerRate = hpTotalCalls > 0 ? (hpAnswered / hpTotalCalls) * 100 : 0;
+
       const base = {
         id: group.id,
         name: group.name || "Unnamed Group",
@@ -237,6 +246,15 @@ const StyledTable = ({
         meta_cost_per_result: metaCostPerResult,
         meta_leads: metaLeads,
         hp_leads: hpLeads,
+        hp_total_calls: hpTotalCalls,
+        hp_inbound: hpStats.inbound_count ?? 0,
+        hp_outbound: hpStats.outbound_count ?? 0,
+        hp_transfers: hpStats.transfers ?? 0,
+        hp_leads_with_calls: hpLeadsWithCalls,
+        hp_answered_calls: hpAnswered,
+        hp_talk_time: hpStats.total_talk_min ?? 0,
+        hp_connect_rate: hpConnectRate,
+        hp_answer_rate: hpAnswerRate,
         original: group,
         _isCreating: group._isCreating || false,
         _isPending: group._isPending || false,

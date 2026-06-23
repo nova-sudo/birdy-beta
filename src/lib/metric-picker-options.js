@@ -1,10 +1,11 @@
-import { ghlIcon, metaIcon } from "@/lib/icons"
+import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 import { flaskIcon } from "@/lib/icons"
 
 /**
  * Build the full metrics list for MetricPicker, including:
  * - Meta Ads metrics (with metaIcon)
  * - GHL metrics (with ghlIcon)
+ * - Call Center / HotProspector metrics (with hpIcon) — per-client + per-agent
  * - GHL Tags (with ghlIcon, from availableTags array)
  * - Custom metrics (with flaskIcon, from customMetrics array)
  */
@@ -32,6 +33,27 @@ export function buildMetricPickerOptions({ availableTags = [], customMetrics = [
     { id: "ghl_open_opps",    label: "Open Opps",             category: "GoHighLevel", icon: ghlIcon },
     { id: "ghl_abandoned_opps", label: "Abandoned Opps",      category: "GoHighLevel", icon: ghlIcon },
     { id: "ghl_total_opps",   label: "Total Opps",            category: "GoHighLevel", icon: ghlIcon },
+    // Call Center (HotProspector) — per-client, date-windowed
+    { id: "hp_leads",            label: "Call Center Leads",  category: "Call Center", icon: hpIcon },
+    { id: "hp_total_calls",      label: "Total Calls",        category: "Call Center", icon: hpIcon },
+    { id: "hp_inbound",          label: "Inbound Calls",      category: "Call Center", icon: hpIcon },
+    { id: "hp_outbound",         label: "Outbound Calls",     category: "Call Center", icon: hpIcon },
+    { id: "hp_transfers",        label: "Call Transfers",     category: "Call Center", icon: hpIcon },
+    { id: "hp_leads_with_calls", label: "Leads Called",       category: "Call Center", icon: hpIcon },
+    { id: "hp_answered_calls",   label: "Answered Calls",     category: "Call Center", icon: hpIcon },
+    { id: "hp_talk_time",        label: "Talk Time (min)",    category: "Call Center", icon: hpIcon },
+    { id: "hp_connect_rate",     label: "Connect Rate (%)",   category: "Call Center", icon: hpIcon },
+    { id: "hp_answer_rate",      label: "Answer Rate (%)",    category: "Call Center", icon: hpIcon },
+    // Call Center (HotProspector) — per-agent, account-wide
+    { id: "hp_agent_outbound",    label: "Agent Outbound Calls",  category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_inbound",     label: "Agent Inbound Calls",   category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_dialed",      label: "Agent Total Dials",     category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_answered",    label: "Agent Answered Calls",  category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_convos",      label: "Conversations",         category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_appts",       label: "Appointments Set",      category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_talk_min",    label: "Agent Talk Time (min)", category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_sms",         label: "SMS Sent",              category: "Call Center Agents", icon: hpIcon },
+    { id: "hp_agent_answer_rate", label: "Agent Answer Rate (%)", category: "Call Center Agents", icon: hpIcon },
   ]
 
   // Tags
