@@ -10,7 +10,21 @@ import ChatConversation from "@/components/chat/ChatConversation"
  * Global chat dialog. Triggered from the header "Ask Birdy..." search bar.
  * Thin shell around ChatConversation.
  */
-export default function BirdyChatModal({ open, onOpenChange, initialMessage = null }) {
+function getPageSlug(pathname) {
+  if (!pathname) return null
+  const p = pathname.toLowerCase()
+  if (p.includes("alert")) return "alerts"
+  if (p.includes("sales-hub")) return "call_center"
+  if (p.includes("campaign")) return "campaigns"
+  if (p.includes("lead")) return "leads"
+  if (p.includes("opportunit") || p.includes("pipeline")) return "opportunities"
+  if (p.includes("metric")) return "custom_metrics"
+  if (p.includes("dashboard") || p.includes("main-hub")) return "dashboard"
+  return null
+}
+
+export default function BirdyChatModal({ open, onOpenChange, initialMessage = null, pathname = null }) {
+  const page = getPageSlug(pathname)
   // Use a "key" trick to force-remount ChatConversation for "New Chat"
   const [resetKey, setResetKey] = useState(0)
 
@@ -57,6 +71,7 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
             key={resetKey}
             initialMessage={initialMessage}
             sessionKey="birdy_chat_modal_session"
+            page={page}
             bubbleWidthClass="max-w-[85%]"
             emptyStateTitle="What would you like to know?"
             emptyStateSubtitle="Ask about campaigns, leads, opportunities, or any metric."

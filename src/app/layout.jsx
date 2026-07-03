@@ -133,6 +133,7 @@ export default function RootLayout({ children }) {
                     if (!v) setChatInitialMsg("");
                   }}
                   initialMessage={chatInitialMsg}
+                  pathname={pathname}
                 />
               </div>
             )}
