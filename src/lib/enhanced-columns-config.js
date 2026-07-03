@@ -42,9 +42,18 @@ export const BASE_CLIENT_COLUMNS = [
   { id: "best_ad_name", label: "Best Ad", visible: false, sortable: false, icons: metaa, category: 'metaads', type: 'data' },
   { id: "best_ad_ctr", label: "Best Ad CTR", visible: false, sortable: true, icons: metaa, category: 'metaads', type: 'data' },
   
-  // HotProspector
+  // HotProspector (Call Center) — per-client, date-windowed from hotprospector.call_stats
   { id: "hp_leads", label: "HP Leads", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
-  
+  { id: "hp_total_calls", label: "Total Calls", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_inbound", label: "Inbound Calls", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_outbound", label: "Outbound Calls", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_transfers", label: "Transfers", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_leads_with_calls", label: "Leads Called", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_answered_calls", label: "Answered Calls", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_talk_time", label: "Talk Time (min)", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_connect_rate", label: "Connect Rate", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_answer_rate", label: "Answer Rate", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+
   // Calculated Metrics
   { id: "conversion_rate", label: "Conversion Rate", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
   { id: "cost_per_lead", label: "Cost Per Lead", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
@@ -200,6 +209,15 @@ export const buildMetricMapping = (clientGroups) => {
     "meta_cpm": "meta_cpm",
     "meta_campaigns": "meta_campaigns",
     "hp_leads": "hp_leads",
+    "hp_total_calls": "hp_total_calls",
+    "hp_inbound": "hp_inbound",
+    "hp_outbound": "hp_outbound",
+    "hp_transfers": "hp_transfers",
+    "hp_leads_with_calls": "hp_leads_with_calls",
+    "hp_answered_calls": "hp_answered_calls",
+    "hp_talk_time": "hp_talk_time",
+    "hp_connect_rate": "hp_connect_rate",
+    "hp_answer_rate": "hp_answer_rate",
     "conversion_rate": "conversion_rate",
     "cost_per_lead": "cost_per_lead",
     "engagement_rate": "engagement_rate",
@@ -257,9 +275,18 @@ export const buildFormulaMetrics = (clientGroups) => {
     { id: "meta_leads", label: "Meta Leads", category: "Meta Ads" },
     { id: "meta_campaigns", label: "Campaigns", category: "Meta Ads" },
     
-    // HotProspector
+    // HotProspector (Call Center)
     { id: "hp_leads", label: "HP Leads", category: "HotProspector" },
-    
+    { id: "hp_total_calls", label: "Total Calls", category: "HotProspector" },
+    { id: "hp_inbound", label: "Inbound Calls", category: "HotProspector" },
+    { id: "hp_outbound", label: "Outbound Calls", category: "HotProspector" },
+    { id: "hp_transfers", label: "Transfers", category: "HotProspector" },
+    { id: "hp_leads_with_calls", label: "Leads Called", category: "HotProspector" },
+    { id: "hp_answered_calls", label: "Answered Calls", category: "HotProspector" },
+    { id: "hp_talk_time", label: "Talk Time (min)", category: "HotProspector" },
+    { id: "hp_connect_rate", label: "Connect Rate", category: "HotProspector" },
+    { id: "hp_answer_rate", label: "Answer Rate", category: "HotProspector" },
+
     // Calculated
     { id: "conversion_rate", label: "Conversion Rate", category: "Calculated" },
     { id: "cost_per_lead", label: "Cost Per Lead", category: "Calculated" },
