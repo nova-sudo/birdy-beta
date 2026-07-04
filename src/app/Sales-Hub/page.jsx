@@ -12,7 +12,7 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { apiRequest } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
-import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { DEFAULT_DATE_PRESET, STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { hpIcon as HP } from "@/lib/icons"
 import {
@@ -29,6 +29,7 @@ import {
   ChevronRight,
   ChevronDown,
   X,
+  History,
 } from "lucide-react"
 
 // ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
@@ -223,10 +224,85 @@ const MEMBER_COLUMNS = [
   { id: "talk_min", label: "Talk (min)", sortable: true, icons: HP },
 ]
 
-const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS }
+const DIRECTION_CELL = (_v, row) => (
+  <Badge
+    variant="outline"
+    className={`${row.direction === "outbound"
+      ? "bg-blue-100/80 text-blue-700 border-blue-200"
+      : "bg-green-100/80 text-green-700 border-green-200"
+      } border text-xs font-medium`}
+  >
+    {row.direction === "outbound" ? "Outbound" : "Inbound"}
+  </Badge>
+)
+
+const DURATION_CELL = (v) => {
+  const mins = Math.floor((v || 0) / 60)
+  const secs = (v || 0) % 60
+  return `${mins}m ${secs}s`
+}
+
+const CALL_TIME_CELL = (v) => (v ? new Date(v).toLocaleString() : "—")
+
+const RECORDING_CELL = (_v, row) =>
+  row.recording_url ? (
+    <div className="flex items-center gap-1">
+      <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" asChild>
+        <a href={row.recording_url} target="_blank" rel="noopener noreferrer" title="Play recording">
+          <Play className="h-3.5 w-3.5" />
+        </a>
+      </Button>
+      <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" asChild>
+        <a href={row.recording_url} download title="Download recording">
+          <Download className="h-3.5 w-3.5" />
+        </a>
+      </Button>
+    </div>
+  ) : (
+    <span className="text-sm text-muted-foreground">—</span>
+  )
+
+const CALL_COLUMNS = [
+  { id: "caller_name", label: "Lead", sortable: true, icons: HP },
+  { id: "client", label: "Client", sortable: true, icons: HP },
+  { id: "direction", label: "Direction", icons: HP, cell: DIRECTION_CELL },
+  { id: "duration", label: "Duration", sortable: true, icons: HP, cell: DURATION_CELL },
+  { id: "from_number", label: "From", icons: HP },
+  { id: "to_number", label: "To", icons: HP },
+  { id: "call_time", label: "Call Time", sortable: true, icons: HP, cell: CALL_TIME_CELL },
+  { id: "recording", label: "Recording", icons: HP, cell: RECORDING_CELL },
+]
+
+const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS, calls: CALL_COLUMNS }
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
 
 const LEADS_PER_PAGE = 15
+
+// Recent-calls tab: how many leads' call logs to pull from the leads endpoint
+// before flattening + sorting, so there are enough calls to satisfy the
+// user-configured "recent calls" count (there's no dedicated flat call feed).
+const CALLS_FETCH_MULTIPLIER = 2
+const MIN_CALLS_TO_FETCH = 50
+const MIN_CALLS_LIMIT = 5
+const MAX_CALLS_LIMIT = 100
+const DEFAULT_CALLS_LIMIT = 20
+const clampCallsLimit = (n) => Math.min(MAX_CALLS_LIMIT, Math.max(MIN_CALLS_LIMIT, Number(n) || DEFAULT_CALLS_LIMIT))
+
+const flattenCalls = (leadsData) =>
+  (leadsData || []).flatMap((lead) => {
+    const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || lead.phone || lead.email || "—"
+    return (lead.call_logs || []).map((log, idx) => ({
+      id: `${lead.id}-${idx}`,
+      caller_name: fullName,
+      client: lead.client_name || "—",
+      direction: log.call_status === "outbound" ? "outbound" : "inbound",
+      duration: log.duration || 0,
+      from_number: log.from_number || "—",
+      to_number: log.to_number || "—",
+      call_time: log.call_time_iso || null,
+      recording_url: log.recording_url || null,
+    }))
+  })
 
 export default function CallCenterPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET)
@@ -239,6 +315,7 @@ export default function CallCenterPage() {
     overview: allVisible(OVERVIEW_COLUMNS),
     leads: allVisible(LEAD_COLUMNS),
     members: allVisible(MEMBER_COLUMNS),
+    calls: allVisible(CALL_COLUMNS),
   })
   const [colMenuOpen, setColMenuOpen] = useState(false)
 
@@ -255,6 +332,23 @@ export default function CallCenterPage() {
 
   // Members tab (account-wide HotProspector team).
   const [members, setMembers] = useState([])
+
+  // Calls tab (most recent calls, flattened from the leads endpoint).
+  const [calls, setCalls] = useState([])
+  const [callsLoading, setCallsLoading] = useState(false)
+  const [recentCallsLimit, setRecentCallsLimit] = useState(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT)
+      return stored ? clampCallsLimit(stored) : DEFAULT_CALLS_LIMIT
+    } catch {
+      return DEFAULT_CALLS_LIMIT
+    }
+  })
+  // Raw text of the limit input, kept separate from recentCallsLimit so the
+  // field can be freely edited (including a transient empty string while the
+  // user backspaces) without being clamped back to a value on every keystroke.
+  const [callsLimitInput, setCallsLimitInput] = useState(String(recentCallsLimit))
+  const commitCallsLimit = () => setRecentCallsLimit(clampCallsLimit(callsLimitInput))
 
   // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
   const overviewRows = useMemo(
@@ -392,6 +486,55 @@ export default function CallCenterPage() {
       cancelled = true
     }
   }, [datePreset])
+
+  // Persist the user-configured "recent calls" count across sessions, and
+  // keep the (freely-editable) input text in sync with the committed value.
+  useEffect(() => {
+    setCallsLimitInput(String(recentCallsLimit))
+    try {
+      localStorage.setItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT, String(recentCallsLimit))
+    } catch {
+      // localStorage unavailable (e.g. private mode) — setting just won't persist.
+    }
+  }, [recentCallsLimit])
+
+  // ── Fetch calls (Calls tab): pull enough leads' call logs, flatten, sort by
+  //    recency, and keep only the user-configured number of most recent calls.
+  useEffect(() => {
+    if (activeTab !== "calls") return
+    let cancelled = false
+    const run = async () => {
+      setCallsLoading(true)
+      try {
+        const { start_date, end_date } = presetToDateRange(datePreset)
+        const qs = new URLSearchParams({
+          skip: "0",
+          limit: String(Math.max(recentCallsLimit * CALLS_FETCH_MULTIPLIER, MIN_CALLS_TO_FETCH)),
+        })
+        if (selectedLocationId) qs.set("location_id", selectedLocationId)
+        if (start_date) qs.set("start_date", start_date)
+        if (end_date) qs.set("end_date", end_date)
+        const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (cancelled) return
+        const sorted = flattenCalls(data.data).sort(
+          (a, b) => new Date(b.call_time || 0) - new Date(a.call_time || 0),
+        )
+        setCalls(sorted.slice(0, recentCallsLimit))
+      } catch (err) {
+        if (cancelled) return
+        console.error("Error loading recent calls:", err)
+        setCalls([])
+      } finally {
+        if (!cancelled) setCallsLoading(false)
+      }
+    }
+    run()
+    return () => {
+      cancelled = true
+    }
+  }, [activeTab, datePreset, selectedLocationId, recentCallsLimit])
 
   const mapLead = (lead) => {
     const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
@@ -585,6 +728,10 @@ export default function CallCenterPage() {
                 <User className="h-4 w-4 mr-2" />
                 Members
               </TabsTrigger>
+              <TabsTrigger value="calls">
+                <History className="h-4 w-4 mr-2" />
+                Calls
+              </TabsTrigger>
             </TabsList>
 
             <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
@@ -685,6 +832,35 @@ export default function CallCenterPage() {
               columnVisibility={colVis.members}
               searchQuery={searchQuery}
               isLoading={false}
+            />
+          </TabsContent>
+
+          {/* Calls — most recent calls across leads (count is user-configurable) */}
+          <TabsContent value="calls" className="mt-4">
+            <div className="mb-3 flex items-center gap-2">
+              <label htmlFor="recent-calls-limit" className="text-sm text-muted-foreground">
+                Show last
+              </label>
+              <Input
+                id="recent-calls-limit"
+                type="number"
+                min={MIN_CALLS_LIMIT}
+                max={MAX_CALLS_LIMIT}
+                value={callsLimitInput}
+                onChange={(e) => setCallsLimitInput(e.target.value)}
+                onBlur={commitCallsLimit}
+                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+                className="bg-white h-9 w-20 text-sm"
+              />
+              <span className="text-sm text-muted-foreground">recent calls</span>
+            </div>
+
+            <StyledTable
+              columns={CALL_COLUMNS}
+              data={calls}
+              columnVisibility={colVis.calls}
+              searchQuery={searchQuery}
+              isLoading={callsLoading}
             />
           </TabsContent>
         </Tabs>
