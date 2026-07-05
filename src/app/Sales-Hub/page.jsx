@@ -281,8 +281,15 @@ const LEADS_PER_PAGE = 15
 // Recent-calls tab: how many leads' call logs to pull from the leads endpoint
 // before flattening + sorting, so there are enough calls to satisfy the
 // user-configured "recent calls" count (there's no dedicated flat call feed).
-const CALLS_FETCH_MULTIPLIER = 2
-const MIN_CALLS_TO_FETCH = 50
+// NOTE: /api/hotprospector/call-center sorts leads by lead *creation* date,
+// not by call recency, so a small batch can badly undercount real recent
+// calls (most of the newest-created leads may have no calls at all in the
+// window). Fetching a much larger batch is a heuristic band-aid, not a
+// guarantee — a correct fix needs a backend aggregation that sorts by call
+// time directly.
+const CALLS_FETCH_MULTIPLIER = 20
+const MIN_CALLS_TO_FETCH = 500
+const MAX_LEADS_TO_FETCH = 2000
 const MIN_CALLS_LIMIT = 5
 const MAX_CALLS_LIMIT = 100
 const DEFAULT_CALLS_LIMIT = 20
@@ -509,7 +516,9 @@ export default function CallCenterPage() {
         const { start_date, end_date } = presetToDateRange(datePreset)
         const qs = new URLSearchParams({
           skip: "0",
-          limit: String(Math.max(recentCallsLimit * CALLS_FETCH_MULTIPLIER, MIN_CALLS_TO_FETCH)),
+          limit: String(
+            Math.min(MAX_LEADS_TO_FETCH, Math.max(recentCallsLimit * CALLS_FETCH_MULTIPLIER, MIN_CALLS_TO_FETCH)),
+          ),
         })
         if (selectedLocationId) qs.set("location_id", selectedLocationId)
         if (start_date) qs.set("start_date", start_date)
