@@ -323,10 +323,7 @@ export default function CallCenterPage() {
         if (start_date) baseParams.start_date = start_date
         if (end_date) baseParams.end_date = end_date
 
-        let all = []
-        let total = Infinity
-        let skip = 0
-        do {
+        const fetchBatch = async (skip) => {
           const qs = new URLSearchParams({
             ...baseParams,
             skip: String(skip),
@@ -334,14 +331,28 @@ export default function CallCenterPage() {
           })
           const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
-          const data = await res.json()
+          return res.json()
+        }
+
+        // First page tells us the total; pull the remaining pages
+        // concurrently (capped) instead of one-request-at-a-time.
+        const first = await fetchBatch(0)
+        if (cancelled) return
+        let all = first.data || []
+        const total = first.meta?.total ?? all.length
+
+        const remainingSkips = []
+        for (let skip = all.length; skip < total; skip += LEADS_FETCH_BATCH_SIZE) {
+          remainingSkips.push(skip)
+        }
+
+        const CONCURRENCY = 6
+        for (let i = 0; i < remainingSkips.length; i += CONCURRENCY) {
           if (cancelled) return
-          const batch = data.data || []
-          all = all.concat(batch)
-          total = data.meta?.total ?? all.length
-          skip += batch.length
-          if (batch.length === 0) break
-        } while (all.length < total)
+          const chunk = remainingSkips.slice(i, i + CONCURRENCY)
+          const results = await Promise.all(chunk.map(fetchBatch))
+          results.forEach((data) => { all = all.concat(data.data || []) })
+        }
 
         if (cancelled) return
         setLeads(all.map(mapLead))
