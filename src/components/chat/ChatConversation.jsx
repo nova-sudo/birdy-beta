@@ -29,6 +29,8 @@ export default function ChatConversation({
   initialMessage = null,
   sessionKey = "birdy_chat_session",
   page = null,
+  clientGroupId = null,
+  clientName = null,
   onMessagesChange,
   onToolUsed = null,
   composerPlaceholder,
@@ -79,7 +81,7 @@ export default function ChatConversation({
     try {
       const res = await apiRequest("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text, session_id: sessionId, page }),
+        body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: clientGroupId, client_name: clientName }),
       })
       const data = res.ok ? await res.json() : { reply: "Sorry, something went wrong.", tools_used: [] }
       if (data.session_id) {
@@ -94,7 +96,7 @@ export default function ChatConversation({
     } finally {
       setLoading(false)
     }
-  }, [loading, sessionId, sessionKey, page])
+  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName])
 
   // Auto-send once
   useEffect(() => {

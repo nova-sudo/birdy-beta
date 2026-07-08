@@ -487,7 +487,7 @@ export default function ClientDetailsPage() {
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
         <TabsContent value="ask-birdy" className="mt-6">
-          <BirdyChat />
+          <BirdyChat clientName={matchingGroup?.name} clientId={matchingGroup?.id} />
         </TabsContent>
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}

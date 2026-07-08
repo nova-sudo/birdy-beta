@@ -20,6 +20,7 @@ function getPageSlug(pathname) {
   if (p.includes("opportunit") || p.includes("pipeline")) return "opportunities"
   if (p.includes("metric")) return "custom_metrics"
   if (p.includes("dashboard") || p.includes("main-hub")) return "dashboard"
+  if (p.match(/\/clients\/[^/]+/)) return "client_detail"
   return null
 }
 
