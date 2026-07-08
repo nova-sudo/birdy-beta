@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
@@ -30,6 +31,7 @@ import {
   ChevronDown,
   X,
   History,
+  SlidersHorizontal,
 } from "lucide-react"
 
 // ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
@@ -265,10 +267,10 @@ const RECORDING_CELL = (_v, row) =>
 const CALL_COLUMNS = [
   { id: "caller_name", label: "Lead", sortable: true, icons: HP },
   { id: "client", label: "Client", sortable: true, icons: HP },
-  { id: "direction", label: "Direction", icons: HP, cell: DIRECTION_CELL },
+  { id: "direction", label: "Direction", sortable: true, icons: HP, cell: DIRECTION_CELL },
   { id: "duration", label: "Duration", sortable: true, icons: HP, cell: DURATION_CELL },
-  { id: "from_number", label: "From", icons: HP },
-  { id: "to_number", label: "To", icons: HP },
+  { id: "from_number", label: "From", sortable: true, icons: HP },
+  { id: "to_number", label: "To", sortable: true, icons: HP },
   { id: "call_time", label: "Call Time", sortable: true, icons: HP, cell: CALL_TIME_CELL },
   { id: "recording", label: "Recording", icons: HP, cell: RECORDING_CELL },
 ]
@@ -294,6 +296,170 @@ const MIN_CALLS_LIMIT = 5
 const MAX_CALLS_LIMIT = 100
 const DEFAULT_CALLS_LIMIT = 20
 const clampCallsLimit = (n) => Math.min(MAX_CALLS_LIMIT, Math.max(MIN_CALLS_LIMIT, Number(n) || DEFAULT_CALLS_LIMIT))
+
+// ── Calls tab filters: recent-calls count, direction, duration range ──
+function CallsFilterDropdown({
+  open,
+  setOpen,
+  recentLimitInput,
+  onRecentLimitChange,
+  onRecentLimitCommit,
+  minLimit,
+  maxLimit,
+  direction,
+  setDirection,
+  durationMinMinutes,
+  setDurationMinMinutes,
+  durationMinSeconds,
+  setDurationMinSeconds,
+  durationMaxMinutes,
+  setDurationMaxMinutes,
+  durationMaxSeconds,
+  setDurationMaxSeconds,
+  onClear,
+}) {
+  const activeCount = [
+    direction !== "all",
+    durationMinMinutes !== "" || durationMinSeconds !== "",
+    durationMaxMinutes !== "" || durationMaxSeconds !== "",
+  ].filter(Boolean).length
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="hidden lg:inline">Filters</span>
+          {activeCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-purple-700">
+              {activeCount}
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent
+        align="end"
+        className="bg-white p-4 w-[340px] space-y-4"
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
+          <label htmlFor="recent-calls-limit" className="text-xs font-medium text-muted-foreground">
+            Show last
+          </label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="recent-calls-limit"
+              type="number"
+              min={minLimit}
+              max={maxLimit}
+              value={recentLimitInput}
+              onChange={(e) => onRecentLimitChange(e.target.value)}
+              onBlur={onRecentLimitCommit}
+              onKeyDown={(e) => {
+                e.stopPropagation()
+                if (e.key === "Enter") e.currentTarget.blur()
+              }}
+              className="h-9 w-20 text-sm"
+            />
+            <span className="text-sm text-muted-foreground">calls</span>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <span className="text-xs font-medium text-muted-foreground">Direction</span>
+          <div className="flex gap-1">
+            {[
+              ["all", "All"],
+              ["inbound", "Inbound"],
+              ["outbound", "Outbound"],
+            ].map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setDirection(id)}
+                className={`flex-1 h-8 rounded-md text-xs font-medium border transition-colors ${
+                  direction === id
+                    ? "bg-purple-600 text-white border-purple-600"
+                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
+          <span className="text-xs font-medium text-muted-foreground">Duration</span>
+          <div className="flex items-center gap-1.5">
+            <Input
+              type="number"
+              min={0}
+              placeholder="Min"
+              value={durationMinMinutes}
+              onChange={(e) => setDurationMinMinutes(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-9 text-sm w-14"
+            />
+            <span className="text-xs text-muted-foreground">m</span>
+            <Input
+              type="number"
+              min={0}
+              max={59}
+              placeholder="Sec"
+              value={durationMinSeconds}
+              onChange={(e) => setDurationMinSeconds(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-9 text-sm w-14"
+            />
+            <span className="text-xs text-muted-foreground">s</span>
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input
+              type="number"
+              min={0}
+              placeholder="Max"
+              value={durationMaxMinutes}
+              onChange={(e) => setDurationMaxMinutes(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-9 text-sm w-14"
+            />
+            <span className="text-xs text-muted-foreground">m</span>
+            <Input
+              type="number"
+              min={0}
+              max={59}
+              placeholder="Sec"
+              value={durationMaxSeconds}
+              onChange={(e) => setDurationMaxSeconds(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-9 text-sm w-14"
+            />
+            <span className="text-xs text-muted-foreground">s</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 pt-3 border-t">
+          <Button variant="ghost" size="sm" onClick={onClear} className="border border-gray-300 rounded-md">
+            Clear
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setOpen(false)}
+            className="flex-1 rounded-md bg-purple-600 text-white font-semibold"
+          >
+            Done
+          </Button>
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
 
 const flattenCalls = (leadsData) =>
   (leadsData || []).flatMap((lead) => {
@@ -356,6 +522,20 @@ export default function CallCenterPage() {
   // user backspaces) without being clamped back to a value on every keystroke.
   const [callsLimitInput, setCallsLimitInput] = useState(String(recentCallsLimit))
   const commitCallsLimit = () => setRecentCallsLimit(clampCallsLimit(callsLimitInput))
+  // Calls tab filters (client-side, applied on top of the fetched batch).
+  const [callsFilterOpen, setCallsFilterOpen] = useState(false)
+  const [callDirection, setCallDirection] = useState("all")
+  const [callDurationMinMinutes, setCallDurationMinMinutes] = useState("")
+  const [callDurationMinSeconds, setCallDurationMinSeconds] = useState("")
+  const [callDurationMaxMinutes, setCallDurationMaxMinutes] = useState("")
+  const [callDurationMaxSeconds, setCallDurationMaxSeconds] = useState("")
+  const clearCallFilters = () => {
+    setCallDirection("all")
+    setCallDurationMinMinutes("")
+    setCallDurationMinSeconds("")
+    setCallDurationMaxMinutes("")
+    setCallDurationMaxSeconds("")
+  }
 
   // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
   const overviewRows = useMemo(
@@ -544,6 +724,21 @@ export default function CallCenterPage() {
       cancelled = true
     }
   }, [activeTab, datePreset, selectedLocationId, recentCallsLimit])
+
+  // Apply the Calls-tab filter dropdown (direction / duration) client-side.
+  const filteredCalls = useMemo(() => {
+    const hasMin = callDurationMinMinutes !== "" || callDurationMinSeconds !== ""
+    const hasMax = callDurationMaxMinutes !== "" || callDurationMaxSeconds !== ""
+    const minSecs = hasMin ? (Number(callDurationMinMinutes) || 0) * 60 + (Number(callDurationMinSeconds) || 0) : null
+    const maxSecs = hasMax ? (Number(callDurationMaxMinutes) || 0) * 60 + (Number(callDurationMaxSeconds) || 0) : null
+    return calls.filter((c) => {
+      if (callDirection !== "all" && c.direction !== callDirection) return false
+      const secs = c.duration || 0
+      if (minSecs !== null && secs < minSecs) return false
+      if (maxSecs !== null && secs > maxSecs) return false
+      return true
+    })
+  }, [calls, callDirection, callDurationMinMinutes, callDurationMinSeconds, callDurationMaxMinutes, callDurationMaxSeconds])
 
   const mapLead = (lead) => {
     const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
@@ -765,6 +960,28 @@ export default function CallCenterPage() {
                 clearAll={clearCols}
                 save={() => setColMenuOpen(false)}
               />
+              {activeTab === "calls" && (
+                <CallsFilterDropdown
+                  open={callsFilterOpen}
+                  setOpen={setCallsFilterOpen}
+                  recentLimitInput={callsLimitInput}
+                  onRecentLimitChange={setCallsLimitInput}
+                  onRecentLimitCommit={commitCallsLimit}
+                  minLimit={MIN_CALLS_LIMIT}
+                  maxLimit={MAX_CALLS_LIMIT}
+                  direction={callDirection}
+                  setDirection={setCallDirection}
+                  durationMinMinutes={callDurationMinMinutes}
+                  setDurationMinMinutes={setCallDurationMinMinutes}
+                  durationMinSeconds={callDurationMinSeconds}
+                  setDurationMinSeconds={setCallDurationMinSeconds}
+                  durationMaxMinutes={callDurationMaxMinutes}
+                  setDurationMaxMinutes={setCallDurationMaxMinutes}
+                  durationMaxSeconds={callDurationMaxSeconds}
+                  setDurationMaxSeconds={setCallDurationMaxSeconds}
+                  onClear={clearCallFilters}
+                />
+              )}
             </div>
           </div>
 
@@ -846,27 +1063,9 @@ export default function CallCenterPage() {
 
           {/* Calls — most recent calls across leads (count is user-configurable) */}
           <TabsContent value="calls" className="mt-4">
-            <div className="mb-3 flex items-center gap-2">
-              <label htmlFor="recent-calls-limit" className="text-sm text-muted-foreground">
-                Show last
-              </label>
-              <Input
-                id="recent-calls-limit"
-                type="number"
-                min={MIN_CALLS_LIMIT}
-                max={MAX_CALLS_LIMIT}
-                value={callsLimitInput}
-                onChange={(e) => setCallsLimitInput(e.target.value)}
-                onBlur={commitCallsLimit}
-                onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-                className="bg-white h-9 w-20 text-sm"
-              />
-              <span className="text-sm text-muted-foreground">recent calls</span>
-            </div>
-
             <StyledTable
               columns={CALL_COLUMNS}
-              data={calls}
+              data={filteredCalls}
               columnVisibility={colVis.calls}
               searchQuery={searchQuery}
               isLoading={callsLoading}
