@@ -5,10 +5,12 @@ import ChatConversation from "@/components/chat/ChatConversation"
 
 /**
  * Client detail page embedded chat card.
- * Thin shell around ChatConversation.
+ * Scoped to a single client — passes clientGroupId + clientName to
+ * ChatConversation which forwards them to the backend, where a dynamic
+ * system prompt locks the AI to that client's data only.
  */
 export default function BirdyChat({ clientName, clientId }) {
-  const subtitle = clientName ? `Ask about ${clientName}'s performance` : "Ask about this client"
+  const displayName = clientName || "this client"
   const sessionKey = clientId ? `birdy_chat_client_${clientId}` : "birdy_chat_client"
 
   return (
@@ -20,7 +22,9 @@ export default function BirdyChat({ clientName, clientId }) {
         </div>
         <div>
           <div className="text-sm font-semibold leading-tight">Birdy AI</div>
-          <div className="text-[10px] text-muted-foreground leading-tight">{subtitle}</div>
+          <div className="text-[10px] text-muted-foreground leading-tight">
+            Scoped to <span className="font-medium text-purple-600">{displayName}</span>
+          </div>
         </div>
       </div>
 
@@ -28,10 +32,20 @@ export default function BirdyChat({ clientName, clientId }) {
       <div className="flex-1 min-h-0">
         <ChatConversation
           sessionKey={sessionKey}
+          page="client_detail"
+          clientGroupId={clientId}
+          clientName={clientName}
           composerCompact
           bubbleWidthClass="max-w-[90%]"
-          emptyStateTitle="Ask me anything"
-          emptyStateSubtitle="Campaign performance, leads, opportunities, tags — ask in plain English."
+          emptyStateTitle={`Ask me about ${displayName}`}
+          emptyStateSubtitle={`Campaign performance, leads, opportunities, and tags — all scoped to ${displayName}.`}
+          showQuickActions={false}
+          quickStarters={[
+            { label: "Performance this week", prompt: `How is ${displayName} performing this week?` },
+            { label: "Top campaigns", prompt: `What are ${displayName}'s top performing campaigns?` },
+            { label: "Leads & pipeline", prompt: `Show me ${displayName}'s leads and pipeline status.` },
+            { label: "Compare vs last week", prompt: `Compare ${displayName}'s performance this week vs last week.` },
+          ]}
         />
       </div>
     </Card>

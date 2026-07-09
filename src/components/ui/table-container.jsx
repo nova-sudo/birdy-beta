@@ -76,6 +76,7 @@ const StyledTable = ({
   togglingRows = new Set(),
   initialColumnOrder = [],
   onColumnOrderChange,
+  emptyMessage,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -516,6 +517,11 @@ const StyledTable = ({
   };
 
   /* ---------- RENDER ---------- */
+  // No data: don't let header column min-widths force the table wider than
+  // its container — that's what was causing a horizontal scrollbar to
+  // appear under an empty state instead of a centered message.
+  const isEmptyState = !isLoading && paginatedData.length === 0;
+
   return (
     <div className="space-y-4">
       <style jsx>{`
@@ -588,9 +594,12 @@ const StyledTable = ({
       {/* Table */}
       <div
         className="table-container border rounded-md"
-        style={{ "--name-sticky-left": `${nameStickyLeft}px` }}
+        style={{
+          "--name-sticky-left": `${nameStickyLeft}px`,
+          overflowX: isEmptyState ? "hidden" : "auto",
+        }}
       >
-        <table className="text-sm w-full">
+        <table className="text-sm w-full" style={isEmptyState ? { width: "100%" } : undefined}>
           <thead className="top-0 z-40">
             <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
 
@@ -642,7 +651,9 @@ const StyledTable = ({
                   className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
                     colIdx === 0
                       ? "fixed-header"
-                      : "min-w-[135px] whitespace-nowrap"
+                      : isEmptyState
+                        ? ""
+                        : "min-w-[135px] whitespace-nowrap"
                   }`}
                 >
                   <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
@@ -760,8 +771,8 @@ const StyledTable = ({
                         d="M9.75 9.75h.008v.008H9.75V9.75zm4.5 0h.008v.008h-.008V9.75zM12 3a9 9 0 100 18A9 9 0 0012 3zm0 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
                       />
                     </svg>
-                    <p className="text-sm font-medium">No data available</p>
-                    <p className="text-xs opacity-60">Try adjusting your filters or date range</p>
+                    <p className="text-sm font-medium">{emptyMessage?.title ?? "No data available"}</p>
+                    <p className="text-xs opacity-60">{emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}</p>
                   </div>
                 </td>
               </tr>
