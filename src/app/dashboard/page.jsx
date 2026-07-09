@@ -13,6 +13,9 @@ import {
   ChevronRight,
   BellRing,
 } from "lucide-react";
+import BirdyChatModal from "@/components/chat/BirdyChatModal";
+import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -376,13 +379,21 @@ function ClientCard({ group, onClick }) {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const pathname = usePathname();
   const { clientGroups, loading } = useClientGroups(DEFAULT_DATE_PRESET);
 
   const [activeTab,      setActiveTab]      = useState("All Alerts");
   const [rawRows,        setRawRows]        = useState([]);
   const [alertsLoading,  setAlertsLoading]  = useState(true);
-  const [query,          setQuery]          = useState("");
   const [dismissingIds,  setDismissingIds]  = useState(new Set());
+  const [chatOpen,       setChatOpen]       = useState(false);
+  const [chatInitMsg,    setChatInitMsg]    = useState(null);
+  const [query,          setQuery]          = useState("");
+
+  const openChat = (message) => {
+    setChatInitMsg(message || null);
+    setChatOpen(true);
+  };
   const [expandedGroups, setExpandedGroups] = useState(new Set());
 
   // ── Fetch alerts ────────────────────────────────────────────────────────────
@@ -517,29 +528,56 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 w-full">
 
-      {/* ── Welcome + AI Search ─────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Welcome to Birdy</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Your AI Marketing Manager – Ask questions about your marketing performance
-        </p>
+      {/* ── Welcome Hero ────────────────────────────────────────────────── */}
+      <div className="relative rounded-2xl overflow-hidden bg-[#F3F0FD] p-6 md:p-8">
+        {/* glow blob */}
+        <div className="absolute -top-8 -right-8 w-48 h-48 rounded-full bg-purple-300/20 blur-3xl pointer-events-none" />
 
-        <div className="mt-4 bg-[#F3F0FD] rounded-2xl p-5">
-          <div className="relative max-w-2xl mx-auto">
+        <div className="relative flex flex-col items-center text-center gap-4">
+          {/* Logo + heading */}
+          <div className="flex items-center gap-3">
+            <Image
+              src="/brand/icon-badge.png"
+              alt="Birdy"
+              width={44}
+              height={44}
+              className="rounded-xl shadow-sm"
+            />
+            <div className="text-left">
+              <p className="text-purple-400 text-[11px] font-semibold tracking-widest uppercase">AI Marketing Manager</p>
+              <h1 className="text-foreground text-xl font-bold leading-tight">Welcome to Birdy</h1>
+            </div>
+          </div>
+
+          <p className="text-muted-foreground text-sm max-w-lg">
+            Ask anything about your clients, campaigns, leads, or performance — Birdy analyses your data and answers instantly.
+          </p>
+
+          {/* Search input */}
+          <div className="relative w-full max-w-2xl">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none">
+              <svg className="w-4 h-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && query.trim()) { openChat(query.trim()); setQuery(""); } }}
+              onFocus={() => { if (!query.trim()) openChat(null); }}
               placeholder="Ask about your marketing metrics, client performance, or campaign insights..."
-              className="w-full bg-white border border-border/60 rounded-xl px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm"
+              className="w-full bg-white border border-border/60 rounded-xl pl-10 pr-16 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm transition-all"
             />
-            <button className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+            <button
+              onClick={() => { if (query.trim()) { openChat(query.trim()); setQuery(""); } else openChat(null); }}
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg px-3 py-1.5 text-xs font-medium transition-all shadow-sm"
+            >
+              Ask
             </button>
           </div>
-          <div className="flex flex-wrap items-center gap-2 mt-3 max-w-2xl mx-auto">
+
+          {/* Quick chips */}
+          <div className="flex flex-wrap justify-center items-center gap-2">
             <span className="text-xs text-muted-foreground">Try asking:</span>
             {[
               "Why are bookings down this week?",
@@ -548,7 +586,7 @@ export default function DashboardPage() {
             ].map((s) => (
               <button
                 key={s}
-                onClick={() => setQuery(s)}
+                onClick={() => openChat(s)}
                 className="text-xs bg-white border border-border/60 rounded-lg px-3 py-1.5 hover:bg-purple-50 hover:border-purple-300 transition-colors text-foreground"
               >
                 {s}
@@ -557,6 +595,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ── Birdy Chat Modal ─────────────────────────────────────────────── */}
+      <BirdyChatModal
+        open={chatOpen}
+        onOpenChange={(o) => { setChatOpen(o); if (!o) setChatInitMsg(null); }}
+        initialMessage={chatInitMsg}
+        pathname={pathname}
+      />
 
       {/* ── Action Required ─────────────────────────────────────────────── */}
       <div>
