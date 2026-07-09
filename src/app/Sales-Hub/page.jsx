@@ -17,6 +17,15 @@ import { DEFAULT_DATE_PRESET, STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { hpIcon as HP } from "@/lib/icons"
 import {
+  LEADS_PER_PAGE,
+  CALLS_FETCH_MULTIPLIER,
+  MIN_CALLS_TO_FETCH,
+  MAX_LEADS_TO_FETCH,
+  MIN_CALLS_LIMIT,
+  MAX_CALLS_LIMIT,
+  DEFAULT_CALLS_LIMIT,
+} from "@/constants"
+import {
   Users,
   Phone,
   PhoneIncoming,
@@ -278,23 +287,6 @@ const CALL_COLUMNS = [
 const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS, calls: CALL_COLUMNS }
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
 
-const LEADS_PER_PAGE = 15
-
-// Recent-calls tab: how many leads' call logs to pull from the leads endpoint
-// before flattening + sorting, so there are enough calls to satisfy the
-// user-configured "recent calls" count (there's no dedicated flat call feed).
-// NOTE: /api/hotprospector/call-center sorts leads by lead *creation* date,
-// not by call recency, so a small batch can badly undercount real recent
-// calls (most of the newest-created leads may have no calls at all in the
-// window). Fetching a much larger batch is a heuristic band-aid, not a
-// guarantee — a correct fix needs a backend aggregation that sorts by call
-// time directly.
-const CALLS_FETCH_MULTIPLIER = 20
-const MIN_CALLS_TO_FETCH = 500
-const MAX_LEADS_TO_FETCH = 2000
-const MIN_CALLS_LIMIT = 5
-const MAX_CALLS_LIMIT = 100
-const DEFAULT_CALLS_LIMIT = 20
 const clampCallsLimit = (n) => Math.min(MAX_CALLS_LIMIT, Math.max(MIN_CALLS_LIMIT, Number(n) || DEFAULT_CALLS_LIMIT))
 
 // ── Calls tab filters: recent-calls count, direction, duration range ──
