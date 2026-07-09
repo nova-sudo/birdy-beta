@@ -3,33 +3,24 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CheckCircle2, Send } from "lucide-react"
+import { Check, CheckCircle2 } from "lucide-react"
 import Image from "next/image"
 
 /**
- * ChatUIBlock — renders interactive form fields inline in chat.
+ * ChatUIBlock — inline interactive form fields inside chat bubbles.
  *
- * Props:
- *  fields     — array of field definitions [{id, type, label, placeholder, options, required, defaultValue, icon}]
- *  onSubmit   — callback(values: object) when user clicks submit
- *  disabled   — boolean, true after submission
+ * Radio fields auto-submit on selection (no button needed).
+ * Checkboxes require a confirm button.
+ * Mixed forms (text + radio etc.) show a submit button.
  */
 export default function ChatUIBlock({ fields = [], onSubmit, disabled = false }) {
   const [values, setValues] = useState(() => {
     const init = {}
     for (const f of fields) {
-      if (f.defaultValue !== undefined) {
-        init[f.id] = f.defaultValue
-      } else if (f.type === "checkboxes") {
-        init[f.id] = []
-      } else if (f.type === "number") {
-        init[f.id] = ""
-      } else {
-        init[f.id] = ""
-      }
+      if (f.defaultValue !== undefined) init[f.id] = f.defaultValue
+      else if (f.type === "checkboxes") init[f.id] = []
+      else init[f.id] = ""
     }
     return init
   })
@@ -41,11 +32,19 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
       const arr = prev[id] || []
       return {
         ...prev,
-        [id]: arr.includes(optionValue)
-          ? arr.filter(v => v !== optionValue)
-          : [...arr, optionValue],
+        [id]: arr.includes(optionValue) ? arr.filter(v => v !== optionValue) : [...arr, optionValue],
       }
     })
+  }
+
+  const isRadioOnly = fields.length === 1 && fields[0].type === "radio"
+
+  const handleRadioSelect = (id, val) => {
+    const next = { ...values, [id]: val }
+    setValues(next)
+    if (isRadioOnly && !disabled) {
+      setTimeout(() => onSubmit?.(next), 80)
+    }
   }
 
   const handleSubmit = () => {
@@ -53,187 +52,163 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
     onSubmit?.(values)
   }
 
+  if (disabled) {
+    return (
+      <div className="flex items-center gap-1.5 mt-2 text-xs text-emerald-600">
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        <span>Answered</span>
+      </div>
+    )
+  }
+
   return (
-    <div className={`rounded-xl border border-border bg-card shadow-sm my-3 overflow-hidden transition-opacity ${disabled ? "opacity-60 pointer-events-none" : ""}`}>
-      {/* Submitted badge */}
-      {disabled && (
-        <div className="flex items-center gap-1.5 px-4 py-2 bg-green-50 border-b border-green-200 text-green-700 text-xs font-medium">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          Submitted
+    <div className="mt-3 -mx-1 space-y-3">
+      {fields.map(field => (
+        <div key={field.id} className="space-y-2">
+          {field.label && (
+            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">
+              {field.label}
+            </p>
+          )}
+
+          {/* Radio — full-width choice cards */}
+          {field.type === "radio" && (
+            <div className="space-y-1.5">
+              {(field.options || []).map(opt => {
+                const selected = values[field.id] === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handleRadioSelect(field.id, opt.value)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl border text-left text-sm transition-all ${
+                      selected
+                        ? "bg-purple-600 border-purple-600 text-white shadow-sm shadow-purple-200"
+                        : "bg-gray-50 border-gray-200 text-gray-700 hover:border-purple-300 hover:bg-purple-50"
+                    }`}
+                  >
+                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                      selected ? "border-white bg-white/30" : "border-gray-300"
+                    }`}>
+                      {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    </div>
+                    <span className="font-medium">{opt.label}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Checkboxes — pill chips */}
+          {field.type === "checkboxes" && (
+            <div className="flex flex-wrap gap-2">
+              {(field.options || []).map(opt => {
+                const checked = (values[field.id] || []).includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => toggleCheckbox(field.id, opt.value)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-sm font-medium transition-all ${
+                      checked
+                        ? "bg-purple-600 border-purple-600 text-white"
+                        : "bg-gray-50 border-gray-200 text-gray-600 hover:border-purple-300 hover:bg-purple-50"
+                    }`}
+                  >
+                    {checked && <Check className="h-3 w-3" />}
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Text input */}
+          {field.type === "text" && (
+            <Input
+              className="h-9 text-sm bg-gray-50 border-gray-200 focus:border-purple-400"
+              placeholder={field.placeholder || ""}
+              value={values[field.id] || ""}
+              onChange={e => setValue(field.id, e.target.value)}
+            />
+          )}
+
+          {/* Number input */}
+          {field.type === "number" && (
+            <Input
+              type="number"
+              className="h-9 text-sm bg-gray-50 border-gray-200 focus:border-purple-400"
+              min={field.min}
+              max={field.max}
+              step={field.step || "any"}
+              placeholder={field.placeholder || "0"}
+              value={values[field.id] ?? ""}
+              onChange={e => setValue(field.id, e.target.value)}
+            />
+          )}
+
+          {/* Select */}
+          {field.type === "select" && (
+            <Select value={values[field.id] || ""} onValueChange={v => setValue(field.id, v)}>
+              <SelectTrigger className="h-9 text-sm bg-gray-50 border-gray-200">
+                <SelectValue placeholder={field.placeholder || "Select..."}>
+                  {(() => {
+                    const opt = (field.options || []).flatMap(o => o.options || [o]).find(o => o.value === values[field.id])
+                    if (!opt) return field.placeholder || "Select..."
+                    return (
+                      <span className="flex items-center gap-2">
+                        {opt.icon && <Image src={opt.icon} alt="" width={14} height={14} className="opacity-70" />}
+                        {opt.label}
+                      </span>
+                    )
+                  })()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent className="bg-white max-h-[240px]">
+                {(field.options || []).map((optOrGroup, i) => {
+                  if (optOrGroup.group) {
+                    return (
+                      <div key={i}>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{optOrGroup.group}</div>
+                        {optOrGroup.options.map(opt => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            <span className="flex items-center gap-2">
+                              {opt.icon && <Image src={opt.icon} alt="" width={14} height={14} className="opacity-70" />}
+                              {opt.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </div>
+                    )
+                  }
+                  return (
+                    <SelectItem key={optOrGroup.value} value={optOrGroup.value}>
+                      <span className="flex items-center gap-2">
+                        {optOrGroup.icon && <Image src={optOrGroup.icon} alt="" width={14} height={14} className="opacity-70" />}
+                        {optOrGroup.label}
+                      </span>
+                    </SelectItem>
+                  )
+                })}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      ))}
+
+      {/* Confirm button — only for non-radio-only forms */}
+      {!isRadioOnly && (
+        <div className="flex justify-end pt-1">
+          <Button
+            onClick={handleSubmit}
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white h-8 px-4 text-xs rounded-lg gap-1.5"
+          >
+            <Check className="h-3.5 w-3.5" />
+            Confirm
+          </Button>
         </div>
       )}
-
-      <div className="p-4 space-y-4">
-        {/* Render fields in a responsive grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {fields.map(field => (
-            <div
-              key={field.id}
-              className={`space-y-1.5 ${
-                field.type === "checkboxes" || field.type === "radio"
-                  ? "sm:col-span-2"
-                  : ""
-              }`}
-            >
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                {field.label}
-                {field.required && <span className="text-red-500 ml-0.5">*</span>}
-              </Label>
-
-              {/* Text input */}
-              {field.type === "text" && (
-                <Input
-                  className="h-9 text-sm"
-                  placeholder={field.placeholder || ""}
-                  value={values[field.id] || ""}
-                  onChange={e => setValue(field.id, e.target.value)}
-                />
-              )}
-
-              {/* Number input */}
-              {field.type === "number" && (
-                <Input
-                  className="h-9 text-sm"
-                  type="number"
-                  min={field.min}
-                  max={field.max}
-                  step={field.step || "any"}
-                  placeholder={field.placeholder || "0"}
-                  value={values[field.id] ?? ""}
-                  onChange={e => setValue(field.id, e.target.value)}
-                />
-              )}
-
-              {/* Date input */}
-              {field.type === "date" && (
-                <Input
-                  className="h-9 text-sm"
-                  type="date"
-                  value={values[field.id] || ""}
-                  onChange={e => setValue(field.id, e.target.value)}
-                />
-              )}
-
-              {/* Select dropdown */}
-              {field.type === "select" && (
-                <Select
-                  value={values[field.id] || ""}
-                  onValueChange={v => setValue(field.id, v)}
-                >
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder={field.placeholder || "Select..."}>
-                      {(() => {
-                        const opt = (field.options || []).flatMap(o => o.options || [o]).find(o => o.value === values[field.id])
-                        if (!opt) return field.placeholder || "Select..."
-                        return (
-                          <span className="flex items-center gap-2">
-                            {opt.icon && <Image src={opt.icon} alt="" width={14} height={14} className="opacity-70" />}
-                            {opt.label}
-                          </span>
-                        )
-                      })()}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent className="bg-white max-h-[240px]">
-                    {(field.options || []).map((optOrGroup, i) => {
-                      // Grouped options: { group: "Meta Ads", options: [...] }
-                      if (optOrGroup.group) {
-                        return (
-                          <div key={i}>
-                            <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
-                              {optOrGroup.group}
-                            </div>
-                            {optOrGroup.options.map(opt => (
-                              <SelectItem key={opt.value} value={opt.value}>
-                                <span className="flex items-center gap-2">
-                                  {opt.icon && <Image src={opt.icon} alt="" width={14} height={14} className="opacity-70" />}
-                                  {opt.label}
-                                </span>
-                              </SelectItem>
-                            ))}
-                          </div>
-                        )
-                      }
-                      // Flat option
-                      return (
-                        <SelectItem key={optOrGroup.value} value={optOrGroup.value}>
-                          <span className="flex items-center gap-2">
-                            {optOrGroup.icon && <Image src={optOrGroup.icon} alt="" width={14} height={14} className="opacity-70" />}
-                            {optOrGroup.label}
-                          </span>
-                        </SelectItem>
-                      )
-                    })}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {/* Checkboxes */}
-              {field.type === "checkboxes" && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(field.options || []).map(opt => {
-                    const checked = (values[field.id] || []).includes(opt.value)
-                    return (
-                      <label
-                        key={opt.value}
-                        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm cursor-pointer transition-colors ${
-                          checked
-                            ? "bg-purple-50 border-purple-300 text-purple-700"
-                            : "bg-white border-border hover:border-purple-200"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={() => toggleCheckbox(field.id, opt.value)}
-                          className="h-3.5 w-3.5"
-                        />
-                        {opt.label}
-                      </label>
-                    )
-                  })}
-                </div>
-              )}
-
-              {/* Radio */}
-              {field.type === "radio" && (
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(field.options || []).map(opt => {
-                    const selected = values[field.id] === opt.value
-                    return (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        onClick={() => setValue(field.id, opt.value)}
-                        className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                          selected
-                            ? "bg-purple-600 border-purple-600 text-white"
-                            : "bg-white border-border hover:border-purple-200"
-                        }`}
-                      >
-                        {opt.label}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* Submit button */}
-        {!disabled && (
-          <div className="flex justify-end pt-1">
-            <Button
-              onClick={handleSubmit}
-              className="bg-purple-600 hover:bg-purple-700 text-white gap-2 h-9 px-5"
-              size="sm"
-            >
-              <Send className="h-3.5 w-3.5" />
-              Submit
-            </Button>
-          </div>
-        )}
-      </div>
     </div>
   )
 }

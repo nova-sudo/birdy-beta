@@ -144,7 +144,11 @@ export default function ChatComposer({
       )}
 
       {/* Input row */}
-      <div className={`flex items-end gap-2 rounded-2xl border border-border/60 bg-white shadow-sm focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 transition ${compact ? "p-1.5" : "p-2"}`}>
+      <div className={`flex items-end gap-2 rounded-xl border bg-white transition-all
+        ${compact
+          ? "border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 p-1.5"
+          : "border-border/60 shadow-sm focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 p-2"
+        }`}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -153,33 +157,33 @@ export default function ChatComposer({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className={`flex-1 resize-none bg-transparent border-0 outline-none text-sm placeholder:text-muted-foreground/70 ${compact ? "px-2 py-1.5" : "px-3 py-2"} min-h-[28px] max-h-[160px] leading-relaxed`}
+          className={`flex-1 resize-none bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400 ${compact ? "px-2 py-1" : "px-3 py-2"} min-h-[28px] max-h-[160px] leading-relaxed`}
         />
         <Button
           onClick={onSend}
           disabled={!canSend}
           size="icon"
-          className={`shrink-0 rounded-xl transition ${
+          className={`shrink-0 rounded-lg transition ${
             canSend
-              ? "bg-purple-600 hover:bg-purple-700 text-white"
-              : "bg-muted text-muted-foreground"
-          } ${compact ? "h-8 w-8" : "h-9 w-9"}`}
+              ? "bg-[#713cdd] hover:bg-[#5f2fc0] text-white shadow-sm"
+              : "bg-gray-100 text-gray-400"
+          } ${compact ? "h-7 w-7" : "h-9 w-9"}`}
           aria-label="Send message"
         >
-          <Send className={compact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+          <Send className={compact ? "h-3 w-3" : "h-4 w-4"} />
         </Button>
       </div>
 
       {/* Hint row */}
       {!compact && (
-        <div className="mt-1.5 px-1 flex items-center justify-between text-[10px] text-muted-foreground/70">
+        <div className="mt-1.5 px-1 flex items-center justify-between text-[10px] text-gray-400">
           <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted font-sans">Enter</kbd> to send ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted font-sans">Shift+Enter</kbd> new line ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-muted font-sans">/</kbd> commands
+            <kbd className="px-1 py-0.5 rounded bg-gray-100 font-sans">Enter</kbd> to send ·
+            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-gray-100 font-sans">Shift+Enter</kbd> new line ·
+            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-gray-100 font-sans">/</kbd> commands
           </span>
           <span>
-            <kbd className="px-1 py-0.5 rounded bg-muted font-sans">⌘K</kbd> focus
+            <kbd className="px-1 py-0.5 rounded bg-gray-100 font-sans">⌘K</kbd> focus
           </span>
         </div>
       )}
