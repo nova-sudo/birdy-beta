@@ -20,6 +20,29 @@ You can start editing the page by modifying `app/page.js`. The page auto-updates
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Hubs & Tabs
+
+### Sales Hub (`src/app/Sales-Hub/page.jsx`)
+
+Call-center performance across HotProspector clients. Tabs:
+
+- **Overview** — one row per client, windowed call KPIs (leads called, total/inbound/outbound calls, transfers). Click a row to drill into Leads for that client.
+- **Leads** — one row per lead, with a "Call Logs" dialog showing every call for that lead. Server-paginated (15/page).
+- **Members** — account-wide HotProspector team performance for the selected date window.
+- **Calls** — the most recent individual calls across leads, newest first. There is no dedicated backend endpoint for a flat "all calls" feed, so this tab fetches a large batch of leads from the same `/api/hotprospector/call-center` endpoint the Leads tab uses, flattens each lead's embedded call logs, and sorts them by call time. The number of calls shown is configurable via the "Show last N recent calls" input above the table (5–100, default 20); the value is persisted per-browser in `localStorage` under `STORAGE_KEYS.SALES_HUB_CALLS_LIMIT`.
+
+  **Known limitation**: `/api/hotprospector/call-center` sorts leads by lead *creation* date, not by call recency, so no batch size fully guarantees the true most-recent calls surface — the tab over-fetches (up to `MAX_LEADS_TO_FETCH` leads, see `src/app/Sales-Hub/page.jsx`) as a heuristic to make this unlikely in practice. A correct fix would need a backend aggregation that filters/sorts by call time server-side; the backend does already have a `GET /api/call_logs?group_id=` endpoint that does this correctly, but it's currently GHL-only — HotProspector-provider clients short-circuit to an empty result until that integration is extended.
+
+All tabs share the same layout: a `Tabs`/`TabsList` header, a search box + column-visibility dropdown toolbar, and a `StyledTable` (`src/components/ui/table-container.jsx`) for the data grid.
+
+## Testing
+
+This project uses [Vitest](https://vitest.dev/) + [React Testing Library](https://testing-library.com/react). Run the suite with:
+
+```bash
+npm run test
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

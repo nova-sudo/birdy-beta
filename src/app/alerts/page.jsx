@@ -39,6 +39,7 @@ import {
 import { toast } from "sonner"
 import {
   Bell,
+  Bird,
   CirclePlus,
   Ellipsis,
   Pencil,
@@ -70,6 +71,7 @@ import {
   TYPE_OPTIONS, FREQUENCY_OPTIONS,
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
 } from "@/lib/alert-helpers"
+import ChatConversation from "@/components/chat/ChatConversation"
 
 // ── Tracking mode toggle ──────────────────────────────────────────────────────
 
@@ -664,9 +666,10 @@ export default function AlertsPage() {
   const [form, setForm] = useState(EXTENDED_EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   const [clientSearch, setClientSearch] = useState("")
-  const [birdyInput, setBirdyInput] = useState("")
+  const [dialogMode, setDialogMode] = useState("birdy") // "birdy" | "manual"
+  const [birdyChatKey, setBirdyChatKey] = useState(0)
   const searchParams = useSearchParams()
-  const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "all")
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "triggered")
 
   // Extract unique tags from all client groups for the tag metric picker
   const availableTags = useMemo(() => {
@@ -732,7 +735,14 @@ export default function AlertsPage() {
     setEditingAlert(null)
     setForm(EXTENDED_EMPTY_FORM)
     setClientSearch("")
-    setBirdyInput("")
+    setDialogMode("birdy")
+    setBirdyChatKey(k => {
+      // Clear the stale session so Birdy always starts fresh
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(`birdy_alert_session_${k + 1}`)
+      }
+      return k + 1
+    })
     setDialogOpen(true)
   }
 
@@ -753,7 +763,7 @@ export default function AlertsPage() {
       tracking_mode: realAlert.tracking_mode || "total",
     })
     setClientSearch("")
-    setBirdyInput("")
+    setDialogMode("manual")
     setDialogOpen(true)
   }, [])
 
@@ -1013,50 +1023,91 @@ export default function AlertsPage() {
       {/* ── Create / Edit Dialog ──────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
-          className="w-[90vw] !max-w-none max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden bg-background sm:!max-w-none"
+          className="w-[90vw] !max-w-none h-[90vh] p-0 gap-0 flex flex-col overflow-hidden bg-background sm:!max-w-none"
           showCloseButton={false}
         >
           {/* Header */}
-          <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg">
-            <div className="flex flex-col text-center sm:text-left space-y-1">
-              <h2 className="text-lg font-semibold leading-none tracking-tight">
-                {editingAlert ? "Edit Alert" : "Create Alert"}
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                {editingAlert ? "Update the alert configuration." : "Set up a metric alert to stay informed."}
-              </p>
+          <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg shrink-0">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  {editingAlert ? "Edit Alert" : "Create Alert"}
+                </h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {editingAlert
+                    ? "Update the alert configuration."
+                    : dialogMode === "birdy"
+                      ? "Chat with Birdy to set up your alert — it'll create it for you."
+                      : "Fill in the form to configure your alert manually."}
+                </p>
+              </div>
+              {!editingAlert && (
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/70 border border-border/60 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDialogMode("birdy")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      dialogMode === "birdy"
+                        ? "bg-white text-purple-700 shadow-sm border border-purple-200/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-purple-500" : "text-muted-foreground"}`} />
+                    Ask Birdy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDialogMode("manual")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      dialogMode === "manual"
+                        ? "bg-white text-foreground shadow-sm border border-border/60"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Manual
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Body */}
-          <div className="p-6 overflow-y-auto flex-1">
-            {/* Ask Birdy — Coming Soon */}
-            <div className="rounded-lg border border-border bg-card p-6 shadow-sm mb-6 relative overflow-hidden">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-base font-semibold text-foreground">Need help? Ask Birdy to build it for you!</h3>
-                  <Badge className="bg-purple-100 text-purple-700 border-0 text-xs font-medium">Coming Soon</Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Describe your alert in plain English and Birdy will configure it automatically — just type something like
-                  &quot;Alert me when cost per lead exceeds £5&quot; and we&apos;ll fill in the metric, condition, and targets for you.
-                </p>
-                <div className="flex gap-2 mt-3 opacity-50 pointer-events-none">
-                  <Input
-                    className="flex-1 h-11 rounded-lg"
-                    placeholder="e.g. 'Alert me when cost per lead exceeds £5'"
-                    disabled
-                  />
-                  <Button
-                    className="h-11 w-11 rounded-lg bg-primary text-primary-foreground shrink-0"
-                    disabled
-                  >
-                    <Zap className="h-4 w-4" />
-                  </Button>
-                </div>
+          {/* Body — Birdy AI mode */}
+          {dialogMode === "birdy" && !editingAlert && (
+            <div className="flex-1 min-h-0 flex flex-col bg-[#FAFAFA] overflow-hidden">
+              <div className="flex-1 min-h-0 h-full overflow-hidden">
+                <ChatConversation
+                  key={birdyChatKey}
+                  page="alerts"
+                  sessionKey={`birdy_alert_session_${birdyChatKey}`}
+                  initialMessage="Hi, I want to create a new alert"
+                  bubbleWidthClass="max-w-[85%]"
+                  composerCompact
+                  composerPlaceholder="Type your answer..."
+                  showQuickActions={false}
+                  quickStarters={[
+                    { label: "CPL alert", prompt: "Alert me when cost per lead exceeds a threshold" },
+                    { label: "Spend alert", prompt: "Alert me when ad spend goes too high" },
+                    { label: "Revenue alert", prompt: "Alert me when GHL revenue drops" },
+                    { label: "Calls alert", prompt: "Alert me on call center metrics" },
+                  ]}
+                  emptyStateTitle="Let's create an alert"
+                  emptyStateSubtitle="Tell me what you want to monitor and I'll set it up for you."
+                  onToolUsed={(toolName) => {
+                    if (toolName === "create_alert") fetchAlerts()
+                  }}
+                />
+              </div>
+              <div className="shrink-0 px-6 py-3 border-t border-border bg-white flex justify-end">
+                <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
+                  Close
+                </Button>
               </div>
             </div>
+          )}
 
+          {/* Body — Manual form mode */}
+          {(dialogMode === "manual" || editingAlert) && (
+          <div className="p-6 overflow-y-auto flex-1">
             {/* Form */}
             <form id="create-alert-form" onSubmit={e => { e.preventDefault(); handleSave() }}>
               <div className="flex flex-col lg:flex-row gap-6 items-stretch">
@@ -1312,8 +1363,10 @@ export default function AlertsPage() {
               </div>
             </form>
           </div>
+          )}
 
-          {/* Footer */}
+          {/* Footer — only shown in manual/edit mode */}
+          {(dialogMode === "manual" || editingAlert) && (
           <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg flex-shrink-0">
             <div className="flex flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
@@ -1331,6 +1384,7 @@ export default function AlertsPage() {
               </Button>
             </div>
           </div>
+          )}
         </DialogContent>
       </Dialog>
 

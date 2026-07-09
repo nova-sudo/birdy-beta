@@ -39,6 +39,7 @@ export const STORAGE_KEYS = {
   DEFAULT_CURRENCY: "user_default_currency",
   CUSTOM_METRICS: "customMetrics",
   OAUTH_REFRESH_QUEUE: "oauth_refresh_queue",
+  SALES_HUB_CALLS_LIMIT: "sales_hub_calls_limit",
 }
 
 export const PUBLIC_ROUTES = ["/", "/login", "/register"]

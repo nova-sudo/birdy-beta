@@ -18,7 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, Copy, PieChart, X, CalculatorIcon, Zap, SquarePlus } from "lucide-react"
+import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, Copy, PieChart, X, CalculatorIcon, Zap, SquarePlus, Bird } from "lucide-react"
+import ChatConversation from "@/components/chat/ChatConversation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
@@ -172,6 +173,8 @@ const MetricsHub = () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [customMetrics, setCustomMetrics] = useState([])
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [dialogMode, setDialogMode] = useState("birdy") // "birdy" | "manual"
+  const [birdyChatKey, setBirdyChatKey] = useState(0)
   const [editingMetric, setEditingMetric] = useState(null)
   // Source metric when the dialog is open in "duplicate" mode (null otherwise).
   // We track it separately from editingMetric so save still POSTs as a new row
@@ -212,13 +215,18 @@ const MetricsHub = () => {
             id: m.id,
             label: m.label,
             category: m.category,
+            level: m.level,
           }))
           // Add tags
           for (const tag of (data.tags || [])) {
             const tagId = `tag_${tag.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
-            metrics.push({ id: tagId, label: `Tag: ${tag}`, category: "Tags" })
+            metrics.push({ id: tagId, label: `Tag: ${tag}`, category: "Tags", level: "group" })
           }
-          setAvailableMetricsForFormulas(metrics)
+          // Account-level metrics (e.g. per-agent call-center KPIs) are account-wide
+          // and can't be resolved per client group, so they'd silently evaluate to 0
+          // inside a custom formula — exclude them from the formula builder. They
+          // still appear in the catalog table (discoveredMetrics) below.
+          setAvailableMetricsForFormulas(metrics.filter(m => m.level !== "account"))
           // Build discovered metrics for the table display (map to expected field names)
           setDiscoveredMetrics(metrics.map(m => ({
             id: m.id,
@@ -271,7 +279,7 @@ const MetricsHub = () => {
   // (E.g. create CPA = Meta Spend / Won Opps, then use CPA in another metric.)
   // The metric currently being edited is excluded so users can't directly
   // reference themselves; deeper cycles are caught server-side on save.
-  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask }
+  const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask, "HotProspector": HP, "Call Center": HP, "Call Center Agents": HP }
   const formulaMetricOptions = useMemo(() => {
     const baseOptions = availableMetricsForFormulas.map(m => ({
       ...m,
@@ -428,6 +436,7 @@ const MetricsHub = () => {
 
     setEditingMetric(metric)
     setDuplicatingFrom(null)
+    setDialogMode("manual")
     setMetricForm({
       name: metric.name,
       description: metric.description || "",
@@ -459,6 +468,7 @@ const MetricsHub = () => {
 
     setEditingMetric(null)       // explicitly NOT edit mode — save will POST
     setDuplicatingFrom(metric)
+    setDialogMode("manual")
     setMetricForm({
       name: suggestedName,
       description: metric.description || "",
@@ -539,6 +549,14 @@ const MetricsHub = () => {
       },
       "HotProspector": {
         color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
+        image: HP
+      },
+      "Call Center": {
+        color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
+        image: HP
+      },
+      "Call Center Agents": {
+        color: "text-[#DB2777] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
         image: HP
       },
     }
@@ -704,7 +722,10 @@ const MetricsHub = () => {
             <Button
               onClick={() => {
                 setEditingMetric(null)
-                resetForm()
+                setDuplicatingFrom(null)
+                setDialogMode("birdy")
+                setBirdyChatKey(k => k + 1)
+                sessionStorage.removeItem(`birdy_metric_session_${birdyChatKey + 1}`)
                 setIsCreateDialogOpen(true)
               }}
               className="h-10 bg-purple-600 hover:bg-purple-700 "
@@ -905,48 +926,117 @@ const MetricsHub = () => {
         </Tabs>
 
         {/* Create/Edit Dialog */}
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) resetForm() }}>
           <DialogContent
-            className="w-[90vw] max-w-none overflow-y-auto max-h-[90vh] p-0 gap-0 bg-background sm:!max-w-none !max-w-none"
+            className="w-[90vw] !max-w-none h-[90vh] p-0 gap-0 flex flex-col overflow-hidden bg-background sm:!max-w-none"
             showCloseButton={false}
           >
             {/* Header */}
-            <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg">
-              <div className="flex flex-col text-center sm:text-left space-y-1">
-                <DialogTitle>
-                  {editingMetric
-                    ? "Edit Metric"
-                    : duplicatingFrom
-                      ? "Duplicate Metric"
-                      : "Create Metric"}
-                </DialogTitle>
-                <DialogDescription>
-                  {duplicatingFrom
-                    ? <>Editing a copy of <span className="font-medium text-foreground">&ldquo;{duplicatingFrom.name}&rdquo;</span> &mdash; choose a unique name before saving.</>
-                    : "Build a formula by combining metrics and operations."}
-                </DialogDescription>
+            <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg shrink-0">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-semibold leading-none tracking-tight">
+                    {editingMetric ? "Edit Metric" : duplicatingFrom ? "Duplicate Metric" : "Create Metric"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {editingMetric
+                      ? "Update the metric configuration."
+                      : duplicatingFrom
+                        ? <>Editing a copy of <span className="font-medium text-foreground">&ldquo;{duplicatingFrom.name}&rdquo;</span> — choose a unique name before saving.</>
+                        : dialogMode === "birdy"
+                          ? "Chat with Birdy to build your metric — it'll create it for you."
+                          : "Build a formula by combining metrics and operations."}
+                  </p>
+                </div>
+                {!editingMetric && !duplicatingFrom && (
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/70 border border-border/60 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setDialogMode("birdy")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        dialogMode === "birdy"
+                          ? "bg-white text-purple-700 shadow-sm border border-purple-200/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-purple-500" : "text-muted-foreground"}`} />
+                      Ask Birdy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDialogMode("manual")}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                        dialogMode === "manual"
+                          ? "bg-white text-foreground shadow-sm border border-border/60"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Manual
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Body */}
-            <div className="p-6">
-              <div className="flex flex-col gap-6">
-                {/* Ask Birdy — Coming Soon */}
-                <div className="rounded-lg border border-border bg-card p-6 shadow-sm relative overflow-hidden">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-foreground">Need help? Ask Birdy to build it for you!</h3>
-                      <Badge className="bg-purple-100 text-purple-700 border-0 text-xs font-medium">Coming Soon</Badge>
-                    </div>
-                    <div className="flex gap-2 mt-3 opacity-50 pointer-events-none">
-                      <Input className="flex-1 h-11 rounded-lg" placeholder="e.g. 'Calculate my cost per booking'" disabled />
-                      <Button className="h-11 w-11 rounded-lg bg-primary text-primary-foreground shrink-0" disabled>
-                        <Zap className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+            {/* Body — Birdy AI mode */}
+            {dialogMode === "birdy" && !editingMetric && !duplicatingFrom && (
+              <div className="flex-1 min-h-0 flex flex-col bg-[#FAFAFA] overflow-hidden">
+                <div className="flex-1 min-h-0 h-full overflow-hidden">
+                  <ChatConversation
+                    key={birdyChatKey}
+                    page="custom_metrics"
+                    sessionKey={`birdy_metric_session_${birdyChatKey}`}
+                    initialMessage="Hi, I want to create a new custom metric"
+                    bubbleWidthClass="max-w-[85%]"
+                    composerCompact
+                    composerPlaceholder="Type your answer..."
+                    showQuickActions={false}
+                    quickStarters={[
+                      { label: "Cost per booking", prompt: "Help me create a cost per booking metric" },
+                      { label: "Lead-to-close ratio", prompt: "I want a lead-to-close ratio metric" },
+                      { label: "Revenue per lead", prompt: "Create a revenue per lead metric" },
+                      { label: "CPL formula", prompt: "Build a cost per lead formula" },
+                    ]}
+                    emptyStateTitle="Let's build a metric"
+                    emptyStateSubtitle="Tell me what you want to measure and I'll set it up for you."
+                    onToolUsed={(toolName) => {
+                      if (toolName === "create_custom_metric") {
+                        apiRequest("/api/custom-metrics").then(async (res) => {
+                          if (res.ok) {
+                            const data = await res.json()
+                            setCustomMetrics((data.custom_metrics || []).map(m => ({
+                              id: m.id,
+                              name: m.name,
+                              description: m.description || "",
+                              source: "Custom Formula",
+                              dashboard: (m.dashboards || []).join(", "),
+                              dashboards: m.dashboards || [],
+                              formula: m.formula_display || "",
+                              formulaParts: m.formula_parts || [],
+                              formatType: m.format_type || "integer",
+                              aggregation: m.aggregation || "total",
+                              displayOnDashboard: true,
+                              category: "custom",
+                              enabled: true,
+                            })))
+                          }
+                        })
+                      }
+                    }}
+                  />
                 </div>
+                <div className="shrink-0 px-6 py-3 border-t border-border bg-white flex justify-end">
+                  <Button variant="outline" size="sm" onClick={resetForm}>
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
 
+            {/* Body — Manual / Edit / Duplicate mode */}
+            {(dialogMode === "manual" || editingMetric || duplicatingFrom) && (
+            <div className="p-6 overflow-y-auto flex-1">
+              <div className="flex flex-col gap-6">
                 {/* Two-column layout */}
                 <div className="flex flex-col lg:flex-row gap-6 items-stretch">
                   {/* Left column */}
@@ -1315,9 +1405,11 @@ const MetricsHub = () => {
                 </div>
               </div>
             </div>
+            )}
 
-            {/* Footer */}
-            <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg">
+            {/* Footer — only shown in manual/edit/duplicate mode */}
+            {(dialogMode === "manual" || editingMetric || duplicatingFrom) && (
+            <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg flex-shrink-0">
               <div className="flex flex-row justify-end gap-2">
                 <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
                 <Button
@@ -1335,6 +1427,7 @@ const MetricsHub = () => {
                 </Button>
               </div>
             </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { Clock, Zap } from "lucide-react"
-import { ghlIcon, metaIcon } from "@/lib/icons"
+import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 
 export const METRIC_OPTIONS = [
   // ── Meta Ads metrics ──
@@ -20,6 +20,27 @@ export const METRIC_OPTIONS = [
   { value: "ghl_leads",        label: "Leads",                 source: "ghl",  icon: ghlIcon },
   { value: "ghl_conversion",   label: "Conversion Rate (%)",   source: "ghl",  icon: ghlIcon },
   { value: "ghl_revenue",      label: "Revenue",               source: "ghl",  icon: ghlIcon },
+  // ── Call Center (HotProspector) — per-client ──
+  { value: "hp_leads",            label: "Call Center Leads",  source: "hp",   icon: hpIcon },
+  { value: "hp_total_calls",      label: "Total Calls",        source: "hp",   icon: hpIcon },
+  { value: "hp_inbound",          label: "Inbound Calls",      source: "hp",   icon: hpIcon },
+  { value: "hp_outbound",         label: "Outbound Calls",     source: "hp",   icon: hpIcon },
+  { value: "hp_transfers",        label: "Call Transfers",     source: "hp",   icon: hpIcon },
+  { value: "hp_leads_with_calls", label: "Leads Called",       source: "hp",   icon: hpIcon },
+  { value: "hp_answered_calls",   label: "Answered Calls",     source: "hp",   icon: hpIcon },
+  { value: "hp_talk_time",        label: "Talk Time (min)",    source: "hp",   icon: hpIcon },
+  { value: "hp_connect_rate",     label: "Connect Rate (%)",   source: "hp",   icon: hpIcon },
+  { value: "hp_answer_rate",      label: "Answer Rate (%)",    source: "hp",   icon: hpIcon },
+  // ── Call Center (HotProspector) — per-agent, account-wide ──
+  { value: "hp_agent_outbound",    label: "Agent Outbound Calls",  source: "hp",   icon: hpIcon },
+  { value: "hp_agent_inbound",     label: "Agent Inbound Calls",   source: "hp",   icon: hpIcon },
+  { value: "hp_agent_dialed",      label: "Agent Total Dials",     source: "hp",   icon: hpIcon },
+  { value: "hp_agent_answered",    label: "Agent Answered Calls",  source: "hp",   icon: hpIcon },
+  { value: "hp_agent_convos",      label: "Conversations",         source: "hp",   icon: hpIcon },
+  { value: "hp_agent_appts",       label: "Appointments Set",      source: "hp",   icon: hpIcon },
+  { value: "hp_agent_talk_min",    label: "Agent Talk Time (min)", source: "hp",   icon: hpIcon },
+  { value: "hp_agent_sms",         label: "SMS Sent",              source: "hp",   icon: hpIcon },
+  { value: "hp_agent_answer_rate", label: "Agent Answer Rate (%)", source: "hp",   icon: hpIcon },
 ]
 
 export const TYPE_OPTIONS = [
@@ -131,7 +152,7 @@ export function ProgressToTrigger({ alert }) {
 
   const isPctOperator = ["pct_drop", "pct_rise"].includes(operator)
   const isCurrency = !isPctOperator && ["spend", "cpc", "cpm", "cpl", "cost_per_result", "ghl_revenue"].includes(alert.condition?.metric)
-  const isPct = isPctOperator || ["ctr", "meta_conversion", "ghl_conversion"].includes(alert.condition?.metric)
+  const isPct = isPctOperator || ["ctr", "meta_conversion", "ghl_conversion", "hp_connect_rate", "hp_answer_rate", "hp_agent_answer_rate"].includes(alert.condition?.metric)
   const fmt = (v, forceType) => {
     // For pct operators: current_value is always a % change, threshold is always a %
     if (forceType === "pct" || isPct) return `${Number(v).toFixed(1)}%`
