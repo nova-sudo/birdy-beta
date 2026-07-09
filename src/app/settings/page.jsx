@@ -42,10 +42,40 @@ function SettingsPageContent() {
   const searchParams = useSearchParams()
   const defaultTab = searchParams.get("tab") || "integrations"
 
-  // Separate state variables with clear naming — no ambiguity about which level of nesting
-  const [ghlStatus, setGhlStatus] = useState({ connected: false })
-  const [facebookStatus, setFacebookStatus] = useState({ connected: false })
-  const [hotprospectorStatus, setHotprospectorStatus] = useState({ connected: false })
+  // Separate state variables with clear naming — no ambiguity about which level of nesting.
+  //
+  // Lazy-init from localStorage so a remount (e.g. user navigates to /meta
+  // and comes back) doesn't flash a stale "Connect" button while
+  // /api/status is in flight. The init effect below still hits the backend
+  // and overwrites with truth — this just bridges the network gap with the
+  // last-known-good state. Same pattern as the existing `user` state below.
+  //
+  // `token_expired` is recomputed against the current clock every time we
+  // read from cache, so a stored `false` from yesterday doesn't claim a
+  // token is still valid past its `expires_at`.
+  const readCachedStatus = (key) => {
+    try {
+      const raw = localStorage.getItem(key)
+      if (!raw) return { connected: false }
+      const parsed = JSON.parse(raw)
+      if (!parsed || !parsed.connected) return { connected: false }
+      if (parsed.expires_at) {
+        parsed.token_expired = new Date(parsed.expires_at) < new Date()
+      }
+      return parsed
+    } catch {
+      return { connected: false }
+    }
+  }
+  const [ghlStatus, setGhlStatus] = useState(() => readCachedStatus("goHighLevelIntegration"))
+  const [facebookStatus, setFacebookStatus] = useState(() => readCachedStatus("facebookIntegration"))
+  const [hotprospectorStatus, setHotprospectorStatus] = useState(() => readCachedStatus("hotprospectorIntegration"))
+  // True until the first /api/status fetch resolves. Used to gate the
+  // Connect buttons behind a "Checking…" pill — so a first-time user on a
+  // fresh browser (no cache) doesn't see "Connect" flash before their real
+  // status loads. Returning users with a cached connected state never see
+  // this because the cache short-circuits them straight to "Connected".
+  const [statusInitialLoading, setStatusInitialLoading] = useState(true)
 
   const [refreshCycle, setRefreshCycle] = useState({ running: false, groups_done: 0, groups_total: 0, current_group: null })
   const [refreshStarting, setRefreshStarting] = useState(false)
@@ -186,7 +216,17 @@ function SettingsPageContent() {
 
         // HotProspector
         const hpRes = await apiRequest("/api/hotprospector/status")
-        if (hpRes.ok) setHotprospectorStatus(await hpRes.json())
+        if (hpRes.ok) {
+          const hpData = await hpRes.json()
+          setHotprospectorStatus(hpData)
+          // Cache so a remount shows the right state instantly (same pattern
+          // as GHL and Facebook above).
+          if (hpData?.connected) {
+            localStorage.setItem("hotprospectorIntegration", JSON.stringify(hpData))
+          } else {
+            localStorage.removeItem("hotprospectorIntegration")
+          }
+        }
 
         // Refresh cycle status
         const cycleRes = await apiRequest("/api/client-groups/refresh-all/status")
@@ -208,11 +248,32 @@ function SettingsPageContent() {
         } catch { }
       } finally {
         setIsLoading(false)
+        setStatusInitialLoading(false)
       }
     }
 
     init()
   }, [searchParams])
+
+  // ── Cross-tab sync ────────────────────────────────────────────────────
+  // If the user disconnects (or connects) an integration in another tab,
+  // localStorage fires a `storage` event in every OTHER open tab. Hook in
+  // so this tab updates without waiting for the next /api/status fetch —
+  // avoids "still says Connected" for several seconds after a disconnect
+  // happened elsewhere.
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "goHighLevelIntegration") {
+        setGhlStatus(readCachedStatus("goHighLevelIntegration"))
+      } else if (e.key === "facebookIntegration") {
+        setFacebookStatus(readCachedStatus("facebookIntegration"))
+      } else if (e.key === "hotprospectorIntegration") {
+        setHotprospectorStatus(readCachedStatus("hotprospectorIntegration"))
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
 
   // ── Refresh-all cycle polling ──────────────────────────────────────────
   useEffect(() => {
@@ -308,6 +369,7 @@ function SettingsPageContent() {
         clearCookie("facebook_tokens")
         setFacebookStatus({ connected: false })
       } else if (integrationType === "hotprospector") {
+        localStorage.removeItem("hotprospectorIntegration")
         setHotprospectorStatus({ connected: false })
       }
 
@@ -357,7 +419,9 @@ function SettingsPageContent() {
         throw new Error(errData.detail || "Failed to connect HotProspector")
       }
       const data = await res.json()
-      setHotprospectorStatus({ connected: true, api_uid: hotprospectorCredentials.api_uid })
+      const hpNext = { connected: true, api_uid: hotprospectorCredentials.api_uid }
+      setHotprospectorStatus(hpNext)
+      localStorage.setItem("hotprospectorIntegration", JSON.stringify(hpNext))
       setHotprospectorDialogOpen(false)
       setHotprospectorCredentials({ api_uid: "", api_key: "" })
       toast.success("Connection Successful", {
@@ -495,6 +559,11 @@ function SettingsPageContent() {
                         )}
                         <RemoveButton integrationType="gohighlevel" label="GoHighLevel" />
                       </>
+                    ) : statusInitialLoading ? (
+                      <Button size="sm" disabled>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Checking…
+                      </Button>
                     ) : (
                       <Button size="sm" onClick={() => handleConnect("gohighlevel")} disabled={isLoading}>
                         {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -552,6 +621,11 @@ function SettingsPageContent() {
                         )}
                         <RemoveButton integrationType="facebook" label="Meta (Facebook)" />
                       </>
+                    ) : statusInitialLoading ? (
+                      <Button size="sm" disabled>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Checking…
+                      </Button>
                     ) : (
                       <Button size="sm" onClick={() => handleConnect("facebook")} disabled={isLoading}>
                         {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
@@ -594,6 +668,11 @@ function SettingsPageContent() {
                   <div className="flex items-center gap-2 flex-wrap">
                     {hotprospectorStatus.connected ? (
                       <RemoveButton integrationType="hotprospector" label="HotProspector" />
+                    ) : statusInitialLoading ? (
+                      <Button size="sm" disabled>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Checking…
+                      </Button>
                     ) : (
                       <Dialog open={hotprospectorDialogOpen} onOpenChange={setHotprospectorDialogOpen}>
                         <DialogTrigger asChild>
