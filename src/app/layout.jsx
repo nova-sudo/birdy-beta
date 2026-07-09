@@ -7,9 +7,10 @@ import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { Bell, UserRound, Search, Sparkles } from 'lucide-react';
+import { UserRound, Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import BirdyLogo from "@/components/BirdyLogo";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -105,10 +106,7 @@ export default function RootLayout({ children }) {
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <button className="relative p-1.5 rounded-full hover:bg-gray-100 transition">
-                      <Bell className="w-5 h-5 text-black" />
-                      <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                    </button>
+                    <NotificationsDropdown />
                     <button className="p-1.5 rounded-full hover:bg-gray-100 transition">
                       <UserRound className="w-5 h-5 text-black" />
                     </button>
