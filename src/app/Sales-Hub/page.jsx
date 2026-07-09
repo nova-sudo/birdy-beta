@@ -279,12 +279,16 @@ export default function CallCenterPage() {
     [clientGroups],
   )
 
-  // Apply the top-right client-filter selection to the Overview.
+  // Apply the top-right client-filter selection, then hide 0-call clients from
+  // this view only — clientGroups/overviewRows themselves are untouched, so the
+  // Leads/Members tabs (which don't read overviewRows) are unaffected. This just
+  // narrows what the Overview table (and its derived stat cards) renders.
   const filteredOverview = useMemo(
     () =>
-      selectedClientGroup === "all"
+      (selectedClientGroup === "all"
         ? overviewRows
-        : overviewRows.filter((r) => r.id === selectedClientGroup),
+        : overviewRows.filter((r) => r.id === selectedClientGroup)
+      ).filter((r) => r.total_calls > 0),
     [overviewRows, selectedClientGroup],
   )
 
