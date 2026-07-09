@@ -17,7 +17,6 @@ import { DEFAULT_DATE_PRESET, STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { hpIcon as HP } from "@/lib/icons"
 import {
-  LEADS_PER_PAGE,
   CALLS_FETCH_MULTIPLIER,
   MIN_CALLS_TO_FETCH,
   MAX_LEADS_TO_FETCH,
@@ -35,8 +34,6 @@ import {
   Download,
   User,
   Mail,
-  ChevronLeft,
-  ChevronRight,
   ChevronDown,
   X,
   History,
@@ -211,25 +208,25 @@ const DATE_CELL = (v) => (v ? new Date(v).toLocaleDateString() : "—")
 const LEAD_COLUMNS = [
   { id: "name", label: "Name", sortable: true },
   { id: "client", label: "Client", sortable: true, icons: HP },
-  { id: "email", label: "Email", icons: HP },
-  { id: "phone", label: "Phone", icons: HP },
-  { id: "company", label: "Company", icons: HP },
-  { id: "location", label: "Location", icons: HP },
+  { id: "email", label: "Email", sortable: true, icons: HP },
+  { id: "phone", label: "Phone", sortable: true, icons: HP },
+  { id: "company", label: "Company", sortable: true, icons: HP },
+  { id: "location", label: "Location", sortable: true, icons: HP },
   { id: "first_call", label: "First Call", sortable: true, icons: HP, cell: DATE_CELL },
   { id: "last_call", label: "Last Call", sortable: true, icons: HP, cell: DATE_CELL },
-  { id: "calls", label: "Call Logs", icons: HP, cell: CALLS_CELL },
-  { id: "status", label: "Status", cell: STATUS_CELL },
+  { id: "calls", label: "Call Logs", sortable: true, icons: HP, cell: CALLS_CELL },
+  { id: "status", label: "Status", sortable: true, cell: STATUS_CELL },
 ]
 
 const MEMBER_COLUMNS = [
   { id: "name", label: "Name", sortable: true },
-  { id: "email", label: "Email", icons: HP },
-  { id: "phone", label: "Phone", icons: HP },
-  { id: "status", label: "Status", icons: HP, cell: STATUS_CELL },
+  { id: "email", label: "Email", sortable: true, icons: HP },
+  { id: "phone", label: "Phone", sortable: true, icons: HP },
+  { id: "status", label: "Status", sortable: true, icons: HP, cell: STATUS_CELL },
   { id: "outbound", label: "Outbound", sortable: true, icons: HP },
   { id: "inbound", label: "Inbound", sortable: true, icons: HP },
   { id: "answered", label: "Answered", sortable: true, icons: HP },
-  { id: "answer_rate", label: "Answer Rate", icons: HP },
+  { id: "answer_rate", label: "Answer Rate", sortable: true, icons: HP },
   { id: "convos", label: "Convos", sortable: true, icons: HP },
   { id: "appts", label: "Appts", sortable: true, icons: HP },
   { id: "talk_min", label: "Talk (min)", sortable: true, icons: HP },
@@ -469,6 +466,11 @@ const flattenCalls = (leadsData) =>
     }))
   })
 
+// Batch size used to page through the backend while pulling the *entire*
+// leads window client-side, so the table can sort/paginate across all of it
+// (not just one server page) — matching how Overview/Members already work.
+const LEADS_FETCH_BATCH_SIZE = 200
+
 export default function CallCenterPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET)
 
@@ -484,11 +486,9 @@ export default function CallCenterPage() {
   })
   const [colMenuOpen, setColMenuOpen] = useState(false)
 
-  // Leads tab (server-paginated, windowed by the date preset).
+  // Leads tab (fully loaded, windowed by the date preset — sorted/paginated client-side).
   const [leads, setLeads] = useState([])
   const [leadsLoading, setLeadsLoading] = useState(false)
-  const [leadsPage, setLeadsPage] = useState(1)
-  const [leadsTotal, setLeadsTotal] = useState(0)
   // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [gridOpen, setGridOpen] = useState(false)
@@ -582,7 +582,9 @@ export default function CallCenterPage() {
     [filteredOverview],
   )
 
-  // ── Fetch leads (Leads tab) whenever the window / drill / page changes ──
+  // ── Fetch leads (Leads tab) whenever the window / drill changes ──
+  //    Pulls every page from the backend up front so sorting/pagination in
+  //    the table operates on the full windowed dataset, not just one page.
   useEffect(() => {
     if (activeTab !== "leads") return
     let cancelled = false
@@ -590,24 +592,48 @@ export default function CallCenterPage() {
       setLeadsLoading(true)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
-        const qs = new URLSearchParams({
-          skip: String((leadsPage - 1) * LEADS_PER_PAGE),
-          limit: String(LEADS_PER_PAGE),
-        })
-        if (selectedLocationId) qs.set("location_id", selectedLocationId)
-        if (start_date) qs.set("start_date", start_date)
-        if (end_date) qs.set("end_date", end_date)
-        const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
+        const baseParams = {}
+        if (selectedLocationId) baseParams.location_id = selectedLocationId
+        if (start_date) baseParams.start_date = start_date
+        if (end_date) baseParams.end_date = end_date
+
+        const fetchBatch = async (skip) => {
+          const qs = new URLSearchParams({
+            ...baseParams,
+            skip: String(skip),
+            limit: String(LEADS_FETCH_BATCH_SIZE),
+          })
+          const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
+          if (!res.ok) throw new Error(`HTTP ${res.status}`)
+          return res.json()
+        }
+
+        // First page tells us the total; pull the remaining pages
+        // concurrently (capped) instead of one-request-at-a-time.
+        const first = await fetchBatch(0)
         if (cancelled) return
-        setLeads((data.data || []).map(mapLead))
-        setLeadsTotal(data.meta?.total ?? 0)
+        let all = first.data || []
+        const total = first.meta?.total ?? all.length
+
+        const remainingSkips = []
+        for (let skip = all.length; skip < total; skip += LEADS_FETCH_BATCH_SIZE) {
+          remainingSkips.push(skip)
+        }
+
+        const CONCURRENCY = 6
+        for (let i = 0; i < remainingSkips.length; i += CONCURRENCY) {
+          if (cancelled) return
+          const chunk = remainingSkips.slice(i, i + CONCURRENCY)
+          const results = await Promise.all(chunk.map(fetchBatch))
+          results.forEach((data) => { all = all.concat(data.data || []) })
+        }
+
+        if (cancelled) return
+        setLeads(all.map(mapLead))
       } catch (err) {
         if (cancelled) return
         console.error("Error loading call-center leads:", err)
         setLeads([])
-        setLeadsTotal(0)
       } finally {
         if (!cancelled) setLeadsLoading(false)
       }
@@ -616,7 +642,7 @@ export default function CallCenterPage() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, datePreset, selectedLocationId, leadsPage])
+  }, [activeTab, datePreset, selectedLocationId])
 
   // ── Fetch members (team + per-day dashboard metrics) on preset change ──
   //    getMemberDashboardData is a per-day snapshot, so we pass the selected
@@ -737,6 +763,9 @@ export default function CallCenterPage() {
     const logs = lead.call_logs || []
     // Only dates a HP lead carries are its call times; expose first/last (windowed).
     const isos = logs.map((l) => l.call_time_iso).filter(Boolean).sort()
+    // Coerce to a real number — the API can send call_logs_count as a string,
+    // which would make the table's comparator sort it lexicographically.
+    const callsCount = Number(lead.call_logs_count ?? logs.length) || 0
     return {
       id: lead.id,
       name: fullName || lead.phone || lead.email || "—",
@@ -748,15 +777,17 @@ export default function CallCenterPage() {
       first_call: isos[0] || null,
       last_call: isos[isos.length - 1] || null,
       call_logs: logs,
-      call_logs_count: lead.call_logs_count ?? logs.length,
+      call_logs_count: callsCount,
+      // "calls" is the sort key for the Call Logs column; the cell itself
+      // renders from call_logs/call_logs_count above.
+      calls: callsCount,
       status: "Active",
     }
   }
 
-  // ── Date preset change: reset leads paging ──
+  // ── Date preset change ──
   const handlePresetChange = (preset) => {
     setDatePreset(preset)
-    setLeadsPage(1)
   }
 
   // ── Top-right client picker (mirrors the Leads hub group picker) ──
@@ -779,7 +810,6 @@ export default function CallCenterPage() {
     setSelectedClientGroup(id)
     setGridOpen(false)
     setGroupSearch("")
-    setLeadsPage(1)
   }
 
   // Close the picker on outside click.
@@ -796,7 +826,6 @@ export default function CallCenterPage() {
   const handleDrillIn = (group) => {
     if (!group?.id) return
     setSelectedClientGroup(group.id)
-    setLeadsPage(1)
     setActiveTab("leads")
   }
 
@@ -815,8 +844,6 @@ export default function CallCenterPage() {
       // keep the first (name) column — StyledTable always shows it anyway
       [activeTab]: Object.fromEntries(activeColumns.map((c, i) => [c.id, i === 0])),
     }))
-
-  const leadsTotalPages = Math.max(1, Math.ceil(leadsTotal / LEADS_PER_PAGE))
 
   const StatCard = ({ label, value, desc, Icon }) => (
     <Card className="border rounded-lg shadow-sm">
@@ -1010,36 +1037,6 @@ export default function CallCenterPage() {
               searchQuery={searchQuery}
               isLoading={leadsLoading}
             />
-
-            {leadsTotal > LEADS_PER_PAGE && (
-              <div className="flex items-center justify-center p-4">
-                <div className="flex items-center gap-4">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLeadsPage((p) => Math.max(1, p - 1))}
-                    disabled={leadsPage === 1 || leadsLoading}
-                    className="hover:bg-purple-200 gap-2"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    Previous
-                  </Button>
-                  <div className="text-sm font-medium px-4">
-                    Page {leadsPage} of {leadsTotalPages}
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLeadsPage((p) => Math.min(leadsTotalPages, p + 1))}
-                    disabled={leadsPage >= leadsTotalPages || leadsLoading}
-                    className="hover:bg-purple-200 gap-2"
-                  >
-                    Next
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
           </TabsContent>
 
           {/* Members — account-wide HotProspector team */}

@@ -1,7 +1,5 @@
 // Sales Hub page constants
 
-export const LEADS_PER_PAGE = 15
-
 // Recent-calls tab: how many leads' call logs to pull from the leads endpoint
 // before flattening + sorting, so there are enough calls to satisfy the
 // user-configured "recent calls" count (there's no dedicated flat call feed).
