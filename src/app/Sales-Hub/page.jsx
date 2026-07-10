@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
@@ -180,6 +181,7 @@ function CallLogsDialog({ lead }) {
 // ── Column definitions per tab ───────────────────────────────────────────────
 const OVERVIEW_COLUMNS = [
   { id: "name", label: "Client", sortable: true },
+  { id: "total_leads", label: "Total Leads", sortable: true, icons: HP },
   { id: "leads", label: "Leads Called", sortable: true, icons: HP },
   { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
   { id: "inbound", label: "Inbound", sortable: true, icons: HP },
@@ -450,6 +452,47 @@ function CallsFilterDropdown({
   )
 }
 
+// ── Leads tab filter: hide leads with no dialer activity ──
+function LeadsFilterDropdown({ open, setOpen, hideNoDialerActivity, setHideNoDialerActivity }) {
+  const activeCount = hideNoDialerActivity ? 1 : 0
+
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm"
+        >
+          <SlidersHorizontal className="h-4 w-4" />
+          <span className="hidden lg:inline">Filters</span>
+          {activeCount > 0 && (
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-purple-700">
+              {activeCount}
+            </span>
+          )}
+          <ChevronDown className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+
+      <DropdownMenuContent align="end" className="bg-white p-4 w-[300px] space-y-3">
+        <label className="flex items-start gap-2.5 cursor-pointer">
+          <Checkbox
+            checked={hideNoDialerActivity}
+            onCheckedChange={(checked) => setHideNoDialerActivity(!!checked)}
+            className="mt-0.5"
+          />
+          <span className="text-sm">
+            <span className="block font-medium text-foreground">Hide No-Dialer-Activity Leads</span>
+            <span className="block text-xs text-muted-foreground mt-0.5">
+              Only show leads the dialer has called in the selected period.
+            </span>
+          </span>
+        </label>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 const flattenCalls = (leadsData) =>
   (leadsData || []).flatMap((lead) => {
     const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim() || lead.phone || lead.email || "—"
@@ -494,6 +537,11 @@ export default function CallCenterPage() {
   const [gridOpen, setGridOpen] = useState(false)
   const [groupSearch, setGroupSearch] = useState("")
   const gridRef = useRef(null)
+  // Leads tab filter: hide leads with no dialer activity. Sent to the backend
+  // as has_calls=true so it's filtered against the whole dataset, not just
+  // whatever page/batch has already been fetched.
+  const [leadsFilterOpen, setLeadsFilterOpen] = useState(false)
+  const [hideNoDialerActivity, setHideNoDialerActivity] = useState(false)
 
   // Members tab (account-wide HotProspector team).
   const [members, setMembers] = useState([])
@@ -541,6 +589,7 @@ export default function CallCenterPage() {
           // Windowed "leads" = leads contacted in the period. HP leads have no
           // creation date, so call activity is the only windowable lead metric;
           // total_leads (full pool) is the same across presets by design.
+          total_leads: g.hotprospector?.metrics?.total_leads ?? 0,
           leads: cs.leads_with_calls ?? 0,
           total_calls: cs.total_calls ?? 0,
           inbound: cs.inbound_count ?? 0,
@@ -600,6 +649,7 @@ export default function CallCenterPage() {
         if (selectedLocationId) baseParams.location_id = selectedLocationId
         if (start_date) baseParams.start_date = start_date
         if (end_date) baseParams.end_date = end_date
+        if (hideNoDialerActivity) baseParams.has_calls = "true"
 
         const fetchBatch = async (skip) => {
           const qs = new URLSearchParams({
@@ -646,7 +696,7 @@ export default function CallCenterPage() {
     return () => {
       cancelled = true
     }
-  }, [activeTab, datePreset, selectedLocationId])
+  }, [activeTab, datePreset, selectedLocationId, hideNoDialerActivity])
 
   // ── Fetch members (team + per-day dashboard metrics) on preset change ──
   //    getMemberDashboardData is a per-day snapshot, so we pass the selected
@@ -983,6 +1033,14 @@ export default function CallCenterPage() {
                 clearAll={clearCols}
                 save={() => setColMenuOpen(false)}
               />
+              {activeTab === "leads" && (
+                <LeadsFilterDropdown
+                  open={leadsFilterOpen}
+                  setOpen={setLeadsFilterOpen}
+                  hideNoDialerActivity={hideNoDialerActivity}
+                  setHideNoDialerActivity={setHideNoDialerActivity}
+                />
+              )}
               {activeTab === "calls" && (
                 <CallsFilterDropdown
                   open={callsFilterOpen}
