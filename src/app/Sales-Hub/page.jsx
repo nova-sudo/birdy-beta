@@ -187,6 +187,7 @@ const OVERVIEW_COLUMNS = [
   { id: "inbound", label: "Inbound", sortable: true, icons: HP },
   { id: "outbound", label: "Outbound", sortable: true, icons: HP },
   { id: "transfers", label: "Transfers", sortable: true, icons: HP },
+  { id: "talk_time", label: "Talk Time (min)", sortable: true, icons: HP },
 ]
 
 const STATUS_CELL = (_v, row) => (
@@ -595,6 +596,7 @@ export default function CallCenterPage() {
           inbound: cs.inbound_count ?? 0,
           outbound: cs.outbound_count ?? 0,
           transfers: cs.transfers ?? 0,
+          talk_time: cs.total_talk_min ?? 0,
           original: g,
         }
       }),

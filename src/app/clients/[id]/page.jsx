@@ -36,8 +36,8 @@ function ComingSoon({ title }) {
 // ── Stat Cards Skeleton ──────────────────────────────────────────────────────
 function StatCardsSkeleton() {
   return (
-    <div className="grid gap-4 md:grid-cols-4">
-      {Array.from({ length: 4 }).map((_, i) => (
+    <div className="grid gap-4 md:grid-cols-5">
+      {Array.from({ length: 5 }).map((_, i) => (
         <Card key={i} className="bg-white">
           <CardContent className="pt-0">
             <div className="flex justify-between items-start">
@@ -133,7 +133,8 @@ export default function ClientDetailsPage() {
     const totalClicks = campaigns.reduce((s, c) => s + (c.clicks || 0), 0)
     const totalImpressions = campaigns.reduce((s, c) => s + (c.impressions || 0), 0)
     const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0"
-    return { totalSpend, totalClicks, totalImpressions, avgCtr }
+    const totalTalkMin = matchingGroup?.hotprospector?.call_stats?.total_talk_min ?? 0
+    return { totalSpend, totalClicks, totalImpressions, avgCtr, totalTalkMin }
   }, [matchingGroup])
 
   // ── Fetch client details (for notes) ───────────────────────────────────────
@@ -303,7 +304,7 @@ export default function ClientDetailsPage() {
           {groupsLoading ? (
             <StatCardsSkeleton />
           ) : (
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-5">
               <Card className="bg-white border-purple-100">
                 <CardContent className="pt-0">
                   <div className="flex justify-between items-start">
@@ -362,6 +363,20 @@ export default function ClientDetailsPage() {
                       <svg className="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                       </svg>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-teal-100">
+                <CardContent className="pt-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-muted-foreground text-sm text-[#71658B]">Talk Time (min)</p>
+                      <h3 className="text-2xl font-bold mt-1">{metrics.totalTalkMin.toLocaleString()}</h3>
+                    </div>
+                    <div className="h-7 w-7 bg-teal-100 rounded-md flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-teal-600" />
                     </div>
                   </div>
                 </CardContent>

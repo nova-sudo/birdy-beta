@@ -50,7 +50,7 @@ export const BASE_CLIENT_COLUMNS = [
   { id: "hp_transfers", label: "Transfers", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
   { id: "hp_leads_with_calls", label: "Leads Called", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
   { id: "hp_answered_calls", label: "Answered Calls", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
-  { id: "hp_talk_time", label: "Talk Time (min)", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
+  { id: "hp_talk_time", label: "Talk Time (min)", visible: true, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
   { id: "hp_connect_rate", label: "Connect Rate", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
   { id: "hp_answer_rate", label: "Answer Rate", visible: false, sortable: true, icons: HP, category: 'hotprospector', type: 'data' },
 
