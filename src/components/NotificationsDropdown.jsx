@@ -1,11 +1,10 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { Bell, BellRing, X, ExternalLink, User } from "lucide-react"
+import { Bell, BellRing, X, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { apiRequest } from "@/lib/api"
 import { formatRelative } from "@/lib/alert-helpers"
-import Link from "next/link"
 
 function formatTriggerDate(dateStr) {
   if (!dateStr) return null
@@ -20,6 +19,12 @@ function formatTriggerDate(dateStr) {
       minute: "2-digit",
     }),
   }
+}
+
+// Stable per-row key, matching how rows are keyed when rendered
+function rowKey(row) {
+  if (row._virtual) return String(row._virtual_id ?? `${row.id}_${row._client_id}`)
+  return `real_${row.id}`
 }
 
 // Same grouping logic as the alerts page
@@ -64,10 +69,17 @@ export default function NotificationsDropdown() {
   const [open, setOpen] = useState(false)
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(false)
+  // Alerts dismissed by closing the dropdown — hides them from the bell
+  // badge/list only. The Alerts page fetches independently, so they still
+  // show up there; this is purely a "seen in the dropdown" marker that
+  // resets on page reload.
+  const [dismissedIds, setDismissedIds] = useState(() => new Set())
+  const wasOpenRef = useRef(false)
   const ref = useRef(null)
   const router = useRouter()
 
-  const groups = groupTriggeredRows(alerts)
+  const visibleAlerts = alerts.filter((row) => !dismissedIds.has(rowKey(row)))
+  const groups = groupTriggeredRows(visibleAlerts)
 
   // Total count = sub-alerts for parent groups + 1 per simple alert
   const totalCount = groups.reduce((sum, { children }) => sum + (children.length > 0 ? children.length : 1), 0)
@@ -105,6 +117,20 @@ export default function NotificationsDropdown() {
     document.addEventListener("mousedown", handler)
     return () => document.removeEventListener("mousedown", handler)
   }, [open])
+
+  // On every open -> closed transition (X button, outside click, bell
+  // toggle, or clicking a notification), dismiss whatever was shown so the
+  // badge/list clear until new alerts come in.
+  useEffect(() => {
+    if (wasOpenRef.current && !open) {
+      setDismissedIds((prev) => {
+        const next = new Set(prev)
+        for (const row of alerts) next.add(rowKey(row))
+        return next
+      })
+    }
+    wasOpenRef.current = open
+  }, [open, alerts])
 
   const goToAlerts = () => {
     setOpen(false)
@@ -207,18 +233,6 @@ export default function NotificationsDropdown() {
                 })}
               </ul>
             )}
-          </div>
-
-          {/* Footer */}
-          <div className="border-t border-gray-100 px-4 py-2.5">
-            <Link
-              href="/alerts?tab=triggered"
-              onClick={() => setOpen(false)}
-              className="flex items-center justify-center gap-1.5 text-xs text-purple-600 hover:text-purple-700 font-medium transition-colors"
-            >
-              View all alerts
-              <ExternalLink className="w-3 h-3" />
-            </Link>
           </div>
         </div>
       )}
