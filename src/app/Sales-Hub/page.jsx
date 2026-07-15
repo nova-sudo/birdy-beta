@@ -943,7 +943,7 @@ export default function CallCenterPage() {
                 <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${gridOpen ? "rotate-180" : ""}`} />
               </button>
               {gridOpen && (
-                <div className="absolute z-50 mt-1 right-0 bg-white border border-gray-200 rounded-lg shadow-lg p-2 min-w-max">
+                <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
                   <div className="mb-2">
                     <input
                       type="text"
@@ -954,7 +954,7 @@ export default function CallCenterPage() {
                     />
                   </div>
                   {filteredClientGrid.length > 0 ? (
-                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(5, minmax(100px, 1fr))" }}>
+                    <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
                       {filteredClientGrid.map((item) => {
                         const isSel = item.id === selectedClientGroup
                         return (
@@ -962,7 +962,7 @@ export default function CallCenterPage() {
                             key={item.id}
                             onClick={() => pickClient(item.id)}
                             title={item.name}
-                            className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors whitespace-nowrap ${
+                            className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors ${
                               isSel
                                 ? "bg-purple-600 text-white border-purple-600 font-semibold"
                                 : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
