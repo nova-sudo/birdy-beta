@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Bot } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
   DialogContent,
@@ -35,6 +36,7 @@ import {
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { apiRequest } from "@/lib/api"
+import { AI_MODELS } from "@/lib/constants"
 import { Crown, ExternalLink as ExternalLinkIcon, AlertCircle as AlertCircleIcon } from "lucide-react"
 
 function SettingsPageContent() {
@@ -70,6 +72,19 @@ function SettingsPageContent() {
   const [ghlStatus, setGhlStatus] = useState(() => readCachedStatus("goHighLevelIntegration"))
   const [facebookStatus, setFacebookStatus] = useState(() => readCachedStatus("facebookIntegration"))
   const [hotprospectorStatus, setHotprospectorStatus] = useState(() => readCachedStatus("hotprospectorIntegration"))
+  // Separate reader from readCachedStatus() above — the AI credential status
+  // shape uses `configured` (matching useAiCredentials.js, which reads/writes
+  // the same "aiCredentialsIntegration" localStorage key), not `connected`.
+  const readCachedAiStatus = () => {
+    try {
+      const raw = localStorage.getItem("aiCredentialsIntegration")
+      const parsed = raw ? JSON.parse(raw) : null
+      return parsed?.configured ? parsed : { configured: false }
+    } catch {
+      return { configured: false }
+    }
+  }
+  const [aiStatus, setAiStatus] = useState(() => readCachedAiStatus())
   // True until the first /api/status fetch resolves. Used to gate the
   // Connect buttons behind a "Checking…" pill — so a first-time user on a
   // fresh browser (no cache) doesn't see "Connect" flash before their real
@@ -85,6 +100,9 @@ function SettingsPageContent() {
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
+  const [aiDialogOpen, setAiDialogOpen] = useState(false)
+  const [aiCredentials, setAiCredentials] = useState({ provider: "anthropic", api_key: "", model: "" })
+  const [aiValidating, setAiValidating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
@@ -228,6 +246,18 @@ function SettingsPageContent() {
           }
         }
 
+        // AI Credentials (BYOK)
+        const aiRes = await apiRequest("/api/integrations/ai/status")
+        if (aiRes.ok) {
+          const aiData = await aiRes.json()
+          setAiStatus(aiData)
+          if (aiData?.configured) {
+            localStorage.setItem("aiCredentialsIntegration", JSON.stringify(aiData))
+          } else {
+            localStorage.removeItem("aiCredentialsIntegration")
+          }
+        }
+
         // Refresh cycle status
         const cycleRes = await apiRequest("/api/client-groups/refresh-all/status")
         if (cycleRes.ok) setRefreshCycle(await cycleRes.json())
@@ -269,6 +299,8 @@ function SettingsPageContent() {
         setFacebookStatus(readCachedStatus("facebookIntegration"))
       } else if (e.key === "hotprospectorIntegration") {
         setHotprospectorStatus(readCachedStatus("hotprospectorIntegration"))
+      } else if (e.key === "aiCredentialsIntegration") {
+        setAiStatus(readCachedAiStatus())
       }
     }
     window.addEventListener("storage", onStorage)
@@ -349,6 +381,7 @@ function SettingsPageContent() {
         gohighlevel: "/api/integrations/gohighlevel/remove",
         facebook: "/api/integrations/facebook/remove",
         hotprospector: "/api/integrations/hotprospector/remove",
+        ai: "/api/integrations/ai/remove",
       }
 
       const res = await apiRequest(endpointMap[integrationType], {
@@ -371,12 +404,17 @@ function SettingsPageContent() {
       } else if (integrationType === "hotprospector") {
         localStorage.removeItem("hotprospectorIntegration")
         setHotprospectorStatus({ connected: false })
+      } else if (integrationType === "ai") {
+        localStorage.removeItem("aiCredentialsIntegration")
+        window.dispatchEvent(new Event("aiCredentialsUpdated"))
+        setAiStatus({ configured: false })
       }
 
       const labelMap = {
         gohighlevel: "GoHighLevel",
         facebook: "Meta (Facebook)",
         hotprospector: "HotProspector",
+        ai: "AI Credentials",
       }
 
       toast.success("Integration Removed", {
@@ -432,6 +470,43 @@ function SettingsPageContent() {
       toast.error("Connection Failed", { description: err.message })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleAiConnect = async () => {
+    try {
+      setAiValidating(true)
+      setError(null)
+      const res = await apiRequest("/api/integrations/ai/connect", {
+        method: "POST",
+        body: JSON.stringify(aiCredentials),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        // The backend's `detail` is already a specific, human-readable
+        // rejection reason (e.g. "Invalid Anthropic API key.", "'gpt-4o'
+        // did not respond with a tool call...") — show it directly.
+        throw new Error(data.detail || "Failed to validate your AI credentials.")
+      }
+      const next = {
+        configured: true,
+        provider: data.provider,
+        model: data.model,
+        key_preview: data.key_preview,
+        validated: data.validated,
+      }
+      setAiStatus(next)
+      localStorage.setItem("aiCredentialsIntegration", JSON.stringify(next))
+      window.dispatchEvent(new Event("aiCredentialsUpdated"))
+      setAiDialogOpen(false)
+      setAiCredentials({ provider: "anthropic", api_key: "", model: "" })
+      toast.success("AI Connected", {
+        description: `Birdy AI will now use your ${data.provider} key (${data.model}).`,
+      })
+    } catch (err) {
+      toast.error("Connection Failed", { description: err.message })
+    } finally {
+      setAiValidating(false)
     }
   }
 
@@ -518,6 +593,135 @@ function SettingsPageContent() {
               </div>
 
               <Separator />
+
+              {/* AI Credentials (BYOK) — gates the flagship chat feature, shown first */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
+                      <Bot className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-base">Birdy AI Agent</CardTitle>
+                        {aiStatus.configured && (
+                          <Badge variant="default" className="text-xs">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />Connected
+                          </Badge>
+                        )}
+                      </div>
+                      <CardDescription className="text-sm">
+                        Connect your own Anthropic or OpenAI API key — Birdy AI chat uses it exclusively, nothing is sent through Birdy's own account.
+                      </CardDescription>
+                      {aiStatus.configured && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {aiStatus.provider === "anthropic" ? "Anthropic" : "OpenAI"} · {aiStatus.model} · Key {aiStatus.key_preview}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {aiStatus.configured ? (
+                      <RemoveButton integrationType="ai" label="AI Credentials" />
+                    ) : statusInitialLoading ? (
+                      <Button size="sm" disabled>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Checking…
+                      </Button>
+                    ) : (
+                      <Dialog open={aiDialogOpen} onOpenChange={setAiDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white">
+                            Connect
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Connect Your AI Agent</DialogTitle>
+                            <DialogDescription>
+                              We verify your key supports tool use with a real test call before saving —
+                              this can take a few seconds.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div className="space-y-2">
+                              <Label htmlFor="ai_provider">Provider</Label>
+                              <Select
+                                value={aiCredentials.provider}
+                                onValueChange={(value) =>
+                                  setAiCredentials((prev) => ({ ...prev, provider: value, model: "" }))
+                                }
+                              >
+                                <SelectTrigger id="ai_provider">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
+                                  <SelectItem value="openai">OpenAI</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ai_model">Model</Label>
+                              <Select
+                                value={aiCredentials.model}
+                                onValueChange={(value) => setAiCredentials((prev) => ({ ...prev, model: value }))}
+                              >
+                                <SelectTrigger id="ai_model">
+                                  <SelectValue placeholder="Select a model" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {AI_MODELS[aiCredentials.provider].map((m) => (
+                                    <SelectItem key={m.value} value={m.value}>
+                                      {m.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="ai_api_key">API Key</Label>
+                              <Input
+                                id="ai_api_key"
+                                type="password"
+                                placeholder="Enter your API key"
+                                value={aiCredentials.api_key}
+                                onChange={(e) =>
+                                  setAiCredentials((prev) => ({ ...prev, api_key: e.target.value }))
+                                }
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant="outline"
+                              disabled={aiValidating}
+                              onClick={() => {
+                                setAiDialogOpen(false)
+                                setAiCredentials({ provider: "anthropic", api_key: "", model: "" })
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              className="bg-purple-600 hover:bg-purple-700 text-white"
+                              onClick={handleAiConnect}
+                              disabled={aiValidating || !aiCredentials.api_key || !aiCredentials.model}
+                            >
+                              {aiValidating
+                                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Validating…</>
+                                : "Connect"
+                              }
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* GoHighLevel */}
               <Card className="border-border/50">

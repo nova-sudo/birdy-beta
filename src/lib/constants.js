@@ -18,6 +18,24 @@ export const DATE_PRESETS = [
 
 export const DEFAULT_DATE_PRESET = "last_7d"
 
+// Curated, tool-calling-capable models for the BYOK "add your own AI agent"
+// connect form (src/app/settings/page.jsx). The backend independently
+// re-validates the specific model on every save (a real API call, forced
+// tool_choice), so a stale entry here just means that one save is rejected
+// with a clear message — not silent breakage.
+export const AI_MODELS = {
+  anthropic: [
+    { value: "claude-sonnet-5", label: "Claude Sonnet 5" },
+    { value: "claude-opus-4-8", label: "Claude Opus 4.8" },
+    { value: "claude-haiku-4-5-20251001", label: "Claude Haiku 4.5" },
+  ],
+  openai: [
+    { value: "gpt-5", label: "GPT-5" },
+    { value: "gpt-4.1", label: "GPT-4.1" },
+    { value: "gpt-4o", label: "GPT-4o" },
+  ],
+}
+
 export const CACHE_KEYS = {
   CLIENT_GROUPS: "clientGroups",
   USER_VIEWS: "userViews",

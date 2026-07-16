@@ -1,7 +1,10 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Bird, Sparkles, Zap } from "lucide-react"
+import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
+import { useAiCredentials } from "@/hooks/useAiCredentials"
+import AiCredentialsEmptyState from "@/components/chat/AiCredentialsEmptyState"
 import MessageBubble from "@/components/chat/MessageBubble"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
@@ -48,6 +51,7 @@ export default function ChatConversation({
   const [sessionId, setSessionId] = useState(null)
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
+  const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
 
   // Stable refs — prevents inline callbacks from recreating sendMessage every render
   const onMessagesChangeRef = useRef(onMessagesChange)
@@ -74,7 +78,7 @@ export default function ChatConversation({
   }, [messages, loading])
 
   const sendMessage = useCallback(async (text) => {
-    if (!text?.trim() || loading) return
+    if (!text?.trim() || loading || !configured) return
     setMessages(prev => [...prev, { role: "user", content: text }])
     setInput("")
     setLoading(true)
@@ -83,6 +87,16 @@ export default function ChatConversation({
         method: "POST",
         body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: clientGroupId, client_name: clientName }),
       })
+      if (res.status === 412) {
+        // Credentials were removed (e.g. in another tab) since this component last checked.
+        markUnconfigured()
+        refreshCreds()
+        toast.error("AI not configured", {
+          description: "Add your AI key in Settings to keep chatting.",
+        })
+        setLoading(false)
+        return
+      }
       const data = res.ok ? await res.json() : { reply: "Sorry, something went wrong.", tools_used: [] }
       if (data.session_id) {
         setSessionId(data.session_id)
@@ -96,15 +110,16 @@ export default function ChatConversation({
     } finally {
       setLoading(false)
     }
-  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName])
+  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds])
 
-  // Auto-send once
+  // Auto-send once — gated on `configured` so a header-search-seeded message
+  // can't fire while the composer is hidden.
   useEffect(() => {
-    if (initialMessage && !hasAutoSent.current) {
+    if (initialMessage && configured && !hasAutoSent.current) {
       hasAutoSent.current = true
       sendMessage(initialMessage)
     }
-  }, [initialMessage, sendMessage])
+  }, [initialMessage, configured, sendMessage])
 
   const handleUISubmit = (uiKey, values) => {
     setSubmittedUIs(prev => new Set(prev).add(uiKey))
@@ -115,6 +130,14 @@ export default function ChatConversation({
     m => !(m.role === "user" && m.content?.startsWith("[UI_RESPONSE]"))
   )
   const isEmpty = visibleMessages.length === 0
+
+  if (!configured) {
+    return (
+      <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
+        <AiCredentialsEmptyState />
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full min-h-0 bg-gray-50/50">

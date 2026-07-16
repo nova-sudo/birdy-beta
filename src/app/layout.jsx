@@ -11,6 +11,7 @@ import { UserRound, Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import BirdyLogo from "@/components/BirdyLogo";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
+import { Toaster } from "@/components/ui/sonner";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -143,6 +144,7 @@ export default function RootLayout({ children }) {
             )}
           </SidebarProvider>
         </ProtectedLayout>
+        <Toaster />
       </body>
     </html>
   );
