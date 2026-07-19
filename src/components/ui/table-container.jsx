@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import {
   Tooltip,
@@ -642,54 +642,64 @@ const StyledTable = ({
               )}
 
               {visibleColumns.map((col, colIdx) => (
-                <th
-                  key={col.id}
-                  draggable={colIdx !== 0}
-                  onDragStart={(e) => handleDragStart(e, col.id, colIdx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleDrop(e, col.id, colIdx)}
-                  className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
-                    colIdx === 0
-                      ? "fixed-header"
-                      : isEmptyState
-                        ? ""
-                        : "min-w-[135px] whitespace-nowrap"
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
-                    <div className="flex items-center gap-1 min-w-0">
-                      <button
-                        onClick={() => col.sortable && handleSort(col.id)}
-                        className={`truncate align-middle text-left items-center gap-1 ${
-                          col.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
-                        }`}
-                      >
-                        {typeof col.header === "function" ? col.header() : col.header}
-                        {col.sortable && sortConfig.key === col.id && (
-                          <span className="text-sm px-2 text-right">
-                            {sortConfig.direction === "asc" ? "↑" : "↓ "}
-                          </span>
-                        )}
-                      </button>
+                <Fragment key={col.id}>
+                  <th
+                    draggable={colIdx !== 0}
+                    onDragStart={(e) => handleDragStart(e, col.id, colIdx)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, col.id, colIdx)}
+                    className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
+                      colIdx === 0
+                        ? "fixed-header"
+                        : isEmptyState
+                          ? ""
+                          : "min-w-[135px] whitespace-nowrap"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                      <div className="flex items-center gap-1 min-w-0">
+                        <button
+                          onClick={() => col.sortable && handleSort(col.id)}
+                          className={`truncate align-middle text-left items-center gap-1 ${
+                            col.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
+                          }`}
+                        >
+                          {typeof col.header === "function" ? col.header() : col.header}
+                          {col.sortable && sortConfig.key === col.id && (
+                            <span className="text-sm px-2 text-right">
+                              {sortConfig.direction === "asc" ? "↑" : "↓ "}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                      <div className="flex-shrink-0 ml-auto">
+                        {col.icons ? (
+                          typeof col.icons === "function" ? (
+                            (() => {
+                              const Icon = col.icons;
+                              return <Icon className="h-4 w-4 text-muted-foreground" />;
+                            })()
+                          ) : (
+                            <img
+                              src={col.icons.src ? col.icons.src : col.icons}
+                              alt={`${col.label} icon`}
+                              className="text-muted-foreground object-scale-down size-4"
+                            />
+                          )
+                        ) : null}
+                      </div>
                     </div>
-                    <div className="flex-shrink-0 ml-auto">
-                      {col.icons ? (
-                        typeof col.icons === "function" ? (
-                          (() => {
-                            const Icon = col.icons;
-                            return <Icon className="h-4 w-4 text-muted-foreground" />;
-                          })()
-                        ) : (
-                          <img
-                            src={col.icons.src ? col.icons.src : col.icons}
-                            alt={`${col.label} icon`}
-                            className="text-muted-foreground object-scale-down size-4"
-                          />
-                        )
-                      ) : null}
-                    </div>
-                  </div>
-                </th>
+                  </th>
+
+                  {/* ── Dedicated Status column — client mode only, right after Business Name ── */}
+                  {colIdx === 0 && isClientMode && (
+                    <th className="h-12 w-[110px] min-w-[110px] font-semibold text-gray-900/78 select-none cursor-default whitespace-nowrap">
+                      <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
+                        <div className="flex items-center gap-1 min-w-0">Status</div>
+                      </div>
+                    </th>
+                  )}
+                </Fragment>
               ))}
             </tr>
           </thead>
@@ -726,26 +736,35 @@ const StyledTable = ({
                     ? visibleColumns
                     : Array.from({ length: 6 }).map((_, i) => ({ id: `skeleton-col-${i}` }))
                   ).map((col, colIdx) => (
-                    <td
-                      key={`skeleton-${idx}-${col.id}`}
-                      className={`text-foreground truncate ${
-                        colIdx === 0
-                          ? idx % 2 === 0
-                            ? "fixed-column-odd h-11"
-                            : "fixed-column-even h-11"
-                          : ""
-                      }`}
-                    >
-                      <div
-                        className={
+                    <Fragment key={`skeleton-${idx}-${col.id}`}>
+                      <td
+                        className={`text-foreground truncate ${
                           colIdx === 0
-                            ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
-                            : "flex items-center px-2 h-11"
-                        }
+                            ? idx % 2 === 0
+                              ? "fixed-column-odd h-11"
+                              : "fixed-column-even h-11"
+                            : ""
+                        }`}
                       >
-                        <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
-                      </div>
-                    </td>
+                        <div
+                          className={
+                            colIdx === 0
+                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                              : "flex items-center px-2 h-11"
+                          }
+                        >
+                          <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
+                        </div>
+                      </td>
+
+                      {colIdx === 0 && isClientMode && (
+                        <td className={idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}>
+                          <div className="flex items-center px-2 h-11">
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </div>
+                        </td>
+                      )}
+                    </Fragment>
                   ))}
                 </tr>
               ))
@@ -753,7 +772,7 @@ const StyledTable = ({
               /* CASE 2: Done loading, no data */
               <tr>
                 <td
-                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0)}
+                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0) + (isClientMode ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
                   <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
@@ -844,71 +863,77 @@ const StyledTable = ({
                     )}
 
                     {visibleColumns.map((col, colIdx) => (
-                      <td
-                        key={`${row.id || idx}-${col.id}`}
-                        className={`text-foreground truncate ${
-                          colIdx === 0
-                            ? globalIdx % 2 === 0
-                              ? "fixed-column-odd h-11"
-                              : "fixed-column-even h-11"
-                            : ""
-                        } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
-                      >
-                        <div
-                          className={
+                      <Fragment key={`${row.id || idx}-${col.id}`}>
+                        <td
+                          className={`text-foreground truncate ${
                             colIdx === 0
-                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
-                              : "min-w-0 px-2"
-                          }
+                              ? globalIdx % 2 === 0
+                                ? "fixed-column-odd h-11"
+                                : "fixed-column-even h-11"
+                              : ""
+                          } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
                         >
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
-                                    row._isCreating || row._isPending ? "text-muted-foreground" : ""
-                                  }`}
-                                >
-                                  {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
-                                    <button
-                                      onClick={() => onFirstColumnClick?.(row)}
-                                      className="text-left font-semibold text-primary hover:underline cursor-pointer truncate min-w-0"
-                                    >
-                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                                    </button>
-                                  ) : (
-                                    <span className="truncate min-w-0 block">
-                                      {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
-                                    </span>
-                                  )}
-
-                                  {/* ── Read-only badge (isClientMode) OR clickable badge (!isClientMode) ── */}
-                                  {/* ── Read-only status badge — clients page only ── */}
-                                    {colIdx === 0 && isClientMode && !isRowLoading?.(row) && row.status && (
-                                      <span
-                                        className={`ml-auto shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
-                                          isActive
-                                            ? "bg-[#DCFCE7] text-[#15803D]"
-                                            : "bg-[#FEF9C3] text-[#A16207]"
-                                        }`}
+                          <div
+                            className={
+                              colIdx === 0
+                                ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
+                                : "min-w-0 px-2"
+                            }
+                          >
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span
+                                    className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
+                                      row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                    }`}
+                                  >
+                                    {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
+                                      <button
+                                        onClick={() => onFirstColumnClick?.(row)}
+                                        className="text-left font-semibold text-primary hover:underline cursor-pointer truncate min-w-0"
                                       >
-                                        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                          isActive ? "bg-[#15803D]" : "bg-[#A16207]"
-                                        }`} />
-                                        <span className="hidden sm:inline">{row.status}</span>
+                                        {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                      </button>
+                                    ) : (
+                                      <span className="truncate min-w-0 block">
+                                        {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                       </span>
                                     )}
+                                  </span>
+                                </TooltipTrigger>
+                                {colIdx === 0 && (
+                                  <TooltipContent>
+                                    <p>{col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}</p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        </td>
+
+                        {/* ── Dedicated Status cell — client mode only, right after Business Name ── */}
+                        {colIdx === 0 && isClientMode && (
+                          <td className={isSelected ? "!bg-primary/5" : ""}>
+                            <div className="flex items-center px-2 h-11">
+                              {!isRowLoading?.(row) && row.status && (
+                                <span
+                                  className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
+                                    isActive
+                                      ? "bg-[#DCFCE7] text-[#15803D]"
+                                      : "bg-[#FEF9C3] text-[#A16207]"
+                                  }`}
+                                >
+                                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+                                    isActive ? "bg-[#15803D]" : "bg-[#A16207]"
+                                  }`} />
+                                  <span className="hidden sm:inline">{row.status}</span>
                                 </span>
-                              </TooltipTrigger>
-                              {colIdx === 0 && (
-                                <TooltipContent>
-                                  <p>{col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}</p>
-                                </TooltipContent>
                               )}
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      </td>
+                            </div>
+                          </td>
+                        )}
+                      </Fragment>
                     ))}
                   </tr>
                 );
