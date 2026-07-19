@@ -39,6 +39,7 @@ import {
   X,
   History,
   SlidersHorizontal,
+  Loader2,
 } from "lucide-react"
 
 // ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
@@ -510,10 +511,19 @@ const flattenCalls = (leadsData) =>
     }))
   })
 
-// Batch size used to page through the backend while pulling the *entire*
-// leads window client-side, so the table can sort/paginate across all of it
-// (not just one server page) — matching how Overview/Members already work.
-const LEADS_FETCH_BATCH_SIZE = 200
+// Leads still load the *entire* windowed dataset client-side, so the table
+// can sort/paginate across all of it (not just one server page) — matching
+// how Overview/Members already work. But pulling it in one shot before
+// rendering anything meant a large client sat on a static skeleton for as
+// long as its full dataset took (multi-second, worse on "All Clients").
+// Split the fetch in two so something real paints almost immediately:
+//   1. One small first page, rendered the moment it lands.
+//   2. The remainder streamed in behind it at a larger batch size, appended
+//      to the table as each concurrent chunk resolves — background loading,
+//      visible progress, no second wait before the rest shows up.
+const LEADS_FIRST_BATCH_SIZE = 40
+const LEADS_BACKGROUND_BATCH_SIZE = 200
+const LEADS_BACKGROUND_CONCURRENCY = 6
 
 export default function CallCenterPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } = useClientGroups(DEFAULT_DATE_PRESET)
@@ -532,7 +542,12 @@ export default function CallCenterPage() {
 
   // Leads tab (fully loaded, windowed by the date preset — sorted/paginated client-side).
   const [leads, setLeads] = useState([])
+  // True only until the first (small) batch has rendered — the table's own
+  // skeleton reads this. Background loading of the remaining batches is
+  // tracked separately so the table never re-shows a skeleton once rows exist.
   const [leadsLoading, setLeadsLoading] = useState(false)
+  const [leadsBackgroundLoading, setLeadsBackgroundLoading] = useState(false)
+  const [leadsTotal, setLeadsTotal] = useState(0)
   // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [gridOpen, setGridOpen] = useState(false)
@@ -638,13 +653,17 @@ export default function CallCenterPage() {
   )
 
   // ── Fetch leads (Leads tab) whenever the window / drill changes ──
-  //    Pulls every page from the backend up front so sorting/pagination in
-  //    the table operates on the full windowed dataset, not just one page.
+  //    Still ends up pulling every page (sorting/pagination in the table
+  //    operates on the full windowed dataset, not just one server page), but
+  //    renders the first small batch immediately and streams the rest in
+  //    behind it — see the LEADS_FIRST_BATCH_SIZE comment above.
   useEffect(() => {
     if (activeTab !== "leads") return
     let cancelled = false
     const run = async () => {
       setLeadsLoading(true)
+      setLeadsBackgroundLoading(false)
+      setLeadsTotal(0)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
         const baseParams = {}
@@ -653,45 +672,68 @@ export default function CallCenterPage() {
         if (end_date) baseParams.end_date = end_date
         if (hideNoDialerActivity) baseParams.has_calls = "true"
 
-        const fetchBatch = async (skip) => {
+        const fetchBatch = async (skip, limit) => {
           const qs = new URLSearchParams({
             ...baseParams,
             skip: String(skip),
-            limit: String(LEADS_FETCH_BATCH_SIZE),
+            limit: String(limit),
           })
           const res = await apiRequest(`/api/hotprospector/call-center?${qs.toString()}`)
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.json()
         }
 
-        // First page tells us the total; pull the remaining pages
-        // concurrently (capped) instead of one-request-at-a-time.
-        const first = await fetchBatch(0)
+        // Small first page — get real rows on screen as fast as possible
+        // instead of holding a skeleton for however long the full dataset takes.
+        // Nothing has rendered yet at this point, so a failure here still
+        // clears to empty (the outer catch below) — same as the old behavior.
+        const first = await fetchBatch(0, LEADS_FIRST_BATCH_SIZE)
         if (cancelled) return
-        let all = first.data || []
-        const total = first.meta?.total ?? all.length
+        const firstBatch = first.data || []
+        const total = first.meta?.total ?? firstBatch.length
+        setLeads(firstBatch.map(mapLead))
+        setLeadsTotal(total)
+        setLeadsLoading(false)
 
+        // Remainder streams in behind it: larger batches, capped concurrency,
+        // appended to the table as each concurrent chunk resolves rather than
+        // waiting for the entire dataset before anything past the first page
+        // is visible. Its own try/catch: the first batch is already on
+        // screen by now, so a background-page failure (e.g. one request
+        // times out) should leave those rows in place and just stop
+        // background loading — not wipe out what the user is already
+        // looking at the way a failure before any render would.
         const remainingSkips = []
-        for (let skip = all.length; skip < total; skip += LEADS_FETCH_BATCH_SIZE) {
+        for (let skip = firstBatch.length; skip < total; skip += LEADS_BACKGROUND_BATCH_SIZE) {
           remainingSkips.push(skip)
         }
 
-        const CONCURRENCY = 6
-        for (let i = 0; i < remainingSkips.length; i += CONCURRENCY) {
-          if (cancelled) return
-          const chunk = remainingSkips.slice(i, i + CONCURRENCY)
-          const results = await Promise.all(chunk.map(fetchBatch))
-          results.forEach((data) => { all = all.concat(data.data || []) })
+        if (remainingSkips.length > 0) {
+          setLeadsBackgroundLoading(true)
+          try {
+            for (let i = 0; i < remainingSkips.length; i += LEADS_BACKGROUND_CONCURRENCY) {
+              if (cancelled) return
+              const chunk = remainingSkips.slice(i, i + LEADS_BACKGROUND_CONCURRENCY)
+              const results = await Promise.all(chunk.map((skip) => fetchBatch(skip, LEADS_BACKGROUND_BATCH_SIZE)))
+              if (cancelled) return
+              const newLeads = results.flatMap((data) => (data.data || []).map(mapLead))
+              setLeads((prev) => [...prev, ...newLeads])
+            }
+          } catch (err) {
+            if (!cancelled) console.error("Error loading remaining call-center leads (keeping what's loaded so far):", err)
+          } finally {
+            if (!cancelled) setLeadsBackgroundLoading(false)
+          }
         }
-
-        if (cancelled) return
-        setLeads(all.map(mapLead))
       } catch (err) {
         if (cancelled) return
         console.error("Error loading call-center leads:", err)
         setLeads([])
       } finally {
-        if (!cancelled) setLeadsLoading(false)
+        if (!cancelled) {
+          setLeadsLoading(false)
+          setLeadsBackgroundLoading(false)
+        }
       }
     }
     run()
@@ -1091,6 +1133,15 @@ export default function CallCenterPage() {
                   </button>
                 </Badge>
                 <span className="text-xs text-muted-foreground">Showing this client only</span>
+              </div>
+            )}
+
+            {leadsBackgroundLoading && (
+              <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>
+                  Loaded {leads.length} of {leadsTotal} leads — loading the rest in the background…
+                </span>
               </div>
             )}
 
