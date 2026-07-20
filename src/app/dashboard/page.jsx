@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock } from "lucide-react";
+import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -26,6 +26,23 @@ const TAB_META = [
   { value: "alerts",      label: "Alerts triggered" },
   { value: "wins",        label: "Client wins" },
 ];
+
+// Server suggestions send `icon` as a string name; the bundled mock data sends a
+// lucide component directly. resolveIcon accepts either and always returns a
+// renderable component.
+const ICON_MAP = {
+  pause: Pause,
+  "trending-up": TrendingUp,
+  image: ImageIcon,
+  dollar: DollarSign,
+  sparkles: Sparkles,
+  alert: AlertTriangle,
+  zap: Zap,
+};
+function resolveIcon(icon) {
+  if (typeof icon === "string") return ICON_MAP[icon] || Sparkles;
+  return icon || Sparkles; // already a component (mock data)
+}
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -56,8 +73,8 @@ function CardSkeleton() {
 }
 
 function RecommendationCard({ item, dismissing, onApply, onDismiss }) {
-  const style = SEVERITY_STYLE[item.severity];
-  const Icon = item.icon;
+  const style = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.MEDIUM;
+  const Icon = resolveIcon(item.icon);
 
   return (
     <FadeWrap dismissing={dismissing}>
@@ -77,7 +94,7 @@ function RecommendationCard({ item, dismissing, onApply, onDismiss }) {
           <p className="text-sm font-semibold text-foreground">{item.title}</p>
           <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
 
-          {item.stats.length > 0 && (
+          {item.stats?.length > 0 && (
             <div className="flex items-center gap-5 mt-3">
               {item.stats.map((s) => (
                 <div key={s.label}>
@@ -170,18 +187,34 @@ function WinRow({ item, dismissing, onMarkDone }) {
   );
 }
 
-function ActivityItem({ actor, title, client, time }) {
+// Icon + tone per activity kind, falling back to the actor when kind is absent
+// (the bundled mock activity has only actor/title/client/time).
+function activityVisual(kind, isBirdy) {
+  switch (kind) {
+    case "analysis_pass":        return { Ico: Clock,  tone: "bg-purple-100 text-purple-600" };
+    case "suggestion_created":   return { Ico: Zap,    tone: "bg-purple-100 text-purple-600" };
+    case "action_applied":       return { Ico: Check,  tone: "bg-green-100 text-green-600" };
+    case "suggestion_dismissed": return { Ico: Trash2, tone: "bg-muted text-muted-foreground" };
+    default:                     return isBirdy
+      ? { Ico: Zap,   tone: "bg-purple-100 text-purple-600" }
+      : { Ico: Check, tone: "bg-green-100 text-green-600" };
+  }
+}
+
+function ActivityItem({ actor, kind, title, client, time, label }) {
   const isBirdy = actor === "birdy";
+  const caption = label || (isBirdy ? "Auto-run by Birdy" : "Approved by you");
+  const { Ico, tone } = activityVisual(kind, isBirdy);
   return (
     <div className="flex items-start gap-3">
-      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${isBirdy ? "bg-purple-100 text-purple-600" : "bg-green-100 text-green-600"}`}>
-        {isBirdy ? <Zap className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+      <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${tone}`}>
+        <Ico className="w-3.5 h-3.5" />
       </div>
       <div className="min-w-0">
         <p className="text-xs font-semibold text-foreground leading-snug">{title}</p>
         <p className="text-xs text-muted-foreground">{client}</p>
         <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-          {isBirdy ? "Auto-run by Birdy" : "Approved by you"} · {time}
+          {caption} · {time}
         </p>
       </div>
     </div>
