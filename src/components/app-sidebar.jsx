@@ -1,8 +1,9 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut, Sparkles} from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut, Sparkles, Shield} from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
+import { useRole } from "@/hooks/useRole"
 import { apiRequest } from "@/lib/api"
 import {
   Sidebar,
@@ -47,6 +48,11 @@ const items = [
 
 export function AppSidebar() {
   const pathname = usePathname()
+  const { isAdmin } = useRole()
+  // Admin is internal-only — appended to the nav just for admin accounts.
+  const navItems = isAdmin
+    ? [...items, { title: "Admin", url: "/admin", icon: Shield }]
+    : items
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const {
@@ -98,7 +104,7 @@ export function AppSidebar() {
             <SidebarGroupLabel>Application</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="gap-y-5 pt-4">
-                {items.map((item) => {
+                {navItems.map((item) => {
                   const isActive = pathname === item.url;
                   return (
                     <SidebarMenuItem key={item.title}>
