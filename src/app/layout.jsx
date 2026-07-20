@@ -11,6 +11,7 @@ import { UserRound, Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import BirdyLogo from "@/components/BirdyLogo";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
+import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
 
 const outfit = Outfit({
@@ -64,6 +65,8 @@ export default function RootLayout({ children }) {
           <SidebarProvider open={false}>
             {!hideSidebar && (
               <div className="flex flex-col h-screen w-full">
+                {/* Impersonation banner (shows only while an admin is impersonating) */}
+                <ImpersonationBar />
                 {/* Top Header */}
                 <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                   <div className="flex items-center gap-2">
