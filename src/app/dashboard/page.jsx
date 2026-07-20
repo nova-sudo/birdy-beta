@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   useDashboardData,
   applySuggestion,
+  undoSuggestion,
   dismissSuggestion,
   runAlertAction,
   completeWin,
@@ -328,10 +329,32 @@ export default function DashboardPage() {
     }, 300);
   };
 
+  const restoreSuggestion = (item) =>
+    setSuggestions((prev) => (prev.some((s) => s.id === item.id) ? prev : [item, ...prev]));
+
   const handleApply = async (item) => {
-    toast.success("Birdy is on it", { description: item.title });
     removeItem("suggestions", item.id);
-    await applySuggestion(item.id);
+    const ok = await applySuggestion(item.id);
+    if (!ok) {
+      restoreSuggestion(item);
+      toast.error("Couldn't apply that", { description: item.title });
+      return;
+    }
+    toast.success("Done — ads paused", {
+      description: item.title,
+      duration: 10000,
+      action: {
+        label: "Undo",
+        onClick: async () => {
+          if (await undoSuggestion(item.id)) {
+            restoreSuggestion(item);
+            toast.success("Undone — ads re-enabled", { description: item.title });
+          } else {
+            toast.error("Couldn't undo", { description: item.title });
+          }
+        },
+      },
+    });
   };
 
   const handleDismiss = async (item) => {

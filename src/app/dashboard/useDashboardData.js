@@ -19,6 +19,7 @@ import {
 //     → { suggestions: [...], alerts: [...], wins: [...], activity: [...],
 //         counts: { suggestions, alerts, wins } }
 //   POST   /api/dashboard/suggestions/:id/apply
+//   POST   /api/dashboard/suggestions/:id/undo
 //   DELETE /api/dashboard/suggestions/:id
 //   POST   /api/dashboard/alerts/:id/action   body: { action: "open_client" | "view_all" }
 //   POST   /api/dashboard/wins/:id/complete
@@ -77,6 +78,16 @@ export function useDashboardData() {
 export async function applySuggestion(id) {
   try {
     const res = await apiRequest(`/api/dashboard/suggestions/${id}/apply`, { method: "POST" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Reverse an applied suggestion — re-enables exactly the ads it paused. */
+export async function undoSuggestion(id) {
+  try {
+    const res = await apiRequest(`/api/dashboard/suggestions/${id}/undo`, { method: "POST" });
     return res.ok;
   } catch {
     return false;
