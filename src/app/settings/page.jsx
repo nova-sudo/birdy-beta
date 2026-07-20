@@ -96,6 +96,10 @@ function SettingsPageContent() {
     }
   }
   const [slackStatus, setSlackStatus] = useState(() => readCachedSlackStatus())
+  const [slackChannels, setSlackChannels] = useState([])
+  const [channelsLoading, setChannelsLoading] = useState(false)
+  const [channelsError, setChannelsError] = useState(false)
+  const [savingChannel, setSavingChannel] = useState(false)
   // True until the first /api/status fetch resolves. Used to gate the
   // Connect buttons behind a "Checking…" pill — so a first-time user on a
   // fresh browser (no cache) doesn't see "Connect" flash before their real
@@ -394,6 +398,46 @@ function SettingsPageContent() {
       toast.error("Connection Failed", { description: err.message })
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const loadSlackChannels = async () => {
+    if (slackChannels.length > 0 || channelsLoading) return
+    setChannelsLoading(true)
+    setChannelsError(false)
+    try {
+      const res = await apiRequest("/api/integrations/slack/channels")
+      if (!res.ok) throw new Error("list failed")
+      const data = await res.json()
+      setSlackChannels(data.channels || [])
+    } catch {
+      setChannelsError(true)
+    } finally {
+      setChannelsLoading(false)
+    }
+  }
+
+  const saveSlackChannel = async (value) => {
+    const channelId = value === "__none__" ? null : value
+    const chan = slackChannels.find((c) => c.id === channelId)
+    setSavingChannel(true)
+    try {
+      const res = await apiRequest("/api/integrations/slack/channel", {
+        method: "PUT",
+        body: JSON.stringify({ channel_id: channelId, channel_name: chan?.name || null }),
+      })
+      if (res.ok) {
+        const next = { ...slackStatus, notify_channel_id: channelId, notify_channel_name: chan?.name || null }
+        setSlackStatus(next)
+        try { localStorage.setItem("slackBotIntegration", JSON.stringify(next)) } catch {}
+        toast.success(channelId ? `Suggestions will post to #${chan?.name}` : "Suggestion posting turned off")
+      } else {
+        toast.error("Couldn't save channel")
+      }
+    } catch {
+      toast.error("Couldn't save channel")
+    } finally {
+      setSavingChannel(false)
     }
   }
 
@@ -821,6 +865,57 @@ function SettingsPageContent() {
                       </a>
                     </Button>
                   </div>
+
+                  {slackStatus.installed && (
+                    <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">AI suggestions channel</p>
+                        <p className="text-xs text-muted-foreground">
+                          Birdy posts each new suggestion here with “Do it for me” and “Ignore” buttons. Change it anytime.
+                        </p>
+                      </div>
+                      {channelsError ? (
+                        <Alert>
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription className="text-xs">
+                            Couldn’t load channels — your Slack connection predates channel support.{" "}
+                            <button onClick={handleConnectSlack} className="underline font-medium">
+                              Reconnect Slack
+                            </button>{" "}
+                            to enable it.
+                          </AlertDescription>
+                        </Alert>
+                      ) : (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Select
+                            value={slackStatus.notify_channel_id || ""}
+                            onValueChange={saveSlackChannel}
+                            disabled={savingChannel}
+                            onOpenChange={(o) => { if (o) loadSlackChannels() }}
+                          >
+                            <SelectTrigger className="w-[240px]">
+                              <SelectValue placeholder={channelsLoading ? "Loading channels…" : "Select a channel…"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">— Don’t post —</SelectItem>
+                              {slackChannels.map((c) => (
+                                <SelectItem key={c.id} value={c.id}>
+                                  {c.is_private ? "🔒 " : "# "}{c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {savingChannel && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                        </div>
+                      )}
+                      {slackStatus.notify_channel_name && !channelsError && (
+                        <p className="text-xs text-green-600 flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          Posting to #{slackStatus.notify_channel_name}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
