@@ -37,9 +37,22 @@ export default function ProtectedLayout({ children }) {
       }
     }
 
+    // Admin routes require the admin role on top of authentication.
+    const isAdminRoute = pathname.startsWith('/admin');
+    let isAdmin = false;
+    try {
+      const rawUser = localStorage.getItem('user');
+      isAdmin = (rawUser ? JSON.parse(rawUser)?.role : null) === 'admin';
+    } catch {
+      isAdmin = false;
+    }
+
     if (isProtectedRoute && !isAuthenticated) {
       // Redirect to /login for protected routes if not authenticated
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (isAdminRoute && isAuthenticated && !isAdmin) {
+      // Authenticated but not an admin — bounce out of the admin console.
+      router.push('/dashboard');
     } else if (isAuthenticated && isPublicRoute && pathname !== '/') {
       // Redirect authenticated users from /login or /register to /clients
       router.push('/clients');
