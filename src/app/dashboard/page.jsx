@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
+import { apiRequest } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -221,6 +222,70 @@ function ActivityItem({ actor, kind, title, client, time, label }) {
   );
 }
 
+// ─── Strictness control ──────────────────────────────────────────────────────
+
+const STRICTNESS_OPTIONS = [
+  { value: "lenient", label: "Lenient" },
+  { value: "balanced", label: "Balanced" },
+  { value: "strict", label: "Strict" },
+];
+
+function StrictnessControl() {
+  const [level, setLevel] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest("/api/dashboard/settings");
+        if (res.ok && !cancelled) {
+          const d = await res.json();
+          setLevel(d.strictness || "balanced");
+        }
+      } catch {
+        /* leave null → the select shows Balanced */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const onChange = async (value) => {
+    const prev = level;
+    setLevel(value);
+    setSaving(true);
+    try {
+      const res = await apiRequest("/api/dashboard/settings", {
+        method: "PUT",
+        body: JSON.stringify({ strictness: value }),
+      });
+      if (res.ok) toast.success(`Suggestion strictness set to ${value}`);
+      else { setLevel(prev); toast.error("Couldn't save strictness"); }
+    } catch {
+      setLevel(prev);
+      toast.error("Couldn't save strictness");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <span className="text-xs text-muted-foreground whitespace-nowrap">Suggestion strictness</span>
+      <select
+        value={level ?? "balanced"}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={level === null || saving}
+        className="text-sm border border-border/60 rounded-lg px-2.5 py-1.5 bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-60"
+      >
+        {STRICTNESS_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // ─── Dashboard Page ─────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -289,13 +354,16 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* ── Greeting ─────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          {greeting}, {firstName}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {dateLabel} · Here&apos;s your day at a glance
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {greeting}, {firstName}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {dateLabel} · Here&apos;s your day at a glance
+          </p>
+        </div>
+        <StrictnessControl />
       </div>
 
       {/* ── Suggestions / Activity feed ─────────────────────────────── */}
