@@ -671,6 +671,12 @@ export default function AlertsPage() {
   const searchParams = useSearchParams()
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") ?? "triggered")
 
+  // Alerts should only ever target active clients
+  const activeClientGroups = useMemo(
+    () => clientGroups.filter(g => (g.client_status ?? "Active") === "Active"),
+    [clientGroups],
+  )
+
   // Extract unique tags from all client groups for the tag metric picker
   const availableTags = useMemo(() => {
     const tagSet = new Set()
@@ -1216,18 +1222,18 @@ export default function AlertsPage() {
                         {/* Select All */}
                       <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors font-medium bg-muted/30">
                         <Checkbox
-                          checked={clientGroups.length > 0 && form.target_group_ids.length === clientGroups.length}
+                          checked={activeClientGroups.length > 0 && form.target_group_ids.length === activeClientGroups.length}
                             onCheckedChange={(checked) => {
                               setForm(f => ({
                                 ...f,
-                                target_group_ids: checked ? clientGroups.map(g => g.id) : [],
+                                target_group_ids: checked ? activeClientGroups.map(g => g.id) : [],
                               }))
                             }}
                         />
                         <span className="text-sm font-medium">Target All Client Groups</span>
                       </label>
                         {/* Client groups */}
-                      {clientGroups
+                      {activeClientGroups
                         .filter(g => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
                         .map(g => (
                           <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors">
