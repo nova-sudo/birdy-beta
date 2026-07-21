@@ -512,7 +512,7 @@ export default function DashboardPage() {
             </div>
             <span className="text-xs text-muted-foreground shrink-0">Changes today · {activity.length}</span>
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 max-h-[520px] overflow-y-auto pr-1">
             {loading
               ? Array.from({ length: 5 }).map((_, i) => (
                   <div key={i} className="flex items-start gap-3">
@@ -523,7 +523,7 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))
-              : activity.map((a) => <ActivityItem key={a.id} {...a} />)}
+              : activity.slice(0, 10).map((a) => <ActivityItem key={a.id} {...a} />)}
           </div>
         </div>
       </div>
