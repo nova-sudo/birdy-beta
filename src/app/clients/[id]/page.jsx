@@ -14,6 +14,7 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
+import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import BirdyChat from "@/components/chat/BirdyChat"
 import { Input } from "@/components/ui/input"
@@ -530,8 +531,15 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
-        <TabsContent value="call-centre" className="mt-6">
-          <ComingSoon title="Call Centre" />
+        <TabsContent value="call-centre" className="mt-4">
+          <CallCentreContent
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            setDatePreset={setDatePreset}
+            showGroupFilter={false}
+            showHeader={false}
+          />
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
