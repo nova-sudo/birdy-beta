@@ -239,17 +239,41 @@ function activityVisual(kind, isBirdy) {
   }
 }
 
+// The activity feed only tracks two resolution states: a suggestion that was
+// dismissed is "ignored", one that was applied is "addressed". Other kinds
+// (analysis_pass, suggestion_created) aren't resolutions, so they get no badge.
+const ACTIVITY_STATUS_STYLE = {
+  ignored:  "bg-muted text-muted-foreground",
+  addressed: "bg-green-100 text-green-600",
+};
+
+function activityStatus(kind) {
+  switch (kind) {
+    case "suggestion_dismissed": return "ignored";
+    case "action_applied":       return "addressed";
+    default:                     return null;
+  }
+}
+
 function ActivityItem({ actor, kind, title, client, time, label }) {
   const isBirdy = actor === "birdy";
   const caption = label || (isBirdy ? "Auto-run by Birdy" : "Approved by you");
   const { Ico, tone } = activityVisual(kind, isBirdy);
+  const status = activityStatus(kind);
   return (
     <div className="flex items-start gap-3">
       <div className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${tone}`}>
         <Ico className="w-3.5 h-3.5" />
       </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-foreground leading-snug">{title}</p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-foreground leading-snug">{title}</p>
+          {status && (
+            <Badge className={`text-[10px] px-1.5 py-0 capitalize shrink-0 ${ACTIVITY_STATUS_STYLE[status]}`}>
+              {status}
+            </Badge>
+          )}
+        </div>
         <p className="text-xs text-muted-foreground">{client}</p>
         <p className="text-[10px] text-muted-foreground/70 mt-0.5">
           {caption} · {time}
