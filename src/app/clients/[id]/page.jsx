@@ -3,17 +3,19 @@ import { useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Save, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings } from "lucide-react"
+import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
+import { useDashboardData } from "@/app/dashboard/useDashboardData"
+import { ActivityItem } from "@/components/activity/ActivityItem"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
+import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import BirdyChat from "@/components/chat/BirdyChat"
 import { Input } from "@/components/ui/input"
@@ -74,12 +76,19 @@ function AlertsSkeleton() {
   )
 }
 
-// ── Notes Skeleton ───────────────────────────────────────────────────────────
-function NotesSkeleton() {
+// ── Activity Skeleton ────────────────────────────────────────────────────────
+function ActivitySkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-[200px] w-full rounded-md" />
-      <Skeleton className="h-10 w-full rounded-md" />
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-start gap-3">
+          <Skeleton className="h-7 w-7 rounded-full shrink-0" />
+          <div className="flex-1 space-y-1.5">
+            <Skeleton className="h-3.5 w-40" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -95,7 +104,6 @@ export default function ClientDetailsPage() {
   // ── Overview data ──────────────────────────────────────────────────────────
   const [clientData, setClientData] = useState(null)
   const [clientLoading, setClientLoading] = useState(true)
-  const [notes, setNotes] = useState("")
   const [alerts, setAlerts] = useState([])
   const [alertsLoading, setAlertsLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
@@ -107,6 +115,14 @@ export default function ClientDetailsPage() {
   // ── Client status (used in Integrations tab) ──────────────────────────────
   const [clientStatus, setClientStatus] = useState(null)
   const [statusLoading, setStatusLoading] = useState(false)
+
+  // ── History Book: dashboard activity feed, filtered to this client ────────
+  const { activity, loading: activityLoading } = useDashboardData()
+  const groupNameForActivity = clientData?.group_info?.name
+  const clientActivity = useMemo(
+    () => activity.filter((a) => a.client === groupNameForActivity),
+    [activity, groupNameForActivity]
+  )
 
   // ── Shared date preset for Marketing & Leads tabs ──────────────────────────
   const {
@@ -138,7 +154,7 @@ export default function ClientDetailsPage() {
     return { totalSpend, totalClicks, totalImpressions, avgCtr, totalTalkMin }
   }, [matchingGroup])
 
-  // ── Fetch client details (for notes) ───────────────────────────────────────
+  // ── Fetch client details ────────────────────────────────────────────────────
   useEffect(() => {
     if (!clientId) return
     ;(async () => {
@@ -148,7 +164,6 @@ export default function ClientDetailsPage() {
         if (!response.ok) throw new Error("Failed to fetch client details")
         const result = await response.json()
         setClientData(result.data)
-        setNotes(result.data?.group_info?.notes || "")
         setClientStatus(result.data?.group_info?.client_status ?? "Active")
       } catch {
         toast.error("Failed to load client details")
@@ -189,20 +204,6 @@ export default function ClientDetailsPage() {
       }
     } catch {
       toast.error("Failed to delete alert")
-    }
-  }
-
-  // ── Save notes ─────────────────────────────────────────────────────────────
-  const handleSaveNotes = async () => {
-    try {
-      const response = await apiRequest(`/api/client-groups/${clientId}/notes`, {
-        method: "PATCH",
-        body: JSON.stringify({ notes }),
-      })
-      if (response.ok) toast.success("Notes saved successfully")
-      else toast.error("Failed to save notes")
-    } catch {
-      toast.error("Failed to save notes")
     }
   }
 
@@ -483,20 +484,15 @@ export default function ClientDetailsPage() {
                 <CardTitle className="text-lg">History Book</CardTitle>
               </CardHeader>
               <CardContent>
-                {clientLoading ? (
-                  <NotesSkeleton />
+                {clientLoading || activityLoading ? (
+                  <ActivitySkeleton />
+                ) : clientActivity.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-4 text-center">No activity for this client yet.</p>
                 ) : (
-                  <div className="space-y-4">
-                    <Textarea
-                      className="min-h-[200px] resize-none bg-muted/20"
-                      placeholder="Add notes about this client..."
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                    />
-                    <Button onClick={handleSaveNotes} className="w-full text-white bg-[#713CDD]">
-                      <Save className="text-white mr-2 h-4 w-4" />
-                      Save Notes
-                    </Button>
+                  <div className="space-y-4 max-h-[350px] overflow-y-auto">
+                    {clientActivity.map((a) => (
+                      <ActivityItem key={a.id} {...a} />
+                    ))}
                   </div>
                 )}
               </CardContent>
@@ -524,8 +520,15 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
-        <TabsContent value="call-centre" className="mt-6">
-          <ComingSoon title="Call Centre" />
+        <TabsContent value="call-centre" className="mt-4">
+          <CallCentreContent
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            setDatePreset={setDatePreset}
+            showGroupFilter={false}
+            showHeader={false}
+          />
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
