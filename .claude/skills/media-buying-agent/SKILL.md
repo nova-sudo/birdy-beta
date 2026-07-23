@@ -79,10 +79,10 @@ find *which* stage, because that determines the fix.
    is a different question than "last 30 days".
 
 2. **Get the data.** The user usually provides it (pasted table, CSV/export, screenshot, or
-   dashboard view). If you need to pull it and have the credentials/tools, see
-   `references/data-model-and-api.md` for the birdy backend endpoints and field schemas. If
-   data is missing (e.g., no revenue, no call data), say so and scope your conclusions to what
-   you can see — never invent numbers.
+   dashboard view). If you need to pull it and have the credentials/tools, the **Sources** in the
+   capability registry below (`references/sources/`) carry each system's endpoints and field
+   schemas. If data is missing (e.g., no revenue, no call data), say so and scope your conclusions
+   to what you can see — never invent numbers.
 
 3. **Weight by spend, always.** Sort by spend and anchor everything to where the money is. A
    $40 CPL on $12 of spend is noise; a $40 CPL on $900 of spend is the whole problem. Never let
@@ -95,14 +95,14 @@ find *which* stage, because that determines the fix.
 5. **Follow the funnel for quality.** For anything that matters, don't stop at CPL. Pull the
    lead through GHL (did it become an opportunity? what status/value?) and HotProspector (was it
    called? did it connect?). This is where you separate cheap leads from *good* leads and where
-   "zombie leads" surface. See `references/playbook.md`.
+   "zombie leads" surface. See `references/playbooks/lead-quality.md`.
 
 6. **Decide: scale / kill / optimize / watch.** For each meaningful object, make a call and give
    the reason and the specific move. Respect data thresholds — don't kill on one result.
 
 7. **Write the output.** Pick the template that matches the ask (audit, client report, Q&A, or
-   lead-quality analysis) from `references/report-templates.md`. Lead with the decision, then the
-   evidence.
+   lead-quality analysis) from `references/templates/` — see the **Deliverables** registry below.
+   Lead with the decision, then the evidence.
 
 ## The diagnostic chain — reason about causes, not just symptoms
 
@@ -179,18 +179,51 @@ to reframe a "great CPL" finding in these terms. The playbook has the full metho
 - **Benchmarks are directional.** Any generic number here is a starting point; the client's own
   history is the real benchmark.
 
-## Reference material
+## Capability registry
 
-Load these as needed — don't dump them all into every answer:
+This skill is a **router**. The universal reasoning lives above in SKILL.md; every *specific*
+ability lives in its own module, wired in through the tables below. To **use** an ability, load its
+module. To **add** one, drop a module in the right folder and add a row here — the full contract is
+in `references/_extending.md`. Load modules on demand; don't dump them all into every answer.
 
-- **`references/metrics-glossary.md`** — every metric ID this stack uses (Meta, GHL, HotProspector),
-  its exact definition/formula, what it diagnoses, and directional benchmarks. Read it when you
-  need the precise meaning of a field or the platform it comes from.
-- **`references/data-model-and-api.md`** — the Client Group → Campaign → Ad Set → Ad → Leads data
-  model, the birdy backend endpoints, and field schemas. Read it when pulling or shaping data.
-- **`references/playbook.md`** — deeper diagnostic playbooks: fatigue detection, audience vs.
-  creative isolation, funnel/lead-quality analysis, budget reallocation math, and worked examples.
-  Read it for anything beyond a quick answer.
-- **`references/report-templates.md`** — the exact output structures for the optimization audit,
-  client-facing report, ad-hoc Q&A, and lead-quality analysis. Read it before writing a
-  deliverable so the format is consistent.
+Cross-source metric layer: **`references/metrics-glossary.md`** — derived / true-north metrics (ROAS,
+cost per qualified lead, …) and how to read metrics together. Per-source metric dictionaries live in
+each Source module.
+
+**Sources** — systems the data comes from *(extend with new ad platforms / CRMs)*:
+
+| Source | Role in the funnel | Load |
+|--------|--------------------|------|
+| Meta Ads | Buying surface (impression → click → lead) | `references/sources/meta.md` |
+| GoHighLevel | CRM / outcomes (opportunities, revenue) | `references/sources/gohighlevel.md` |
+| HotProspector | Call center (connect, appointments) | `references/sources/hotprospector.md` |
+
+**Analyses** — the playbooks *(extend with new analysis methods)*:
+
+| Analysis | Reach for it when | Load |
+|----------|-------------------|------|
+| Account triage | First look at an account | `references/playbooks/account-triage.md` |
+| Isolating the cause | A metric looks bad and you need the why | `references/playbooks/isolating-cause.md` |
+| Fatigue detection | CPL/CPM creeping, frequency rising | `references/playbooks/fatigue.md` |
+| Lead-quality / zombies | Judging leads past the click | `references/playbooks/lead-quality.md` |
+| Scaling | A winner you want to grow | `references/playbooks/scaling.md` |
+| Budget reallocation | Shifting spend from losers to winners | `references/playbooks/budget-reallocation.md` |
+
+**Deliverables** — output formats *(extend with new report types)*:
+
+| Deliverable | Use when the ask is | Load |
+|-------------|---------------------|------|
+| Optimization audit | "what do I scale / kill / fix" | `references/templates/optimization-audit.md` |
+| Client report | a summary for the client | `references/templates/client-report.md` |
+| Ad-hoc Q&A | a specific metric question | `references/templates/adhoc-qa.md` |
+| Lead-quality analysis | "which ads actually make money" | `references/templates/lead-quality.md` |
+
+**Tools** — deterministic scripts *(extend with new computations / fetchers)*: see `scripts/README.md`.
+Run `scripts/validate_skill.py` after adding or moving any module to confirm the registry and the
+files stay in sync.
+
+## Extending this skill
+
+Adding an ability is additive — create a module, add one registry row, sync the trigger `description`,
+add an eval. You should almost never rewrite existing files. Full contract, module stubs, and worked
+examples (e.g. adding Google Ads, or a creative-analysis playbook): **`references/_extending.md`**.
