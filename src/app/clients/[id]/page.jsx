@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Save, DollarSign, Clock, Trash2, AlertTriangle, Loader2 } from "lucide-react"
+import { ArrowLeft, Save, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
@@ -102,6 +102,7 @@ export default function ClientDetailsPage() {
   const [deleteInput, setDeleteInput] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
+  const [integrationsOpen, setIntegrationsOpen] = useState(false)
 
   // ── Client status (used in Integrations tab) ──────────────────────────────
   const [clientStatus, setClientStatus] = useState(null)
@@ -283,7 +284,17 @@ export default function ClientDetailsPage() {
             <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
           )}
         </div>
-        <DateRangeSelect value={datePreset} onChange={setDatePreset} />
+        <div className="flex items-center gap-2">
+          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIntegrationsOpen(true)}
+            title="Integrations & Settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
@@ -295,7 +306,6 @@ export default function ClientDetailsPage() {
           <TabsTrigger value="marketing" className={tabTriggerClass}>Marketing</TabsTrigger>
           <TabsTrigger value="call-centre" className={tabTriggerClass}>Call Centre</TabsTrigger>
           <TabsTrigger value="leads" className={tabTriggerClass}>Leads</TabsTrigger>
-          <TabsTrigger value="integrations" className={tabTriggerClass}>Integrations</TabsTrigger>
         </TabsList>
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
@@ -536,142 +546,151 @@ export default function ClientDetailsPage() {
           />
         </TabsContent>
 
-        {/* ── Integrations Tab ─────────────────────────────────────────────── */}
-        <TabsContent value="integrations" className="mt-6 space-y-6">
-          {/* ── Client Status Toggle Card ── */}
+      </Tabs>
 
-          <IntegrationsContent
-            group={matchingGroup}
-            onRefreshComplete={invalidate}
-          />
+      {/* ── Integrations & Settings Dialog ───────────────────────────────────── */}
+      <Dialog open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Integrations & Settings</DialogTitle>
+            <DialogDescription>
+              Manage connected integrations, client status, and danger zone actions for {groupName}.
+            </DialogDescription>
+          </DialogHeader>
 
-          <Card>
-            <CardContent >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
-                    clientStatus === "Active" ? "bg-[#DCFCE7]" : "bg-[#FEF9C3]"
-                  }`}>
-                    <span className={`h-2.5 w-2.5 rounded-full ${
-                      clientStatus === "Active" ? "bg-[#15803D]" : "bg-[#A16207]"
-                    }`} />
+          <div className="space-y-6">
+            <IntegrationsContent
+              group={matchingGroup}
+              onRefreshComplete={invalidate}
+            />
+
+            <Card>
+              <CardContent >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                      clientStatus === "Active" ? "bg-[#DCFCE7]" : "bg-[#FEF9C3]"
+                    }`}>
+                      <span className={`h-2.5 w-2.5 rounded-full ${
+                        clientStatus === "Active" ? "bg-[#15803D]" : "bg-[#A16207]"
+                      }`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Client Status</p>
+                      <p className="text-xs text-muted-foreground">
+                        {clientStatus === "Active"
+                          ? "This client is currently active and receiving data"
+                          : "This client is paused — data refresh is suspended"}
+                      </p>
+                    </div>
                   </div>
+                  <button
+                    onClick={handleToggleStatus}
+                    disabled={statusLoading || clientLoading}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      clientStatus === "Active" ? "bg-[#713CDD]" : "bg-gray-300"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
+                      clientStatus === "Active" ? "translate-x-[22px]" : "translate-x-[4px]"
+                    }`} />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* ── Danger Zone ───────────────────────────────────────────────────── */}
+            <Card className="border-red-200 bg-red-50/40">
+              <CardHeader>
+                <CardTitle className="text-base text-red-700">Danger Zone</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Client Status</p>
-                    <p className="text-xs text-muted-foreground">
-                      {clientStatus === "Active"
-                        ? "This client is currently active and receiving data"
-                        : "This client is paused — data refresh is suspended"}
+                    <p className="text-sm font-medium text-foreground">Remove Client Group</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Permanently delete this client group and all associated GHL contacts. This cannot be undone.
                     </p>
                   </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="shrink-0 gap-2"
+                    onClick={() => {
+                      setDeleteInput("")
+                      setDeleteError("")
+                      setDeleteModalOpen(true)
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remove Client Group
+                  </Button>
                 </div>
-                <button
-                  onClick={handleToggleStatus}
-                  disabled={statusLoading || clientLoading}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                    clientStatus === "Active" ? "bg-[#713CDD]" : "bg-gray-300"
-                  }`}
-                >
-                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
-                    clientStatus === "Active" ? "translate-x-[22px]" : "translate-x-[4px]"
-                  }`} />
-                </button>
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Delete Confirmation Modal ─────────────────────────────────────────── */}
+      <Dialog open={deleteModalOpen} onOpenChange={(v) => { if (!deleteLoading) setDeleteModalOpen(v) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-1">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
               </div>
-            </CardContent>
-          </Card>
+              <DialogTitle className="text-xl">Delete Client Group</DialogTitle>
+            </div>
+            <DialogDescription className="text-sm leading-relaxed">
+              This action is <span className="font-semibold text-foreground">permanent and irreversible</span>. It will delete:
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* ── Danger Zone ───────────────────────────────────────────────────── */}
-          <Card className="border-red-200 bg-red-50/40">
-            <CardHeader>
-              <CardTitle className="text-base text-red-700">Danger Zone</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Remove Client Group</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Permanently delete this client group and all associated GHL contacts. This cannot be undone.
-                  </p>
-                </div>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="shrink-0 gap-2"
-                  onClick={() => {
-                    setDeleteInput("")
-                    setDeleteError("")
-                    setDeleteModalOpen(true)
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Remove Client Group
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <ul className="text-sm text-muted-foreground space-y-1.5 pl-4 list-disc">
+            <li>All <span className="text-foreground font-medium">GHL contacts</span> linked to this group</li>
+            <li>The <span className="text-foreground font-medium">client group</span> and all its configuration</li>
+          </ul>
 
-          {/* ── Confirmation Modal ─────────────────────────────────────────────── */}
-          <Dialog open={deleteModalOpen} onOpenChange={(v) => { if (!deleteLoading) setDeleteModalOpen(v) }}>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <div className="flex items-center gap-3 mb-1">
-                  <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="h-5 w-5 text-red-600" />
-                  </div>
-                  <DialogTitle className="text-xl">Delete Client Group</DialogTitle>
-                </div>
-                <DialogDescription className="text-sm leading-relaxed">
-                  This action is <span className="font-semibold text-foreground">permanent and irreversible</span>. It will delete:
-                </DialogDescription>
-              </DialogHeader>
+          <div className="space-y-2 pt-1">
+            <p className="text-sm">
+              Type{" "}
+              <span className="font-mono text-xs font-semibold bg-muted px-1 py-0.5 rounded">{groupName}</span>
+              {" "}to confirm:
+            </p>
+            <Input
+              value={deleteInput}
+              onChange={(e) => { setDeleteInput(e.target.value); setDeleteError("") }}
+              placeholder={groupName}
+              className={`font-mono text-sm ${deleteError ? "border-red-400" : ""}`}
+              disabled={deleteLoading}
+              onKeyDown={(e) => { if (e.key === "Enter") handleDeleteGroup() }}
+              autoComplete="off"
+            />
+            {deleteError && (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> {deleteError}
+              </p>
+            )}
+          </div>
 
-              <ul className="text-sm text-muted-foreground space-y-1.5 pl-4 list-disc">
-                <li>All <span className="text-foreground font-medium">GHL contacts</span> linked to this group</li>
-                <li>The <span className="text-foreground font-medium">client group</span> and all its configuration</li>
-              </ul>
-
-              <div className="space-y-2 pt-1">
-                <p className="text-sm">
-                  Type{" "}
-                  <span className="font-mono text-xs font-semibold bg-muted px-1 py-0.5 rounded">{groupName}</span>
-                  {" "}to confirm:
-                </p>
-                <Input
-                  value={deleteInput}
-                  onChange={(e) => { setDeleteInput(e.target.value); setDeleteError("") }}
-                  placeholder={groupName}
-                  className={`font-mono text-sm ${deleteError ? "border-red-400" : ""}`}
-                  disabled={deleteLoading}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleDeleteGroup() }}
-                  autoComplete="off"
-                />
-                {deleteError && (
-                  <p className="text-xs text-red-500 flex items-center gap-1">
-                    <AlertTriangle className="h-3 w-3" /> {deleteError}
-                  </p>
-                )}
-              </div>
-
-              <DialogFooter className="flex gap-2 pt-2">
-                <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading} className="flex-1">
-                  Cancel
-                </Button>
-                <Button
-                  variant="destructive"
-                  onClick={handleDeleteGroup}
-                  disabled={deleteInput.trim() !== groupName?.trim() || deleteLoading}
-                  className="flex-1 gap-2"
-                >
-                  {deleteLoading
-                    ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
-                    : <><Trash2 className="h-4 w-4" /> Delete Group</>}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </TabsContent>
-
-      </Tabs>
+          <DialogFooter className="flex gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteGroup}
+              disabled={deleteInput.trim() !== groupName?.trim() || deleteLoading}
+              className="flex-1 gap-2"
+            >
+              {deleteLoading
+                ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
+                : <><Trash2 className="h-4 w-4" /> Delete Group</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -3,13 +3,14 @@
 import "./globals.css";
 import { Outfit } from "next/font/google";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
 import { UserRound, Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
-import BirdyLogo from "@/components/BirdyLogo";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
@@ -64,79 +65,79 @@ export default function RootLayout({ children }) {
         <ProtectedLayout>
           <SidebarProvider open={false}>
             {!hideSidebar && (
-              <div className="flex flex-col h-screen w-full">
-                {/* Impersonation banner (shows only while an admin is impersonating) */}
-                <ImpersonationBar />
-                {/* Top Header */}
-                <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <SidebarTrigger className="md:hidden" />
+              <div className="flex h-screen w-full overflow-hidden">
+                <AppSidebar />
+                <div className="flex flex-col flex-1 min-w-0">
+                  {/* Impersonation banner (shows only while an admin is impersonating) */}
+                  <ImpersonationBar />
+                  {/* Top Header */}
+                  <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
-                      <BirdyLogo variant="lockup" theme="light" size={75} priority />
-                      <span className="text-xs bg-accent px-2 py-0.5 rounded-md font-semibold">Beta 1.0</span>
+                      <SidebarTrigger className="md:hidden" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
+                        <Badge variant="secondary" className="font-semibold">Beta 1.0</Badge>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Center Ask-Birdy search bar */}
-                  <div className="mx-auto flex-1 flex justify-center max-w-2xl px-4">
-                    <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md group">
-                      <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-purple-500 pointer-events-none" />
-                      <input
-                        ref={headerInputRef}
-                        value={headerInput}
-                        onChange={(e) => setHeaderInput(e.target.value)}
-                        className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-white border border-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition"
-                        placeholder="Ask Birdy about your marketing data..."
-                        aria-label="Ask Birdy"
-                      />
-                      {!headerInput && (
-                        <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border/60 bg-muted/40 text-[10px] font-medium text-muted-foreground font-sans pointer-events-none">
-                          {isMac ? "⌘" : "Ctrl"}K
-                        </kbd>
-                      )}
-                      <button
-                        type="submit"
-                        disabled={!headerInput.trim()}
-                        className={`absolute top-1/2 -translate-y-1/2 right-1.5 h-8 w-8 flex items-center justify-center rounded-full transition ${
-                          headerInput.trim()
-                            ? "bg-purple-600 text-white hover:bg-purple-700"
-                            : "bg-muted/60 text-muted-foreground"
-                        }`}
-                        aria-label="Ask Birdy"
-                      >
-                        <Search className="h-4 w-4" />
-                      </button>
-                    </form>
-                  </div>
+                    {/* Center Ask-Birdy search bar */}
+                    <div className="mx-auto flex-1 flex justify-center max-w-2xl px-4">
+                      <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md group">
+                        <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-purple-500 pointer-events-none" />
+                        <input
+                          ref={headerInputRef}
+                          value={headerInput}
+                          onChange={(e) => setHeaderInput(e.target.value)}
+                          className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-white border border-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition"
+                          placeholder="Ask Birdy about your marketing data..."
+                          aria-label="Ask Birdy"
+                        />
+                        {!headerInput && (
+                          <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border/60 bg-muted/40 text-[10px] font-medium text-muted-foreground font-sans pointer-events-none">
+                            {isMac ? "⌘" : "Ctrl"}K
+                          </kbd>
+                        )}
+                        <button
+                          type="submit"
+                          disabled={!headerInput.trim()}
+                          className={`absolute top-1/2 -translate-y-1/2 right-1.5 h-8 w-8 flex items-center justify-center rounded-full transition ${
+                            headerInput.trim()
+                              ? "bg-purple-600 text-white hover:bg-purple-700"
+                              : "bg-muted/60 text-muted-foreground"
+                          }`}
+                          aria-label="Ask Birdy"
+                        >
+                          <Search className="h-4 w-4" />
+                        </button>
+                      </form>
+                    </div>
 
-                  <div className="flex items-center gap-3">
-                    <NotificationsDropdown />
-                    <button className="p-1.5 rounded-full hover:bg-gray-100 transition">
-                      <UserRound className="w-5 h-5 text-black" />
-                    </button>
-                  </div>
-                </header>
+                    <div className="flex items-center gap-3">
+                      <NotificationsDropdown />
+                      <Button size="icon" className="rounded-md">
+                        <UserRound className="w-5 h-5" />
+                      </Button>
+                    </div>
+                  </header>
 
-                {/* Sidebar + Content */}
-                <div className="flex flex-1 overflow-hidden">
-                  <AppSidebar />
-                  <SidebarInset>
+                  {/* Content */}
+                  <SidebarInset className="flex-1 overflow-hidden">
                     <div className="mx-auto bg-background w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
                       {children}
                     </div>
                   </SidebarInset>
-                </div>
 
-                {/* Birdy Chat Modal */}
-                <BirdyChatModal
-                  open={chatOpen}
-                  onOpenChange={(v) => {
-                    setChatOpen(v);
-                    if (!v) setChatInitialMsg("");
-                  }}
-                  initialMessage={chatInitialMsg}
-                  pathname={pathname}
-                />
+                  {/* Birdy Chat Modal */}
+                  <BirdyChatModal
+                    open={chatOpen}
+                    onOpenChange={(v) => {
+                      setChatOpen(v);
+                      if (!v) setChatInitialMsg("");
+                    }}
+                    initialMessage={chatInitialMsg}
+                    pathname={pathname}
+                  />
+                </div>
               </div>
             )}
 
