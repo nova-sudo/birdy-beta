@@ -1,8 +1,9 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, Bird, LogOut, Sparkles, Shield} from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, Shield} from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
+import Image from "next/image"
 import { useRole } from "@/hooks/useRole"
 import { apiRequest } from "@/lib/api"
 import {
@@ -89,11 +90,15 @@ export function AppSidebar() {
       >
         <SidebarContent className="pt-2">
           <SidebarGroup>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild className="rounded-none">
               <Link href="/clients">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground rounded-md flex aspect-square size-8 items-center justify-center">
-                  <Bird className="size-6" />
-                </div>
+                <Image
+                  src="/top-left-mascot.jpeg"
+                  alt="Birdy"
+                  width={32}
+                  height={32}
+                  className="h-full w-full rounded-sm"
+                />
                 <div className="flex flex-col gap-0.5 text-purple-900 leading-none">
                   <span className="font-bold">Birdy Ai</span>
                   <span className="text-xs">Alpha 1.0</span>
