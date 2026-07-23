@@ -302,7 +302,6 @@ export default function ClientDetailsPage() {
       <Tabs defaultValue="overview" className="flex-1 flex flex-col">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="overview" className={tabTriggerClass}>Overview</TabsTrigger>
-          <TabsTrigger value="insights" className={tabTriggerClass}>Insights</TabsTrigger>
           <TabsTrigger value="ask-birdy" className={tabTriggerClass}>Ask Birdy</TabsTrigger>
           <TabsTrigger value="marketing" className={tabTriggerClass}>Marketing</TabsTrigger>
           <TabsTrigger value="call-centre" className={tabTriggerClass}>Call Centre</TabsTrigger>
@@ -499,11 +498,6 @@ export default function ClientDetailsPage() {
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-
-        {/* ── Insights Tab ──────────────────────────────────────────────────── */}
-        <TabsContent value="insights" className="mt-6">
-          <ComingSoon title="Insights" />
         </TabsContent>
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
