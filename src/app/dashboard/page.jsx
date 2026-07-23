@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles, RotateCcw } from "lucide-react";
+import { apiRequest } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 import {
   useDashboardData,
   applySuggestion,
+  undoSuggestion,
   dismissSuggestion,
   runAlertAction,
   completeWin,
@@ -72,9 +74,45 @@ function CardSkeleton() {
   );
 }
 
-function RecommendationCard({ item, dismissing, onApply, onDismiss }) {
+function RecommendationCard({ item, dismissing, onApply, onUndo, onDismiss }) {
   const style = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.MEDIUM;
   const Icon = resolveIcon(item.icon);
+
+  // An applied suggestion stays on the board (muted) with a lasting Undo, so the
+  // dashboard matches the persistent Undo button on the Slack card.
+  if (item.status === "applied") {
+    const n = item.applied_count ?? 0;
+    return (
+      <FadeWrap dismissing={dismissing}>
+        <div className="flex items-start gap-4 bg-white border border-border/60 rounded-xl border-l-4 border-l-green-500 p-4 shadow-sm mb-4">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-green-100 text-green-600">
+            <Check className="w-4 h-4" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <span className="text-[11px] font-bold tracking-wide text-green-600">DONE</span>
+              <span className="text-xs text-muted-foreground truncate">
+                {item.client} · {item.platform}
+              </span>
+            </div>
+            <p className="text-sm font-semibold text-muted-foreground">{item.title}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Paused {n} ad{n === 1 ? "" : "s"} · you can still undo this.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onUndo(item)}
+            className="rounded-lg h-8 px-3 text-xs gap-1.5 shrink-0"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Undo
+          </Button>
+        </div>
+      </FadeWrap>
+    );
+  }
 
   return (
     <FadeWrap dismissing={dismissing}>
@@ -221,6 +259,70 @@ function ActivityItem({ actor, kind, title, client, time, label }) {
   );
 }
 
+// ─── Strictness control ──────────────────────────────────────────────────────
+
+const STRICTNESS_OPTIONS = [
+  { value: "lenient", label: "Lenient" },
+  { value: "balanced", label: "Balanced" },
+  { value: "strict", label: "Strict" },
+];
+
+function StrictnessControl() {
+  const [level, setLevel] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest("/api/dashboard/settings");
+        if (res.ok && !cancelled) {
+          const d = await res.json();
+          setLevel(d.strictness || "balanced");
+        }
+      } catch {
+        /* leave null → the select shows Balanced */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const onChange = async (value) => {
+    const prev = level;
+    setLevel(value);
+    setSaving(true);
+    try {
+      const res = await apiRequest("/api/dashboard/settings", {
+        method: "PUT",
+        body: JSON.stringify({ strictness: value }),
+      });
+      if (res.ok) toast.success(`Suggestion strictness set to ${value}`);
+      else { setLevel(prev); toast.error("Couldn't save strictness"); }
+    } catch {
+      setLevel(prev);
+      toast.error("Couldn't save strictness");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <span className="text-xs text-muted-foreground whitespace-nowrap">Suggestion strictness</span>
+      <select
+        value={level ?? "balanced"}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={level === null || saving}
+        className="text-sm border border-border/60 rounded-lg px-2.5 py-1.5 bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-60"
+      >
+        {STRICTNESS_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 // ─── Dashboard Page ─────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -263,10 +365,35 @@ export default function DashboardPage() {
     }, 300);
   };
 
+  const setSuggestionStatus = (id, status, extra = {}) =>
+    setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, status, ...extra } : s)));
+
+  const handleUndo = async (item) => {
+    setSuggestionStatus(item.id, "open"); // optimistic
+    const data = await undoSuggestion(item.id);
+    if (!data) {
+      setSuggestionStatus(item.id, "applied");
+      toast.error("Couldn't undo", { description: item.title });
+      return;
+    }
+    toast.success("Undone — ads re-enabled", { description: item.title });
+  };
+
   const handleApply = async (item) => {
-    toast.success("Birdy is on it", { description: item.title });
-    removeItem("suggestions", item.id);
-    await applySuggestion(item.id);
+    setSuggestionStatus(item.id, "applied"); // optimistic — the card stays, muted
+    const data = await applySuggestion(item.id);
+    if (!data) {
+      setSuggestionStatus(item.id, "open");
+      toast.error("Couldn't apply that", { description: item.title });
+      return;
+    }
+    const n = (data.succeeded || []).length;
+    setSuggestionStatus(item.id, "applied", { applied_count: n });
+    toast.success(`Paused ${n} ad${n === 1 ? "" : "s"}`, {
+      description: item.title,
+      duration: 8000,
+      action: { label: "Undo", onClick: () => handleUndo(item) },
+    });
   };
 
   const handleDismiss = async (item) => {
@@ -289,13 +416,16 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col gap-6 w-full">
       {/* ── Greeting ─────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">
-          {greeting}, {firstName}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          {dateLabel} · Here&apos;s your day at a glance
-        </p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">
+            {greeting}, {firstName}
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {dateLabel} · Here&apos;s your day at a glance
+          </p>
+        </div>
+        <StrictnessControl />
       </div>
 
       {/* ── Suggestions / Activity feed ─────────────────────────────── */}
@@ -327,6 +457,7 @@ export default function DashboardPage() {
                   item={item}
                   dismissing={dismissingIds.has(item.id)}
                   onApply={handleApply}
+                  onUndo={handleUndo}
                   onDismiss={handleDismiss}
                 />
               ))

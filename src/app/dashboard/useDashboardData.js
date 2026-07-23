@@ -19,6 +19,7 @@ import {
 //     → { suggestions: [...], alerts: [...], wins: [...], activity: [...],
 //         counts: { suggestions, alerts, wins } }
 //   POST   /api/dashboard/suggestions/:id/apply
+//   POST   /api/dashboard/suggestions/:id/undo
 //   DELETE /api/dashboard/suggestions/:id
 //   POST   /api/dashboard/alerts/:id/action   body: { action: "open_client" | "view_all" }
 //   POST   /api/dashboard/wins/:id/complete
@@ -74,12 +75,25 @@ export function useDashboardData() {
 // Each fires the real request first; if the endpoint isn't live yet the
 // caller still gets a resolved promise so the optimistic UI update proceeds.
 
+/** Returns the response body on success (incl. `succeeded`), or null on failure. */
 export async function applySuggestion(id) {
   try {
     const res = await apiRequest(`/api/dashboard/suggestions/${id}/apply`, { method: "POST" });
-    return res.ok;
+    if (!res.ok) return null;
+    return await res.json().catch(() => ({ ok: true }));
   } catch {
-    return false;
+    return null;
+  }
+}
+
+/** Reverse an applied suggestion — re-enables exactly the ads it paused. */
+export async function undoSuggestion(id) {
+  try {
+    const res = await apiRequest(`/api/dashboard/suggestions/${id}/undo`, { method: "POST" });
+    if (!res.ok) return null;
+    return await res.json().catch(() => ({ ok: true }));
+  } catch {
+    return null;
   }
 }
 
