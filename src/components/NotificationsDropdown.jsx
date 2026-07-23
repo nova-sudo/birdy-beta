@@ -141,7 +141,7 @@ export default function NotificationsDropdown() {
     <div className="relative" ref={ref}>
       {/* Outer bell button with total count badge */}
       <button
-        className="relative p-1.5 rounded-full hover:bg-gray-100 transition"
+        className="relative flex items-center justify-center size-10 rounded-md bg-muted hover:bg-gray-200 transition"
         onClick={() => setOpen((v) => !v)}
         aria-label="Notifications"
       >
