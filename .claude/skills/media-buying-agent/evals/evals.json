@@ -1,0 +1,34 @@
+{
+  "skill_name": "media-buying-agent",
+  "notes": "Realistic prompts a birdy-ai user (agency media buyer) would actually type. Prompts only for now; assertions can be added when running the skill-creator eval loop. Each maps to one of the four deliverables the skill supports.",
+  "evals": [
+    {
+      "id": 1,
+      "deliverable": "optimization-audit",
+      "prompt": "Here's last 7 days for Acme Dental (USD). Their target CPL is $18. Audit it and tell me exactly what to scale, kill, and fix.\n\nCampaigns:\n- Lead-Gen-Prospecting | spend 1200 | leads 42 | cpl 28.57 | ctr 0.9% | cpm 22 | freq 3.4\n- Lead-Gen-Retarget | spend 300 | leads 26 | cpl 11.54 | ctr 2.1% | cpm 14 | freq 1.6\n- Brand-Awareness | spend 150 | leads 3 | cpl 50.00 | ctr 0.6% | cpm 9 | freq 1.2",
+      "expected_output": "Decision-first audit: weights by spend, flags the fatiguing high-CPL prospecting campaign (freq 3.4, low CTR) as optimize/kill, the retarget campaign as scale, notes brand-awareness is low-data/off-objective. Anchors to the $18 target. Uses the audit template.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "deliverable": "lead-quality",
+      "prompt": "Which of these ads is actually bringing good leads vs cheap junk? Ad A: 128 leads, $6.10 CPL, 41% GHL matched, 12 opps all open, 19% HotProspector connect, $0 revenue. Ad C: 30 leads, $22 CPL, 90% matched, 21 opps / 6 won, 63% connect, $9,400 revenue.",
+      "expected_output": "Identifies Ad A as a zombie factory (cheap CPL is a mirage — low match/connect, no revenue) and Ad C as the real winner by ROAS despite higher CPL. Recommends fixing/killing A's audience/form and scaling C. Reframes CPL into ROAS/quality.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "deliverable": "adhoc-qa",
+      "prompt": "quick one — which ad set has the best CTR this week and should i just scale that one?",
+      "expected_output": "Answers the CTR question directly but adds the so-what: best CTR isn't automatically the best ad set — checks whether it also has healthy CPL/quality and enough spend before endorsing a scale. Flags need for spend/CPL context if not provided.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "deliverable": "client-report",
+      "prompt": "Write a short client-facing performance summary for Bright Smiles for the last 30 days. Spend $8,400, 512 leads, CPL $16.40 (down from $19 last month), 88 booked appointments, GHL revenue $47,000. Keep it non-technical.",
+      "expected_output": "Client-friendly report: outcome-first headline (leads, CPL improvement, revenue/return), plain-language wins and next steps, no jargon soup. Uses the client-report template and the real numbers only.",
+      "files": []
+    }
+  ]
+}
