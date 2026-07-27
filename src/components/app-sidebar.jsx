@@ -1,4 +1,4 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, Shield} from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, Shield, Megaphone} from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -44,6 +44,7 @@ const items = [
   { title: "Leads", url: "/contacts", icon: List },
   { title: "Metrics", url: "/metrics", icon: Calculator },
   { title: "Alerts", url: "/alerts", icon: Bell },
+  { title: "What's New", url: "/changelog", icon: Megaphone },
   { title: "Settings", url: "/settings", icon: Settings },
 ]
 
