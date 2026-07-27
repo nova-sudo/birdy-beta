@@ -4,12 +4,14 @@ import "./globals.css";
 import { Outfit } from "next/font/google";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { UserRound, Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, Tag } from 'lucide-react';
+import { APP_VERSION } from "@/lib/changelog";
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
@@ -22,7 +24,13 @@ const outfit = Outfit({
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
-  const hideSidebar = pathname === "/login" || pathname === "/register" || pathname === "/";
+  // /admin runs as a separate app-shell (its own dark rail + topbar via
+  // src/app/admin/layout.jsx), so it opts out of the main sidebar/header here.
+  const hideSidebar =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/" ||
+    pathname.startsWith("/admin");
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
@@ -76,7 +84,20 @@ export default function RootLayout({ children }) {
                       <SidebarTrigger className="md:hidden" />
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
-                        <Badge variant="secondary" className="font-semibold">Beta 1.0</Badge>
+                        <Link
+                          href="/changelog"
+                          aria-label={`What's new in Birdy — version ${APP_VERSION}`}
+                          title={`What's new — ${APP_VERSION}`}
+                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+                        >
+                          <Badge
+                            variant="secondary"
+                            className="cursor-pointer gap-1 font-semibold transition-colors hover:bg-secondary/70"
+                          >
+                            <Tag className="h-3 w-3 text-purple-500" aria-hidden="true" />
+                            {APP_VERSION}
+                          </Badge>
+                        </Link>
                       </div>
                     </div>
 
@@ -114,9 +135,7 @@ export default function RootLayout({ children }) {
 
                     <div className="flex items-center gap-3">
                       <NotificationsDropdown />
-                      <Button size="icon" className="rounded-md">
-                        <UserRound className="w-5 h-5" />
-                      </Button>
+                      <UserMenu />
                     </div>
                   </header>
 

@@ -47,8 +47,9 @@ export default function ProtectedLayout({ children }) {
       isAdmin = false;
     }
 
-    if (isProtectedRoute && !isAuthenticated) {
-      // Redirect to /login for protected routes if not authenticated
+    if ((isProtectedRoute || isAdminRoute) && !isAuthenticated) {
+      // Redirect to /login for protected/admin routes if not authenticated
+      // (isAdminRoute covers every /admin sub-route, not just the exact path).
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
     } else if (isAdminRoute && isAuthenticated && !isAdmin) {
       // Authenticated but not an admin — bounce out of the admin console.

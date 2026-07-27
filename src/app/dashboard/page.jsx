@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles, RotateCcw } from "lucide-react";
+import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
 import { apiRequest } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,45 +75,9 @@ function CardSkeleton() {
   );
 }
 
-function RecommendationCard({ item, dismissing, onApply, onUndo, onDismiss }) {
+function RecommendationCard({ item, dismissing, onApply, onDismiss }) {
   const style = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.MEDIUM;
   const Icon = resolveIcon(item.icon);
-
-  // An applied suggestion stays on the board (muted) with a lasting Undo, so the
-  // dashboard matches the persistent Undo button on the Slack card.
-  if (item.status === "applied") {
-    const n = item.applied_count ?? 0;
-    return (
-      <FadeWrap dismissing={dismissing}>
-        <div className="flex items-start gap-4 bg-white border border-border/60 rounded-xl border-l-4 border-l-green-500 p-4 shadow-sm mb-4">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-green-100 text-green-600">
-            <Check className="w-4 h-4" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <span className="text-[11px] font-bold tracking-wide text-green-600">DONE</span>
-              <span className="text-xs text-muted-foreground truncate">
-                {item.client} · {item.platform}
-              </span>
-            </div>
-            <p className="text-sm font-semibold text-muted-foreground">{item.title}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Paused {n} ad{n === 1 ? "" : "s"} · you can still undo this.
-            </p>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onUndo(item)}
-            className="rounded-lg h-8 px-3 text-xs gap-1.5 shrink-0"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Undo
-          </Button>
-        </div>
-      </FadeWrap>
-    );
-  }
 
   return (
     <FadeWrap dismissing={dismissing}>
@@ -300,7 +264,7 @@ export default function DashboardPage() {
     suggestions, setSuggestions,
     alerts, setAlerts,
     wins, setWins,
-    activity,
+    activity, setActivity,
     counts,
     loading,
   } = useDashboardData();
@@ -332,34 +296,59 @@ export default function DashboardPage() {
     }, 300);
   };
 
-  const setSuggestionStatus = (id, status, extra = {}) =>
-    setSuggestions((prev) => prev.map((s) => (s.id === id ? { ...s, status, ...extra } : s)));
+  // Applying a suggestion moves it into the Activity feed (the "Completed today"
+  // surface) where its persistent Undo lives; a transient toast Undo covers the
+  // moment just after applying. One clear undo surface, no duplicate card button.
+  const buildAppliedEntry = (item, extra = {}) => ({
+    id: `applied-${item.id}`,
+    kind: "action_applied",
+    actor: "birdy",
+    title: item.title,
+    client: item.client,
+    time: "just now",
+    reversible: true,
+    undone: false,
+    suggestion: item, // stashed so Undo can reverse and restore the recommendation
+    ...extra,
+  });
 
-  const handleUndo = async (item) => {
-    setSuggestionStatus(item.id, "open"); // optimistic
-    const data = await undoSuggestion(item.id);
+  const handleUndo = async (entry) => {
+    // optimistic — mark the completed action as undone in the feed
+    setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, undone: true } : a)));
+    const data = await undoSuggestion(entry.suggestion.id);
     if (!data) {
-      setSuggestionStatus(item.id, "applied");
-      toast.error("Couldn't undo", { description: item.title });
+      setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, undone: false } : a)));
+      toast.error("Couldn't undo", { description: entry.title });
       return;
     }
-    toast.success("Undone — ads re-enabled", { description: item.title });
+    // bring the recommendation back so it can be acted on again
+    setSuggestions((prev) =>
+      prev.some((s) => s.id === entry.suggestion.id) ? prev : [entry.suggestion, ...prev]
+    );
+    toast.success("Undone — ads re-enabled", { description: entry.title });
   };
 
   const handleApply = async (item) => {
-    setSuggestionStatus(item.id, "applied"); // optimistic — the card stays, muted
+    // optimistic — move the suggestion out of the list and into the completed feed
+    const entry = buildAppliedEntry(item);
+    setSuggestions((prev) => prev.filter((s) => s.id !== item.id));
+    setActivity((prev) => [entry, ...prev]);
+
     const data = await applySuggestion(item.id);
     if (!data) {
-      setSuggestionStatus(item.id, "open");
+      // revert: pull the feed entry back out and restore the suggestion
+      setActivity((prev) => prev.filter((a) => a.id !== entry.id));
+      setSuggestions((prev) => (prev.some((s) => s.id === item.id) ? prev : [item, ...prev]));
       toast.error("Couldn't apply that", { description: item.title });
       return;
     }
+
     const n = (data.succeeded || []).length;
-    setSuggestionStatus(item.id, "applied", { applied_count: n });
+    setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, applied_count: n } : a)));
     toast.success(`Paused ${n} ad${n === 1 ? "" : "s"}`, {
       description: item.title,
       duration: 8000,
-      action: { label: "Undo", onClick: () => handleUndo(item) },
+      action: { label: "Undo", onClick: () => handleUndo(entry) },
     });
   };
 
@@ -424,7 +413,6 @@ export default function DashboardPage() {
                   item={item}
                   dismissing={dismissingIds.has(item.id)}
                   onApply={handleApply}
-                  onUndo={handleUndo}
                   onDismiss={handleDismiss}
                 />
               ))
@@ -490,7 +478,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))
-              : activity.slice(0, 10).map((a) => <ActivityItem key={a.id} {...a} />)}
+              : activity.slice(0, 10).map((a) => (
+                  <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
+                ))}
           </div>
         </div>
       </div>
