@@ -69,4 +69,5 @@ export const PROTECTED_ROUTES = [
   "/campaigns",
   "/contacts",
   "/admin",
+  "/changelog",
 ]

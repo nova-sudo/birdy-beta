@@ -1,11 +1,11 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, Shield} from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles} from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
 import Image from "next/image"
-import { useRole } from "@/hooks/useRole"
 import { apiRequest } from "@/lib/api"
+import { APP_VERSION } from "@/lib/changelog"
 import {
   Sidebar,
   SidebarContent,
@@ -49,11 +49,8 @@ const items = [
 
 export function AppSidebar() {
   const pathname = usePathname()
-  const { isAdmin } = useRole()
-  // Admin is internal-only — appended to the nav just for admin accounts.
-  const navItems = isAdmin
-    ? [...items, { title: "Admin", url: "/admin", icon: Shield }]
-    : items
+  // Admin now lives behind the profile avatar menu (UserMenu), not the sidebar.
+  const navItems = items
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const {
@@ -101,7 +98,7 @@ export function AppSidebar() {
                 />
                 <div className="flex flex-col gap-0.5 text-purple-900 leading-none">
                   <span className="font-bold">Birdy Ai</span>
-                  <span className="text-xs">Alpha 1.0</span>
+                  <span className="text-xs">{APP_VERSION}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
