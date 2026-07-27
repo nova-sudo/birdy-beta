@@ -1,0 +1,7 @@
+interface:
+  display_name: "Media Buying Agent"
+  short_description: "Analyze & optimize Meta ad performance across clients, campaigns, ad sets, ads, and leads (GHL + HotProspector)"
+  brand_color: "#4F46E5"
+  default_prompt: "Analyze this client's Meta ad performance and tell me what to scale, kill, and fix"
+policy:
+  allow_implicit_invocation: true
