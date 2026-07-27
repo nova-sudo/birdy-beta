@@ -64,7 +64,7 @@ export function useDashboardData() {
     suggestions, setSuggestions,
     alerts, setAlerts,
     wins, setWins,
-    activity,
+    activity, setActivity,
     counts,
     loading,
     usingMockData,
