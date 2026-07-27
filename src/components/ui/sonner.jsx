@@ -1,16 +1,19 @@
 "use client"
 
-import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner";
 
+// The app is light-only (no `.dark` tokens in globals.css) and there is no
+// next-themes ThemeProvider, so useTheme() used to fall back to "system" and
+// render dark toasts against the light app whenever the OS was in dark mode.
+// Pin to light, and use richColors so success/error/info carry their proper
+// green/red/blue treatment instead of a plain monochrome icon.
 const Toaster = ({
   ...props
 }) => {
-  const { theme = "system" } = useTheme()
-
   return (
     <Sonner
-      theme={theme}
+      theme="light"
+      richColors
       className="toaster group"
       style={
         {

@@ -321,11 +321,20 @@ export default function DashboardPage() {
       toast.error("Couldn't undo", { description: entry.title });
       return;
     }
+    // "noop" = nothing was actually applied to reverse (already reverted, or a
+    // stale feed row). Settle quietly instead of claiming ads were re-enabled.
+    if (data.outcome === "noop") {
+      toast.info("Already reverted", { description: entry.title });
+      return;
+    }
     // bring the recommendation back so it can be acted on again
     setSuggestions((prev) =>
       prev.some((s) => s.id === entry.suggestion.id) ? prev : [entry.suggestion, ...prev]
     );
-    toast.success("Undone — ads re-enabled", { description: entry.title });
+    const n = (data.succeeded || []).length;
+    toast.success(n ? `Undone. ${n} ad${n === 1 ? "" : "s"} re-enabled` : "Undone", {
+      description: entry.title,
+    });
   };
 
   const handleApply = async (item) => {
@@ -359,7 +368,7 @@ export default function DashboardPage() {
   };
 
   const handleAlertAction = async (item) => {
-    toast.info(item.cta, { description: `${item.title} — ${item.client}` });
+    toast.info(item.cta, { description: `${item.title}, ${item.client}` });
     await runAlertAction(item.id, item.actionKey);
   };
 
