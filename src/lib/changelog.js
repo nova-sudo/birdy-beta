@@ -9,6 +9,23 @@
 
 export const RELEASES = [
   {
+    version: "Beta 1.7",
+    date: "2026-07-27",
+    summary:
+      "Birdy can now think like a media buyer — a new opt-in capability that reads performance end to end.",
+    changes: {
+      added: [
+        "Media Buying Analyst: enable it in Settings → Capabilities to give Birdy chat senior media-buyer reasoning — what to scale, kill, and fix across campaigns, ad sets, and ads.",
+        "Lead-quality analysis from ad spend all the way to revenue: Meta leads → GoHighLevel opportunities → HotProspector connect rate, so cheap-but-dead “zombie” leads get caught.",
+        "A new Capabilities tab in Settings to turn Birdy's agent abilities on and off.",
+      ],
+      improved: [
+        "Birdy can now read call-center connect rate and coverage per client when judging lead quality.",
+      ],
+      fixed: [],
+    },
+  },
+  {
     version: "Beta 1.6",
     date: "2026-07-23",
     summary:
