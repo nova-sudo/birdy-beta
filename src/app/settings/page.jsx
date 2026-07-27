@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Bot } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Bot, Target, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Dialog,
@@ -121,6 +122,13 @@ function SettingsPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
+  // ── Capabilities (Settings → Capabilities tab) ────────────────────────────
+  // Per-user Birdy agent ability toggles, persisted server-side via
+  // /api/capabilities. `capsLoaded` gates the switches until the real values
+  // arrive so we don't flash a default-off state over an enabled capability.
+  const [capabilities, setCapabilities] = useState({ media_buying: false })
+  const [capsLoaded, setCapsLoaded] = useState(false)
+  const [savingCapability, setSavingCapability] = useState(null) // capability key mid-save
   const [user] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user")) } catch { return null }
   })
@@ -140,6 +148,40 @@ function SettingsPageContent() {
       .then(data => { if (data) setBillingStatus(data) })
       .catch(() => {})
   }, [])
+
+  // Load the user's capability flags for the Capabilities tab.
+  useEffect(() => {
+    apiRequest("/api/capabilities")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setCapabilities(prev => ({ ...prev, ...data })) })
+      .catch(() => {})
+      .finally(() => setCapsLoaded(true))
+  }, [])
+
+  // Toggle a capability with optimistic UI + revert on failure. The backend
+  // returns the full resolved set, so we reconcile against its response.
+  const toggleCapability = async (key, next) => {
+    const previous = capabilities[key]
+    setCapabilities(c => ({ ...c, [key]: next }))
+    setSavingCapability(key)
+    try {
+      const res = await apiRequest("/api/capabilities", {
+        method: "PUT",
+        body: JSON.stringify({ [key]: next }),
+      })
+      if (!res.ok) throw new Error("Failed to save capability")
+      const data = await res.json()
+      setCapabilities(c => ({ ...c, ...data }))
+      toast.success(next ? "Capability enabled" : "Capability disabled", {
+        description: "New Birdy chats will use this setting.",
+      })
+    } catch (err) {
+      setCapabilities(c => ({ ...c, [key]: previous })) // revert optimistic change
+      toast.error("Couldn't update capability", { description: "Please try again." })
+    } finally {
+      setSavingCapability(null)
+    }
+  }
 
   const handlePortal = async () => {
     setLoadingPortal(true)
@@ -654,7 +696,7 @@ function SettingsPageContent() {
       <div>
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="w-full justify-start">
-            {["general", "integrations", "account"].map((tab) => (
+            {["general", "integrations", "capabilities", "account"].map((tab) => (
               <TabsTrigger key={tab} value={tab}>
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
               </TabsTrigger>
@@ -1208,6 +1250,66 @@ function SettingsPageContent() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="capabilities" className="space-y-6">
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-1">Agent Capabilities</h2>
+                <p className="text-sm text-muted-foreground">
+                  Optional abilities for the Birdy AI agent. Turn these on to give Birdy extra expertise in chat — they take effect on your next Birdy conversation.
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Media Buying Analyst — injects senior-media-buyer reasoning into Birdy chat */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
+                      <Target className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CardTitle className="text-base">Media Buying Analyst</CardTitle>
+                            {capsLoaded && capabilities.media_buying && (
+                              <Badge variant="default" className="text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />Enabled
+                              </Badge>
+                            )}
+                          </div>
+                          <CardDescription className="text-sm">
+                            Adds senior media-buyer reasoning to Birdy chat — it diagnoses CPL, CTR, CPM and ROAS
+                            across campaigns, ad sets and ads, judges lead quality through GoHighLevel, and recommends
+                            what to scale, kill, and fix. Applies to the Campaigns, Dashboard, client, and Ask&nbsp;Birdy
+                            chats (not the Alerts or Metrics assistants).
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          {savingCapability === "media_buying" && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          <Switch
+                            checked={!!capabilities.media_buying}
+                            onCheckedChange={(v) => toggleCapability("media_buying", v)}
+                            disabled={!capsLoaded || savingCapability === "media_buying"}
+                            aria-label="Toggle the Media Buying Analyst capability"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3" />
+                More capabilities are coming. Have one in mind? Let us know.
+              </p>
             </div>
           </TabsContent>
 
