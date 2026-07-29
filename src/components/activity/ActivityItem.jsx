@@ -1,7 +1,6 @@
 import { Zap, Check, Trash2, Clock, RotateCcw } from "lucide-react";
 
-// Icon + tone per activity kind, falling back to the actor when kind is absent
-// (the bundled mock activity has only actor/title/client/time).
+// Icon + tone per activity kind, falling back to the actor when kind is absent.
 function activityVisual(kind, isBirdy) {
   switch (kind) {
     case "analysis_pass":        return { Ico: Clock,  tone: "bg-purple-100 text-purple-600" };
