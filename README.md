@@ -37,10 +37,16 @@ All tabs share the same layout: a `Tabs`/`TabsList` header, a search box + colum
 
 ## Billing & Payments (Whop)
 
-Billing runs on [Whop](https://docs.whop.com/). The subscribe flow uses Whop's
+Billing runs on [Whop](https://docs.whop.com/). New subscriptions use Whop's
 [embedded checkout](https://docs.whop.com/payments/checkout-embed) (`@whop/checkout/react`)
 rendered in a modal on `src/app/billing/page.jsx` — no payment SDK is loaded from a CDN and
-no card data touches this app.
+no card data touches this app. Plan changes and cancellations happen in Whop's hosted
+customer portal (the membership `manage_url`), because Whop has no in-place "swap the plan"
+API the way Paddle did.
+
+> **Whop setup:** configure Starter / Growth / Scale as three **plans under a single Whop
+> product (access pass)** so the customer portal can switch a member between them. Extra
+> client slots are a separate recurring plan (the Scale add-on).
 
 ### Frontend environment variables
 
@@ -50,32 +56,31 @@ no card data touches this app.
 | `NEXT_PUBLIC_WHOP_PLAN_STARTER` | `plan_XXXXXXXX` | Whop plan ID for the Starter plan. |
 | `NEXT_PUBLIC_WHOP_PLAN_GROWTH` | `plan_XXXXXXXX` | Whop plan ID for the Growth plan. |
 | `NEXT_PUBLIC_WHOP_PLAN_SCALE` | `plan_XXXXXXXX` | Whop plan ID for the Scale plan. |
+| `NEXT_PUBLIC_WHOP_PLAN_EXTRA_CLIENT` | `plan_XXXXXXXX` | *(Optional)* Whop plan ID for the Scale extra-client-slot add-on. Hides the add-slot button when unset. |
 
 Find a plan ID in the Whop dashboard: **Checkout Links → ⋯ → Details → `plan_XXXXXXXX`**.
 
 > The previous `NEXT_PUBLIC_PADDLE_*` variables (`_CLIENT_TOKEN`, `_ENVIRONMENT`,
 > `_PRICE_STARTER/GROWTH/SCALE`, `_PRICE_EXTRA_CLIENT`) are no longer read and can be removed.
 
-### Backend contract (separate `birdy-backend` service)
+### Backend (separate `birdy-backend` service)
 
-This repo is the frontend only. The API at `NEXT_PUBLIC_API_URL` still owns subscription
-state, so the **backend must also migrate from Paddle to Whop**. The frontend calls these
-endpoints (paths unchanged):
+The API at `NEXT_PUBLIC_API_URL` owns subscription state. Its Whop migration lives in
+`birdy-backend/billing.py` (official `whop-sdk`; Standard-Webhooks verification). Endpoints the
+frontend calls:
 
-- `GET /api/billing/status` — returns `{ subscribed, plan, status, client_count, client_limit, extra_clients_paid, can_add_extra_slots, current_period_end, cancel_at_period_end }`, now derived from Whop memberships.
-- `POST /api/billing/change-plan` — body is now `{ new_plan_id, extra_clients }` (was `new_price_id`); performs upgrade/downgrade/extra-slot changes via the Whop API.
-- `GET /api/billing/portal-url` — returns `{ portal_url }` pointing at the Whop membership-management page.
-- **Whop webhook handler (new)** — verify the signature, then on `membership_went_valid` / `payment_succeeded` (and the invalid/cancel events) map the buyer to the account and flip the subscription live. This replaces the Paddle webhook and is what actually activates a plan after checkout.
+- `GET /api/billing/status` — `{ subscribed, plan, status, client_count, client_limit, extra_clients_paid, can_add_extra_slots, current_period_end, cancel_at_period_end }`, derived from the Whop membership stored on the user.
+- `GET /api/billing/portal-url` — `{ portal_url }`, the membership's Whop `manage_url` (plan change / update card / cancel).
+- `POST /api/billing/webhook` — verifies the Standard-Webhooks signature and, on `membership.activated` / `membership.deactivated` (and payment events), rebuilds the stored subscription. This is what activates a plan after checkout. *(The Paddle `change-plan` endpoint was removed — plan changes go through the portal.)*
 
-The backend needs a server-side `WHOP_API_KEY` (Company API key, `Authorization: Bearer …`,
-base URL `https://api.whop.com/api/v1`) for change-plan, portal, and webhook verification.
+Backend env: `WHOP_API_KEY` (Company API key), `WHOP_WEBHOOK_SECRET`, and
+`WHOP_PLAN_STARTER` / `_GROWTH` / `_SCALE` (+ optional `_EXTRA_CLIENT`).
 
-**Reliable purchase → account linking (recommended):** the checkout currently embeds a static
-`planId` and prefills the signed-in user's email so the webhook can reconcile by email. For a
-stronger link, have the backend create a
-[checkout configuration/session](https://docs.whop.com/api-reference/checkout-configurations/create-checkout-configuration)
-with `metadata: { user_id }` and return its `session_id`; then swap `planId` for `sessionId`
-on `<WhopCheckoutEmbed>` in `CheckoutModal` (one-line change).
+**Purchase → account linking:** the account id (`user_id`) *is* the email, and checkout
+prefills the signed-in user's email, so the webhook reconciles by the buyer's Whop email. If a
+checkout session sets `metadata.user_id`, that is preferred — create one via the backend
+[checkout-configuration API](https://docs.whop.com/api-reference/checkout-configurations/create-checkout-configuration)
+and pass its id as `sessionId` to `<WhopCheckoutEmbed>` for an exact link.
 
 ## Testing
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   Check, Zap, TrendingUp, Building2,
-  Plus, Minus, ExternalLink, AlertCircle,
+  Plus, ExternalLink, AlertCircle,
   Loader2, Crown,
 } from "lucide-react";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
@@ -19,6 +19,8 @@ const WHOP_ENVIRONMENT =
   (process.env.NEXT_PUBLIC_WHOP_ENVIRONMENT ?? "production") === "sandbox"
     ? "sandbox"
     : "production";
+// Optional: a separate recurring "extra client slot" plan (Scale add-on).
+const EXTRA_CLIENT_PLAN_ID = process.env.NEXT_PUBLIC_WHOP_PLAN_EXTRA_CLIENT ?? "";
 const EXTRA_CLIENT_PRICE = 10;
 
 const PLANS = [
@@ -70,8 +72,8 @@ const COLOR_CLASSES = {
 };
 
 // Best-effort read of the signed-in user's email so we can prefill the Whop
-// checkout form (and give the backend webhook a stable key to reconcile the
-// purchase against the account).
+// checkout form. In this app the account id (user_id) *is* the email, so this
+// is also what the backend webhook uses to reconcile the purchase.
 function getStoredEmail() {
   if (typeof window === "undefined") return "";
   try {
@@ -86,10 +88,11 @@ function StatusBadge({ status }) {
     active: "bg-green-100 text-green-700 border-green-200",
     trialing: "bg-blue-100 text-blue-700 border-blue-200",
     past_due: "bg-amber-100 text-amber-700 border-amber-200",
+    canceling: "bg-amber-100 text-amber-700 border-amber-200",
     canceled: "bg-red-100 text-red-700 border-red-200",
     inactive: "bg-gray-100 text-gray-600 border-gray-200",
   };
-  const labels = { active: "Active", trialing: "Trial", past_due: "Past Due", canceled: "Canceled", inactive: "No Plan" };
+  const labels = { active: "Active", trialing: "Trial", past_due: "Past Due", canceling: "Canceling", canceled: "Canceled", inactive: "No Plan" };
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${styles[status] ?? styles.inactive}`}>
       {labels[status] ?? status}
@@ -98,23 +101,15 @@ function StatusBadge({ status }) {
 }
 
 function PlanCard({
-  plan, billingStatus, onCheckout, onChangePlan, onAddExtraSlots,
-  loadingPlanId, loadingExtra, extraClients, setExtraClients,
+  plan, billingStatus, onCheckout, onManage, onAddExtraSlots, loadingManage,
 }) {
   const Icon = plan.icon;
   const c = COLOR_CLASSES[plan.color];
   const isCurrent = billingStatus?.plan?.id === plan.id && billingStatus?.subscribed;
-  const isLoading = loadingPlanId === plan.id;
   const isDowngrade = billingStatus?.subscribed && PLAN_ORDER.indexOf(plan.id) < PLAN_ORDER.indexOf(billingStatus.plan?.id);
 
-  // When Scale is the current plan, show an "Add slots" button instead of
-  // "Current Plan". Extra slots are added to a live subscription via the
-  // backend change-plan flow — Whop's embedded checkout is single-plan, so
-  // they can't be bundled into the initial subscribe.
-  const scaleIsCurrentPlan = isCurrent && plan.supportsExtraSlots;
-
-  // The extra-slots picker only applies to an already-active Scale plan.
-  const showExtraSlotsUI = scaleIsCurrentPlan;
+  // Active Scale plan can buy the extra-client-slot add-on (a separate Whop plan).
+  const canBuyExtraSlots = isCurrent && plan.supportsExtraSlots && !!EXTRA_CLIENT_PLAN_ID;
 
   return (
     <div className={[
@@ -150,11 +145,6 @@ function PlanCard({
             <span className="text-4xl font-extrabold text-gray-900">${plan.price}</span>
             <span className="text-gray-500">/mo</span>
           </div>
-          {showExtraSlotsUI && extraClients > 0 && (
-            <p className="text-sm text-gray-500 mt-0.5">
-              +${extraClients * EXTRA_CLIENT_PRICE}/mo for {extraClients} extra slot{extraClients !== 1 ? "s" : ""}
-            </p>
-          )}
         </div>
 
         <ul className="space-y-2.5 mb-6 flex-1">
@@ -165,7 +155,7 @@ function PlanCard({
             </li>
           ))}
           {/* Show currently purchased extra slots when Scale is active */}
-          {scaleIsCurrentPlan && billingStatus.extra_clients_paid > 0 && (
+          {isCurrent && plan.supportsExtraSlots && billingStatus.extra_clients_paid > 0 && (
             <li className="flex items-start gap-2 text-sm text-emerald-600 font-medium">
               <Check className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600" />
               {billingStatus.extra_clients_paid} extra slot{billingStatus.extra_clients_paid !== 1 ? "s" : ""} active
@@ -173,65 +163,36 @@ function PlanCard({
           )}
         </ul>
 
-        {/* Extra slots picker — shown for an active Scale subscription */}
-        {showExtraSlotsUI && (
-          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
-            <p className="text-xs font-medium text-emerald-700 mb-2">
-              Add extra client slots{" "}
-              <span className="text-emerald-500">(+$10/mo each)</span>
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setExtraClients(Math.max(0, extraClients - 1))}
-                className="p-1 rounded-lg border border-emerald-200 hover:bg-emerald-100"
-              >
-                <Minus className="w-3.5 h-3.5 text-emerald-700" />
-              </button>
-              <span className="text-sm font-semibold w-4 text-center text-emerald-900">{extraClients}</span>
-              <button
-                type="button"
-                onClick={() => setExtraClients(extraClients + 1)}
-                className="p-1 rounded-lg border border-emerald-200 hover:bg-emerald-100"
-              >
-                <Plus className="w-3.5 h-3.5 text-emerald-700" />
-              </button>
+        {/* CTA */}
+        {isCurrent ? (
+          <div className="space-y-2">
+            <div className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center ${c.light} ${c.text} border ${c.border}`}>
+              ✓ Current Plan
             </div>
-          </div>
-        )}
-
-        {/* CTA buttons */}
-        {scaleIsCurrentPlan ? (
-          // Scale current plan: show "Add X Slots" button (active only when extraClients > 0)
-          <button
-            type="button"
-            onClick={() => extraClients > 0 && onAddExtraSlots(plan, extraClients)}
-            disabled={extraClients === 0 || loadingExtra}
-            className={`w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${c.button} disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
-          >
-            {loadingExtra
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
-              : extraClients > 0
-                ? `Add ${extraClients} Slot${extraClients !== 1 ? "s" : ""} (+$${extraClients * EXTRA_CLIENT_PRICE}/mo)`
-                : "Select slots above to add"}
-          </button>
-        ) : isCurrent ? (
-          <div className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center ${c.light} ${c.text} border ${c.border}`}>
-            ✓ Current Plan
+            {canBuyExtraSlots && (
+              <button
+                type="button"
+                onClick={onAddExtraSlots}
+                className={`w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${c.button} flex items-center justify-center gap-2`}
+              >
+                <Plus className="w-4 h-4" />
+                Add extra client slot (+${EXTRA_CLIENT_PRICE}/mo)
+              </button>
+            )}
           </div>
         ) : (
           <button
             type="button"
             onClick={() =>
               billingStatus?.subscribed
-                ? onChangePlan(plan)
+                ? onManage()
                 : onCheckout(plan)
             }
-            disabled={isLoading}
+            disabled={billingStatus?.subscribed && loadingManage}
             className={`w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors ${c.button} disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2`}
           >
-            {isLoading
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Processing...</>
+            {billingStatus?.subscribed && loadingManage
+              ? <><Loader2 className="w-4 h-4 animate-spin" />Opening…</>
               : billingStatus?.subscribed
                 ? (isDowngrade ? "Downgrade" : "Upgrade")
                 : "Get Started"}
@@ -355,12 +316,9 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
 export default function BillingPage() {
   const [billingStatus, setBillingStatus] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [loadingPlanId, setLoadingPlanId] = useState(null);
-  const [loadingExtra, setLoadingExtra] = useState(false);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
-  const [extraClients, setExtraClients] = useState(0);
   const [checkoutPlan, setCheckoutPlan] = useState(null);
   const [storedEmail] = useState(getStoredEmail);
 
@@ -413,57 +371,20 @@ export default function BillingPage() {
     pollAfterCheckout();
   }, [fetchStatus, pollAfterCheckout]);
 
-  const handleChangePlan = async (plan) => {
-    if (!plan.planId) {
-      setError(`The ${plan.name} plan isn't available yet — its Whop plan ID hasn't been configured.`);
+  // Extra client slots are a separate Whop plan (Scale add-on) purchased
+  // through the same embedded checkout.
+  const handleAddExtraSlots = () => {
+    setError(null);
+    if (!EXTRA_CLIENT_PLAN_ID) {
+      setError("Extra client slots aren't configured yet.");
       return;
     }
-    if (!window.confirm(`Switch to the ${plan.name} plan? Proration will be applied immediately.`)) return;
-    setLoadingPlanId(plan.id);
-    setError(null);
-    try {
-      const res = await apiRequest("/api/billing/change-plan", {
-        method: "POST",
-        body: JSON.stringify({ new_plan_id: plan.planId, extra_clients: 0 }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ?? "Failed to change plan");
-      setSuccessMsg(`✓ Plan changed to ${plan.name}!`);
-      setExtraClients(0);
-      await fetchStatus();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoadingPlanId(null);
-    }
+    setCheckoutPlan({ id: "extra_client", name: "Extra Client Slot", price: EXTRA_CLIENT_PRICE, planId: EXTRA_CLIENT_PLAN_ID });
   };
 
-  // Called when a Scale user who is already subscribed adds more extra slots
-  const handleAddExtraSlots = async (plan, extras) => {
-    if (!window.confirm(`Add ${extras} extra client slot${extras !== 1 ? "s" : ""} for +$${extras * EXTRA_CLIENT_PRICE}/mo? Charged immediately on a prorated basis.`)) return;
-    setLoadingExtra(true);
-    setError(null);
-    try {
-      const currentExtra = billingStatus?.extra_clients_paid ?? 0;
-      const newTotal = currentExtra + extras;
-
-      const res = await apiRequest("/api/billing/change-plan", {
-        method: "POST",
-        // Keep Scale plan, bump total extra slots to currentExtra + new extras
-        body: JSON.stringify({ new_plan_id: plan.planId, extra_clients: newTotal }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.detail ?? "Failed to add extra slots");
-      setSuccessMsg(`✓ Added ${extras} extra client slot${extras !== 1 ? "s" : ""}! Your new limit is ${25 + newTotal} clients.`);
-      setExtraClients(0);
-      await fetchStatus();
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoadingExtra(false);
-    }
-  };
-
+  // Plan changes and cancellations are handled in Whop's hosted customer
+  // portal — Whop has no in-place plan-swap API — so "Upgrade"/"Downgrade"
+  // and "Manage Billing" all open the membership's manage URL.
   const handlePortal = async () => {
     setLoadingPortal(true);
     setError(null);
@@ -529,25 +450,26 @@ export default function BillingPage() {
               plan={plan}
               billingStatus={billingStatus}
               onCheckout={handleCheckout}
-              onChangePlan={handleChangePlan}
+              onManage={handlePortal}
               onAddExtraSlots={handleAddExtraSlots}
-              loadingPlanId={loadingPlanId}
-              loadingExtra={loadingExtra}
-              extraClients={extraClients}
-              setExtraClients={setExtraClients}
+              loadingManage={loadingPortal}
             />
           ))}
         </div>
 
-        <p className="mt-8 text-center text-sm text-gray-500">
-          On the Scale plan?{" "}
-          <span className="font-medium text-gray-700">Add extra client slots for $10/mo each</span>
-          {" "}— use the Scale card above, or manage via the billing portal.
-        </p>
+        {billingStatus?.subscribed && (
+          <p className="mt-8 text-center text-sm text-gray-500">
+            To change or cancel your plan, use{" "}
+            <button type="button" onClick={handlePortal} className="font-medium text-gray-700 underline underline-offset-2 hover:no-underline">
+              Manage Billing
+            </button>
+            {" "}— it opens your secure Whop customer portal.
+          </p>
+        )}
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-6">
           {[
-            { q: "Can I change plans at any time?", a: "Yes. Upgrades are applied immediately with prorated billing. Downgrades take effect at the end of your current billing period." },
+            { q: "Can I change plans at any time?", a: "Yes. Open 'Manage Billing' to switch plans in the Whop customer portal — upgrades are prorated immediately and downgrades take effect at the end of your current billing period." },
             { q: "What counts as a client group?", a: "Each connected client (with a GHL location, Meta ad account, or HotProspector group) counts as one client group toward your limit." },
             { q: "What are extra client slots?", a: "Scale plan users can purchase additional client slots for $10/mo each, beyond the included 25. Starter and Growth plans must upgrade to add more clients." },
             { q: "How do I cancel?", a: "Click 'Manage Billing' to access the Whop customer portal, where you can cancel at any time. You'll keep access until the end of your billing period." },
