@@ -325,11 +325,18 @@ export default function DashboardPage() {
     return "Good evening";
   }, []);
 
+  // Everything the feed is willing to show — suggestion_created entries are
+  // noise here, so they count for nothing either.
+  const visibleActivity = useMemo(
+    () => activity.filter((a) => a.kind !== "suggestion_created"),
+    [activity]
+  );
+
   // The header says "today", so it counts today's entries — the feed itself
   // still lists older ones, since that's where their Undo lives.
   const changesToday = useMemo(
-    () => activity.filter((a) => isToday(activityDate(a))).length,
-    [activity]
+    () => visibleActivity.filter((a) => isToday(activityDate(a))).length,
+    [visibleActivity]
   );
 
   const dateLabel = useMemo(
@@ -543,12 +550,9 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))
-              : activity
-                  .filter((a) => a.kind !== "suggestion_created")
-                  .slice(0, 10)
-                  .map((a) => (
-                    <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
-                  ))}
+              : visibleActivity.slice(0, 10).map((a) => (
+                  <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
+                ))}
           </div>
         </div>
       </div>
