@@ -3,30 +3,22 @@
 import { useEffect, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { METRIC_OPTIONS, conditionSummary } from "@/lib/alert-helpers";
-import {
-  MOCK_SUGGESTIONS,
-  MOCK_WINS,
-  MOCK_ACTIVITY,
-  MOCK_TAB_COUNTS,
-} from "./mockData";
 
 // ─── Backend contract ──────────────────────────────────────────────────────
-// These are the endpoints the homepage is wired to call. None exist yet —
-// every call fails gracefully and falls back to the bundled mock data, so
-// the UI works today and needs zero changes once the routes are live.
+// The endpoints the homepage calls. Every call fails gracefully to an empty
+// tab, so the page works whether or not the route is live yet — it never
+// shows placeholder data.
 //
 //   GET    /api/dashboard/summary
-//     → { suggestions: [...], wins: [...], activity: [...],
-//         counts: { suggestions, alerts, wins } }
+//     → { suggestions: [...], wins: [...], activity: [...] }
 //   POST   /api/dashboard/suggestions/:id/apply
 //   POST   /api/dashboard/suggestions/:id/undo
 //   DELETE /api/dashboard/suggestions/:id
 //   POST   /api/dashboard/wins/:id/complete
 //
-// Alerts are the exception: they are live today. They come from /api/alerts
-// (the same store the Alerts page and the notifications bell read) so the
-// homepage lists the individual triggered clients rather than the parent
-// roll-up — never mock data, and never the summary's `alerts` field.
+// Alerts come from /api/alerts instead (the same store the Alerts page and
+// the notifications bell read), so the homepage lists the individual
+// triggered clients rather than the parent roll-up.
 
 function metricLabel(row) {
   const metric = row.condition?.metric;
@@ -62,14 +54,12 @@ export function expandTriggeredAlerts(rows) {
 }
 
 export function useDashboardData() {
-  const [suggestions, setSuggestions] = useState(MOCK_SUGGESTIONS);
+  const [suggestions, setSuggestions] = useState([]);
   const [alerts, setAlerts] = useState([]);
-  const [wins, setWins] = useState(MOCK_WINS);
-  const [activity, setActivity] = useState(MOCK_ACTIVITY);
-  const [counts, setCounts] = useState(MOCK_TAB_COUNTS);
+  const [wins, setWins] = useState([]);
+  const [activity, setActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [alertsLoading, setAlertsLoading] = useState(true);
-  const [usingMockData, setUsingMockData] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,14 +71,16 @@ export function useDashboardData() {
         const data = await res.json();
         if (cancelled) return;
 
-        setSuggestions(data.suggestions ?? MOCK_SUGGESTIONS);
-        setWins(data.wins ?? MOCK_WINS);
-        setActivity(data.activity ?? MOCK_ACTIVITY);
-        setCounts(data.counts ?? MOCK_TAB_COUNTS);
-        setUsingMockData(false);
+        setSuggestions(data.suggestions ?? []);
+        setWins(data.wins ?? []);
+        setActivity(data.activity ?? []);
       } catch {
-        // Backend not ready yet — keep the mock data already in state.
-        if (!cancelled) setUsingMockData(true);
+        // Endpoint not live yet — the tabs show their empty states.
+        if (!cancelled) {
+          setSuggestions([]);
+          setWins([]);
+          setActivity([]);
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -127,12 +119,14 @@ export function useDashboardData() {
     alerts, setAlerts,
     wins, setWins,
     activity, setActivity,
-    // The alerts tab count is always the live sub-alert count, never whatever
-    // the summary (or the mock counts) says.
-    counts: { ...counts, alerts: alerts.length },
+    // Tab counts are whatever each tab actually holds.
+    counts: {
+      suggestions: suggestions.length,
+      alerts: alerts.length,
+      wins: wins.length,
+    },
     loading,
     alertsLoading,
-    usingMockData,
   };
 }
 

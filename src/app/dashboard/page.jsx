@@ -35,9 +35,8 @@ const TAB_META = [
   { value: "wins",        label: "Client wins" },
 ];
 
-// Server suggestions send `icon` as a string name; the bundled mock data sends a
-// lucide component directly. resolveIcon accepts either and always returns a
-// renderable component.
+// Suggestions carry `icon` as a string name; resolveIcon maps it to a lucide
+// component and always returns something renderable.
 const ICON_MAP = {
   pause: Pause,
   "trending-up": TrendingUp,
@@ -48,8 +47,7 @@ const ICON_MAP = {
   zap: Zap,
 };
 function resolveIcon(icon) {
-  if (typeof icon === "string") return ICON_MAP[icon] || Sparkles;
-  return icon || Sparkles; // already a component (mock data)
+  return ICON_MAP[icon] || Sparkles;
 }
 
 // Activity entries carry either a real timestamp or a relative label such as
