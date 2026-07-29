@@ -35,6 +35,48 @@ Call-center performance across HotProspector clients. Tabs:
 
 All tabs share the same layout: a `Tabs`/`TabsList` header, a search box + column-visibility dropdown toolbar, and a `StyledTable` (`src/components/ui/table-container.jsx`) for the data grid.
 
+## Billing & Payments (Whop)
+
+Billing runs on [Whop](https://docs.whop.com/). The subscribe flow uses Whop's
+[embedded checkout](https://docs.whop.com/payments/checkout-embed) (`@whop/checkout/react`)
+rendered in a modal on `src/app/billing/page.jsx` — no payment SDK is loaded from a CDN and
+no card data touches this app.
+
+### Frontend environment variables
+
+| Variable | Example | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_WHOP_ENVIRONMENT` | `sandbox` \| `production` | Defaults to `production`. Use `sandbox` for [Whop test mode](https://docs.whop.com/developer/guides/sandbox). |
+| `NEXT_PUBLIC_WHOP_PLAN_STARTER` | `plan_XXXXXXXX` | Whop plan ID for the Starter plan. |
+| `NEXT_PUBLIC_WHOP_PLAN_GROWTH` | `plan_XXXXXXXX` | Whop plan ID for the Growth plan. |
+| `NEXT_PUBLIC_WHOP_PLAN_SCALE` | `plan_XXXXXXXX` | Whop plan ID for the Scale plan. |
+
+Find a plan ID in the Whop dashboard: **Checkout Links → ⋯ → Details → `plan_XXXXXXXX`**.
+
+> The previous `NEXT_PUBLIC_PADDLE_*` variables (`_CLIENT_TOKEN`, `_ENVIRONMENT`,
+> `_PRICE_STARTER/GROWTH/SCALE`, `_PRICE_EXTRA_CLIENT`) are no longer read and can be removed.
+
+### Backend contract (separate `birdy-backend` service)
+
+This repo is the frontend only. The API at `NEXT_PUBLIC_API_URL` still owns subscription
+state, so the **backend must also migrate from Paddle to Whop**. The frontend calls these
+endpoints (paths unchanged):
+
+- `GET /api/billing/status` — returns `{ subscribed, plan, status, client_count, client_limit, extra_clients_paid, can_add_extra_slots, current_period_end, cancel_at_period_end }`, now derived from Whop memberships.
+- `POST /api/billing/change-plan` — body is now `{ new_plan_id, extra_clients }` (was `new_price_id`); performs upgrade/downgrade/extra-slot changes via the Whop API.
+- `GET /api/billing/portal-url` — returns `{ portal_url }` pointing at the Whop membership-management page.
+- **Whop webhook handler (new)** — verify the signature, then on `membership_went_valid` / `payment_succeeded` (and the invalid/cancel events) map the buyer to the account and flip the subscription live. This replaces the Paddle webhook and is what actually activates a plan after checkout.
+
+The backend needs a server-side `WHOP_API_KEY` (Company API key, `Authorization: Bearer …`,
+base URL `https://api.whop.com/api/v1`) for change-plan, portal, and webhook verification.
+
+**Reliable purchase → account linking (recommended):** the checkout currently embeds a static
+`planId` and prefills the signed-in user's email so the webhook can reconcile by email. For a
+stronger link, have the backend create a
+[checkout configuration/session](https://docs.whop.com/api-reference/checkout-configurations/create-checkout-configuration)
+with `metadata: { user_id }` and return its `session_id`; then swap `planId` for `sessionId`
+on `<WhopCheckoutEmbed>` in `CheckoutModal` (one-line change).
+
 ## Testing
 
 This project uses [Vitest](https://vitest.dev/) + [React Testing Library](https://testing-library.com/react). Run the suite with:

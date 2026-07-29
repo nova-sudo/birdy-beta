@@ -78,7 +78,7 @@ const SCENARIOS = [
 const STEPS = [
   { title: "Email us within 7 days",   desc: <>Contact <a href="mailto:billing@birdy.ai" className="text-blue-600 underline underline-offset-2">billing@birdy.ai</a> within 7 days of the charge you are disputing.</> },
   { title: "Include your details",      desc: "Provide your account email, the date of the charge, the amount, and a brief description of the issue." },
-  { title: "We'll review and respond", desc: "We aim to respond within 3 business days. If approved, refunds are processed via Paddle and typically appear within 5–10 business days." },
+  { title: "We'll review and respond", desc: "We aim to respond within 3 business days. If approved, refunds are processed via Whop and typically appear within 5–10 business days." },
 ];
 
 export default function RefundPolicy() {
@@ -156,7 +156,7 @@ export default function RefundPolicy() {
             <Callout color="green">
               <strong className="text-green-700">How to cancel:</strong> Go to the{" "}
               <Link href="/billing" className="text-blue-600 underline underline-offset-2">Billing page</Link>{" "}
-              and click &quot;Manage Billing&quot; to access the Paddle customer portal, where you can cancel at any time.
+              and click &quot;Manage Billing&quot; to access the Whop customer portal, where you can cancel at any time.
             </Callout>
           </section>
 
