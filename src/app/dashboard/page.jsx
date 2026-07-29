@@ -545,9 +545,12 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 ))
-              : activity.slice(0, 10).map((a) => (
-                  <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
-                ))}
+              : activity
+                  .filter((a) => a.kind !== "suggestion_created")
+                  .slice(0, 10)
+                  .map((a) => (
+                    <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
+                  ))}
           </div>
         </div>
       </div>
