@@ -82,7 +82,7 @@ function BulletList({ items }) {
 
 const DATA_ROWS = [
   { category: "Account data",     examples: "Name, email address, password (hashed)",                                         source: "Provided by you at registration" },
-  { category: "Billing data",     examples: "Subscription plan, billing status",                                              source: "Paddle (payment processor)" },
+  { category: "Billing data",     examples: "Subscription plan, billing status",                                              source: "Whop (payment processor)" },
   { category: "Integration data", examples: "OAuth tokens for GoHighLevel, Meta, HotProspector",                              source: "Third-party authorization flows" },
   { category: "Client data",      examples: "Contact lists, campaign metrics, lead data from your connected accounts",         source: "Pulled from third-party APIs on your behalf" },
   { category: "Usage data",       examples: "Pages visited, features used, timestamps",                                        source: "Automatically collected" },
@@ -186,9 +186,9 @@ export default function PrivacyPolicy() {
               <strong className="text-green-700">Your control:</strong> You can disconnect any integration at any time from the Settings page. Upon disconnection, we stop pulling new data from that platform.
             </Callout>
             <p className="text-gray-700">
-              Billing is processed by <strong className="font-medium">Paddle</strong>. We do not store payment card details. Please review{" "}
-              <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2">
-                Paddle&apos;s Privacy Policy
+              Billing is processed by <strong className="font-medium">Whop</strong>. We do not store payment card details. Please review{" "}
+              <a href="https://whop.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2">
+                Whop&apos;s Privacy Policy
               </a>{" "}
               for how they handle payment data.
             </p>
