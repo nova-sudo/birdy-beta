@@ -150,14 +150,14 @@ export default function TermsOfService() {
             <SectionHeading num="04">Subscriptions & Billing</SectionHeading>
             <p className="text-gray-700 mb-4">Birdy is offered on a subscription basis. By subscribing, you agree to the following:</p>
             <BulletList items={[
-              "Billing cycles: Subscriptions are billed monthly in advance via Paddle, our payment processor.",
+              "Billing cycles: Subscriptions are billed monthly in advance via Whop, our payment processor.",
               "Automatic renewal: Subscriptions renew automatically unless cancelled before the renewal date.",
               "Plan changes: Upgrades take effect immediately with prorated billing. Downgrades take effect at the end of the current billing period.",
               "Extra client slots: Available on the Scale plan at $10/mo each, charged at time of purchase.",
               "Refunds: Payments are generally non-refundable. Please see our Refund Policy for details.",
             ]} />
             <Callout>
-              <strong className="text-blue-600">Note:</strong> All billing is handled by Paddle. By subscribing, you also agree to Paddle&apos;s terms of service. Birdy does not store your payment card details.
+              <strong className="text-blue-600">Note:</strong> All billing is handled by Whop. By subscribing, you also agree to Whop&apos;s terms of service. Birdy does not store your payment card details.
             </Callout>
           </section>
 
