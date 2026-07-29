@@ -975,17 +975,20 @@ export function MarketingContent({
         </div>
         )}
 
-        {/* Meta reconnect banner */}
+        {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
         {(() => {
-          const hasTokenError = clientGroups.some(g => g.meta_token_error)
-          const errorText = groupsError || ""
-          const isMetaAuth = hasTokenError ||
-            errorText.toLowerCase().includes("permission") ||
-            errorText.toLowerCase().includes("token") ||
-            errorText.toLowerCase().includes("403")
-          const showBanner = groupsError || hasTokenError
+          if (!selectedClientGroup || selectedClientGroup === "all") return null
 
-          if (!showBanner) return null
+          const group = clientGroups.find(g => g.id === selectedClientGroup)
+          if (!group) return null
+
+          // Inactive clients aren't being actively managed, so a lapsed Meta
+          // token there isn't worth surfacing — only check the token for
+          // clients that are currently active.
+          const isActive = String(group.client_status || "").toLowerCase() === "active"
+          if (!isActive) return null
+          if (!group.meta_token_error) return null
+
           return (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-amber-800">
@@ -993,16 +996,14 @@ export function MarketingContent({
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <span>
-                  {isMetaAuth
-                    ? "Your Meta connection has expired or lost permissions. Please reconnect to continue seeing campaign data."
-                    : `Failed to load campaign data: ${errorText}`}
+                  Your Meta connection has expired or lost permissions. Please reconnect to continue seeing campaign data.
                 </span>
               </div>
               <a
                 href="/settings?tab=integrations"
                 className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
               >
-                {isMetaAuth ? "Reconnect Meta" : "Go to Settings"}
+                Reconnect Meta
               </a>
             </div>
           )
