@@ -980,7 +980,14 @@ export function MarketingContent({
           if (!selectedClientGroup || selectedClientGroup === "all") return null
 
           const group = clientGroups.find(g => g.id === selectedClientGroup)
-          if (!group?.meta_token_error) return null
+          if (!group) return null
+
+          // Inactive clients aren't being actively managed, so a lapsed Meta
+          // token there isn't worth surfacing — only check the token for
+          // clients that are currently active.
+          const isActive = String(group.client_status || "").toLowerCase() === "active"
+          if (!isActive) return null
+          if (!group.meta_token_error) return null
 
           return (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
