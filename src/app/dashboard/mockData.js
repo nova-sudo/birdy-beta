@@ -125,41 +125,8 @@ export const MOCK_SUGGESTIONS = [
   },
 ];
 
-export const MOCK_ALERTS = [
-  {
-    id: "alert-1",
-    color: "amber",
-    client: "Palm Peach Body Sculpt",
-    title: "Zero ad spend threshold breached",
-    badge: "Auto-run by Birdy",
-    badgeTone: "purple",
-    cta: "Open client",
-    ctaVariant: "filled",
-    actionKey: "open_client",
-  },
-  {
-    id: "alert-2",
-    color: "red",
-    client: "The Contour Co",
-    title: "Leads not syncing to CRM",
-    badge: "Needs approval",
-    badgeTone: "gray",
-    cta: "View all",
-    ctaVariant: "outline",
-    actionKey: "view_all",
-  },
-  {
-    id: "alert-3",
-    color: "red",
-    client: "Sculpted By Jo",
-    title: "Leads not syncing to CRM",
-    badge: "Auto-run by Birdy",
-    badgeTone: "purple",
-    cta: "View all",
-    ctaVariant: "outline",
-    actionKey: "view_all",
-  },
-];
+// No MOCK_ALERTS — the alerts tab reads the live /api/alerts store and shows
+// an empty state when nothing is triggered.
 
 export const MOCK_WINS = [
   {
@@ -193,4 +160,5 @@ export const MOCK_ACTIVITY = [
   { id: "a14", actor: "user",  title: "Launched video creative test",  client: "V Rejuvederm",               time: "15h ago" },
 ];
 
-export const MOCK_TAB_COUNTS = { suggestions: 12, alerts: 3, wins: 5 };
+// `alerts` is always overridden by the live sub-alert count.
+export const MOCK_TAB_COUNTS = { suggestions: 12, alerts: 0, wins: 5 };

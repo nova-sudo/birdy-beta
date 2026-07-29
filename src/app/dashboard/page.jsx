@@ -2,7 +2,9 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { apiRequest } from "@/lib/api";
+import { formatRelative } from "@/lib/alert-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,9 +16,12 @@ import {
   applySuggestion,
   undoSuggestion,
   dismissSuggestion,
-  runAlertAction,
   completeWin,
 } from "./useDashboardData";
+
+// The alerts tab lists one card per triggered client, which can run long —
+// show a first page and let the rest expand.
+const ALERTS_PREVIEW_COUNT = 8;
 
 const SEVERITY_STYLE = {
   HIGH:        { badge: "bg-red-100 text-red-700",     border: "border-l-red-500",   icon: "bg-red-100 text-red-500" },
@@ -45,6 +50,36 @@ const ICON_MAP = {
 function resolveIcon(icon) {
   if (typeof icon === "string") return ICON_MAP[icon] || Sparkles;
   return icon || Sparkles; // already a component (mock data)
+}
+
+// Activity entries carry either a real timestamp or a relative label such as
+// "just now" / "2h ago" / "1d ago". Resolve whichever is present to a Date so
+// the feed header can count today's changes rather than everything it holds.
+function activityDate(entry) {
+  const stamp = entry.created_at ?? entry.timestamp ?? entry.occurred_at ?? entry.at;
+  if (stamp) {
+    const parsed = new Date(stamp);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+
+  const rel = typeof entry.time === "string" ? entry.time.trim().toLowerCase() : "";
+  if (!rel) return null;
+  if (rel === "now" || rel === "just now") return new Date();
+
+  const match = rel.match(/^(\d+)\s*(m|mins?|minutes?|h|hrs?|hours?|d|days?|w|weeks?)\b/);
+  if (!match) return null;
+  const ms = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 }[match[2][0]];
+  return new Date(Date.now() - Number(match[1]) * ms);
+}
+
+function isToday(date) {
+  if (!date) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  );
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -147,11 +182,19 @@ function AlertRow({ item, dismissing, onAction }) {
           <AlertTriangle className="w-4 h-4" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground mb-0.5">{item.title}</p>
-          <p className="text-xs text-muted-foreground mb-1.5">{item.client}</p>
-          <span className={`inline-flex text-[10px] font-bold tracking-wide uppercase rounded px-2 py-0.5 ${badgeTone}`}>
-            {item.badge}
-          </span>
+          <p className="text-sm font-semibold text-foreground mb-0.5 truncate">{item.title}</p>
+          <p className="text-xs text-muted-foreground mb-1.5 truncate">{item.client}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex text-[10px] font-bold tracking-wide uppercase rounded px-2 py-0.5 ${badgeTone}`}>
+              {item.badge}
+            </span>
+            {item.actual != null && (
+              <span className="text-[11px] font-mono text-red-600">actual: {item.actual.toFixed(2)}</span>
+            )}
+            {item.triggeredAt && (
+              <span className="text-[11px] text-muted-foreground">{formatRelative(new Date(item.triggeredAt))}</span>
+            )}
+          </div>
         </div>
         <Button
           size="sm"
@@ -259,6 +302,8 @@ function StrictnessControl() {
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("suggestions");
   const [dismissingIds, setDismissingIds] = useState(new Set());
+  const [showAllAlerts, setShowAllAlerts] = useState(false);
+  const router = useRouter();
 
   const {
     suggestions, setSuggestions,
@@ -267,6 +312,7 @@ export default function DashboardPage() {
     activity, setActivity,
     counts,
     loading,
+    alertsLoading,
   } = useDashboardData();
 
   const [user] = useState(() => {
@@ -280,6 +326,13 @@ export default function DashboardPage() {
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   }, []);
+
+  // The header says "today", so it counts today's entries — the feed itself
+  // still lists older ones, since that's where their Undo lives.
+  const changesToday = useMemo(
+    () => activity.filter((a) => isToday(activityDate(a))).length,
+    [activity]
+  );
 
   const dateLabel = useMemo(
     () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }),
@@ -358,9 +411,11 @@ export default function DashboardPage() {
     await dismissSuggestion(item.id);
   };
 
-  const handleAlertAction = async (item) => {
-    toast.info(item.cta, { description: `${item.title} — ${item.client}` });
-    await runAlertAction(item.id, item.actionKey);
+  // Sub-alerts point at the client that breached; anything else goes to the
+  // triggered list on the Alerts page.
+  const handleAlertAction = (item) => {
+    if (item.clientId) router.push(`/clients/${item.clientId}`);
+    else router.push("/alerts?tab=triggered");
   };
 
   const handleMarkDone = async (item) => {
@@ -420,21 +475,33 @@ export default function DashboardPage() {
           </TabsContent>
 
           <TabsContent value="alerts" className="mt-4">
-            {loading ? (
+            {alertsLoading ? (
               Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
             ) : alerts.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
-                Nothing here right now
+                No triggered alerts
               </div>
             ) : (
-              alerts.map((item) => (
-                <AlertRow
-                  key={item.id}
-                  item={item}
-                  dismissing={dismissingIds.has(item.id)}
-                  onAction={handleAlertAction}
-                />
-              ))
+              <>
+                {(showAllAlerts ? alerts : alerts.slice(0, ALERTS_PREVIEW_COUNT)).map((item) => (
+                  <AlertRow
+                    key={item.id}
+                    item={item}
+                    dismissing={dismissingIds.has(item.id)}
+                    onAction={handleAlertAction}
+                  />
+                ))}
+                {alerts.length > ALERTS_PREVIEW_COUNT && (
+                  <button
+                    onClick={() => setShowAllAlerts((v) => !v)}
+                    className="w-full text-xs font-semibold text-purple-600 hover:text-purple-700 py-2"
+                  >
+                    {showAllAlerts
+                      ? "Show less"
+                      : `Show all ${alerts.length} triggered alerts`}
+                  </button>
+                )}
+              </>
             )}
           </TabsContent>
 
@@ -465,7 +532,7 @@ export default function DashboardPage() {
               <Clock className="w-4 h-4 text-purple-600" />
               <h2 className="font-semibold text-foreground text-sm">Activity feed</h2>
             </div>
-            <span className="text-xs text-muted-foreground shrink-0">Changes today · {activity.length}</span>
+            <span className="text-xs text-muted-foreground shrink-0">Changes today · {changesToday}</span>
           </div>
           <div className="flex flex-col gap-4 max-h-[520px] overflow-y-auto pr-1">
             {loading
