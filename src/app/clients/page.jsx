@@ -106,7 +106,9 @@ export default function ClientsPage() {
   const [togglingRows, setTogglingRows] = useState(new Set())
 
   // ── Status filter ─────────────────────────────────────────────────────────
-  const [statusFilter, setStatusFilter] = useState("all")
+  // Defaults to "Active" — the hub opens on the clients being worked on, and
+  // inactive/all stay one click away.
+  const [statusFilter, setStatusFilter] = useState("Active")
 
   // Sync hook data → local state (local state allows optimistic updates)
   useEffect(() => {
