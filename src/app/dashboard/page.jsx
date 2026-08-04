@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { ActivityItem } from "@/components/activity/ActivityItem";
+import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem";
 import {
   useDashboardData,
   applySuggestion,
@@ -325,10 +325,10 @@ export default function DashboardPage() {
     return "Good evening";
   }, []);
 
-  // Everything the feed is willing to show — suggestion_created entries are
-  // noise here, so they count for nothing either.
+  // Everything the feed is willing to show — applied actions and dismissals
+  // only. Everything else is noise here, so it counts for nothing either.
   const visibleActivity = useMemo(
-    () => activity.filter((a) => a.kind !== "suggestion_created"),
+    () => activity.filter(isFeedActivity),
     [activity]
   );
 
