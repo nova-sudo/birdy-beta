@@ -16,6 +16,7 @@ import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
+import { CreditsProvider } from "@/hooks/useCredits";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -73,6 +74,7 @@ export default function RootLayout({ children }) {
         <ProtectedLayout>
           <SidebarProvider open={false}>
             {!hideSidebar && (
+              <CreditsProvider>
               <div className="flex h-screen w-full overflow-hidden">
                 <AppSidebar />
                 <div className="flex flex-col flex-1 min-w-0">
@@ -158,6 +160,7 @@ export default function RootLayout({ children }) {
                   />
                 </div>
               </div>
+              </CreditsProvider>
             )}
 
             {hideSidebar && (

@@ -2,9 +2,12 @@
 import { useState, useRef, useEffect, useCallback } from "react"
 import { Bird, Sparkles, Zap } from "lucide-react"
 import { toast } from "sonner"
+import Link from "next/link"
 import { apiRequest } from "@/lib/api"
 import { useAiCredentials } from "@/hooks/useAiCredentials"
+import { useCredits } from "@/hooks/useCredits"
 import AiCredentialsEmptyState from "@/components/chat/AiCredentialsEmptyState"
+import OutOfCreditsEmptyState from "@/components/chat/OutOfCreditsEmptyState"
 import MessageBubble from "@/components/chat/MessageBubble"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
@@ -52,6 +55,7 @@ export default function ChatConversation({
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
   const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
+  const { blocked: outOfCredits, refresh: refreshCredits } = useCredits()
 
   // Stable refs — prevents inline callbacks from recreating sendMessage every render
   const onMessagesChangeRef = useRef(onMessagesChange)
@@ -79,6 +83,12 @@ export default function ChatConversation({
 
   const sendMessage = useCallback(async (text) => {
     if (!text?.trim() || loading || !configured) return
+    if (outOfCredits) {
+      toast.error("You're out of Birdy Credits", {
+        description: "Top up to keep using Birdy AI.",
+      })
+      return
+    }
     setMessages(prev => [...prev, { role: "user", content: text }])
     setInput("")
     setLoading(true)
@@ -97,6 +107,16 @@ export default function ChatConversation({
         setLoading(false)
         return
       }
+      if (res.status === 402) {
+        // Out of Birdy Credits (the server-side stopper). Refresh the balance so
+        // the sidebar + composer reflect it, and prompt a top-up.
+        refreshCredits?.()
+        toast.error("You're out of Birdy Credits", {
+          description: "Top up to keep using Birdy AI.",
+        })
+        setLoading(false)
+        return
+      }
       const data = res.ok ? await res.json() : { reply: "Sorry, something went wrong.", tools_used: [] }
       if (data.session_id) {
         setSessionId(data.session_id)
@@ -105,12 +125,14 @@ export default function ChatConversation({
       const toolsUsed = data.tools_used || []
       setMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
       toolsUsed.forEach(t => onToolUsedRef.current?.(t))
+      // Refresh the credit balance so the indicator reflects this question's spend.
+      refreshCredits?.()
     } catch {
       setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I hit an error. Please try again.", tools_used: [] }])
     } finally {
       setLoading(false)
     }
-  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds])
+  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
@@ -135,6 +157,14 @@ export default function ChatConversation({
     return (
       <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
         <AiCredentialsEmptyState />
+      </div>
+    )
+  }
+
+  if (outOfCredits && isEmpty) {
+    return (
+      <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
+        <OutOfCreditsEmptyState />
       </div>
     )
   }
@@ -171,11 +201,19 @@ export default function ChatConversation({
       {/* Composer */}
       <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
         <div className="max-w-2xl mx-auto">
+          {outOfCredits && (
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+              <span>You&apos;re out of Birdy Credits.</span>
+              <Link href="/credits" className="font-semibold underline underline-offset-2 hover:no-underline">
+                Buy credits
+              </Link>
+            </div>
+          )}
           <ChatComposer
             value={input}
             onChange={setInput}
             onSend={() => sendMessage(input)}
-            disabled={loading}
+            disabled={loading || outOfCredits}
             compact={composerCompact}
             placeholder={composerPlaceholder}
             showQuickActions={showQuickActions && isEmpty}
