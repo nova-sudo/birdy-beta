@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart,
+  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -41,16 +41,18 @@ function initials(name = "") {
 function PricingControls({ config, mutate }) {
   const [markup, setMarkup] = useState(config.markup);
   const [rateMode, setRateMode] = useState(config.rate_mode);
+  const [enforce, setEnforce] = useState(config.enforce);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     setMarkup(config.markup);
     setRateMode(config.rate_mode);
-  }, [config.markup, config.rate_mode]);
+    setEnforce(config.enforce);
+  }, [config.markup, config.rate_mode, config.enforce]);
 
   const min = config.markup_min ?? 1;
   const max = config.markup_max ?? 20;
-  const dirty = Number(markup) !== config.markup || rateMode !== config.rate_mode;
+  const dirty = Number(markup) !== config.markup || rateMode !== config.rate_mode || enforce !== config.enforce;
 
   const pricing = config.model_pricing || { in: 0, out: 0 };
   const previewManaged = useMemo(() => {
@@ -64,10 +66,10 @@ function PricingControls({ config, mutate }) {
   const save = async () => {
     setSaving(true);
     try {
-      const updated = await updateCreditsConfig({ markup: Number(markup), rate_mode: rateMode });
+      const updated = await updateCreditsConfig({ markup: Number(markup), rate_mode: rateMode, enforce });
       await mutate(updated, { revalidate: false });
-      toast.success("Credits pricing updated", {
-        description: `Markup ${updated.markup}× · ${updated.rate_mode === "managed" ? "Managed" : "Own-key"} rate`,
+      toast.success("Credits settings updated", {
+        description: `Markup ${updated.markup}× · ${updated.rate_mode === "managed" ? "Managed" : "Own-key"} · stopper ${updated.enforce ? "ON" : "off"}`,
       });
     } catch (e) {
       toast.error("Couldn't update pricing", { description: e.message });
@@ -123,6 +125,30 @@ function PricingControls({ config, mutate }) {
             <Sparkles className="h-3.5 w-3.5" /> Managed
           </button>
         </div>
+      </div>
+
+      {/* Enforcement (the hard stopper) */}
+      <div className={`mt-4 flex items-start justify-between gap-4 rounded-lg border p-4 transition-colors ${enforce ? "border-red-200 bg-red-50/50" : "border-gray-200 bg-gray-50/60"}`}>
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-[#1F1B33]">
+            <ShieldCheck className={`h-4 w-4 ${enforce ? "text-red-600" : "text-gray-400"}`} />
+            Enforce credit limits
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {enforce
+              ? "ON — out-of-credits accounts are blocked in the app, Slack, and the weekly cron."
+              : "Off — usage is metered and shown, but AI keeps working after credits run out."}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={enforce}
+          onClick={() => setEnforce((v) => !v)}
+          className={`relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${enforce ? "bg-red-500" : "bg-gray-300"}`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${enforce ? "translate-x-5" : "translate-x-0.5"}`} />
+        </button>
       </div>
 
       {/* Markup dial */}
@@ -204,13 +230,14 @@ function PricingControls({ config, mutate }) {
   );
 }
 
-function TotalCard({ Icon, label, value, tint }) {
+function TotalCard({ Icon, label, value, tint, sub }) {
   return (
     <div className="rounded-xl border bg-white p-4">
       <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">
         <Icon className={`h-3.5 w-3.5 ${tint}`} /> {label}
       </p>
       <p className="mt-1 text-2xl font-extrabold text-[#1F1B33] tabular-nums">{fmt(value)}</p>
+      {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
     </div>
   );
 }
@@ -273,7 +300,14 @@ function AccountsTable({ data, loading }) {
                 <TableCell className="text-right tabular-nums text-sm text-gray-600">
                   {fmt(a.used_period)}{a.allowance > 0 && <span className="text-gray-400"> / {fmt(a.allowance)}</span>}
                 </TableCell>
-                <TableCell className="text-right tabular-nums text-sm text-gray-600">{fmt(a.used_total)}</TableCell>
+                <TableCell className="text-right tabular-nums text-sm text-gray-600">
+                  {fmt(a.used_total)}
+                  {a.used_total > 0 && (
+                    <span className="block text-[10px] font-normal text-gray-400">
+                      {fmt(a.used_internal)} app · {fmt(a.used_slack)} slack · {fmt(a.used_cron)} cron
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right tabular-nums text-sm">
                   <span className={a.purchased_total > 0 ? "font-semibold text-emerald-700" : "text-gray-400"}>
                     {fmt(a.purchased_total)}
@@ -324,7 +358,15 @@ export default function AdminCreditsPage() {
       {/* Platform totals */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <TotalCard Icon={Wallet} tint="text-emerald-500" label="Outstanding balance" value={totals.balance} />
-        <TotalCard Icon={TrendingUp} tint="text-purple-500" label="Credits used · all-time" value={totals.used_total} />
+        <TotalCard
+          Icon={TrendingUp}
+          tint="text-purple-500"
+          label="Credits used · all-time"
+          value={totals.used_total}
+          sub={totals.used_total > 0
+            ? `${fmt(totals.used_internal)} app · ${fmt(totals.used_slack)} slack · ${fmt(totals.used_cron)} cron`
+            : null}
+        />
         <TotalCard Icon={ShoppingCart} tint="text-blue-500" label="Credits bought · all-time" value={totals.purchased_total} />
       </div>
 

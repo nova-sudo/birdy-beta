@@ -76,10 +76,10 @@ export async function stopImpersonation() {
   return res.json()
 }
 
-export async function updateCreditsConfig({ markup, rate_mode }) {
+export async function updateCreditsConfig({ markup, rate_mode, enforce }) {
   const res = await apiRequest("/api/admin/credits/config", {
     method: "PUT",
-    body: JSON.stringify({ markup, rate_mode }),
+    body: JSON.stringify({ markup, rate_mode, enforce }),
   })
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
