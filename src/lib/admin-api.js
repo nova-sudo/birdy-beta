@@ -47,6 +47,15 @@ export function useConversation(sessionId) {
   )
 }
 
+export function useCreditsConfig() {
+  return useSWR("/api/admin/credits/config", fetcher)
+}
+
+export function useCreditsAccounts(search = "") {
+  const qs = search ? `?search=${encodeURIComponent(search)}` : ""
+  return useSWR(`/api/admin/credits${qs}`, fetcher, { keepPreviousData: true })
+}
+
 // ── Mutations ──────────────────────────────────────────────────────────────
 
 export async function startImpersonation(targetEmail) {
@@ -64,6 +73,18 @@ export async function startImpersonation(targetEmail) {
 export async function stopImpersonation() {
   const res = await apiRequest("/api/admin/impersonate/stop", { method: "POST" })
   if (!res.ok) throw new Error("Failed to stop impersonation")
+  return res.json()
+}
+
+export async function updateCreditsConfig({ markup, rate_mode }) {
+  const res = await apiRequest("/api/admin/credits/config", {
+    method: "PUT",
+    body: JSON.stringify({ markup, rate_mode }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || "Failed to update credits settings")
+  }
   return res.json()
 }
 
