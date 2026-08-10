@@ -59,7 +59,7 @@ function PricingControls({ config, mutate }) {
     const costCents = ((SAMPLE_IN * pricing.in + SAMPLE_OUT * pricing.out) / 1e6) * 100;
     return costCents * (Number(markup) || 0);
   }, [pricing.in, pricing.out, markup]);
-  const previewByok = (0.5 * (SAMPLE_IN + SAMPLE_OUT)) / 1000;
+  const previewByok = ((0.5 * (SAMPLE_IN + SAMPLE_OUT)) / 1000) * (Number(markup) || 0);
 
   const managedActive = rateMode === "managed";
 
@@ -91,8 +91,8 @@ function PricingControls({ config, mutate }) {
         <div>
           <h3 className="text-sm font-bold text-[#1F1B33]">Pricing controls</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            The markup multiplies real model cost on the <span className="font-medium">Managed</span> rate.
-            Changes take effect on the next question — no redeploy.
+            The markup is the profit multiplier and applies to <span className="font-medium">both</span> rates —
+            Managed (real model cost) and Own-key (the 0.5/1k base). Takes effect on the next question, no redeploy.
           </p>
         </div>
         {config.updated_by && (
@@ -151,11 +151,11 @@ function PricingControls({ config, mutate }) {
         </button>
       </div>
 
-      {/* Markup dial */}
-      <div className={`mt-4 rounded-lg border p-4 transition-colors ${managedActive ? "border-purple-100 bg-purple-50/40" : "border-gray-100 bg-gray-50/60"}`}>
+      {/* Markup dial — applies to both rates */}
+      <div className="mt-4 rounded-lg border border-purple-100 bg-purple-50/40 p-4">
         <div className="flex items-center justify-between">
           <label htmlFor="markup" className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">
-            Managed markup
+            Credit markup
           </label>
           <div className="flex items-center gap-1.5">
             <input
@@ -180,7 +180,7 @@ function PricingControls({ config, mutate }) {
           value={Number(markup) || min}
           onChange={(e) => setMarkup(Number(e.target.value))}
           className="mt-3 w-full accent-purple-600"
-          aria-label="Managed markup multiplier"
+          aria-label="Credit markup multiplier"
         />
         <div className="mt-1 flex justify-between text-[10px] text-gray-400">
           <span>{min}×</span>
@@ -208,7 +208,7 @@ function PricingControls({ config, mutate }) {
           <p className="mt-1 text-2xl font-extrabold text-gray-700 tabular-nums">
             {fmt(previewByok, 1)} <span className="text-sm font-semibold text-gray-400">credits</span>
           </p>
-          <p className="text-[10px] text-gray-400">Flat 0.5 credits / 1k tokens · markup does not apply</p>
+          <p className="text-[10px] text-gray-400">0.5 credits / 1k tokens base · at {Number(markup) || 0}× markup</p>
         </div>
       </div>
 
