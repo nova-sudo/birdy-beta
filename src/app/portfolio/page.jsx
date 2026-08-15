@@ -3,8 +3,15 @@
 import { useMemo, useState } from "react";
 import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
+import { TopClients } from "@/components/portfolio/TopClients";
 import { TrendChart } from "@/components/portfolio/TrendChart";
-import { CHART_METRICS, chartForMetric, kpisForTimeframe } from "./fixtures";
+import {
+  CHART_METRICS,
+  TOP_CLIENTS,
+  TOP_CLIENT_METRICS,
+  chartForMetric,
+  kpisForTimeframe,
+} from "./fixtures";
 import { portfolioFontClass } from "./fonts";
 
 // Tab order is deliberate: Leads · Ad spend · Calls · Closes.
@@ -27,6 +34,7 @@ export default function PortfolioDashboardPage() {
   // at the page level rather than inside either.
   const [timeframe, setTimeframe] = useState("Monthly");
   const [chartMetric, setChartMetric] = useState("leads");
+  const [topMetric, setTopMetric] = useState("Avg CPL");
 
   const kpis = useMemo(() => kpisForTimeframe(timeframe), [timeframe]);
   const chart = useMemo(() => chartForMetric(chartMetric, timeframe), [chartMetric, timeframe]);
@@ -55,9 +63,15 @@ export default function PortfolioDashboardPage() {
             redrawKey={`${chartMetric}-${timeframe}`}
           />
 
-          {/* Top clients + performance funnel — PR-06/07 */}
           <div className="mb-[18px] flex gap-[18px]">
-            <div className="h-[280px] min-w-0 flex-[0.85] rounded-[16px] border border-pd-border bg-pd-surface" />
+            <TopClients
+              metric={topMetric}
+              metrics={TOP_CLIENT_METRICS}
+              onMetricChange={setTopMetric}
+              clients={TOP_CLIENTS[topMetric]}
+            />
+
+            {/* Performance funnel — PR-07 */}
             <div className="h-[280px] min-w-0 flex-[1.45] rounded-[16px] border border-pd-border bg-pd-surface" />
           </div>
 

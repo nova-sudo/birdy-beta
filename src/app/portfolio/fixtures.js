@@ -42,6 +42,45 @@ export const KPIS = {
   },
 };
 
+// ─── Top performing clients ─────────────────────────────────────────────────
+// Each metric carries its own ranking, its own supporting meta, and its own bar
+// widths — switching the picker re-ranks the whole list rather than re-sorting
+// one set of rows, because "best" means something different per metric and the
+// meta line changes with it (spend/leads for CPL, closes/AOV for revenue).
+
+export const TOP_CLIENT_METRICS = ["Avg CPL", "Closes", "Leads", "Revenue"];
+
+export const TOP_CLIENTS = {
+  "Avg CPL": [
+    { name: "The Body Room", meta: "£116 spend · 85 leads", bar: 100, value: "£1.37", direction: "up", delta: "14%" },
+    { name: "Beauty Hub Mcr", meta: "£70 spend · 50 leads", bar: 94, value: "£1.41", direction: "up", delta: "9%" },
+    { name: "The Contour Co", meta: "£118 spend · 81 leads", bar: 91, value: "£1.45", direction: "up", delta: "11%" },
+    { name: "Tylaesthetics", meta: "£124 spend · 83 leads", bar: 88, value: "£1.49", direction: "up", delta: "18%" },
+    { name: "BBL Body Confidence", meta: "£72 spend · 46 leads", bar: 80, value: "£1.57", direction: "up", delta: "6%" },
+  ],
+  Closes: [
+    { name: "Tylaesthetics", meta: "83 leads · 17.2% conv", bar: 100, value: "214", direction: "up", delta: "21%" },
+    { name: "The Contour Co", meta: "81 leads · 15.8% conv", bar: 88, value: "188", direction: "up", delta: "12%" },
+    { name: "The Body Room", meta: "85 leads · 14.1% conv", bar: 80, value: "171", direction: "up", delta: "9%" },
+    { name: "Beauty Hub Mcr", meta: "50 leads · 16.4% conv", bar: 62, value: "132", direction: "up", delta: "7%" },
+    { name: "Aura", meta: "40 leads · 15.1% conv", bar: 51, value: "109", direction: "up", delta: "4%" },
+  ],
+  Leads: [
+    { name: "The Body Room", meta: "£116 spend · £1.37 CPL", bar: 100, value: "1,842", direction: "up", delta: "16%" },
+    { name: "Tylaesthetics", meta: "£124 spend · £1.49 CPL", bar: 93, value: "1,714", direction: "up", delta: "18%" },
+    { name: "The Contour Co", meta: "£118 spend · £1.45 CPL", bar: 89, value: "1,640", direction: "up", delta: "11%" },
+    { name: "Beauty Hub Mcr", meta: "£70 spend · £1.41 CPL", bar: 64, value: "1,178", direction: "up", delta: "9%" },
+    { name: "BBL Body Confidence", meta: "£72 spend · £1.57 CPL", bar: 55, value: "1,012", direction: "up", delta: "6%" },
+  ],
+  Revenue: [
+    { name: "Tylaesthetics", meta: "214 closes · £1.4k AOV", bar: 100, value: "£298k", direction: "up", delta: "23%" },
+    { name: "The Contour Co", meta: "188 closes · £1.3k AOV", bar: 85, value: "£254k", direction: "up", delta: "14%" },
+    { name: "The Body Room", meta: "171 closes · £1.2k AOV", bar: 71, value: "£211k", direction: "up", delta: "10%" },
+    { name: "Beauty Hub Mcr", meta: "132 closes · £1.1k AOV", bar: 50, value: "£149k", direction: "up", delta: "8%" },
+    { name: "Aura", meta: "109 closes · £1.1k AOV", bar: 41, value: "£122k", direction: "up", delta: "5%" },
+  ],
+};
+
 // ─── Trend chart ────────────────────────────────────────────────────────────
 // Series are in normalised units; the chart scales them between their own min
 // and max. Each timeframe has a deliberately different shape — monthly trends
