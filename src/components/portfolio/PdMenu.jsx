@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,8 +30,15 @@ const SIZES = {
 export function PdMenu({ value, options, onChange, icon, label, size = "lg", className }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const optionsRef = useRef([]);
   const menuId = useId();
   const s = SIZES[size];
+
+  const close = ({ refocus = false } = {}) => {
+    setOpen(false);
+    if (refocus) triggerRef.current?.focus();
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -40,7 +47,10 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
       if (!rootRef.current?.contains(e.target)) setOpen(false);
     };
     const onKeyDown = (e) => {
-      if (e.key === "Escape") setOpen(false);
+      // Escape hands focus back to the trigger; a Tab out just closes, so the
+      // user carries on through the page rather than being pulled backwards.
+      if (e.key === "Escape") close({ refocus: true });
+      else if (e.key === "Tab") setOpen(false);
     };
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -51,17 +61,40 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
     };
   }, [open]);
 
+  // Opening moves focus onto the current selection, so a keyboard user lands
+  // where they are rather than at the top of the list.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const selectedIndex = Math.max(options.indexOf(value), 0);
+    optionsRef.current[selectedIndex]?.focus();
+  }, [open, options, value]);
+
+  const onOptionKeyDown = (event, index) => {
+    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    let next = null;
+
+    if (step) next = (index + step + options.length) % options.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = options.length - 1;
+    if (next === null) return;
+
+    event.preventDefault();
+    optionsRef.current[next]?.focus();
+  };
+
   return (
     <div ref={rootRef} className={cn("relative", className)}>
       <button
+        ref={triggerRef}
         type="button"
-        aria-label={label}
+        aria-label={`${label}: ${value}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex cursor-pointer items-center border border-pd-border bg-pd-surface font-semibold text-pd-body",
+          "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
           s.trigger
         )}
       >
@@ -80,7 +113,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
             s.menu
           )}
         >
-          {options.map((option) => {
+          {options.map((option, i) => {
             const selected = option === value;
             return (
               <button
@@ -88,15 +121,20 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
                 type="button"
                 role="option"
                 aria-selected={selected}
+                ref={(el) => {
+                  optionsRef.current[i] = el;
+                }}
+                onKeyDown={(e) => onOptionKeyDown(e, i)}
                 // The prototype's real bug: without stopPropagation the click
                 // bubbles to the trigger and reopens the menu immediately.
                 onClick={(e) => {
                   e.stopPropagation();
                   onChange(option);
-                  setOpen(false);
+                  close({ refocus: true });
                 }}
                 className={cn(
                   "block w-full cursor-pointer rounded-lg text-left font-medium",
+                  "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary",
                   s.option,
                   selected ? "bg-pd-primary-tint text-pd-primary" : "bg-transparent text-pd-body"
                 )}

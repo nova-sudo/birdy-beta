@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { buildChartGeometry } from "@/lib/portfolio-chart";
 import { deltaTone } from "@/lib/portfolio-metrics";
+import { PdSegmented } from "./PdSegmented";
 
 const GRID_LINES = 5;
 
@@ -34,35 +35,31 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
           <p className="mt-0.5 text-[12px] text-pd-faint">{chart.subtitle}</p>
         </div>
 
-        {/* Metric segmented control */}
-        <div className="flex shrink-0 gap-[5px] rounded-[10px] border border-pd-border bg-pd-divider p-1">
-          {metrics.map((metric) => {
-            const selected = metric.key === activeMetric;
-            return (
-              <button
-                key={metric.key}
-                type="button"
-                onClick={() => onMetricChange(metric.key)}
-                className={cn(
-                  "cursor-pointer rounded-lg px-[13px] py-[7px] font-pd-display text-[12.5px] font-semibold",
-                  selected
-                    ? "bg-pd-surface text-pd-ink shadow-pd-segment"
-                    : "bg-transparent text-pd-muted"
-                )}
-              >
-                {metric.tab}
-              </button>
-            );
-          })}
-        </div>
+        <PdSegmented
+          label="Chart metric"
+          className="shrink-0"
+          itemClassName="px-[13px] py-[7px]"
+          options={metrics.map((metric) => ({ key: metric.key, label: metric.tab }))}
+          value={activeMetric}
+          onChange={onMetricChange}
+        />
       </div>
 
       <div className="mt-[14px] mb-4 flex items-baseline gap-[10px]">
         <span className="font-pd-display text-[28px] font-bold text-pd-ink">{chart.total}</span>
         <span className={cn("text-[12.5px] font-semibold", tone.text)}>
-          {chart.direction === "up" ? "▲" : "▼"} {chart.delta}
+          <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
+          <span className="sr-only">{chart.direction} </span> {chart.delta}
         </span>
       </div>
+
+      {/* Names the shape of the series for anyone who can't see it — the dots
+          below carry the individual readings. */}
+      <p className="sr-only">
+        {chart.title}, {chart.subtitle}. {chart.total}, {chart.direction} {chart.delta} on the
+        previous period. {points.length} data points, from {chart.pointValues[0]} to{" "}
+        {chart.pointValues[points.length - 1]}.
+      </p>
 
       <div className="relative h-[190px]">
         {/* Baseline grid — the bottom rule sits a shade darker than the rest. */}
@@ -106,14 +103,23 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
         </svg>
 
         {/* Dots are HTML rather than SVG so they stay circular under the
-            stretched viewBox, and so the tooltip can hang off them. */}
+            stretched viewBox, and so the tooltip can hang off them.
+
+            They are buttons because the tooltip is the only place a reading
+            of an individual period exists — hover-only would put that data
+            out of reach of anyone not using a mouse. */}
         {points.map((point, i) => (
-          <div
+          <button
             key={i}
+            type="button"
+            aria-label={`${chart.tooltipLabels[i]}: ${chart.pointValues[i]}`}
             onMouseEnter={() => setHoveredIndex(i)}
             onMouseLeave={() => setHoveredIndex((current) => (current === i ? null : current))}
+            onFocus={() => setHoveredIndex(i)}
+            onBlur={() => setHoveredIndex((current) => (current === i ? null : current))}
             className={cn(
               "absolute -mt-[5px] -ml-[5px] size-[10px] cursor-pointer rounded-full border-2 border-white",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
               i === lastIndex ? "bg-pd-primary shadow-pd-glow" : "bg-pd-primary-light"
             )}
             style={{ left: `${point.xPercent.toFixed(2)}%`, top: `${point.yPercent.toFixed(2)}%` }}
@@ -131,7 +137,7 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
                 </div>
               </div>
             )}
-          </div>
+          </button>
         ))}
       </div>
 

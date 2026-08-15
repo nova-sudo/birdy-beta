@@ -45,7 +45,8 @@ export function TopClients({ metric, metrics, onMetricChange, clients }) {
                 <div className="text-[11.5px] text-pd-faint">{client.meta}</div>
               </div>
 
-              <div className="shrink-0 basis-[88px]">
+              {/* Restates the value to its right — decorative to a reader. */}
+              <div className="shrink-0 basis-[88px]" aria-hidden="true">
                 <div className="h-1.5 rounded-[3px] bg-pd-divider">
                   <div
                     className="h-full rounded-[3px] bg-pd-primary"
@@ -59,7 +60,8 @@ export function TopClients({ metric, metrics, onMetricChange, clients }) {
                   {client.value}
                 </div>
                 <div className={cn("text-[11px]", tone.text)}>
-                  {client.direction === "up" ? "▲" : "▼"} {client.delta}
+                  <span aria-hidden="true">{client.direction === "up" ? "▲" : "▼"}</span>
+                  <span className="sr-only">{client.direction} </span> {client.delta}
                 </div>
               </div>
             </li>

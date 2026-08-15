@@ -79,7 +79,8 @@ export function PerformanceFunnel({ stages }) {
                   {stage.count}
                 </div>
                 <div className={cn("mt-1 text-[12px] font-semibold", tone.text)}>
-                  {stage.direction === "up" ? "↑" : "↓"} {stage.delta}%
+                  <span aria-hidden="true">{stage.direction === "up" ? "↑" : "↓"}</span>
+                  <span className="sr-only">{stage.direction} </span> {stage.delta}%
                 </div>
               </div>
 
