@@ -22,58 +22,88 @@ PortfolioHeader          title · timeframe picker · date range
 | Where | What |
 |---|---|
 | `page.jsx` | Composition and the state the cards share |
-| `usePortfolioData.js` | Fetching, optimistic actions, the backend contract |
-| `fixtures.js` | The handoff's figures, in the payload's shape |
+| `usePortfolioData.js` | Fetching and shaping from the real endpoints |
+| `presentation.js` | Which icon and tone each metric wears |
 | `fonts.js` | Poppins + Inter, scoped to this route |
-| `src/components/portfolio/` | The cards and the two shared controls |
+| `src/components/portfolio/` | The data-agnostic component set |
+| `src/lib/portfolio-aggregate.js` | Client groups → KPIs, funnel, leaderboards (pure) |
+| `src/lib/portfolio-series.js` | Bucketing and previous-period mapping (pure) |
 | `src/lib/portfolio-chart.js` | Chart geometry (pure) |
 | `src/lib/portfolio-metrics.js` | Delta polarity and funnel diagnosis (pure) |
-| `src/lib/portfolio-view.js` | Payload → render shapes (pure) |
 
 ## State
 
-Five pieces, all on the page:
-
 | State | Default | Drives |
 |---|---|---|
-| `timeframe` | `Monthly` | KPI strip **and** chart together |
-| `chartMetric` | `leads` | Chart series, title, total |
-| `topMetric` | first in payload | Leaderboard ranking |
+| `preset` | `last_7d` | The window **every** figure covers |
+| `granularity` | `Daily` | How finely the chart buckets that window |
+| `chartMetric` | `leads` | Which series is plotted |
+| `topMetric` | first available | Leaderboard ranking |
 | `panel` | `suggestions` | Which rail panel renders |
-| `hoveredIndex` | `null` | Chart tooltip (local to `TrendChart`) |
 
-The chart replays its draw animation by being keyed on `metric + timeframe`, so
-a switch remounts the paths and the CSS animations restart.
+The handoff blurred these first two into one "timeframe" control. They are
+different questions — which window, and how finely to slice it — so they are
+two controls here.
 
-## Backend contract
+The chart replays its draw animation by being keyed on
+`metric + granularity + preset`, so a switch remounts the paths and the CSS
+animations restart.
 
-```
-GET    /api/portfolio/summary
-POST   /api/portfolio/suggestions/:id/apply
-DELETE /api/portfolio/suggestions/:id
-```
+## Where the data comes from
 
-The summary returns **every timeframe in one payload**. Switching
-Daily/Weekly/Monthly is a redraw the user expects to be instant, and a round trip
-per switch would put a spinner in the middle of the one interaction this screen
-is built around. The full shape is documented at the top of `usePortfolioData.js`.
+Everything is real, from endpoints that already existed:
 
-### When the endpoint isn't live
+| Endpoint | Feeds |
+|---|---|
+| `/api/client-groups?date_preset=` | KPIs, leaderboards, funnel, call insights |
+| `/api/client-groups?date_preset=<previous>` | The delta pills |
+| `/api/facebook-leads/filtered` | The trend series (leads and closes) |
+| `/api/dashboard/summary` | Suggestions and activity |
+| `/api/dashboard/suggestions/:id/apply` `DELETE :id` | The rail's two buttons |
 
-* **Development** — falls back to `fixtures.js` behind a visible banner saying
-  so, and actions skip the request rather than rolling back.
-* **Production** — shows a distinct "data isn't available" state. It never
-  renders placeholder numbers, matching the rule `useDashboardData` already
-  holds on the homepage. That matters more here than anywhere: an agency owner
-  would otherwise be reading named clients and spend figures that are not
-  theirs. "Isn't available" is also a different claim from "you have no
-  clients", so the two are not collapsed into one empty state.
+Field paths mirror what `components/ui/table-container.jsx` already reads, so
+this screen and the clients table can't drift into disagreeing about what
+"leads" means. Lead counts follow the same ladder it uses — `results`, then
+summed campaign results, then `total_leads` — because older cached insights
+only carry the last one, and skipping the ladder makes whole clients read as
+zero-lead.
+
+### Deltas
+
+`/api/client-groups` only speaks in date presets, so a previous period has to
+be expressible as one. Where a natural predecessor exists (`this_month` →
+`last_month`) it is fetched directly. Where only a longer window exists,
+`last_7d` is compared against `last_14d` **minus** the current week — every
+figure summed here is additive, so that subtraction is exact rather than an
+estimate.
+
+Presets with no expressible predecessor (`last_30d`, `maximum`, `last_14d`,
+`this_week_mon_today`) get **no delta pills at all** rather than invented ones.
+The same applies when a previous period was zero: something out of nothing has
+no meaningful percentage, and "+100%" on a client's first week of spend would
+be worse than silence.
+
+### What the design asks for that the data cannot give
+
+Both are absent rather than approximated:
+
+* **A spend-over-time curve.** Meta insights arrive pre-aggregated per date
+  preset; nothing breaks spend down by day. Spend is a KPI here, not a chart
+  metric, so the chart offers Leads and Closes only.
+* **A "Shows" funnel stage.** GoHighLevel opportunity stats carry
+  won/lost/open/abandoned and nothing about attendance. The funnel runs four
+  real stages — Leads → In CRM → Called → Closes — rather than five with a
+  guess at the end.
+
+Two call metrics also moved to what exists: "Speed to lead" became talk time
+(no first-touch timestamp is available), and "Unique answer rate" became answer
+rate, since `call_stats` counts answered calls rather than answered leads.
 
 ## Things worth knowing
 
-**Delta polarity.** Most metrics are better when they rise, but average CPL,
-speed to lead and calls per close are better when they *fall*, and calls per lead
-is worse when it rises. `deltaTone(direction, polarity)` is the single place that
+**Delta polarity.** Most metrics are better when they rise, but average CPL
+and calls per close are better when they *fall*, and calls per lead is worse
+when it rises. `deltaTone(direction, polarity)` is the single place that
 resolves this — getting it backwards inverts the meaning of a whole card.
 
 **Chart geometry.** Points are centred over their axis label rather than spread
@@ -100,10 +130,13 @@ These are deliberate. Everything else matches the design's tokens.
 3. **"Unique answer rate" uses a phone-call icon.** The design draws a phone
    crossed with an ×, which is lucide's `phone-missed` and reads as the opposite
    of the metric. The handoff's own icon table calls that slot "phone-answer".
-4. **Menus and segmented controls are keyboard-operable.** The prototype closed
+4. **The header has two controls, not one.** The handoff's single "timeframe"
+   picker conflated the window with the granularity; the API separates them, so
+   the header does too.
+5. **Menus and segmented controls are keyboard-operable.** The prototype closed
    menus only on selection; the handoff asks for outside-click and Escape in
    production, and this adds roving focus, arrow keys and focus return on top.
-5. **Chart points are buttons.** The tooltip was the only reading of an
+6. **Chart points are buttons.** The tooltip was the only reading of an
    individual period and hover-only put it out of reach of keyboard users.
 
 ## Tests
@@ -112,7 +145,14 @@ These are deliberate. Everything else matches the design's tokens.
 npx vitest run src/app/portfolio src/lib/__tests__
 ```
 
-The pure modules are tested directly — chart geometry, delta polarity, funnel
-diagnosis, payload shaping. `__tests__/page.test.jsx` covers the interactions:
-timeframe switching moving every figure at once, inverted CPL colouring,
-leaderboard re-ranking, rail panel swapping, and apply/dismiss.
+84 tests. The pure modules are covered directly — chart geometry, delta
+polarity, funnel diagnosis, the aggregation ladder and its divide-by-zero
+guards, bucketing, and the previous-period arithmetic.
+
+`__tests__/page.test.jsx` runs the screen against mocked endpoints returning
+real-shaped client groups, and asserts the things a wrong number would break:
+the roll-up totals, CPL derived from summed spend over summed leads rather than
+an average of averages, delta pills appearing on a comparable preset and
+vanishing on one without, the series bucketing by day and by month, ascending
+CPL ranking against descending everything else, auto-run separated from
+approved in the feed, and a failed apply putting the card back.

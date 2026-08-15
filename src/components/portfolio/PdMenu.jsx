@@ -27,7 +27,14 @@ const SIZES = {
   },
 };
 
-export function PdMenu({ value, options, onChange, icon, label, size = "lg", className }) {
+/** Options may be plain strings or {value, label} pairs. */
+function normalise(options) {
+  return (options ?? []).map((o) => (typeof o === "string" ? { value: o, label: o } : o));
+}
+
+export function PdMenu({ value, options: rawOptions, onChange, icon, label, size = "lg", className }) {
+  const options = normalise(rawOptions);
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? value;
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const triggerRef = useRef(null);
@@ -65,7 +72,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
   // where they are rather than at the top of the list.
   useLayoutEffect(() => {
     if (!open) return;
-    const selectedIndex = Math.max(options.indexOf(value), 0);
+    const selectedIndex = Math.max(options.findIndex((o) => o.value === value), 0);
     optionsRef.current[selectedIndex]?.focus();
   }, [open, options, value]);
 
@@ -87,7 +94,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
       <button
         ref={triggerRef}
         type="button"
-        aria-label={`${label}: ${value}`}
+        aria-label={`${label}: ${selectedLabel}`}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? menuId : undefined}
@@ -99,7 +106,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
         )}
       >
         {icon}
-        {value}
+        {selectedLabel}
         <ChevronDown className="size-3 shrink-0" aria-hidden="true" />
       </button>
 
@@ -114,10 +121,10 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
           )}
         >
           {options.map((option, i) => {
-            const selected = option === value;
+            const selected = option.value === value;
             return (
               <button
-                key={option}
+                key={option.value}
                 type="button"
                 role="option"
                 aria-selected={selected}
@@ -129,7 +136,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
                 // bubbles to the trigger and reopens the menu immediately.
                 onClick={(e) => {
                   e.stopPropagation();
-                  onChange(option);
+                  onChange(option.value);
                   close({ refocus: true });
                 }}
                 className={cn(
@@ -139,7 +146,7 @@ export function PdMenu({ value, options, onChange, icon, label, size = "lg", cla
                   selected ? "bg-pd-primary-tint text-pd-primary" : "bg-transparent text-pd-body"
                 )}
               >
-                {option}
+                {option.label}
               </button>
             );
           })}

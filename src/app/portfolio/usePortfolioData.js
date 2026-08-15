@@ -1,123 +1,169 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
+import { useClientGroups } from "@/lib/useClientGroups";
+import { useCurrency } from "@/hooks/useCurrency";
+import { presetToDateRange } from "@/lib/date-utils";
+import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import {
-  ACTIVITY,
-  ACTIVITY_TOTAL,
-  CALL_INSIGHTS,
-  CHART_AXIS,
-  CHART_METRICS,
-  FUNNEL_STAGES,
-  KPIS,
-  SUGGESTIONS,
-  TOP_CLIENTS,
-  TOP_CLIENT_METRICS,
-} from "./fixtures";
+  aggregatePortfolio,
+  buildCallInsights,
+  buildFunnel,
+  buildKpis,
+  buildLeaderboards,
+} from "@/lib/portfolio-aggregate";
+import { PREVIOUS_PERIOD, bucketSeries, subtractPeriods } from "@/lib/portfolio-series";
 
-// ─── Backend contract ──────────────────────────────────────────────────────
+// ─── Where the figures come from ───────────────────────────────────────────
 //
-//   GET    /api/portfolio/summary
-//   POST   /api/portfolio/suggestions/:id/apply
-//   DELETE /api/portfolio/suggestions/:id
+// Everything on this screen is real, from endpoints that already exist:
 //
-// The summary returns every timeframe in one payload rather than one request
-// per timeframe. Switching Daily/Weekly/Monthly is a chart redraw the user
-// expects to be instant, and a round trip per switch would put a spinner in the
-// middle of the one interaction this screen is built around.
+//   /api/client-groups?date_preset=      per-client Meta / GHL / HotProspector
+//                                        caches → KPIs, leaderboards, funnel,
+//                                        call insights
+//   /api/client-groups?date_preset=<prev> the preceding period, for deltas
+//   /api/facebook-leads/filtered         lead rows with created_time →
+//                                        the leads and closes series
+//   /api/dashboard/summary               Birdy suggestions and activity
 //
-//   {
-//     clientCount: 55,
-//     dateRange: "1 – 31 Jul 2026",
-//     kpis:        { spend: { label, icon, polarity, Monthly: { value, direction, delta }, … }, … },
-//     chartMetrics:{ leads: { tab, title, subtitle, scale, prefix?, Monthly: [...], totals: {…} }, … },
-//     chartAxis:   { Monthly: [...], Weekly: [...], Daily: [...] },
-//     topClients:  { "Avg CPL": [ { name, meta, bar, value, direction, delta } ], … },
-//     funnel:      [ { key, stage, count, direction, delta, issue, stageNoun } ],
-//     callInsights:[ { key, label, value, direction, delta, polarity, icon } ],
-//     suggestions: [ { id, severity, client, title, why } ],
-//     activity:    [ { id, action, client, mode, time } ],
-//     activityCount: 14,
-//   }
+// Two things the design asks for that no endpoint provides, and which are
+// therefore absent rather than invented:
+//
+//   * A spend-over-time curve. Meta insights arrive pre-aggregated per preset,
+//     so spend is a KPI here but not a chart metric.
+//   * A "Shows" funnel stage. GHL opportunity stats carry won/lost/open/
+//     abandoned and nothing about attendance.
+//
+// Deltas appear only for presets whose previous period is expressible as
+// another preset (see PREVIOUS_PERIOD). Elsewhere the pills are simply absent.
 
-const SUMMARY_ENDPOINT = "/api/portfolio/summary";
+const LEADS_FETCH_LIMIT = 5000;
 
-// The screen was built against the handoff's figures, and they stay useful for
-// reviewing it before the endpoint exists. They are development-only on
-// purpose: this repo's dashboard hook already holds the line that a live page
-// shows an empty state rather than invented numbers, and invented numbers are
-// worse here than anywhere — an agency owner would be reading named clients and
-// spend figures that are not theirs.
-const ALLOW_FIXTURES = process.env.NODE_ENV !== "production";
+/** Lead rows that reached a won opportunity — the closes series. */
+function isWon(lead) {
+  return String(lead.ghl_opportunity_status ?? "").toLowerCase() === "won";
+}
 
-const FIXTURE_PAYLOAD = {
-  clientCount: 55,
-  dateRange: "1 – 31 Jul 2026",
-  kpis: KPIS,
-  chartMetrics: CHART_METRICS,
-  chartAxis: CHART_AXIS,
-  topClients: TOP_CLIENTS,
-  topClientMetrics: TOP_CLIENT_METRICS,
-  funnel: FUNNEL_STAGES,
-  callInsights: CALL_INSIGHTS,
-  suggestions: SUGGESTIONS,
-  activity: ACTIVITY,
-  activityCount: ACTIVITY_TOTAL,
-};
+export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "Daily" } = {}) {
+  const { clientGroups, loading: groupsLoading, error: groupsError } = useClientGroups(preset);
+  const { currencySymbol } = useCurrency("GBP");
 
-const EMPTY_PAYLOAD = {
-  clientCount: null,
-  dateRange: "",
-  kpis: {},
-  chartMetrics: {},
-  chartAxis: {},
-  topClients: {},
-  topClientMetrics: [],
-  funnel: [],
-  callInsights: [],
-  suggestions: [],
-  activity: [],
-  activityCount: 0,
-};
+  const [previousGroups, setPreviousGroups] = useState(null);
+  const [leads, setLeads] = useState([]);
+  const [rail, setRail] = useState({ suggestions: [], activity: [], activityCount: 0 });
+  const [seriesLoading, setSeriesLoading] = useState(true);
 
-export function usePortfolioData() {
-  const [data, setData] = useState(EMPTY_PAYLOAD);
-  const [loading, setLoading] = useState(true);
-  // Distinct from "loaded but empty": the endpoint isn't answering, so the page
-  // says so rather than implying the portfolio has no clients.
-  const [unavailable, setUnavailable] = useState(false);
-  const [usingFixtures, setUsingFixtures] = useState(false);
-  // Read inside the action callbacks, which must not be rebuilt when it flips.
-  const usingFixturesRef = useRef(false);
+  const formatMoney = useCallback(
+    (value, decimals = 0) =>
+      `${currencySymbol}${Number(value || 0).toLocaleString(undefined, {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}`,
+    [currencySymbol]
+  );
 
+  // ── Previous period, for the delta pills ────────────────────────────────
+  useEffect(() => {
+    const comparison = PREVIOUS_PERIOD[preset];
+    if (!comparison) {
+      setPreviousGroups(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`);
+        if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setPreviousGroups(data.client_groups ?? []);
+      } catch {
+        // No comparison is a fine outcome — the pills just don't render.
+        if (!cancelled) setPreviousGroups(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [preset]);
+
+  // ── Lead rows, for the trend chart and its closes series ────────────────
+  useEffect(() => {
+    if (groupsLoading) return;
+    if (!clientGroups?.length) {
+      setLeads([]);
+      setSeriesLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const controller = new AbortController();
+
+    (async () => {
+      setSeriesLoading(true);
+      try {
+        const groupIds = clientGroups.map((g) => g.id).join(",");
+        const { start_date, end_date } = presetToDateRange(preset);
+        const params = new URLSearchParams({ groups: groupIds, limit: String(LEADS_FETCH_LIMIT) });
+        if (start_date) params.set("start_date", start_date);
+        if (end_date) params.set("end_date", end_date);
+
+        const res = await apiRequest(`/api/facebook-leads/filtered?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`facebook-leads → ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setLeads(data.leads ?? []);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        if (!cancelled) setLeads([]);
+      } finally {
+        if (!cancelled) setSeriesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [clientGroups, groupsLoading, preset]);
+
+  // ── Suggestions and activity ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
       try {
-        const res = await apiRequest(SUMMARY_ENDPOINT);
-        if (!res.ok) throw new Error(`GET ${SUMMARY_ENDPOINT} → ${res.status}`);
-        const payload = await res.json();
+        const res = await apiRequest("/api/dashboard/summary");
+        if (!res.ok) throw new Error(`dashboard/summary → ${res.status}`);
+        const data = await res.json();
         if (cancelled) return;
 
-        setData({ ...EMPTY_PAYLOAD, ...payload });
-        setUnavailable(false);
-        setUsingFixtures(false);
-        usingFixturesRef.current = false;
+        setRail({
+          suggestions: (data.suggestions ?? []).map((s) => ({
+            id: s.id,
+            severity: s.severity ?? "MEDIUM",
+            client: s.client ?? "",
+            title: s.title ?? "",
+            why: s.description ?? s.why ?? "",
+          })),
+          activity: (data.activity ?? [])
+            .filter((a) => a.kind !== "suggestion_created")
+            .map((a) => ({
+              id: a.id,
+              action: a.title ?? a.action ?? "",
+              client: a.client ?? "",
+              // The feed distinguishes what Birdy did on standing approval from
+              // what the user signed off; `actor` is where that lives.
+              mode: a.actor === "birdy" ? "Auto-run" : "Approved",
+              time: a.time ?? "",
+            })),
+          activityCount: (data.activity ?? []).length,
+        });
       } catch {
-        if (cancelled) return;
-
-        if (ALLOW_FIXTURES) {
-          setData(FIXTURE_PAYLOAD);
-          setUsingFixtures(true);
-          setUnavailable(false);
-          usingFixturesRef.current = true;
-        } else {
-          setData(EMPTY_PAYLOAD);
-          setUnavailable(true);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setRail({ suggestions: [], activity: [], activityCount: 0 });
       }
     })();
 
@@ -126,74 +172,84 @@ export function usePortfolioData() {
     };
   }, []);
 
-  // Applying moves the suggestion into the feed. The optimistic update runs
-  // first and is rolled back on failure, so the rail never stalls on a request
-  // the user has already decided about.
-  const applySuggestion = useCallback(async (suggestion) => {
-    const entry = {
-      id: `applied-${suggestion.id}`,
-      action: suggestion.title,
-      client: suggestion.client,
-      mode: "Approved",
-      time: "just now",
+  // ── Shaping ─────────────────────────────────────────────────────────────
+
+  const current = useMemo(() => aggregatePortfolio(clientGroups), [clientGroups]);
+
+  const previous = useMemo(() => {
+    if (!previousGroups) return null;
+    const enclosing = aggregatePortfolio(previousGroups);
+    const comparison = PREVIOUS_PERIOD[preset];
+    return comparison?.subtractCurrent ? subtractPeriods(enclosing, current) : enclosing;
+  }, [previousGroups, preset, current]);
+
+  const chartMetrics = useMemo(() => {
+    const leadSeries = bucketSeries(leads, (l) => l.created_time, granularity);
+    const wonLeads = leads.filter(isWon);
+    const closeSeries = bucketSeries(wonLeads, (l) => l.created_time, granularity);
+
+    return {
+      leads: {
+        tab: "Leads",
+        title: "Total leads",
+        subtitle: "Lead volume across the portfolio",
+        total: Math.round(current.leads).toLocaleString(),
+        ...leadSeries,
+      },
+      closes: {
+        tab: "Closes",
+        title: "Total closes",
+        subtitle: "Leads that reached a won opportunity",
+        total: Math.round(current.closes).toLocaleString(),
+        ...closeSeries,
+      },
     };
+  }, [leads, granularity, current.leads, current.closes]);
 
-    setData((prev) => ({
-      ...prev,
-      suggestions: prev.suggestions.filter((s) => s.id !== suggestion.id),
-      activity: [entry, ...prev.activity],
-      activityCount: prev.activityCount + 1,
-    }));
+  const dateRangeLabel = useMemo(
+    () => DATE_PRESETS.find((p) => p.value === preset)?.label ?? preset,
+    [preset]
+  );
 
-    // On fixtures there is no endpoint to confirm against, and rolling the
-    // change back would make the rail untestable by hand — the card would
-    // reappear the moment you acted on it.
-    if (usingFixturesRef.current) return true;
+  return {
+    clientCount: current.clientCount,
+    dateRangeLabel,
 
-    try {
-      const res = await apiRequest(`/api/portfolio/suggestions/${suggestion.id}/apply`, {
-        method: "POST",
-      });
-      if (!res.ok) throw new Error(`apply → ${res.status}`);
-      return true;
-    } catch {
-      setData((prev) => ({
-        ...prev,
-        suggestions: prev.suggestions.some((s) => s.id === suggestion.id)
-          ? prev.suggestions
-          : [suggestion, ...prev.suggestions],
-        activity: prev.activity.filter((a) => a.id !== entry.id),
-        activityCount: Math.max(prev.activityCount - 1, 0),
-      }));
-      return false;
-    }
-  }, []);
+    kpis: buildKpis(current, previous, formatMoney),
+    callInsights: buildCallInsights(current),
+    funnel: buildFunnel(current, previous),
+    leaderboards: buildLeaderboards(current, formatMoney),
+    chartMetrics,
 
-  // Dismissing is not an action on the ad platform, so nothing joins the feed.
-  const dismissSuggestion = useCallback(async (suggestion) => {
-    setData((prev) => ({
-      ...prev,
-      suggestions: prev.suggestions.filter((s) => s.id !== suggestion.id),
-    }));
+    ...rail,
 
-    if (usingFixturesRef.current) return true;
+    loading: groupsLoading,
+    seriesLoading,
+    error: groupsError,
+    hasClients: current.clientCount > 0,
+    hasComparison: previous != null,
+  };
+}
 
-    try {
-      const res = await apiRequest(`/api/portfolio/suggestions/${suggestion.id}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error(`dismiss → ${res.status}`);
-      return true;
-    } catch {
-      setData((prev) => ({
-        ...prev,
-        suggestions: prev.suggestions.some((s) => s.id === suggestion.id)
-          ? prev.suggestions
-          : [suggestion, ...prev.suggestions],
-      }));
-      return false;
-    }
-  }, []);
+// ─── Actions ────────────────────────────────────────────────────────────────
+// The rail's two buttons act against the same endpoints the old homepage used,
+// so a suggestion applied here and one applied there do the same thing.
 
-  return { ...data, loading, unavailable, usingFixtures, applySuggestion, dismissSuggestion };
+export async function applySuggestionRequest(id) {
+  try {
+    const res = await apiRequest(`/api/dashboard/suggestions/${id}/apply`, { method: "POST" });
+    if (!res.ok) return null;
+    return await res.json().catch(() => ({ ok: true }));
+  } catch {
+    return null;
+  }
+}
+
+export async function dismissSuggestionRequest(id) {
+  try {
+    const res = await apiRequest(`/api/dashboard/suggestions/${id}`, { method: "DELETE" });
+    return res.ok;
+  } catch {
+    return false;
+  }
 }

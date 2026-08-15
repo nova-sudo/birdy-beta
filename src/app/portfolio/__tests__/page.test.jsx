@@ -4,18 +4,84 @@ import userEvent from "@testing-library/user-event";
 import PortfolioDashboardPage from "../page";
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
+vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }));
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the page uses.
 vi.mock("../fonts", () => ({ portfolioFontClass: "" }));
 
 import { apiRequest } from "@/lib/api";
+import { useClientGroups } from "@/lib/useClientGroups";
 
-// The portfolio endpoint isn't live yet, so the page falls back to the
-// handoff's figures outside production — which is exactly what these assert
-// against. When the endpoint lands, point this at a fixture response instead.
+/** A client group in the shape GET /api/client-groups actually returns. */
+function group({ id, name, spend, results, won, revenue, contacts = 0, calls = {} }) {
+  return {
+    id,
+    name,
+    client_status: "Active",
+    facebook: { currency: "GBP", metrics: { insights: { spend, results } } },
+    gohighlevel: {
+      metrics: { total_contacts: contacts, opportunity_stats: { won, won_revenue: revenue } },
+    },
+    hotprospector: { call_stats: calls },
+  };
+}
+
+const GROUPS = [
+  group({ id: "a", name: "The Body Room", spend: 100, results: 100, won: 4, revenue: 900, contacts: 80,
+    calls: { total_calls: 120, answered_calls: 60, leads_with_calls: 50, total_leads: 100, total_talk_min: 200 } }),
+  group({ id: "b", name: "Tylaesthetics", spend: 300, results: 100, won: 12, revenue: 2400, contacts: 70,
+    calls: { total_calls: 80, answered_calls: 50, leads_with_calls: 40, total_leads: 100, total_talk_min: 140 } }),
+];
+
+const LEADS = [
+  { created_time: "2026-07-01T09:00:00Z", ghl_opportunity_status: "won" },
+  { created_time: "2026-07-01T11:00:00Z", ghl_opportunity_status: "open" },
+  { created_time: "2026-07-02T09:00:00Z", ghl_opportunity_status: "won" },
+  { created_time: "2026-07-03T09:00:00Z", ghl_opportunity_status: null },
+];
+
+const SUMMARY = {
+  suggestions: [
+    { id: "s1", severity: "HIGH", client: "Palm Peach", title: "Pause 2 underperforming ads", description: "£48 CPL vs £22 target." },
+    { id: "s2", severity: "MEDIUM", client: "Aura", title: "Raise daily budget", description: "Budget capped by 2pm." },
+  ],
+  activity: [
+    { id: "a1", kind: "action_applied", actor: "birdy", title: "Paused 2 ads", client: "Contour", time: "4 min ago" },
+    { id: "a2", kind: "action_applied", actor: "user", title: "Raised budget", client: "Tylaesthetics", time: "1 hr ago" },
+    { id: "a3", kind: "suggestion_created", actor: "birdy", title: "noise", client: "x", time: "2 hrs ago" },
+  ],
+};
+
+function mockEndpoints(overrides = {}) {
+  apiRequest.mockImplementation((url) => {
+    if (url.startsWith("/api/dashboard/summary")) {
+      return Promise.resolve({ ok: true, json: async () => overrides.summary ?? SUMMARY });
+    }
+    if (url.startsWith("/api/facebook-leads/filtered")) {
+      return Promise.resolve({ ok: true, json: async () => ({ leads: overrides.leads ?? LEADS }) });
+    }
+    if (url.startsWith("/api/client-groups")) {
+      // The previous-period fetch. last_14d encloses last_7d, so it reads
+      // higher; the hook subtracts to get the week before.
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({
+          client_groups: overrides.previous ?? [
+            group({ id: "a", name: "The Body Room", spend: 180, results: 180, won: 6, revenue: 1500, contacts: 150 }),
+            group({ id: "b", name: "Tylaesthetics", spend: 500, results: 180, won: 20, revenue: 4000, contacts: 130 }),
+          ],
+        }),
+      });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({}) });
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  apiRequest.mockRejectedValue(new Error("not implemented"));
+  useClientGroups.mockReturnValue({ clientGroups: GROUPS, loading: false, error: null });
+  mockEndpoints();
 });
 
 async function renderPage() {
@@ -23,127 +89,191 @@ async function renderPage() {
   await waitFor(() => expect(screen.getByText("Total ad spend")).toBeInTheDocument());
 }
 
-/** Figures repeat across the strip, chart and funnel — scope to the cell. */
 function kpiCell(label) {
   const strip = screen.getByRole("group", { name: "Portfolio KPIs" });
   return within(strip).getByText(label).closest("div.flex-1");
 }
 
-async function pickTimeframe(user, timeframe) {
-  await user.click(screen.getByRole("button", { name: /Timeframe:/ }));
-  await user.click(screen.getByRole("option", { name: timeframe }));
-}
-
 describe("Portfolio Dashboard", () => {
-  it("renders the portfolio KPIs for the default monthly timeframe", async () => {
+  it("rolls the portfolio up from real client groups", async () => {
     await renderPage();
 
-    expect(within(kpiCell("Total ad spend")).getByText("£142,860")).toBeInTheDocument();
-    expect(within(kpiCell("Total leads")).getByText("24,918")).toBeInTheDocument();
-    expect(within(kpiCell("Average CPL")).getByText("£5.73")).toBeInTheDocument();
-    expect(within(kpiCell("Closed Leads")).getByText("3,182")).toBeInTheDocument();
+    expect(within(kpiCell("Total ad spend")).getByText("£400")).toBeInTheDocument();
+    expect(within(kpiCell("Total leads")).getByText("200")).toBeInTheDocument();
+    // £400 over 200 leads.
+    expect(within(kpiCell("Average CPL")).getByText("£2.00")).toBeInTheDocument();
+    expect(within(kpiCell("Closed Leads")).getByText("16")).toBeInTheDocument();
   });
 
-  it("switches every timeframe-driven figure at once", async () => {
+  it("counts the active clients in the header", async () => {
+    await renderPage();
+    expect(screen.getByText(/2 clients · portfolio-level performance/)).toBeInTheDocument();
+  });
+
+  it("compares against the previous period on a preset that has one", async () => {
+    await renderPage();
+
+    // last_14d spend of £680 minus this week's £400 leaves £280 for the week
+    // before, so spend is up.
+    const spendPill = within(kpiCell("Total ad spend")).getByText(/%$/);
+    expect(spendPill.className).toContain("text-pd-success");
+  });
+
+  it("drops the delta pills entirely on a preset with no comparable period", async () => {
     const user = userEvent.setup();
     await renderPage();
 
-    await pickTimeframe(user, "Weekly");
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
 
-    // KPI strip, chart total and chart subtitle all follow the header.
-    expect(within(kpiCell("Total ad spend")).getByText("£33,410")).toBeInTheDocument();
-    expect(within(kpiCell("Total leads")).getByText("5,842")).toBeInTheDocument();
-    expect(screen.getByText(/^Weekly · Lead volume/)).toBeInTheDocument();
+    await waitFor(() => {
+      const strip = screen.getByRole("group", { name: "Portfolio KPIs" });
+      expect(within(strip).queryByText(/%$/)).not.toBeInTheDocument();
+    });
   });
 
-  it("colours a falling CPL as good and a falling lead count as bad", async () => {
+  it("builds the trend series from dated lead rows", async () => {
+    await renderPage();
+
+    // 1 Jul has two leads, 2 and 3 Jul one each.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1 Jul 2026: 2" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "3 Jul 2026: 1" })).toBeInTheDocument();
+  });
+
+  it("offers no ad-spend chart tab, because no endpoint breaks spend down by day", async () => {
+    await renderPage();
+
+    const tabs = screen.getAllByRole("radio").map((r) => r.textContent);
+    expect(tabs).toEqual(["Leads", "Closes"]);
+  });
+
+  it("plots only won leads on the closes series", async () => {
     const user = userEvent.setup();
     await renderPage();
 
-    // Monthly CPL is down 3.3% — cheaper leads, so green.
-    expect(within(kpiCell("Average CPL")).getByText("3.3%").className).toContain("text-pd-success");
-
-    await pickTimeframe(user, "Daily");
-
-    // Daily leads are down 2.1% — fewer leads, so red.
-    expect(within(kpiCell("Total leads")).getByText("2.1%").className).toContain("text-pd-danger");
-    // And a rising CPL is red too.
-    expect(within(kpiCell("Average CPL")).getByText("2.7%").className).toContain("text-pd-danger");
+    await user.click(screen.getByRole("radio", { name: "Closes" }));
+    // Two won leads, one on 1 Jul and one on 2 Jul.
+    expect(screen.getByRole("button", { name: "1 Jul 2026: 1" })).toBeInTheDocument();
   });
 
-  it("re-ranks the leaderboard when the metric changes", async () => {
+  it("re-buckets the same window when granularity changes", async () => {
     const user = userEvent.setup();
     await renderPage();
 
-    const leaderboard = screen.getByRole("heading", { name: "Top performing clients" }).closest("section");
-    const firstRowBefore = within(leaderboard).getAllByRole("listitem")[0];
-    expect(within(firstRowBefore).getByText("The Body Room")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Chart granularity:/ }));
+    await user.click(screen.getByRole("option", { name: "Monthly" }));
 
-    await user.click(within(leaderboard).getByRole("button", { name: /Rank clients by/ }));
+    // All four leads fall in one month.
+    expect(screen.getByRole("button", { name: "July 2026: 4" })).toBeInTheDocument();
+  });
+
+  it("ranks clients by the chosen metric", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Top performing clients" }).closest("section");
+    // Avg CPL is the default and ranks ascending — £1 beats £3.
+    expect(within(card).getAllByRole("listitem")[0]).toHaveTextContent("The Body Room");
+
+    await user.click(within(card).getByRole("button", { name: /Rank clients by/ }));
     await user.click(screen.getByRole("option", { name: "Revenue" }));
 
-    const firstRowAfter = within(leaderboard).getAllByRole("listitem")[0];
-    expect(within(firstRowAfter).getByText("Tylaesthetics")).toBeInTheDocument();
-    expect(within(firstRowAfter).getByText("£298k")).toBeInTheDocument();
+    expect(within(card).getAllByRole("listitem")[0]).toHaveTextContent("Tylaesthetics");
   });
 
-  it("shows the derived diagnostic for the failing stage", async () => {
+  it("builds a four-stage funnel and stops where the data does", async () => {
     await renderPage();
 
-    expect(screen.getByText("Problem found: close rate")).toBeInTheDocument();
-    expect(screen.getByText(/the drop is at the closing stage/)).toBeInTheDocument();
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    const stages = within(card).getAllByRole("listitem").map((li) => li.textContent);
+
+    expect(stages).toHaveLength(4);
+    expect(stages[0]).toContain("Leads");
+    expect(stages[3]).toContain("Closes");
+    expect(card.textContent).not.toContain("Shows");
   });
 
-  it("swaps rail panels without stacking two scroll areas", async () => {
+  it("computes the call insights from HotProspector stats", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Call insights" }).closest("section");
+    expect(within(card).getByText("200")).toBeInTheDocument(); // 120 + 80 calls
+    expect(within(card).getByText("55.0%")).toBeInTheDocument(); // 110 answered of 200
+  });
+
+  it("shows suggestions from the dashboard summary", async () => {
+    await renderPage();
+    await waitFor(() =>
+      expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument()
+    );
+  });
+
+  it("separates what Birdy did on its own from what the user approved", async () => {
     const user = userEvent.setup();
     await renderPage();
-
-    expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument();
-    expect(screen.queryByText("Rotated in new creative set")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
     await user.click(screen.getByRole("tab", { name: /Activity/ }));
 
-    expect(screen.getByText("Rotated in new creative set")).toBeInTheDocument();
-    expect(screen.queryByText("Pause 2 underperforming ads")).not.toBeInTheDocument();
-    expect(screen.getAllByRole("tabpanel")).toHaveLength(1);
+    expect(screen.getByText("Paused 2 ads").closest("li")).toHaveTextContent("Auto-run");
+    expect(screen.getByText("Raised budget").closest("li")).toHaveTextContent("Approved");
+    // suggestion_created entries are noise in this feed.
+    expect(screen.queryByText("noise")).not.toBeInTheDocument();
   });
 
-  it("moves an applied suggestion into the activity feed", async () => {
+  it("moves an applied suggestion into the feed", async () => {
     const user = userEvent.setup();
+    apiRequest.mockImplementation((url, opts) => {
+      if (url.includes("/apply")) return Promise.resolve({ ok: true, json: async () => ({ succeeded: ["ad1"] }) });
+      if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
+      if (url.startsWith("/api/facebook-leads/filtered")) return Promise.resolve({ ok: true, json: async () => ({ leads: LEADS }) });
+      return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
+    });
+
     await renderPage();
+    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: /Do it for me: Refresh ad creative/ }));
-
-    expect(screen.queryByText("Refresh ad creative")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Do it for me: Pause 2 underperforming ads/ }));
+    await waitFor(() =>
+      expect(screen.queryByText("Pause 2 underperforming ads")).not.toBeInTheDocument()
+    );
 
     await user.click(screen.getByRole("tab", { name: /Activity/ }));
-    expect(screen.getByText("Refresh ad creative")).toBeInTheDocument();
     expect(screen.getByText("just now")).toBeInTheDocument();
   });
 
-  it("removes a dismissed suggestion without recording an action", async () => {
+  it("puts a suggestion back when applying fails", async () => {
     const user = userEvent.setup();
+    apiRequest.mockImplementation((url) => {
+      if (url.includes("/apply")) return Promise.resolve({ ok: false, status: 500 });
+      if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
+      if (url.startsWith("/api/facebook-leads/filtered")) return Promise.resolve({ ok: true, json: async () => ({ leads: LEADS }) });
+      return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
+    });
+
     await renderPage();
+    await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: /Dismiss: Raise daily budget/ }));
-    expect(screen.queryByText("Raise daily budget £20")).not.toBeInTheDocument();
-
-    await user.click(screen.getByRole("tab", { name: /Activity/ }));
-    expect(screen.queryByText("Raise daily budget £20")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Do it for me: Raise daily budget/ }));
+    await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
   });
 
-  it("puts the chart tabs and rail toggle in one tab stop each", async () => {
-    await renderPage();
+  it("says so when there are no active clients rather than showing zeroes", async () => {
+    useClientGroups.mockReturnValue({ clientGroups: [], loading: false, error: null });
+    render(<PortfolioDashboardPage />);
 
-    const radios = screen.getAllByRole("radio");
-    expect(radios.filter((r) => r.tabIndex === 0)).toHaveLength(1);
-
-    const tabs = screen.getAllByRole("tab");
-    expect(tabs.filter((t) => t.tabIndex === 0)).toHaveLength(1);
+    await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
+    expect(screen.queryByRole("group", { name: "Portfolio KPIs" })).not.toBeInTheDocument();
   });
 
-  it("names each chart point for readers who can't see the tooltip", async () => {
-    await renderPage();
-    expect(screen.getByRole("button", { name: "Aug 2025: 1,404" })).toBeInTheDocument();
+  it("distinguishes a failed load from an empty portfolio", async () => {
+    useClientGroups.mockReturnValue({ clientGroups: [], loading: false, error: "HTTP 503" });
+    render(<PortfolioDashboardPage />);
+
+    await waitFor(() =>
+      expect(screen.getByText("Couldn't load your portfolio")).toBeInTheDocument()
+    );
   });
 });
