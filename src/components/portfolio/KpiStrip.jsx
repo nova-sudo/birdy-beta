@@ -14,7 +14,11 @@ const CHIPS = {
 /** Four portfolio aggregates in one strip, divided by hairlines. */
 export function KpiStrip({ kpis }) {
   return (
-    <div className="mb-[18px] flex rounded-[14px] border border-pd-border bg-pd-surface">
+    <div
+      role="group"
+      aria-label="Portfolio KPIs"
+      className="mb-[18px] flex rounded-[14px] border border-pd-border bg-pd-surface"
+    >
       {kpis.map((kpi, i) => {
         const chip = CHIPS[kpi.icon];
         const Icon = chip.Icon;

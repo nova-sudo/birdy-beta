@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import {
   ACTIVITY,
@@ -87,6 +87,8 @@ export function usePortfolioData() {
   // says so rather than implying the portfolio has no clients.
   const [unavailable, setUnavailable] = useState(false);
   const [usingFixtures, setUsingFixtures] = useState(false);
+  // Read inside the action callbacks, which must not be rebuilt when it flips.
+  const usingFixturesRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -101,6 +103,7 @@ export function usePortfolioData() {
         setData({ ...EMPTY_PAYLOAD, ...payload });
         setUnavailable(false);
         setUsingFixtures(false);
+        usingFixturesRef.current = false;
       } catch {
         if (cancelled) return;
 
@@ -108,6 +111,7 @@ export function usePortfolioData() {
           setData(FIXTURE_PAYLOAD);
           setUsingFixtures(true);
           setUnavailable(false);
+          usingFixturesRef.current = true;
         } else {
           setData(EMPTY_PAYLOAD);
           setUnavailable(true);
@@ -141,6 +145,11 @@ export function usePortfolioData() {
       activityCount: prev.activityCount + 1,
     }));
 
+    // On fixtures there is no endpoint to confirm against, and rolling the
+    // change back would make the rail untestable by hand — the card would
+    // reappear the moment you acted on it.
+    if (usingFixturesRef.current) return true;
+
     try {
       const res = await apiRequest(`/api/portfolio/suggestions/${suggestion.id}/apply`, {
         method: "POST",
@@ -166,6 +175,8 @@ export function usePortfolioData() {
       ...prev,
       suggestions: prev.suggestions.filter((s) => s.id !== suggestion.id),
     }));
+
+    if (usingFixturesRef.current) return true;
 
     try {
       const res = await apiRequest(`/api/portfolio/suggestions/${suggestion.id}`, {

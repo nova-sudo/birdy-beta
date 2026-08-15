@@ -35,6 +35,17 @@ Call-center performance across HotProspector clients. Tabs:
 
 All tabs share the same layout: a `Tabs`/`TabsList` header, a search box + column-visibility dropdown toolbar, and a `StyledTable` (`src/components/ui/table-container.jsx`) for the data grid.
 
+### Portfolio Dashboard (`src/app/portfolio/page.jsx`)
+
+Agency-level view across every client: portfolio KPIs, a switchable trend chart,
+a client leaderboard, a diagnostic funnel, call-centre metrics, and a rail of
+Birdy suggestions and activity. Built from the `variant 3e` design handoff.
+
+It runs on its own `pd-*` design tokens (declared in `src/app/globals.css`) and
+its own typefaces, both scoped to the route — see
+[`src/app/portfolio/README.md`](src/app/portfolio/README.md) for the backend
+contract, the shared-state model, and the deliberate deviations from the design.
+
 ## Billing & Payments (Whop)
 
 Billing runs on [Whop](https://docs.whop.com/). New subscriptions use Whop's
