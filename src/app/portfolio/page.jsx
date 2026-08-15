@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
+import { kpisForTimeframe } from "./fixtures";
 import { portfolioFontClass } from "./fonts";
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
@@ -21,6 +23,8 @@ export default function PortfolioDashboardPage() {
   // at the page level rather than inside either.
   const [timeframe, setTimeframe] = useState("Monthly");
 
+  const kpis = useMemo(() => kpisForTimeframe(timeframe), [timeframe]);
+
   return (
     <div
       className={`${portfolioFontClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border-strong bg-pd-canvas`}
@@ -35,8 +39,7 @@ export default function PortfolioDashboardPage() {
       <div className="flex min-h-0 flex-1">
         {/* Content column */}
         <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-          {/* KPI strip — PR-03 */}
-          <div className="mb-[18px] h-[74px] rounded-[14px] border border-pd-border bg-pd-surface" />
+          <KpiStrip kpis={kpis} />
 
           {/* Trend chart — PR-04/05 */}
           <div className="mb-[18px] h-[340px] rounded-[16px] border border-pd-border bg-pd-surface" />
