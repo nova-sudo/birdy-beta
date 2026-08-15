@@ -46,7 +46,36 @@ function isWon(lead) {
 }
 
 export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "Daily" } = {}) {
-  const { clientGroups, loading: groupsLoading, error: groupsError } = useClientGroups(preset);
+  // useClientGroups takes its argument as an *initial* value — it holds the
+  // preset in its own state and expects callers to move it with setDatePreset.
+  // Passing a new one on re-render does nothing, so the date range has to be
+  // pushed in explicitly or the client groups stay on whatever was asked for
+  // first while everything fetched here quietly moves on without them.
+  const {
+    clientGroups,
+    loading: groupsLoading,
+    error: groupsError,
+    datePreset,
+    setDatePreset,
+  } = useClientGroups(preset);
+
+  useEffect(() => {
+    if (datePreset !== preset) setDatePreset(preset);
+  }, [preset, datePreset, setDatePreset]);
+
+  // The lead fetch keys off this rather than the array itself: which clients
+  // are in the portfolio is what the request depends on, and an identity check
+  // on the array would re-fire on any render that happened to rebuild it.
+  const groupIds = useMemo(
+    () => (clientGroups ?? []).map((g) => g.id).join(","),
+    [clientGroups]
+  );
+
+  // One render sits between asking for a window and the fetch for it starting.
+  // Without this the screen would show the old window's figures under the new
+  // window's label — the one wrong state worse than a spinner.
+  const presetSyncing = datePreset !== preset;
+
   const { currencySymbol } = useCurrency("GBP");
 
   const [previousGroups, setPreviousGroups] = useState(null);
@@ -96,8 +125,11 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
 
   // ── Lead rows, for the trend chart and its closes series ────────────────
   useEffect(() => {
-    if (groupsLoading) return;
-    if (!clientGroups?.length) {
+    // Wait for the groups to match the requested window before fetching leads
+    // for it — otherwise the series is built for one window and the group ids
+    // come from another.
+    if (groupsLoading || presetSyncing) return;
+    if (!groupIds) {
       setLeads([]);
       setSeriesLoading(false);
       return;
@@ -109,7 +141,6 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
     (async () => {
       setSeriesLoading(true);
       try {
-        const groupIds = clientGroups.map((g) => g.id).join(",");
         const { start_date, end_date } = presetToDateRange(preset);
         const params = new URLSearchParams({ groups: groupIds, limit: String(LEADS_FETCH_LIMIT) });
         if (start_date) params.set("start_date", start_date);
@@ -133,7 +164,7 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
       cancelled = true;
       controller.abort();
     };
-  }, [clientGroups, groupsLoading, preset]);
+  }, [groupIds, groupsLoading, presetSyncing, preset]);
 
   // ── Suggestions and activity ────────────────────────────────────────────
   useEffect(() => {
@@ -238,8 +269,8 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
 
     ...rail,
 
-    loading: groupsLoading,
-    seriesLoading,
+    loading: groupsLoading || presetSyncing,
+    seriesLoading: seriesLoading || presetSyncing,
     error: groupsError,
     hasClients: current.clientCount > 0,
     hasComparison: previous != null,

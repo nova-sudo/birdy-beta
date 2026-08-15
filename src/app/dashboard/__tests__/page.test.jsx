@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -81,9 +82,31 @@ function mockEndpoints(overrides = {}) {
   });
 }
 
+/**
+ * A stand-in that behaves the way the real useClientGroups does — including the
+ * part that bit: the preset argument is only an *initial* value, and the only
+ * way to move the window is the setDatePreset it hands back. A mock that simply
+ * echoed its argument would pass whether or not the page wires that up.
+ */
+const NO_GROUPS = [];
+
+function fakeUseClientGroups(groupsByPreset, { loading = false, error = null } = {}) {
+  return (initialPreset) => {
+    const [datePreset, setDatePreset] = useState(initialPreset);
+    return {
+      // A fresh [] per render would make every effect keyed on this re-fire.
+      clientGroups: groupsByPreset[datePreset] ?? NO_GROUPS,
+      loading,
+      error,
+      datePreset,
+      setDatePreset,
+    };
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
-  useClientGroups.mockReturnValue({ clientGroups: GROUPS, loading: false, error: null });
+  useClientGroups.mockImplementation(fakeUseClientGroups({ last_7d: GROUPS }));
   mockEndpoints();
 });
 
@@ -122,8 +145,81 @@ describe("Portfolio Dashboard", () => {
     expect(spendPill.className).toContain("text-pd-success");
   });
 
+  it("refetches every figure when the date range changes", async () => {
+    const user = userEvent.setup();
+    // A different window has to yield different numbers, or the assertion
+    // below would pass on stale data.
+    useClientGroups.mockImplementation(
+      fakeUseClientGroups({
+        last_7d: GROUPS,
+        last_30d: [
+          group({ id: "a", name: "The Body Room", spend: 1000, results: 500, won: 40, revenue: 9000, contacts: 400 }),
+        ],
+      })
+    );
+
+    await renderPage();
+    expect(within(kpiCell("Total ad spend")).getByText("£400")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
+
+    // The client-group figures have to move with the window, not just the
+    // chart series this hook fetches for itself.
+    await waitFor(() =>
+      expect(within(kpiCell("Total ad spend")).getByText("£1,000")).toBeInTheDocument()
+    );
+    expect(within(kpiCell("Total leads")).getByText("500")).toBeInTheDocument();
+    expect(within(kpiCell("Closed Leads")).getByText("40")).toBeInTheDocument();
+    expect(screen.getByText(/1 client · portfolio-level performance/)).toBeInTheDocument();
+  });
+
+  it("re-ranks the leaderboard off the new window's clients", async () => {
+    const user = userEvent.setup();
+    useClientGroups.mockImplementation(
+      fakeUseClientGroups({
+        last_7d: GROUPS,
+        this_month: [
+          group({ id: "c", name: "Aura", spend: 50, results: 50, won: 9, revenue: 700, contacts: 40 }),
+        ],
+      })
+    );
+
+    const leaderboard = () =>
+      screen.getByRole("heading", { name: "Top performing clients" }).closest("section");
+
+    await renderPage();
+    expect(within(leaderboard()).getAllByRole("listitem")[0]).toHaveTextContent("The Body Room");
+
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "This Month" }));
+
+    await waitFor(() =>
+      expect(within(leaderboard()).getAllByRole("listitem")[0]).toHaveTextContent("Aura")
+    );
+  });
+
+  it("never shows one window's figures under another window's label", async () => {
+    const user = userEvent.setup();
+    useClientGroups.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS, last_30d: [] })
+    );
+
+    await renderPage();
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
+
+    // The empty 30-day window must not leave the 7-day totals on screen.
+    await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
+    expect(screen.queryByText("£400")).not.toBeInTheDocument();
+  });
+
   it("drops the delta pills entirely on a preset with no comparable period", async () => {
     const user = userEvent.setup();
+    // Same clients either side — this is about the comparison, not the window.
+    useClientGroups.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
+    );
     await renderPage();
 
     await user.click(screen.getByRole("button", { name: /Date range:/ }));
@@ -286,7 +382,7 @@ describe("Portfolio Dashboard", () => {
   });
 
   it("says so when there are no active clients rather than showing zeroes", async () => {
-    useClientGroups.mockReturnValue({ clientGroups: [], loading: false, error: null });
+    useClientGroups.mockImplementation(fakeUseClientGroups({}));
     render(<PortfolioDashboardPage />);
 
     await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
@@ -294,7 +390,7 @@ describe("Portfolio Dashboard", () => {
   });
 
   it("distinguishes a failed load from an empty portfolio", async () => {
-    useClientGroups.mockReturnValue({ clientGroups: [], loading: false, error: "HTTP 503" });
+    useClientGroups.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
     render(<PortfolioDashboardPage />);
 
     await waitFor(() =>

@@ -70,6 +70,19 @@ summed campaign results, then `total_leads` — because older cached insights
 only carry the last one, and skipping the ladder makes whole clients read as
 zero-lead.
 
+### The date range
+
+`useClientGroups` takes its preset as an **initial** value — it holds the window
+in its own state and expects callers to move it with the `setDatePreset` it
+returns. Passing a new preset on re-render does nothing. `usePortfolioData`
+therefore pushes the change in explicitly and holds `loading` until the groups
+match the window that was asked for, so the screen never shows one window's
+figures under another window's label.
+
+Everything except the right rail follows the date range. Suggestions, wins and
+activity come from `/api/dashboard/summary`, which takes no date parameters —
+they describe what needs attention now rather than what happened in a window.
+
 ### Deltas
 
 `/api/client-groups` only speaks in date presets, so a previous period has to
