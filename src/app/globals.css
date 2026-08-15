@@ -378,6 +378,56 @@
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 
+/* ═══════════════════════════════════════════════════════════════
+   Portfolio Dashboard chart motion
+   ═══════════════════════════════════════════════════════════════ */
+
+/* The line draws itself by walking a dash offset the length of the path, and
+   the gradient area fades in behind it. Both replay whenever the metric or
+   timeframe changes — the chart element is keyed on that pair, so React
+   remounts it and the animations restart from the top. */
+@keyframes pd-chart-draw {
+  from { stroke-dashoffset: 2400; }
+  to   { stroke-dashoffset: 0; }
+}
+
+@keyframes pd-chart-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pd-tooltip-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pd-chart-line {
+  stroke-dasharray: 2400;
+  animation: pd-chart-draw 800ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.pd-chart-area {
+  animation: pd-chart-fade 800ms ease-out forwards;
+}
+
+.pd-tooltip {
+  animation: pd-tooltip-in 120ms ease-out;
+}
+
+/* Redrawing the whole series on every switch is exactly the kind of motion
+   reduced-motion users are asking us to skip — show the finished line. */
+@media (prefers-reduced-motion: reduce) {
+  .pd-chart-line {
+    stroke-dasharray: none;
+    animation: none;
+  }
+
+  .pd-chart-area,
+  .pd-tooltip {
+    animation: none;
+  }
+}
+
 /* Portfolio Dashboard scroll areas — the design specs a wider, tinted
    thumb than the 6px global one. */
 .pd-scrolly { overflow-y: auto; scrollbar-color: var(--pd-scroll) transparent; }

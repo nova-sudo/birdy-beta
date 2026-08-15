@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo } from "react";
+import { useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { buildChartGeometry } from "@/lib/portfolio-chart";
 import { deltaTone } from "@/lib/portfolio-metrics";
@@ -15,8 +15,9 @@ const GRID_LINES = 5;
  * spend, daily calls all trend down). Every other delta on this screen is
  * coloured by direction, so this one is too.
  */
-export function TrendChart({ chart, metrics, activeMetric, onMetricChange }) {
+export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redrawKey }) {
   const fillId = useId();
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const { points, linePath, areaPath } = useMemo(
     () => buildChartGeometry(chart.values),
     [chart.values]
@@ -74,7 +75,10 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange }) {
           ))}
         </div>
 
+        {/* Keying on metric + timeframe remounts the paths, which is what makes
+            the draw and fade animations replay on every switch. */}
         <svg
+          key={redrawKey}
           viewBox="0 0 1000 200"
           preserveAspectRatio="none"
           className="absolute inset-0 size-full"
@@ -86,8 +90,9 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange }) {
               <stop offset="100%" stopColor="var(--pd-primary)" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={areaPath} fill={`url(#${fillId})`} />
+          <path className="pd-chart-area" d={areaPath} fill={`url(#${fillId})`} />
           <path
+            className="pd-chart-line"
             d={linePath}
             fill="none"
             stroke="var(--pd-primary)"
@@ -101,16 +106,32 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange }) {
         </svg>
 
         {/* Dots are HTML rather than SVG so they stay circular under the
-            stretched viewBox, and so a tooltip can hang off them in PR-05. */}
+            stretched viewBox, and so the tooltip can hang off them. */}
         {points.map((point, i) => (
           <div
             key={i}
+            onMouseEnter={() => setHoveredIndex(i)}
+            onMouseLeave={() => setHoveredIndex((current) => (current === i ? null : current))}
             className={cn(
-              "absolute -mt-[5px] -ml-[5px] size-[10px] rounded-full border-2 border-white",
+              "absolute -mt-[5px] -ml-[5px] size-[10px] cursor-pointer rounded-full border-2 border-white",
               i === lastIndex ? "bg-pd-primary shadow-pd-glow" : "bg-pd-primary-light"
             )}
             style={{ left: `${point.xPercent.toFixed(2)}%`, top: `${point.yPercent.toFixed(2)}%` }}
-          />
+          >
+            {/* A 10px dot is a mean hit target — widen it without moving it. */}
+            <span className="absolute -inset-2" aria-hidden="true" />
+
+            {hoveredIndex === i && (
+              <div className="pd-tooltip pointer-events-none absolute bottom-[15px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-pd-ink px-[10px] py-1.5 text-white shadow-pd-tooltip">
+                <div className="font-pd-display text-[12.5px] font-bold leading-none">
+                  {chart.pointValues[i]}
+                </div>
+                <div className="mt-[3px] text-[10.5px] text-pd-primary-pale">
+                  {chart.tooltipLabels[i]}
+                </div>
+              </div>
+            )}
+          </div>
         ))}
       </div>
 

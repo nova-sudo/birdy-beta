@@ -52,6 +52,7 @@ export default function PortfolioDashboardPage() {
             metrics={CHART_TABS}
             activeMetric={chartMetric}
             onMetricChange={setChartMetric}
+            redrawKey={`${chartMetric}-${timeframe}`}
           />
 
           {/* Top clients + performance funnel — PR-06/07 */}
