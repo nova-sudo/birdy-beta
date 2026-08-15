@@ -20,6 +20,7 @@ export function SidePanel({
   id = "pd-side-panel",
   emptyMessage = "Nothing here right now",
   className = "w-[340px]",
+  itemClassName = "flex-1 p-2",
 }) {
   const current = panels.find((p) => p.key === active) ?? panels[0];
 
@@ -38,7 +39,7 @@ export function SidePanel({
           }))}
           value={current.key}
           onChange={onChange}
-          itemClassName="flex-1 p-2"
+          itemClassName={itemClassName}
         />
       </div>
 

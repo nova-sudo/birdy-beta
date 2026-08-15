@@ -46,6 +46,9 @@ const SUMMARY = {
     { id: "s1", severity: "HIGH", client: "Palm Peach", title: "Pause 2 underperforming ads", description: "£48 CPL vs £22 target." },
     { id: "s2", severity: "MEDIUM", client: "Aura", title: "Raise daily budget", description: "Budget capped by 2pm." },
   ],
+  wins: [
+    { id: "w1", client: "The Body Room", title: "CPL down 22% this week", description: "Cheapest leads since March." },
+  ],
   activity: [
     { id: "a1", kind: "action_applied", actor: "birdy", title: "Paused 2 ads", client: "Contour", time: "4 min ago" },
     { id: "a2", kind: "action_applied", actor: "user", title: "Raised budget", client: "Tylaesthetics", time: "1 hr ago" },
@@ -258,6 +261,28 @@ describe("Portfolio Dashboard", () => {
 
     await user.click(screen.getByRole("button", { name: /Do it for me: Raise daily budget/ }));
     await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
+  });
+
+  it("keeps client wins reachable, which the page it replaces owned", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: /Wins/ }));
+    expect(screen.getByText("CPL down 22% this week")).toBeInTheDocument();
+  });
+
+  it("marks a win done", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("tab", { name: /Wins/ }));
+    await user.click(screen.getByRole("button", { name: /Mark done: CPL down 22%/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("CPL down 22% this week")).not.toBeInTheDocument()
+    );
   });
 
   it("says so when there are no active clients rather than showing zeroes", async () => {

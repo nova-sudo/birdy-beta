@@ -51,7 +51,12 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
 
   const [previousGroups, setPreviousGroups] = useState(null);
   const [leads, setLeads] = useState([]);
-  const [rail, setRail] = useState({ suggestions: [], activity: [], activityCount: 0 });
+  const [rail, setRail] = useState({
+    suggestions: [],
+    activity: [],
+    activityCount: 0,
+    wins: [],
+  });
   const [seriesLoading, setSeriesLoading] = useState(true);
 
   const formatMoney = useCallback(
@@ -161,9 +166,19 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
               time: a.time ?? "",
             })),
           activityCount: (data.activity ?? []).length,
+          // Client wins had no home outside the page this screen replaces, so
+          // they move into the rail rather than disappearing with it.
+          wins: (data.wins ?? []).map((w) => ({
+            id: w.id,
+            client: w.client ?? "",
+            title: w.title ?? "",
+            why: w.description ?? "",
+          })),
         });
       } catch {
-        if (!cancelled) setRail({ suggestions: [], activity: [], activityCount: 0 });
+        if (!cancelled) {
+          setRail({ suggestions: [], activity: [], activityCount: 0, wins: [] });
+        }
       }
     })();
 
@@ -242,6 +257,15 @@ export async function applySuggestionRequest(id) {
     return await res.json().catch(() => ({ ok: true }));
   } catch {
     return null;
+  }
+}
+
+export async function completeWinRequest(id) {
+  try {
+    const res = await apiRequest(`/api/dashboard/wins/${id}/complete`, { method: "POST" });
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

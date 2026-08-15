@@ -1,10 +1,10 @@
-# Portfolio Dashboard
+# Dashboard (Portfolio)
 
 The agency-level view: **across all clients, what is happening and where is the
 problem?** Built from the `Birdy — Portfolio Dashboard (variant 3e)` design
 handoff.
 
-Route: `/portfolio`.
+Route: `/dashboard` — this is the app home screen.
 
 ## Layout
 
@@ -26,6 +26,7 @@ PortfolioHeader          title · timeframe picker · date range
 | `presentation.js` | Which icon and tone each metric wears |
 | `fonts.js` | Poppins + Inter, scoped to this route |
 | `src/components/portfolio/` | The data-agnostic component set |
+| `useDashboardData.js` | Legacy hook, still used by `clients/[id]` for its activity feed |
 | `src/lib/portfolio-aggregate.js` | Client groups → KPIs, funnel, leaderboards (pure) |
 | `src/lib/portfolio-series.js` | Bucketing and previous-period mapping (pure) |
 | `src/lib/portfolio-chart.js` | Chart geometry (pure) |
@@ -39,7 +40,7 @@ PortfolioHeader          title · timeframe picker · date range
 | `granularity` | `Daily` | How finely the chart buckets that window |
 | `chartMetric` | `leads` | Which series is plotted |
 | `topMetric` | first available | Leaderboard ranking |
-| `panel` | `suggestions` | Which rail panel renders |
+| `panel` | `suggestions` | Which rail panel renders — Suggestions, Wins or Activity |
 
 The handoff blurred these first two into one "timeframe" control. They are
 different questions — which window, and how finely to slice it — so they are
@@ -59,7 +60,8 @@ Everything is real, from endpoints that already existed:
 | `/api/client-groups?date_preset=<previous>` | The delta pills |
 | `/api/facebook-leads/filtered` | The trend series (leads and closes) |
 | `/api/dashboard/summary` | Suggestions and activity |
-| `/api/dashboard/suggestions/:id/apply` `DELETE :id` | The rail's two buttons |
+| `/api/dashboard/suggestions/:id/apply` `DELETE :id` | Do it / Dismiss |
+| `/api/dashboard/wins/:id/complete` | Mark a win done |
 
 Field paths mirror what `components/ui/table-container.jsx` already reads, so
 this screen and the clients table can't drift into disagreeing about what
@@ -116,6 +118,23 @@ stage falling by more than 1% and, when the stage feeding it is rising,
 contrasts the two — that contrast is what says the problem is one step rather
 than lead flow. Below the threshold it names the strongest stage instead.
 
+## What this screen replaced
+
+It took over `/dashboard` from a page that listed Birdy suggestions, triggered
+alerts and client wins as tabs, with an activity feed beside them. Of those:
+
+* **Suggestions** and **activity** are the right rail, on the same endpoints.
+* **Client wins** are a third rail panel. They had no home outside the page this
+  replaced, so they moved rather than disappearing with it.
+* **Triggered alerts** are not carried over — `/alerts` already lists them, and
+  the old tab was a second view of the same store.
+* **Suggestion strictness** (the `PUT /api/dashboard/settings` control) has no
+  home yet. It is a preference rather than a portfolio figure, so `/settings` is
+  the natural place, but that move is not made here.
+
+`useDashboardData.js` stays because `clients/[id]` imports it for its own
+activity feed.
+
 ## Deviations from the handoff
 
 These are deliberate. Everything else matches the design's tokens.
@@ -142,7 +161,7 @@ These are deliberate. Everything else matches the design's tokens.
 ## Tests
 
 ```bash
-npx vitest run src/app/portfolio src/lib/__tests__
+npx vitest run src/app/dashboard src/lib/__tests__
 ```
 
 84 tests. The pure modules are covered directly — chart geometry, delta

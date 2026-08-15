@@ -69,16 +69,21 @@ export function PdSegmented({
             onClick={() => onChange(option.key)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              "flex cursor-pointer items-center justify-center gap-[7px] rounded-lg font-pd-display text-[12.5px] font-semibold",
+              "flex min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-lg font-pd-display text-[12.5px] font-semibold",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
               selected ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "bg-transparent text-pd-muted",
               itemClassName
             )}
           >
-            {option.label}
+            {/* A third panel makes these tight in a 340px rail; the label gives
+                way before the count does, since the count is the scannable bit. */}
+            <span className="truncate">{option.label}</span>
             {option.badge != null && (
               <span
-                className={cn("rounded-[5px] px-1.5 py-px text-[10.5px] font-bold", option.badgeClassName)}
+                className={cn(
+                  "shrink-0 rounded-[5px] px-1.5 py-px text-[10.5px] font-bold",
+                  option.badgeClassName
+                )}
               >
                 {option.badge}
               </span>
