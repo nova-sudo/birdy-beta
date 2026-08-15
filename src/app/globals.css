@@ -108,9 +108,54 @@
     --purple-800: #5b4294;
     --purple-900: #4a347b;
     --purple-950: #2e1f50;
+
+    /* ── Portfolio Dashboard palette ─────────────────────────────
+       Handoff "Birdy — Portfolio Dashboard (variant 3e)". These are
+       literal hex from the design tokens table and deliberately sit
+       outside the semantic scale above: the screen is specced at high
+       fidelity, so its greys and tints are exact rather than derived.
+       Registered under @theme below as the pd-* colour scale.       */
+    --pd-primary: #6B4EE6;
+    --pd-primary-tint: #F1EEFC;
+    --pd-primary-light: #A98BF5;
+    --pd-primary-pale: #C9BEF3;
+    --pd-ink: #1F1B33;
+    --pd-body: #5A5A6E;
+    --pd-muted: #6B6480;
+    --pd-subtle: #8A8A9A;
+    --pd-faint: #9A9AAB;
+    --pd-divider: #F1F1F5;
+    --pd-border: #ECECF2;
+    --pd-border-strong: #E3E3EC;
+    --pd-chevron: #CFCFDA;
+    --pd-surface: #ffffff;
+    --pd-canvas: #F7F7FB;
+    --pd-scroll: #DEDCE8;
+    --pd-success: #25A55F;
+    --pd-success-bg: #EDF8F1;
+    --pd-danger: #E5484D;
+    --pd-danger-bg: #FEF1F1;
+    --pd-danger-surface: #FEF6F6;
+    --pd-danger-border: #F8DEDE;
+    --pd-danger-tint: #F3FAF6;
+    --pd-warning: #E0920A;
+    --pd-warning-bg: #FDF6EC;
+    --pd-amber: #B4530A;
+    --pd-amber-bg: #FDF1E7;
+    --pd-info: #3B7DD6;
+    --pd-info-bg: #EAF1FD;
+    --pd-healthy-surface: #F3FAF6;
+    --pd-healthy-border: #D5EEDF;
+    --pd-neutral-badge: #E7E7ED;
+
+    /* Shadows — one per role in the design's shadow table. */
+    --pd-shadow-segment: 0 2px 8px -2px rgba(107, 78, 230, 0.35);
+    --pd-shadow-popover: 0 14px 34px -12px rgba(30, 25, 60, 0.28);
+    --pd-shadow-tooltip: 0 6px 16px -6px rgba(30, 25, 60, 0.5);
+    --pd-shadow-glow: 0 0 0 4px rgba(107, 78, 230, 0.18);
   }
 
-  
+
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -162,6 +207,46 @@
   --color-purple-800: var(--purple-800);
   --color-purple-900: var(--purple-900);
   --color-purple-950: var(--purple-950);
+
+  /* Portfolio Dashboard palette */
+  --color-pd-primary: var(--pd-primary);
+  --color-pd-primary-tint: var(--pd-primary-tint);
+  --color-pd-primary-light: var(--pd-primary-light);
+  --color-pd-primary-pale: var(--pd-primary-pale);
+  --color-pd-ink: var(--pd-ink);
+  --color-pd-body: var(--pd-body);
+  --color-pd-muted: var(--pd-muted);
+  --color-pd-subtle: var(--pd-subtle);
+  --color-pd-faint: var(--pd-faint);
+  --color-pd-divider: var(--pd-divider);
+  --color-pd-border: var(--pd-border);
+  --color-pd-border-strong: var(--pd-border-strong);
+  --color-pd-chevron: var(--pd-chevron);
+  --color-pd-surface: var(--pd-surface);
+  --color-pd-canvas: var(--pd-canvas);
+  --color-pd-success: var(--pd-success);
+  --color-pd-success-bg: var(--pd-success-bg);
+  --color-pd-danger: var(--pd-danger);
+  --color-pd-danger-bg: var(--pd-danger-bg);
+  --color-pd-danger-surface: var(--pd-danger-surface);
+  --color-pd-danger-border: var(--pd-danger-border);
+  --color-pd-warning: var(--pd-warning);
+  --color-pd-warning-bg: var(--pd-warning-bg);
+  --color-pd-amber: var(--pd-amber);
+  --color-pd-amber-bg: var(--pd-amber-bg);
+  --color-pd-info: var(--pd-info);
+  --color-pd-info-bg: var(--pd-info-bg);
+  --color-pd-healthy-surface: var(--pd-healthy-surface);
+  --color-pd-healthy-border: var(--pd-healthy-border);
+  --color-pd-neutral-badge: var(--pd-neutral-badge);
+
+  --shadow-pd-segment: var(--pd-shadow-segment);
+  --shadow-pd-popover: var(--pd-shadow-popover);
+  --shadow-pd-tooltip: var(--pd-shadow-tooltip);
+  --shadow-pd-glow: var(--pd-shadow-glow);
+
+  --font-pd-display: var(--font-poppins);
+  --font-pd-body: var(--font-inter);
 
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -292,6 +377,13 @@
 /* Scrollbar hiding utility */
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+
+/* Portfolio Dashboard scroll areas — the design specs a wider, tinted
+   thumb than the 6px global one. */
+.pd-scrolly { overflow-y: auto; scrollbar-color: var(--pd-scroll) transparent; }
+.pd-scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+.pd-scrolly::-webkit-scrollbar-thumb { background: var(--pd-scroll); border-radius: 5px; }
+.pd-scrolly::-webkit-scrollbar-thumb:hover { background: var(--pd-scroll); }
 
 /* ═══════════════════════════════════════════════════════════════
    Magical Shimmer Input (AskBirdy search)
