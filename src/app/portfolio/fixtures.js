@@ -42,6 +42,56 @@ export const KPIS = {
   },
 };
 
+// ─── Right rail ─────────────────────────────────────────────────────────────
+
+export const SUGGESTIONS = [
+  {
+    id: "s1",
+    severity: "HIGH",
+    client: "Palm Peach Body Sculpt",
+    title: "Pause 2 underperforming ads",
+    why: "£48 CPL vs £22 target · 0 leads in 5 days · £312 spent.",
+  },
+  {
+    id: "s2",
+    severity: "OPPORTUNITY",
+    client: "BBL Body Confidence",
+    title: "Scale winning ad set +20%",
+    why: "ROAS holding at 4.9x with CPL down 18% over 7 days.",
+  },
+  {
+    id: "s3",
+    severity: "MEDIUM",
+    client: "The Body Room",
+    title: "Refresh ad creative",
+    why: "CTR fell 4.8% → 2.1% while frequency climbed to 3.4.",
+  },
+  {
+    id: "s4",
+    severity: "MEDIUM",
+    client: "Aura",
+    title: "Raise daily budget £20",
+    why: "Hitting budget cap by 2pm — losing afternoon lead volume.",
+  },
+];
+
+// "Auto-run" is Birdy acting under standing approval; "Approved" is a change
+// the user signed off. The distinction is the whole point of the feed — an
+// owner needs to see at a glance what happened without them.
+export const ACTIVITY = [
+  { id: "a1", action: "Paused 2 ads over CPL threshold", client: "Contour Aesthetics By Abi", mode: "Auto-run", time: "4 min ago" },
+  { id: "a2", action: "Increased daily budget to £48", client: "Tylaesthetics", mode: "Approved", time: "22 min ago" },
+  { id: "a3", action: "Rotated in new creative set", client: "The Body Room", mode: "Approved", time: "1 hr ago" },
+  { id: "a4", action: "Paused ad set — zero conversions", client: "Thee Vision Studio", mode: "Auto-run", time: "2 hrs ago" },
+  { id: "a5", action: "Reallocated £120 to top ad set", client: "The Contour Co", mode: "Approved", time: "3 hrs ago" },
+  { id: "a6", action: "Fixed GHL lead sync mapping", client: "Konfidence Clinic", mode: "Auto-run", time: "4 hrs ago" },
+  { id: "a7", action: "Lowered bid cap to £18", client: "Casey Beauty", mode: "Approved", time: "5 hrs ago" },
+  { id: "a8", action: "Duplicated winning ad set", client: "Beauty Hub Mcr", mode: "Approved", time: "6 hrs ago" },
+];
+
+/** The feed shows a page of entries; the badge counts everything behind it. */
+export const ACTIVITY_TOTAL = 14;
+
 // ─── Call insights ──────────────────────────────────────────────────────────
 // Order is deliberate and worth preserving: volume → speed → contact quality →
 // effort → outcome. Three of the six improve as they fall, which is what the

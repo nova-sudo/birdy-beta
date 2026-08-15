@@ -5,12 +5,16 @@ import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
 import { CallInsights } from "@/components/portfolio/CallInsights";
 import { PerformanceFunnel } from "@/components/portfolio/PerformanceFunnel";
+import { RightRail } from "@/components/portfolio/RightRail";
 import { TopClients } from "@/components/portfolio/TopClients";
 import { TrendChart } from "@/components/portfolio/TrendChart";
 import {
+  ACTIVITY,
+  ACTIVITY_TOTAL,
   CALL_INSIGHTS,
   CHART_METRICS,
   FUNNEL_STAGES,
+  SUGGESTIONS,
   TOP_CLIENTS,
   TOP_CLIENT_METRICS,
   chartForMetric,
@@ -39,9 +43,36 @@ export default function PortfolioDashboardPage() {
   const [timeframe, setTimeframe] = useState("Monthly");
   const [chartMetric, setChartMetric] = useState("leads");
   const [topMetric, setTopMetric] = useState("Avg CPL");
+  const [panel, setPanel] = useState("suggestions");
+  const [suggestions, setSuggestions] = useState(SUGGESTIONS);
+  const [activity, setActivity] = useState(ACTIVITY);
+  const [activityTotal, setActivityTotal] = useState(ACTIVITY_TOTAL);
 
   const kpis = useMemo(() => kpisForTimeframe(timeframe), [timeframe]);
   const chart = useMemo(() => chartForMetric(chartMetric, timeframe), [chartMetric, timeframe]);
+
+  // Acting on a suggestion takes it off the list and writes what happened into
+  // the feed, which is where the record of Birdy's changes lives. PR-10 puts
+  // the API call behind these; the optimistic move is the same either way.
+  const handleApply = (suggestion) => {
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+    setActivity((prev) => [
+      {
+        id: `applied-${suggestion.id}`,
+        action: suggestion.title,
+        client: suggestion.client,
+        mode: "Approved",
+        time: "just now",
+      },
+      ...prev,
+    ]);
+    setActivityTotal((n) => n + 1);
+  };
+
+  // Dismissing is not an action on the ad platform — nothing joins the feed.
+  const handleDismiss = (suggestion) => {
+    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
+  };
 
   return (
     <div
@@ -81,8 +112,15 @@ export default function PortfolioDashboardPage() {
           <CallInsights insights={CALL_INSIGHTS} />
         </div>
 
-        {/* Right rail — PR-09 */}
-        <aside className="flex w-[340px] shrink-0 flex-col border-l border-pd-border bg-pd-surface" />
+        <RightRail
+          panel={panel}
+          onPanelChange={setPanel}
+          suggestions={suggestions}
+          activity={activity}
+          activityCount={activityTotal}
+          onApply={handleApply}
+          onDismiss={handleDismiss}
+        />
       </div>
     </div>
   );
