@@ -3,8 +3,12 @@
 import { useMemo, useState } from "react";
 import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
-import { kpisForTimeframe } from "./fixtures";
+import { TrendChart } from "@/components/portfolio/TrendChart";
+import { CHART_METRICS, chartForMetric, kpisForTimeframe } from "./fixtures";
 import { portfolioFontClass } from "./fonts";
+
+// Tab order is deliberate: Leads · Ad spend · Calls · Closes.
+const CHART_TABS = Object.entries(CHART_METRICS).map(([key, metric]) => ({ key, tab: metric.tab }));
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
 // Agency-level view: across all clients, what is happening and where is the
@@ -22,8 +26,10 @@ export default function PortfolioDashboardPage() {
   // Timeframe drives the KPI strip and the trend chart together, so it lives
   // at the page level rather than inside either.
   const [timeframe, setTimeframe] = useState("Monthly");
+  const [chartMetric, setChartMetric] = useState("leads");
 
   const kpis = useMemo(() => kpisForTimeframe(timeframe), [timeframe]);
+  const chart = useMemo(() => chartForMetric(chartMetric, timeframe), [chartMetric, timeframe]);
 
   return (
     <div
@@ -41,8 +47,12 @@ export default function PortfolioDashboardPage() {
         <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
           <KpiStrip kpis={kpis} />
 
-          {/* Trend chart — PR-04/05 */}
-          <div className="mb-[18px] h-[340px] rounded-[16px] border border-pd-border bg-pd-surface" />
+          <TrendChart
+            chart={chart}
+            metrics={CHART_TABS}
+            activeMetric={chartMetric}
+            onMetricChange={setChartMetric}
+          />
 
           {/* Top clients + performance funnel — PR-06/07 */}
           <div className="mb-[18px] flex gap-[18px]">
