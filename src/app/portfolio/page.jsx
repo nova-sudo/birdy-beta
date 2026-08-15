@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
+import { PerformanceFunnel } from "@/components/portfolio/PerformanceFunnel";
 import { TopClients } from "@/components/portfolio/TopClients";
 import { TrendChart } from "@/components/portfolio/TrendChart";
 import {
   CHART_METRICS,
+  FUNNEL_STAGES,
   TOP_CLIENTS,
   TOP_CLIENT_METRICS,
   chartForMetric,
@@ -71,8 +73,7 @@ export default function PortfolioDashboardPage() {
               clients={TOP_CLIENTS[topMetric]}
             />
 
-            {/* Performance funnel — PR-07 */}
-            <div className="h-[280px] min-w-0 flex-[1.45] rounded-[16px] border border-pd-border bg-pd-surface" />
+            <PerformanceFunnel stages={FUNNEL_STAGES} />
           </div>
 
           {/* Call insights — PR-08 */}

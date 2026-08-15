@@ -42,6 +42,19 @@ export const KPIS = {
   },
 };
 
+// ─── Performance funnel ─────────────────────────────────────────────────────
+// `issue` and `stageNoun` exist so the diagnostic banner can write a sentence
+// about whichever stage is failing without a lookup table of special cases —
+// "Problem found: close rate", "the drop is at the closing stage".
+
+export const FUNNEL_STAGES = [
+  { key: "leads", stage: "Leads", count: "24,918", direction: "up", delta: 12.1, issue: "lead flow", stageNoun: "lead" },
+  { key: "engaged", stage: "Engaged", count: "19,340", direction: "up", delta: 9.4, issue: "engagement", stageNoun: "engagement" },
+  { key: "convos", stage: "Convos", count: "11,204", direction: "up", delta: 6.2, issue: "conversation rate", stageNoun: "conversation" },
+  { key: "closes", stage: "Closes", count: "3,182", direction: "down", delta: 4.8, issue: "close rate", stageNoun: "closing" },
+  { key: "shows", stage: "Shows", count: "2,741", direction: "up", delta: 3.1, issue: "show rate", stageNoun: "show" },
+];
+
 // ─── Top performing clients ─────────────────────────────────────────────────
 // Each metric carries its own ranking, its own supporting meta, and its own bar
 // widths — switching the picker re-ranks the whole list rather than re-sorting

@@ -28,3 +28,61 @@ export function deltaTone(direction, polarity = HIGHER_IS_BETTER) {
     ? { text: "text-pd-success", bg: "bg-pd-success-bg" }
     : { text: "text-pd-danger", bg: "bg-pd-danger-bg" };
 }
+
+// ─── Funnel diagnosis ───────────────────────────────────────────────────────
+
+/**
+ * A stage has to fall by more than this to be called a problem. Without a floor
+ * the banner would cry wolf over ordinary week-to-week noise, and an agency
+ * owner who sees "problem found" on a healthy funnel stops reading it.
+ */
+export const MATERIAL_DECLINE_PCT = 1;
+
+/**
+ * Work out what the funnel is telling us.
+ *
+ * The interesting case is a stage falling while the one feeding it rises: that
+ * localises the problem to a step rather than to lead flow, which is the whole
+ * point of showing the funnel. When nothing is materially down, the banner
+ * names the strongest stage instead.
+ *
+ * @param {{stage: string, direction: "up"|"down", delta: number, issue?: string,
+ *          stageNoun?: string}[]} stages in funnel order, top to bottom
+ * @returns {{state: "problem"|"healthy", title: string, body: string}}
+ */
+export function diagnoseFunnel(stages) {
+  const signed = (s) => (s.direction === "down" ? -s.delta : s.delta);
+
+  const declining = (stages ?? [])
+    .map((stage, index) => ({ stage, index }))
+    .filter(({ stage }) => signed(stage) < -MATERIAL_DECLINE_PCT)
+    .sort((a, b) => signed(a.stage) - signed(b.stage));
+
+  if (declining.length === 0) {
+    const best = [...(stages ?? [])].sort((a, b) => signed(b) - signed(a))[0];
+    if (!best) return { state: "healthy", title: "All looking good", body: "" };
+
+    return {
+      state: "healthy",
+      title: "All looking good",
+      body: `${best.stage} are up ${best.delta}% — the strongest stage across the funnel right now.`,
+    };
+  }
+
+  const worst = declining[0];
+  const upstream = stages[worst.index - 1];
+  const noun = worst.stage.stageNoun ?? worst.stage.stage.toLowerCase();
+
+  // Only contrast with the feeding stage when it actually rose — otherwise the
+  // whole funnel is sliding and singling out one step would be misleading.
+  const contrast =
+    upstream && signed(upstream) > 0
+      ? ` while ${upstream.stage.toLowerCase()} are up ${upstream.delta}% — the drop is at the ${noun} stage, not lead flow`
+      : "";
+
+  return {
+    state: "problem",
+    title: `Problem found: ${worst.stage.issue ?? noun}`,
+    body: `${worst.stage.stage} are down ${worst.stage.delta}%${contrast}.`,
+  };
+}
