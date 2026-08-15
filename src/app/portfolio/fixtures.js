@@ -42,6 +42,20 @@ export const KPIS = {
   },
 };
 
+// ─── Call insights ──────────────────────────────────────────────────────────
+// Order is deliberate and worth preserving: volume → speed → contact quality →
+// effort → outcome. Three of the six improve as they fall, which is what the
+// polarity flag carries.
+
+export const CALL_INSIGHTS = [
+  { key: "total", label: "Total calls", value: "18,402", direction: "up", delta: "9.2%", polarity: HIGHER_IS_BETTER, icon: "phone" },
+  { key: "speed", label: "Speed to lead", value: "4m 12s", direction: "down", delta: "1m06", polarity: LOWER_IS_BETTER, icon: "speed" },
+  { key: "answer", label: "Unique answer rate", value: "62.4%", direction: "up", delta: "3.1pts", polarity: HIGHER_IS_BETTER, icon: "answer" },
+  { key: "perLead", label: "Calls per lead", value: "2.3", direction: "up", delta: "0.2", polarity: LOWER_IS_BETTER, icon: "effort" },
+  { key: "perClose", label: "Calls per close", value: "5.8", direction: "down", delta: "0.4", polarity: LOWER_IS_BETTER, icon: "efficiency" },
+  { key: "conversion", label: "Conversion rate", value: "17.3%", direction: "up", delta: "1.8pts", polarity: HIGHER_IS_BETTER, icon: "conversion" },
+];
+
 // ─── Performance funnel ─────────────────────────────────────────────────────
 // `issue` and `stageNoun` exist so the diagnostic banner can write a sentence
 // about whichever stage is failing without a lookup table of special cases —

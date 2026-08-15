@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
+import { CallInsights } from "@/components/portfolio/CallInsights";
 import { PerformanceFunnel } from "@/components/portfolio/PerformanceFunnel";
 import { TopClients } from "@/components/portfolio/TopClients";
 import { TrendChart } from "@/components/portfolio/TrendChart";
 import {
+  CALL_INSIGHTS,
   CHART_METRICS,
   FUNNEL_STAGES,
   TOP_CLIENTS,
@@ -76,8 +78,7 @@ export default function PortfolioDashboardPage() {
             <PerformanceFunnel stages={FUNNEL_STAGES} />
           </div>
 
-          {/* Call insights — PR-08 */}
-          <div className="h-[150px] rounded-[16px] border border-pd-border bg-pd-surface" />
+          <CallInsights insights={CALL_INSIGHTS} />
         </div>
 
         {/* Right rail — PR-09 */}
