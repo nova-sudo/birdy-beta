@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
 import { portfolioFontClass } from "./fonts";
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
@@ -15,12 +17,20 @@ import { portfolioFontClass } from "./fonts";
 // content column and right rail scrolling independently inside it.
 
 export default function PortfolioDashboardPage() {
+  // Timeframe drives the KPI strip and the trend chart together, so it lives
+  // at the page level rather than inside either.
+  const [timeframe, setTimeframe] = useState("Monthly");
+
   return (
     <div
       className={`${portfolioFontClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border-strong bg-pd-canvas`}
     >
-      {/* Header bar — PR-02 */}
-      <div className="flex h-16 shrink-0 items-center gap-4 border-b border-pd-border bg-pd-surface px-[26px]" />
+      <PortfolioHeader
+        clientCount={55}
+        timeframe={timeframe}
+        onTimeframeChange={setTimeframe}
+        dateRange="1 – 31 Jul 2026"
+      />
 
       <div className="flex min-h-0 flex-1">
         {/* Content column */}
