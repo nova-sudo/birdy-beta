@@ -27,7 +27,6 @@ export function kpisForTimeframe(kpis, timeframe) {
     return {
       key,
       label: kpi.label,
-      icon: kpi.icon,
       polarity: kpi.polarity,
       value: period.value,
       direction: period.direction,

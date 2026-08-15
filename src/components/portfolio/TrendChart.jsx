@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { buildChartGeometry } from "@/lib/portfolio-chart";
 import { deltaTone } from "@/lib/portfolio-metrics";
+import { PdCard } from "./PdCard";
 import { PdSegmented } from "./PdSegmented";
 
 const GRID_LINES = 5;
@@ -16,7 +17,7 @@ const GRID_LINES = 5;
  * spend, daily calls all trend down). Every other delta on this screen is
  * coloured by direction, so this one is too.
  */
-export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redrawKey }) {
+export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redrawKey, className }) {
   const fillId = useId();
   const [hoveredIndex, setHoveredIndex] = useState(null);
   const { points, linePath, areaPath } = useMemo(
@@ -28,22 +29,32 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
   const lastIndex = points.length - 1;
 
   return (
-    <section className="mb-[18px] rounded-[16px] border border-pd-border bg-pd-surface px-[22px] py-5">
-      <div className="mb-1.5 flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <h2 className="font-pd-display text-[15px] font-semibold text-pd-ink">{chart.title}</h2>
-          <p className="mt-0.5 text-[12px] text-pd-faint">{chart.subtitle}</p>
-        </div>
-
-        <PdSegmented
-          label="Chart metric"
-          className="shrink-0"
-          itemClassName="px-[13px] py-[7px]"
-          options={metrics.map((metric) => ({ key: metric.key, label: metric.tab }))}
-          value={activeMetric}
-          onChange={onMetricChange}
-        />
-      </div>
+    <PdCard
+      className={className}
+      headerClassName="mb-1.5 items-start"
+      title={
+        <span className="block">
+          <span className="block font-pd-display text-[15px] font-semibold text-pd-ink">
+            {chart.title}
+          </span>
+          <span className="mt-0.5 block text-[12px] font-normal text-pd-faint">
+            {chart.subtitle}
+          </span>
+        </span>
+      }
+      action={
+        metrics?.length > 1 ? (
+          <PdSegmented
+            label="Chart metric"
+            className="shrink-0"
+            itemClassName="px-[13px] py-[7px]"
+            options={metrics.map((metric) => ({ key: metric.key, label: metric.tab }))}
+            value={activeMetric}
+            onChange={onMetricChange}
+          />
+        ) : null
+      }
+    >
 
       <div className="mt-[14px] mb-4 flex items-baseline gap-[10px]">
         <span className="font-pd-display text-[28px] font-bold text-pd-ink">{chart.total}</span>
@@ -148,6 +159,6 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
           </span>
         ))}
       </div>
-    </section>
+    </PdCard>
   );
 }

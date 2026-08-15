@@ -1,15 +1,28 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CallInsights } from "@/components/portfolio/CallInsights";
-import { KpiStrip } from "@/components/portfolio/KpiStrip";
-import { PerformanceFunnel } from "@/components/portfolio/PerformanceFunnel";
-import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
-import { RightRail } from "@/components/portfolio/RightRail";
-import { TopClients } from "@/components/portfolio/TopClients";
-import { TrendChart } from "@/components/portfolio/TrendChart";
+import {
+  ActivityRow,
+  DiagnosticBanner,
+  FunnelStepper,
+  Leaderboard,
+  PdCard,
+  PdMenu,
+  PortfolioHeader,
+  SidePanel,
+  StatStrip,
+  SuggestionCard,
+  TrendChart,
+} from "@/components/portfolio";
 import { Skeleton } from "@/components/ui/skeleton";
+import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 import { chartForMetric, chartTabs, kpisForTimeframe } from "@/lib/portfolio-view";
+import {
+  CALL_PRESENTATION,
+  FUNNEL_PRESENTATION,
+  KPI_PRESENTATION,
+  withPresentation,
+} from "./presentation";
 import { portfolioFontClass } from "./fonts";
 import { usePortfolioData } from "./usePortfolioData";
 
@@ -24,6 +37,10 @@ import { usePortfolioData } from "./usePortfolioData";
 // title block and timeframe controls become a page-level header. What is kept
 // is the frame itself: canvas background, 1px border, 16px radius, with the
 // content column and right rail scrolling independently inside it.
+//
+// This file is only composition and wiring. Everything it renders comes from
+// @/components/portfolio, which knows nothing about where the figures came
+// from, and the shaping lives in @/lib/portfolio-*.
 
 function LoadingColumn() {
   return (
@@ -41,8 +58,7 @@ function LoadingColumn() {
 
 export default function PortfolioDashboardPage() {
   // Timeframe drives the KPI strip and the trend chart together, so it lives at
-  // the page level rather than inside either. The summary carries every
-  // timeframe, so switching is a redraw rather than a fetch.
+  // the page level rather than inside either.
   const [timeframe, setTimeframe] = useState("Monthly");
   const [chartMetric, setChartMetric] = useState("leads");
   const [topMetric, setTopMetric] = useState(null);
@@ -68,7 +84,20 @@ export default function PortfolioDashboardPage() {
     dismissSuggestion,
   } = usePortfolioData();
 
-  const kpiRows = useMemo(() => kpisForTimeframe(kpis, timeframe), [kpis, timeframe]);
+  const kpiStats = useMemo(
+    () => withPresentation(kpisForTimeframe(kpis, timeframe), KPI_PRESENTATION),
+    [kpis, timeframe]
+  );
+  const callStats = useMemo(
+    () => withPresentation(callInsights, CALL_PRESENTATION),
+    [callInsights]
+  );
+  const funnelStages = useMemo(
+    () => withPresentation(funnel, FUNNEL_PRESENTATION),
+    [funnel]
+  );
+  const diagnosis = useMemo(() => diagnoseFunnel(funnel), [funnel]);
+
   const tabs = useMemo(() => chartTabs(chartMetrics), [chartMetrics]);
   const chart = useMemo(
     () => chartForMetric(chartMetrics, chartAxis, chartMetric, timeframe),
@@ -79,6 +108,40 @@ export default function PortfolioDashboardPage() {
   // backend that drops or renames one doesn't leave the card blank.
   const metrics = topClientMetrics?.length ? topClientMetrics : Object.keys(topClients ?? {});
   const activeTopMetric = topMetric && metrics.includes(topMetric) ? topMetric : metrics[0];
+
+  const panels = [
+    {
+      key: "suggestions",
+      label: "Suggestions",
+      badge: suggestions.length,
+      badgeClassName: "bg-pd-primary-tint text-pd-primary",
+      isEmpty: suggestions.length === 0,
+      status: `${suggestions.length} suggestion${suggestions.length === 1 ? "" : "s"} outstanding`,
+      render: () =>
+        suggestions.map((suggestion) => (
+          <SuggestionCard
+            key={suggestion.id}
+            suggestion={suggestion}
+            onApply={applySuggestion}
+            onDismiss={dismissSuggestion}
+          />
+        )),
+    },
+    {
+      key: "activity",
+      label: "Activity",
+      badge: activityCount ?? activity.length,
+      badgeClassName: "bg-pd-neutral-badge text-pd-subtle",
+      isEmpty: activity.length === 0,
+      render: () => (
+        <ul>
+          {activity.map((entry) => (
+            <ActivityRow key={entry.id} entry={entry} />
+          ))}
+        </ul>
+      ),
+    },
+  ];
 
   return (
     <div
@@ -114,10 +177,11 @@ export default function PortfolioDashboardPage() {
           </div>
         ) : (
           <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-            <KpiStrip kpis={kpiRows} />
+            <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
 
             {chart && (
               <TrendChart
+                className="mb-[18px]"
                 chart={chart}
                 metrics={tabs}
                 activeMetric={chartMetric}
@@ -127,29 +191,49 @@ export default function PortfolioDashboardPage() {
             )}
 
             <div className="mb-[18px] flex gap-[18px]">
-              <TopClients
-                metric={activeTopMetric}
-                metrics={metrics}
-                onMetricChange={setTopMetric}
-                clients={topClients?.[activeTopMetric] ?? []}
-              />
+              <PdCard
+                className="min-w-0 flex-[0.85]"
+                title="Top performing clients"
+                action={
+                  metrics.length > 0 && (
+                    <PdMenu
+                      size="sm"
+                      label="Rank clients by"
+                      value={activeTopMetric}
+                      options={metrics}
+                      onChange={setTopMetric}
+                    />
+                  )
+                }
+              >
+                <Leaderboard rows={topClients?.[activeTopMetric] ?? []} />
+              </PdCard>
 
-              <PerformanceFunnel stages={funnel} />
+              <PdCard
+                className="min-w-0 flex-[1.45]"
+                title="Performance funnel"
+                headerClassName="mb-[18px]"
+              >
+                <FunnelStepper stages={funnelStages} />
+                <DiagnosticBanner
+                  className="mt-5"
+                  state={diagnosis.state}
+                  title={diagnosis.title}
+                  body={diagnosis.body}
+                />
+              </PdCard>
             </div>
 
-            <CallInsights insights={callInsights} />
+            <PdCard
+              title="Call insights"
+              action={<span className="text-[12px] text-pd-faint">Across all client call centres</span>}
+            >
+              <StatStrip stats={callStats} variant="separate" label="Call insights" />
+            </PdCard>
           </div>
         )}
 
-        <RightRail
-          panel={panel}
-          onPanelChange={setPanel}
-          suggestions={suggestions}
-          activity={activity}
-          activityCount={activityCount}
-          onApply={applySuggestion}
-          onDismiss={dismissSuggestion}
-        />
+        <SidePanel panels={panels} active={panel} onChange={setPanel} label="Rail panel" />
       </div>
     </div>
   );

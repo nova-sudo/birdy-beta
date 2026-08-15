@@ -9,7 +9,6 @@ import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "@/lib/portfolio-metrics";
 export const KPIS = {
   spend: {
     label: "Total ad spend",
-    icon: "spend",
     polarity: HIGHER_IS_BETTER,
     Monthly: { value: "£142,860", direction: "up", delta: "8.4%" },
     Weekly: { value: "£33,410", direction: "down", delta: "1.6%" },
@@ -17,7 +16,6 @@ export const KPIS = {
   },
   leads: {
     label: "Total leads",
-    icon: "leads",
     polarity: HIGHER_IS_BETTER,
     Monthly: { value: "24,918", direction: "up", delta: "12.1%" },
     Weekly: { value: "5,842", direction: "up", delta: "4.8%" },
@@ -25,7 +23,6 @@ export const KPIS = {
   },
   cpl: {
     label: "Average CPL",
-    icon: "cpl",
     // Cheaper leads are better — a fall here is the good news.
     polarity: LOWER_IS_BETTER,
     Monthly: { value: "£5.73", direction: "down", delta: "3.3%" },
@@ -34,7 +31,6 @@ export const KPIS = {
   },
   closes: {
     label: "Closed Leads",
-    icon: "closes",
     polarity: HIGHER_IS_BETTER,
     Monthly: { value: "3,182", direction: "up", delta: "6.9%" },
     Weekly: { value: "744", direction: "up", delta: "9.2%" },
@@ -98,12 +94,12 @@ export const ACTIVITY_TOTAL = 14;
 // polarity flag carries.
 
 export const CALL_INSIGHTS = [
-  { key: "total", label: "Total calls", value: "18,402", direction: "up", delta: "9.2%", polarity: HIGHER_IS_BETTER, icon: "phone" },
-  { key: "speed", label: "Speed to lead", value: "4m 12s", direction: "down", delta: "1m06", polarity: LOWER_IS_BETTER, icon: "speed" },
-  { key: "answer", label: "Unique answer rate", value: "62.4%", direction: "up", delta: "3.1pts", polarity: HIGHER_IS_BETTER, icon: "answer" },
-  { key: "perLead", label: "Calls per lead", value: "2.3", direction: "up", delta: "0.2", polarity: LOWER_IS_BETTER, icon: "effort" },
-  { key: "perClose", label: "Calls per close", value: "5.8", direction: "down", delta: "0.4", polarity: LOWER_IS_BETTER, icon: "efficiency" },
-  { key: "conversion", label: "Conversion rate", value: "17.3%", direction: "up", delta: "1.8pts", polarity: HIGHER_IS_BETTER, icon: "conversion" },
+  { key: "total", label: "Total calls", value: "18,402", direction: "up", delta: "9.2%", polarity: HIGHER_IS_BETTER },
+  { key: "speed", label: "Speed to lead", value: "4m 12s", direction: "down", delta: "1m06", polarity: LOWER_IS_BETTER },
+  { key: "answer", label: "Unique answer rate", value: "62.4%", direction: "up", delta: "3.1pts", polarity: HIGHER_IS_BETTER },
+  { key: "perLead", label: "Calls per lead", value: "2.3", direction: "up", delta: "0.2", polarity: LOWER_IS_BETTER },
+  { key: "perClose", label: "Calls per close", value: "5.8", direction: "down", delta: "0.4", polarity: LOWER_IS_BETTER },
+  { key: "conversion", label: "Conversion rate", value: "17.3%", direction: "up", delta: "1.8pts", polarity: HIGHER_IS_BETTER },
 ];
 
 // ─── Performance funnel ─────────────────────────────────────────────────────
