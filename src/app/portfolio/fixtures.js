@@ -231,52 +231,6 @@ export const CHART_AXIS = {
   Daily: ["1", "3", "6", "9", "12", "14", "17", "20", "23", "25", "28", "31"],
 };
 
-// Tooltips carry the period the axis label alone leaves ambiguous. The monthly
-// axis runs Aug–Dec 2025 then Jan–Jul 2026, so the year turns at index 5.
-export const CHART_AXIS_SUFFIX = {
-  Monthly: (i) => (i < 5 ? " 2025" : " 2026"),
-  Weekly: () => " · Jul 2026",
-  Daily: () => " Jul 2026",
-};
-
-/** Formats a normalised point back into the figure the tooltip shows. */
-export function formatChartValue(metricKey, rawValue) {
-  const metric = CHART_METRICS[metricKey];
-  return (metric.prefix ?? "") + Math.round(rawValue * metric.scale).toLocaleString();
-}
-
-/** Everything the chart card needs for one metric/timeframe pairing. */
-export function chartForMetric(metricKey, timeframe) {
-  const metric = CHART_METRICS[metricKey];
-  const values = metric[timeframe] ?? metric.Monthly;
-  const totals = metric.totals[timeframe] ?? metric.totals.Monthly;
-  const labels = CHART_AXIS[timeframe] ?? CHART_AXIS.Monthly;
-  const suffix = CHART_AXIS_SUFFIX[timeframe] ?? CHART_AXIS_SUFFIX.Monthly;
-
-  return {
-    key: metricKey,
-    title: metric.title,
-    subtitle: `${timeframe} · ${metric.subtitle}`,
-    values,
-    labels,
-    tooltipLabels: labels.map((label, i) => label + suffix(i)),
-    pointValues: values.map((v) => formatChartValue(metricKey, v)),
-    ...totals,
-  };
-}
-
-/** Flattens the KPI table for one timeframe into the strip's row shape. */
-export function kpisForTimeframe(timeframe) {
-  return Object.entries(KPIS).map(([key, kpi]) => {
-    const period = kpi[timeframe] ?? kpi.Monthly;
-    return {
-      key,
-      label: kpi.label,
-      icon: kpi.icon,
-      polarity: kpi.polarity,
-      value: period.value,
-      direction: period.direction,
-      delta: period.delta,
-    };
-  });
-}
+// Deriving the render shapes from this data lives in lib/portfolio-view, which
+// takes the payload as an argument so the same functions serve the live API
+// response and these fixtures.

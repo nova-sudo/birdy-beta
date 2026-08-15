@@ -1,29 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { KpiStrip } from "@/components/portfolio/KpiStrip";
-import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
 import { CallInsights } from "@/components/portfolio/CallInsights";
+import { KpiStrip } from "@/components/portfolio/KpiStrip";
 import { PerformanceFunnel } from "@/components/portfolio/PerformanceFunnel";
+import { PortfolioHeader } from "@/components/portfolio/PortfolioHeader";
 import { RightRail } from "@/components/portfolio/RightRail";
 import { TopClients } from "@/components/portfolio/TopClients";
 import { TrendChart } from "@/components/portfolio/TrendChart";
-import {
-  ACTIVITY,
-  ACTIVITY_TOTAL,
-  CALL_INSIGHTS,
-  CHART_METRICS,
-  FUNNEL_STAGES,
-  SUGGESTIONS,
-  TOP_CLIENTS,
-  TOP_CLIENT_METRICS,
-  chartForMetric,
-  kpisForTimeframe,
-} from "./fixtures";
+import { Skeleton } from "@/components/ui/skeleton";
+import { chartForMetric, chartTabs, kpisForTimeframe } from "@/lib/portfolio-view";
 import { portfolioFontClass } from "./fonts";
-
-// Tab order is deliberate: Leads · Ad spend · Calls · Closes.
-const CHART_TABS = Object.entries(CHART_METRICS).map(([key, metric]) => ({ key, tab: metric.tab }));
+import { usePortfolioData } from "./usePortfolioData";
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
 // Agency-level view: across all clients, what is happening and where is the
@@ -37,89 +25,130 @@ const CHART_TABS = Object.entries(CHART_METRICS).map(([key, metric]) => ({ key, 
 // is the frame itself: canvas background, 1px border, 16px radius, with the
 // content column and right rail scrolling independently inside it.
 
+function LoadingColumn() {
+  return (
+    <div className="min-w-0 flex-1 px-6 py-[22px]">
+      <Skeleton className="mb-[18px] h-[74px] rounded-[14px]" />
+      <Skeleton className="mb-[18px] h-[340px] rounded-[16px]" />
+      <div className="mb-[18px] flex gap-[18px]">
+        <Skeleton className="h-[280px] flex-[0.85] rounded-[16px]" />
+        <Skeleton className="h-[280px] flex-[1.45] rounded-[16px]" />
+      </div>
+      <Skeleton className="h-[150px] rounded-[16px]" />
+    </div>
+  );
+}
+
 export default function PortfolioDashboardPage() {
-  // Timeframe drives the KPI strip and the trend chart together, so it lives
-  // at the page level rather than inside either.
+  // Timeframe drives the KPI strip and the trend chart together, so it lives at
+  // the page level rather than inside either. The summary carries every
+  // timeframe, so switching is a redraw rather than a fetch.
   const [timeframe, setTimeframe] = useState("Monthly");
   const [chartMetric, setChartMetric] = useState("leads");
-  const [topMetric, setTopMetric] = useState("Avg CPL");
+  const [topMetric, setTopMetric] = useState(null);
   const [panel, setPanel] = useState("suggestions");
-  const [suggestions, setSuggestions] = useState(SUGGESTIONS);
-  const [activity, setActivity] = useState(ACTIVITY);
-  const [activityTotal, setActivityTotal] = useState(ACTIVITY_TOTAL);
 
-  const kpis = useMemo(() => kpisForTimeframe(timeframe), [timeframe]);
-  const chart = useMemo(() => chartForMetric(chartMetric, timeframe), [chartMetric, timeframe]);
+  const {
+    clientCount,
+    dateRange,
+    kpis,
+    chartMetrics,
+    chartAxis,
+    topClients,
+    topClientMetrics,
+    funnel,
+    callInsights,
+    suggestions,
+    activity,
+    activityCount,
+    loading,
+    unavailable,
+    usingFixtures,
+    applySuggestion,
+    dismissSuggestion,
+  } = usePortfolioData();
 
-  // Acting on a suggestion takes it off the list and writes what happened into
-  // the feed, which is where the record of Birdy's changes lives. PR-10 puts
-  // the API call behind these; the optimistic move is the same either way.
-  const handleApply = (suggestion) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
-    setActivity((prev) => [
-      {
-        id: `applied-${suggestion.id}`,
-        action: suggestion.title,
-        client: suggestion.client,
-        mode: "Approved",
-        time: "just now",
-      },
-      ...prev,
-    ]);
-    setActivityTotal((n) => n + 1);
-  };
+  const kpiRows = useMemo(() => kpisForTimeframe(kpis, timeframe), [kpis, timeframe]);
+  const tabs = useMemo(() => chartTabs(chartMetrics), [chartMetrics]);
+  const chart = useMemo(
+    () => chartForMetric(chartMetrics, chartAxis, chartMetric, timeframe),
+    [chartMetrics, chartAxis, chartMetric, timeframe]
+  );
 
-  // Dismissing is not an action on the ad platform — nothing joins the feed.
-  const handleDismiss = (suggestion) => {
-    setSuggestions((prev) => prev.filter((s) => s.id !== suggestion.id));
-  };
+  // The leaderboard defaults to whichever metric the payload lists first, so a
+  // backend that drops or renames one doesn't leave the card blank.
+  const metrics = topClientMetrics?.length ? topClientMetrics : Object.keys(topClients ?? {});
+  const activeTopMetric = topMetric && metrics.includes(topMetric) ? topMetric : metrics[0];
 
   return (
     <div
       className={`${portfolioFontClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border-strong bg-pd-canvas`}
     >
       <PortfolioHeader
-        clientCount={55}
+        clientCount={clientCount}
         timeframe={timeframe}
         onTimeframeChange={setTimeframe}
-        dateRange="1 – 31 Jul 2026"
+        dateRange={dateRange}
       />
 
+      {usingFixtures && (
+        <p className="shrink-0 border-b border-pd-warning-bg bg-pd-warning-bg px-[26px] py-2 text-[12px] font-semibold text-pd-amber">
+          Design reference data — the portfolio API isn&apos;t connected. Development only.
+        </p>
+      )}
+
       <div className="flex min-h-0 flex-1">
-        {/* Content column */}
-        <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-          <KpiStrip kpis={kpis} />
-
-          <TrendChart
-            chart={chart}
-            metrics={CHART_TABS}
-            activeMetric={chartMetric}
-            onMetricChange={setChartMetric}
-            redrawKey={`${chartMetric}-${timeframe}`}
-          />
-
-          <div className="mb-[18px] flex gap-[18px]">
-            <TopClients
-              metric={topMetric}
-              metrics={TOP_CLIENT_METRICS}
-              onMetricChange={setTopMetric}
-              clients={TOP_CLIENTS[topMetric]}
-            />
-
-            <PerformanceFunnel stages={FUNNEL_STAGES} />
+        {loading ? (
+          <LoadingColumn />
+        ) : unavailable ? (
+          <div className="flex min-w-0 flex-1 items-center justify-center px-6 py-[22px]">
+            <div className="max-w-sm text-center">
+              <p className="font-pd-display text-[15px] font-semibold text-pd-ink">
+                Portfolio data isn&apos;t available
+              </p>
+              <p className="mt-1.5 text-[12px] leading-[1.45] text-pd-body">
+                We couldn&apos;t reach the portfolio summary. Nothing here is out of date — there
+                is simply nothing to show yet.
+              </p>
+            </div>
           </div>
+        ) : (
+          <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
+            <KpiStrip kpis={kpiRows} />
 
-          <CallInsights insights={CALL_INSIGHTS} />
-        </div>
+            {chart && (
+              <TrendChart
+                chart={chart}
+                metrics={tabs}
+                activeMetric={chartMetric}
+                onMetricChange={setChartMetric}
+                redrawKey={`${chartMetric}-${timeframe}`}
+              />
+            )}
+
+            <div className="mb-[18px] flex gap-[18px]">
+              <TopClients
+                metric={activeTopMetric}
+                metrics={metrics}
+                onMetricChange={setTopMetric}
+                clients={topClients?.[activeTopMetric] ?? []}
+              />
+
+              <PerformanceFunnel stages={funnel} />
+            </div>
+
+            <CallInsights insights={callInsights} />
+          </div>
+        )}
 
         <RightRail
           panel={panel}
           onPanelChange={setPanel}
           suggestions={suggestions}
           activity={activity}
-          activityCount={activityTotal}
-          onApply={handleApply}
-          onDismiss={handleDismiss}
+          activityCount={activityCount}
+          onApply={applySuggestion}
+          onDismiss={dismissSuggestion}
         />
       </div>
     </div>
