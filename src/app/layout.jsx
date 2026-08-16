@@ -20,6 +20,7 @@ import { CreditsProvider } from "@/hooks/useCredits";
 import {
   DashboardControlsProvider,
   DashboardHeaderControls,
+  DashboardHeaderTitle,
 } from "@/components/dashboard-controls";
 
 const outfit = Outfit({
@@ -36,6 +37,8 @@ export default function RootLayout({ children }) {
     pathname === "/register" ||
     pathname === "/" ||
     pathname.startsWith("/admin");
+
+  const isDashboard = pathname === "/dashboard";
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
@@ -89,7 +92,10 @@ export default function RootLayout({ children }) {
                   <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="md:hidden" />
-                      <div className="flex items-center gap-2">
+                      {/* The dashboard puts its own title here instead of the
+                          wordmark — the page no longer carries one. */}
+                      <DashboardHeaderTitle />
+                      <div className={`items-center gap-2 ${isDashboard ? "hidden" : "flex"}`}>
                         <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
                         <Link
                           href="/changelog"

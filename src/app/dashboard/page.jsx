@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
   ActivityRow,
@@ -76,7 +76,7 @@ export default function PortfolioDashboardPage() {
   // changes how finely the chart buckets that same window.
   // The date range and granularity chips live in the global top bar, so their
   // state sits above this page rather than in it.
-  const { preset, granularity } = useDashboardControls();
+  const { preset, granularity, setClientCount } = useDashboardControls();
   const [chartMetric, setChartMetric] = useState("leads");
   const [topMetric, setTopMetric] = useState(null);
   const [panel, setPanel] = useState("suggestions");
@@ -144,6 +144,12 @@ export default function PortfolioDashboardPage() {
     }
     toast("Suggestion dismissed", { description: suggestion.title });
   }, []);
+
+  // The title block lives in the top bar, which is above this page in the
+  // tree and has no other way to learn the count.
+  useEffect(() => {
+    setClientCount(clientCount);
+  }, [clientCount, setClientCount]);
 
   const kpiStats = useMemo(() => withPresentation(kpis, KPI_PRESENTATION), [kpis]);
   const callStats = useMemo(
@@ -237,19 +243,6 @@ export default function PortfolioDashboardPage() {
           />
         ) : (
           <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-            {/* The controls that used to sit beside this are in the top bar
-                now; the title stays as the page's own heading. */}
-            <div className="mb-[18px]">
-              <h1 className="font-pd-display text-[19px] font-bold tracking-[-0.02em] text-pd-ink">
-                Portfolio Dashboard
-              </h1>
-              <p className="mt-px text-[12px] text-pd-faint">
-                {clientCount
-                  ? `${clientCount.toLocaleString()} ${clientCount === 1 ? "client" : "clients"} · portfolio-level performance`
-                  : "Portfolio-level performance"}
-              </p>
-            </div>
-
             <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
 
             {seriesLoading ? (

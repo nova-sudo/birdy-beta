@@ -46,7 +46,12 @@ The handoff blurred these first two into one "timeframe" control. They are
 different questions — which window, and how finely to slice it — so they are
 two controls here.
 
-Both sit in the **global top bar**, beside the notifications bell and profile
+The **title block** sits in the top bar too, standing in for the Birdy wordmark
+while you are on this route — the page carries no heading of its own. Only the
+page knows the client count, so it publishes that up through the same context
+rather than the header fetching the portfolio a second time.
+
+Both controls sit in the **global top bar**, beside the notifications bell and profile
 menu, not on the page. That puts them and the page that obeys them in different
 parts of the tree, so their state lives in `DashboardControlsProvider`
 (`src/components/dashboard-controls.jsx`), which `src/app/layout.jsx` wraps the

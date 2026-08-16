@@ -6,6 +6,7 @@ import PortfolioDashboardPage from "../page";
 import {
   DashboardControlsProvider,
   DashboardHeaderControls,
+  DashboardHeaderTitle,
 } from "@/components/dashboard-controls";
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
@@ -126,6 +127,7 @@ beforeEach(() => {
 function renderDashboard() {
   return render(
     <DashboardControlsProvider>
+      <DashboardHeaderTitle />
       <DashboardHeaderControls />
       <PortfolioDashboardPage />
     </DashboardControlsProvider>
@@ -153,9 +155,20 @@ describe("Portfolio Dashboard", () => {
     expect(within(kpiCell("Closed Leads")).getByText("16")).toBeInTheDocument();
   });
 
-  it("counts the active clients in the header", async () => {
+  it("publishes the active client count up to the top bar", async () => {
+    // The title block renders in the header, above this page in the tree, so
+    // the count has to travel up through the controls context.
     await renderPage();
-    expect(screen.getByText(/2 clients · portfolio-level performance/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/2 clients · portfolio-level performance/)).toBeInTheDocument()
+    );
+    expect(screen.getByRole("heading", { name: "Portfolio Dashboard" })).toBeInTheDocument();
+  });
+
+  it("keeps the title out of the page body", async () => {
+    await renderPage();
+    // Exactly one — the header's. The page no longer carries its own.
+    expect(screen.getAllByRole("heading", { name: "Portfolio Dashboard" })).toHaveLength(1);
   });
 
   it("compares against the previous period on a preset that has one", async () => {

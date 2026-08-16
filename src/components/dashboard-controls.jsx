@@ -6,6 +6,7 @@ import { Calendar, Clock } from "lucide-react";
 import { PdMenu } from "@/components/portfolio/PdMenu";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { GRANULARITIES } from "@/lib/portfolio-series";
+import { portfolioFontClass } from "@/app/dashboard/fonts";
 
 // The dashboard's date range and chart granularity live in the global top bar,
 // beside the notifications bell and profile menu, rather than on the page.
@@ -23,10 +24,14 @@ const DashboardControlsContext = createContext(null);
 export function DashboardControlsProvider({ children }) {
   const [preset, setPreset] = useState(DEFAULT_DATE_PRESET);
   const [granularity, setGranularity] = useState("Daily");
+  // Published upwards by the page: the header shows the client count, but only
+  // the page knows it, and it should not fetch the portfolio a second time to
+  // find out.
+  const [clientCount, setClientCount] = useState(null);
 
   const value = useMemo(
-    () => ({ preset, setPreset, granularity, setGranularity }),
-    [preset, granularity]
+    () => ({ preset, setPreset, granularity, setGranularity, clientCount, setClientCount }),
+    [preset, granularity, clientCount]
   );
 
   return (
@@ -46,6 +51,7 @@ export function useDashboardControls() {
   const ctx = useContext(DashboardControlsContext);
   const [fallbackPreset, setFallbackPreset] = useState(DEFAULT_DATE_PRESET);
   const [fallbackGranularity, setFallbackGranularity] = useState("Daily");
+  const [fallbackClientCount, setFallbackClientCount] = useState(null);
 
   return (
     ctx ?? {
@@ -53,7 +59,36 @@ export function useDashboardControls() {
       setPreset: setFallbackPreset,
       granularity: fallbackGranularity,
       setGranularity: setFallbackGranularity,
+      clientCount: fallbackClientCount,
+      setClientCount: setFallbackClientCount,
     }
+  );
+}
+
+/**
+ * The dashboard's title block, which stands in for the Birdy wordmark in the
+ * top bar while you are on that route.
+ *
+ * It carries the pd font variables itself: the page subtree that normally
+ * provides them is below the header, not around it.
+ */
+export function DashboardHeaderTitle() {
+  const pathname = usePathname();
+  const { clientCount } = useDashboardControls();
+
+  if (pathname !== DASHBOARD_ROUTE) return null;
+
+  return (
+    <div className={portfolioFontClass}>
+      <h1 className="font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+        Portfolio Dashboard
+      </h1>
+      <p className="mt-1 text-[12px] leading-none text-pd-faint">
+        {clientCount
+          ? `${clientCount.toLocaleString()} ${clientCount === 1 ? "client" : "clients"} · portfolio-level performance`
+          : "Portfolio-level performance"}
+      </p>
+    </div>
   );
 }
 
