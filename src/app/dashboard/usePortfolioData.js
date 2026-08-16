@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useClientGroups } from "@/lib/useClientGroups";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -14,7 +14,14 @@ import {
   buildKpis,
   buildLeaderboards,
 } from "@/lib/portfolio-aggregate";
-import { PREVIOUS_PERIOD, bucketSeries, subtractPeriods } from "@/lib/portfolio-series";
+import {
+  PREVIOUS_PERIOD,
+  bucketSeries,
+  callTimestamps,
+  scaleSeriesToTotal,
+  subtractPeriods,
+} from "@/lib/portfolio-series";
+import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 
 // ─── Where the figures come from ───────────────────────────────────────────
 //
@@ -28,13 +35,18 @@ import { PREVIOUS_PERIOD, bucketSeries, subtractPeriods } from "@/lib/portfolio-
 //                                        created_time, ghl_matched and
 //                                        ghl_opportunity_status → the trend
 //                                        series and the funnel's attribution
+//   /api/hotprospector/call-center       leads with nested call logs →
+//                                        the calls series, fetched only when
+//                                        that tab is opened
 //   /api/dashboard/summary               Birdy suggestions and activity
 //
 // Two things the design asks for that no endpoint provides, and which are
 // therefore absent rather than invented:
 //
-//   * A spend-over-time curve. Meta insights arrive pre-aggregated per preset,
-//     so spend is a KPI here but not a chart metric.
+//   * A spend-over-time curve. Meta insights arrive pre-aggregated per date
+//     preset — there is no daily breakdown anywhere in the payload — so spend
+//     is a KPI here but not a chart metric. Unlocking it means asking Meta for
+//     time_increment=1 on the backend, not more client-side arithmetic.
 //   * A "Shows" funnel stage. GHL opportunity stats carry won/lost/open/
 //     abandoned and nothing about attendance.
 //
@@ -53,7 +65,11 @@ function isWon(lead) {
   return String(lead.ghl_opportunity_status ?? "").toLowerCase() === "won";
 }
 
-export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "Daily" } = {}) {
+export function usePortfolioData({
+  preset = DEFAULT_DATE_PRESET,
+  granularity = "Daily",
+  chartMetric = "leads",
+} = {}) {
   // useClientGroups takes its argument as an *initial* value — it holds the
   // preset in its own state and expects callers to move it with setDatePreset.
   // Passing a new one on re-render does nothing, so the date range has to be
@@ -95,6 +111,11 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
     wins: [],
   });
   const [seriesLoading, setSeriesLoading] = useState(true);
+  // Call logs are only fetched once the Calls tab is opened — it is a second
+  // heavyweight request, and most visits never look at it.
+  const [callRows, setCallRows] = useState(null);
+  const [callsLoading, setCallsLoading] = useState(false);
+  const callsFetchedFor = useRef(null);
 
   const formatMoney = useCallback(
     (value, decimals = 0) =>
@@ -174,6 +195,53 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
     };
   }, [groupIds, groupsLoading, presetSyncing, preset]);
 
+  // ── Call logs, for the calls series ─────────────────────────────────────
+  useEffect(() => {
+    if (chartMetric !== "calls") return;
+    if (groupsLoading || presetSyncing) return;
+    if (callsFetchedFor.current === preset) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    callsFetchedFor.current = preset;
+
+    (async () => {
+      setCallsLoading(true);
+      try {
+        const { start_date, end_date } = presetToDateRange(preset);
+        const params = new URLSearchParams({ skip: "0", limit: String(MAX_LEADS_TO_FETCH) });
+        if (start_date) params.set("start_date", start_date);
+        if (end_date) params.set("end_date", end_date);
+
+        const res = await apiRequest(`/api/hotprospector/call-center?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`call-center → ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setCallRows(data.data ?? []);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        if (!cancelled) {
+          setCallRows([]);
+          // Let a later visit retry rather than caching the failure.
+          callsFetchedFor.current = null;
+        }
+      } finally {
+        if (!cancelled) setCallsLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [chartMetric, preset, groupsLoading, presetSyncing]);
+
+  // A new window invalidates whatever calls we hold.
+  useEffect(() => {
+    if (callsFetchedFor.current !== preset) setCallRows(null);
+  }, [preset]);
+
   // ── Suggestions and activity ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -238,9 +306,30 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
   }, [previousGroups, preset, current]);
 
   const chartMetrics = useMemo(() => {
-    const leadSeries = bucketSeries(leads, (l) => l.created_time, granularity);
+    const leadsCapped = leads.length >= LEADS_FETCH_LIMIT;
     const wonLeads = leads.filter(isWon);
-    const closeSeries = bucketSeries(wonLeads, (l) => l.created_time, granularity);
+
+    // Both row endpoints cap what they return, so each series is a sample.
+    // Scaling it onto the real total keeps the shape the sample showed while
+    // making the magnitude agree with the figure printed directly above it.
+    const leadSeries = scaleSeriesToTotal(
+      bucketSeries(leads, (l) => l.created_time, granularity),
+      current.leads,
+      leadsCapped
+    );
+    const closeSeries = scaleSeriesToTotal(
+      bucketSeries(wonLeads, (l) => l.created_time, granularity),
+      current.closes,
+      leadsCapped
+    );
+
+    const calls = callTimestamps(callRows);
+    const callsCapped = (callRows?.length ?? 0) >= MAX_LEADS_TO_FETCH;
+    const callSeries = scaleSeriesToTotal(
+      bucketSeries(calls, (c) => c.at, granularity),
+      current.totalCalls,
+      callsCapped
+    );
 
     return {
       leads: {
@@ -250,6 +339,32 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
         total: Math.round(current.leads).toLocaleString(),
         ...leadSeries,
       },
+      spend: {
+        tab: "Ad spend",
+        title: "Total ad spend",
+        subtitle: "Combined Meta spend across the portfolio",
+        total: formatMoney(current.spend),
+        valuePrefix: currencySymbol,
+        // Meta reports spend only as a total for the whole date range — there
+        // is no daily breakdown in the payload and no endpoint that returns
+        // one. The total is exact; the curve is the real spend spread across
+        // the window in proportion to that day's leads, which assumes CPL held
+        // steady. The card says so, because on a day of heavy spend and few
+        // leads this line will understate and that is worth knowing.
+        ...scaleSeriesToTotal({ ...leadSeries, estimated: false }, current.spend, true),
+        estimateNote:
+          "spread across days by lead share — Meta reports spend only as a range total",
+      },
+      calls: {
+        tab: "Calls",
+        title: "Total calls",
+        subtitle: "Call volume across client call centres",
+        total: Math.round(current.totalCalls).toLocaleString(),
+        loading: callsLoading,
+        // Distinguishes "not fetched yet" from "fetched and there were none".
+        pending: callRows === null,
+        ...callSeries,
+      },
       closes: {
         tab: "Closes",
         title: "Total closes",
@@ -258,7 +373,18 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
         ...closeSeries,
       },
     };
-  }, [leads, granularity, current.leads, current.closes]);
+  }, [
+    leads,
+    callRows,
+    callsLoading,
+    granularity,
+    formatMoney,
+    currencySymbol,
+    current.leads,
+    current.closes,
+    current.totalCalls,
+    current.spend,
+  ]);
 
   // Attribution comes off the sampled lead rows; the funnel scales its rates
   // onto the true lead total so it shares an axis with the KPI strip.
@@ -287,6 +413,7 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
 
     loading: groupsLoading || presetSyncing,
     seriesLoading: seriesLoading || presetSyncing,
+    callsLoading,
     error: groupsError,
     hasClients: current.clientCount > 0,
     hasComparison: previous != null,

@@ -3,6 +3,8 @@ import {
   MAX_BUCKETS,
   PREVIOUS_PERIOD,
   bucketSeries,
+  callTimestamps,
+  scaleSeriesToTotal,
   subtractPeriods,
 } from "@/lib/portfolio-series";
 
@@ -77,6 +79,68 @@ describe("bucketSeries", () => {
   it("returns an empty series for no rows", () => {
     expect(bucketSeries([], (r) => r.created_time, "Daily").values).toEqual([]);
     expect(bucketSeries(undefined, (r) => r.created_time, "Daily").values).toEqual([]);
+  });
+});
+
+describe("callTimestamps", () => {
+  it("walks into each lead's nested call logs", () => {
+    const rows = [
+      { call_logs: [{ call_time_iso: "2026-07-01T09:00:00Z" }, { call_time_iso: "2026-07-01T10:00:00Z" }] },
+      { call_logs: [{ call_time_iso: "2026-07-02T09:00:00Z" }] },
+    ];
+    expect(callTimestamps(rows)).toHaveLength(3);
+  });
+
+  it("skips logs with no timestamp, and leads with no logs", () => {
+    const rows = [
+      { call_logs: [{ call_time_iso: null }, { call_time_iso: "2026-07-01T09:00:00Z" }] },
+      { call_logs: [] },
+      {},
+    ];
+    expect(callTimestamps(rows)).toEqual([{ at: "2026-07-01T09:00:00Z" }]);
+  });
+
+  it("handles no rows at all", () => {
+    expect(callTimestamps(null)).toEqual([]);
+  });
+});
+
+describe("scaleSeriesToTotal", () => {
+  const series = { values: [1, 2, 1], labels: ["a", "b", "c"] };
+
+  it("leaves an uncapped series exactly as counted", () => {
+    const out = scaleSeriesToTotal(series, 999, false);
+    expect(out.values).toEqual([1, 2, 1]);
+    expect(out.estimated).toBe(false);
+  });
+
+  it("scales a capped series onto the real total", () => {
+    // The sample saw 4; the window really held 400. Every bucket ×100.
+    const out = scaleSeriesToTotal(series, 400, true);
+    expect(out.values).toEqual([100, 200, 100]);
+    expect(out.estimated).toBe(true);
+  });
+
+  it("preserves the shape it scales", () => {
+    const out = scaleSeriesToTotal(series, 400, true);
+    expect(out.values[1] / out.values[0]).toBeCloseTo(2, 5);
+  });
+
+  it("makes the scaled series sum to the total it was given", () => {
+    // This is the whole point — the curve has to agree with the figure
+    // printed directly above it.
+    const out = scaleSeriesToTotal(series, 400, true);
+    expect(out.values.reduce((a, b) => a + b, 0)).toBeCloseTo(400, 5);
+  });
+
+  it("keeps other series fields intact", () => {
+    expect(scaleSeriesToTotal(series, 400, true).labels).toEqual(["a", "b", "c"]);
+  });
+
+  it("does not scale when there is nothing to scale from or to", () => {
+    expect(scaleSeriesToTotal({ values: [0, 0] }, 400, true).values).toEqual([0, 0]);
+    expect(scaleSeriesToTotal(series, 0, true).values).toEqual([1, 2, 1]);
+    expect(scaleSeriesToTotal(series, null, true).estimated).toBe(false);
   });
 });
 

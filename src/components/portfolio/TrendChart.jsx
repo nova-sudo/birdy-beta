@@ -56,12 +56,20 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
       }
     >
 
-      <div className="mt-[14px] mb-4 flex items-baseline gap-[10px]">
+      <div className="mt-[14px] mb-4 flex flex-wrap items-baseline gap-[10px]">
         <span className="font-pd-display text-[28px] font-bold text-pd-ink">{chart.total}</span>
         <span className={cn("text-[12.5px] font-semibold", tone.text)}>
           <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
           <span className="sr-only">{chart.direction} </span> {chart.delta}
         </span>
+        {chart.estimated && (
+          // The total is exact; the curve under it is not counted — either a
+          // sample scaled onto that total, or a shape borrowed from another
+          // metric. Say which, rather than letting it read as measured.
+          <span className="text-[11.5px] text-pd-faint">
+            {chart.estimateNote ?? "shape estimated from a sample"}
+          </span>
+        )}
       </div>
 
       {/* Names the shape of the series for anyone who can't see it — the dots

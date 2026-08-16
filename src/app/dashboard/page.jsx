@@ -93,10 +93,11 @@ export default function PortfolioDashboardPage() {
     activityCount,
     loading,
     seriesLoading,
+    callsLoading,
     error,
     hasClients,
     hasComparison,
-  } = usePortfolioData({ preset, granularity });
+  } = usePortfolioData({ preset, granularity, chartMetric });
 
   // Optimistic rail state layered over what the hook fetched, so acting on a
   // card is immediate and a failed request puts it back.
@@ -175,7 +176,9 @@ export default function PortfolioDashboardPage() {
     return {
       ...metric,
       subtitle: `${granularity} · ${metric.subtitle}`,
-      pointValues: metric.values.map((v) => Math.round(v).toLocaleString()),
+      pointValues: metric.values.map(
+        (v) => `${metric.valuePrefix ?? ""}${Math.round(v).toLocaleString()}`
+      ),
       direction: kpi?.direction,
       delta: kpi?.delta,
     };
@@ -245,7 +248,9 @@ export default function PortfolioDashboardPage() {
           <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
             <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
 
-            {seriesLoading ? (
+            {(chartMetric === "calls"
+              ? callsLoading || chartMetrics.calls?.pending
+              : seriesLoading) ? (
               <Skeleton className="mb-[18px] h-[340px] rounded-[16px]" />
             ) : chart ? (
               <TrendChart
@@ -259,7 +264,9 @@ export default function PortfolioDashboardPage() {
             ) : (
               <PdCard className="mb-[18px]" title="Trend">
                 <p className="py-8 text-center text-[12px] text-pd-faint">
-                  No dated leads in this window yet.
+                  {chartMetric === "calls"
+                    ? "No dated calls in this window yet."
+                    : "No dated leads in this window yet."}
                 </p>
               </PdCard>
             )}

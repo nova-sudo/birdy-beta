@@ -72,7 +72,8 @@ Everything is real, from endpoints that already existed:
 |---|---|
 | `/api/client-groups?date_preset=` | KPIs, leaderboards, funnel, call insights |
 | `/api/client-groups?date_preset=<previous>` | The delta pills |
-| `/api/facebook-leads/filtered` | The trend series (leads and closes) |
+| `/api/facebook-leads/filtered` | The leads, spend and closes series, and the funnel's attribution |
+| `/api/hotprospector/call-center` | The calls series — fetched only when that tab is opened |
 | `/api/dashboard/summary` | Suggestions and activity |
 | `/api/dashboard/suggestions/:id/apply` `DELETE :id` | Do it / Dismiss |
 
@@ -95,6 +96,38 @@ figures under another window's label.
 Everything except the right rail follows the date range. Suggestions, wins and
 activity come from `/api/dashboard/summary`, which takes no date parameters —
 they describe what needs attention now rather than what happened in a window.
+
+### The chart's four series, and which are measured
+
+| Tab | Shape | Total |
+|---|---|---|
+| Leads | counted from lead rows | exact |
+| Ad spend | **borrowed from lead volume** | exact |
+| Calls | counted from call logs | exact |
+| Closes | counted from won lead rows | exact |
+
+Every total is exact. Two things about the shapes are worth knowing.
+
+**The row endpoints cap what they return** — 5,000 leads, 2,000 call-centre
+leads — so those series are samples of their window. A series built straight
+from one undercounts and sits beneath a headline total that does not: a chart
+reading 120,531 above a curve summing to 5,000. `scaleSeriesToTotal` multiplies
+every bucket by one factor so the curve sums to the real total: shape from the
+sample, magnitude from the uncapped figure.
+
+**Ad spend has no shape of its own.** Meta reports spend already totalled for
+the whole date preset — there is no daily breakdown in the payload and no
+endpoint that returns one. The curve is the real total spread across days in
+proportion to that day's leads, which assumes CPL held steady. On a day of heavy
+spend and few leads it will understate, and that is exactly the case a media
+buyer cares about, so the card says `spread across days by lead share` under
+the total rather than letting the line read as measured. Making it real is a
+backend change: request `time_increment=1` from Meta's Insights API and cache
+the daily rows.
+
+Call logs are fetched lazily, only once the Calls tab is opened — a second
+heavyweight request most visits never need. A change of date range drops what
+was held rather than showing one window's calls under another's.
 
 ### The funnel, and why it is only three stages
 
@@ -154,9 +187,6 @@ be worse than silence.
 
 Both are absent rather than approximated:
 
-* **A spend-over-time curve.** Meta insights arrive pre-aggregated per date
-  preset; nothing breaks spend down by day. Spend is a KPI here, not a chart
-  metric, so the chart offers Leads and Closes only.
 * **A "Shows" funnel stage.** GoHighLevel opportunity stats carry
   won/lost/open/abandoned and nothing about attendance.
 

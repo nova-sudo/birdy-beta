@@ -65,8 +65,32 @@ const SUMMARY = {
   ],
 };
 
+// Two leads with call logs: three calls on 1 Jul, one on 2 Jul.
+const CALL_ROWS = [
+  {
+    id: "l1",
+    call_logs: [
+      { call_time_iso: "2026-07-01T09:00:00Z" },
+      { call_time_iso: "2026-07-01T10:00:00Z" },
+    ],
+  },
+  {
+    id: "l2",
+    call_logs: [
+      { call_time_iso: "2026-07-01T15:00:00Z" },
+      { call_time_iso: "2026-07-02T09:00:00Z" },
+    ],
+  },
+];
+
 function mockEndpoints(overrides = {}) {
   apiRequest.mockImplementation((url) => {
+    if (url.startsWith("/api/hotprospector/call-center")) {
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ data: overrides.callRows ?? CALL_ROWS }),
+      });
+    }
     if (url.startsWith("/api/dashboard/summary")) {
       return Promise.resolve({ ok: true, json: async () => overrides.summary ?? SUMMARY });
     }
@@ -276,11 +300,62 @@ describe("Portfolio Dashboard", () => {
     expect(screen.getByRole("button", { name: "3 Jul 2026: 1" })).toBeInTheDocument();
   });
 
-  it("offers no ad-spend chart tab, because no endpoint breaks spend down by day", async () => {
+  it("offers all four chart tabs", async () => {
     await renderPage();
 
     const tabs = screen.getAllByRole("radio").map((r) => r.textContent);
-    expect(tabs).toEqual(["Leads", "Closes"]);
+    expect(tabs).toEqual(["Leads", "Ad spend", "Calls", "Closes"]);
+  });
+
+  it("plots ad spend against the real total, spread by lead share", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Ad spend" }));
+
+    // £400 spread over 4 leads: 1 Jul had two of them, so £200.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1 Jul 2026: £200" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "2 Jul 2026: £100" })).toBeInTheDocument();
+  });
+
+  it("says the spend curve is derived rather than measured", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Ad spend" }));
+
+    // Meta gives no daily breakdown; the shape is borrowed from lead volume,
+    // and the card has to admit that rather than look measured.
+    expect(screen.getByText(/spread across days by lead share/)).toBeInTheDocument();
+  });
+
+  it("does not fetch call logs until the Calls tab is opened", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    const calledCallCentre = () =>
+      apiRequest.mock.calls.some(([url]) => url.startsWith("/api/hotprospector/call-center"));
+
+    // A second heavyweight request most visits never need.
+    expect(calledCallCentre()).toBe(false);
+
+    await user.click(screen.getByRole("radio", { name: "Calls" }));
+    await waitFor(() => expect(calledCallCentre()).toBe(true));
+  });
+
+  it("builds the calls series from nested call logs", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Calls" }));
+
+    // Three calls on 1 Jul, one on 2 Jul.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1 Jul 2026: 3" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "2 Jul 2026: 1" })).toBeInTheDocument();
   });
 
   it("plots only won leads on the closes series", async () => {

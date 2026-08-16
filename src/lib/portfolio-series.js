@@ -74,6 +74,46 @@ export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
 }
 
 /**
+ * Flatten call-centre lead rows down to their individual call timestamps.
+ *
+ * `/api/hotprospector/call-center` returns leads with their call logs nested,
+ * so a call series means walking into `call_logs` rather than counting rows.
+ */
+export function callTimestamps(leadRows) {
+  return (leadRows ?? []).flatMap((lead) =>
+    (lead.call_logs ?? [])
+      .map((log) => log.call_time_iso)
+      .filter(Boolean)
+      .map((at) => ({ at }))
+  );
+}
+
+/**
+ * Put a sampled series onto the same axis as its real total.
+ *
+ * Both series on this chart come from row endpoints that cap what they return,
+ * so a series built straight from them undercounts — and sits directly beneath
+ * a headline figure that does not. Scaling every bucket by the same factor
+ * keeps the shape the sample actually showed while making the magnitude agree
+ * with the total above it.
+ *
+ * @param {{values: number[]}} series
+ * @param {number} total the real, uncapped figure for the window
+ * @param {boolean} capped whether the sample hit its limit
+ */
+export function scaleSeriesToTotal(series, total, capped) {
+  const values = series?.values ?? [];
+  const sampleTotal = values.reduce((sum, v) => sum + v, 0);
+
+  if (!capped || sampleTotal <= 0 || !Number.isFinite(total) || total <= 0) {
+    return { ...series, estimated: false };
+  }
+
+  const factor = total / sampleTotal;
+  return { ...series, values: values.map((v) => v * factor), estimated: true };
+}
+
+/**
  * Which preset to fetch to get the period immediately before this one.
  *
  * `/api/client-groups` only speaks in presets, so a previous period has to be
