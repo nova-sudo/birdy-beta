@@ -40,7 +40,7 @@ PortfolioHeader          title · timeframe picker · date range
 | `granularity` | `Daily` | How finely the chart buckets that window |
 | `chartMetric` | `leads` | Which series is plotted |
 | `topMetric` | first available | Leaderboard ranking |
-| `panel` | `suggestions` | Which rail panel renders — Suggestions, Wins or Activity |
+| `panel` | `suggestions` | Which rail panel renders — Suggestions or Activity |
 
 The handoff blurred these first two into one "timeframe" control. They are
 different questions — which window, and how finely to slice it — so they are
@@ -61,7 +61,6 @@ Everything is real, from endpoints that already existed:
 | `/api/facebook-leads/filtered` | The trend series (leads and closes) |
 | `/api/dashboard/summary` | Suggestions and activity |
 | `/api/dashboard/suggestions/:id/apply` `DELETE :id` | Do it / Dismiss |
-| `/api/dashboard/wins/:id/complete` | Mark a win done |
 
 Field paths mirror what `components/ui/table-container.jsx` already reads, so
 this screen and the clients table can't drift into disagreeing about what
@@ -174,8 +173,11 @@ It took over `/dashboard` from a page that listed Birdy suggestions, triggered
 alerts and client wins as tabs, with an activity feed beside them. Of those:
 
 * **Suggestions** and **activity** are the right rail, on the same endpoints.
-* **Client wins** are a third rail panel. They had no home outside the page this
-  replaced, so they moved rather than disappearing with it.
+* **Client wins** are not shown. They briefly had a third rail panel, which was
+  removed — three tabs did not fit a 340px rail without abbreviating
+  "Suggestions". `usePortfolioData` still maps `wins` off the summary response
+  and `WinCard` / `completeWinRequest` still exist, so restoring the panel is a
+  few lines; nothing currently renders them.
 * **Triggered alerts** are not carried over — `/alerts` already lists them, and
   the old tab was a second view of the same store.
 * **Suggestion strictness** (the `PUT /api/dashboard/settings` control) has no

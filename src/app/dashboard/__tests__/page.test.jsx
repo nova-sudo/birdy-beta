@@ -388,26 +388,24 @@ describe("Portfolio Dashboard", () => {
     await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
   });
 
-  it("keeps client wins reachable, which the page it replaces owned", async () => {
-    const user = userEvent.setup();
+  it("shows two rail tabs, and no Wins tab even when the API returns wins", async () => {
     await renderPage();
     await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("tab", { name: /Wins/ }));
-    expect(screen.getByText("CPL down 22% this week")).toBeInTheDocument();
+    // The summary response still carries a win; the rail deliberately ignores it.
+    const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+    expect(tabs).toHaveLength(2);
+    expect(tabs.join(" ")).not.toContain("Wins");
+    expect(screen.queryByText("CPL down 22% this week")).not.toBeInTheDocument();
   });
 
-  it("marks a win done", async () => {
-    const user = userEvent.setup();
+  it("leaves the two remaining tab labels unabbreviated", async () => {
     await renderPage();
-    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("tab", { name: /Wins/ }));
-    await user.click(screen.getByRole("button", { name: /Mark done: CPL down 22%/ }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("CPL down 22% this week")).not.toBeInTheDocument()
-    );
+    // Three tabs squeezed "Suggestions" into "Sugges…"; two do not.
+    const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+    expect(tabs[0]).toContain("Suggestions");
+    expect(tabs[1]).toContain("Activity");
   });
 
   it("says so when there are no active clients rather than showing zeroes", async () => {

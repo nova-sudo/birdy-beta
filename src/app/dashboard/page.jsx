@@ -14,7 +14,6 @@ import {
   StatStrip,
   SuggestionCard,
   TrendChart,
-  WinCard,
 } from "@/components/portfolio";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
@@ -29,7 +28,6 @@ import {
 import { portfolioFontClass } from "./fonts";
 import {
   applySuggestionRequest,
-  completeWinRequest,
   dismissSuggestionRequest,
   usePortfolioData,
 } from "./usePortfolioData";
@@ -94,7 +92,6 @@ export default function PortfolioDashboardPage() {
     suggestions,
     activity,
     activityCount,
-    wins,
     loading,
     seriesLoading,
     error,
@@ -112,18 +109,6 @@ export default function PortfolioDashboardPage() {
     [suggestions, removed]
   );
   const visibleActivity = useMemo(() => [...applied, ...activity], [applied, activity]);
-  const visibleWins = useMemo(() => wins.filter((w) => !removed[w.id]), [wins, removed]);
-
-  const handleCompleteWin = useCallback(async (win) => {
-    setRemoved((prev) => ({ ...prev, [win.id]: true }));
-    const ok = await completeWinRequest(win.id);
-    if (!ok) {
-      setRemoved((prev) => ({ ...prev, [win.id]: false }));
-      toast.error("Couldn't mark that done", { description: win.title });
-      return;
-    }
-    toast.success("Marked as done", { description: win.title });
-  }, []);
 
   const handleApply = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
@@ -215,16 +200,6 @@ export default function PortfolioDashboardPage() {
             onDismiss={handleDismiss}
           />
         )),
-    },
-    {
-      key: "wins",
-      label: "Wins",
-      badge: visibleWins.length,
-      badgeClassName: "bg-pd-success-bg text-pd-success",
-      isEmpty: visibleWins.length === 0,
-      emptyMessage: "No wins to report yet",
-      render: () =>
-        visibleWins.map((win) => <WinCard key={win.id} win={win} onComplete={handleCompleteWin} />),
     },
     {
       key: "activity",
@@ -350,7 +325,6 @@ export default function PortfolioDashboardPage() {
           active={panel}
           onChange={setPanel}
           label="Rail panel"
-          itemClassName="flex-1 px-1.5 py-2"
         />
       </div>
     </div>
