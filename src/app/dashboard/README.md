@@ -36,8 +36,8 @@ PortfolioHeader          title · timeframe picker · date range
 
 | State | Default | Drives |
 |---|---|---|
-| `preset` | `last_7d` | The window **every** figure covers |
-| `granularity` | `Daily` | How finely the chart buckets that window |
+| `preset` | `last_7d` | The window **every** figure covers — lives in the top bar |
+| `granularity` | `Daily` | How finely the chart buckets that window — lives in the top bar |
 | `chartMetric` | `leads` | Which series is plotted |
 | `topMetric` | first available | Leaderboard ranking |
 | `panel` | `suggestions` | Which rail panel renders — Suggestions or Activity |
@@ -45,6 +45,15 @@ PortfolioHeader          title · timeframe picker · date range
 The handoff blurred these first two into one "timeframe" control. They are
 different questions — which window, and how finely to slice it — so they are
 two controls here.
+
+Both sit in the **global top bar**, beside the notifications bell and profile
+menu, not on the page. That puts them and the page that obeys them in different
+parts of the tree, so their state lives in `DashboardControlsProvider`
+(`src/components/dashboard-controls.jsx`), which `src/app/layout.jsx` wraps the
+shell in. `DashboardHeaderControls` renders on `/dashboard` only — no other
+route has anything for them to filter. Tests render the page inside that
+provider with the controls above it, because rendering the page alone would not
+exercise the wiring at all.
 
 The chart replays its draw animation by being keyed on
 `metric + granularity + preset`, so a switch remounts the paths and the CSS
@@ -191,23 +200,28 @@ activity feed.
 
 These are deliberate. Everything else matches the design's tokens.
 
-1. **No icon rail, no header avatar.** `AppSidebar` and `UserMenu` already
+1. **No frame, no page header bar.** The design's 1600×1040 card had a canvas
+   background inside a bordered box. That canvas is now the whole app's
+   background (`body` in `globals.css`, plus `SidebarInset`), so the box has
+   nothing left to delimit — cards and rails read as raised surfaces on every
+   route, not just this one. The title survives as an ordinary page heading.
+2. **No icon rail, no header avatar.** `AppSidebar` and `UserMenu` already
    render both globally from `src/app/layout.jsx`. Duplicating them would put
    two nav systems on one screen. The design's frame — canvas, border, radius,
    independently scrolling columns — is kept.
-2. **The chart's total-row delta is coloured by direction.** The handoff
+3. **The chart's total-row delta is coloured by direction.** The handoff
    hardcodes it green, which misreads daily leads, weekly spend and daily calls,
    all of which fell.
-3. **"Unique answer rate" uses a phone-call icon.** The design draws a phone
+4. **"Unique answer rate" uses a phone-call icon.** The design draws a phone
    crossed with an ×, which is lucide's `phone-missed` and reads as the opposite
    of the metric. The handoff's own icon table calls that slot "phone-answer".
-4. **The header has two controls, not one.** The handoff's single "timeframe"
+5. **The header has two controls, not one.** The handoff's single "timeframe"
    picker conflated the window with the granularity; the API separates them, so
    the header does too.
-5. **Menus and segmented controls are keyboard-operable.** The prototype closed
+6. **Menus and segmented controls are keyboard-operable.** The prototype closed
    menus only on selection; the handoff asks for outside-click and Escape in
    production, and this adds roving focus, arrow keys and focus return on top.
-6. **Chart points are buttons.** The tooltip was the only reading of an
+7. **Chart points are buttons.** The tooltip was the only reading of an
    individual period and hover-only put it out of reach of keyboard users.
 
 ## Tests

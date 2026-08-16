@@ -363,7 +363,10 @@
 
   body {
     @apply text-foreground;
-    background-color: var(--background);
+    /* The app sits on the Portfolio Dashboard's canvas rather than flat white,
+       so cards and rails read as raised surfaces everywhere, not just there.
+       `--background` stays white — it is what those surfaces are painted with. */
+    background-color: var(--pd-canvas);
     font-family: var(--font-outfit), 'Outfit', ui-sans-serif, system-ui, sans-serif;
     transition: background-color 0.5s ease, color 0.5s ease;
   }

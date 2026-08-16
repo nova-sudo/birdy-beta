@@ -12,7 +12,6 @@ export { Leaderboard } from "./Leaderboard";
 export { PdCard } from "./PdCard";
 export { PdMenu } from "./PdMenu";
 export { PdSegmented } from "./PdSegmented";
-export { PortfolioHeader } from "./PortfolioHeader";
 export { SidePanel } from "./SidePanel";
 export { StatStrip } from "./StatStrip";
 export { StatTile } from "./StatTile";

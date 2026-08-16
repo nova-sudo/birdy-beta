@@ -3,8 +3,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PortfolioDashboardPage from "../page";
+import {
+  DashboardControlsProvider,
+  DashboardHeaderControls,
+} from "@/components/dashboard-controls";
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
+// The header controls only render on the dashboard route.
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // next/font hits the network at module load, which a unit test has no business
@@ -111,8 +117,23 @@ beforeEach(() => {
   mockEndpoints();
 });
 
+/**
+ * Renders the page the way src/app/layout.jsx does — the date range and
+ * granularity chips live in the global top bar, above the page, sharing state
+ * through DashboardControlsProvider. Rendering the page alone would not
+ * exercise that wiring at all.
+ */
+function renderDashboard() {
+  return render(
+    <DashboardControlsProvider>
+      <DashboardHeaderControls />
+      <PortfolioDashboardPage />
+    </DashboardControlsProvider>
+  );
+}
+
 async function renderPage() {
-  render(<PortfolioDashboardPage />);
+  renderDashboard();
   await waitFor(() => expect(screen.getByText("Total ad spend")).toBeInTheDocument());
 }
 
@@ -410,7 +431,7 @@ describe("Portfolio Dashboard", () => {
 
   it("says so when there are no active clients rather than showing zeroes", async () => {
     useClientGroups.mockImplementation(fakeUseClientGroups({}));
-    render(<PortfolioDashboardPage />);
+    renderDashboard();
 
     await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
     expect(screen.queryByRole("group", { name: "Portfolio KPIs" })).not.toBeInTheDocument();
@@ -418,7 +439,7 @@ describe("Portfolio Dashboard", () => {
 
   it("distinguishes a failed load from an empty portfolio", async () => {
     useClientGroups.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
-    render(<PortfolioDashboardPage />);
+    renderDashboard();
 
     await waitFor(() =>
       expect(screen.getByText("Couldn't load your portfolio")).toBeInTheDocument()

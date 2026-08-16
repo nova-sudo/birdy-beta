@@ -75,7 +75,12 @@
       "Bash(find . -name \"*.py\" -exec grep -l \"graph.facebook.com/v23.0\\\\|graph.facebook.com/v18.0\\\\|facebook.com/v18.0\\\\|facebook.com/v23.0\" {} \\\\;)",
       "Bash(timeout 60 node -e ':*)",
       "Bash(node _test_parser.mjs)",
-      "WebFetch(domain:stitch.withgoogle.com)"
+      "WebFetch(domain:stitch.withgoogle.com)",
+      "Bash(python -)",
+      "Bash(rm src/components/portfolio/PortfolioHeader.jsx)",
+      "Bash(python -c ' *)",
+      "Bash(rm -rf .next)",
+      "Bash(timeout 400 npx next build)"
     ]
   }
 }

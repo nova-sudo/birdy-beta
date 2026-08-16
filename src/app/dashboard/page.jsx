@@ -9,16 +9,14 @@ import {
   Leaderboard,
   PdCard,
   PdMenu,
-  PortfolioHeader,
   SidePanel,
   StatStrip,
   SuggestionCard,
   TrendChart,
 } from "@/components/portfolio";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
+import { useDashboardControls } from "@/components/dashboard-controls";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
-import { GRANULARITIES } from "@/lib/portfolio-series";
 import {
   CALL_PRESENTATION,
   FUNNEL_PRESENTATION,
@@ -76,8 +74,9 @@ function EmptyState({ title, body }) {
 export default function PortfolioDashboardPage() {
   // The date preset picks the window every figure covers; granularity only
   // changes how finely the chart buckets that same window.
-  const [preset, setPreset] = useState(DEFAULT_DATE_PRESET);
-  const [granularity, setGranularity] = useState("Daily");
+  // The date range and granularity chips live in the global top bar, so their
+  // state sits above this page rather than in it.
+  const { preset, granularity } = useDashboardControls();
   const [chartMetric, setChartMetric] = useState("leads");
   const [topMetric, setTopMetric] = useState(null);
   const [panel, setPanel] = useState("suggestions");
@@ -220,17 +219,8 @@ export default function PortfolioDashboardPage() {
 
   return (
     <div
-      className={`${portfolioFontClass} flex min-h-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border-strong bg-pd-canvas`}
+      className={`${portfolioFontClass} -m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-6`}
     >
-      <PortfolioHeader
-        clientCount={clientCount}
-        granularity={granularity}
-        granularities={GRANULARITIES}
-        onGranularityChange={setGranularity}
-        preset={preset}
-        presets={DATE_PRESETS}
-        onPresetChange={setPreset}
-      />
 
       <div className="flex min-h-0 flex-1">
         {loading ? (
@@ -247,6 +237,19 @@ export default function PortfolioDashboardPage() {
           />
         ) : (
           <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
+            {/* The controls that used to sit beside this are in the top bar
+                now; the title stays as the page's own heading. */}
+            <div className="mb-[18px]">
+              <h1 className="font-pd-display text-[19px] font-bold tracking-[-0.02em] text-pd-ink">
+                Portfolio Dashboard
+              </h1>
+              <p className="mt-px text-[12px] text-pd-faint">
+                {clientCount
+                  ? `${clientCount.toLocaleString()} ${clientCount === 1 ? "client" : "clients"} · portfolio-level performance`
+                  : "Portfolio-level performance"}
+              </p>
+            </div>
+
             <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
 
             {seriesLoading ? (
