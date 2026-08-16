@@ -1,10 +1,8 @@
 import {
   CalendarCheck,
   CircleCheck,
-  Eye,
   Layers,
   MessageCircle,
-  MessageCircleMore,
   Phone,
   PhoneCall,
   PoundSterling,
@@ -38,14 +36,12 @@ export const CALL_PRESENTATION = {
   conversion: { icon: CalendarCheck, tone: "success" },
 };
 
-// Tints run purple → blue → amber → red → green down the funnel, matching the
-// KPI strip so a stage and its headline number read as the same thing.
+// Tints run purple → blue → green down the funnel, matching the KPI strip so a
+// stage and its headline number read as the same thing.
 export const FUNNEL_PRESENTATION = {
   leads: { icon: Users, tone: "primary" },
   engaged: { icon: MessageCircle, tone: "info" },
-  convos: { icon: MessageCircleMore, tone: "warning" },
-  closes: { icon: CircleCheck, tone: "danger" },
-  shows: { icon: Eye, tone: "success" },
+  closes: { icon: CircleCheck, tone: "success" },
 };
 
 /** Merges a presentation table into rows keyed by `key`. */

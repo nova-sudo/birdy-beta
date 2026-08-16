@@ -8,6 +8,7 @@ import { presetToDateRange } from "@/lib/date-utils";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import {
   aggregatePortfolio,
+  attributionStats,
   buildCallInsights,
   buildFunnel,
   buildKpis,
@@ -23,8 +24,10 @@ import { PREVIOUS_PERIOD, bucketSeries, subtractPeriods } from "@/lib/portfolio-
 //                                        caches → KPIs, leaderboards, funnel,
 //                                        call insights
 //   /api/client-groups?date_preset=<prev> the preceding period, for deltas
-//   /api/facebook-leads/filtered         lead rows with created_time →
-//                                        the leads and closes series
+//   /api/facebook-leads/filtered         individual Meta leads with
+//                                        created_time, ghl_matched and
+//                                        ghl_opportunity_status → the trend
+//                                        series and the funnel's attribution
 //   /api/dashboard/summary               Birdy suggestions and activity
 //
 // Two things the design asks for that no endpoint provides, and which are
@@ -34,6 +37,11 @@ import { PREVIOUS_PERIOD, bucketSeries, subtractPeriods } from "@/lib/portfolio-
 //     so spend is a KPI here but not a chart metric.
 //   * A "Shows" funnel stage. GHL opportunity stats carry won/lost/open/
 //     abandoned and nothing about attendance.
+//
+// The funnel takes its attribution from the lead rows rather than from
+// portfolio totals, so each stage is genuinely a subset of the one above it.
+// Those rows are capped at LEADS_FETCH_LIMIT, so they are read as a sample:
+// rates off the sample, magnitude off the true lead total. See buildFunnel.
 //
 // Deltas appear only for presets whose previous period is expressible as
 // another preset (see PREVIOUS_PERIOD). Elsewhere the pills are simply absent.
@@ -252,6 +260,13 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
     };
   }, [leads, granularity, current.leads, current.closes]);
 
+  // Attribution comes off the sampled lead rows; the funnel scales its rates
+  // onto the true lead total so it shares an axis with the KPI strip.
+  const attribution = useMemo(
+    () => attributionStats(leads, LEADS_FETCH_LIMIT),
+    [leads]
+  );
+
   const dateRangeLabel = useMemo(
     () => DATE_PRESETS.find((p) => p.value === preset)?.label ?? preset,
     [preset]
@@ -263,7 +278,8 @@ export function usePortfolioData({ preset = DEFAULT_DATE_PRESET, granularity = "
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),
-    funnel: buildFunnel(current, previous),
+    funnel: buildFunnel(current, previous, attribution),
+    funnelEstimated: attribution.capped,
     leaderboards: buildLeaderboards(current, formatMoney),
     chartMetrics,
 

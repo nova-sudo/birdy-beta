@@ -53,13 +53,21 @@ export const MATERIAL_DECLINE_PCT = 1;
 export function diagnoseFunnel(stages) {
   const signed = (s) => (s.direction === "down" ? -s.delta : s.delta);
 
-  const declining = (stages ?? [])
-    .map((stage, index) => ({ stage, index }))
+  // Only stages with a real movement can be diagnosed. Attributed stages are
+  // derived from a single window's lead rows and have no prior period to
+  // compare against, so they arrive with no delta at all — reading undefined
+  // as zero would let a stage with no information win "strongest stage".
+  const comparable = (stages ?? []).filter(
+    (s) => (s.direction === "up" || s.direction === "down") && Number.isFinite(s.delta)
+  );
+
+  const declining = comparable
+    .map((stage) => ({ stage, index: stages.indexOf(stage) }))
     .filter(({ stage }) => signed(stage) < -MATERIAL_DECLINE_PCT)
     .sort((a, b) => signed(a.stage) - signed(b.stage));
 
   if (declining.length === 0) {
-    const best = [...(stages ?? [])].sort((a, b) => signed(b) - signed(a))[0];
+    const best = [...comparable].sort((a, b) => signed(b) - signed(a))[0];
     if (!best) return { state: "healthy", title: "All looking good", body: "" };
 
     return {

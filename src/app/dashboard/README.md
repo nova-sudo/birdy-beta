@@ -83,6 +83,45 @@ Everything except the right rail follows the date range. Suggestions, wins and
 activity come from `/api/dashboard/summary`, which takes no date parameters —
 they describe what needs attention now rather than what happened in a window.
 
+### The funnel, and why it is only three stages
+
+A funnel's whole claim is that each stage is a **subset** of the one above it.
+Portfolio totals cannot deliver that, because each integration counts a
+different population:
+
+* GoHighLevel's `total_contacts` is every contact a client has — organic
+  enquiries, referrals, manual imports, everyone from before Meta was connected
+  — and unlike the Meta cache it is not read through a date preset. An earlier
+  version used it for "In CRM" and duly showed *more* people in the CRM than
+  there were leads.
+* HotProspector's `leads_with_calls` counts whoever is in the dialler, with no
+  link back to which Meta lead they were.
+
+So every stage now comes from `/api/facebook-leads/filtered`, which returns
+individual Meta leads carrying `ghl_matched` and `ghl_opportunity_status`:
+
+| Stage | Source |
+|---|---|
+| Leads | Meta insights lead total for the window |
+| In CRM | share of sampled leads with `ghl_matched` |
+| Closes | share of sampled leads whose opportunity is `won` |
+
+"Called" is gone — its figures still appear in the Call insights card, where
+they are not pretending to be a funnel stage.
+
+**The rows are a sample.** The fetch is capped at `LEADS_FETCH_LIMIT` (5,000),
+so a raw count would top out at the cap rather than describing the portfolio.
+The sample supplies the *rate* and the true lead total supplies the
+*magnitude*. When the cap is hit the scaled stages are marked estimated and
+render with a `≈`, because an estimate should not wear the same exactness as a
+counted figure.
+
+**Attributed stages carry no delta.** They are derived from one window's rows
+and there is no previous-window fetch to compare against, so only Leads has a
+movement. `diagnoseFunnel` ignores stages with no delta rather than reading the
+absence as zero — otherwise a stage with no information could win "strongest
+stage", or mask a real decline elsewhere.
+
 ### Deltas
 
 `/api/client-groups` only speaks in date presets, so a previous period has to
@@ -106,9 +145,7 @@ Both are absent rather than approximated:
   preset; nothing breaks spend down by day. Spend is a KPI here, not a chart
   metric, so the chart offers Leads and Closes only.
 * **A "Shows" funnel stage.** GoHighLevel opportunity stats carry
-  won/lost/open/abandoned and nothing about attendance. The funnel runs four
-  real stages — Leads → In CRM → Called → Closes — rather than five with a
-  guess at the end.
+  won/lost/open/abandoned and nothing about attendance.
 
 Two call metrics also moved to what exists: "Speed to lead" became talk time
 (no first-touch timestamp is available), and "Unique answer rate" became answer

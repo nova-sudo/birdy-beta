@@ -6,6 +6,7 @@ import {
   buildFunnel,
   buildKpis,
   buildLeaderboards,
+  attributionStats,
   groupMetrics,
   percentDelta,
 } from "@/lib/portfolio-aggregate";
@@ -164,22 +165,102 @@ describe("buildKpis", () => {
   });
 });
 
-describe("buildFunnel", () => {
-  it("stops at closes — GHL carries no attendance data to build a Shows stage on", () => {
-    const stages = buildFunnel({ leads: 100, contacts: 80, leadsWithCalls: 50, closes: 10 }, null);
-    expect(stages.map((s) => s.key)).toEqual(["leads", "engaged", "convos", "closes"]);
+describe("attributionStats", () => {
+  const rows = [
+    { ghl_matched: true, ghl_opportunity_status: "won" },
+    { ghl_matched: true, ghl_opportunity_status: "open" },
+    { ghl_matched: false, ghl_opportunity_status: null },
+    { ghl_matched: true, ghl_opportunity_status: "WON" },
+  ];
+
+  it("counts leads that reached the CRM", () => {
+    expect(attributionStats(rows, 5000).matched).toBe(3);
   });
 
-  it("gives diagnoseFunnel numeric deltas to compare", () => {
-    const stages = buildFunnel(
-      { leads: 110, contacts: 80, leadsWithCalls: 50, closes: 9 },
-      { leads: 100, contacts: 80, leadsWithCalls: 50, closes: 10 }
-    );
-    const closes = stages.find((s) => s.key === "closes");
+  it("counts won opportunities case-insensitively", () => {
+    expect(attributionStats(rows, 5000).won).toBe(2);
+  });
 
-    expect(closes.direction).toBe("down");
-    expect(typeof closes.delta).toBe("number");
-    expect(closes.delta).toBeCloseTo(10, 1);
+  it("reports rates off the sample", () => {
+    const stats = attributionStats(rows, 5000);
+    expect(stats.matchRate).toBe(0.75);
+    expect(stats.wonRate).toBe(0.5);
+  });
+
+  it("knows when the fetch was capped", () => {
+    expect(attributionStats(rows, 5000).capped).toBe(false);
+    expect(attributionStats(rows, 4).capped).toBe(true);
+  });
+
+  it("has no rate to report for an empty sample", () => {
+    const stats = attributionStats([], 5000);
+    expect(stats.matchRate).toBeNull();
+    expect(stats.wonRate).toBeNull();
+  });
+});
+
+describe("buildFunnel", () => {
+  const current = { leads: 1000, contacts: 99999, leadsWithCalls: 800, closes: 500 };
+  const sample = attributionStats(
+    [
+      { ghl_matched: true, ghl_opportunity_status: "won" },
+      { ghl_matched: true, ghl_opportunity_status: "open" },
+      { ghl_matched: false, ghl_opportunity_status: null },
+      { ghl_matched: false, ghl_opportunity_status: null },
+    ],
+    5000
+  );
+
+  it("keeps every stage a subset of the one above it", () => {
+    const stages = buildFunnel(current, null, sample);
+    const counts = stages.map((s) => Number(s.count.replace(/,/g, "")));
+
+    for (let i = 1; i < counts.length; i += 1) {
+      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
+    }
+  });
+
+  it("takes In CRM from lead attribution, not the portfolio contact count", () => {
+    // 99,999 CRM contacts across the portfolio, but only half the sampled Meta
+    // leads reached it — the funnel must report the attributed half.
+    const stages = buildFunnel(current, null, sample);
+    const inCrm = stages.find((s) => s.key === "engaged");
+    expect(inCrm.count).toBe("500");
+  });
+
+  it("scales the sample's rate onto the true lead total", () => {
+    // The fetch is capped, so a raw count would top out at the cap rather than
+    // describing the portfolio.
+    const stages = buildFunnel({ ...current, leads: 120000 }, null, sample);
+    expect(stages.find((s) => s.key === "engaged").count).toBe("60,000");
+  });
+
+  it("drops Called — HotProspector stats have no link back to a Meta lead", () => {
+    const stages = buildFunnel(current, null, sample);
+    expect(stages.map((s) => s.key)).toEqual(["leads", "engaged", "closes"]);
+  });
+
+  it("marks scaled stages as estimated only when the sample was capped", () => {
+    const uncapped = buildFunnel(current, null, sample);
+    expect(uncapped.every((s) => s.estimated === false)).toBe(true);
+
+    const capped = buildFunnel(current, null, { ...sample, capped: true });
+    expect(capped.find((s) => s.key === "engaged").estimated).toBe(true);
+    // Leads is a counted total, not a scaled one, so it stays exact.
+    expect(capped.find((s) => s.key === "leads").estimated).toBe(false);
+  });
+
+  it("omits attributed stages entirely when there are no lead rows", () => {
+    const stages = buildFunnel(current, null, attributionStats([], 5000));
+    expect(stages.map((s) => s.key)).toEqual(["leads"]);
+  });
+
+  it("gives Leads a numeric delta for diagnoseFunnel to read", () => {
+    const stages = buildFunnel(current, { leads: 800 }, sample);
+    const leads = stages.find((s) => s.key === "leads");
+
+    expect(leads.direction).toBe("up");
+    expect(typeof leads.delta).toBe("number");
   });
 });
 

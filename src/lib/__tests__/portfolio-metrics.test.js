@@ -88,6 +88,27 @@ describe("diagnoseFunnel", () => {
     expect(result.body).not.toContain("while");
   });
 
+  it("ignores stages that carry no delta at all", () => {
+    // Attributed stages are derived from one window's lead rows and have no
+    // prior period. Reading their missing delta as zero would let a stage with
+    // no information win "strongest stage" — or mask a real decline elsewhere.
+    const mixed = [
+      { stage: "Leads", direction: "up", delta: 4.2, issue: "lead flow" },
+      { stage: "In CRM", issue: "CRM sync" },
+      { stage: "Closes", issue: "close rate" },
+    ];
+    const result = diagnoseFunnel(mixed);
+
+    expect(result.state).toBe("healthy");
+    expect(result.body).toContain("Leads are up 4.2%");
+    expect(result.body).not.toContain("undefined");
+  });
+
+  it("stays quiet when no stage has anything to compare", () => {
+    const result = diagnoseFunnel([{ stage: "Leads" }, { stage: "In CRM" }]);
+    expect(result).toEqual({ state: "healthy", title: "All looking good", body: "" });
+  });
+
   it("survives an empty funnel", () => {
     expect(diagnoseFunnel([]).state).toBe("healthy");
     expect(diagnoseFunnel(undefined).state).toBe("healthy");

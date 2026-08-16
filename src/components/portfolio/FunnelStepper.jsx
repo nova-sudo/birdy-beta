@@ -33,7 +33,18 @@ export function FunnelStepper({ stages }) {
                 <Icon className="size-[19px]" aria-hidden="true" />
               </span>
               <div className="text-[12px] text-pd-faint">{stage.stage}</div>
-              <div className="mt-[3px] font-pd-display text-[22px] font-bold text-pd-ink">
+              <div
+                className="mt-[3px] font-pd-display text-[22px] font-bold text-pd-ink"
+                // An estimate says so rather than wearing the same exactness as
+                // a counted figure.
+                title={stage.estimated ? `${stage.count} — estimated from a sample` : undefined}
+              >
+                {stage.estimated && (
+                  <span aria-hidden="true" className="text-pd-faint">
+                    ≈
+                  </span>
+                )}
+                {stage.estimated && <span className="sr-only">approximately </span>}
                 {stage.count}
               </div>
               {tone && (

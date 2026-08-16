@@ -29,17 +29,18 @@ function group({ id, name, spend, results, won, revenue, contacts = 0, calls = {
 }
 
 const GROUPS = [
-  group({ id: "a", name: "The Body Room", spend: 100, results: 100, won: 4, revenue: 900, contacts: 80,
+  group({ id: "a", name: "The Body Room", spend: 100, results: 100, won: 4, revenue: 900, contacts: 5000,
     calls: { total_calls: 120, answered_calls: 60, leads_with_calls: 50, total_leads: 100, total_talk_min: 200 } }),
-  group({ id: "b", name: "Tylaesthetics", spend: 300, results: 100, won: 12, revenue: 2400, contacts: 70,
+  group({ id: "b", name: "Tylaesthetics", spend: 300, results: 100, won: 12, revenue: 2400, contacts: 4000,
     calls: { total_calls: 80, answered_calls: 50, leads_with_calls: 40, total_leads: 100, total_talk_min: 140 } }),
 ];
 
+// Three of four reached the CRM; two of four were won.
 const LEADS = [
-  { created_time: "2026-07-01T09:00:00Z", ghl_opportunity_status: "won" },
-  { created_time: "2026-07-01T11:00:00Z", ghl_opportunity_status: "open" },
-  { created_time: "2026-07-02T09:00:00Z", ghl_opportunity_status: "won" },
-  { created_time: "2026-07-03T09:00:00Z", ghl_opportunity_status: null },
+  { created_time: "2026-07-01T09:00:00Z", ghl_matched: true, ghl_opportunity_status: "won" },
+  { created_time: "2026-07-01T11:00:00Z", ghl_matched: true, ghl_opportunity_status: "open" },
+  { created_time: "2026-07-02T09:00:00Z", ghl_matched: true, ghl_opportunity_status: "won" },
+  { created_time: "2026-07-03T09:00:00Z", ghl_matched: false, ghl_opportunity_status: null },
 ];
 
 const SUMMARY = {
@@ -282,15 +283,43 @@ describe("Portfolio Dashboard", () => {
     expect(within(card).getAllByRole("listitem")[0]).toHaveTextContent("Tylaesthetics");
   });
 
-  it("builds a four-stage funnel and stops where the data does", async () => {
+  it("never shows a funnel stage larger than the one above it", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    const counts = within(card)
+      .getAllByRole("listitem")
+      .map((li) => Number(li.textContent.match(/[\d,]+/)[0].replace(/,/g, "")));
+
+    expect(counts.length).toBeGreaterThan(1);
+    for (let i = 1; i < counts.length; i += 1) {
+      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
+    }
+  });
+
+  it("takes In CRM from lead attribution rather than the CRM's own contact count", async () => {
     await renderPage();
 
     const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
     const stages = within(card).getAllByRole("listitem").map((li) => li.textContent);
 
-    expect(stages).toHaveLength(4);
-    expect(stages[0]).toContain("Leads");
-    expect(stages[3]).toContain("Closes");
+    // The portfolio holds 9,000 GHL contacts against 200 Meta leads. Three of
+    // the four sampled leads reached the CRM, so the stage is 75% of 200.
+    expect(stages[1]).toContain("In CRM");
+    expect(stages[1]).toContain("150");
+    expect(card.textContent).not.toContain("9,000");
+  });
+
+  it("drops the stages it cannot attribute to a Meta lead", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    const stages = within(card).getAllByRole("listitem").map((li) => li.textContent);
+
+    expect(stages).toHaveLength(3);
+    // Call volume has no link back to which Meta lead it belonged to, and
+    // attendance has no source at all.
+    expect(card.textContent).not.toContain("Called");
     expect(card.textContent).not.toContain("Shows");
   });
 

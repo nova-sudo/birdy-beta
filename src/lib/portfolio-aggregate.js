@@ -205,35 +205,110 @@ export function buildCallInsights(current) {
 }
 
 /**
- * The funnel, as far as the data actually reaches.
+ * What the sampled lead rows say about where Meta leads ended up.
  *
- * The handoff draws five stages ending in Shows. GoHighLevel's opportunity
- * stats carry won/lost/open/abandoned and no show data, so the last stage is
- * dropped rather than invented — four real stages beat five with a guess.
+ * `/api/facebook-leads/filtered` returns individual leads that came from Meta,
+ * each carrying whether it reached the CRM and what its opportunity did. That
+ * attribution is the whole point: a portfolio-level GHL contact count answers a
+ * different question, because the CRM also holds organic enquiries, referrals,
+ * manual imports and everyone from before Meta was connected.
+ *
+ * The fetch is capped, so treat these as a sample and read rates off them
+ * rather than totals. `capped` says whether we saw everything.
+ *
+ * @param {object[]} leads
+ * @param {number} fetchLimit the cap the rows were fetched under
  */
-export function buildFunnel(current, previous) {
+export function attributionStats(leads, fetchLimit) {
+  const rows = leads ?? [];
+  const sampled = rows.length;
+  const matched = rows.filter((l) => Boolean(l.ghl_matched)).length;
+  const won = rows.filter(
+    (l) => String(l.ghl_opportunity_status ?? "").toLowerCase() === "won"
+  ).length;
+
+  return {
+    sampled,
+    matched,
+    won,
+    capped: fetchLimit > 0 && sampled >= fetchLimit,
+    matchRate: sampled > 0 ? matched / sampled : null,
+    wonRate: sampled > 0 ? won / sampled : null,
+  };
+}
+
+/**
+ * The funnel, built so each stage is genuinely a subset of the one above it.
+ *
+ * Every stage counts Meta-attributed leads. Mixing bases is what made an
+ * earlier version show more people "In CRM" than there were leads: that stage
+ * summed every GoHighLevel contact each client had, which is not a subset of
+ * anything upstream and is not even windowed the way Meta insights are.
+ *
+ * "Called" is gone for the same reason — HotProspector call stats count calls
+ * to whoever is in the dialler, with no link back to which Meta lead they were.
+ * Those figures still have a home in the Call insights card, where they are not
+ * pretending to be a stage.
+ *
+ * The handoff's fifth stage, Shows, has no source at all: GHL opportunity stats
+ * carry won/lost/open/abandoned and nothing about attendance.
+ *
+ * @param {object} current portfolio totals
+ * @param {object|null} previous the preceding period, for deltas
+ * @param {object} stats from attributionStats
+ */
+export function buildFunnel(current, previous, stats) {
   const prev = previous ?? {};
+  const { matchRate, wonRate, capped } = stats ?? {};
+
+  // The sample gives a rate; the true lead total gives the magnitude. Scaling
+  // one by the other keeps the funnel on the same axis as the KPI strip
+  // instead of topping out at whatever the fetch limit happened to be.
+  const scaled = (rate) => (rate == null ? null : current.leads * rate);
 
   const stages = [
-    { key: "leads", stage: "Leads", value: current.leads, prev: prev.leads, issue: "lead flow", stageNoun: "lead" },
-    { key: "engaged", stage: "In CRM", value: current.contacts, prev: prev.contacts, issue: "CRM sync", stageNoun: "CRM" },
-    { key: "convos", stage: "Called", value: current.leadsWithCalls, prev: prev.leadsWithCalls, issue: "contact rate", stageNoun: "calling" },
-    { key: "closes", stage: "Closes", value: current.closes, prev: prev.closes, issue: "close rate", stageNoun: "closing" },
+    {
+      key: "leads",
+      stage: "Leads",
+      value: current.leads,
+      prev: prev.leads,
+      issue: "lead flow",
+      stageNoun: "lead",
+    },
+    {
+      key: "engaged",
+      stage: "In CRM",
+      value: scaled(matchRate),
+      issue: "CRM sync",
+      stageNoun: "CRM",
+      estimated: capped,
+    },
+    {
+      key: "closes",
+      stage: "Closes",
+      value: scaled(wonRate),
+      issue: "close rate",
+      stageNoun: "closing",
+      estimated: capped,
+    },
   ];
 
-  return stages.map((s) => {
-    const change = percentDelta(s.value, s.prev);
-    return {
-      key: s.key,
-      stage: s.stage,
-      count: Math.round(s.value).toLocaleString(),
-      issue: s.issue,
-      stageNoun: s.stageNoun,
-      // diagnoseFunnel reads delta as a number; StatTile-style strings don't
-      // apply here.
-      ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
-    };
-  });
+  return stages
+    .filter((s) => s.value != null)
+    .map((s) => {
+      const change = percentDelta(s.value, s.prev);
+      return {
+        key: s.key,
+        stage: s.stage,
+        count: Math.round(s.value).toLocaleString(),
+        issue: s.issue,
+        stageNoun: s.stageNoun,
+        estimated: Boolean(s.estimated),
+        // diagnoseFunnel reads delta as a number; the pill-style strings the
+        // KPI strip uses don't apply here.
+        ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
+      };
+    });
 }
 
 /**
