@@ -63,6 +63,11 @@ export function groupMetrics(group) {
     funnelCalled: num(funnel?.called),
     funnelCloses: num(funnel?.closes),
 
+    // Measured per-day spend for this client, [{date, spend}]. Kept off the
+    // SUMMED list because it is a series, not a scalar — aggregatePortfolio
+    // merges it by date instead.
+    dailySpend: Array.isArray(group.facebook?.daily_spend) ? group.facebook.daily_spend : [],
+
     totalCalls: num(calls.total_calls),
     leadsWithCalls: num(calls.leads_with_calls),
     answeredCalls: num(calls.answered_calls),
@@ -109,8 +114,34 @@ export function aggregatePortfolio(groups) {
     clientCount: rows.length,
     currency: rows.find((r) => r.currency)?.currency ?? null,
     cpl: totals.leads > 0 ? totals.spend / totals.leads : 0,
+    dailySpend: mergeDailySpend(rows),
     rows,
   };
+}
+
+/**
+ * One portfolio-wide spend series, from each client's own daily rows.
+ *
+ * Summed the same way the KPI strip sums spend — per client group. Five ad
+ * accounts back two groups each, so their spend lands twice in both figures.
+ * That is wrong in the same direction and by the same amount in each, which is
+ * the point: the curve and the total above it agree. Fixing the double-count
+ * is a separate decision about what a "client" is, and it has to change both
+ * at once or the card starts contradicting itself.
+ */
+function mergeDailySpend(rows) {
+  const byDate = new Map();
+
+  for (const row of rows) {
+    for (const day of row.dailySpend) {
+      if (!day?.date) continue;
+      byDate.set(day.date, (byDate.get(day.date) ?? 0) + num(day.spend));
+    }
+  }
+
+  return [...byDate.entries()]
+    .map(([date, spend]) => ({ date, spend }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 // ─── Deltas ─────────────────────────────────────────────────────────────────

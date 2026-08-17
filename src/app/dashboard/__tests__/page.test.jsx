@@ -18,16 +18,26 @@ vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), err
 // doing — the class names are all the page uses.
 vi.mock("../fonts", () => ({ portfolioFontClass: "" }));
 
+import { format, subDays } from "date-fns";
+
 import { apiRequest } from "@/lib/api";
 import { useClientGroups } from "@/lib/useClientGroups";
 
+/** N days ago, in the two shapes this file needs. */
+const dayISO = (n) => format(subDays(new Date(), n), "yyyy-MM-dd");
+const dayLabel = (n) => format(subDays(new Date(), n), "d MMM yyyy");
+
 /** A client group in the shape GET /api/client-groups actually returns. */
-function group({ id, name, spend, results, won, revenue, contacts = 0, open = 0, calls = {}, funnel = null }) {
+function group({ id, name, spend, results, won, revenue, contacts = 0, open = 0, calls = {}, funnel = null, dailySpend = [] }) {
   return {
     id,
     name,
     client_status: "Active",
-    facebook: { currency: "GBP", metrics: { insights: { spend, results } } },
+    facebook: {
+      currency: "GBP",
+      metrics: { insights: { spend, results } },
+      daily_spend: dailySpend,
+    },
     gohighlevel: {
       metrics: {
         total_contacts: contacts,
@@ -42,10 +52,26 @@ function group({ id, name, spend, results, won, revenue, contacts = 0, open = 0,
 const GROUPS = [
   group({ id: "a", name: "The Body Room", spend: 100, results: 100, won: 4, revenue: 900, contacts: 5000, open: 60,
     calls: { total_calls: 120, answered_calls: 60, leads_with_calls: 50, total_leads: 100, total_talk_min: 200 },
-    funnel: { leads: 300, in_crm: 120, called: 200, closes: 30 } }),
+    funnel: { leads: 300, in_crm: 120, called: 200, closes: 30 },
+    // Measured spend: deliberately NOT proportional to lead volume, so a curve
+    // that still borrows the lead shape is visible in the assertions.
+    //
+    // Dated relative to today because the chart slices this to the selected
+    // range, and the default preset is last_7d — fixed July dates would fall
+    // outside it and the series would (correctly) come back empty.
+    dailySpend: [
+      { date: dayISO(3), spend: 20 },
+      { date: dayISO(2), spend: 55 },
+      { date: dayISO(1), spend: 25 },
+    ] }),
   group({ id: "b", name: "Tylaesthetics", spend: 300, results: 100, won: 12, revenue: 2400, contacts: 4000, open: 40,
     calls: { total_calls: 80, answered_calls: 50, leads_with_calls: 40, total_leads: 100, total_talk_min: 140 },
-    funnel: { leads: 100, in_crm: 60, called: 70, closes: 20 } }),
+    funnel: { leads: 100, in_crm: 60, called: 70, closes: 20 },
+    dailySpend: [
+      { date: dayISO(3), spend: 80 },
+      { date: dayISO(2), spend: 145 },
+      { date: dayISO(1), spend: 75 },
+    ] }),
 ];
 
 // Per-day counts as /api/facebook-leads/series returns them: four leads over
@@ -316,28 +342,31 @@ describe("Portfolio Dashboard", () => {
     expect(tabs).toEqual(["Leads", "Ad spend", "Calls", "Closes"]);
   });
 
-  it("plots ad spend against the real total, spread by lead share", async () => {
+  it("plots each day's measured spend, summed across clients", async () => {
     const user = userEvent.setup();
     await renderPage();
 
     await user.click(screen.getByRole("radio", { name: "Ad spend" }));
 
-    // £400 spread over 4 leads: 1 Jul had two of them, so £200.
+    // £20 + £80, then £55 + £145, then £25 + £75. Straight from Meta's rows.
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "1 Jul 2026: £200" })).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: `${dayLabel(3)}: £100` })).toBeInTheDocument()
     );
-    expect(screen.getByRole("button", { name: "2 Jul 2026: £100" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${dayLabel(2)}: £200` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${dayLabel(1)}: £100` })).toBeInTheDocument();
   });
 
-  it("says the spend curve is derived rather than measured", async () => {
+  it("no longer borrows the lead shape for spend", async () => {
     const user = userEvent.setup();
     await renderPage();
 
     await user.click(screen.getByRole("radio", { name: "Ad spend" }));
 
-    // Meta gives no daily breakdown; the shape is borrowed from lead volume,
-    // and the card has to admit that rather than look measured.
-    expect(screen.getByText(/spread across days by lead share/)).toBeInTheDocument();
+    // The fixture's spend is deliberately not proportional to its leads: the
+    // heaviest spend day is the middle one, while lead volume peaks on the
+    // first. A derived curve could not produce this ordering.
+    expect(screen.getByRole("button", { name: `${dayLabel(2)}: £200` })).toBeInTheDocument();
+    expect(screen.queryByText(/spread across days by lead share/)).not.toBeInTheDocument();
   });
 
   it("does not fetch call logs until the Calls tab is opened", async () => {
