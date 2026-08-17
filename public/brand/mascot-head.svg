@@ -1,0 +1,140 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2000 2000" role="img" aria-label="Birdy mascot head">
+  <title>Birdy mascot head</title>
+
+  <defs>
+    <!-- Body / head shading -->
+    <radialGradient id="bodyFill" cx="48%" cy="30%" r="78%">
+      <stop offset="0%" stop-color="#CF66F3"/>
+      <stop offset="40%" stop-color="#C74AEC"/>
+      <stop offset="72%" stop-color="#BE3BE1"/>
+      <stop offset="100%" stop-color="#A62AC9"/>
+    </radialGradient>
+
+    <!-- Cheeks -->
+    <radialGradient id="cheekFill" cx="38%" cy="34%" r="72%">
+      <stop offset="0%" stop-color="#FF7FAE"/>
+      <stop offset="60%" stop-color="#FF5C96"/>
+      <stop offset="100%" stop-color="#F94A88"/>
+    </radialGradient>
+
+    <!-- Beak: bright on top, deep red-orange underneath -->
+    <linearGradient id="beakFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#FDB43D"/>
+      <stop offset="34%"  stop-color="#F79422"/>
+      <stop offset="55%"  stop-color="#EF7C1D"/>
+      <stop offset="58%"  stop-color="#CE411C"/>
+      <stop offset="82%"  stop-color="#A82F17"/>
+      <stop offset="100%" stop-color="#8A2413"/>
+    </linearGradient>
+
+    <!-- Soft shadow cast by the crest onto the dome -->
+    <filter id="softBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="34"/>
+    </filter>
+    <filter id="wideBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="70"/>
+    </filter>
+
+    <!-- Paper grain, matching the painterly texture of the source render -->
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/>
+      <feColorMatrix type="saturate" values="0"/>
+    </filter>
+
+    <!-- Head + crest silhouette, reused for fill, outline and inner shading -->
+    <!-- Dome is a superellipse (n=3) fitted to the source silhouette;
+         the two crest lobes are spliced into its top edge. -->
+    <path id="headShape" d="
+      M 39 2080
+      C 39 1984, 34 1652, 37 1502
+      C 40 1351, 46 1271, 57 1178
+      C 68 1085, 82 1013, 100 942
+      C 118 871, 140 810, 166 754
+      C 191 697, 221 648, 254 604
+      C 288 560, 325 522, 368 489
+      C 410 456, 455 429, 509 408
+      C 563 386, 660 368, 690 360
+      C 646 300, 626 236, 660 208
+      C 698 176, 790 250, 840 322
+      C 854 346, 864 374, 872 398
+      C 844 292, 848 156, 906 78
+      C 954 20, 1040 44, 1086 134
+      C 1128 220, 1148 300, 1158 348
+      C 1197 353, 1324 363, 1391 380
+      C 1457 398, 1508 421, 1558 451
+      C 1608 481, 1651 518, 1690 561
+      C 1729 604, 1763 653, 1793 709
+      C 1822 766, 1848 828, 1869 900
+      C 1890 972, 1906 1046, 1918 1142
+      C 1931 1238, 1939 1317, 1943 1474
+      C 1946 1630, 1941 1979, 1941 2080
+      Z"/>
+
+    <clipPath id="headClip"><use href="#headShape"/></clipPath>
+
+    <!-- One eye, mirrored for the other side -->
+    <g id="eye">
+      <ellipse cx="500" cy="1265" rx="302" ry="306" fill="#4A1259"/>
+      <ellipse cx="528" cy="1300" rx="272" ry="275" fill="#FAF6F1"/>
+      <ellipse cx="543" cy="1292" rx="233" ry="246" fill="#3A0A4C"/>
+      <g fill="#551571" opacity=".38">
+        <ellipse cx="452" cy="1218" rx="46" ry="42"/>
+        <ellipse cx="404" cy="1448" rx="52" ry="46"/>
+        <ellipse cx="634" cy="1470" rx="50" ry="44"/>
+      </g>
+      <circle cx="592" cy="1186" r="64" fill="#FFFDF8"/>
+    </g>
+  </defs>
+
+  <!-- Cream backdrop -->
+  <rect width="2000" height="2000" fill="#FBF9EC"/>
+
+  <!-- Head -->
+  <use href="#headShape" fill="url(#bodyFill)" stroke="#611873" stroke-width="56" stroke-linejoin="round"/>
+
+  <g clip-path="url(#headClip)">
+    <!-- ambient occlusion along the inner edge -->
+    <use href="#headShape" fill="none" stroke="#842099" stroke-width="150" opacity=".55" filter="url(#wideBlur)"/>
+    <!-- deeper falloff into the lower corners -->
+    <ellipse cx="160" cy="1980" rx="420" ry="380" fill="#8E22A6" opacity=".4" filter="url(#wideBlur)"/>
+    <ellipse cx="1830" cy="1980" rx="420" ry="380" fill="#8E22A6" opacity=".4" filter="url(#wideBlur)"/>
+    <!-- shadow under the crest -->
+    <ellipse cx="930" cy="470" rx="300" ry="92" fill="#8A23A2" opacity=".55" filter="url(#softBlur)"/>
+    <!-- broad light across the brow -->
+    <ellipse cx="1010" cy="760" rx="560" ry="300" fill="#D775F5" opacity=".3" filter="url(#wideBlur)"/>
+    <!-- sheen on the upper right of the dome -->
+    <ellipse cx="1428" cy="690" rx="96" ry="58" fill="#E29AF8" opacity=".5"
+             transform="rotate(-32 1428 690)" filter="url(#softBlur)"/>
+  </g>
+
+  <!-- Cheeks (sit under the eyes) -->
+  <g clip-path="url(#headClip)">
+    <ellipse cx="245" cy="1608" rx="192" ry="156" fill="url(#cheekFill)"/>
+    <ellipse cx="1725" cy="1608" rx="192" ry="156" fill="url(#cheekFill)"/>
+    <ellipse cx="180" cy="1548" rx="70" ry="44" fill="#FF9CC0" opacity=".5" filter="url(#softBlur)"/>
+    <ellipse cx="1660" cy="1548" rx="70" ry="44" fill="#FF9CC0" opacity=".5" filter="url(#softBlur)"/>
+  </g>
+
+  <!-- Eyes -->
+  <use href="#eye"/>
+  <use href="#eye" transform="matrix(-1,0,0,1,1970,0)"/>
+
+  <!-- Beak -->
+  <g>
+    <path fill="#5C1568" d="
+      M 976 1322
+      C 1100 1322, 1176 1396, 1176 1518
+      C 1176 1640, 1100 1714, 976 1714
+      C 852 1714, 776 1640, 776 1518
+      C 776 1396, 852 1322, 976 1322 Z"/>
+    <ellipse cx="976" cy="1524" rx="150" ry="138" fill="url(#beakFill)"/>
+    <ellipse cx="928" cy="1442" rx="62" ry="34" fill="#FFD07A" opacity=".55"
+             transform="rotate(-14 928 1442)" filter="url(#softBlur)"/>
+    <path fill="none" stroke="#7A2213" stroke-width="16" stroke-linecap="round" opacity=".55"
+          d="M 872 1618 C 930 1660, 1022 1660, 1078 1618"/>
+  </g>
+
+  <!-- Grain overlay -->
+  <rect width="2000" height="2000" filter="url(#grain)" opacity=".07"
+        style="mix-blend-mode:overlay" pointer-events="none"/>
+</svg>
