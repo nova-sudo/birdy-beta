@@ -28,6 +28,15 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
   const tone = deltaTone(chart.direction);
   const lastIndex = points.length - 1;
 
+  // bucketSeries blanks most labels so a long axis stays readable; the two it
+  // keeps at the ends are the ones that need anchoring rather than centring.
+  const printedLabelIndices = useMemo(
+    () => chart.labels.reduce((kept, label, i) => (label ? [...kept, i] : kept), []),
+    [chart.labels]
+  );
+  const firstLabelIndex = printedLabelIndices[0];
+  const lastLabelIndex = printedLabelIndices[printedLabelIndices.length - 1];
+
   return (
     <PdCard
       className={className}
@@ -160,12 +169,38 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
         ))}
       </div>
 
-      <div className="mt-[9px] flex gap-[9px]">
-        {chart.labels.map((label, i) => (
-          <span key={i} className="flex-1 text-center text-[10.5px] text-pd-faint">
-            {label}
-          </span>
-        ))}
+      {/* Dates are placed at their point's x rather than laid out in a row of
+          cells. A row gave each bucket an equal share of the width, which a
+          long range shrinks to a few pixels — narrower than the date printed
+          in it, so every label overflowed its cell and the axis ran off the
+          side of the card. (text-align cannot rein that in: an inline box
+          narrower than its text always draws from its left edge.) Positioning
+          means only the printed dates exist, each one anchored to the point it
+          describes. */}
+      <div className="relative mt-[9px] h-[15px]" data-testid="chart-axis">
+        {chart.labels.map((label, i) =>
+          label ? (
+            <span
+              key={i}
+              data-axis-label
+              className="absolute top-0 whitespace-nowrap text-[10.5px] text-pd-faint"
+              style={{
+                left: `${points[i]?.xPercent.toFixed(2) ?? 0}%`,
+                // Centred on its point, except at the ends: the first date
+                // starts at its point and the last one finishes at its point,
+                // so neither can hang off the card.
+                transform:
+                  i === firstLabelIndex
+                    ? "translateX(0)"
+                    : i === lastLabelIndex
+                      ? "translateX(-100%)"
+                      : "translateX(-50%)",
+              }}
+            >
+              {label}
+            </span>
+          ) : null
+        )}
       </div>
     </PdCard>
   );

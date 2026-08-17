@@ -104,9 +104,16 @@ they describe what needs attention now rather than what happened in a window.
 | Leads | counted from lead rows | exact |
 | Ad spend | **borrowed from lead volume** | exact |
 | Calls | counted from call logs | exact |
-| Closes | counted from won lead rows | exact |
+| Closes | shaped from won lead rows, totalled from GHL `won` | exact |
 
-Every total is exact. Two things about the shapes are worth knowing.
+Every total is exact. Three things about the shapes are worth knowing.
+
+**The chart plots every bucket in the range.** It used to keep only the most
+recent 31, which meant Daily granularity drew a 31-day window whatever preset
+you picked — "all time" quietly rendered as "the last month", and so did this
+year, this quarter and last quarter. `bucketSeries` now returns the whole range
+and thins the *axis labels* to `MAX_LABELS` instead, blanking the rest so each
+printed date still sits under its own point. Tooltips stay complete.
 
 **The row endpoints cap what they return** — 5,000 leads, 2,000 call-centre
 leads — so those series are samples of their window. A series built straight
@@ -114,6 +121,13 @@ from one undercounts and sits beneath a headline total that does not: a chart
 reading 120,531 above a curve summing to 5,000. `scaleSeriesToTotal` multiplies
 every bucket by one factor so the curve sums to the real total: shape from the
 sample, magnitude from the uncapped figure.
+
+That cap has a second effect worth knowing on long ranges: the leads endpoint
+sorts newest-first, so once a range holds more than 5,000 leads the rows *only
+cover the recent end of it* and the earlier buckets are missing rather than
+merely scaled. Scaling fixes the magnitude, not the span. The fix is a
+server-side series: a `$group` on `lead_data.created_time` returning per-bucket
+counts, which has no cap and a far smaller payload than the rows do.
 
 **Ad spend has no shape of its own.** Meta reports spend already totalled for
 the whole date preset — there is no daily breakdown in the payload and no
@@ -129,44 +143,54 @@ Call logs are fetched lazily, only once the Calls tab is opened — a second
 heavyweight request most visits never need. A change of date range drops what
 was held rather than showing one window's calls under another's.
 
-### The funnel, and why it is only three stages
+### The funnel is a cohort, and that is the whole point
 
-A funnel's whole claim is that each stage is a **subset** of the one above it.
-Portfolio totals cannot deliver that, because each integration counts a
-different population:
+Every stage counts the **same people**: the contacts whose `dateAdded` falls in
+the selected window. Each stage shows its share of that cohort, and Closes'
+share *is* the close rate — the number this card exists to show.
 
-* GoHighLevel's `total_contacts` is every contact a client has — organic
-  enquiries, referrals, manual imports, everyone from before Meta was connected
-  — and unlike the Meta cache it is not read through a date preset. An earlier
-  version used it for "In CRM" and duly showed *more* people in the CRM than
-  there were leads.
-* HotProspector's `leads_with_calls` counts whoever is in the dialler, with no
-  link back to which Meta lead they were.
-
-So every stage now comes from `/api/facebook-leads/filtered`, which returns
-individual Meta leads carrying `ghl_matched` and `ghl_opportunity_status`:
-
-| Stage | Source |
+| Stage | Of the window's contacts... |
 |---|---|
-| Leads | Meta insights lead total for the window |
-| In CRM | share of sampled leads with `ghl_matched` |
-| Closes | share of sampled leads whose opportunity is `won` |
+| Leads | all of them |
+| In CRM | ...those an opportunity was opened for |
+| Called | ...those HotProspector logged a call to |
+| Closes | ...those with an opportunity since won |
 
-"Called" is gone — its figures still appear in the Call insights card, where
-they are not pretending to be a funnel stage.
+`Leads ⊇ In CRM ⊇ Closes` always holds, which is what makes closes/leads a rate
+you can act on. Called is a subset of Leads but measured beside In CRM rather
+than under it, because a lead can be dialled without anyone opening an
+opportunity for them.
 
-**The rows are a sample.** The fetch is capped at `LEADS_FETCH_LIMIT` (5,000),
-so a raw count would top out at the cap rather than describing the portfolio.
-The sample supplies the *rate* and the true lead total supplies the
-*magnitude*. When the cap is hit the scaled stages are marked estimated and
-render with a `≈`, because an estimate should not wear the same exactness as a
-counted figure.
+**The backend does the cohort work.** `compute_cohort_funnel` in birdy-backend
+buckets a group's contacts into all 13 presets on the GHL refresh and stores
+them at `ghl_funnel_cache.<preset>`; `/api/client-groups` serves the requested
+preset as `gohighlevel.metrics.funnel`. Answering it per request meant scanning
+`ghl_contacts` on every dashboard load, which was this cluster's largest source
+of collection scans.
 
-**Attributed stages carry no delta.** They are derived from one window's rows
-and there is no previous-window fetch to compare against, so only Leads has a
-movement. `diagnoseFunnel` ignores stages with no delta rather than reading the
-absence as zero — otherwise a stage with no information could win "strongest
-stage", or mask a real decline elsewhere.
+**Recent windows under-report.** A cohort keeps closing after its window ends,
+so "last 7 days" describes leads that have had a week to convert and will show
+a lower close rate than "last month". That is cohort reporting working, not a
+data fault — compare like windows.
+
+**A missing preset renders nothing, not zeroes.** `buildFunnel` returns `[]`
+when no client has a cached cohort, because four zeroes read as "a portfolio
+with no leads" — a different claim from "not computed yet". The backend
+deliberately does *not* fall back to the lifetime figure here, unlike the opp
+and call caches: that silent fallback is exactly how an earlier funnel ended up
+showing all-time call counts beside a windowed lead count.
+
+**Why not portfolio totals.** An earlier version counted each stage from a
+different cache — `total_contacts`, `opportunity_stats.open`,
+`call_stats.leads_with_calls` — and the stages could not nest, because each
+integration windows on a different event. `opportunity_stats` in particular
+counts *activity* in the window (`lastStatusChangeAt`), so dividing its wins by
+this window's new contacts compared two different populations and produced a
+close rate that meant nothing.
+
+`diagnoseFunnel` still ignores stages with no delta rather than reading the
+absence as zero, so a preset without a previous period cannot let an
+information-free stage win "strongest stage" or mask a decline elsewhere.
 
 ### Deltas
 

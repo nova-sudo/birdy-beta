@@ -7,6 +7,9 @@ import {
   DiagnosticBanner,
   FunnelStepper,
   Leaderboard,
+  LoadingPulse,
+  CHART_LOADING,
+  FUNNEL_LOADING,
   PdCard,
   PdMenu,
   SidePanel,
@@ -46,14 +49,17 @@ import {
 // @/components/portfolio, which knows nothing about where figures came from;
 // the fetching is in usePortfolioData and the arithmetic in @/lib/portfolio-*.
 
+// The two panels that take real time to arrive say what they are waiting on;
+// the rest are plain skeletons, because a screen of competing progress bars is
+// harder to read than one that points at the slow parts.
 function LoadingColumn() {
   return (
     <div className="min-w-0 flex-1 px-6 py-[22px]">
       <Skeleton className="mb-[18px] h-[74px] rounded-[14px]" />
-      <Skeleton className="mb-[18px] h-[340px] rounded-[16px]" />
+      <LoadingPulse className="mb-[18px] h-[340px]" statements={CHART_LOADING} />
       <div className="mb-[18px] flex gap-[18px]">
         <Skeleton className="h-[280px] flex-[0.85] rounded-[16px]" />
-        <Skeleton className="h-[280px] flex-[1.45] rounded-[16px]" />
+        <LoadingPulse className="h-[280px] flex-[1.45]" statements={FUNNEL_LOADING} />
       </div>
       <Skeleton className="h-[150px] rounded-[16px]" />
     </div>
@@ -251,7 +257,10 @@ export default function PortfolioDashboardPage() {
             {(chartMetric === "calls"
               ? callsLoading || chartMetrics.calls?.pending
               : seriesLoading) ? (
-              <Skeleton className="mb-[18px] h-[340px] rounded-[16px]" />
+              <LoadingPulse
+                className="mb-[18px] h-[340px]"
+                statements={CHART_LOADING}
+              />
             ) : chart ? (
               <TrendChart
                 className="mb-[18px]"

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  MAX_BUCKETS,
+  MAX_LABELS,
   PREVIOUS_PERIOD,
   bucketSeries,
   callTimestamps,
@@ -58,13 +58,37 @@ describe("bucketSeries", () => {
     expect(bucketSeries(rows, (r) => r.created_time, "Daily").values).toEqual([1]);
   });
 
-  it("keeps the most recent buckets when a range is too long to read", () => {
+  it("plots every bucket in the range, however long it is", () => {
+    // The old behaviour kept only the most recent 31 buckets, which turned
+    // every long date preset into a one-month chart.
+    const rows = Array.from({ length: 120 }, (_, i) =>
+      lead(`2026-0${Math.floor(i / 28) + 1}-${String((i % 28) + 1).padStart(2, "0")}T09:00:00Z`)
+    );
+    const series = bucketSeries(rows, (r) => r.created_time, "Daily");
+
+    expect(series.values).toHaveLength(120);
+    expect(series.tooltipLabels).toHaveLength(120);
+  });
+
+  it("thins the axis labels rather than the data", () => {
     const rows = Array.from({ length: 60 }, (_, i) =>
-      lead(`2026-05-${String((i % 28) + 1).padStart(2, "0")}T09:00:00Z`)
+      lead(`2026-0${Math.floor(i / 30) + 1}-${String((i % 30) + 1).padStart(2, "0")}T09:00:00Z`)
     );
-    expect(bucketSeries(rows, (r) => r.created_time, "Daily").values.length).toBeLessThanOrEqual(
-      MAX_BUCKETS
-    );
+    const series = bucketSeries(rows, (r) => r.created_time, "Daily");
+    const printed = series.labels.filter(Boolean);
+
+    expect(series.values).toHaveLength(60);
+    expect(printed.length).toBeLessThanOrEqual(MAX_LABELS);
+    // Blanks hold their slot so each printed label stays under its own point.
+    expect(series.labels).toHaveLength(60);
+    expect(series.labels[0]).not.toBe("");
+  });
+
+  it("labels months with their year so an all-time range does not repeat", () => {
+    const rows = [lead("2025-01-15T09:00:00Z"), lead("2026-01-15T09:00:00Z")];
+    const series = bucketSeries(rows, (r) => r.created_time, "Monthly");
+
+    expect(series.labels).toEqual(["Jan 25", "Jan 26"]);
   });
 
   it("can weight buckets instead of counting them", () => {

@@ -28,6 +28,10 @@ export function groupMetrics(group) {
   const insights = group.facebook?.metrics?.insights ?? {};
   const opps = group.gohighlevel?.metrics?.opportunity_stats ?? {};
   const calls = group.hotprospector?.call_stats ?? {};
+  // The cohort funnel for the requested window, or null when the backend has
+  // not cached that preset yet. There is deliberately no lifetime fallback —
+  // see buildFunnel.
+  const funnel = group.gohighlevel?.metrics?.funnel ?? null;
 
   let leads = num(insights.results);
   if (!leads && group.facebook?.campaigns?.length) {
@@ -51,6 +55,14 @@ export function groupMetrics(group) {
     contacts: num(group.gohighlevel?.metrics?.total_contacts),
     totalOpps: num(opps.total_opportunities),
 
+    // One cohort, four stages. `funnelCached` counts as a sum so the portfolio
+    // can tell "every client reports zero closes" from "nothing cached yet".
+    funnelCached: funnel ? 1 : 0,
+    funnelLeads: num(funnel?.leads),
+    funnelInCrm: num(funnel?.in_crm),
+    funnelCalled: num(funnel?.called),
+    funnelCloses: num(funnel?.closes),
+
     totalCalls: num(calls.total_calls),
     leadsWithCalls: num(calls.leads_with_calls),
     answeredCalls: num(calls.answered_calls),
@@ -71,6 +83,11 @@ const SUMMED = [
   "revenue",
   "contacts",
   "totalOpps",
+  "funnelCached",
+  "funnelLeads",
+  "funnelInCrm",
+  "funnelCalled",
+  "funnelCloses",
   "totalCalls",
   "leadsWithCalls",
   "answeredCalls",
@@ -205,110 +222,94 @@ export function buildCallInsights(current) {
 }
 
 /**
- * What the sampled lead rows say about where Meta leads ended up.
+ * The funnel — one cohort of leads, followed through four stages.
  *
- * `/api/facebook-leads/filtered` returns individual leads that came from Meta,
- * each carrying whether it reached the CRM and what its opportunity did. That
- * attribution is the whole point: a portfolio-level GHL contact count answers a
- * different question, because the CRM also holds organic enquiries, referrals,
- * manual imports and everyone from before Meta was connected.
+ * Every stage counts the same people: the contacts created inside the selected
+ * window. `share` is each stage as a percentage of that cohort, which is the
+ * number the screen exists to show — Closes' share *is* the close rate.
  *
- * The fetch is capped, so treat these as a sample and read rates off them
- * rather than totals. `capped` says whether we saw everything.
+ * The backend does the cohort work (see `compute_cohort_funnel` in
+ * birdy-backend), because answering it per request meant scanning ghl_contacts
+ * on every dashboard load. This function only presents what it cached.
  *
- * @param {object[]} leads
- * @param {number} fetchLimit the cap the rows were fetched under
- */
-export function attributionStats(leads, fetchLimit) {
-  const rows = leads ?? [];
-  const sampled = rows.length;
-  const matched = rows.filter((l) => Boolean(l.ghl_matched)).length;
-  const won = rows.filter(
-    (l) => String(l.ghl_opportunity_status ?? "").toLowerCase() === "won"
-  ).length;
-
-  return {
-    sampled,
-    matched,
-    won,
-    capped: fetchLimit > 0 && sampled >= fetchLimit,
-    matchRate: sampled > 0 ? matched / sampled : null,
-    wonRate: sampled > 0 ? won / sampled : null,
-  };
-}
-
-/**
- * The funnel, built so each stage is genuinely a subset of the one above it.
+ * Two things follow from cohort semantics and are worth knowing before reading
+ * a number off this card:
  *
- * Every stage counts Meta-attributed leads. Mixing bases is what made an
- * earlier version show more people "In CRM" than there were leads: that stage
- * summed every GoHighLevel contact each client had, which is not a subset of
- * anything upstream and is not even windowed the way Meta insights are.
+ *   * **Recent windows under-report.** A cohort keeps closing after its window
+ *     ends, so "last 7 days" describes leads that have had a week to convert
+ *     and will show a lower close rate than "last month". Compare like windows.
+ *   * **Called is measured beside In CRM, not under it.** A lead can be dialled
+ *     without anyone opening an opportunity, so Called is a subset of Leads but
+ *     not of In CRM. Leads ⊇ In CRM ⊇ Closes always holds, which is what makes
+ *     the close rate trustworthy.
  *
- * "Called" is gone for the same reason — HotProspector call stats count calls
- * to whoever is in the dialler, with no link back to which Meta lead they were.
- * Those figures still have a home in the Call insights card, where they are not
- * pretending to be a stage.
+ * Returns an empty array when the backend has not cached this preset yet,
+ * rather than rendering four zeroes that look like a portfolio with no leads.
  *
- * The handoff's fifth stage, Shows, has no source at all: GHL opportunity stats
- * carry won/lost/open/abandoned and nothing about attendance.
+ * The handoff's fifth stage, Shows, still has no source: GHL carries won/lost/
+ * open/abandoned and nothing about attendance.
  *
  * @param {object} current portfolio totals
  * @param {object|null} previous the preceding period, for deltas
- * @param {object} stats from attributionStats
  */
-export function buildFunnel(current, previous, stats) {
+export function buildFunnel(current, previous) {
   const prev = previous ?? {};
-  const { matchRate, wonRate, capped } = stats ?? {};
+  if (!current.funnelCached) return [];
 
-  // The sample gives a rate; the true lead total gives the magnitude. Scaling
-  // one by the other keeps the funnel on the same axis as the KPI strip
-  // instead of topping out at whatever the fetch limit happened to be.
-  const scaled = (rate) => (rate == null ? null : current.leads * rate);
+  const cohort = current.funnelLeads;
+  const share = (value) =>
+    cohort > 0 ? `${((value / cohort) * 100).toFixed(1)}%` : null;
 
   const stages = [
     {
       key: "leads",
       stage: "Leads",
-      value: current.leads,
-      prev: prev.leads,
+      value: current.funnelLeads,
+      prev: prev.funnelLeads,
       issue: "lead flow",
       stageNoun: "lead",
     },
     {
       key: "engaged",
       stage: "In CRM",
-      value: scaled(matchRate),
+      value: current.funnelInCrm,
+      prev: prev.funnelInCrm,
       issue: "CRM sync",
       stageNoun: "CRM",
-      estimated: capped,
+    },
+    {
+      key: "called",
+      stage: "Called",
+      value: current.funnelCalled,
+      prev: prev.funnelCalled,
+      issue: "call coverage",
+      stageNoun: "calling",
     },
     {
       key: "closes",
       stage: "Closes",
-      value: scaled(wonRate),
+      value: current.funnelCloses,
+      prev: prev.funnelCloses,
       issue: "close rate",
       stageNoun: "closing",
-      estimated: capped,
     },
   ];
 
-  return stages
-    .filter((s) => s.value != null)
-    .map((s) => {
-      const change = percentDelta(s.value, s.prev);
-      return {
-        key: s.key,
-        stage: s.stage,
-        count: Math.round(s.value).toLocaleString(),
-        issue: s.issue,
-        stageNoun: s.stageNoun,
-        estimated: Boolean(s.estimated),
-        // diagnoseFunnel reads delta as a number; the pill-style strings the
-        // KPI strip uses don't apply here.
-        ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
-      };
-    });
+  return stages.map((s) => {
+    const change = percentDelta(s.value, s.prev);
+    return {
+      key: s.key,
+      stage: s.stage,
+      count: Math.round(s.value).toLocaleString(),
+      // The first stage is the cohort itself; "100% of leads" is noise.
+      share: s.key === "leads" ? null : share(s.value),
+      issue: s.issue,
+      stageNoun: s.stageNoun,
+      // diagnoseFunnel reads delta as a number; the pill-style strings the
+      // KPI strip uses don't apply here.
+      ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
+    };
+  });
 }
 
 /**

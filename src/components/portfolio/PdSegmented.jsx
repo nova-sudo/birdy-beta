@@ -46,7 +46,13 @@ export function PdSegmented({
       role={role}
       aria-label={label}
       className={cn(
-        "flex gap-[5px] rounded-[10px] border border-pd-border bg-pd-divider p-1",
+        // Concentric with the chip inside it: the track's radius is the chip's
+        // plus the padding between them (5px + p-1, which is ~3.9px at this
+        // app's 15.5px root). Get that wrong and the corners stop running
+        // parallel — the border curves away from the selected chip and the
+        // control reads over-rounded, which is what 10px around an 8px chip
+        // did. Change either radius and move the other by the same amount.
+        "flex gap-[5px] rounded-[9px] border border-pd-border bg-pd-divider p-1",
         className
       )}
     >
@@ -69,7 +75,7 @@ export function PdSegmented({
             onClick={() => onChange(option.key)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              "flex min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-lg font-pd-display text-[12.5px] font-semibold",
+              "flex min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-[5px] font-pd-display text-[12.5px] font-semibold",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
               selected ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "bg-transparent text-pd-muted",
               itemClassName

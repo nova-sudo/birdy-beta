@@ -77,7 +77,11 @@
     /* 16px base radius */
 
     /* ── Sidebar Tokens — neutral ────────────────────────────── */
-    --sidebar: hsl(0 0% 98%);
+    /* Painted with the header's own surface rather than a shade off it, so the
+       rail and the bar above it read as one frame around the canvas instead of
+       two nearly-matching greys. Tracks --background by reference: change that
+       and the two stay together. */
+    --sidebar: var(--background);
     --sidebar-foreground: hsl(0 0% 9%);
     --sidebar-primary: hsl(260 70% 55%);
     --sidebar-primary-foreground: hsl(0 0% 100%);

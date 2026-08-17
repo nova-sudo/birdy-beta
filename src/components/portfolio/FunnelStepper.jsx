@@ -10,7 +10,8 @@ import { toneClass } from "./tones";
  * a chevron between steps that sits level with the chips rather than the row
  * centre.
  *
- * @param {{key, stage, count, tone, icon, direction?, delta?}[]} stages in funnel order
+ * @param {{key, stage, count, share?, tone, icon, direction?, delta?}[]} stages
+ *        in funnel order; `share` is the stage as a percentage of the cohort
  */
 export function FunnelStepper({ stages }) {
   if (!stages?.length) return null;
@@ -47,6 +48,13 @@ export function FunnelStepper({ stages }) {
                 {stage.estimated && <span className="sr-only">approximately </span>}
                 {stage.count}
               </div>
+              {stage.share && (
+                // The point of the card: what fraction of the cohort reached
+                // this stage. On Closes this is the close rate.
+                <div className="mt-[2px] text-[12px] text-pd-faint">
+                  {stage.share} of leads
+                </div>
+              )}
               {tone && (
                 <div className={cn("mt-1 text-[12px] font-semibold", tone.text)}>
                   <span aria-hidden="true">{stage.direction === "up" ? "↑" : "↓"}</span>

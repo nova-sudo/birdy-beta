@@ -26,13 +26,23 @@ const BUCKET = {
   },
   Monthly: {
     key: (d) => format(startOfMonth(d), "yyyy-MM"),
-    label: (d) => format(d, "MMM"),
+    // Carries the year: an all-time range spans several, and a run of bare
+    // "Jan … Jan … Jan" reads as one repeated month rather than three.
+    label: (d) => format(d, "MMM yy"),
     tooltip: (d) => format(d, "MMMM yyyy"),
   },
 };
 
-/** How many buckets we're willing to plot before the axis becomes a smear. */
-export const MAX_BUCKETS = 31;
+/**
+ * How many axis labels we're willing to print before they smear together.
+ *
+ * This thins *labels*, not data. It used to be a cap on buckets — the series
+ * kept the most recent 31 and dropped the rest, so Daily granularity drew a
+ * 31-day window whatever date range you picked, and "all time" quietly meant
+ * "the last month". Every bucket in the range is plotted now; only some of
+ * them get their date printed underneath.
+ */
+export const MAX_LABELS = 12;
 
 /**
  * Bucket timestamped rows into a series.
@@ -63,13 +73,16 @@ export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
   }
 
   const ordered = [...totals.values()].sort((a, b) => a.date - b.date);
-  // Keep the most recent window when a range is too long to read.
-  const kept = ordered.slice(-MAX_BUCKETS);
+
+  // Print every nth date and blank the rest. The blanks keep their slot, so
+  // each printed label still sits under the point it belongs to.
+  const step = Math.ceil(ordered.length / MAX_LABELS) || 1;
 
   return {
-    values: kept.map((b) => b.value),
-    labels: kept.map((b) => bucket.label(b.date)),
-    tooltipLabels: kept.map((b) => bucket.tooltip(b.date)),
+    values: ordered.map((b) => b.value),
+    labels: ordered.map((b, i) => (i % step === 0 ? bucket.label(b.date) : "")),
+    // Tooltips stay complete — thinning is about the axis, not the data.
+    tooltipLabels: ordered.map((b) => bucket.tooltip(b.date)),
   };
 }
 

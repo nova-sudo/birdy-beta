@@ -6,7 +6,6 @@ import {
   buildFunnel,
   buildKpis,
   buildLeaderboards,
-  attributionStats,
   groupMetrics,
   percentDelta,
 } from "@/lib/portfolio-aggregate";
@@ -165,102 +164,77 @@ describe("buildKpis", () => {
   });
 });
 
-describe("attributionStats", () => {
-  const rows = [
-    { ghl_matched: true, ghl_opportunity_status: "won" },
-    { ghl_matched: true, ghl_opportunity_status: "open" },
-    { ghl_matched: false, ghl_opportunity_status: null },
-    { ghl_matched: true, ghl_opportunity_status: "WON" },
-  ];
-
-  it("counts leads that reached the CRM", () => {
-    expect(attributionStats(rows, 5000).matched).toBe(3);
-  });
-
-  it("counts won opportunities case-insensitively", () => {
-    expect(attributionStats(rows, 5000).won).toBe(2);
-  });
-
-  it("reports rates off the sample", () => {
-    const stats = attributionStats(rows, 5000);
-    expect(stats.matchRate).toBe(0.75);
-    expect(stats.wonRate).toBe(0.5);
-  });
-
-  it("knows when the fetch was capped", () => {
-    expect(attributionStats(rows, 5000).capped).toBe(false);
-    expect(attributionStats(rows, 4).capped).toBe(true);
-  });
-
-  it("has no rate to report for an empty sample", () => {
-    const stats = attributionStats([], 5000);
-    expect(stats.matchRate).toBeNull();
-    expect(stats.wonRate).toBeNull();
-  });
-});
-
 describe("buildFunnel", () => {
-  const current = { leads: 1000, contacts: 99999, leadsWithCalls: 800, closes: 500 };
-  const sample = attributionStats(
-    [
-      { ghl_matched: true, ghl_opportunity_status: "won" },
-      { ghl_matched: true, ghl_opportunity_status: "open" },
-      { ghl_matched: false, ghl_opportunity_status: null },
-      { ghl_matched: false, ghl_opportunity_status: null },
-    ],
-    5000
-  );
+  // The unrelated portfolio totals are deliberately different from the cohort
+  // figures, so a stage reading off the wrong field is visible here.
+  const current = {
+    funnelCached: 2,
+    funnelLeads: 1000,
+    funnelInCrm: 400,
+    funnelCalled: 650,
+    funnelCloses: 50,
+    leads: 7777,
+    contacts: 99999,
+    leadsWithCalls: 800,
+    closes: 500,
+  };
 
-  it("keeps every stage a subset of the one above it", () => {
-    const stages = buildFunnel(current, null, sample);
-    const counts = stages.map((s) => Number(s.count.replace(/,/g, "")));
+  it("counts the four stages off the cohort cache", () => {
+    const stages = buildFunnel(current, null);
 
-    for (let i = 1; i < counts.length; i += 1) {
-      expect(counts[i]).toBeLessThanOrEqual(counts[i - 1]);
-    }
+    expect(stages.map((s) => s.key)).toEqual(["leads", "engaged", "called", "closes"]);
+    expect(stages.map((s) => s.stage)).toEqual(["Leads", "In CRM", "Called", "Closes"]);
+    expect(stages.map((s) => s.count)).toEqual(["1,000", "400", "650", "50"]);
   });
 
-  it("takes In CRM from lead attribution, not the portfolio contact count", () => {
-    // 99,999 CRM contacts across the portfolio, but only half the sampled Meta
-    // leads reached it — the funnel must report the attributed half.
-    const stages = buildFunnel(current, null, sample);
-    const inCrm = stages.find((s) => s.key === "engaged");
-    expect(inCrm.count).toBe("500");
+  it("shows each stage as a share of the cohort — Closes is the close rate", () => {
+    const stages = buildFunnel(current, null);
+
+    // 50 of the window's 1,000 leads closed.
+    expect(stages.find((s) => s.key === "closes").share).toBe("5.0%");
+    expect(stages.find((s) => s.key === "engaged").share).toBe("40.0%");
   });
 
-  it("scales the sample's rate onto the true lead total", () => {
-    // The fetch is capped, so a raw count would top out at the cap rather than
-    // describing the portfolio.
-    const stages = buildFunnel({ ...current, leads: 120000 }, null, sample);
-    expect(stages.find((s) => s.key === "engaged").count).toBe("60,000");
+  it("leaves the first stage without a share — it is the cohort itself", () => {
+    const stages = buildFunnel(current, null);
+    expect(stages.find((s) => s.key === "leads").share).toBeNull();
   });
 
-  it("drops Called — HotProspector stats have no link back to a Meta lead", () => {
-    const stages = buildFunnel(current, null, sample);
-    expect(stages.map((s) => s.key)).toEqual(["leads", "engaged", "closes"]);
+  it("has no share to report for a cohort of nobody", () => {
+    const empty = { ...current, funnelLeads: 0, funnelInCrm: 0, funnelCalled: 0, funnelCloses: 0 };
+    const stages = buildFunnel(empty, null);
+
+    expect(stages).toHaveLength(4);
+    expect(stages.every((s) => s.share === null)).toBe(true);
   });
 
-  it("marks scaled stages as estimated only when the sample was capped", () => {
-    const uncapped = buildFunnel(current, null, sample);
-    expect(uncapped.every((s) => s.estimated === false)).toBe(true);
-
-    const capped = buildFunnel(current, null, { ...sample, capped: true });
-    expect(capped.find((s) => s.key === "engaged").estimated).toBe(true);
-    // Leads is a counted total, not a scaled one, so it stays exact.
-    expect(capped.find((s) => s.key === "leads").estimated).toBe(false);
+  it("renders nothing until the backend has cached this preset", () => {
+    // Four zeroes would read as a portfolio with no leads, which is a
+    // different claim from "not computed yet".
+    expect(buildFunnel({ ...current, funnelCached: 0 }, null)).toEqual([]);
   });
 
-  it("omits attributed stages entirely when there are no lead rows", () => {
-    const stages = buildFunnel(current, null, attributionStats([], 5000));
-    expect(stages.map((s) => s.key)).toEqual(["leads"]);
+  it("gives every stage a numeric delta for diagnoseFunnel to read", () => {
+    const previous = {
+      funnelLeads: 900,
+      funnelInCrm: 500,
+      funnelCalled: 600,
+      funnelCloses: 40,
+    };
+    const stages = buildFunnel(current, previous);
+
+    expect(stages.map((s) => s.direction)).toEqual(["up", "down", "up", "up"]);
+    for (const stage of stages) expect(typeof stage.delta).toBe("number");
   });
 
-  it("gives Leads a numeric delta for diagnoseFunnel to read", () => {
-    const stages = buildFunnel(current, { leads: 800 }, sample);
-    const leads = stages.find((s) => s.key === "leads");
+  it("keeps Closes inside In CRM inside Leads", () => {
+    // The invariant the close rate depends on. The backend counts all three
+    // off one cohort, so this must survive whatever the other caches say.
+    const stages = buildFunnel(current, null);
+    const count = (key) => Number(stages.find((s) => s.key === key).count.replace(/,/g, ""));
 
-    expect(leads.direction).toBe("up");
-    expect(typeof leads.delta).toBe("number");
+    expect(count("closes")).toBeLessThanOrEqual(count("engaged"));
+    expect(count("engaged")).toBeLessThanOrEqual(count("leads"));
   });
 });
 

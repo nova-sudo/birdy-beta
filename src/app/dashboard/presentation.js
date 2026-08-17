@@ -36,11 +36,12 @@ export const CALL_PRESENTATION = {
   conversion: { icon: CalendarCheck, tone: "success" },
 };
 
-// Tints run purple → blue → green down the funnel, matching the KPI strip so a
-// stage and its headline number read as the same thing.
+// Tints run purple → blue → amber → green down the funnel, matching the KPI
+// strip so a stage and its headline number read as the same thing.
 export const FUNNEL_PRESENTATION = {
   leads: { icon: Users, tone: "primary" },
   engaged: { icon: MessageCircle, tone: "info" },
+  called: { icon: PhoneCall, tone: "amber" },
   closes: { icon: CircleCheck, tone: "success" },
 };
 

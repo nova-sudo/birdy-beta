@@ -8,7 +8,6 @@ import { presetToDateRange } from "@/lib/date-utils";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import {
   aggregatePortfolio,
-  attributionStats,
   buildCallInsights,
   buildFunnel,
   buildKpis,
@@ -31,10 +30,9 @@ import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 //                                        caches → KPIs, leaderboards, funnel,
 //                                        call insights
 //   /api/client-groups?date_preset=<prev> the preceding period, for deltas
-//   /api/facebook-leads/filtered         individual Meta leads with
-//                                        created_time, ghl_matched and
-//                                        ghl_opportunity_status → the trend
-//                                        series and the funnel's attribution
+//   /api/facebook-leads/series           per-day lead and close counts across
+//                                        the whole range → the leads and
+//                                        closes trend series
 //   /api/hotprospector/call-center       leads with nested call logs →
 //                                        the calls series, fetched only when
 //                                        that tab is opened
@@ -50,20 +48,13 @@ import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 //   * A "Shows" funnel stage. GHL opportunity stats carry won/lost/open/
 //     abandoned and nothing about attendance.
 //
-// The funnel takes its attribution from the lead rows rather than from
-// portfolio totals, so each stage is genuinely a subset of the one above it.
-// Those rows are capped at LEADS_FETCH_LIMIT, so they are read as a sample:
-// rates off the sample, magnitude off the true lead total. See buildFunnel.
+// The funnel is a cohort: every stage counts the contacts created inside the
+// selected window, so Closes as a share of Leads is a real close rate. The
+// backend derives it (ghl_funnel_cache) because doing it per request meant
+// scanning ghl_contacts on every load. See buildFunnel.
 //
 // Deltas appear only for presets whose previous period is expressible as
 // another preset (see PREVIOUS_PERIOD). Elsewhere the pills are simply absent.
-
-const LEADS_FETCH_LIMIT = 5000;
-
-/** Lead rows that reached a won opportunity — the closes series. */
-function isWon(lead) {
-  return String(lead.ghl_opportunity_status ?? "").toLowerCase() === "won";
-}
 
 export function usePortfolioData({
   preset = DEFAULT_DATE_PRESET,
@@ -103,7 +94,9 @@ export function usePortfolioData({
   const { currencySymbol } = useCurrency("GBP");
 
   const [previousGroups, setPreviousGroups] = useState(null);
-  const [leads, setLeads] = useState([]);
+  // One row per day: { date, leads, closes }. Counted in Mongo, so this is the
+  // whole range rather than the newest 5,000 rows.
+  const [leadDays, setLeadDays] = useState([]);
   const [rail, setRail] = useState({
     suggestions: [],
     activity: [],
@@ -159,7 +152,7 @@ export function usePortfolioData({
     // come from another.
     if (groupsLoading || presetSyncing) return;
     if (!groupIds) {
-      setLeads([]);
+      setLeadDays([]);
       setSeriesLoading(false);
       return;
     }
@@ -171,19 +164,19 @@ export function usePortfolioData({
       setSeriesLoading(true);
       try {
         const { start_date, end_date } = presetToDateRange(preset);
-        const params = new URLSearchParams({ groups: groupIds, limit: String(LEADS_FETCH_LIMIT) });
+        const params = new URLSearchParams({ groups: groupIds });
         if (start_date) params.set("start_date", start_date);
         if (end_date) params.set("end_date", end_date);
 
-        const res = await apiRequest(`/api/facebook-leads/filtered?${params}`, {
+        const res = await apiRequest(`/api/facebook-leads/series?${params}`, {
           signal: controller.signal,
         });
-        if (!res.ok) throw new Error(`facebook-leads → ${res.status}`);
+        if (!res.ok) throw new Error(`facebook-leads/series → ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setLeads(data.leads ?? []);
+        if (!cancelled) setLeadDays(data.series ?? []);
       } catch (err) {
         if (err.name === "AbortError") return;
-        if (!cancelled) setLeads([]);
+        if (!cancelled) setLeadDays([]);
       } finally {
         if (!cancelled) setSeriesLoading(false);
       }
@@ -306,22 +299,17 @@ export function usePortfolioData({
   }, [previousGroups, preset, current]);
 
   const chartMetrics = useMemo(() => {
-    const leadsCapped = leads.length >= LEADS_FETCH_LIMIT;
-    const wonLeads = leads.filter(isWon);
-
-    // Both row endpoints cap what they return, so each series is a sample.
-    // Scaling it onto the real total keeps the shape the sample showed while
-    // making the magnitude agree with the figure printed directly above it.
-    const leadSeries = scaleSeriesToTotal(
-      bucketSeries(leads, (l) => l.created_time, granularity),
-      current.leads,
-      leadsCapped
-    );
-    const closeSeries = scaleSeriesToTotal(
-      bucketSeries(wonLeads, (l) => l.created_time, granularity),
-      current.closes,
-      leadsCapped
-    );
+    // Leads and closes are counted server-side across the whole range, so
+    // there is no sample to scale — the days roll straight up into whichever
+    // granularity is selected.
+    const leadSeries = {
+      ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.leads),
+      estimated: false,
+    };
+    const closeSeries = {
+      ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.closes),
+      estimated: false,
+    };
 
     const calls = callTimestamps(callRows);
     const callsCapped = (callRows?.length ?? 0) >= MAX_LEADS_TO_FETCH;
@@ -374,7 +362,7 @@ export function usePortfolioData({
       },
     };
   }, [
-    leads,
+    leadDays,
     callRows,
     callsLoading,
     granularity,
@@ -385,13 +373,6 @@ export function usePortfolioData({
     current.totalCalls,
     current.spend,
   ]);
-
-  // Attribution comes off the sampled lead rows; the funnel scales its rates
-  // onto the true lead total so it shares an axis with the KPI strip.
-  const attribution = useMemo(
-    () => attributionStats(leads, LEADS_FETCH_LIMIT),
-    [leads]
-  );
 
   const dateRangeLabel = useMemo(
     () => DATE_PRESETS.find((p) => p.value === preset)?.label ?? preset,
@@ -404,8 +385,7 @@ export function usePortfolioData({
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),
-    funnel: buildFunnel(current, previous, attribution),
-    funnelEstimated: attribution.capped,
+    funnel: buildFunnel(current, previous),
     leaderboards: buildLeaderboards(current, formatMoney),
     chartMetrics,
 
