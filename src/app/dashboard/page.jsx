@@ -1,560 +1,343 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
-import { AlertTriangle, TrendingUp, Zap, Check, Trash2, Clock, Pause, Image as ImageIcon, DollarSign, Sparkles } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { apiRequest } from "@/lib/api";
-import { formatRelative } from "@/lib/alert-helpers";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ActivityItem } from "@/components/activity/ActivityItem";
 import {
-  useDashboardData,
-  applySuggestion,
-  undoSuggestion,
-  dismissSuggestion,
-  completeWin,
-} from "./useDashboardData";
+  ActivityRow,
+  DiagnosticBanner,
+  FunnelStepper,
+  Leaderboard,
+  LoadingPulse,
+  CHART_LOADING,
+  FUNNEL_LOADING,
+  PdCard,
+  PdMenu,
+  SidePanel,
+  StatStrip,
+  SuggestionCard,
+  TrendChart,
+} from "@/components/portfolio";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useDashboardControls } from "@/components/dashboard-controls";
+import { diagnoseFunnel } from "@/lib/portfolio-metrics";
+import {
+  CALL_PRESENTATION,
+  FUNNEL_PRESENTATION,
+  KPI_PRESENTATION,
+  withPresentation,
+} from "./presentation";
+import { portfolioFontClass } from "./fonts";
+import {
+  applySuggestionRequest,
+  dismissSuggestionRequest,
+  usePortfolioData,
+} from "./usePortfolioData";
 
-// The alerts tab lists one card per triggered client, which can run long —
-// show a first page and let the rest expand.
-const ALERTS_PREVIEW_COUNT = 8;
+// ─── Portfolio Dashboard ────────────────────────────────────────────────────
+// Agency-level view: across all clients, what is happening and where is the
+// problem? Built from the "variant 3e" handoff, on Birdy's own data.
+//
+// The handoff draws a full 1600×1040 app frame — a 68px icon rail and a 64px
+// header with an avatar. Birdy already renders both globally from
+// src/app/layout.jsx (AppSidebar + the search header + UserMenu), so the rail
+// and the avatar are dropped here rather than duplicated, and the design's
+// title block and controls become a page-level header. What is kept is the
+// frame itself: canvas background, 1px border, 16px radius, with the content
+// column and right rail scrolling independently inside it.
+//
+// This file is only composition and wiring. What it renders comes from
+// @/components/portfolio, which knows nothing about where figures came from;
+// the fetching is in usePortfolioData and the arithmetic in @/lib/portfolio-*.
 
-const SEVERITY_STYLE = {
-  HIGH:        { badge: "bg-red-100 text-red-700",     border: "border-l-red-500",   icon: "bg-red-100 text-red-500" },
-  MEDIUM:      { badge: "bg-amber-100 text-amber-700",  border: "border-l-amber-500", icon: "bg-amber-100 text-amber-500" },
-  OPPORTUNITY: { badge: "bg-green-100 text-green-700",  border: "border-l-green-500", icon: "bg-green-100 text-green-500" },
-};
-
-const TAB_META = [
-  { value: "suggestions", label: "Birdy suggestions" },
-  { value: "alerts",      label: "Alerts triggered" },
-  { value: "wins",        label: "Client wins" },
-];
-
-// Suggestions carry `icon` as a string name; resolveIcon maps it to a lucide
-// component and always returns something renderable.
-const ICON_MAP = {
-  pause: Pause,
-  "trending-up": TrendingUp,
-  image: ImageIcon,
-  dollar: DollarSign,
-  sparkles: Sparkles,
-  alert: AlertTriangle,
-  zap: Zap,
-};
-function resolveIcon(icon) {
-  return ICON_MAP[icon] || Sparkles;
-}
-
-// Activity entries carry either a real timestamp or a relative label such as
-// "just now" / "2h ago" / "1d ago". Resolve whichever is present to a Date so
-// the feed header can count today's changes rather than everything it holds.
-function activityDate(entry) {
-  const stamp = entry.created_at ?? entry.timestamp ?? entry.occurred_at ?? entry.at;
-  if (stamp) {
-    const parsed = new Date(stamp);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
-  }
-
-  const rel = typeof entry.time === "string" ? entry.time.trim().toLowerCase() : "";
-  if (!rel) return null;
-  if (rel === "now" || rel === "just now") return new Date();
-
-  const match = rel.match(/^(\d+)\s*(m|mins?|minutes?|h|hrs?|hours?|d|days?|w|weeks?)\b/);
-  if (!match) return null;
-  const ms = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 }[match[2][0]];
-  return new Date(Date.now() - Number(match[1]) * ms);
-}
-
-function isToday(date) {
-  if (!date) return false;
-  const now = new Date();
+// The two panels that take real time to arrive say what they are waiting on;
+// the rest are plain skeletons, because a screen of competing progress bars is
+// harder to read than one that points at the slow parts.
+function LoadingColumn() {
   return (
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate()
-  );
-}
-
-// ─── Sub-components ────────────────────────────────────────────────────────
-
-function FadeWrap({ dismissing, children }) {
-  return (
-    <div
-      className={`transition-all duration-300 ease-in-out overflow-hidden ${
-        dismissing ? "max-h-0 opacity-0 -translate-x-4" : "max-h-96 opacity-100"
-      }`}
-    >
-      {children}
+    <div className="min-w-0 flex-1 px-6 py-[22px]">
+      <Skeleton className="mb-[18px] h-[74px] rounded-[14px]" />
+      <LoadingPulse className="mb-[18px] h-[340px]" statements={CHART_LOADING} />
+      <div className="mb-[18px] flex gap-[18px]">
+        <Skeleton className="h-[280px] flex-[0.85] rounded-[16px]" />
+        <LoadingPulse className="h-[280px] flex-[1.45]" statements={FUNNEL_LOADING} />
+      </div>
+      <Skeleton className="h-[150px] rounded-[16px]" />
     </div>
   );
 }
 
-function CardSkeleton() {
+function EmptyState({ title, body }) {
   return (
-    <div className="flex items-start gap-4 bg-white border border-border/60 rounded-xl border-l-4 border-l-muted p-4 shadow-sm mb-4">
-      <Skeleton className="w-9 h-9 rounded-lg shrink-0" />
-      <div className="flex-1 min-w-0 flex flex-col gap-2">
-        <Skeleton className="h-3 w-40" />
-        <Skeleton className="h-4 w-64" />
-        <Skeleton className="h-3 w-full max-w-md" />
+    <div className="flex min-w-0 flex-1 items-center justify-center px-6 py-[22px]">
+      <div className="max-w-sm text-center">
+        <p className="font-pd-display text-[15px] font-semibold text-pd-ink">{title}</p>
+        <p className="mt-1.5 text-[12px] leading-[1.45] text-pd-body">{body}</p>
       </div>
-      <Skeleton className="h-8 w-28 rounded-lg shrink-0" />
     </div>
   );
 }
 
-function RecommendationCard({ item, dismissing, onApply, onDismiss }) {
-  const style = SEVERITY_STYLE[item.severity] || SEVERITY_STYLE.MEDIUM;
-  const Icon = resolveIcon(item.icon);
-
-  return (
-    <FadeWrap dismissing={dismissing}>
-      <div className={`flex items-start gap-4 bg-white border border-border/60 rounded-xl border-l-4 ${style.border} p-4 shadow-sm mb-4`}>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${style.icon}`}>
-          <Icon className="w-4 h-4" />
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="text-[11px] font-bold tracking-wide text-purple-600">RECOMMENDATION</span>
-            <Badge className={`${style.badge} border-transparent`}>{item.severity}</Badge>
-            <span className="text-xs text-muted-foreground truncate">
-              {item.client} · {item.platform}
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-foreground">{item.title}</p>
-          <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-
-          {item.stats?.length > 0 && (
-            <div className="flex items-center gap-5 mt-3">
-              {item.stats.map((s) => (
-                <div key={s.label}>
-                  <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</p>
-                  <p className={`text-sm font-semibold mt-0.5 ${s.bad ? "text-red-600" : "text-foreground"}`}>{s.value}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            size="sm"
-            onClick={() => onApply(item)}
-            className="bg-purple-600 hover:bg-purple-700 text-white rounded-lg h-8 px-3 text-xs gap-1.5"
-          >
-            <Zap className="w-3.5 h-3.5" />
-            Do it for me
-          </Button>
-          <button
-            onClick={() => onDismiss(item)}
-            title="Dismiss"
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-border/60 hover:bg-muted transition-colors shrink-0"
-          >
-            <Trash2 className="w-3.5 h-3.5 text-muted-foreground" />
-          </button>
-        </div>
-      </div>
-    </FadeWrap>
-  );
-}
-
-function AlertRow({ item, dismissing, onAction }) {
-  const border = item.color === "red" ? "border-l-red-500" : "border-l-amber-500";
-  const iconTone = item.color === "red" ? "bg-red-100 text-red-500" : "bg-amber-100 text-amber-500";
-  const badgeTone = item.badgeTone === "purple" ? "bg-purple-100 text-purple-700" : "bg-muted text-muted-foreground";
-  const ctaTone =
-    item.ctaVariant === "filled"
-      ? "bg-purple-600 hover:bg-purple-700 text-white"
-      : "bg-white border border-border/60 text-foreground hover:bg-muted";
-
-  return (
-    <FadeWrap dismissing={dismissing}>
-      <div className={`flex items-center gap-4 bg-white border border-border/60 rounded-xl border-l-4 ${border} p-4 shadow-sm mb-4`}>
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${iconTone}`}>
-          <AlertTriangle className="w-4 h-4" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-foreground mb-0.5 truncate">{item.title}</p>
-          <p className="text-xs text-muted-foreground mb-1.5 truncate">{item.client}</p>
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`inline-flex text-[10px] font-bold tracking-wide uppercase rounded px-2 py-0.5 ${badgeTone}`}>
-              {item.badge}
-            </span>
-            {item.actual != null && (
-              <span className="text-[11px] font-mono text-red-600">actual: {item.actual.toFixed(2)}</span>
-            )}
-            {item.triggeredAt && (
-              <span className="text-[11px] text-muted-foreground">{formatRelative(new Date(item.triggeredAt))}</span>
-            )}
-          </div>
-        </div>
-        <Button
-          size="sm"
-          onClick={() => onAction(item)}
-          className={`${ctaTone} rounded-lg h-8 px-3 text-xs shrink-0`}
-        >
-          {item.cta}
-        </Button>
-      </div>
-    </FadeWrap>
-  );
-}
-
-function WinRow({ item, dismissing, onMarkDone }) {
-  return (
-    <FadeWrap dismissing={dismissing}>
-      <div className="flex items-center gap-4 bg-white border border-border/60 rounded-xl border-l-4 border-l-green-500 p-4 shadow-sm mb-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <TrendingUp className="w-4 h-4 text-green-600 shrink-0" />
-            <span className="text-[11px] font-bold tracking-wide text-green-600">CLIENT WIN</span>
-            <span className="text-xs text-muted-foreground truncate">{item.client}</span>
-          </div>
-          <p className="text-sm font-semibold text-foreground">{item.title}</p>
-          <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
-        </div>
-        <button
-          onClick={() => onMarkDone(item)}
-          title="Mark done"
-          className="w-9 h-9 flex items-center justify-center rounded-lg bg-green-50 border border-green-200 text-green-600 hover:bg-green-100 transition-colors shrink-0"
-        >
-          <Check className="w-4 h-4" />
-        </button>
-      </div>
-    </FadeWrap>
-  );
-}
-
-// ─── Strictness control ──────────────────────────────────────────────────────
-
-const STRICTNESS_OPTIONS = [
-  { value: "lenient", label: "Lenient" },
-  { value: "balanced", label: "Balanced" },
-  { value: "strict", label: "Strict" },
-];
-
-function StrictnessControl() {
-  const [level, setLevel] = useState(null);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiRequest("/api/dashboard/settings");
-        if (res.ok && !cancelled) {
-          const d = await res.json();
-          setLevel(d.strictness || "balanced");
-        }
-      } catch {
-        /* leave null → the select shows Balanced */
-      }
-    })();
-    return () => { cancelled = true; };
-  }, []);
-
-  const onChange = async (value) => {
-    const prev = level;
-    setLevel(value);
-    setSaving(true);
-    try {
-      const res = await apiRequest("/api/dashboard/settings", {
-        method: "PUT",
-        body: JSON.stringify({ strictness: value }),
-      });
-      if (res.ok) toast.success(`Suggestion strictness set to ${value}`);
-      else { setLevel(prev); toast.error("Couldn't save strictness"); }
-    } catch {
-      setLevel(prev);
-      toast.error("Couldn't save strictness");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center gap-2 shrink-0">
-      <span className="text-xs text-muted-foreground whitespace-nowrap">Suggestion strictness</span>
-      <select
-        value={level ?? "balanced"}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={level === null || saving}
-        className="text-sm border border-border/60 rounded-lg px-2.5 py-1.5 bg-white text-foreground focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-60"
-      >
-        {STRICTNESS_OPTIONS.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-// ─── Dashboard Page ─────────────────────────────────────────────────────────
-
-export default function DashboardPage() {
-  const [activeTab, setActiveTab] = useState("suggestions");
-  const [dismissingIds, setDismissingIds] = useState(new Set());
-  const [showAllAlerts, setShowAllAlerts] = useState(false);
-  const router = useRouter();
+export default function PortfolioDashboardPage() {
+  // The date preset picks the window every figure covers; granularity only
+  // changes how finely the chart buckets that same window.
+  // The date range and granularity chips live in the global top bar, so their
+  // state sits above this page rather than in it.
+  const { preset, granularity, setClientCount } = useDashboardControls();
+  const [chartMetric, setChartMetric] = useState("leads");
+  const [topMetric, setTopMetric] = useState(null);
+  const [panel, setPanel] = useState("suggestions");
 
   const {
-    suggestions, setSuggestions,
-    alerts, setAlerts,
-    wins, setWins,
-    activity, setActivity,
-    counts,
+    clientCount,
+    kpis,
+    callInsights,
+    funnel,
+    leaderboards,
+    chartMetrics,
+    suggestions,
+    activity,
+    activityCount,
     loading,
-    alertsLoading,
-  } = useDashboardData();
+    seriesLoading,
+    callsLoading,
+    error,
+    hasClients,
+    hasComparison,
+  } = usePortfolioData({ preset, granularity, chartMetric });
 
-  const [user] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("user")); } catch { return null; }
-  });
-  const firstName = user?.name?.split(" ")[0] || "there";
+  // Optimistic rail state layered over what the hook fetched, so acting on a
+  // card is immediate and a failed request puts it back.
+  const [removed, setRemoved] = useState({});
+  const [applied, setApplied] = useState([]);
 
-  const greeting = useMemo(() => {
-    const hour = new Date().getHours();
-    if (hour < 12) return "Good morning";
-    if (hour < 18) return "Good afternoon";
-    return "Good evening";
+  const visibleSuggestions = useMemo(
+    () => suggestions.filter((s) => !removed[s.id]),
+    [suggestions, removed]
+  );
+  const visibleActivity = useMemo(() => [...applied, ...activity], [applied, activity]);
+
+  const handleApply = useCallback(async (suggestion) => {
+    setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
+    const entry = {
+      id: `applied-${suggestion.id}`,
+      action: suggestion.title,
+      client: suggestion.client,
+      mode: "Approved",
+      time: "just now",
+    };
+    setApplied((prev) => [entry, ...prev]);
+
+    const result = await applySuggestionRequest(suggestion.id);
+    if (!result) {
+      setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
+      setApplied((prev) => prev.filter((a) => a.id !== entry.id));
+      toast.error("Couldn't apply that", { description: suggestion.title });
+      return;
+    }
+
+    const count = (result.succeeded ?? []).length;
+    toast.success(count ? `Applied to ${count} ad${count === 1 ? "" : "s"}` : "Applied", {
+      description: suggestion.title,
+    });
   }, []);
 
-  // Everything the feed is willing to show — suggestion_created entries are
-  // noise here, so they count for nothing either.
-  const visibleActivity = useMemo(
-    () => activity.filter((a) => a.kind !== "suggestion_created"),
-    [activity]
-  );
-
-  // The header says "today", so it counts today's entries — the feed itself
-  // still lists older ones, since that's where their Undo lives.
-  const changesToday = useMemo(
-    () => visibleActivity.filter((a) => isToday(activityDate(a))).length,
-    [visibleActivity]
-  );
-
-  const dateLabel = useMemo(
-    () => new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }),
-    []
-  );
-
-  const SETTERS = { suggestions: setSuggestions, alerts: setAlerts, wins: setWins };
-
-  const removeItem = (tabValue, id) => {
-    setDismissingIds((prev) => new Set([...prev, id]));
-    setTimeout(() => {
-      SETTERS[tabValue]((prev) => prev.filter((i) => i.id !== id));
-      setDismissingIds((prev) => { const next = new Set(prev); next.delete(id); return next; });
-    }, 300);
-  };
-
-  // Applying a suggestion moves it into the Activity feed (the "Completed today"
-  // surface) where its persistent Undo lives; a transient toast Undo covers the
-  // moment just after applying. One clear undo surface, no duplicate card button.
-  const buildAppliedEntry = (item, extra = {}) => ({
-    id: `applied-${item.id}`,
-    kind: "action_applied",
-    actor: "birdy",
-    title: item.title,
-    client: item.client,
-    time: "just now",
-    reversible: true,
-    undone: false,
-    suggestion: item, // stashed so Undo can reverse and restore the recommendation
-    ...extra,
-  });
-
-  const handleUndo = async (entry) => {
-    // optimistic — mark the completed action as undone in the feed
-    setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, undone: true } : a)));
-    const data = await undoSuggestion(entry.suggestion.id);
-    if (!data) {
-      setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, undone: false } : a)));
-      toast.error("Couldn't undo", { description: entry.title });
+  const handleDismiss = useCallback(async (suggestion) => {
+    setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
+    const ok = await dismissSuggestionRequest(suggestion.id);
+    if (!ok) {
+      setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
+      toast.error("Couldn't dismiss that", { description: suggestion.title });
       return;
     }
-    // bring the recommendation back so it can be acted on again
-    setSuggestions((prev) =>
-      prev.some((s) => s.id === entry.suggestion.id) ? prev : [entry.suggestion, ...prev]
-    );
-    toast.success("Undone — ads re-enabled", { description: entry.title });
-  };
+    toast("Suggestion dismissed", { description: suggestion.title });
+  }, []);
 
-  const handleApply = async (item) => {
-    // optimistic — move the suggestion out of the list and into the completed feed
-    const entry = buildAppliedEntry(item);
-    setSuggestions((prev) => prev.filter((s) => s.id !== item.id));
-    setActivity((prev) => [entry, ...prev]);
+  // The title block lives in the top bar, which is above this page in the
+  // tree and has no other way to learn the count.
+  useEffect(() => {
+    setClientCount(clientCount);
+  }, [clientCount, setClientCount]);
 
-    const data = await applySuggestion(item.id);
-    if (!data) {
-      // revert: pull the feed entry back out and restore the suggestion
-      setActivity((prev) => prev.filter((a) => a.id !== entry.id));
-      setSuggestions((prev) => (prev.some((s) => s.id === item.id) ? prev : [item, ...prev]));
-      toast.error("Couldn't apply that", { description: item.title });
-      return;
-    }
+  const kpiStats = useMemo(() => withPresentation(kpis, KPI_PRESENTATION), [kpis]);
+  const callStats = useMemo(
+    () => withPresentation(callInsights, CALL_PRESENTATION),
+    [callInsights]
+  );
+  const funnelStages = useMemo(() => withPresentation(funnel, FUNNEL_PRESENTATION), [funnel]);
+  const diagnosis = useMemo(() => diagnoseFunnel(funnel), [funnel]);
 
-    const n = (data.succeeded || []).length;
-    setActivity((prev) => prev.map((a) => (a.id === entry.id ? { ...a, applied_count: n } : a)));
-    toast.success(`Paused ${n} ad${n === 1 ? "" : "s"}`, {
-      description: item.title,
-      duration: 8000,
-      action: { label: "Undo", onClick: () => handleUndo(entry) },
-    });
-  };
+  const chartTabs = useMemo(
+    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
+    [chartMetrics]
+  );
 
-  const handleDismiss = async (item) => {
-    toast("Suggestion dismissed", { description: item.title });
-    removeItem("suggestions", item.id);
-    await dismissSuggestion(item.id);
-  };
+  const chart = useMemo(() => {
+    const metric = chartMetrics[chartMetric] ?? chartMetrics.leads;
+    if (!metric?.values?.length) return null;
 
-  // Sub-alerts point at the client that breached; anything else goes to the
-  // triggered list on the Alerts page.
-  const handleAlertAction = (item) => {
-    if (item.clientId) router.push(`/clients/${item.clientId}`);
-    else router.push("/alerts?tab=triggered");
-  };
+    // The chart's headline delta is the same period-over-period figure the KPI
+    // strip shows for that metric — one number, computed once.
+    const kpi = kpis.find((k) => k.key === chartMetric);
 
-  const handleMarkDone = async (item) => {
-    toast.success("Marked as done", { description: item.title });
-    removeItem("wins", item.id);
-    await completeWin(item.id);
-  };
+    return {
+      ...metric,
+      subtitle: `${granularity} · ${metric.subtitle}`,
+      pointValues: metric.values.map(
+        (v) => `${metric.valuePrefix ?? ""}${Math.round(v).toLocaleString()}`
+      ),
+      direction: kpi?.direction,
+      delta: kpi?.delta,
+    };
+  }, [chartMetrics, chartMetric, granularity, kpis]);
+
+  const leaderboardMetrics = Object.keys(leaderboards);
+  const activeTopMetric =
+    topMetric && leaderboardMetrics.includes(topMetric) ? topMetric : leaderboardMetrics[0];
+
+  const panels = [
+    {
+      key: "suggestions",
+      label: "Suggestions",
+      badge: visibleSuggestions.length,
+      badgeClassName: "bg-pd-primary-tint text-pd-primary",
+      isEmpty: visibleSuggestions.length === 0,
+      emptyMessage: "No suggestions right now",
+      status: `${visibleSuggestions.length} suggestion${
+        visibleSuggestions.length === 1 ? "" : "s"
+      } outstanding`,
+      render: () =>
+        visibleSuggestions.map((suggestion) => (
+          <SuggestionCard
+            key={suggestion.id}
+            suggestion={suggestion}
+            onApply={handleApply}
+            onDismiss={handleDismiss}
+          />
+        )),
+    },
+    {
+      key: "activity",
+      label: "Activity",
+      badge: activityCount + applied.length,
+      badgeClassName: "bg-pd-neutral-badge text-pd-subtle",
+      isEmpty: visibleActivity.length === 0,
+      emptyMessage: "Nothing has happened yet",
+      render: () => (
+        <ul>
+          {visibleActivity.map((entry) => (
+            <ActivityRow key={entry.id} entry={entry} />
+          ))}
+        </ul>
+      ),
+    },
+  ];
 
   return (
-    <div className="flex flex-col gap-6 w-full">
-      {/* ── Greeting ─────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {greeting}, {firstName}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {dateLabel} · Here&apos;s your day at a glance
-          </p>
-        </div>
-        <StrictnessControl />
-      </div>
+    <div
+      className={`${portfolioFontClass} -m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-6`}
+    >
 
-      {/* ── Suggestions / Activity feed ─────────────────────────────── */}
-      <div className="grid grid-cols-1 xl:grid-cols-[3fr_1fr] gap-6 items-start">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full rounded-full bg-muted/70 p-1">
-            {TAB_META.map((tab) => (
-              <TabsTrigger
-                key={tab.value}
-                value={tab.value}
-                className="flex-1 h-auto rounded-full px-3 py-1.5 text-xs font-semibold data-[state=active]:shadow-sm"
+      <div className="flex min-h-0 flex-1">
+        {loading ? (
+          <LoadingColumn />
+        ) : error ? (
+          <EmptyState
+            title="Couldn't load your portfolio"
+            body={`${error}. Nothing here is out of date — we just couldn't reach your client data.`}
+          />
+        ) : !hasClients ? (
+          <EmptyState
+            title="No active clients yet"
+            body="Once a client group is connected and has Meta or GoHighLevel data, its figures roll up here."
+          />
+        ) : (
+          <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
+            <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
+
+            {(chartMetric === "calls"
+              ? callsLoading || chartMetrics.calls?.pending
+              : seriesLoading) ? (
+              <LoadingPulse
+                className="mb-[18px] h-[340px]"
+                statements={CHART_LOADING}
+              />
+            ) : chart ? (
+              <TrendChart
+                className="mb-[18px]"
+                chart={chart}
+                metrics={chartTabs}
+                activeMetric={chartMetric}
+                onMetricChange={setChartMetric}
+                redrawKey={`${chartMetric}-${granularity}-${preset}`}
+              />
+            ) : (
+              <PdCard className="mb-[18px]" title="Trend">
+                <p className="py-8 text-center text-[12px] text-pd-faint">
+                  {chartMetric === "calls"
+                    ? "No dated calls in this window yet."
+                    : "No dated leads in this window yet."}
+                </p>
+              </PdCard>
+            )}
+
+            <div className="mb-[18px] flex gap-[18px]">
+              <PdCard
+                className="min-w-0 flex-[0.85]"
+                title="Top performing clients"
+                action={
+                  leaderboardMetrics.length > 0 && (
+                    <PdMenu
+                      size="sm"
+                      label="Rank clients by"
+                      value={activeTopMetric}
+                      options={leaderboardMetrics}
+                      onChange={setTopMetric}
+                    />
+                  )
+                }
               >
-                {tab.label} · {counts[tab.value]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value="suggestions" className="mt-4">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
-            ) : suggestions.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
-                Nothing here right now
-              </div>
-            ) : (
-              suggestions.map((item) => (
-                <RecommendationCard
-                  key={item.id}
-                  item={item}
-                  dismissing={dismissingIds.has(item.id)}
-                  onApply={handleApply}
-                  onDismiss={handleDismiss}
+                <Leaderboard
+                  rows={leaderboards[activeTopMetric] ?? []}
+                  emptyMessage={`No client has ${activeTopMetric.toLowerCase()} data in this window`}
                 />
-              ))
-            )}
-          </TabsContent>
+              </PdCard>
 
-          <TabsContent value="alerts" className="mt-4">
-            {alertsLoading ? (
-              Array.from({ length: 3 }).map((_, i) => <CardSkeleton key={i} />)
-            ) : alerts.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
-                No triggered alerts
-              </div>
-            ) : (
-              <>
-                {(showAllAlerts ? alerts : alerts.slice(0, ALERTS_PREVIEW_COUNT)).map((item) => (
-                  <AlertRow
-                    key={item.id}
-                    item={item}
-                    dismissing={dismissingIds.has(item.id)}
-                    onAction={handleAlertAction}
-                  />
-                ))}
-                {alerts.length > ALERTS_PREVIEW_COUNT && (
-                  <button
-                    onClick={() => setShowAllAlerts((v) => !v)}
-                    className="w-full text-xs font-semibold text-purple-600 hover:text-purple-700 py-2"
-                  >
-                    {showAllAlerts
-                      ? "Show less"
-                      : `Show all ${alerts.length} triggered alerts`}
-                  </button>
-                )}
-              </>
-            )}
-          </TabsContent>
-
-          <TabsContent value="wins" className="mt-4">
-            {loading ? (
-              Array.from({ length: 2 }).map((_, i) => <CardSkeleton key={i} />)
-            ) : wins.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-10 bg-white border border-border/60 rounded-xl">
-                Nothing here right now
-              </div>
-            ) : (
-              wins.map((item) => (
-                <WinRow
-                  key={item.id}
-                  item={item}
-                  dismissing={dismissingIds.has(item.id)}
-                  onMarkDone={handleMarkDone}
+              <PdCard
+                className="min-w-0 flex-[1.45]"
+                title="Performance funnel"
+                headerClassName="mb-[18px]"
+              >
+                <FunnelStepper stages={funnelStages} />
+                <DiagnosticBanner
+                  className="mt-5"
+                  state={diagnosis.state}
+                  title={diagnosis.title}
+                  body={
+                    hasComparison
+                      ? diagnosis.body
+                      : "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it."
+                  }
                 />
-              ))
-            )}
-          </TabsContent>
-        </Tabs>
-
-        {/* ── Activity feed ────────────────────────────────────────── */}
-        <div className="bg-white border border-border/60 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-purple-600" />
-              <h2 className="font-semibold text-foreground text-sm">Activity feed</h2>
+              </PdCard>
             </div>
-            <span className="text-xs text-muted-foreground shrink-0">Changes today · {changesToday}</span>
+
+            <PdCard
+              title="Call insights"
+              action={
+                <span className="text-[12px] text-pd-faint">Across all client call centres</span>
+              }
+            >
+              <StatStrip stats={callStats} variant="separate" label="Call insights" />
+            </PdCard>
           </div>
-          <div className="flex flex-col gap-4 max-h-[520px] overflow-y-auto pr-1">
-            {loading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <Skeleton className="w-7 h-7 rounded-full shrink-0" />
-                    <div className="flex-1 flex flex-col gap-1.5">
-                      <Skeleton className="h-3 w-40" />
-                      <Skeleton className="h-3 w-24" />
-                    </div>
-                  </div>
-                ))
-              : visibleActivity.slice(0, 10).map((a) => (
-                  <ActivityItem key={a.id} {...a} onUndo={() => handleUndo(a)} />
-                ))}
-          </div>
-        </div>
+        )}
+
+        <SidePanel
+          panels={panels}
+          active={panel}
+          onChange={setPanel}
+          label="Rail panel"
+        />
       </div>
     </div>
   );

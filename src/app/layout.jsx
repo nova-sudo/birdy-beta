@@ -17,6 +17,11 @@ import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
 import { CreditsProvider } from "@/hooks/useCredits";
+import {
+  DashboardControlsProvider,
+  DashboardHeaderControls,
+  DashboardHeaderTitle,
+} from "@/components/dashboard-controls";
 
 const outfit = Outfit({
   variable: "--font-outfit",
@@ -32,6 +37,8 @@ export default function RootLayout({ children }) {
     pathname === "/register" ||
     pathname === "/" ||
     pathname.startsWith("/admin");
+
+  const isDashboard = pathname === "/dashboard";
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
@@ -75,6 +82,7 @@ export default function RootLayout({ children }) {
           <SidebarProvider open={false}>
             {!hideSidebar && (
               <CreditsProvider>
+              <DashboardControlsProvider>
               <div className="flex h-screen w-full overflow-hidden">
                 <AppSidebar />
                 <div className="flex flex-col flex-1 min-w-0">
@@ -84,7 +92,10 @@ export default function RootLayout({ children }) {
                   <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="md:hidden" />
-                      <div className="flex items-center gap-2">
+                      {/* The dashboard puts its own title here instead of the
+                          wordmark — the page no longer carries one. */}
+                      <DashboardHeaderTitle />
+                      <div className={`items-center gap-2 ${isDashboard ? "hidden" : "flex"}`}>
                         <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
                         <Link
                           href="/changelog"
@@ -136,14 +147,17 @@ export default function RootLayout({ children }) {
                     </div>
 
                     <div className="flex items-center gap-3">
+                      {/* Dashboard date range + granularity; renders on that
+                          route only, since nothing else obeys them. */}
+                      <DashboardHeaderControls />
                       <NotificationsDropdown />
                       <UserMenu />
                     </div>
                   </header>
 
                   {/* Content */}
-                  <SidebarInset className="flex-1 overflow-hidden">
-                    <div className="mx-auto bg-background w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
+                  <SidebarInset className="flex-1 overflow-hidden bg-pd-canvas">
+                    <div className="mx-auto w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
                       {children}
                     </div>
                   </SidebarInset>
@@ -160,6 +174,7 @@ export default function RootLayout({ children }) {
                   />
                 </div>
               </div>
+              </DashboardControlsProvider>
               </CreditsProvider>
             )}
 
