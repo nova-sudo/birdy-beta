@@ -311,6 +311,21 @@ export function usePortfolioData({
       estimated: false,
     };
 
+    // Measured per-day spend, summed across clients. The API serves the whole
+    // retained window in one go, so the range is applied here rather than by
+    // refetching whenever the preset changes.
+    //
+    // Falls back to nothing rather than to a derived shape: an absent curve
+    // reads as "not cached yet", where a fabricated one reads as fact.
+    const { start_date, end_date } = presetToDateRange(preset);
+    const spendDays = (current.dailySpend ?? []).filter(
+      (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
+    );
+    const spendSeries = {
+      ...bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend),
+      estimated: false,
+    };
+
     const calls = callTimestamps(callRows);
     const callsCapped = (callRows?.length ?? 0) >= MAX_LEADS_TO_FETCH;
     const callSeries = scaleSeriesToTotal(
@@ -333,15 +348,13 @@ export function usePortfolioData({
         subtitle: "Combined Meta spend across the portfolio",
         total: formatMoney(current.spend),
         valuePrefix: currencySymbol,
-        // Meta reports spend only as a total for the whole date range — there
-        // is no daily breakdown in the payload and no endpoint that returns
-        // one. The total is exact; the curve is the real spend spread across
-        // the window in proportion to that day's leads, which assumes CPL held
-        // steady. The card says so, because on a day of heavy spend and few
-        // leads this line will understate and that is worth knowing.
-        ...scaleSeriesToTotal({ ...leadSeries, estimated: false }, current.spend, true),
-        estimateNote:
-          "spread across days by lead share — Meta reports spend only as a range total",
+        // Measured, not inferred. This used to be the preset total spread
+        // across days in proportion to that day's leads, which assumed CPL
+        // held steady AND inherited every gap in lead capture: while lead
+        // ingestion was running at 37%, the all-time curve drew £2,554 for a
+        // day that actually cost £718. The backend now asks Meta for
+        // time_increment=1 rows, so each day is what that day cost.
+        ...spendSeries,
       },
       calls: {
         tab: "Calls",
@@ -372,6 +385,8 @@ export function usePortfolioData({
     current.closes,
     current.totalCalls,
     current.spend,
+    current.dailySpend,
+    preset,
   ]);
 
   const dateRangeLabel = useMemo(

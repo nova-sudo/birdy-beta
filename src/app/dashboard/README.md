@@ -102,7 +102,7 @@ they describe what needs attention now rather than what happened in a window.
 | Tab | Shape | Total |
 |---|---|---|
 | Leads | counted from lead rows | exact |
-| Ad spend | **borrowed from lead volume** | exact |
+| Ad spend | measured per-day from Meta | exact |
 | Calls | counted from call logs | exact |
 | Closes | shaped from won lead rows, totalled from GHL `won` | exact |
 
@@ -129,15 +129,25 @@ merely scaled. Scaling fixes the magnitude, not the span. The fix is a
 server-side series: a `$group` on `lead_data.created_time` returning per-bucket
 counts, which has no cap and a far smaller payload than the rows do.
 
-**Ad spend has no shape of its own.** Meta reports spend already totalled for
-the whole date preset — there is no daily breakdown in the payload and no
-endpoint that returns one. The curve is the real total spread across days in
-proportion to that day's leads, which assumes CPL held steady. On a day of heavy
-spend and few leads it will understate, and that is exactly the case a media
-buyer cares about, so the card says `spread across days by lead share` under
-the total rather than letting the line read as measured. Making it real is a
-backend change: request `time_increment=1` from Meta's Insights API and cache
-the daily rows.
+**Ad spend is measured, not inferred.** It used to be the preset total spread
+across days in proportion to that day's leads — which assumed CPL held steady
+*and* silently inherited any gap in lead capture. Both assumptions failed at
+once: while lead ingestion was running at 37%, the all-time curve drew £2,554
+for a day that actually cost £718, because each stored lead had to absorb ~3.5×
+its share of spend. The error was exactly the reciprocal of the capture rate.
+
+The backend now asks Meta for `time_increment=1` rows per ad account and caches
+them (`meta_daily_spend`), served as `facebook.daily_spend`. The whole retained
+window is sent at once and sliced client-side, so changing the date range
+doesn't refetch. When no rows are cached the curve is empty rather than
+derived: absent reads as "not cached yet", where a fabricated line reads as
+fact.
+
+The per-day rows are summed per client group, the same way the KPI strip sums
+spend. Five ad accounts back two groups each, so their spend lands twice in
+both — wrong in the same direction and by the same amount, which is the point:
+the curve and the total above it agree. De-duplicating is a separate decision
+about what a "client" is, and it has to change both at once.
 
 Call logs are fetched lazily, only once the Calls tab is opened — a second
 heavyweight request most visits never need. A change of date range drops what
