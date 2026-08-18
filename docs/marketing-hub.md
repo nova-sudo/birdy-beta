@@ -3,6 +3,16 @@
 `/campaigns`, rebuilt to `design_handoff_hubs/Marketing Hub.dc.html` on Birdy's
 real data.
 
+> **On the committed bundle.** `design_handoff_hubs/` holds only the three files
+> this build is read against — the Marketing Hub target, the style guide, and
+> the handoff README. The delivered archive also contained the two "Options (all
+> variants)" exploration whiteboards and the Sales Hub target, which that README
+> marks *context only* or which belong to another screen, plus `support.js` (the
+> prototype runtime it says not to port) and a mascot PNG the app already ships
+> as `public/birdy-mascot-VmH3J7Wq.png`. Those are dropped rather than carried.
+> The README's own Files table still lists them, since it describes the archive
+> as delivered rather than what was kept.
+
 ## What it reuses
 
 The Portfolio Dashboard was built from this same handoff bundle, so the design
