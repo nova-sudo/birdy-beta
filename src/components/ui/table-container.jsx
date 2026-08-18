@@ -643,41 +643,32 @@ const StyledTable = ({
                   >
                     {/* No vertical rule between columns: the design separates
                         them by alignment and spacing, and a grid of hairlines
-                        competes with the figures. */}
-                    <div className="flex h-full w-full items-center justify-between gap-2 px-[22px]">
-                      <div className="flex min-w-0 items-center gap-1">
-                        <button
-                          onClick={() => col.sortable && handleSort(col.id)}
-                          className={`items-center gap-1 truncate text-left align-middle ${
-                            col.sortable ? "cursor-pointer hover:text-pd-ink" : "cursor-default"
-                          }`}
-                        >
+                        competes with the figures.
+
+                        No source icon either. Every column in a given table
+                        came from the same integration, so a Meta mark repeated
+                        across eight headers said nothing per-column while
+                        crowding the label it sat beside. `col.icons` is still
+                        read by the Columns visibility menu, where the source
+                        does distinguish one row from the next. */}
+                    <div className="flex h-full w-full items-center gap-2 px-[22px]">
+                      <button
+                        onClick={() => col.sortable && handleSort(col.id)}
+                        className={`flex min-w-0 items-center gap-1 truncate text-left align-middle ${
+                          col.sortable ? "cursor-pointer hover:text-pd-ink" : "cursor-default"
+                        }`}
+                      >
+                        <span className="truncate">
                           {typeof col.header === "function" ? col.header() : col.header}
-                          {col.sortable && sortConfig.key === col.id && (
-                            // The active sort column takes the ink colour, so
-                            // the arrow is legible against the muted header.
-                            <span className="px-2 text-right text-sm text-pd-ink">
-                              {sortConfig.direction === "asc" ? "↑" : "↓"}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                      <div className="flex-shrink-0 ml-auto">
-                        {col.icons ? (
-                          typeof col.icons === "function" ? (
-                            (() => {
-                              const Icon = col.icons;
-                              return <Icon className="h-4 w-4 text-muted-foreground" />;
-                            })()
-                          ) : (
-                            <img
-                              src={col.icons.src ? col.icons.src : col.icons}
-                              alt={`${col.label} icon`}
-                              className="text-muted-foreground object-scale-down size-4"
-                            />
-                          )
-                        ) : null}
-                      </div>
+                        </span>
+                        {col.sortable && sortConfig.key === col.id && (
+                          // The active sort column takes the ink colour, so
+                          // the arrow is legible against the muted header.
+                          <span className="shrink-0 text-sm text-pd-ink">
+                            {sortConfig.direction === "asc" ? "↑" : "↓"}
+                          </span>
+                        )}
+                      </button>
                     </div>
                   </th>
 
