@@ -23,6 +23,17 @@ const LAYOUTS = {
     label: "mt-[5px] truncate text-[11.5px] text-pd-subtle",
     pillSize: "sm",
   },
+  // Six of these sit in a 1fr 1fr grid beside the Marketing Hub's trend chart,
+  // so the column matches the chart's height. A stacked chip/value/label made
+  // that section too tall — everything rides on one row instead.
+  compact: {
+    root: "flex min-w-0 items-center gap-[9px] rounded-xl border border-pd-border bg-pd-surface px-3 py-[11px]",
+    chip: "size-7 rounded-lg",
+    icon: "size-[14px]",
+    value: "text-[17px]",
+    label: "mt-[3px] truncate text-[11px] text-pd-subtle",
+    pillSize: "sm",
+  },
 };
 
 /**

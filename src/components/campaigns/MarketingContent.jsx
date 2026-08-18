@@ -38,6 +38,22 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { portfolioFontClass } from "@/app/dashboard/fonts"
+import { StatTile } from "@/components/portfolio"
+import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
+import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
+
+// Which icon and colour family each KPI tile wears, from the handoff's tile
+// table — except for spend. The design draws a pound sign, but this screen
+// renders whatever currency the ad account reports, so a neutral note icon goes
+// beside a figure that might be in dollars.
+const MARKETING_KPI_PRESENTATION = {
+  activeCampaigns: { icon: Megaphone, tone: "primary" },
+  spend: { icon: Banknote, tone: "success" },
+  leads: { icon: Users, tone: "info" },
+  cpl: { icon: Target, tone: "amber" },
+  impressions: { icon: Eye, tone: "info" },
+  ctr: { icon: MousePointerClick, tone: "primary" },
+}
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
@@ -841,17 +857,29 @@ export function MarketingContent({
     })
   }, [visibleColumns, activeTab, customMetrics, userCurrency])
 
-  // ── Summary cards ─────────────────────────────────────────────────────────
-  const metrics = useMemo(() => {
-    let base = campaigns
-    if (selectedClientGroup && selectedClientGroup !== "all")
-      base = campaigns.filter(i => i._groupId === selectedClientGroup)
-    const totalSpend = base.reduce((s, i) => s + (i.spend || 0), 0)
-    const totalLeads = base.reduce((s, i) => s + (i.leads || 0), 0)
-    const activeCampaigns = base.filter(i => String(i.status).toLowerCase() === "active").length
-    const avgCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
-    return { totalSpend, totalLeads, activeCampaigns, avgCPL }
+  // ── KPI tiles ─────────────────────────────────────────────────────────────
+  // These read the campaign rows for the selected client group — the same rows
+  // the table draws — rather than a parallel total of their own, so the tiles
+  // and the table can never disagree and the group picker filters both at once.
+  // Deliberately not narrowed by the drill-down: the tiles describe the account
+  // for this period, while the table below is what you have drilled into.
+  const heroRows = useMemo(() => {
+    if (!selectedClientGroup || selectedClientGroup === "all") return campaigns
+    return campaigns.filter(i => i._groupId === selectedClientGroup)
   }, [campaigns, selectedClientGroup])
+
+  const { kpis } = useMarketingHubData({
+    clientGroups,
+    rows: heroRows,
+    datePreset,
+    selectedClientGroup,
+    currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
+  })
+
+  const kpiTiles = useMemo(
+    () => kpis.map(k => ({ ...k, ...(MARKETING_KPI_PRESENTATION[k.key] ?? {}) })),
+    [kpis]
+  )
 
   // ── Filter condition helpers ──────────────────────────────────────────────
   const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
@@ -1024,30 +1052,32 @@ export function MarketingContent({
           )
         })()}
 
-        {/* Summary cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Active Campaigns", icon: LayoutGrid, value: metrics.activeCampaigns },
-            { label: "Total Ad Spend", icon: DollarSign, value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
-            { label: "Total Leads", icon: Target, value: metrics.totalLeads },
-            { label: "Average CPL", icon: TrendingUp, value: metrics.avgCPL > 0 ? `${getSymbolFromCurrency(userCurrency)}${metrics.avgCPL.toFixed(2)}` : "-" },
-          ].map((c, i) => (
-            <Card key={i} className="border shadow-sm rounded-lg">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-muted-foreground font-normal text-sm">{c.label}</CardTitle>
-                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                  <c.icon className="h-4 w-4 text-purple-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading
-                  ? <div className="w-full py-4"><Skeleton className="h-4 w-1/2" /></div>
-                  : <div className="text-2xl font-bold">{c.value}</div>
-                }
-                <p className="text-xs text-[#71658B] text-muted-foreground">Across all {activeTab}</p>
-              </CardContent>
-            </Card>
-          ))}
+        {/* ── KPI tiles ──────────────────────────────────────────────────────
+            Six compact tiles on the handoff's spec, replacing the four summary
+            cards. Each rides on a single row — chip, value over label, delta
+            pill pushed right — so the set stays short enough to sit beside the
+            trend chart once that lands.
+
+            A metric with no comparable previous period renders without a pill
+            rather than with a zero: an unknown delta is not a flat one. */}
+        <div className={`${portfolioFontClass} grid grid-cols-2 gap-[10px] lg:grid-cols-3 xl:grid-cols-6`}>
+          {groupsLoading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-[52px] rounded-xl" />
+              ))
+            : kpiTiles.map(tile => (
+                <StatTile
+                  key={tile.key}
+                  layout="compact"
+                  icon={tile.icon}
+                  tone={tile.tone}
+                  value={tile.value}
+                  label={tile.label}
+                  direction={tile.direction}
+                  delta={tile.delta}
+                  polarity={tile.polarity}
+                />
+              ))}
         </div>
 
         {/* Tabs */}
