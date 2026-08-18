@@ -6,6 +6,7 @@ import { presetToDateRange } from "@/lib/date-utils";
 import { bucketSeries, PREVIOUS_PERIOD } from "@/lib/portfolio-series";
 import {
   aggregateCampaignRows,
+  buildMarketingInsight,
   buildMarketingKpis,
   campaignRowsFromGroups,
   mergeDailySpend,
@@ -184,6 +185,11 @@ export function useMarketingHubData({
     [current, previous, formatMoney]
   );
 
+  const insight = useMemo(
+    () => buildMarketingInsight(current, previous, rows, formatMoney),
+    [current, previous, rows, formatMoney]
+  );
+
   const chartMetrics = useMemo(() => {
     const { start_date, end_date } = presetToDateRange(datePreset);
     const inRange = (d) =>
@@ -255,6 +261,7 @@ export function useMarketingHubData({
     current,
     previous,
     kpis,
+    insight,
     chartMetrics,
     seriesLoading,
     hasComparison: previous != null,

@@ -19,6 +19,48 @@ const num = (v) => {
 };
 
 /**
+ * A campaign is over its CPL ceiling when it costs this many times the blended
+ * CPL of everything else running.
+ *
+ * The handoff asks for "the CPL threshold per client/campaign that decides when
+ * a CPL cell turns red" and no such field exists — not in Meta's payload, not
+ * on the client group. Rather than leave it uncoloured or invent a fixed pound
+ * figure that would be wrong for every client at a different budget, the
+ * ceiling is relative to the account's own blended CPL. A campaign paying
+ * double what the rest of the account pays for the same lead is the anomaly the
+ * red is there to point at.
+ *
+ * 2× is what the handoff's own sample data implies: blended £3.00, and the four
+ * rows it draws in red start at £6.58.
+ *
+ * When a real per-client threshold lands, this is the only line that changes.
+ */
+export const CPL_CEILING_MULTIPLE = 2;
+
+/**
+ * A campaign needs at least this much spend before its CPL is worth judging.
+ *
+ * One lead on £8 of spend is an £8 CPL, which would light up red on a campaign
+ * that has barely started. Below the floor there isn't enough evidence to call
+ * anything an offender.
+ */
+export const CPL_JUDGEMENT_FLOOR = 20;
+
+/**
+ * Is this row's CPL over the ceiling the rest of the account sets?
+ *
+ * @param {object} row a campaign/adset/ad row
+ * @param {number} blendedCpl the aggregate CPL these rows roll up to
+ */
+export function isOverCplCeiling(row, blendedCpl) {
+  if (!Number.isFinite(blendedCpl) || blendedCpl <= 0) return false;
+  const spend = num(row?.spend);
+  const cpl = num(row?.cpl);
+  if (spend < CPL_JUDGEMENT_FLOOR || cpl <= 0) return false;
+  return cpl > blendedCpl * CPL_CEILING_MULTIPLE;
+}
+
+/**
  * Sum a set of campaign/adset/ad rows into the figures the KPI tiles show.
  *
  * Rates are blended — total clicks over total impressions — not the mean of
@@ -187,4 +229,91 @@ export function buildMarketingKpis(current, previous, formatMoney) {
       ...(ctrDelta ?? {}),
     },
   ];
+}
+
+/**
+ * The Birdy Insights copy for this period.
+ *
+ * The handoff asks for two sentences generated from the data: the headline
+ * movement, then the single most actionable anomaly with the trade it implies.
+ * Both come from figures already on the screen — no extra endpoint, and nothing
+ * asserted that the rows don't say.
+ *
+ * Returns null when there is nothing worth claiming, so the card can render a
+ * plain waiting state rather than a sentence with holes in it.
+ *
+ * Segments are pre-split rather than a string because the figures and campaign
+ * names inside the sentence are emphasised; building that from markup here
+ * would mean the copy carried its own styling.
+ *
+ * @returns {{segments: {text: string, strong?: boolean}[]} | null}
+ */
+export function buildMarketingInsight(current, previous, rows, formatMoney) {
+  const list = rows ?? [];
+  if (!list.length || current.spend <= 0) return null;
+
+  const segments = [];
+  const say = (text) => segments.push({ text });
+  const emphasise = (text) => segments.push({ text, strong: true });
+
+  // ── Sentence one: the headline movement ────────────────────────────────
+  const spendMove = percentDelta(current.spend, previous?.spend);
+  const cplMove = percentDelta(current.cpl, previous?.cpl, LOWER_IS_BETTER);
+
+  if (spendMove) {
+    say("Spend is ");
+    say(spendMove.direction === "up" ? "up " : "down ");
+    emphasise(spendMove.delta);
+    if (cplMove) {
+      say(cplMove.direction === "up" ? " and CPL has climbed to " : " while CPL has fallen to ");
+      emphasise(formatMoney(current.cpl, 2));
+      say(". ");
+    } else {
+      say(" at ");
+      emphasise(formatMoney(current.cpl, 2));
+      say(" CPL. ");
+    }
+  } else {
+    // No comparable previous period — state the position rather than a move.
+    say("You're at ");
+    emphasise(formatMoney(current.spend, 2));
+    say(" spend and ");
+    emphasise(formatMoney(current.cpl, 2));
+    say(" blended CPL across ");
+    emphasise(
+      `${current.activeCampaigns} active campaign${current.activeCampaigns === 1 ? "" : "s"}`
+    );
+    say(". ");
+  }
+
+  // ── Sentence two: the worst offender, and what pausing it would buy ────
+  const judgeable = list.filter((r) => num(r.spend) >= CPL_JUDGEMENT_FLOOR && num(r.cpl) > 0);
+  const worst = [...judgeable].sort((a, b) => num(b.cpl) - num(a.cpl))[0];
+  const best = [...judgeable].sort((a, b) => num(a.cpl) - num(b.cpl))[0];
+
+  if (!worst || !isOverCplCeiling(worst, current.cpl)) {
+    say(
+      judgeable.length
+        ? "No campaign is running above twice the blended CPL — nothing is dragging the account right now."
+        : "No campaign has enough spend yet to judge its CPL."
+    );
+    return { segments };
+  }
+
+  emphasise(worst.name);
+  say(" is the worst offender at ");
+  emphasise(formatMoney(num(worst.cpl), 2));
+  say(` CPL with only ${Math.round(num(worst.results ?? worst.leads))} results`);
+
+  if (best && best.id !== worst.id) {
+    say(" — pausing it would free ");
+    emphasise(formatMoney(num(worst.spend), 0));
+    say(" for your ");
+    emphasise(formatMoney(num(best.cpl), 2));
+    say(" CPL winner.");
+  } else {
+    say(".");
+  }
+
+  return { segments };
 }

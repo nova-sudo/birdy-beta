@@ -38,7 +38,7 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { portfolioFontClass } from "@/app/dashboard/fonts"
-import { CHART_LOADING, LoadingPulse, PdCard, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { DATE_PRESETS } from "@/lib/constants"
 import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
@@ -876,7 +876,7 @@ export function MarketingContent({
     [datePreset]
   )
 
-  const { kpis, chartMetrics, seriesLoading } = useMarketingHubData({
+  const { kpis, insight, chartMetrics, seriesLoading } = useMarketingHubData({
     clientGroups,
     rows: heroRows,
     datePreset,
@@ -1120,24 +1120,41 @@ export function MarketingContent({
             )}
           </div>
 
-          <div className="grid min-w-0 grid-cols-2 content-start gap-[10px] lg:flex-[0.85]">
-            {groupsLoading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-[52px] rounded-xl" />
-                ))
-              : kpiTiles.map(tile => (
-                  <StatTile
-                    key={tile.key}
-                    layout="compact"
-                    icon={tile.icon}
-                    tone={tile.tone}
-                    value={tile.value}
-                    label={tile.label}
-                    direction={tile.direction}
-                    delta={tile.delta}
-                    polarity={tile.polarity}
-                  />
-                ))}
+          <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+            {/* Birdy's own voice, and the only saturated surface the style
+                guide allows on a screen. Copy is generated per period from the
+                rows below it — the headline movement, then the single campaign
+                worth acting on. */}
+            {insight ? (
+              <InsightCard segments={insight.segments} />
+            ) : (
+              <PdCard title="Birdy Insights">
+                <p className="text-[12.5px] leading-[1.5] text-pd-body">
+                  Once campaigns in this window have spend against them, Birdy
+                  reads the movement and names what to act on.
+                </p>
+              </PdCard>
+            )}
+
+            <div className="grid grid-cols-2 gap-[10px]">
+              {groupsLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-[52px] rounded-xl" />
+                  ))
+                : kpiTiles.map(tile => (
+                    <StatTile
+                      key={tile.key}
+                      layout="compact"
+                      icon={tile.icon}
+                      tone={tile.tone}
+                      value={tile.value}
+                      label={tile.label}
+                      direction={tile.direction}
+                      delta={tile.delta}
+                      polarity={tile.polarity}
+                    />
+                  ))}
+            </div>
           </div>
         </div>
 
