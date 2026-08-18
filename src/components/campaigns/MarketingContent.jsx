@@ -40,6 +40,7 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { portfolioFontClass } from "@/app/dashboard/fonts"
 import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
+import { isOverCplCeiling } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
 import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
 
@@ -474,6 +475,42 @@ export function MarketingContent({
     })
   }, [allAds, customMetrics])
 
+  // ── Hero row: chart, insight and KPI tiles ────────────────────────────────
+  // These read the campaign rows for the selected client group — the same rows
+  // the table draws — rather than a parallel total of their own, so the tiles
+  // and the table can never disagree and the group picker filters both at once.
+  // Deliberately not narrowed by the drill-down: the hero describes the account
+  // for this period, while the table below is what you have drilled into.
+  //
+  // Declared above the table's column definitions because formatCellValue reads
+  // the blended CPL to decide which cells turn red, and tableColumns memoises
+  // the closures that call it.
+  const heroRows = useMemo(() => {
+    if (!selectedClientGroup || selectedClientGroup === "all") return campaigns
+    return campaigns.filter(i => i._groupId === selectedClientGroup)
+  }, [campaigns, selectedClientGroup])
+
+  const [chartMetric, setChartMetric] = useState("spend")
+
+  const dateRangeLabel = useMemo(
+    () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
+    [datePreset]
+  )
+
+  const {
+    current: heroTotals,
+    kpis,
+    insight,
+    chartMetrics,
+    seriesLoading,
+  } = useMarketingHubData({
+    clientGroups,
+    rows: heroRows,
+    datePreset,
+    selectedClientGroup,
+    currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
+  })
+
   // ── Leads fetch ──────────────────────────────────────────────────────────
   useEffect(() => {
     if (groupsLoading || !clientGroups.length) {
@@ -815,7 +852,17 @@ export function MarketingContent({
       if (fmt === "decimal") return Number(value).toFixed(2)
       return Number(value).toLocaleString()
     }
-    if (["spend", "cpc", "cpm", "cpp", "social_spend", "cpl", "cost_per_result"].includes(col))
+    // CPL turns red when a row costs more than twice what the rest of the
+    // account pays for the same lead. There is no per-campaign CPL target
+    // anywhere in the data, so the ceiling is relative to this selection's own
+    // blended CPL — see CPL_CEILING_MULTIPLE.
+    if (col === "cpl" || col === "cost_per_result") {
+      const money = `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
+      return isOverCplCeiling(row, heroTotals.cpl)
+        ? <span className="font-medium text-pd-danger">{money}</span>
+        : money
+    }
+    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col))
       return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
     if (col === "ctr" || col === "conversion_rate") return `${Number(value).toFixed(2)}%`
     if (col === "account_currency") return value.toUpperCase()
@@ -856,33 +903,10 @@ export function MarketingContent({
         render: (value, row) => formatCellValue(value, col, row),
       }
     })
-  }, [visibleColumns, activeTab, customMetrics, userCurrency])
-
-  // ── KPI tiles ─────────────────────────────────────────────────────────────
-  // These read the campaign rows for the selected client group — the same rows
-  // the table draws — rather than a parallel total of their own, so the tiles
-  // and the table can never disagree and the group picker filters both at once.
-  // Deliberately not narrowed by the drill-down: the tiles describe the account
-  // for this period, while the table below is what you have drilled into.
-  const heroRows = useMemo(() => {
-    if (!selectedClientGroup || selectedClientGroup === "all") return campaigns
-    return campaigns.filter(i => i._groupId === selectedClientGroup)
-  }, [campaigns, selectedClientGroup])
-
-  const [chartMetric, setChartMetric] = useState("spend")
-
-  const dateRangeLabel = useMemo(
-    () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
-    [datePreset]
-  )
-
-  const { kpis, insight, chartMetrics, seriesLoading } = useMarketingHubData({
-    clientGroups,
-    rows: heroRows,
-    datePreset,
-    selectedClientGroup,
-    currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
-  })
+    // heroTotals.cpl is in here because formatCellValue closes over it to
+    // decide which CPL cells render red; without it the columns keep the
+    // closure from the render where the threshold was last different.
+  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl])
 
   const kpiTiles = useMemo(
     () => kpis.map(k => ({ ...k, ...(MARKETING_KPI_PRESENTATION[k.key] ?? {}) })),
