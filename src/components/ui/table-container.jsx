@@ -80,6 +80,11 @@ const StyledTable = ({
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
+  // The table opens sorted by spend, and used to advertise that with a ↓ on the
+  // header. But an arrow the reader never asked for reads as a control they left
+  // switched on. It stays hidden until someone actually sorts — the default
+  // ordering is unchanged, only the claim about it is withheld.
+  const [hasSorted, setHasSorted] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
 
@@ -404,6 +409,10 @@ const StyledTable = ({
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
+    // Only a real click reveals the indicator. The fallback below that picks a
+    // sort key when none is set is housekeeping, not a choice the reader made,
+    // so it deliberately does not flip this.
+    setHasSorted(true);
     setSortConfig((prev) => ({
       key: columnId,
       direction:
@@ -661,7 +670,7 @@ const StyledTable = ({
                         <span className="truncate">
                           {typeof col.header === "function" ? col.header() : col.header}
                         </span>
-                        {col.sortable && sortConfig.key === col.id && (
+                        {col.sortable && hasSorted && sortConfig.key === col.id && (
                           // The active sort column takes the ink colour, so
                           // the arrow is legible against the muted header.
                           <span className="shrink-0 text-sm text-pd-ink">
