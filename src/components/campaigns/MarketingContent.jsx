@@ -29,8 +29,10 @@ import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
+import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { useHeaderSlot } from "@/components/dashboard-controls"
 
 // The Marketing Hub is drawn on the design system in
 // design_handoff_hubs/Birdy Style Guide.md — Poppins for headings and numerals,
@@ -978,106 +980,60 @@ export function MarketingContent({
     [gridItems, groupSearch]
   )
 
+  // ── Top-bar slots ─────────────────────────────────────────────────────────
+  // The date range and client-group pickers sit in the global header next to
+  // the notifications bell and the profile menu, and the page title stands in
+  // for the Birdy wordmark while you are here. Both are published through the
+  // context in dashboard-controls, because the header is rendered above this
+  // page in the tree.
+  //
+  // `showHeader` is false where MarketingContent is embedded inside the client
+  // detail page; that copy must not claim the top bar out from under the route
+  // that owns it.
+  const headerControls = useMemo(() => {
+    if (!showHeader) return null
+
+    return (
+      <div className="flex items-center gap-2">
+        {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
+        {showGroupFilter && clientGroups.length > 0 && (
+          <ClientGroupPicker
+            gridRef={gridRef}
+            open={gridOpen}
+            setOpen={setGridOpen}
+            label={selectedGroupLabel}
+            search={groupSearch}
+            setSearch={setGroupSearch}
+            items={filteredGridItems}
+            selectedId={selectedClientGroup}
+            onSelect={setSelectedClientGroup}
+          />
+        )}
+      </div>
+    )
+    // filteredGridItems and selectedGroupLabel are themselves memoised, so this
+    // node is stable between renders that don't change a control's own state —
+    // which it has to be, since useHeaderSlot holds it in state.
+  }, [
+    showHeader, setDatePreset, datePreset, showGroupFilter, clientGroups.length,
+    gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
+  ])
+
+  useHeaderSlot({
+    title: showHeader ? "Marketing Hub" : undefined,
+    subtitle: showHeader ? "Campaign performance across all connected ad accounts" : undefined,
+    controls: headerControls,
+  })
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] mx-auto md:w-[calc(100dvw-130px)]">
       <div className="flex flex-col gap-6">
 
-        {/* Header */}
-        {showHeader && (
-          <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
-            {/* Title block per the handoff: the page name over a sub-line
-                naming what it covers. The 68px icon rail, ⌘K field, bell and
-                avatar the design also draws are already rendered globally by
-                src/app/layout.jsx, so they are not repeated here — the same
-                call the Portfolio Dashboard made from this bundle. */}
-            <div className={`${portfolioFontClass} flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full`}>
-              <div className="min-w-0">
-                <h1 className="font-pd-display text-[19px] font-bold text-pd-ink">
-                  Marketing Hub
-                </h1>
-                <p className="mt-px text-[12px] text-pd-faint">
-                  Campaign performance across all connected ad accounts
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
-              {setDatePreset && (
-                <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-              )}
-              {showGroupFilter && clientGroups.length > 0 && (
-                <div className="relative" ref={gridRef}>
-                  <button
-                    onClick={() => setGridOpen(prev => !prev)}
-                    className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="truncate flex-1 text-left text-gray-800">
-                      {selectedGroupLabel}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {gridOpen && (
-                    <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                      <div className="mb-2">
-                        <input
-                          type="text"
-                          placeholder="Search groups..."
-                          value={groupSearch}
-                          onChange={e => setGroupSearch(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-
-                      {filteredGridItems.length > 0 ? (
-                        <div
-                          className="grid gap-1 max-h-72 overflow-y-auto"
-                          style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-                        >
-                          {filteredGridItems.map(item => {
-                            const isSelected =
-                              item.id === "all"
-                                ? !selectedClientGroup || selectedClientGroup === "all"
-                                : selectedClientGroup === item.id
-
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => {
-                                  setSelectedClientGroup(item.id)
-                                  setGridOpen(false)
-                                  setGroupSearch("")
-                                }}
-                                title={item.name}
-                                className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors
-                                  ${isSelected
-                                    ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                  }`}
-                              >
-                                {item.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-3 px-6">
-                          No groups found
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-          </div>
-        </div>
-        )}
+        {/* The title block and the date/group filters now live in the global
+            top bar beside the bell and the profile menu — published by
+            useHeaderSlot above. The handoff puts filters in the header, so the
+            page starts straight at its content. */}
 
         {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
         {(() => {
