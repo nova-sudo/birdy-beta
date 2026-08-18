@@ -90,6 +90,29 @@ export function campaignRowsFromGroups(groups, groupId) {
   return rows;
 }
 
+/**
+ * One spend-per-day series across the selected groups.
+ *
+ * Measured, not inferred: the backend asks Meta for time_increment=1 rows and
+ * caches them on the group as `daily_spend`. Days the cache has no row for are
+ * absent rather than zero — a gap in the cache is not a day that cost nothing.
+ */
+export function mergeDailySpend(groups, groupId) {
+  const byDate = new Map();
+
+  for (const group of groups ?? []) {
+    if (groupId && groupId !== "all" && group.id !== groupId) continue;
+    for (const day of group.facebook?.daily_spend ?? []) {
+      if (!day?.date) continue;
+      byDate.set(day.date, (byDate.get(day.date) ?? 0) + num(day.spend));
+    }
+  }
+
+  return [...byDate.entries()]
+    .map(([date, spend]) => ({ date, spend }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** Compact 1.42M / 298k for figures too long to read in a 17px tile. */
 export function abbreviate(value) {
   const n = num(value);
