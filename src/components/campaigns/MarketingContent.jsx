@@ -32,6 +32,13 @@ import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 
+// The Marketing Hub is drawn on the design system in
+// design_handoff_hubs/Birdy Style Guide.md — Poppins for headings and numerals,
+// Inter for body, on the --pd-* tokens in globals.css. Both were already
+// implemented for the Portfolio Dashboard, which came from the same handoff
+// bundle, so this screen scopes the same fonts rather than declaring its own.
+import { portfolioFontClass } from "@/app/dashboard/fonts"
+
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
   campaigns: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
@@ -890,11 +897,19 @@ export function MarketingContent({
         {/* Header */}
         {showHeader && (
           <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
-              <div className="whitespace-nowrap">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
+            {/* Title block per the handoff: the page name over a sub-line
+                naming what it covers. The 68px icon rail, ⌘K field, bell and
+                avatar the design also draws are already rendered globally by
+                src/app/layout.jsx, so they are not repeated here — the same
+                call the Portfolio Dashboard made from this bundle. */}
+            <div className={`${portfolioFontClass} flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full`}>
+              <div className="min-w-0">
+                <h1 className="font-pd-display text-[19px] font-bold text-pd-ink">
                   Marketing Hub
                 </h1>
+                <p className="mt-px text-[12px] text-pd-faint">
+                  Campaign performance across all connected ad accounts
+                </p>
               </div>
             </div>
 
@@ -1037,8 +1052,12 @@ export function MarketingContent({
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <TabsList className="flex-1 justify-start overflow-x-auto">
+          {/* Section tabs on the handoff's segmented-control spec: the track is
+              the divider tint, the selected item lifts onto white with the
+              purple-tinted shadow. Radix Tabs still drives the behaviour —
+              only the skin changes. */}
+          <div className={`${portfolioFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
+            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
               {[
                 { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
                 { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
@@ -1050,12 +1069,12 @@ export function MarketingContent({
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="gap-2"
+                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
                 >
-                    <tab.icon className="h-4 w-4" />
+                    <tab.icon className="size-[14px]" />
                     {tab.label}
                     {badge !== null && (
-                    <span className="ml-1 bg-purple-100 text-purple-700 rounded-full px-1.5 text-[10px] font-semibold leading-4">
+                    <span className="ml-1 rounded-[5px] bg-pd-primary-tint px-1.5 text-[10.5px] font-bold leading-4 text-pd-primary">
                       {badge}
                     </span>
                     )}
@@ -1064,11 +1083,13 @@ export function MarketingContent({
               })}
             </TabsList>
 
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+            {/* Search and Columns as the handoff's 38px controls, sitting
+                together at the right end of the tab row. */}
+            <div className="ml-auto flex w-fit shrink-0 items-center gap-[10px]">
               <Input
                 type="search"
-                placeholder={`Search ${activeTab}...`}
-                className="h-10 bg-white w-fit md:w-55 rounded-md text-sm font-medium"
+                placeholder={`Search ${activeTab}…`}
+                className="h-[38px] w-fit rounded-[10px] border-pd-border bg-pd-surface text-[13px] md:w-[220px]"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
