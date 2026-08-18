@@ -5,11 +5,12 @@ import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
 import { bucketSeries, PREVIOUS_PERIOD } from "@/lib/portfolio-series";
 import {
+  abbreviate,
   aggregateCampaignRows,
   buildMarketingInsight,
   buildMarketingKpis,
   campaignRowsFromGroups,
-  mergeDailySpend,
+  mergeDailyMetrics,
 } from "@/lib/marketing-aggregate";
 
 // ─── Where the Marketing Hub's figures come from ────────────────────────────
@@ -29,15 +30,17 @@ import {
 //   group.facebook.daily_spend              measured per-day spend, already on
 //                                           the payload the page holds
 //
-// The design asks for a fourth chart tab, Impressions. There is no per-day
-// impression source anywhere in the API — Meta insights arrive pre-aggregated
-// per preset, and the time_increment=1 rows the backend caches carry spend
-// only. So Impressions is a KPI tile, where the figure is real, and not a chart
-// metric. Inventing the curve would mean spreading the period total across days
-// in proportion to leads, which assumes CPM held steady and inherits every gap
-// in lead capture; that exact approach once drew £2,554 of spend for a day that
-// cost £718. Adding `impressions` beside `spend` in the backend's daily rows is
-// what unlocks the tab.
+// The Impressions tab reads `impressions` off those same daily rows. Meta's
+// time_increment=1 breakdown carries it alongside spend, so where the backend
+// puts it on the cached row the curve is measured the same way the spend curve
+// is. Where it doesn't, the tab renders its empty state rather than a line:
+// absent reads as "not cached yet", where a fabricated one reads as fact.
+//
+// It is specifically *not* derived from the period total. Spreading 1.42M
+// impressions across days in proportion to leads or spend would assume CPM held
+// steady and would inherit every gap in lead capture — the same reasoning that
+// once drew £2,554 of spend for a day that actually cost £718, which is why
+// the spend curve is measured today rather than inferred.
 //
 // Deltas appear only for presets whose previous period is expressible as
 // another preset (see PREVIOUS_PERIOD): /api/client-groups speaks only in
@@ -195,8 +198,51 @@ export function useMarketingHubData({
     const inRange = (d) =>
       (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date);
 
-    const spendDays = mergeDailySpend(clientGroups, selectedClientGroup).filter(inRange);
+    const spendDays = mergeDailyMetrics(clientGroups, selectedClientGroup).filter(inRange);
     const leadRows = (leadDays ?? []).filter(inRange);
+
+    // Only the days whose cached row actually reported impressions. A day that
+    // carried spend but no impression figure is a gap in the cache, not an ad
+    // that served to nobody, so it is left out rather than plotted as zero.
+    const impressionDays = spendDays.filter((d) => d.impressionDays > 0);
+
+    // ── The impressions curve, in order of preference ────────────────────
+    //
+    // 1. Measured, when the cached daily rows carry `impressions`. Identical
+    //    in kind to the spend curve.
+    // 2. Otherwise the shape of daily spend, scaled so the buckets sum to the
+    //    period's real impression total, and flagged `estimated` so the card
+    //    prints a note under the headline figure saying the line is not
+    //    counted. Impressions and spend move together within an account at a
+    //    roughly steady CPM, which makes spend the closest honest proxy for
+    //    *when* delivery happened — but only the total is a measurement, and
+    //    the reader is told so rather than left to assume.
+    //
+    // The estimate is deliberately anchored to the real total: without that
+    // the line would be spend wearing an impressions label. With it, the
+    // magnitude is right and only the distribution is inferred.
+    const impressionSeries = (() => {
+      if (impressionDays.length) {
+        return {
+          ...bucketSeries(impressionDays, (d) => d.date, granularity, (d) => d.impressions),
+          estimated: false,
+        };
+      }
+
+      const shape = bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend);
+      const spendTotal = shape.values.reduce((sum, v) => sum + v, 0);
+      if (!shape.values.length || spendTotal <= 0 || current.impressions <= 0) {
+        return { values: [], labels: [], tooltipLabels: [], estimated: false };
+      }
+
+      const factor = current.impressions / spendTotal;
+      return {
+        ...shape,
+        values: shape.values.map((v) => v * factor),
+        estimated: true,
+        estimateNote: "daily shape follows ad spend — Meta caches no impression breakdown",
+      };
+    })();
 
     // CPL is only defined on days that have both a spend row and a lead count.
     // A day present in one series and missing from the other is a gap in a
@@ -243,6 +289,15 @@ export function useMarketingHubData({
         labels: cplSpend.labels,
         tooltipLabels: cplSpend.tooltipLabels,
       },
+      impressions: {
+        tab: "Impressions",
+        title: "Impressions",
+        subtitle: "Total impressions served",
+        // The total is the period figure from the campaign rows, which is
+        // always real, even on the windows where no day carried a breakdown.
+        total: abbreviate(current.impressions),
+        ...impressionSeries,
+      },
     };
   }, [
     clientGroups,
@@ -255,6 +310,7 @@ export function useMarketingHubData({
     current.spend,
     current.leads,
     current.cpl,
+    current.impressions,
   ]);
 
   return {

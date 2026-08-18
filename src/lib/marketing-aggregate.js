@@ -133,26 +133,38 @@ export function campaignRowsFromGroups(groups, groupId) {
 }
 
 /**
- * One spend-per-day series across the selected groups.
+ * One per-day series across the selected groups, summed by date.
  *
- * Measured, not inferred: the backend asks Meta for time_increment=1 rows and
+ * Measured, not inferred: the backend asks Meta for `time_increment=1` rows and
  * caches them on the group as `daily_spend`. Days the cache has no row for are
  * absent rather than zero — a gap in the cache is not a day that cost nothing.
+ *
+ * Each row carries `spend` and, where Meta's daily breakdown includes it,
+ * `impressions`. Impressions is tracked separately from spend rather than
+ * assumed present: the field was added to these rows after spend, so a client
+ * whose cache predates that still has spend-only days. `impressionDays` counts
+ * how many rows actually reported the figure, which is what lets the chart tell
+ * "this account served nothing" from "nothing cached it" — the difference
+ * between a real zero and an absent curve.
  */
-export function mergeDailySpend(groups, groupId) {
+export function mergeDailyMetrics(groups, groupId) {
   const byDate = new Map();
 
   for (const group of groups ?? []) {
     if (groupId && groupId !== "all" && group.id !== groupId) continue;
     for (const day of group.facebook?.daily_spend ?? []) {
       if (!day?.date) continue;
-      byDate.set(day.date, (byDate.get(day.date) ?? 0) + num(day.spend));
+      const row = byDate.get(day.date) ?? { date: day.date, spend: 0, impressions: 0, impressionDays: 0 };
+      row.spend += num(day.spend);
+      if (day.impressions != null) {
+        row.impressions += num(day.impressions);
+        row.impressionDays += 1;
+      }
+      byDate.set(day.date, row);
     }
   }
 
-  return [...byDate.entries()]
-    .map(([date, spend]) => ({ date, spend }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /** Compact 1.42M / 298k for figures too long to read in a 17px tile. */

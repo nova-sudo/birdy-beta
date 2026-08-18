@@ -38,7 +38,7 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { portfolioFontClass } from "@/app/dashboard/fonts"
-import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { isOverCplCeiling } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
@@ -1134,11 +1134,33 @@ export function MarketingContent({
                 redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup ?? "all"}`}
               />
             ) : (
-              <PdCard className="flex-1" title="Trend">
+              <PdCard
+                className="flex-1"
+                title={chartMetrics[chartMetric]?.title ?? "Trend"}
+                // The metric tabs live inside TrendChart, so without them here
+                // a metric with no series would be a dead end — you could
+                // select it and have no way back to one that plots.
+                action={
+                  <PdSegmented
+                    label="Chart metric"
+                    className="shrink-0"
+                    itemClassName="px-[13px] py-[7px]"
+                    options={chartTabs.map(m => ({ key: m.key, label: m.tab }))}
+                    value={chartMetric}
+                    onChange={setChartMetric}
+                  />
+                }
+              >
                 <p className="py-8 text-center text-[12px] text-pd-faint">
-                  {chartMetric === "spend"
-                    ? "No measured daily spend cached for this window yet."
-                    : "No dated leads in this window yet."}
+                  {{
+                    spend: "No measured daily spend cached for this window yet.",
+                    leads: "No dated leads in this window yet.",
+                    cpl: "No day in this window has both spend and leads recorded.",
+                    // Impressions falls back to the shape of daily spend, so
+                    // reaching here means there is no spend curve either.
+                    impressions:
+                      "No measured daily spend cached for this window yet, so there is nothing to shape delivery against — the total is still in the tiles.",
+                  }[chartMetric] ?? "Nothing to plot for this window yet."}
                 </p>
               </PdCard>
             )}
