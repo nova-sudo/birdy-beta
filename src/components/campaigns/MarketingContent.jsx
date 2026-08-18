@@ -38,8 +38,9 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { portfolioFontClass } from "@/app/dashboard/fonts"
-import { StatTile } from "@/components/portfolio"
+import { CHART_LOADING, LoadingPulse, PdCard, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
+import { DATE_PRESETS } from "@/lib/constants"
 import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
 
 // Which icon and colour family each KPI tile wears, from the handoff's tile
@@ -868,7 +869,14 @@ export function MarketingContent({
     return campaigns.filter(i => i._groupId === selectedClientGroup)
   }, [campaigns, selectedClientGroup])
 
-  const { kpis } = useMarketingHubData({
+  const [chartMetric, setChartMetric] = useState("spend")
+
+  const dateRangeLabel = useMemo(
+    () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
+    [datePreset]
+  )
+
+  const { kpis, chartMetrics, seriesLoading } = useMarketingHubData({
     clientGroups,
     rows: heroRows,
     datePreset,
@@ -880,6 +888,35 @@ export function MarketingContent({
     () => kpis.map(k => ({ ...k, ...(MARKETING_KPI_PRESENTATION[k.key] ?? {}) })),
     [kpis]
   )
+
+  const chartTabs = useMemo(
+    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
+    [chartMetrics]
+  )
+
+  const chart = useMemo(() => {
+    const metric = chartMetrics[chartMetric] ?? chartMetrics.spend
+    if (!metric?.values?.length) return null
+
+    // The chart's headline delta is the same period-over-period figure the tile
+    // for that metric shows — one number, computed once.
+    const kpi = kpis.find(k => k.key === chartMetric)
+    const decimals = metric.decimals ?? 0
+
+    return {
+      ...metric,
+      subtitle: `${dateRangeLabel} · ${metric.subtitle}`,
+      pointValues: metric.values.map(v =>
+        `${metric.valuePrefix ?? ""}${Number(v).toLocaleString(undefined, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })}`
+      ),
+      direction: kpi?.direction,
+      delta: kpi?.delta,
+      polarity: kpi?.polarity,
+    }
+  }, [chartMetrics, chartMetric, kpis, dateRangeLabel])
 
   // ── Filter condition helpers ──────────────────────────────────────────────
   const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
@@ -1052,32 +1089,56 @@ export function MarketingContent({
           )
         })()}
 
-        {/* ── KPI tiles ──────────────────────────────────────────────────────
-            Six compact tiles on the handoff's spec, replacing the four summary
-            cards. Each rides on a single row — chip, value over label, delta
-            pill pushed right — so the set stays short enough to sit beside the
-            trend chart once that lands.
+        {/* ── Hero row: trend chart (1.65) · KPI tiles (0.85) ────────────────
+            The handoff's "chart + insights row". The tiles move out of a full
+            width strip and into the chart's right-hand column, six of them in
+            a 1fr 1fr grid so the column's height matches the chart's.
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <div className={`${portfolioFontClass} grid grid-cols-2 gap-[10px] lg:grid-cols-3 xl:grid-cols-6`}>
-          {groupsLoading
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-[52px] rounded-xl" />
-              ))
-            : kpiTiles.map(tile => (
-                <StatTile
-                  key={tile.key}
-                  layout="compact"
-                  icon={tile.icon}
-                  tone={tile.tone}
-                  value={tile.value}
-                  label={tile.label}
-                  direction={tile.direction}
-                  delta={tile.delta}
-                  polarity={tile.polarity}
-                />
-              ))}
+        <div className={`${portfolioFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
+          <div className="flex min-w-0 flex-col lg:flex-[1.65]">
+            {groupsLoading || seriesLoading ? (
+              <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
+            ) : chart ? (
+              <TrendChart
+                className="flex-1"
+                chart={chart}
+                metrics={chartTabs}
+                activeMetric={chartMetric}
+                onMetricChange={setChartMetric}
+                redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup ?? "all"}`}
+              />
+            ) : (
+              <PdCard className="flex-1" title="Trend">
+                <p className="py-8 text-center text-[12px] text-pd-faint">
+                  {chartMetric === "spend"
+                    ? "No measured daily spend cached for this window yet."
+                    : "No dated leads in this window yet."}
+                </p>
+              </PdCard>
+            )}
+          </div>
+
+          <div className="grid min-w-0 grid-cols-2 content-start gap-[10px] lg:flex-[0.85]">
+            {groupsLoading
+              ? Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-[52px] rounded-xl" />
+                ))
+              : kpiTiles.map(tile => (
+                  <StatTile
+                    key={tile.key}
+                    layout="compact"
+                    icon={tile.icon}
+                    tone={tile.tone}
+                    value={tile.value}
+                    label={tile.label}
+                    direction={tile.direction}
+                    delta={tile.delta}
+                    polarity={tile.polarity}
+                  />
+                ))}
+          </div>
         </div>
 
         {/* Tabs */}
