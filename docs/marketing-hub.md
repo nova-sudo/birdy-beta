@@ -44,20 +44,49 @@ the period, while the table below is whatever you have drilled into.
 | Spend curve | `group.facebook.daily_spend` — measured, `time_increment=1` |
 | Leads curve | `GET /api/facebook-leads/series` |
 | CPL curve | spend ÷ leads, bucketed over the days that have **both** |
+| Impressions curve | measured where the daily rows carry `impressions`; otherwise the shape of daily spend scaled to the real total, and labelled as an estimate |
 | Six KPI tiles | the campaign rows for the selected group |
 | Delta pills | `GET /api/client-groups?date_preset=<previous>` via `PREVIOUS_PERIOD` |
 | Insight copy | the largest KPI movement + the highest-CPL campaign over the ceiling |
 
 Three things worth knowing before reading a number off this screen:
 
-**There is no Impressions chart tab.** The design asks for one. No per-day
-impression source exists anywhere in the API — Meta insights arrive
-pre-aggregated per preset, and the daily rows the backend caches carry spend
-only. Impressions is a KPI tile, where the figure is real, and not a curve.
-Adding `impressions` beside `spend` in those daily rows is what unlocks the tab;
-inventing it client-side would mean spreading the period total across days in
-proportion to leads, which assumes CPM held steady and inherits every gap in
-lead capture. That approach once drew £2,554 of spend for a day that cost £718.
+**The Impressions curve is an estimate today, and says so on the card.** It
+resolves in two steps:
+
+1. **Measured**, where the cached daily rows carry `impressions`. Meta's
+   `time_increment=1` breakdown does return it alongside spend, so the moment
+   the backend puts it on the row this curve becomes identical in kind to the
+   spend curve, with no frontend change.
+2. **Otherwise the shape of daily spend**, scaled so the buckets sum to the
+   period's real impression total, and flagged `estimated` so `TrendChart`
+   prints *"daily shape follows ad spend — Meta caches no impression
+   breakdown"* under the headline figure.
+
+The backend does not currently send the field, so step 2 is what renders.
+
+Two things make step 2 defensible rather than a fabrication. The **magnitude is
+measured** — the line is anchored to the real period total, so only the
+distribution is inferred; without that anchor it would be spend wearing an
+impressions label. And the inference is **declared on the card**, not buried
+here. Impressions and spend move together within an account at a roughly steady
+CPM, which makes spend the closest honest proxy for *when* delivery happened.
+
+This is the same mechanism the Portfolio Dashboard's calls series uses, and the
+reason `estimated`/`estimateNote` exist on `TrendChart` at all.
+
+What it is **not** derived from is lead volume. Spreading impressions in
+proportion to leads would inherit every gap in lead capture — the reasoning that
+once drew £2,554 of spend for a day that actually cost £718, and why spend is
+measured today rather than inferred.
+
+`mergeDailyMetrics` counts `impressionDays` separately from the impression total
+so the chart can tell **a day that served nothing** (a row reporting `0`, which
+plots) from **a day nothing cached** (a row with no `impressions` field, which
+does not). Plotting the second as zero would draw a trough that never happened.
+
+**Getting to a fully measured curve** is one backend change: add `impressions`
+to the `meta_daily_spend` rows served as `facebook.daily_spend`.
 
 **CPL is only plotted where both inputs exist.** A day present in the spend
 cache but missing from the lead series (or the reverse) is a gap in a cache, not
