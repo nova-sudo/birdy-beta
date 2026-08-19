@@ -35,6 +35,7 @@ export default function SalesHubPage() {
 
   const {
     totals,
+    deltas,
     chartMetrics,
     metrics,
     seriesLoading,
@@ -104,6 +105,7 @@ export default function SalesHubPage() {
           <KpiTiles
             tiles={KPI_PRESENTATION}
             totals={totals}
+            deltas={deltas}
             loading={groupsLoading}
             format={formatTotal}
           />

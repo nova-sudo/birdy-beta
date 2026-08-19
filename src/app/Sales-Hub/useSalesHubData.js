@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
+import { percentDelta } from "@/lib/portfolio-aggregate";
+import { PREVIOUS_PERIOD, subtractPeriods } from "@/lib/portfolio-series";
 import { MAX_LEADS_TO_FETCH } from "@/constants";
 import { buildSalesSeries, granularityForRange, SALES_CHART_METRICS } from "@/lib/saleshub-series";
 import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight";
@@ -21,6 +23,13 @@ import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight";
 // caps what it returns, so the rows are a *sample* of that window. Taking the
 // magnitude from the first and the shape from the second is what keeps the
 // curve and the figure above it agreeing — see scaleSeriesToTotal.
+//
+// Deltas need a second window. /api/client-groups only speaks in date presets,
+// so a previous period has to be expressible as one: PREVIOUS_PERIOD maps the
+// five that can be, and the rest render no pills at all rather than invented
+// ones. Where only a longer window exists (last_7d against last_14d), the
+// current one is subtracted out of it — every figure summed here is additive,
+// so that subtraction is exact rather than an estimate.
 
 /** Sums the windowed call stats across whichever clients are in scope. */
 export function sumCallStats(clientGroups, selectedClientGroup) {
@@ -154,17 +163,67 @@ export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selec
     };
   }, [fetchKey, groupsLoading, datePreset, locationId]);
 
+  // ── Previous period, for the delta pills ────────────────────────────────
+  const [previousGroups, setPreviousGroups] = useState(null);
+
+  useEffect(() => {
+    const comparison = PREVIOUS_PERIOD[datePreset];
+    if (!comparison) {
+      setPreviousGroups(null);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`);
+        if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setPreviousGroups(data.client_groups ?? []);
+      } catch {
+        // No comparison is a fine outcome — the pills just don't render.
+        if (!cancelled) setPreviousGroups(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [datePreset]);
+
   const totals = useMemo(
     () => sumCallStats(clientGroups, selectedClientGroup),
     [clientGroups, selectedClientGroup]
   );
+
+  const previousTotals = useMemo(() => {
+    if (!previousGroups) return null;
+    const enclosing = sumCallStats(previousGroups, selectedClientGroup);
+    const comparison = PREVIOUS_PERIOD[datePreset];
+    return comparison?.subtractCurrent ? subtractPeriods(enclosing, totals) : enclosing;
+  }, [previousGroups, selectedClientGroup, datePreset, totals]);
+
+  // Every figure on this screen is a volume — more calls, more leads reached
+  // and more talk time are all good news — so none of them inverts. The
+  // Marketing Hub's CPL is the sibling screen's counter-example.
+  const deltas = useMemo(() => {
+    if (!previousTotals) return null;
+    return Object.keys(totals).reduce((acc, key) => {
+      const d = percentDelta(totals[key], previousTotals[key]);
+      if (d) acc[key] = d;
+      return acc;
+    }, {});
+  }, [totals, previousTotals]);
 
   const clientRows = useMemo(
     () => buildClientRows(clientGroups, selectedClientGroup),
     [clientGroups, selectedClientGroup]
   );
 
-  const insight = useMemo(() => buildSalesInsight(totals, clientRows), [totals, clientRows]);
+  const insight = useMemo(
+    () => buildSalesInsight(totals, clientRows, deltas),
+    [totals, clientRows, deltas]
+  );
 
   const chartMetrics = useMemo(() => {
     const { start_date, end_date } = presetToDateRange(datePreset);
@@ -179,6 +238,7 @@ export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selec
       acc[metric.key] = {
         ...metric,
         ...s,
+        ...(deltas?.[metric.key] ?? {}),
         total: format(totals[metric.key]),
         pointValues: s.values.map(format),
         estimateNote: "shape estimated from a sample of calls",
@@ -187,10 +247,12 @@ export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selec
       };
       return acc;
     }, {});
-  }, [callRows, totals, datePreset]);
+  }, [callRows, totals, datePreset, deltas]);
 
   return {
     totals,
+    deltas,
+    hasComparison: previousTotals != null,
     clientRows,
     insight,
     insightPrompt: insightPrompt(insight),
