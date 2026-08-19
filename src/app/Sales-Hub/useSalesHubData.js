@@ -1,0 +1,153 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { apiRequest } from "@/lib/api";
+import { presetToDateRange } from "@/lib/date-utils";
+import { MAX_LEADS_TO_FETCH } from "@/constants";
+import { buildSalesSeries, granularityForRange, SALES_CHART_METRICS } from "@/lib/saleshub-series";
+
+// ─── Sales Hub data ─────────────────────────────────────────────────────────
+// Everything the redesigned screen plots, from endpoints that already existed.
+//
+// | Source                            | Feeds                                |
+// |-----------------------------------|--------------------------------------|
+// | client groups (passed in)         | the totals above the chart           |
+// | /api/hotprospector/call-center    | the shape of all four series         |
+//
+// The split matters. Call stats on the client groups are aggregates the
+// backend computed over the whole window, so they are exact; the row endpoint
+// caps what it returns, so the rows are a *sample* of that window. Taking the
+// magnitude from the first and the shape from the second is what keeps the
+// curve and the figure above it agreeing — see scaleSeriesToTotal.
+
+/** Sums the windowed call stats across whichever clients are in scope. */
+export function sumCallStats(clientGroups, selectedClientGroup) {
+  const scoped =
+    selectedClientGroup && selectedClientGroup !== "all"
+      ? (clientGroups ?? []).filter((g) => g.id === selectedClientGroup)
+      : (clientGroups ?? []);
+
+  return scoped.reduce(
+    (acc, g) => {
+      const cs = g.hotprospector?.call_stats ?? {};
+      return {
+        called: acc.called + (cs.leads_with_calls ?? 0),
+        calls: acc.calls + (cs.total_calls ?? 0),
+        inbound: acc.inbound + (cs.inbound_count ?? 0),
+        outbound: acc.outbound + (cs.outbound_count ?? 0),
+        transfers: acc.transfers + (cs.transfers ?? 0),
+        talk: acc.talk + (cs.total_talk_min ?? 0),
+      };
+    },
+    { called: 0, calls: 0, inbound: 0, outbound: 0, transfers: 0, talk: 0 }
+  );
+}
+
+/** Talk time reads as minutes everywhere on this screen, to one decimal. */
+const formatTalk = (v) => (Math.round(v * 10) / 10).toLocaleString();
+const formatCount = (v) => Math.round(v).toLocaleString();
+
+const FORMAT = { calls: formatCount, called: formatCount, inbound: formatCount, talk: formatTalk };
+
+/**
+ * @param {object[]} clientGroups
+ * @param {string} datePreset the window every figure covers
+ * @param {string} selectedClientGroup "all" or a client group id
+ */
+export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selectedClientGroup }) {
+  const [callRows, setCallRows] = useState(null);
+  const [seriesLoading, setSeriesLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  // The scope and window this fetch was for, so a change to either invalidates
+  // what we hold rather than showing one client's calls under another's name.
+  const locationId = useMemo(() => {
+    if (!selectedClientGroup || selectedClientGroup === "all") return null;
+    return (clientGroups ?? []).find((g) => g.id === selectedClientGroup)?.ghl_location_id ?? null;
+  }, [clientGroups, selectedClientGroup]);
+
+  const fetchedFor = useRef(null);
+  const fetchKey = `${datePreset}|${locationId ?? "all"}`;
+
+  useEffect(() => {
+    if (groupsLoading) return;
+    if (fetchedFor.current === fetchKey) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
+    fetchedFor.current = fetchKey;
+    setCallRows(null);
+
+    (async () => {
+      setSeriesLoading(true);
+      setError(null);
+      try {
+        const { start_date, end_date } = presetToDateRange(datePreset);
+        const params = new URLSearchParams({ skip: "0", limit: String(MAX_LEADS_TO_FETCH) });
+        if (locationId) params.set("location_id", locationId);
+        if (start_date) params.set("start_date", start_date);
+        if (end_date) params.set("end_date", end_date);
+
+        const res = await apiRequest(`/api/hotprospector/call-center?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`call-center → ${res.status}`);
+        const data = await res.json();
+        if (!cancelled) setCallRows(data.data ?? []);
+      } catch (err) {
+        if (err.name === "AbortError") return;
+        if (!cancelled) {
+          setCallRows([]);
+          setError(err.message);
+          // Let a later visit retry rather than caching the failure.
+          fetchedFor.current = null;
+        }
+      } finally {
+        if (!cancelled) setSeriesLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [fetchKey, groupsLoading, datePreset, locationId]);
+
+  const totals = useMemo(
+    () => sumCallStats(clientGroups, selectedClientGroup),
+    [clientGroups, selectedClientGroup]
+  );
+
+  const chartMetrics = useMemo(() => {
+    const { start_date, end_date } = presetToDateRange(datePreset);
+    const granularity = granularityForRange(start_date, end_date);
+    const capped = (callRows?.length ?? 0) >= MAX_LEADS_TO_FETCH;
+    const series = buildSalesSeries(callRows, capped, totals, granularity);
+
+    return SALES_CHART_METRICS.reduce((acc, metric) => {
+      const s = series[metric.key];
+      const format = FORMAT[metric.key];
+
+      acc[metric.key] = {
+        ...metric,
+        ...s,
+        total: format(totals[metric.key]),
+        pointValues: s.values.map(format),
+        estimateNote: "shape estimated from a sample of calls",
+        // Distinguishes "not fetched yet" from "fetched and there were none".
+        pending: callRows === null,
+      };
+      return acc;
+    }, {});
+  }, [callRows, totals, datePreset]);
+
+  return {
+    totals,
+    chartMetrics,
+    metrics: SALES_CHART_METRICS,
+    seriesLoading,
+    error,
+    hasCalls: totals.calls > 0,
+  };
+}
