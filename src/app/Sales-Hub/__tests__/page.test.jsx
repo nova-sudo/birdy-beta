@@ -10,6 +10,9 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/useClientGroups", () => ({
   useClientGroups: vi.fn(),
 }))
+// next/font hits the network at module load, which a unit test has no business
+// doing — the class names are all the shell uses.
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"

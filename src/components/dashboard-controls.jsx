@@ -6,7 +6,7 @@ import { Calendar, Clock } from "lucide-react";
 import { PdMenu } from "@/components/portfolio/PdMenu";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import { GRANULARITIES } from "@/lib/portfolio-series";
-import { portfolioFontClass } from "@/app/dashboard/fonts";
+import { pdFontClass } from "@/lib/pd-fonts";
 
 // The dashboard's date range and chart granularity live in the global top bar,
 // beside the notifications bell and profile menu, rather than on the page.
@@ -79,7 +79,7 @@ export function DashboardHeaderTitle() {
   if (pathname !== DASHBOARD_ROUTE) return null;
 
   return (
-    <div className={portfolioFontClass}>
+    <div className={pdFontClass}>
       <h1 className="font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
         Portfolio Dashboard
       </h1>
