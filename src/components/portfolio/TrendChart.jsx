@@ -67,15 +67,10 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
 
       <div className="mt-[14px] mb-4 flex flex-wrap items-baseline gap-[10px]">
         <span className="font-pd-display text-[28px] font-bold text-pd-ink">{chart.total}</span>
-        {/* A window with no comparable period before it renders no delta at
-            all, rather than a zero — an unknown movement is not a flat one,
-            and the same rule already governs every KPI pill on these screens. */}
-        {chart.direction && (
-          <span className={cn("text-[12.5px] font-semibold", tone.text)}>
-            <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
-            <span className="sr-only">{chart.direction} </span> {chart.delta}
-          </span>
-        )}
+        <span className={cn("text-[12.5px] font-semibold", tone.text)}>
+          <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
+          <span className="sr-only">{chart.direction} </span> {chart.delta}
+        </span>
         {chart.estimated && (
           // The total is exact; the curve under it is not counted — either a
           // sample scaled onto that total, or a shape borrowed from another
@@ -89,9 +84,8 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
       {/* Names the shape of the series for anyone who can't see it — the dots
           below carry the individual readings. */}
       <p className="sr-only">
-        {chart.title}, {chart.subtitle}. {chart.total}
-        {chart.direction ? `, ${chart.direction} ${chart.delta} on the previous period` : ""}.{" "}
-        {points.length} data points, from {chart.pointValues[0]} to{" "}
+        {chart.title}, {chart.subtitle}. {chart.total}, {chart.direction} {chart.delta} on the
+        previous period. {points.length} data points, from {chart.pointValues[0]} to{" "}
         {chart.pointValues[points.length - 1]}.
       </p>
 

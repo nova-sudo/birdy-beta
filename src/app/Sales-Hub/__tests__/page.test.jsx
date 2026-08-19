@@ -76,10 +76,10 @@ describe("Sales Hub — Calls tab", () => {
     render(<CallCenterPage />)
 
     // Radix's Tabs mounted all four panels and hid three, so the Leads tab's
-    // first batch was fetched on a visit that never left Overview. The chart
-    // above the tabs has its own call-centre fetch and is expected here; the
-    // Leads batch is the one that should not have run. It is recognisable by
-    // its page size (LEADS_FIRST_BATCH_SIZE).
+    // first batch was fetched on a visit that never left Overview. Nothing
+    // above the tabs fetches — the tiles sum client groups the page already
+    // holds — so the Leads batch is the only request in play. It is
+    // recognisable by its page size (LEADS_FIRST_BATCH_SIZE).
     const leadsBatchFetched = () =>
       vi.mocked(apiRequest).mock.calls.some(([url]) => url.includes("limit=40"))
 

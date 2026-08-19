@@ -1,148 +1,58 @@
-// The copy in the Birdy Insights card, generated from the period's own figures.
+// The copy in the Birdy Insights card.
 //
-// The design is explicit that this is not static text: "name the biggest
-// movement, then the single most actionable anomaly". It is also the product's
-// voice — direct and operational, one sentence, with the numbers in it.
+// This states the window's figures and nothing else. The design asks the card
+// to name the biggest movement and then the most actionable anomaly, both of
+// which mean deriving claims — a period-over-period comparison, and a ranking
+// across clients. Neither is drawn here: the card reports the same numbers the
+// tiles beside it report, summed from what the API returned.
 //
-// Output is a list of parts rather than a string so the card can render figures
-// and client names in white against the body's 88% white, the way the design
-// draws them. `strong: true` marks a part for that treatment.
-//
-// What counts as the anomaly here is the largest *untouched pool*: the client
-// with the most leads nobody has dialled. It is the one number on this screen
-// that names a specific thing to go and do, and unlike a movement it needs no
-// previous period to compute — so it survives on the windows that have no
-// comparable predecessor, which is most of them.
+// Output is a list of parts rather than a string so the card can render the
+// figures in white against the body's 88% white, the way the design draws them.
+// `strong: true` marks a part for that treatment.
 
 const plain = (text) => ({ text, strong: false });
 const strong = (text) => ({ text, strong: true });
 
-const count = (n) => Math.round(n).toLocaleString();
-const pct = (n) => `${Math.round(n * 10) / 10}%`;
-
-/**
- * The client with the most leads never dialled.
- *
- * Ranked by the size of the untouched pool rather than by the ratio, because a
- * client sitting on 228 uncalled leads is a bigger miss than one sitting on 9,
- * even where the second has called a smaller share. Clients with no leads at
- * all are skipped — nothing to act on.
- *
- * @param {{name: string, total_leads: number, leads: number}[]} rows
- */
-export function biggestUntouchedPool(rows) {
-  return (rows ?? [])
-    .filter((r) => (r.total_leads ?? 0) > 0)
-    .map((r) => ({
-      name: r.name,
-      total: r.total_leads ?? 0,
-      called: r.leads ?? 0,
-      untouched: Math.max(0, (r.total_leads ?? 0) - (r.leads ?? 0)),
-    }))
-    .sort((a, b) => b.untouched - a.untouched)[0];
-}
-
-/**
- * The movement sentence: what changed, and what drove it.
- *
- * The design opens on call volume and then contrasts it with a metric moving
- * the other way, which is the sentence that actually tells you something —
- * "up 9.1% and outbound is driving it, but inbound has slipped 2.6%". That
- * contrast only exists when one is up and another is down, so it is built
- * rather than assumed: with everything moving the same way there is nothing to
- * contrast, and inventing a "but" would misdescribe the period.
- */
-function movementParts(deltas) {
-  const calls = deltas?.calls;
-  if (!calls) return null;
-
-  const parts = [
-    plain("Call volume is "),
-    plain(calls.direction === "up" ? "up " : "down "),
-    strong(calls.delta),
-  ];
-
-  // The counter-movement: whichever of the other metrics went the opposite way
-  // by the most. Naming the largest makes the sentence about the biggest thing
-  // the headline figure is hiding.
-  const counter = ["inbound", "called", "talk"]
-    .map((key) => ({ key, ...(deltas[key] ?? {}) }))
-    .filter((d) => d.direction && d.direction !== calls.direction)
-    .sort((a, b) => parseFloat(b.delta) - parseFloat(a.delta))[0];
-
-  if (counter) {
-    parts.push(
-      plain(`, but ${LABEL[counter.key]} `),
-      plain(counter.direction === "up" ? "is up " : "has slipped "),
-      strong(counter.delta)
-    );
-  }
-
-  parts.push(plain("."));
-  return parts;
-}
-
-const LABEL = { inbound: "inbound", called: "leads reached", talk: "talk time" };
+const count = (n) => Math.round(n ?? 0).toLocaleString();
 
 /**
  * Build the card's copy for the period.
  *
- * @param {{calls: number, called: number, inbound: number, talk: number}} totals
- * @param {object[]} rows one per client, as the Overview table shapes them
- * @param {Record<string, {direction: string, delta: string}>} [deltas] absent
- *   on a window with no comparable previous period — most of them
+ * @param {{calls, called, inbound, outbound, clients}} totals summed call stats
  * @returns {{text: string, strong: boolean}[]}
  */
-export function buildSalesInsight(totals, rows, deltas) {
-  const t = totals ?? { calls: 0, called: 0, inbound: 0 };
+export function buildSalesInsight(totals) {
+  const t = totals ?? {};
 
   if (!t.calls) {
     return [
       plain(
-        "No calls logged in this window yet. Once the dialler runs, this is where the movement worth acting on will be called out."
+        "No calls logged in this window yet. Once the dialler runs, this is where the period's figures will be summarised."
       ),
     ];
   }
 
-  // Lead with the movement where there is one to lead with; fall back to what
-  // the window did in absolute terms, which needs no previous period.
-  const movement = movementParts(deltas);
-  const parts = movement ?? [
+  const parts = [
     plain("Your call centres placed "),
     strong(`${count(t.calls)} calls`),
     plain(" to "),
     strong(`${count(t.called)} leads`),
-    plain(" this period"),
   ];
 
-  if (!movement) {
-    // Inbound share is worth a clause only when there is one — a portfolio
-    // doing pure outbound should not get a sentence about 0%.
-    if (t.inbound > 0) {
-      parts.push(
-        plain(", with "),
-        strong(pct((t.inbound / t.calls) * 100)),
-        plain(" coming inbound")
-      );
-    }
-    parts.push(plain("."));
+  // Only worth saying across a portfolio — scoped to one client it would read
+  // as "across 1 client", which tells the reader nothing they can't see.
+  if (t.clients > 1) {
+    parts.push(plain(" across "), strong(`${count(t.clients)} clients`));
   }
 
-  const worst = biggestUntouchedPool(rows);
-  // Only worth naming when the pool is actually mostly untouched. A client
-  // who has been called 300 of 320 times is not the story.
-  if (worst && worst.untouched > 0 && worst.called / worst.total < 0.5) {
-    parts.push(
-      plain(" "),
-      strong(worst.name),
-      plain(" has called only "),
-      strong(count(worst.called)),
-      plain(" of "),
-      strong(count(worst.total)),
-      plain(" leads — the biggest untouched pool in the portfolio.")
-    );
+  parts.push(plain(" this period: "), strong(`${count(t.outbound)} outbound`));
+
+  // A pure-outbound portfolio should not get a clause about zero inbound.
+  if (t.inbound > 0) {
+    parts.push(plain(" and "), strong(`${count(t.inbound)} inbound`));
   }
 
+  parts.push(plain("."));
   return parts;
 }
 
