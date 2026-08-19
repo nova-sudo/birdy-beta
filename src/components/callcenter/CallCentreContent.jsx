@@ -537,6 +537,7 @@ export function CallCentreContent({
   groupsLoading,
   datePreset,
   showGroupFilter = true,
+  showStatCards = true,
   selectedClientGroup: controlledClientGroup,
   onSelectClientGroup,
 }) {
@@ -950,13 +951,17 @@ export function CallCentreContent({
     // the Sales Hub's own scroll region.
     <div className="min-w-0">
       <div className="flex flex-col gap-6">
-        {/* Stat cards (windowed) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
-          <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
-          <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
-          <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
-        </div>
+        {/* Stat cards (windowed). The Sales Hub draws its own six-tile KPI grid
+            from the same figures and turns these off; /clients/[id] has no call
+            KPIs of its own on this tab, so they stay its default. */}
+        {showStatCards && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
+            <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
+            <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
+            <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
+          </div>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

@@ -9,8 +9,10 @@ import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { InsightCard } from "@/components/saleshub/InsightCard"
+import { KpiTiles } from "@/components/saleshub/KpiTiles"
 import { SalesHubShell } from "@/components/saleshub/SalesHubShell"
-import { useSalesHubData } from "./useSalesHubData"
+import { KPI_PRESENTATION } from "./presentation"
+import { formatTotal, useSalesHubData } from "./useSalesHubData"
 
 // ─── Sales Hub ──────────────────────────────────────────────────────────────
 // Call-centre performance across every Hot Prospector client: is the outreach
@@ -31,7 +33,15 @@ export default function SalesHubPage() {
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("calls")
 
-  const { chartMetrics, metrics, seriesLoading, hasCalls, insight, insightPrompt } = useSalesHubData({
+  const {
+    totals,
+    chartMetrics,
+    metrics,
+    seriesLoading,
+    hasCalls,
+    insight,
+    insightPrompt,
+  } = useSalesHubData({
     clientGroups,
     groupsLoading,
     datePreset,
@@ -91,6 +101,12 @@ export default function SalesHubPage() {
 
         <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
           <InsightCard parts={insight} prompt={insightPrompt} />
+          <KpiTiles
+            tiles={KPI_PRESENTATION}
+            totals={totals}
+            loading={groupsLoading}
+            format={formatTotal}
+          />
         </div>
       </div>
 
@@ -99,6 +115,7 @@ export default function SalesHubPage() {
         groupsLoading={groupsLoading}
         datePreset={datePreset}
         showGroupFilter={true}
+        showStatCards={false}
         selectedClientGroup={selectedClientGroup}
         onSelectClientGroup={setSelectedClientGroup}
       />
