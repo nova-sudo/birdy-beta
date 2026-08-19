@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Search, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION } from "@/lib/changelog";
+import { ASK_BIRDY_EVENT } from "@/lib/ask-birdy";
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
@@ -50,6 +51,19 @@ export default function RootLayout({ children }) {
     if (typeof navigator !== "undefined") {
       setIsMac(/Mac|iPhone|iPad|iPod/i.test(navigator.platform));
     }
+  }, []);
+
+  // Pages open the assistant by announcing a question rather than by reaching
+  // into this component's state — see lib/ask-birdy.js for why.
+  useEffect(() => {
+    const onAsk = (e) => {
+      const msg = e.detail?.message?.trim();
+      if (!msg) return;
+      setChatInitialMsg(msg);
+      setChatOpen(true);
+    };
+    window.addEventListener(ASK_BIRDY_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_BIRDY_EVENT, onAsk);
   }, []);
 
   // ⌘K / Ctrl+K focuses the header search bar (only when chat modal is closed)

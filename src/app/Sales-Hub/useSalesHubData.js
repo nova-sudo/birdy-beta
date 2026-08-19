@@ -6,6 +6,7 @@ import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
 import { MAX_LEADS_TO_FETCH } from "@/constants";
 import { buildSalesSeries, granularityForRange, SALES_CHART_METRICS } from "@/lib/saleshub-series";
+import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight";
 
 // ─── Sales Hub data ─────────────────────────────────────────────────────────
 // Everything the redesigned screen plots, from endpoints that already existed.
@@ -42,6 +43,36 @@ export function sumCallStats(clientGroups, selectedClientGroup) {
     },
     { called: 0, calls: 0, inbound: 0, outbound: 0, transfers: 0, talk: 0 }
   );
+}
+
+/**
+ * One row per client in scope, with the window's call figures.
+ *
+ * Clients with no calls in the window are dropped: the hub is a view of what
+ * the dialler did, and a page of zero-rows buries the clients that did move.
+ * The full pool (`total_leads`) is not windowed — HotProspector leads carry no
+ * creation date, so call activity is the only windowable lead metric there is.
+ */
+export function buildClientRows(clientGroups, selectedClientGroup) {
+  return (clientGroups ?? [])
+    .filter((g) => selectedClientGroup === "all" || g.id === selectedClientGroup)
+    .map((g) => {
+      const cs = g.hotprospector?.call_stats ?? {};
+      return {
+        id: g.id,
+        name: g.name || "Unnamed Client",
+        ghl_location_id: g.ghl_location_id,
+        total_leads: g.hotprospector?.metrics?.total_leads ?? 0,
+        leads: cs.leads_with_calls ?? 0,
+        total_calls: cs.total_calls ?? 0,
+        inbound: cs.inbound_count ?? 0,
+        outbound: cs.outbound_count ?? 0,
+        transfers: cs.transfers ?? 0,
+        talk_time: cs.total_talk_min ?? 0,
+        original: g,
+      };
+    })
+    .filter((r) => r.total_calls > 0);
 }
 
 /** Talk time reads as minutes everywhere on this screen, to one decimal. */
@@ -119,6 +150,13 @@ export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selec
     [clientGroups, selectedClientGroup]
   );
 
+  const clientRows = useMemo(
+    () => buildClientRows(clientGroups, selectedClientGroup),
+    [clientGroups, selectedClientGroup]
+  );
+
+  const insight = useMemo(() => buildSalesInsight(totals, clientRows), [totals, clientRows]);
+
   const chartMetrics = useMemo(() => {
     const { start_date, end_date } = presetToDateRange(datePreset);
     const granularity = granularityForRange(start_date, end_date);
@@ -144,6 +182,9 @@ export function useSalesHubData({ clientGroups, groupsLoading, datePreset, selec
 
   return {
     totals,
+    clientRows,
+    insight,
+    insightPrompt: insightPrompt(insight),
     chartMetrics,
     metrics: SALES_CHART_METRICS,
     seriesLoading,

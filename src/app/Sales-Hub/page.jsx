@@ -8,6 +8,7 @@ import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
+import { InsightCard } from "@/components/saleshub/InsightCard"
 import { SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { useSalesHubData } from "./useSalesHubData"
 
@@ -30,7 +31,7 @@ export default function SalesHubPage() {
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("calls")
 
-  const { chartMetrics, metrics, seriesLoading, hasCalls } = useSalesHubData({
+  const { chartMetrics, metrics, seriesLoading, hasCalls, insight, insightPrompt } = useSalesHubData({
     clientGroups,
     groupsLoading,
     datePreset,
@@ -60,28 +61,38 @@ export default function SalesHubPage() {
         </div>
       }
     >
-      {seriesLoading || metric?.pending ? (
-        <LoadingPulse className="mb-[18px] h-[340px]" statements={CALL_CHART_LOADING} />
-      ) : chart?.values?.length > 0 ? (
-        <TrendChart
-          className="mb-[18px]"
-          chart={chart}
-          metrics={metrics}
-          activeMetric={chartMetric}
-          onMetricChange={setChartMetric}
-          // Keying on metric + window remounts the paths, which is what makes
-          // the draw and fade animations replay on every switch.
-          redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
-        />
-      ) : (
-        <PdCard className="mb-[18px]" title="Call trend">
-          <p className="py-8 text-center text-[12px] text-pd-faint">
-            {hasCalls
-              ? "No dated calls in this window yet."
-              : "No calls logged in this window yet."}
-          </p>
-        </PdCard>
-      )}
+      {/* Chart left, Birdy's read of it right — the design's 1.65 / 0.85 split.
+          Stretch, so the right column ends level with the chart card. */}
+      <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
+        <div className="flex min-w-0 flex-col lg:flex-[1.65]">
+          {seriesLoading || metric?.pending ? (
+            <LoadingPulse className="h-[340px] flex-1" statements={CALL_CHART_LOADING} />
+          ) : chart?.values?.length > 0 ? (
+            <TrendChart
+              className="flex-1"
+              chart={chart}
+              metrics={metrics}
+              activeMetric={chartMetric}
+              onMetricChange={setChartMetric}
+              // Keying on metric + window remounts the paths, which is what
+              // makes the draw and fade animations replay on every switch.
+              redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
+            />
+          ) : (
+            <PdCard className="flex-1" title="Call trend">
+              <p className="py-8 text-center text-[12px] text-pd-faint">
+                {hasCalls
+                  ? "No dated calls in this window yet."
+                  : "No calls logged in this window yet."}
+              </p>
+            </PdCard>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+          <InsightCard parts={insight} prompt={insightPrompt} />
+        </div>
+      </div>
 
       <CallCentreContent
         clientGroups={clientGroups}
