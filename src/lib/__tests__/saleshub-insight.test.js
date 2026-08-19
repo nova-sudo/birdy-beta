@@ -66,6 +66,56 @@ describe("buildSalesInsight", () => {
     expect(text(parts)).not.toContain("untouched pool");
   });
 
+  it("leads with the movement once a previous period exists", () => {
+    const parts = buildSalesInsight(totals, rows, {
+      calls: { direction: "up", delta: "9.1%" },
+      inbound: { direction: "down", delta: "2.6%" },
+    });
+
+    expect(text(parts)).toContain("Call volume is up 9.1%, but inbound has slipped 2.6%");
+    // The volume sentence gives way to it — the card stays one movement plus
+    // one anomaly, not a list.
+    expect(text(parts)).not.toContain("placed 17,687 calls");
+  });
+
+  it("names the largest counter-movement, not the first one it finds", () => {
+    const parts = buildSalesInsight(totals, rows, {
+      calls: { direction: "up", delta: "9.1%" },
+      inbound: { direction: "down", delta: "2.6%" },
+      talk: { direction: "down", delta: "14.2%" },
+    });
+
+    expect(text(parts)).toContain("but talk time has slipped 14.2%");
+    expect(text(parts)).not.toContain("inbound");
+  });
+
+  it("does not invent a contrast when everything moved the same way", () => {
+    const parts = buildSalesInsight(totals, rows, {
+      calls: { direction: "up", delta: "9.1%" },
+      inbound: { direction: "up", delta: "4.0%" },
+    });
+
+    expect(text(parts)).toContain("Call volume is up 9.1%.");
+    expect(text(parts)).not.toContain("but");
+  });
+
+  it("falls back to the window's own figures when no period precedes it", () => {
+    // Most presets have no expressible predecessor, so this is the common case.
+    const parts = buildSalesInsight(totals, rows, null);
+
+    expect(text(parts)).toContain("placed 17,687 calls");
+    expect(text(parts)).not.toContain("Call volume is");
+  });
+
+  it("still names the untouched pool alongside a movement", () => {
+    const parts = buildSalesInsight(totals, rows, {
+      calls: { direction: "up", delta: "9.1%" },
+    });
+
+    expect(text(parts)).toContain("Call volume is up 9.1%");
+    expect(text(parts)).toContain("Tylaesthetics has called only 328 of 1,305 leads");
+  });
+
   it("says what is true rather than nothing when no calls were logged", () => {
     const parts = buildSalesInsight({ calls: 0, called: 0, inbound: 0 }, []);
 

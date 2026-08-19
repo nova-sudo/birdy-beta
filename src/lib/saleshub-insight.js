@@ -43,13 +43,57 @@ export function biggestUntouchedPool(rows) {
 }
 
 /**
+ * The movement sentence: what changed, and what drove it.
+ *
+ * The design opens on call volume and then contrasts it with a metric moving
+ * the other way, which is the sentence that actually tells you something —
+ * "up 9.1% and outbound is driving it, but inbound has slipped 2.6%". That
+ * contrast only exists when one is up and another is down, so it is built
+ * rather than assumed: with everything moving the same way there is nothing to
+ * contrast, and inventing a "but" would misdescribe the period.
+ */
+function movementParts(deltas) {
+  const calls = deltas?.calls;
+  if (!calls) return null;
+
+  const parts = [
+    plain("Call volume is "),
+    plain(calls.direction === "up" ? "up " : "down "),
+    strong(calls.delta),
+  ];
+
+  // The counter-movement: whichever of the other metrics went the opposite way
+  // by the most. Naming the largest makes the sentence about the biggest thing
+  // the headline figure is hiding.
+  const counter = ["inbound", "called", "talk"]
+    .map((key) => ({ key, ...(deltas[key] ?? {}) }))
+    .filter((d) => d.direction && d.direction !== calls.direction)
+    .sort((a, b) => parseFloat(b.delta) - parseFloat(a.delta))[0];
+
+  if (counter) {
+    parts.push(
+      plain(`, but ${LABEL[counter.key]} `),
+      plain(counter.direction === "up" ? "is up " : "has slipped "),
+      strong(counter.delta)
+    );
+  }
+
+  parts.push(plain("."));
+  return parts;
+}
+
+const LABEL = { inbound: "inbound", called: "leads reached", talk: "talk time" };
+
+/**
  * Build the card's copy for the period.
  *
  * @param {{calls: number, called: number, inbound: number, talk: number}} totals
  * @param {object[]} rows one per client, as the Overview table shapes them
+ * @param {Record<string, {direction: string, delta: string}>} [deltas] absent
+ *   on a window with no comparable previous period — most of them
  * @returns {{text: string, strong: boolean}[]}
  */
-export function buildSalesInsight(totals, rows) {
+export function buildSalesInsight(totals, rows, deltas) {
   const t = totals ?? { calls: 0, called: 0, inbound: 0 };
 
   if (!t.calls) {
@@ -60,7 +104,10 @@ export function buildSalesInsight(totals, rows) {
     ];
   }
 
-  const parts = [
+  // Lead with the movement where there is one to lead with; fall back to what
+  // the window did in absolute terms, which needs no previous period.
+  const movement = movementParts(deltas);
+  const parts = movement ?? [
     plain("Your call centres placed "),
     strong(`${count(t.calls)} calls`),
     plain(" to "),
@@ -68,12 +115,18 @@ export function buildSalesInsight(totals, rows) {
     plain(" this period"),
   ];
 
-  // Inbound share is worth a clause only when there is one — a portfolio doing
-  // pure outbound should not get a sentence about 0%.
-  if (t.inbound > 0) {
-    parts.push(plain(", with "), strong(pct((t.inbound / t.calls) * 100)), plain(" coming inbound"));
+  if (!movement) {
+    // Inbound share is worth a clause only when there is one — a portfolio
+    // doing pure outbound should not get a sentence about 0%.
+    if (t.inbound > 0) {
+      parts.push(
+        plain(", with "),
+        strong(pct((t.inbound / t.calls) * 100)),
+        plain(" coming inbound")
+      );
+    }
+    parts.push(plain("."));
   }
-  parts.push(plain("."));
 
   const worst = biggestUntouchedPool(rows);
   // Only worth naming when the pool is actually mostly untouched. A client
