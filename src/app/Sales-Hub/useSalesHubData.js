@@ -82,6 +82,15 @@ const formatCount = (v) => Math.round(v).toLocaleString();
 const FORMAT = { calls: formatCount, called: formatCount, inbound: formatCount, talk: formatTalk };
 
 /**
+ * Render a figure the way its metric is read. Everything is a whole count
+ * except talk time, which is minutes and keeps a decimal — the table has
+ * always shown 251.7 rather than 252, and the tile above it should agree.
+ */
+export function formatTotal(key, value) {
+  return (FORMAT[key] ?? formatCount)(value);
+}
+
+/**
  * @param {object[]} clientGroups
  * @param {string} datePreset the window every figure covers
  * @param {string} selectedClientGroup "all" or a client group id
