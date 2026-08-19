@@ -594,7 +594,7 @@ const StyledTable = ({
         <table className="w-full text-sm" style={isEmptyState ? { width: "100%" } : undefined}>
           {/* Uppercase, letter-spaced and a shade off white — the header reads
               as a label strip rather than a first row of data. */}
-          <thead className="top-0 z-40 border-b border-pd-border bg-pd-table-head text-[11.5px] font-bold tracking-[.03em] text-pd-faint uppercase">
+          <thead className="top-0 z-40 border-b border-pd-border bg-pd-table-head text-[12.5px] font-bold tracking-[.03em] text-pd-faint uppercase">
             <tr className="h-12 bg-pd-table-head transition-colors">
 
               {/* Checkbox header — sticky at left: 0 */}
