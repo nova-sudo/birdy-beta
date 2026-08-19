@@ -179,15 +179,22 @@ function CallLogsDialog({ lead }) {
 }
 
 // ── Column definitions per tab ───────────────────────────────────────────────
+// The design picks out two figures in each Overview row — total calls and talk
+// time — and lets the rest sit back. They are what say whether the outreach
+// actually happened, as opposed to how it was split.
+const KEY_FIGURE = (v) => (
+  <span className="font-medium text-pd-ink">{(v ?? 0).toLocaleString()}</span>
+)
+
 const OVERVIEW_COLUMNS = [
   { id: "name", label: "Client", sortable: true },
   { id: "total_leads", label: "Total Leads", sortable: true, icons: HP },
   { id: "leads", label: "Leads Called", sortable: true, icons: HP },
-  { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
+  { id: "total_calls", label: "Total Calls", sortable: true, icons: HP, cell: KEY_FIGURE },
   { id: "inbound", label: "Inbound", sortable: true, icons: HP },
   { id: "outbound", label: "Outbound", sortable: true, icons: HP },
   { id: "transfers", label: "Transfers", sortable: true, icons: HP },
-  { id: "talk_time", label: "Talk Time (min)", sortable: true, icons: HP },
+  { id: "talk_time", label: "Talk Time (min)", sortable: true, icons: HP, cell: KEY_FIGURE },
 ]
 
 const STATUS_CELL = (_v, row) => (
@@ -1065,7 +1072,7 @@ export function CallCentreContent({
           {/* One panel, whichever section is selected. Radix's Tabs mounted all
               four and hid three; each of these carries its own fetch, so the
               hidden ones were work nobody asked for. */}
-          <div id={TABLE_PANEL_ID} role="tabpanel" className="mt-4">
+          <div id={TABLE_PANEL_ID} role="tabpanel" className="pd-table mt-4">
             {activeTab === "overview" && showGroupFilter && (
               // One row per client, windowed KPIs — click to drill into Leads.
               <StyledTable
