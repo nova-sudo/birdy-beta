@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
@@ -524,17 +523,22 @@ const LEADS_FIRST_BATCH_SIZE = 40
 const LEADS_BACKGROUND_BATCH_SIZE = 200
 const LEADS_BACKGROUND_CONCURRENCY = 6
 
-// showGroupFilter controls both the client picker and the two hub-only tabs
-// (Overview lists one row per client; Members is account-wide HotProspector
-// team data with no per-client filter available upstream) — neither makes
-// sense once the view is already locked to a single client group.
+// showGroupFilter controls the two hub-only tabs (Overview lists one row per
+// client; Members is account-wide HotProspector team data with no per-client
+// filter available upstream) — neither makes sense once the view is already
+// locked to a single client group.
+//
+// The client selection is controlled when `selectedClientGroup` is passed and
+// internal otherwise. The Sales Hub renders the picker itself, in its own
+// header row, and so owns the value; /clients/[id] is already scoped to one
+// client and never moves it, so it passes nothing and this keeps its own.
 export function CallCentreContent({
   clientGroups,
   groupsLoading,
   datePreset,
-  setDatePreset,
   showGroupFilter = true,
-  showHeader = true,
+  selectedClientGroup: controlledClientGroup,
+  onSelectClientGroup,
 }) {
   const [activeTab, setActiveTab] = useState(showGroupFilter ? "overview" : "leads")
   const [searchQuery, setSearchQuery] = useState("")
@@ -556,11 +560,11 @@ export function CallCentreContent({
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsBackgroundLoading, setLeadsBackgroundLoading] = useState(false)
   const [leadsTotal, setLeadsTotal] = useState(0)
-  // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
-  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
-  const [gridOpen, setGridOpen] = useState(false)
-  const [groupSearch, setGroupSearch] = useState("")
-  const gridRef = useRef(null)
+  // Client filter: "all" or a client_group id. Controlled by the page on the
+  // Sales Hub, internal on /clients/[id].
+  const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
+  const selectedClientGroup = controlledClientGroup ?? uncontrolledClientGroup
+  const setSelectedClientGroup = onSelectClientGroup ?? setUncontrolledClientGroup
   // Leads tab filter: hide leads with no dialer activity. Sent to the backend
   // as has_calls=true so it's filtered against the whole dataset, not just
   // whatever page/batch has already been fetched.
@@ -895,42 +899,11 @@ export function CallCentreContent({
     }
   }
 
-  // ── Date preset change ──
-  const handlePresetChange = (preset) => {
-    setDatePreset(preset)
-  }
-
-  // ── Top-right client picker (mirrors the Leads hub group picker) ──
-  const clientGridItems = useMemo(
-    () => [
-      { id: "all", name: "All Clients" },
-      ...(clientGroups || []).map((g) => ({ id: g.id, name: g.name || "Unnamed Client" })),
-    ],
-    [clientGroups],
-  )
-  const filteredClientGrid = useMemo(
-    () => clientGridItems.filter((it) => it.name.toLowerCase().includes(groupSearch.toLowerCase())),
-    [clientGridItems, groupSearch],
-  )
+  // Names the current scope for the Leads tab's "showing this client only" chip.
   const selectedClientLabel = useMemo(() => {
     if (selectedClientGroup === "all") return "All Clients"
     return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.name || "All Clients"
   }, [selectedClientGroup, clientGroups])
-  const pickClient = (id) => {
-    setSelectedClientGroup(id)
-    setGridOpen(false)
-    setGroupSearch("")
-  }
-
-  // Close the picker on outside click.
-  useEffect(() => {
-    if (!gridOpen) return
-    const onDocClick = (e) => {
-      if (gridRef.current && !gridRef.current.contains(e.target)) setGridOpen(false)
-    }
-    document.addEventListener("mousedown", onDocClick)
-    return () => document.removeEventListener("mousedown", onDocClick)
-  }, [gridOpen])
 
   // ── Drill from an Overview client row into the Leads tab ──
   const handleDrillIn = (group) => {
@@ -971,75 +944,12 @@ export function CallCentreContent({
   )
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+    // Width comes from the container now. This used to be sized off the
+    // viewport minus the rail (100dvw-130px), which is the sort of measurement
+    // that goes wrong the moment anything else changes width — and did, inside
+    // the Sales Hub's own scroll region.
+    <div className="min-w-0">
       <div className="flex flex-col gap-6">
-        {/* Header + toolbar */}
-        {showHeader && (
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                Sales Hub
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
-                Call-center performance across your Hot Prospector clients
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
-              <DateRangeSelect value={datePreset} onChange={handlePresetChange} />
-
-              {/* Client picker — filters the Overview and scopes the Leads tab */}
-              {showGroupFilter && (
-                <div className="relative" ref={gridRef}>
-                  <button
-                    onClick={() => setGridOpen((p) => !p)}
-                    className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[130px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="truncate flex-1 text-left text-gray-800">{selectedClientLabel}</span>
-                    <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${gridOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {gridOpen && (
-                    <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                      <div className="mb-2">
-                        <input
-                          type="text"
-                          placeholder="Search clients..."
-                          value={groupSearch}
-                          onChange={(e) => setGroupSearch(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-                      {filteredClientGrid.length > 0 ? (
-                        <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-                          {filteredClientGrid.map((item) => {
-                            const isSel = item.id === selectedClientGroup
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => pickClient(item.id)}
-                                title={item.name}
-                                className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors ${
-                                  isSel
-                                    ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                }`}
-                              >
-                                {item.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-3 px-6">No clients found</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Stat cards (windowed) */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
@@ -1149,7 +1059,7 @@ export function CallCentreContent({
               <div className="mb-3 flex items-center gap-2">
                 <Badge variant="outline" className="gap-2 bg-purple-50 text-purple-700 border-purple-200">
                   Client: <span className="font-semibold">{selectedClientLabel}</span>
-                  <button onClick={() => pickClient("all")} className="ml-1 hover:text-purple-900" aria-label="Show all clients">
+                  <button onClick={() => setSelectedClientGroup("all")} className="ml-1 hover:text-purple-900" aria-label="Show all clients">
                     <X className="h-3.5 w-3.5" />
                   </button>
                 </Badge>
