@@ -654,12 +654,9 @@ const StyledTable = ({
                         them by alignment and spacing, and a grid of hairlines
                         competes with the figures.
 
-                        No source icon either. Every column in a given table
-                        came from the same integration, so a Meta mark repeated
-                        across eight headers said nothing per-column while
-                        crowding the label it sat beside. `col.icons` is still
-                        read by the Columns visibility menu, where the source
-                        does distinguish one row from the next. */}
+                        The source icon sits at the far end, away from the
+                        label, so it marks where the column came from without
+                        crowding the word it belongs to. */}
                     <div className="flex h-full w-full items-center gap-2 px-[22px]">
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
@@ -678,6 +675,24 @@ const StyledTable = ({
                           </span>
                         )}
                       </button>
+
+                      <div className="ml-auto shrink-0">
+                        {col.icons ? (
+                          typeof col.icons === "function" ? (
+                            (() => {
+                              const Icon = col.icons;
+                              return <Icon className="size-4 text-pd-faint" aria-hidden="true" />;
+                            })()
+                          ) : (
+                            <img
+                              src={col.icons.src ? col.icons.src : col.icons}
+                              alt=""
+                              aria-hidden="true"
+                              className="size-4 object-scale-down"
+                            />
+                          )
+                        ) : null}
+                      </div>
                     </div>
                   </th>
 
