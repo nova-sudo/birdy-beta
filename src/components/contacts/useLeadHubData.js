@@ -66,7 +66,17 @@ export function useLeadHubData({
   const groupsParam = selectedClientGroup && selectedClientGroup !== "all" ? selectedClientGroup : "";
 
   useEffect(() => {
-    if (!ready) return;
+    // Nothing to ask for, and nothing coming: settle rather than stay pending.
+    // These flags start true so the first paint is a loading state, which means
+    // returning early here would leave the chart shimmering permanently on any
+    // account with no GHL-connected group — a screen that never resolves reads
+    // as a screen that was never built.
+    if (!ready) {
+      setCurrent(null);
+      setPrevious(null);
+      setStatsLoading(false);
+      return;
+    }
 
     let cancelled = false;
     const controller = new AbortController();
@@ -112,7 +122,12 @@ export function useLeadHubData({
 
   // ── The rows the four curves are bucketed from ──────────────────────────
   useEffect(() => {
-    if (!ready) return;
+    if (!ready) {
+      setSeriesRows([]);
+      setSeriesCapped(false);
+      setSeriesLoading(false);
+      return;
+    }
 
     let cancelled = false;
     const controller = new AbortController();
