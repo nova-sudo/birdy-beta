@@ -9,7 +9,8 @@ Route: `/Sales-Hub`.
 ## Layout
 
 ```
-SalesHubShell            title · date range · client picker
+global top bar           Sales Hub · date range · client picker · bell · profile
+SalesHubShell            canvas + one scroll region
 ├── chart + insights row
 │   ├── TrendChart       flex 1.65 — 4 call metrics
 │   └── right column     flex 0.85
@@ -40,7 +41,12 @@ SalesHubShell            title · date range · client picker
 
 The first two live on the page rather than in the table, because the design puts
 both in the header row above everything they filter, and the table stopped being
-the only thing that reads them. `CallCentreContent` takes the selection as a
+the only thing that reads them. The page then *publishes* its title and those
+two controls into the global top bar (`src/components/page-header.jsx`), which
+is where the design draws them — in place of the Birdy wordmark, beside the bell
+and profile menu. What is published are React nodes, so the controls stay part
+of this page's tree and keep closing over its state; nothing is lifted into a
+provider to be filtered by. `CallCentreContent` takes the selection as a
 controlled prop with an internal fallback, so `/clients/[id]` — which renders it
 scoped to one client and never moves it — is unaffected.
 

@@ -12,7 +12,8 @@ import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/componen
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { InsightCard } from "@/components/saleshub/InsightCard"
 import { KpiTiles } from "@/components/saleshub/KpiTiles"
-import { SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { usePageHeader } from "@/components/page-header"
 import { KPI_PRESENTATION } from "./presentation"
 import { useSalesHubSeries } from "./useSalesHubSeries"
 
@@ -53,6 +54,33 @@ export default function SalesHubPage() {
     selectedClientGroup,
   })
 
+  // Title and filters live in the global top bar, where the design puts them —
+  // in place of the Birdy wordmark, and beside the bell and profile menu.
+  // Memoised because publishing sets state on the provider above: a fresh
+  // object every render would republish every render. See usePageHeader.
+  const header = useMemo(
+    () => ({
+      title: (
+        <SalesHubHeaderTitle
+          title="Sales Hub"
+          subtitle="Call-centre performance across your Hot Prospector clients"
+        />
+      ),
+      controls: (
+        <div className="hidden items-center gap-2 md:flex">
+          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
+          <ClientGroupPicker
+            clientGroups={clientGroups}
+            value={selectedClientGroup}
+            onChange={setSelectedClientGroup}
+          />
+        </div>
+      ),
+    }),
+    [datePreset, setDatePreset, clientGroups, selectedClientGroup]
+  )
+  usePageHeader(header)
+
   const metric = chartMetrics[chartMetric]
   // The design's subtitle reads "<Date range> · <metric sub>", so the chart
   // always says which window it is drawing.
@@ -62,20 +90,7 @@ export default function SalesHubPage() {
   }
 
   return (
-    <SalesHubShell
-      title="Sales Hub"
-      subtitle="Call-centre performance across your Hot Prospector clients"
-      action={
-        <div className="flex items-center gap-2.5">
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <ClientGroupPicker
-            clientGroups={clientGroups}
-            value={selectedClientGroup}
-            onChange={setSelectedClientGroup}
-          />
-        </div>
-      }
-    >
+    <SalesHubShell>
       {/* Chart left, Birdy's read of the period right — the design's 1.65 /
           0.85 split. Stretch, so the right column ends level with the chart. */}
       <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
