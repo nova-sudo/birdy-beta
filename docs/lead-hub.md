@@ -75,7 +75,7 @@ Everything on the hero row is real.
 |---|---|
 | Six KPI tiles | `meta.stats` from `GET /api/leads/unified` over the window |
 | Delta pills | the same call over the window `previousWindow` names |
-| Four chart curves | a page of rows from the same endpoint, bucketed by `dateAdded` |
+| Four chart curves | every row in the window from the same endpoint, bucketed by `dateAdded` |
 | Pipeline tab counts | the same `meta.stats` |
 | Insight copy | the largest KPI movement, plus the client group with the most records carrying no email |
 | Table rows | `GET /api/leads/unified`, paged, filtered by the open stage tab |
@@ -117,34 +117,49 @@ beside a busy end of month and read the difference as a change in performance.
 
 ### The chart's four curves, and what is measured
 
-There is no per-day endpoint for GHL contacts. The shapes are bucketed from one
-page of rows over the window; one bucket set carries all four weightings, which
-is what lets the won and lead counts be divided index by index for the
-conversion curve.
+There is no per-day endpoint for GHL contacts. The shapes are bucketed from the
+window's rows — all of them; one bucket set carries all four weightings, which is
+what lets the won and lead counts be divided index by index for the conversion
+curve.
 
 | Tab | Total | Curve |
 |---|---|---|
-| Leads | exact, from `meta.stats` | counted from rows |
-| Contacts | exact | counted from rows |
-| Open | exact | counted from rows |
+| Leads | exact, from `meta.stats` | counted from every row in the window |
+| Contacts | exact | counted from every row in the window |
+| Open | exact | counted from every row in the window |
 | Conversion | exact | won ÷ leads per bucket |
 
-Every **total** is exact. The curves are exact too on any window that fits
-inside `LEAD_SERIES_LIMIT`. Past it the rows are a sample, and
-`scaleSeriesToTotal` puts that sample's shape onto the real total so the curve
-and the figure above it agree — `TrendChart` then prints a note saying the shape
-is sampled, because a curve summing to 2,000 under a headline of 12,000 reads as
-a contradiction rather than as a cap.
+Every figure on this card is counted. Nothing is estimated.
 
-**Read that note literally: scaling fixes the magnitude, not the span.** The
-endpoint sorts newest-first, so a window holding more rows than the limit is
-missing its earlier buckets rather than merely scaling them. The fix is a
-server-side series — a `$group` on `ghl_contacts.dateAdded` returning per-bucket
-counts, which has no cap and a far smaller payload than the rows do. The
-Portfolio Dashboard's leads curve is waiting on the same thing.
+**The whole window is read, a page at a time.** The first attempt asked for
+2,000 rows in a single call and came back empty: this endpoint serves the table
+at a page size of 15, and nothing documents what it does with a limit two orders
+of magnitude past that — reject it, clamp it, or serve it. Paging at
+`LEAD_SERIES_PAGE_SIZE`, a size it is already known to accept, removes the
+guess. Page one goes on its own because its `meta.total_pages` says how many
+there are; the rest are fetched `LEAD_SERIES_CONCURRENCY` at a time.
 
-The conversion curve needs no scaling: numerator and denominator come from the
-same sample, so the ratio holds even where the counts are short.
+Both halves of that matter. Walking the pages one after another turned a slow
+window into a minute of loading pulse — a screen that hangs tells you less than
+a screen that says it has nothing. Firing all of them at once would put hundreds
+of requests in flight on a long range. The pool is what keeps a complete read
+from becoming either.
+
+**Nothing is sampled and nothing is scaled.** An earlier version took the first
+N rows and scaled their shape onto the real total. That fixed the magnitude but
+not the span: this endpoint sorts newest-first, so a truncated read covers the
+recent end of the window and leaves the earlier buckets *missing* rather than
+merely short — a curve describing a fortnight while claiming to describe a
+quarter. Reading the whole window is the only version of this chart whose shape
+is a fact.
+
+The one case that still needs saying is a read that came up short because a page
+failed. The curve is then genuinely under the total above it, so `TrendChart`
+prints a note; a chart that under-draws in silence is worse than one that admits
+it.
+
+The conversion curve is derived from the same rows on the same buckets, so its
+numerator and denominator always describe one population.
 
 **Granularity is derived rather than picked.** The Portfolio Dashboard makes it a
 control because the window and the slicing are separate questions there. Here the
@@ -167,8 +182,9 @@ but not emailed, making it the cheapest untouched pool an agency has, and it is
 nearly always one client's form dropping the field rather than a spread across
 all of them. GHL writes a synthetic `no_email_` address where none was captured,
 so those count as missing — the table's Email column already treats them that
-way. Below `LEAD_POOL_FLOOR` nothing is named. On sampled windows the count is a
-floor, and the sentence says "at least".
+way. Below `LEAD_POOL_FLOOR` nothing is named. The count is exact, since it is
+read off the same complete set of rows the curves are; it only becomes a floor —
+and the sentence only says "at least" — where a page failed to load.
 
 ## Things worth knowing
 
@@ -185,6 +201,19 @@ colour. Getting it backwards inverts the meaning of the tile.
 comparable period renders with no pill, a pipeline stage the payload does not
 carry renders with no badge, and a window with no dated rows renders an empty
 state rather than a flat line.
+
+**And absence is not failure.** The chart's empty state distinguishes three
+things that once shared one sentence: no GoHighLevel connection at all, a row
+request that failed, and a window that genuinely holds nothing. Collapsing them
+is what let a rejected request sit on the card reading as a fact about the
+business — which is exactly how the 2,000-row limit went unnoticed.
+
+**The server-side series is still the right fix.** Reading a long window costs
+one request per hundred rows, and none of that work is anything the database
+could not do in one pass: a `$group` on `ghl_contacts.dateAdded` returning
+per-bucket counts has no paging, no concurrency pool, and a payload measured in
+bytes rather than megabytes. The Portfolio Dashboard's leads curve wants the
+same endpoint.
 
 **The pipeline tabs are a radiogroup, not a tablist.** There are no panels — the
 table sits outside the tab row and re-queries when the stage changes — so what is

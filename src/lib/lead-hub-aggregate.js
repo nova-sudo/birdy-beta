@@ -37,14 +37,35 @@ const num = (v) => {
 const fmt = (d) => format(d, "yyyy-MM-dd");
 
 /**
- * How many rows the chart asks for to draw its curves.
+ * How the chart collects the rows it buckets into curves.
  *
  * There is no per-day endpoint for GHL contacts, so the shape of every series
- * on this screen is bucketed from rows. Windows longer than this return a
- * sample, and `scaleSeriesToTotal` puts that sample's shape onto the real
- * total from meta.stats — see the hook for what that does and does not fix.
+ * on this screen comes from rows — many more of them than the table's page
+ * shows.
+ *
+ * **Every row in the window, not a sample of it.** An earlier version took the
+ * first N rows and scaled their shape onto the real total, which fixed the
+ * magnitude but not the span: this endpoint sorts newest-first, so a truncated
+ * read covers the recent end of the window and leaves the earlier buckets
+ * missing rather than merely short. The curve then described a fortnight while
+ * claiming to describe a quarter. Reading the whole window is the only version
+ * of this chart whose shape is a fact.
+ *
+ * They are collected in pages rather than in one large request. The first
+ * attempt asked for 2,000 rows in a single call and came back empty: this
+ * endpoint serves the table at a page size of 15, and nothing documents what
+ * it does with a limit two orders of magnitude past that — reject it, clamp
+ * it, or serve it. Paging at a size it is already known to accept removes the
+ * guess.
+ *
+ * Page one goes on its own because its `meta` says how many pages exist; the
+ * rest are fetched a poolful at a time. Walking them one after another turned
+ * a slow window into a minute of loading pulse, and firing all of them at once
+ * would put hundreds of requests in flight on a long range — the pool is what
+ * keeps a complete read from becoming either.
  */
-export const LEAD_SERIES_LIMIT = 2000;
+export const LEAD_SERIES_PAGE_SIZE = 100;
+export const LEAD_SERIES_CONCURRENCY = 6;
 
 /**
  * How finely to slice the selected window.
@@ -298,11 +319,11 @@ export function largestUnreachablePool(rows, floor = LEAD_POOL_FLOOR) {
  *
  * @param {ReturnType<typeof normaliseLeadStats>} current
  * @param {ReturnType<typeof normaliseLeadStats>|null} previous
- * @param {object[]} rows the sampled rows the chart is bucketed from
- * @param {boolean} sampled whether those rows hit their limit
+ * @param {object[]} rows the window's rows, the same ones the chart buckets
+ * @param {boolean} partial true when a page failed and the read came up short
  * @returns {{segments: {text: string, strong?: boolean}[]} | null}
  */
-export function buildLeadInsight(current, previous, rows, sampled = false) {
+export function buildLeadInsight(current, previous, rows, partial = false) {
   if (!current || current.leads + current.contacts <= 0) return null;
 
   const segments = [];
@@ -350,9 +371,10 @@ export function buildLeadInsight(current, previous, rows, sampled = false) {
   }
 
   emphasise(pool.group);
-  // The count comes from a sample on long windows, so it is a floor rather
-  // than a total. Saying "at least" is what keeps it a fact.
-  say(sampled ? " has at least " : " has ");
+  // Normally exact — it is read off the same complete set of rows the curves
+  // are. Only a read that came up short makes it a floor, and then "at least"
+  // is what keeps the sentence a fact.
+  say(partial ? " has at least " : " has ");
   emphasise(pool.count.toLocaleString());
   say(" records with no email captured — fixing that form would unlock your largest untouched pool.");
 

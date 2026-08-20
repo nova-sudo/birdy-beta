@@ -291,7 +291,7 @@ describe("buildLeadInsight", () => {
     expect(text(insight)).toContain("You're at 1,525 leads and 448 contacts");
   });
 
-  it("says 'at least' where the count came from a sample", () => {
+  it("says 'at least' only where the read came up short", () => {
     // Quoting a sample as though it were the whole window would understate the
     // pool and overstate what was measured.
     expect(text(buildLeadInsight(stats(), null, unreachable, true))).toContain(

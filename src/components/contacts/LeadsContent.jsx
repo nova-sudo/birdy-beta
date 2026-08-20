@@ -184,7 +184,7 @@ export function LeadsContent({
   // The headline figures for the window, the window before it, and the rows the
   // four curves are bucketed from. Separate from the table's own query on
   // purpose — see useLeadHubData.
-  const { current, kpis, insight, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
+  const { current, kpis, insight, chartMetrics, chartFor, statsLoading, seriesLoading, seriesError } = useLeadHubData({
     datePreset,
     selectedClientGroup,
     dateRangeLabel,
@@ -581,15 +581,18 @@ export function LeadsContent({
                   />
                 }
               >
-                {/* Two different absences, and they need different sentences:
-                    an account with nothing connected has no data source at all,
-                    where a connected one with an empty window has a source that
-                    reported nothing. Telling someone to "try another date
-                    range" when they have no integration is a dead end. */}
+                {/* Three different absences, and they need different
+                    sentences. Nothing connected has no data source at all; a
+                    request that failed has one that didn't answer; a quiet
+                    window has one that answered nothing. Saying "no leads in
+                    this window" for all three is what let a rejected request
+                    sit here looking like a fact about the business. */}
                 <p className="py-8 text-center text-[12px] text-pd-faint">
                   {ghlClientGroups.length === 0
                     ? "No client group here has GoHighLevel connected, so there are no leads to plot."
-                    : "No leads or contacts were added in this window, so there is nothing dated to plot."}
+                    : seriesError
+                      ? "Couldn't load the rows behind this chart. The figures above came through, so this is the row request rather than the window."
+                      : "No leads or contacts were added in this window, so there is nothing dated to plot."}
                 </p>
               </PdCard>
             )}

@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
-import { bucketSeries, scaleSeriesToTotal } from "@/lib/portfolio-series";
+import { bucketSeries } from "@/lib/portfolio-series";
 import {
   buildLeadInsight,
   buildLeadKpis,
   granularityFor,
   isLeadRow,
-  LEAD_SERIES_LIMIT,
+  LEAD_SERIES_CONCURRENCY,
+  LEAD_SERIES_PAGE_SIZE,
   normaliseLeadStats,
   previousWindow,
   rowStatus,
@@ -19,7 +20,7 @@ import {
 //
 //   /api/leads/unified  meta.stats over the selected window, and again over the
 //                       window before it for the delta pills
-//   /api/leads/unified  a page of rows over the selected window, bucketed by
+//   /api/leads/unified  every row in the selected window, paged, bucketed by
 //                       dateAdded into the chart's four curves
 //
 // The two stats calls ask for a single row each. `meta.stats` is an aggregate
@@ -59,7 +60,8 @@ export function useLeadHubData({
   const [previous, setPrevious] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [seriesRows, setSeriesRows] = useState([]);
-  const [seriesCapped, setSeriesCapped] = useState(false);
+  const [seriesPartial, setSeriesPartial] = useState(false);
+  const [seriesError, setSeriesError] = useState(false);
   const [seriesLoading, setSeriesLoading] = useState(true);
 
   // "" is how this endpoint spells every group the caller can see.
@@ -93,26 +95,31 @@ export function useLeadHubData({
       return normaliseLeadStats(data?.meta?.stats);
     };
 
-    (async () => {
-      setStatsLoading(true);
-      try {
-        const now = await statsFor(presetToDateRange(datePreset));
-        if (!cancelled) setCurrent(now);
-      } catch (err) {
-        if (err.name !== "AbortError" && !cancelled) setCurrent(null);
-      } finally {
-        if (!cancelled) setStatsLoading(false);
-      }
+    // Two independent windows, so they go together. Waiting for one before
+    // asking for the other doubled the time the hero spent loading for no
+    // reason — neither figure is derived from the other.
+    setStatsLoading(true);
 
-      try {
-        // A failed or absent comparison is a fine outcome — the pills just
-        // don't render, which is what an unknown delta should look like.
-        const before = await statsFor(previousWindow(datePreset));
+    statsFor(presetToDateRange(datePreset))
+      .then((now) => {
+        if (!cancelled) setCurrent(now);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError" && !cancelled) setCurrent(null);
+      })
+      .finally(() => {
+        if (!cancelled) setStatsLoading(false);
+      });
+
+    // A failed or absent comparison is a fine outcome — the pills just don't
+    // render, which is what an unknown delta should look like.
+    statsFor(previousWindow(datePreset))
+      .then((before) => {
         if (!cancelled) setPrevious(before);
-      } catch {
+      })
+      .catch(() => {
         if (!cancelled) setPrevious(null);
-      }
-    })();
+      });
 
     return () => {
       cancelled = true;
@@ -124,7 +131,8 @@ export function useLeadHubData({
   useEffect(() => {
     if (!ready) {
       setSeriesRows([]);
-      setSeriesCapped(false);
+      setSeriesPartial(false);
+      setSeriesError(false);
       setSeriesLoading(false);
       return;
     }
@@ -134,31 +142,67 @@ export function useLeadHubData({
 
     (async () => {
       setSeriesLoading(true);
-      try {
-        const { start_date, end_date } = presetToDateRange(datePreset);
+      setSeriesError(false);
+
+      const { start_date, end_date } = presetToDateRange(datePreset);
+      const pageOf = async (page) => {
         const params = new URLSearchParams({
           groups: groupsParam,
-          page: "1",
-          limit: String(LEAD_SERIES_LIMIT),
+          page: String(page),
+          limit: String(LEAD_SERIES_PAGE_SIZE),
         });
         if (start_date) params.set("start_date", start_date);
         if (end_date) params.set("end_date", end_date);
 
         const res = await apiRequest(`/api/leads/unified?${params}`, { signal: controller.signal });
-        if (!res.ok) throw new Error(`leads/unified → ${res.status}`);
-        const data = await res.json();
-        const rows = data?.contacts ?? [];
-        if (!cancelled) {
-          setSeriesRows(rows);
-          setSeriesCapped(rows.length >= LEAD_SERIES_LIMIT);
+        if (!res.ok) throw new Error(`leads/unified page ${page} → ${res.status}`);
+        return res.json();
+      };
+
+      let rows = [];
+      let complete = false;
+
+      try {
+        const first = await pageOf(1);
+        if (cancelled) return;
+
+        rows = first?.contacts ?? [];
+
+        // How many pages there are, from the endpoint's own count. A first
+        // page shorter than it was asked for is the whole window whatever meta
+        // says, so it costs nothing to check that too.
+        const shortPage = rows.length < LEAD_SERIES_PAGE_SIZE;
+        const totalPages = shortPage ? 1 : Math.max(Number(first?.meta?.total_pages) || 1, 1);
+
+        // Every remaining page, a poolful at a time — the whole window, but
+        // never more than LEAD_SERIES_CONCURRENCY requests in flight.
+        for (let page = 2; page <= totalPages; page += LEAD_SERIES_CONCURRENCY) {
+          const wave = Array.from(
+            { length: Math.min(LEAD_SERIES_CONCURRENCY, totalPages - page + 1) },
+            (_, i) => pageOf(page + i)
+          );
+          const settled = await Promise.all(wave);
+          if (cancelled) return;
+          rows = settled.reduce((all, p) => all.concat(p?.contacts ?? []), rows);
         }
+
+        complete = true;
+        if (!cancelled) setSeriesRows(rows);
       } catch (err) {
         if (err.name === "AbortError") return;
         if (!cancelled) {
-          setSeriesRows([]);
-          setSeriesCapped(false);
+          // Whatever pages did arrive are still real rows, but they are no
+          // longer the whole window — and a partial curve under an exact total
+          // is the thing this chart is not allowed to draw silently.
+          setSeriesRows(rows);
+          setSeriesPartial(rows.length > 0);
+          // Nothing at all is a load failure rather than an empty window. The
+          // two looked identical before, which is how a rejected request came
+          // to read as "no leads in this window".
+          setSeriesError(rows.length === 0);
         }
       } finally {
+        if (!cancelled && complete) setSeriesPartial(false);
         if (!cancelled) setSeriesLoading(false);
       }
     })();
@@ -174,8 +218,8 @@ export function useLeadHubData({
   // Read off the same rows the chart is bucketed from, so the sentence and the
   // curve above it describe one set of records.
   const insight = useMemo(
-    () => buildLeadInsight(current, previous, seriesRows, seriesCapped),
-    [current, previous, seriesRows, seriesCapped]
+    () => buildLeadInsight(current, previous, seriesRows, seriesPartial),
+    [current, previous, seriesRows, seriesPartial]
   );
 
   const chartMetrics = useMemo(() => {
@@ -192,16 +236,19 @@ export function useLeadHubData({
     );
     const won = bucketSeries(seriesRows, at, granularity, (r) => (rowStatus(r) === "won" ? 1 : 0));
 
-    // A sampled window undercounts, and would sit directly beneath a headline
-    // total that does not. Scaling every bucket by one factor keeps the shape
-    // the sample showed and makes the magnitude agree with the figure above it.
-    const note =
-      "shape from a sample of this window's rows — the total above is the full count";
-
-    const counted = (series, total) => {
-      const scaled = scaleSeriesToTotal(series, total, seriesCapped);
-      return scaled.estimated ? { ...scaled, estimateNote: note } : scaled;
-    };
+    // Every bucket is a count of real rows — the whole window is read, so
+    // nothing here is scaled or inferred. The one case that needs saying is a
+    // read that came up short because a page failed: the curve is then genuinely
+    // under the total above it, and a chart that under-draws in silence is worse
+    // than one that admits it.
+    const counted = (series) =>
+      seriesPartial
+        ? {
+            ...series,
+            estimated: true,
+            estimateNote: "some pages didn't load — this curve is short of the total above",
+          }
+        : { ...series, estimated: false };
 
     const totals = current ?? { leads: 0, contacts: 0, open: 0, conversionRate: 0 };
 
@@ -211,21 +258,21 @@ export function useLeadHubData({
         title: "Total leads",
         subtitle: "Lead volume across all client groups",
         total: Math.round(totals.leads).toLocaleString(),
-        ...counted(leads, totals.leads),
+        ...counted(leads),
       },
       contacts: {
         tab: "Contacts",
         title: "Total contacts",
         subtitle: "Contacts captured without a lead form",
         total: Math.round(totals.contacts).toLocaleString(),
-        ...counted(contacts, totals.contacts),
+        ...counted(contacts),
       },
       open: {
         tab: "Open",
         title: "Open leads",
         subtitle: "Leads still in an open opportunity stage",
         total: Math.round(totals.open).toLocaleString(),
-        ...counted(open, totals.open),
+        ...counted(open),
       },
       conversion: {
         tab: "Conversion",
@@ -234,8 +281,7 @@ export function useLeadHubData({
         total: `${totals.conversionRate.toFixed(1)}%`,
         decimals: 1,
         valueSuffix: "%",
-        // A rate needs no scaling: numerator and denominator come from the
-        // same sample, so the ratio is right even where the counts are short.
+        // Both sides come from the same rows, so the rate is the window's own.
         values: won.values.map((wins, i) => {
           const denominator = leads.values[i];
           return denominator > 0 ? (wins / denominator) * 100 : 0;
@@ -244,7 +290,7 @@ export function useLeadHubData({
         tooltipLabels: leads.tooltipLabels,
       },
     };
-  }, [seriesRows, seriesCapped, datePreset, current]);
+  }, [seriesRows, seriesPartial, datePreset, current]);
 
   const chartFor = useMemo(
     () => (metricKey) => {
@@ -281,6 +327,8 @@ export function useLeadHubData({
     chartFor,
     statsLoading,
     seriesLoading,
+    seriesError,
+    seriesPartial,
     hasComparison: previous != null,
   };
 }
