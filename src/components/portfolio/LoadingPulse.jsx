@@ -109,3 +109,10 @@ export const CHART_LOADING = [
   "Bucketing them into the range…",
   "Drawing the curve…",
 ];
+
+export const CALL_CHART_LOADING = [
+  "Pulling call logs for the window…",
+  "Sorting inbound from outbound…",
+  "Bucketing them into the range…",
+  "Drawing the curve…",
+];
