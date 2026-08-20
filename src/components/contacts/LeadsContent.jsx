@@ -21,7 +21,6 @@ import StyledTable from "@/components/ui/table-container"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
 import { buildContactColumns } from "@/lib/contact-columns"
-import { ContactStats } from "@/components/contacts/ContactStats"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
 import { ErrorBanner } from "@/components/ErrorBanner"
@@ -37,8 +36,27 @@ import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
 import { portfolioFontClass } from "@/app/dashboard/fonts"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useHeaderSlot } from "@/components/dashboard-controls"
+import { StatTile } from "@/components/portfolio"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useLeadHubData } from "@/components/contacts/useLeadHubData"
+import { Percent, Target, TrendingUp, UserCheck, Users, XCircle } from "lucide-react"
 
 const baseContactColumns = buildContactColumns()
+
+// Which icon and colour family each KPI tile wears, from the handoff's tile
+// table — except for the conversion rate. The design draws a trending-down
+// arrow there because its sample period happened to fall; an icon that states
+// the direction misreads every period that rises, so the tile wears a percent
+// sign and lets the delta pill carry the movement. The amber chip is the
+// design's.
+const LEAD_KPI_PRESENTATION = {
+  leads: { icon: UserCheck, tone: "primary" },
+  contacts: { icon: Users, tone: "info" },
+  opportunities: { icon: Target, tone: "success" },
+  open: { icon: TrendingUp, tone: "primary" },
+  lost: { icon: XCircle, tone: "danger" },
+  conversionRate: { icon: Percent, tone: "amber" },
+}
 
 export function LeadsContent({
   clientGroups,
@@ -158,6 +176,19 @@ export function LeadsContent({
   const [selectedCategory, setSelectedCategory] = useState("columns")
   const [searchTerm, setSearchTerm] = useState("")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+  // The headline figures for the window, and the window before it. Separate
+  // from the table's own query on purpose — see useLeadHubData.
+  const { kpis, statsLoading } = useLeadHubData({
+    datePreset,
+    selectedClientGroup,
+    ready: !groupsLoading && ghlClientGroups.length > 0,
+  })
+
+  const kpiTiles = useMemo(
+    () => kpis.map(k => ({ ...k, ...(LEAD_KPI_PRESENTATION[k.key] ?? {}) })),
+    [kpis]
+  )
 
   const columnVisibilityMap = useMemo(
     () => contactColumns.reduce(
@@ -483,7 +514,33 @@ export function LeadsContent({
             above. The handoff puts both in the header, so the page starts
             straight at its content. */}
 
-        <ContactStats metaStats={metaData?.stats} loading={loading} />
+        {/* The handoff's six KPI tiles. They describe the whole period, not the
+            open pipeline tab, and a metric with no comparable previous period
+            renders without a pill rather than with a zero — an unknown delta is
+            not a flat one.
+
+            LH3 moves this grid into the column beside the trend chart, which is
+            where the design puts it; it runs full width until there is a chart
+            to sit next to. */}
+        <div className="grid grid-cols-2 gap-[10px] md:grid-cols-3 lg:grid-cols-6">
+          {groupsLoading || statsLoading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-[52px] rounded-xl" />
+              ))
+            : kpiTiles.map(tile => (
+                <StatTile
+                  key={tile.key}
+                  layout="compact"
+                  icon={tile.icon}
+                  tone={tile.tone}
+                  value={tile.value}
+                  label={tile.label}
+                  direction={tile.direction}
+                  delta={tile.delta}
+                  polarity={tile.polarity}
+                />
+              ))}
+        </div>
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
