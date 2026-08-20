@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/api";
 import { presetToDateRange } from "@/lib/date-utils";
 import { bucketSeries, scaleSeriesToTotal } from "@/lib/portfolio-series";
 import {
+  buildLeadInsight,
   buildLeadKpis,
   granularityFor,
   isLeadRow,
@@ -155,6 +156,13 @@ export function useLeadHubData({
 
   const kpis = useMemo(() => buildLeadKpis(current, previous), [current, previous]);
 
+  // Read off the same rows the chart is bucketed from, so the sentence and the
+  // curve above it describe one set of records.
+  const insight = useMemo(
+    () => buildLeadInsight(current, previous, seriesRows, seriesCapped),
+    [current, previous, seriesRows, seriesCapped]
+  );
+
   const chartMetrics = useMemo(() => {
     const granularity = granularityFor(datePreset);
     const at = (row) => row?.dateAdded;
@@ -253,6 +261,7 @@ export function useLeadHubData({
     current,
     previous,
     kpis,
+    insight,
     chartMetrics,
     chartFor,
     statsLoading,

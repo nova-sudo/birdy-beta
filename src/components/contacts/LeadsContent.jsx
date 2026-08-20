@@ -36,7 +36,7 @@ import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
 import { portfolioFontClass } from "@/app/dashboard/fonts"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useHeaderSlot } from "@/components/dashboard-controls"
-import { CHART_LOADING, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLeadHubData } from "@/components/contacts/useLeadHubData"
 import { DATE_PRESETS } from "@/lib/constants"
@@ -188,7 +188,7 @@ export function LeadsContent({
   // The headline figures for the window, the window before it, and the rows the
   // four curves are bucketed from. Separate from the table's own query on
   // purpose — see useLeadHubData.
-  const { kpis, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
+  const { kpis, insight, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
     datePreset,
     selectedClientGroup,
     dateRangeLabel,
@@ -581,6 +581,23 @@ export function LeadsContent({
           </div>
 
           <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+            {/* Birdy's own voice, and the only saturated surface the style
+                guide allows on a screen. Copy is generated per period from the
+                rows below it — the headline movement, then the single client
+                group worth acting on. */}
+            {groupsLoading || seriesLoading || statsLoading ? (
+              <Skeleton className="h-[128px] rounded-2xl" />
+            ) : insight ? (
+              <InsightCard segments={insight.segments} />
+            ) : (
+              <PdCard title="Birdy Insights">
+                <p className="text-[12.5px] leading-[1.5] text-pd-body">
+                  Once this window has leads and contacts in it, Birdy reads the
+                  movement and names what to act on.
+                </p>
+              </PdCard>
+            )}
+
             <div className="grid grid-cols-2 gap-[10px]">
               {groupsLoading || statsLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
