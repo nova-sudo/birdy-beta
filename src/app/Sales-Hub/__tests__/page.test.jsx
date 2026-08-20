@@ -10,6 +10,9 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/useClientGroups", () => ({
   useClientGroups: vi.fn(),
 }))
+// next/font hits the network at module load, which a unit test has no business
+// doing — the class names are all the shell uses.
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
@@ -34,11 +37,19 @@ const mockLeads = Array.from({ length: 8 }, (_, i) => {
   }
 })
 
+// The call-centre endpoint pages. meta.total is how many leads the window
+// holds; each request returns the slice its skip/limit asks for.
 function mockApiRequest(url) {
   if (url.includes("/api/hotprospector/call-center")) {
+    const params = new URLSearchParams(url.split("?")[1] ?? "")
+    const skip = Number(params.get("skip") ?? 0)
+    const limit = Number(params.get("limit") ?? mockLeads.length)
     return Promise.resolve({
       ok: true,
-      json: async () => ({ data: mockLeads, meta: { total: mockLeads.length } }),
+      json: async () => ({
+        data: mockLeads.slice(skip, skip + limit),
+        meta: { total: mockLeads.length },
+      }),
     })
   }
   if (url.includes("/api/hotprospector/members/dashboard")) {
@@ -68,6 +79,27 @@ describe("Sales Hub — Calls tab", () => {
     expect(screen.getByRole("tab", { name: /calls/i })).toBeInTheDocument()
   })
 
+  it("mounts only the selected section, so the other three don't fetch behind it", async () => {
+    const user = userEvent.setup()
+    render(<CallCenterPage />)
+
+    // Radix's Tabs mounted all four panels and hid three, so the Leads tab's
+    // first batch was fetched on a visit that never left Overview. The trend
+    // chart above the tabs has its own call-centre fetch and is expected here;
+    // the Leads batch is the one that should not have run, and it is
+    // recognisable by its page size (LEADS_FIRST_BATCH_SIZE).
+    const leadsBatchFetched = () =>
+      vi.mocked(apiRequest).mock.calls.some(([url]) => url.includes("limit=40"))
+
+    expect(leadsBatchFetched()).toBe(false)
+
+    await user.click(screen.getByRole("tab", { name: /leads/i }))
+    await waitFor(() => expect(leadsBatchFetched()).toBe(true))
+
+    await user.click(screen.getByRole("tab", { name: /calls/i }))
+    await waitFor(() => expect(screen.getByText("Lead 08")).toBeInTheDocument())
+  })
+
   it("shows the most recent calls, sorted newest first, when the Calls tab is opened", async () => {
     const user = userEvent.setup()
     render(<CallCenterPage />)
@@ -90,7 +122,12 @@ describe("Sales Hub — Calls tab", () => {
     // All 8 calls fit under the default limit of 20.
     expect(screen.getByText("Lead 01")).toBeInTheDocument()
 
-    const limitInput = screen.getByLabelText(/show last/i)
+    // The limit lives in the Calls tab's filter menu, so it has to be opened
+    // before it exists to query. This assertion used to run against a closed
+    // menu and had been failing on main.
+    await user.click(screen.getByRole("button", { name: /filters/i }))
+
+    const limitInput = await screen.findByLabelText(/show last/i)
     expect(limitInput).toHaveValue(20)
 
     fireEvent.change(limitInput, { target: { value: "5" } })

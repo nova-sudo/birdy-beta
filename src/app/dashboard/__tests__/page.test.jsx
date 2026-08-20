@@ -16,7 +16,7 @@ vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the page uses.
-vi.mock("../fonts", () => ({ portfolioFontClass: "" }));
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }));
 
 import { format, subDays } from "date-fns";
 
