@@ -8,12 +8,13 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Users, MessageSquare, BarChart3, Coins, ArrowLeft, UserRound } from "lucide-react";
+import { Users, MessageSquare, BarChart3, Coins, Percent, ArrowLeft, UserRound } from "lucide-react";
 
 const NAV = [
   { label: "Agencies", href: "/admin/agencies", Icon: Users },
   { label: "AI queries", href: "/admin/ai-queries", Icon: MessageSquare },
   { label: "Credits", href: "/admin/credits", Icon: Coins },
+  { label: "Promo Codes", href: "/admin/promo-codes", Icon: Percent },
   { label: "Stats", href: "/admin/stats", Icon: BarChart3 },
 ];
 

@@ -30,6 +30,7 @@ function getStoredEmail() {
 
 // Top-up checkout in a modal (mirrors the billing page's Whop embed).
 function TopupModal({ pack, email, onClose, onComplete }) {
+  const [appliedPromo, setAppliedPromo] = useState(null);
   const returnUrl =
     typeof window !== "undefined" ? `${window.location.origin}/credits?topup=success` : undefined;
   return (
@@ -40,6 +41,17 @@ function TopupModal({ pack, email, onClose, onComplete }) {
           <DialogDescription>${pack.price} · Secure checkout powered by Whop</DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto p-4">
+          {appliedPromo && (
+            <div className="mb-3 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>
+                <span className="font-semibold">{appliedPromo.code}</span> applied —{" "}
+                {appliedPromo.type === "percentage"
+                  ? `${appliedPromo.amount}% off`
+                  : `$${appliedPromo.amount} off`}
+              </span>
+            </div>
+          )}
           <WhopCheckoutEmbed
             planId={pack.plan_id}
             environment={WHOP_ENVIRONMENT}
@@ -48,6 +60,7 @@ function TopupModal({ pack, email, onClose, onComplete }) {
             returnUrl={returnUrl}
             prefill={email ? { email } : undefined}
             onComplete={onComplete}
+            onPromoCodeChanged={setAppliedPromo}
             fallback={
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />

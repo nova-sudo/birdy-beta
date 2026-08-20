@@ -56,6 +56,10 @@ export function useCreditsAccounts(search = "") {
   return useSWR(`/api/admin/credits${qs}`, fetcher, { keepPreviousData: true })
 }
 
+export function usePromoCodes() {
+  return useSWR("/api/admin/promo-codes", fetcher)
+}
+
 // ── Mutations ──────────────────────────────────────────────────────────────
 
 export async function startImpersonation(targetEmail) {
@@ -84,6 +88,41 @@ export async function updateCreditsConfig({ markup, rate_mode, enforce }) {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}))
     throw new Error(data.detail || "Failed to update credits settings")
+  }
+  return res.json()
+}
+
+export async function createPromoCode(body) {
+  const res = await apiRequest("/api/admin/promo-codes", {
+    method: "POST",
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || "Failed to create promo code")
+  }
+  return res.json()
+}
+
+export async function deletePromoCode(id) {
+  const res = await apiRequest(`/api/admin/promo-codes/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || "Failed to delete promo code")
+  }
+  return res.json()
+}
+
+export async function grantCredits({ email, amount, note }) {
+  const res = await apiRequest("/api/admin/credits/grant", {
+    method: "POST",
+    body: JSON.stringify({ email, amount, note }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(data.detail || "Failed to grant credits")
   }
   return res.json()
 }

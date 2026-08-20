@@ -278,6 +278,7 @@ function CurrentPlanBar({ billingStatus, onPortal, loadingPortal }) {
 
 // Modal that mounts the Whop embedded checkout for the selected plan.
 function CheckoutModal({ plan, email, onClose, onComplete }) {
+  const [appliedPromo, setAppliedPromo] = useState(null);
   const returnUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/billing?checkout=success`
@@ -293,6 +294,17 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto p-4">
+          {appliedPromo && (
+            <div className="mb-3 flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+              <Check className="w-4 h-4 shrink-0" />
+              <span>
+                <span className="font-semibold">{appliedPromo.code}</span> applied —{" "}
+                {appliedPromo.type === "percentage"
+                  ? `${appliedPromo.amount}% off`
+                  : `$${appliedPromo.amount} off`}
+              </span>
+            </div>
+          )}
           <WhopCheckoutEmbed
             planId={plan.planId}
             environment={WHOP_ENVIRONMENT}
@@ -301,6 +313,7 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
             returnUrl={returnUrl}
             prefill={email ? { email } : undefined}
             onComplete={onComplete}
+            onPromoCodeChanged={setAppliedPromo}
             fallback={
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />

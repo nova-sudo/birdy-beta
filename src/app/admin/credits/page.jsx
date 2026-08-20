@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck,
+  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck, Gift,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -11,7 +11,12 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCreditsConfig, useCreditsAccounts, updateCreditsConfig } from "@/lib/admin-api";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
+import { useCreditsConfig, useCreditsAccounts, updateCreditsConfig, grantCredits } from "@/lib/admin-api";
 
 const PLAN_STYLES = {
   Scale: "bg-purple-50 text-purple-700 border-purple-200",
@@ -242,7 +247,72 @@ function TotalCard({ Icon, label, value, tint, sub }) {
   );
 }
 
-function AccountsTable({ data, loading }) {
+function GrantCreditsDialog({ account, onClose, onGranted }) {
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submit = async () => {
+    const n = Number(amount);
+    if (!n || n <= 0) return toast.error("Enter a positive amount");
+    setSaving(true);
+    try {
+      await grantCredits({ email: account.email, amount: n, note: note.trim() || undefined });
+      toast.success(`Granted ${fmt(n)} credits to ${account.email}`);
+      onGranted();
+    } catch (e) {
+      toast.error("Couldn't grant credits", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Grant free credits</DialogTitle>
+          <DialogDescription>{account.email} — outside of any Whop purchase.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="grant-amount" className="text-xs font-semibold text-[#71658B]">Amount</Label>
+            <Input
+              id="grant-amount"
+              type="number" min={1} autoFocus
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="grant-note" className="text-xs font-semibold text-[#71658B]">Note (optional)</Label>
+            <Input
+              id="grant-note"
+              placeholder="e.g. goodwill credit, support escalation"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <DialogFooter>
+          <button
+            type="button"
+            onClick={submit}
+            disabled={saving}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-40 transition-colors"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />}
+            {saving ? "Granting…" : "Grant credits"}
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AccountsTable({ data, loading, onGrant }) {
   if (loading) {
     return (
       <div className="space-y-2 rounded-xl border bg-white p-4">
@@ -263,14 +333,16 @@ function AccountsTable({ data, loading }) {
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Used · period</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Used · all-time</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Bought</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Granted</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Questions</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Last used</TableHead>
+              <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
+                <TableCell colSpan={10} className="text-center text-sm text-muted-foreground py-10">
                   No accounts found.
                 </TableCell>
               </TableRow>
@@ -314,8 +386,24 @@ function AccountsTable({ data, loading }) {
                   </span>
                   {a.topups > 0 && <span className="block text-[10px] text-gray-400">{a.topups} order{a.topups > 1 ? "s" : ""}</span>}
                 </TableCell>
+                <TableCell className="text-right tabular-nums text-sm">
+                  <span className={a.granted_total > 0 ? "font-semibold text-purple-700" : "text-gray-400"}>
+                    {fmt(a.granted_total)}
+                  </span>
+                </TableCell>
                 <TableCell className="text-right tabular-nums text-sm text-gray-600">{fmt(a.questions)}</TableCell>
                 <TableCell className="text-xs text-muted-foreground whitespace-nowrap">{relative(a.last_used)}</TableCell>
+                <TableCell>
+                  <button
+                    type="button"
+                    onClick={() => onGrant(a)}
+                    aria-label={`Grant credits to ${a.email}`}
+                    title="Grant free credits"
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-purple-600 transition-opacity"
+                  >
+                    <Gift className="h-4 w-4" />
+                  </button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -335,8 +423,9 @@ export default function AdminCreditsPage() {
   }, [searchInput]);
 
   const { data: config, isLoading: configLoading, mutate: mutateConfig } = useCreditsConfig();
-  const { data: accounts, isLoading: accountsLoading } = useCreditsAccounts(search);
+  const { data: accounts, isLoading: accountsLoading, mutate: mutateAccounts } = useCreditsAccounts(search);
   const totals = accounts?.totals || {};
+  const [grantAccount, setGrantAccount] = useState(null);
 
   return (
     <div className="flex flex-col gap-5">
@@ -387,7 +476,15 @@ export default function AdminCreditsPage() {
         </div>
       </div>
 
-      <AccountsTable data={accounts} loading={accountsLoading} />
+      <AccountsTable data={accounts} loading={accountsLoading} onGrant={setGrantAccount} />
+
+      {grantAccount && (
+        <GrantCreditsDialog
+          account={grantAccount}
+          onClose={() => setGrantAccount(null)}
+          onGranted={() => { setGrantAccount(null); void mutateAccounts(); }}
+        />
+      )}
     </div>
   );
 }
