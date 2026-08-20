@@ -81,6 +81,8 @@ export function PdSegmented({
               itemClassName
             )}
           >
+            {/* Section tabs carry a 14px leading glyph; metric tabs don't. */}
+            {option.icon && <option.icon className="size-[14px] shrink-0" aria-hidden="true" />}
             {/* A third panel makes these tight in a 340px rail; the label gives
                 way before the count does, since the count is the scannable bit. */}
             <span className="truncate">{option.label}</span>

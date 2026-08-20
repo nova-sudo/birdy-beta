@@ -26,6 +26,7 @@ export default function ColumnVisibilityDropdown({
   setSearchTerm: _externalSetSearch,
 
   filteredColumns,
+  triggerClassName,
   columnVisibility,
   toggleColumnVisibility,
 
@@ -64,7 +65,7 @@ export default function ColumnVisibilityDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm "
+          className={triggerClassName ?? "flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm "}
         >
           <SlidersHorizontal className="h-4 w-4" />
           <span className="hidden lg:inline">Columns</span>
