@@ -42,8 +42,8 @@ export default function SalesHubPage() {
   const [chartMetric, setChartMetric] = useState("calls")
 
   const totals = useMemo(
-    () => sumCallStats(clientGroups, selectedClientGroup),
-    [clientGroups, selectedClientGroup]
+    () => sumCallStats(clientGroups, selectedClientGroup, datePreset),
+    [clientGroups, selectedClientGroup, datePreset]
   )
   const insight = useMemo(() => buildSalesInsight(totals), [totals])
 

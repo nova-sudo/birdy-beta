@@ -52,20 +52,42 @@ scoped to one client and never moves it — is unaffected.
 
 ## Where the data comes from
 
-Two sources, both precomputed server-side — neither fetches per-lead rows.
+Two sources, both precomputed server-side — neither fetches per-lead rows —
+and which figures come from which is deliberate:
 
 | Reads | Feeds |
 |---|---|
-| `clientGroups[].hotprospector.call_stats` | The six tiles and the insight card |
-| `clientGroups[].hotprospector.daily_calls` | The trend chart's four series |
+| `clientGroups[].hotprospector.call_stats` | Leads called + Transfers tiles, the Overview table's Leads/Transfers columns |
+| `clientGroups[].hotprospector.daily_calls` | Total calls / Inbound / Outbound / Talk time tiles, the insight card, the Overview table's matching columns, and the trend chart's four series |
 
-**The tiles and the card derive nothing.** `sumCallStats` adds up what
-`/api/client-groups` sent for the one preset that was asked for; `formatTotal`
-decides only how a number is printed. Talk time keeps its decimal, because the
-table has always shown `251.7` rather than `252` and a tile above it reading
-differently would invite the reader to work out which one is lying.
+**Total calls / Inbound / Outbound / Talk time used to read `call_stats` too**,
+same as Leads called and Transfers still do. Investigated 2026-08-20 after the
+tiles and the chart disagreed on Total calls for the same window: re-deriving
+`daily_calls` fresh didn't close the gap, which ruled out a timing fluke.
+`call_stats` only gets recomputed by the once-a-day `hp-tick` cron pass per
+location, so it can run up to 24h stale against what's actually in storage;
+`daily_calls` reflects current storage on every refresh. `sumCallStats` and
+`CallCentreContent`'s Overview rows (`windowCallTotals`, `saleshub-totals.js`)
+now sum the same daily series the chart draws for those four figures, so the
+tiles, the table and the curve read off one cadence instead of two — and get
+the fresher number in the process. Outbound isn't tracked per day separately;
+it's `calls - inbound` off the same rows.
 
-**Neither does the chart, any more.** It used to page the whole call-log
+**Leads called and Transfers stay on `call_stats`, unchanged, on purpose.**
+"Leads called" there means "distinct leads with any call in the window" —
+`daily_calls.called` answers a different question (see below) and summing it
+would just be a smaller, more confusing tile. Transfers is HP's own upstream
+field already effectively equal to Total calls on their side (see the
+Transfers card investigation), so there's no separate version of it in
+`daily_calls` to switch to either way.
+
+**Nothing here fetches, still.** `sumCallStats` and `windowCallTotals` sum
+what `/api/client-groups` already sent; `formatTotal` decides only how a
+number is printed. Talk time keeps its decimal, because the table has always
+shown `251.7` rather than `252` and a tile above it reading differently would
+invite the reader to work out which one is lying.
+
+**The chart doesn't fetch either.** It used to page the whole call-log
 history through `/api/hotprospector/call-center` on every load and bucket it
 into days client-side — that endpoint orders leads by *creation* date rather
 than call recency, so one page was a biased slice of the window rather than a
@@ -84,23 +106,28 @@ Nothing is scaled onto another figure and no previous period is fetched, so
 the chart still carries no delta — and the headline figure is still the sum
 of what it drew, so curve and number always agree.
 
-**"Leads called" is a lifetime cohort, not a window-relative one.** Each lead
-is counted once, on the day of their *first-ever* call — not their first call
-within whatever window happens to be selected. A lead first contacted before
-the window started therefore reads as zero for that window even if they were
-called again inside it. The old paginated version got this exactly right for
-any window, because it only ever fetched calls inside that window in the first
-place; this trades that precision for not fetching per-call data at all. Same
-tradeoff GHL's cohort funnel already accepts (see `compute_cohort_funnel`'s
-"recent end under-reports" note) — worth knowing if the number looks low for a
-short window on a client with older history.
+**The chart's "New leads contacted" tab is a lifetime cohort, not a
+window-relative count — and is named differently from the "Leads called" tile
+for exactly that reason.** Each lead is counted once, on the day of their
+*first-ever* call — not their first call within whatever window happens to be
+selected. A lead first contacted before the window started therefore reads as
+zero for that window even if they were called again inside it. The old
+paginated version got this exactly right for any window, because it only ever
+fetched calls inside that window in the first place; this trades that
+precision for not fetching per-call data at all. Same tradeoff GHL's cohort
+funnel already accepts (see `compute_cohort_funnel`'s "recent end
+under-reports" note) — worth knowing if the number looks low for a short
+window on a client with older history. The two labels used to both read
+"Leads called," which read as the same figure disagreeing with itself; they
+never were the same figure.
 
 ## Deviations from the handoff
 
 These are deliberate. Everything else matches the design's tokens.
 
-1. **"Leads called" is a lifetime-cohort count, not a scaled sample.** See
-   above for the tradeoff that accepts.
+1. **The chart's "New leads contacted" is a lifetime-cohort count, not a
+   scaled sample, and deliberately not labeled "Leads called."** See above
+   for the tradeoff that accepts.
 2. **No delta pills, anywhere**, including the chart's total-row delta, which
    the prototype hardcodes. A period-over-period figure means fetching and
    assembling a second window; every number here belongs to the one window that

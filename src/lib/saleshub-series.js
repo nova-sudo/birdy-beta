@@ -75,9 +75,14 @@ export const SALES_CHART_METRICS = [
   },
   {
     key: "called",
-    tab: "Leads called",
-    title: "Leads called",
-    subtitle: "Leads contacted across the period",
+    // Named differently from the "Leads called" KPI tile on purpose: this is
+    // a lifetime cohort (each lead counted once, on their first-ever call —
+    // see the module docstring above), not "distinct leads called in this
+    // window" the way the tile is. Sharing a label would read as the same
+    // number; it never is.
+    tab: "New leads contacted",
+    title: "New leads contacted",
+    subtitle: "Leads reached for the first time, by the day of their first call",
   },
   {
     key: "inbound",

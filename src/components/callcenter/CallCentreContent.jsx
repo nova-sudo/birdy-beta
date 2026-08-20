@@ -14,6 +14,7 @@ import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
+import { windowCallTotals } from "@/lib/saleshub-totals"
 import { hpIcon as HP } from "@/lib/icons"
 import {
   CALLS_FETCH_MULTIPLIER,
@@ -622,10 +623,19 @@ export function CallCentreContent({
   }
 
   // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
+  //
+  // total_calls/inbound/outbound/talk_time come from hotprospector.daily_calls
+  // (windowCallTotals), the same per-day series the Sales-Hub trend chart
+  // sums, rather than hotprospector.call_stats: that preset cache only
+  // refreshes once a day per location (hp-tick's cron cadence) so it can run
+  // stale against current storage, and drifted from the chart's own totals
+  // for exactly that reason. leads/transfers stay on call_stats — see
+  // saleshub-totals.js's file header for why those two don't move.
   const overviewRows = useMemo(
     () =>
       (clientGroups || []).map((g) => {
         const cs = g.hotprospector?.call_stats || {}
+        const daily = windowCallTotals(g.hotprospector?.daily_calls, datePreset)
         return {
           id: g.id,
           name: g.name || "Unnamed Client",
@@ -635,15 +645,15 @@ export function CallCentreContent({
           // total_leads (full pool) is the same across presets by design.
           total_leads: g.hotprospector?.metrics?.total_leads ?? 0,
           leads: cs.leads_with_calls ?? 0,
-          total_calls: cs.total_calls ?? 0,
-          inbound: cs.inbound_count ?? 0,
-          outbound: cs.outbound_count ?? 0,
+          total_calls: daily.calls,
+          inbound: daily.inbound,
+          outbound: daily.outbound,
           transfers: cs.transfers ?? 0,
-          talk_time: cs.total_talk_min ?? 0,
+          talk_time: daily.talk,
           original: g,
         }
       }),
-    [clientGroups],
+    [clientGroups, datePreset],
   )
 
   // Apply the top-right client-filter selection, then hide 0-call clients from

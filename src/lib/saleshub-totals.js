@@ -1,47 +1,87 @@
+import { presetToDateRange } from "./date-utils";
+
 // The Sales Hub's figures, summed straight from the client groups already on
-// the page.
+// the page. Nothing here fetches — each figure is a sum of what
+// /api/client-groups already returned, the way it returned it.
 //
-// These are the windowed call stats the backend computed for the selected date
-// preset — /api/client-groups serves them, and useClientGroups has them by the
-// time this screen renders. Nothing here fetches, scales, estimates or compares
-// against another window: each figure is the sum of what the API returned, and
-// that is what the tiles show.
+// Two different caches feed these numbers, and which one a figure comes from
+// is deliberate, not incidental:
+//
+//   calls / inbound / outbound / talk  <- hotprospector.daily_calls, the same
+//     per-day series the trend chart sums. hotprospector.call_stats (the
+//     other, preset-scoped cache) only gets recomputed by the once-a-day
+//     hp-tick cron per location, so it can run up to 24h stale against
+//     whatever's actually in storage; the daily series is derived from
+//     current storage on every refresh. Investigated 2026-08-20: re-deriving
+//     it fresh didn't close the gap against call_stats, confirming this is a
+//     cadence mismatch between the two caches rather than a rounding error —
+//     summing the same source the chart draws keeps the tile and the curve
+//     in agreement and gives both the fresher number.
+//   called / transfers / clients  <- hotprospector.call_stats, unchanged.
+//     "Leads called" here means "distinct leads with any call in the
+//     window" — call_stats.leads_with_calls answers exactly that.
+//     daily_calls.called answers a different question on purpose (see
+//     mergeDailyCalls below); summing it here would just be a smaller,
+//     more confusing number for the same tile. "Transfers" is HP's own
+//     upstream field, already 1:1 with total_calls on their side — no
+//     version of it lives in daily_calls to switch to anyway.
 
-/** Sums the windowed call stats across whichever clients are in scope. */
-export function sumCallStats(clientGroups, selectedClientGroup) {
-  const scoped =
-    selectedClientGroup && selectedClientGroup !== "all"
-      ? (clientGroups ?? []).filter((g) => g.id === selectedClientGroup)
-      : (clientGroups ?? []);
+function scopedGroups(clientGroups, selectedClientGroup) {
+  return selectedClientGroup && selectedClientGroup !== "all"
+    ? (clientGroups ?? []).filter((g) => g.id === selectedClientGroup)
+    : (clientGroups ?? []);
+}
 
-  return scoped.reduce(
+/**
+ * Sums a client's (or several, already-merged) daily rows down to one
+ * window's calls/inbound/outbound/talk — the shared slice-and-sum both
+ * sumCallStats (portfolio-wide) and CallCentreContent's Overview rows
+ * (per-client) do against the same daily_calls series.
+ */
+export function windowCallTotals(dailyRows, datePreset) {
+  const { start_date, end_date } = presetToDateRange(datePreset);
+  const rows = (dailyRows ?? []).filter(
+    (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
+  );
+  const calls = rows.reduce((sum, d) => sum + (d.calls ?? 0), 0);
+  const inbound = rows.reduce((sum, d) => sum + (d.inbound ?? 0), 0);
+  const talk = rows.reduce((sum, d) => sum + (d.talk_min ?? 0), 0);
+  return { calls, inbound, outbound: calls - inbound, talk };
+}
+
+/** Sums the call stats across whichever clients are in scope, for the tiles and the insight card. */
+export function sumCallStats(clientGroups, selectedClientGroup, datePreset) {
+  const scoped = scopedGroups(clientGroups, selectedClientGroup);
+
+  const windowed = scoped.reduce(
     (acc, g) => {
       const cs = g.hotprospector?.call_stats ?? {};
       return {
         clients: acc.clients + ((cs.total_calls ?? 0) > 0 ? 1 : 0),
         called: acc.called + (cs.leads_with_calls ?? 0),
-        calls: acc.calls + (cs.total_calls ?? 0),
-        inbound: acc.inbound + (cs.inbound_count ?? 0),
-        outbound: acc.outbound + (cs.outbound_count ?? 0),
         transfers: acc.transfers + (cs.transfers ?? 0),
-        talk: acc.talk + (cs.total_talk_min ?? 0),
       };
     },
-    { clients: 0, called: 0, calls: 0, inbound: 0, outbound: 0, transfers: 0, talk: 0 }
+    { clients: 0, called: 0, transfers: 0 }
   );
+
+  const daily = windowCallTotals(mergeDailyCalls(clientGroups, selectedClientGroup), datePreset);
+
+  return { ...windowed, ...daily };
 }
 
 /**
  * Merges each scoped client's daily call series (`hotprospector.daily_calls`)
- * into one, summed by date — the trend chart's input. Same scoping and same
- * "sum what the API already sent" rule as sumCallStats, just per-day instead
- * of per-window.
+ * into one, summed by date — the trend chart's input, and sumCallStats' for
+ * calls/inbound/outbound/talk above.
+ *
+ * `called` here is a lifetime cohort (see hp_service.py's
+ * _compute_daily_call_series): each lead counted once, on the day of their
+ * first-ever call. sumCallStats deliberately does not sum this field for the
+ * "Leads called" tile — see the file header.
  */
 export function mergeDailyCalls(clientGroups, selectedClientGroup) {
-  const scoped =
-    selectedClientGroup && selectedClientGroup !== "all"
-      ? (clientGroups ?? []).filter((g) => g.id === selectedClientGroup)
-      : (clientGroups ?? []);
+  const scoped = scopedGroups(clientGroups, selectedClientGroup);
 
   const byDate = new Map();
   for (const g of scoped) {
