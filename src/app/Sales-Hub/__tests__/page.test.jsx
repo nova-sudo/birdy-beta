@@ -37,11 +37,19 @@ const mockLeads = Array.from({ length: 8 }, (_, i) => {
   }
 })
 
+// The call-centre endpoint pages. meta.total is how many leads the window
+// holds; each request returns the slice its skip/limit asks for.
 function mockApiRequest(url) {
   if (url.includes("/api/hotprospector/call-center")) {
+    const params = new URLSearchParams(url.split("?")[1] ?? "")
+    const skip = Number(params.get("skip") ?? 0)
+    const limit = Number(params.get("limit") ?? mockLeads.length)
     return Promise.resolve({
       ok: true,
-      json: async () => ({ data: mockLeads, meta: { total: mockLeads.length } }),
+      json: async () => ({
+        data: mockLeads.slice(skip, skip + limit),
+        meta: { total: mockLeads.length },
+      }),
     })
   }
   if (url.includes("/api/hotprospector/members/dashboard")) {
@@ -76,9 +84,9 @@ describe("Sales Hub — Calls tab", () => {
     render(<CallCenterPage />)
 
     // Radix's Tabs mounted all four panels and hid three, so the Leads tab's
-    // first batch was fetched on a visit that never left Overview. Nothing
-    // above the tabs fetches — the tiles sum client groups the page already
-    // holds — so the Leads batch is the only request in play. It is
+    // first batch was fetched on a visit that never left Overview. The trend
+    // chart above the tabs has its own call-centre fetch and is expected here;
+    // the Leads batch is the one that should not have run, and it is
     // recognisable by its page size (LEADS_FIRST_BATCH_SIZE).
     const leadsBatchFetched = () =>
       vi.mocked(apiRequest).mock.calls.some(([url]) => url.includes("limit=40"))

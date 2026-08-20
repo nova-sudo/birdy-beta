@@ -10,15 +10,20 @@ Route: `/Sales-Hub`.
 
 ```
 SalesHubShell            title · date range · client picker
-├── InsightCard          the window's figures, stated
-├── KpiTiles             6 compact tiles
+├── chart + insights row
+│   ├── TrendChart       flex 1.65 — 4 call metrics
+│   └── right column     flex 0.85
+│       ├── InsightCard  the window's figures, stated
+│       └── KpiTiles     6 compact tiles
 └── CallCentreContent    section tabs · search/columns · table
 ```
 
 | Where | What |
 |---|---|
 | `page.jsx` | Composition, and the window/scope state the controls hold |
+| `useSalesHubSeries.js` | The chart's series, counted from call logs |
 | `presentation.js` | Which icon and tone each tile wears |
+| `src/lib/saleshub-series.js` | Bucketing the four metrics (pure) |
 | `src/lib/saleshub-totals.js` | Summing the call stats (pure) |
 | `src/lib/saleshub-insight.js` | The insight copy (pure) |
 | `src/components/saleshub/` | Shell, picker, insight card, tiles |
@@ -30,6 +35,7 @@ SalesHubShell            title · date range · client picker
 |---|---|---|
 | `datePreset` | `last_7d` | The window **every** figure covers |
 | `selectedClientGroup` | `all` | Which client is in scope |
+| `chartMetric` | `calls` | Which series is plotted |
 | `activeTab` | `overview` | Which table renders |
 
 The first two live on the page rather than in the table, because the design puts
@@ -40,47 +46,67 @@ scoped to one client and never moves it — is unaffected.
 
 ## Where the data comes from
 
-**This screen fetches nothing of its own.** Every figure above the table is
-summed from the client groups the page already holds — the windowed call stats
-`/api/client-groups` returns for the selected preset — and shown as returned.
+Two sources, and the difference between them is the thing to understand.
 
 | Reads | Feeds |
 |---|---|
 | `clientGroups[].hotprospector.call_stats` | The six tiles and the insight card |
+| `/api/hotprospector/call-center` | The trend chart's four series |
 
-Nothing is derived, scaled, estimated, bucketed or compared against another
-window. `sumCallStats` adds up what the API sent for the one preset that was
-asked for; `formatTotal` decides only how a number is printed. Talk time keeps
-its decimal, because the table has always shown `251.7` rather than `252` and a
-tile above it reading differently would invite the reader to work out which one
-is lying.
+**The tiles and the card derive nothing.** `sumCallStats` adds up what
+`/api/client-groups` sent for the one preset that was asked for; `formatTotal`
+decides only how a number is printed. Talk time keeps its decimal, because the
+table has always shown `251.7` rather than `252` and a tile above it reading
+differently would invite the reader to work out which one is lying.
 
-The tables below keep their own existing behaviour and endpoints — `Overview`
-off the same client groups, `Leads`, `Members` and `Calls` off the HotProspector
-endpoints `CallCentreContent` has always called.
+**The chart cannot work that way.** Those call stats are per-client aggregates
+for the whole window — exact, but with no time dimension in them — so there is
+nothing in them to plot. A curve has to be counted from the call logs
+themselves, which is what `/api/hotprospector/call-center` returns nested inside
+its lead rows.
 
-### The insight card restates, it does not conclude
+Everything plotted is a straight count of those logs. Nothing is scaled onto
+another figure and no previous period is fetched, so the chart carries no delta.
 
-The design asks it to name the biggest movement and then the most actionable
-anomaly. Both are derived claims — one needs a second window, the other a
-ranking across clients — so neither is drawn. The card reports the same figures
-the tiles beside it report.
+### It pages through the whole window, and it has to
 
-It still declines to pad: no inbound clause for a pure-outbound portfolio, no
-"across 1 client" when the view is already scoped to one, and a plain statement
-of fact when no calls were logged at all.
+`src/constants/sales-hub-constants.js` records that this endpoint orders leads by
+lead **creation** date rather than call recency. That makes one page not a sample
+of the window but a biased slice of it — most of the newest-created leads may
+have no calls in the period at all. An earlier version fetched a single 2,000-row
+page against a window where 6,879 leads had been called, and drew a curve off a
+third of the data that was not a random third.
+
+So `useSalesHubSeries` fetches every page: a small first one so a curve appears
+quickly, then the rest behind it in batches of 2,000, six at a time, with
+`meta.total` saying when it is done. Rows accumulate as pages land and the series
+rebuilds on each, so the chart fills in rather than blocking. While that is
+happening it prints "counting N of M leads so far"; once complete, the note goes
+and the plotted total is the window's real count.
+
+**There is no ceiling on the page count.** An earlier version capped at 40 pages,
+which stopped dead on 40,500 leads and drew a curve that quietly omitted
+everything past it — a partial count with nothing on screen saying which calls
+were missing. A slow chart is better than a wrong one.
+
+The cost is real: a window holding 45,000 leads is 23 requests carrying every
+lead record, when all the chart wants is call timestamps. The right fix is a
+backend aggregation returning per-bucket counts — `src/constants/sales-hub-constants.js`
+asks for the same thing for the Calls tab, for the same reason.
+
+The chart's headline figure is the sum of what it drew, so the curve and the
+number above it always agree.
 
 ## Deviations from the handoff
 
 These are deliberate. Everything else matches the design's tokens.
 
-1. **No trend chart.** The design plots four call metrics over the window. This
-   app has no call time-series — building one meant pulling call logs and
-   bucketing them into a curve, which is derived data by definition. The tiles
-   carry the same four figures as totals.
-2. **No delta pills, anywhere.** A period-over-period figure means fetching and
-   assembling a second window. Every number here is the one window that was
-   asked for.
+1. **The chart plots what was counted, not a scaled sample.** It pages the whole
+   window to do that, and says so while pages are still arriving. See above.
+2. **No delta pills, anywhere**, including the chart's total-row delta, which
+   the prototype hardcodes. A period-over-period figure means fetching and
+   assembling a second window; every number here belongs to the one window that
+   was asked for.
 3. **No frame, no icon rail, no header bar.** `AppSidebar` and
    `src/app/layout.jsx` already render the rail, the Ask Birdy field, the
    notification bell and the avatar globally. Rebuilding them would put two nav
@@ -109,5 +135,5 @@ cards the hub turned off (`showStatCards`), because it has no other call KPIs.
 ## Tests
 
 ```bash
-npx vitest run src/app/Sales-Hub src/lib/__tests__/saleshub-insight.test.js
+npx vitest run src/app/Sales-Hub src/lib/__tests__
 ```
