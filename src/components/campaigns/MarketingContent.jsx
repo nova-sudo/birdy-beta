@@ -32,14 +32,14 @@ import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { useHeaderSlot } from "@/components/dashboard-controls"
+import { usePageHeader } from "@/components/page-header"
 
 // The Marketing Hub is drawn on the design system in
 // design_handoff_hubs/Birdy Style Guide.md — Poppins for headings and numerals,
 // Inter for body, on the --pd-* tokens in globals.css. Both were already
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
-import { portfolioFontClass } from "@/app/dashboard/fonts"
+import { pdFontClass } from "@/lib/pd-fonts"
 import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { isOverCplCeiling } from "@/lib/marketing-aggregate"
@@ -980,50 +980,57 @@ export function MarketingContent({
     [gridItems, groupSearch]
   )
 
-  // ── Top-bar slots ─────────────────────────────────────────────────────────
-  // The date range and client-group pickers sit in the global header next to
-  // the notifications bell and the profile menu, and the page title stands in
-  // for the Birdy wordmark while you are here. Both are published through the
-  // context in dashboard-controls, because the header is rendered above this
-  // page in the tree.
+  // ── Top-bar slot ──────────────────────────────────────────────────────────
+  // The title and the date/group filters sit in the global header next to the
+  // notifications bell and the profile menu, in place of the Birdy wordmark —
+  // published through page-header's context, since the header is rendered
+  // above this page in the tree. See usePageHeader.
   //
   // `showHeader` is false where MarketingContent is embedded inside the client
   // detail page; that copy must not claim the top bar out from under the route
   // that owns it.
-  const headerControls = useMemo(() => {
+  const header = useMemo(() => {
     if (!showHeader) return null
 
-    return (
-      <div className="flex items-center gap-2">
-        {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
-        {showGroupFilter && clientGroups.length > 0 && (
-          <ClientGroupPicker
-            gridRef={gridRef}
-            open={gridOpen}
-            setOpen={setGridOpen}
-            label={selectedGroupLabel}
-            search={groupSearch}
-            setSearch={setGroupSearch}
-            items={filteredGridItems}
-            selectedId={selectedClientGroup}
-            onSelect={setSelectedClientGroup}
-          />
-        )}
-      </div>
-    )
+    return {
+      title: (
+        <div className={`${pdFontClass} min-w-0`}>
+          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+            Marketing Hub
+          </h1>
+          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+            Campaign performance across all connected ad accounts
+          </p>
+        </div>
+      ),
+      controls: (
+        <div className="flex items-center gap-2">
+          {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
+          {showGroupFilter && clientGroups.length > 0 && (
+            <ClientGroupPicker
+              gridRef={gridRef}
+              open={gridOpen}
+              setOpen={setGridOpen}
+              label={selectedGroupLabel}
+              search={groupSearch}
+              setSearch={setGroupSearch}
+              items={filteredGridItems}
+              selectedId={selectedClientGroup}
+              onSelect={setSelectedClientGroup}
+            />
+          )}
+        </div>
+      ),
+    }
     // filteredGridItems and selectedGroupLabel are themselves memoised, so this
     // node is stable between renders that don't change a control's own state —
-    // which it has to be, since useHeaderSlot holds it in state.
+    // which it has to be, since usePageHeader holds it in state.
   }, [
     showHeader, setDatePreset, datePreset, showGroupFilter, clientGroups.length,
     gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
   ])
 
-  useHeaderSlot({
-    title: showHeader ? "Marketing Hub" : undefined,
-    subtitle: showHeader ? "Campaign performance across all connected ad accounts" : undefined,
-    controls: headerControls,
-  })
+  usePageHeader(header)
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -1032,7 +1039,7 @@ export function MarketingContent({
 
         {/* The title block and the date/group filters now live in the global
             top bar beside the bell and the profile menu — published by
-            useHeaderSlot above. The handoff puts filters in the header, so the
+            usePageHeader above. The handoff puts filters in the header, so the
             page starts straight at its content. */}
 
         {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
@@ -1076,7 +1083,7 @@ export function MarketingContent({
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <div className={`${portfolioFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
+        <div className={`${pdFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
           <div className="flex min-w-0 flex-col lg:flex-[1.65]">
             {groupsLoading || seriesLoading ? (
               <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
@@ -1166,7 +1173,7 @@ export function MarketingContent({
               the divider tint, the selected item lifts onto white with the
               purple-tinted shadow. Radix Tabs still drives the behaviour —
               only the skin changes. */}
-          <div className={`${portfolioFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
+          <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
             <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
               {[
                 { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },

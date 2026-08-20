@@ -3,12 +3,16 @@
 import "./globals.css";
 import { Outfit } from "next/font/google";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { Badge } from "@/components/ui/badge";
 import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Search, Sparkles } from 'lucide-react';
+import { Search, Sparkles, Tag } from 'lucide-react';
+import { APP_VERSION } from "@/lib/changelog";
+import { ASK_BIRDY_EVENT } from "@/lib/ask-birdy";
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
@@ -19,11 +23,51 @@ import {
   DashboardHeaderControls,
   DashboardHeaderTitle,
 } from "@/components/dashboard-controls";
+import {
+  PageHeaderControls,
+  PageHeaderProvider,
+  PageHeaderTitle,
+  useHasPageHeader,
+} from "@/components/page-header";
 
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
 });
+
+/**
+ * The wordmark and version badge, which stand down whenever a page has put its
+ * own title in the bar. It reads that from context, so it has to be a child of
+ * the provider rather than part of RootLayout, which renders it.
+ */
+function BirdyWordmark() {
+  const pathname = usePathname();
+  const hasPageHeader = useHasPageHeader();
+
+  // /dashboard publishes its title the older way (a route check in
+  // dashboard-controls), so it is named here rather than detected.
+  if (pathname === "/dashboard" || hasPageHeader) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
+      <Link
+        href="/changelog"
+        aria-label={`What's new in Birdy — version ${APP_VERSION}`}
+        title={`What's new — ${APP_VERSION}`}
+        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+      >
+        <Badge
+          variant="secondary"
+          className="cursor-pointer gap-1 font-semibold transition-colors hover:bg-secondary/70"
+        >
+          <Tag className="h-3 w-3 text-purple-500" aria-hidden="true" />
+          {APP_VERSION}
+        </Badge>
+      </Link>
+    </div>
+  );
+}
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
@@ -45,6 +89,19 @@ export default function RootLayout({ children }) {
     if (typeof navigator !== "undefined") {
       setIsMac(/Mac|iPhone|iPad|iPod/i.test(navigator.platform));
     }
+  }, []);
+
+  // Pages open the assistant by announcing a question rather than by reaching
+  // into this component's state — see lib/ask-birdy.js for why.
+  useEffect(() => {
+    const onAsk = (e) => {
+      const msg = e.detail?.message?.trim();
+      if (!msg) return;
+      setChatInitialMsg(msg);
+      setChatOpen(true);
+    };
+    window.addEventListener(ASK_BIRDY_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_BIRDY_EVENT, onAsk);
   }, []);
 
   // ⌘K / Ctrl+K focuses the header search bar (only when chat modal is closed)
@@ -78,6 +135,7 @@ export default function RootLayout({ children }) {
             {!hideSidebar && (
               <CreditsProvider>
               <DashboardControlsProvider>
+              <PageHeaderProvider>
               <div className="flex h-screen w-full overflow-hidden">
                 <AppSidebar />
                 <div className="flex flex-col flex-1 min-w-0">
@@ -87,11 +145,11 @@ export default function RootLayout({ children }) {
                   <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="md:hidden" />
-                      {/* A page's own title stands in for the wordmark while
-                          you are on it; DashboardHeaderTitle owns that choice,
-                          including the wordmark fallback, so the header does
-                          not branch on the route itself. */}
+                      {/* The dashboard puts its own title here instead of the
+                          wordmark — the page no longer carries one. */}
                       <DashboardHeaderTitle />
+                      <PageHeaderTitle />
+                      <BirdyWordmark />
                     </div>
 
                     {/* Center Ask-Birdy search bar */}
@@ -130,6 +188,7 @@ export default function RootLayout({ children }) {
                       {/* Dashboard date range + granularity; renders on that
                           route only, since nothing else obeys them. */}
                       <DashboardHeaderControls />
+                      <PageHeaderControls />
                       <NotificationsDropdown />
                       <UserMenu />
                     </div>
@@ -154,6 +213,7 @@ export default function RootLayout({ children }) {
                   />
                 </div>
               </div>
+              </PageHeaderProvider>
               </DashboardControlsProvider>
               </CreditsProvider>
             )}

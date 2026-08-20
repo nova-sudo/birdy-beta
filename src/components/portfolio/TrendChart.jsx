@@ -71,10 +71,15 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
 
       <div className="mt-[14px] mb-4 flex flex-wrap items-baseline gap-[10px]">
         <span className="font-pd-display text-[28px] font-bold text-pd-ink">{chart.total}</span>
-        <span className={cn("text-[12.5px] font-semibold", tone.text)}>
-          <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
-          <span className="sr-only">{chart.direction} </span> {chart.delta}
-        </span>
+        {/* A window with no comparable period before it renders no delta at
+            all, rather than a zero — an unknown movement is not a flat one,
+            and the same rule already governs every KPI pill on these screens. */}
+        {chart.direction && (
+          <span className={cn("text-[12.5px] font-semibold", tone.text)}>
+            <span aria-hidden="true">{chart.direction === "up" ? "▲" : "▼"}</span>
+            <span className="sr-only">{chart.direction} </span> {chart.delta}
+          </span>
+        )}
         {chart.estimated && (
           // The total is exact; the curve under it is not counted — either a
           // sample scaled onto that total, or a shape borrowed from another
@@ -83,14 +88,22 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
             {chart.estimateNote ?? "shape estimated from a sample"}
           </span>
         )}
+        {chart.coverage && (
+          // The figure above is the sum of what was plotted. When the rows
+          // behind it were capped, that is less than the portfolio total on
+          // the tiles — say which leads it covers rather than letting the two
+          // numbers look like a contradiction.
+          <span className="text-[11.5px] text-pd-faint">{chart.coverage}</span>
+        )}
       </div>
 
       {/* Names the shape of the series for anyone who can't see it — the dots
           below carry the individual readings. */}
       <p className="sr-only">
-        {chart.title}, {chart.subtitle}. {chart.total}, {chart.direction} {chart.delta} on the
-        previous period. {points.length} data points, from {chart.pointValues[0]} to{" "}
-        {chart.pointValues[points.length - 1]}.
+        {chart.title}, {chart.subtitle}. {chart.total}
+        {chart.direction ? `, ${chart.direction} ${chart.delta} on the previous period` : ""}
+        {chart.coverage ? `, ${chart.coverage}` : ""}. {points.length} data points, from{" "}
+        {chart.pointValues[0]} to {chart.pointValues[points.length - 1]}.
       </p>
 
       <div className="relative h-[190px]">
