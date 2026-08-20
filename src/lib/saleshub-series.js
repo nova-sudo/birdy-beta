@@ -1,55 +1,26 @@
-// The Sales Hub trend chart's four series, derived from call-centre lead rows.
+// The Sales Hub trend chart's four series, from each client's precomputed
+// daily call series (`hotprospector.daily_calls`, written server-side by
+// birdy-backend's hp_service._compute_daily_call_series). One row per day
+// already carries every metric this chart plots:
 //
-// `/api/hotprospector/call-center` returns leads with their call logs nested,
-// and every metric on this chart is a different reading of the same logs — so
-// all four come from one fetch rather than four. What differs is what each one
-// counts and which timestamp it hangs the count on:
+//   Total calls   every call that day
+//   Leads called  leads whose first-ever call fell on that day (a lifetime
+//                 cohort count — see the backend docstring for the tradeoff
+//                 that accepts: a lead first contacted before the selected
+//                 window reads as zero even if called again inside it)
+//   Inbound       the inbound subset of that day's calls
+//   Talk time     minutes that day
 //
-//   Total calls   every log, at its own call time
-//   Leads called  each lead once, at its *first* call in the window
-//   Inbound       the logs the lead placed, at their call time
-//   Talk time     minutes, at the log's call time
+// Because every metric is bucketed from the same row set, they share the same
+// buckets by construction — a day with zero inbound calls still has a row, so
+// no separate axis-alignment pass is needed the way it was when inbound was a
+// filtered subset of raw call logs.
 //
-// "Leads called" is the one worth reading twice. Counting a lead at every call
-// would make it a second, quieter copy of Total calls; counting it at its first
-// call is what makes it answer a different question — how far through the pool
-// the dialler has got, rather than how hard it worked.
+// This used to page /api/hotprospector/call-center to build the same shape
+// client-side, fetching every lead's full call history on every load. See
+// the Sales-Hub README for why that existed and what replaced it.
 
 import { bucketSeries } from "./portfolio-series";
-
-/** A log counts as outbound unless it says otherwise, matching the tables. */
-const isOutbound = (log) => log.call_status === "outbound";
-
-/**
- * Flatten lead rows to one entry per call log, carrying what the series need.
- * Logs without a usable timestamp are dropped — bucketSeries would skip them
- * anyway, and counting them into a total the curve can't place would put the
- * curve and its headline figure into disagreement.
- */
-export function callLogEntries(leadRows) {
-  return (leadRows ?? []).flatMap((lead) =>
-    (lead.call_logs ?? [])
-      .filter((log) => log.call_time_iso)
-      .map((log) => ({
-        at: log.call_time_iso,
-        outbound: isOutbound(log),
-        minutes: (Number(log.duration) || 0) / 60,
-      }))
-  );
-}
-
-/**
- * One entry per lead that was called, dated at its earliest call in the window.
- */
-export function firstCallPerLead(leadRows) {
-  return (leadRows ?? [])
-    .map((lead) => {
-      const times = (lead.call_logs ?? []).map((l) => l.call_time_iso).filter(Boolean);
-      if (times.length === 0) return null;
-      return { at: times.reduce((a, b) => (a < b ? a : b)) };
-    })
-    .filter(Boolean);
-}
 
 /**
  * Pick how finely to bucket a window.
@@ -77,57 +48,20 @@ export function granularityForRange(startDate, endDate) {
 }
 
 /**
- * Put a metric's series onto another series' axis, filling gaps with zero.
- *
- * `bucketSeries` builds buckets from the data it is given, which is right for a
- * single series — a range with gaps plots the periods that exist rather than a
- * run of zeroes. Across four series it is wrong: inbound calls happen on fewer
- * days than calls do, so inbound would come back with fewer points and its own
- * dates, and switching tabs would silently redraw the x-axis under the reader.
- *
- * Every entry in all four series is a call log, so the Total calls axis is a
- * superset of the other three. Aligning to it means a day with no inbound calls
- * reads as a zero on the same axis, which is what it is.
- *
- * Buckets are matched on their tooltip label, which is the one thing
- * bucketSeries emits that is unique per bucket and not thinned for the axis.
- */
-function alignTo(axis, series) {
-  const byLabel = new Map(series.tooltipLabels.map((label, i) => [label, series.values[i]]));
-
-  return {
-    values: axis.tooltipLabels.map((label) => byLabel.get(label) ?? 0),
-    labels: axis.labels,
-    tooltipLabels: axis.tooltipLabels,
-  };
-}
-
-/**
  * Build all four series for the window.
  *
- * Every value plotted is a straight count of the call logs that were fetched.
- * Nothing is scaled onto another figure or inferred — what the curve shows is
- * what the rows said. Where the fetch hit its row limit the series therefore
- * covers only the leads that came back, and the chart says so rather than
- * multiplying itself up to match a bigger number.
- *
- * @param {object[]} leadRows rows from /api/hotprospector/call-center
+ * @param {object[]} dailyRows [{date, calls, inbound, talk_min, called}, ...]
  * @param {string} granularity Daily | Weekly | Monthly
  */
-export function buildSalesSeries(leadRows, granularity) {
-  const logs = callLogEntries(leadRows);
-  const inbound = logs.filter((l) => !l.outbound);
-
-  // Every other series is aligned to this one — see alignTo.
-  const axis = bucketSeries(logs, (l) => l.at, granularity);
-  const on = (rows, getDate, weight) =>
-    alignTo(axis, bucketSeries(rows, getDate, granularity, weight));
+export function buildSalesSeries(dailyRows, granularity) {
+  const rows = dailyRows ?? [];
+  const on = (weight) => bucketSeries(rows, (d) => d.date, granularity, weight);
 
   return {
-    calls: axis,
-    called: on(firstCallPerLead(leadRows), (l) => l.at),
-    inbound: on(inbound, (l) => l.at),
-    talk: on(logs, (l) => l.at, (l) => l.minutes),
+    calls: on((d) => d.calls ?? 0),
+    called: on((d) => d.called ?? 0),
+    inbound: on((d) => d.inbound ?? 0),
+    talk: on((d) => d.talk_min ?? 0),
   };
 }
 

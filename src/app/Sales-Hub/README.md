@@ -52,12 +52,12 @@ scoped to one client and never moves it — is unaffected.
 
 ## Where the data comes from
 
-Two sources, and the difference between them is the thing to understand.
+Two sources, both precomputed server-side — neither fetches per-lead rows.
 
 | Reads | Feeds |
 |---|---|
 | `clientGroups[].hotprospector.call_stats` | The six tiles and the insight card |
-| `/api/hotprospector/call-center` | The trend chart's four series |
+| `clientGroups[].hotprospector.daily_calls` | The trend chart's four series |
 
 **The tiles and the card derive nothing.** `sumCallStats` adds up what
 `/api/client-groups` sent for the one preset that was asked for; `formatTotal`
@@ -65,50 +65,42 @@ decides only how a number is printed. Talk time keeps its decimal, because the
 table has always shown `251.7` rather than `252` and a tile above it reading
 differently would invite the reader to work out which one is lying.
 
-**The chart cannot work that way.** Those call stats are per-client aggregates
-for the whole window — exact, but with no time dimension in them — so there is
-nothing in them to plot. A curve has to be counted from the call logs
-themselves, which is what `/api/hotprospector/call-center` returns nested inside
-its lead rows.
+**Neither does the chart, any more.** It used to page the whole call-log
+history through `/api/hotprospector/call-center` on every load and bucket it
+into days client-side — that endpoint orders leads by *creation* date rather
+than call recency, so one page was a biased slice of the window rather than a
+sample of it, and a correct curve needed every page fetched. A window holding
+45,000 leads meant 23 requests carrying every lead record, when the chart only
+ever wanted four numbers a day.
 
-Everything plotted is a straight count of those logs. Nothing is scaled onto
-another figure and no previous period is fetched, so the chart carries no delta.
+`birdy-backend`'s `hp_service._compute_daily_call_series` now derives that
+same per-day breakdown once, server-side, from the calls it already loads to
+refresh the Overview tiles — no extra API call. `/api/client-groups` serves it
+whole, same shape as Meta's `daily_spend` and GHL's `daily_leads`:
+`mergeDailyCalls` (`saleshub-totals.js`) sums it across whichever clients are
+in scope, and `useSalesHubSeries` slices it to the selected window and hands
+it to `buildSalesSeries` (`saleshub-series.js`) to bucket by day/week/month.
+Nothing is scaled onto another figure and no previous period is fetched, so
+the chart still carries no delta — and the headline figure is still the sum
+of what it drew, so curve and number always agree.
 
-### It pages through the whole window, and it has to
-
-`src/constants/sales-hub-constants.js` records that this endpoint orders leads by
-lead **creation** date rather than call recency. That makes one page not a sample
-of the window but a biased slice of it — most of the newest-created leads may
-have no calls in the period at all. An earlier version fetched a single 2,000-row
-page against a window where 6,879 leads had been called, and drew a curve off a
-third of the data that was not a random third.
-
-So `useSalesHubSeries` fetches every page: a small first one so a curve appears
-quickly, then the rest behind it in batches of 2,000, six at a time, with
-`meta.total` saying when it is done. Rows accumulate as pages land and the series
-rebuilds on each, so the chart fills in rather than blocking. While that is
-happening it prints "counting N of M leads so far"; once complete, the note goes
-and the plotted total is the window's real count.
-
-**There is no ceiling on the page count.** An earlier version capped at 40 pages,
-which stopped dead on 40,500 leads and drew a curve that quietly omitted
-everything past it — a partial count with nothing on screen saying which calls
-were missing. A slow chart is better than a wrong one.
-
-The cost is real: a window holding 45,000 leads is 23 requests carrying every
-lead record, when all the chart wants is call timestamps. The right fix is a
-backend aggregation returning per-bucket counts — `src/constants/sales-hub-constants.js`
-asks for the same thing for the Calls tab, for the same reason.
-
-The chart's headline figure is the sum of what it drew, so the curve and the
-number above it always agree.
+**"Leads called" is a lifetime cohort, not a window-relative one.** Each lead
+is counted once, on the day of their *first-ever* call — not their first call
+within whatever window happens to be selected. A lead first contacted before
+the window started therefore reads as zero for that window even if they were
+called again inside it. The old paginated version got this exactly right for
+any window, because it only ever fetched calls inside that window in the first
+place; this trades that precision for not fetching per-call data at all. Same
+tradeoff GHL's cohort funnel already accepts (see `compute_cohort_funnel`'s
+"recent end under-reports" note) — worth knowing if the number looks low for a
+short window on a client with older history.
 
 ## Deviations from the handoff
 
 These are deliberate. Everything else matches the design's tokens.
 
-1. **The chart plots what was counted, not a scaled sample.** It pages the whole
-   window to do that, and says so while pages are still arriving. See above.
+1. **"Leads called" is a lifetime-cohort count, not a scaled sample.** See
+   above for the tradeoff that accepts.
 2. **No delta pills, anywhere**, including the chart's total-row delta, which
    the prototype hardcodes. A period-over-period figure means fetching and
    assembling a second window; every number here belongs to the one window that

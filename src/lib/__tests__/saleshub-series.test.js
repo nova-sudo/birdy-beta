@@ -1,61 +1,13 @@
 import { describe, it, expect } from "vitest";
 
-import {
-  buildSalesSeries,
-  callLogEntries,
-  firstCallPerLead,
-  granularityForRange,
-} from "../saleshub-series";
+import { buildSalesSeries, granularityForRange } from "../saleshub-series";
 
-// One lead, three calls across two days; one inbound. Durations in seconds.
-const leads = [
-  {
-    id: "a",
-    call_logs: [
-      { call_time_iso: "2026-07-02T09:00:00Z", call_status: "outbound", duration: 120 },
-      { call_time_iso: "2026-07-01T09:00:00Z", call_status: "outbound", duration: 60 },
-      { call_time_iso: "2026-07-02T15:00:00Z", call_status: "inbound", duration: 30 },
-    ],
-  },
-  {
-    id: "b",
-    call_logs: [{ call_time_iso: "2026-07-02T11:00:00Z", call_status: "outbound", duration: 90 }],
-  },
-  // Never dialled — must not count as a lead called, and must not land in a bucket.
-  { id: "c", call_logs: [] },
+// Two days of precomputed daily rows — the shape hp_service.py's
+// _compute_daily_call_series writes as hotprospector.daily_calls.
+const dailyRows = [
+  { date: "2026-07-01", calls: 1, inbound: 0, talk_min: 1, called: 1 },
+  { date: "2026-07-02", calls: 3, inbound: 1, talk_min: 4, called: 1 },
 ];
-
-describe("callLogEntries", () => {
-  it("flattens every log and converts duration to minutes", () => {
-    const entries = callLogEntries(leads);
-
-    expect(entries).toHaveLength(4);
-    expect(entries.map((e) => e.minutes)).toEqual([2, 1, 0.5, 1.5]);
-  });
-
-  it("treats anything that is not explicitly outbound as inbound", () => {
-    const entries = callLogEntries(leads);
-
-    expect(entries.filter((e) => !e.outbound)).toHaveLength(1);
-  });
-
-  it("drops logs with no timestamp rather than bucketing them at the epoch", () => {
-    const entries = callLogEntries([{ call_logs: [{ call_status: "outbound", duration: 60 }] }]);
-
-    expect(entries).toEqual([]);
-  });
-});
-
-describe("firstCallPerLead", () => {
-  it("counts each called lead once, at its earliest call", () => {
-    // Lead a was called three times; it must appear once, dated 1 July — not
-    // 2 July, and not three times, or the series becomes a copy of Total calls.
-    expect(firstCallPerLead(leads)).toEqual([
-      { at: "2026-07-01T09:00:00Z" },
-      { at: "2026-07-02T11:00:00Z" },
-    ]);
-  });
-});
 
 describe("granularityForRange", () => {
   it("buckets all-time by month — anything finer is unreadable across years", () => {
@@ -73,21 +25,17 @@ describe("granularityForRange", () => {
 });
 
 describe("buildSalesSeries", () => {
-  it("counts each metric off the same logs, bucketed by day", () => {
-    const series = buildSalesSeries(leads, "Daily");
+  it("reads each metric straight off the precomputed daily rows", () => {
+    const series = buildSalesSeries(dailyRows, "Daily");
 
-    // 1 July: one call. 2 July: three.
     expect(series.calls.values).toEqual([1, 3]);
-    // One lead first called on each day.
     expect(series.called.values).toEqual([1, 1]);
-    // The single inbound call landed on 2 July.
     expect(series.inbound.values).toEqual([0, 1]);
-    // Minutes: 1 on the first day, 2 + 0.5 + 1.5 on the second.
     expect(series.talk.values).toEqual([1, 4]);
   });
 
   it("draws every metric on one axis, so switching tabs can't move the dates", () => {
-    const series = buildSalesSeries(leads, "Daily");
+    const series = buildSalesSeries(dailyRows, "Daily");
     const axis = series.calls.tooltipLabels;
 
     for (const key of ["called", "inbound", "talk"]) {
@@ -96,21 +44,20 @@ describe("buildSalesSeries", () => {
     }
 
     // 1 July had no inbound call. That is a zero on the shared axis, not a
-    // missing bucket — otherwise inbound would plot one point where calls
-    // plots two, and the x-axis would change under the reader mid-tab-switch.
+    // missing bucket — every metric is bucketed from the same row set, so a
+    // day present for Total calls is present for Inbound too, at whatever
+    // value it actually had.
     expect(series.inbound.values[0]).toBe(0);
   });
 
-  it("plots the logs as counted, scaling nothing onto another figure", () => {
-    const series = buildSalesSeries(leads, "Daily");
+  it("sums multiple daily rows into one bucket at coarser granularity", () => {
+    const series = buildSalesSeries(dailyRows, "Weekly");
 
-    // Four logs went in, so the curve sums to four. It is never multiplied up
-    // to match a portfolio total the rows did not cover.
-    expect(series.calls.values.reduce((a, b) => a + b, 0)).toBe(4);
-    expect(series.calls.estimated).toBeUndefined();
+    expect(series.calls.values).toEqual([4]);
+    expect(series.talk.values).toEqual([5]);
   });
 
-  it("returns empty series rather than throwing when nothing was fetched", () => {
+  it("returns empty series rather than throwing when nothing is cached yet", () => {
     const series = buildSalesSeries(null, "Daily");
 
     expect(series.calls.values).toEqual([]);

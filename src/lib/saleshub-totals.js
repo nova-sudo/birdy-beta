@@ -31,6 +31,34 @@ export function sumCallStats(clientGroups, selectedClientGroup) {
   );
 }
 
+/**
+ * Merges each scoped client's daily call series (`hotprospector.daily_calls`)
+ * into one, summed by date — the trend chart's input. Same scoping and same
+ * "sum what the API already sent" rule as sumCallStats, just per-day instead
+ * of per-window.
+ */
+export function mergeDailyCalls(clientGroups, selectedClientGroup) {
+  const scoped =
+    selectedClientGroup && selectedClientGroup !== "all"
+      ? (clientGroups ?? []).filter((g) => g.id === selectedClientGroup)
+      : (clientGroups ?? []);
+
+  const byDate = new Map();
+  for (const g of scoped) {
+    for (const row of g.hotprospector?.daily_calls ?? []) {
+      if (!row?.date) continue;
+      const acc = byDate.get(row.date) ?? { date: row.date, calls: 0, inbound: 0, talk_min: 0, called: 0 };
+      acc.calls += row.calls ?? 0;
+      acc.inbound += row.inbound ?? 0;
+      acc.talk_min += row.talk_min ?? 0;
+      acc.called += row.called ?? 0;
+      byDate.set(row.date, acc);
+    }
+  }
+
+  return [...byDate.values()].sort((a, b) => a.date.localeCompare(b.date));
+}
+
 /** Talk time reads as minutes and keeps its decimal; everything else is a count. */
 const formatTalk = (v) => (Math.round(v * 10) / 10).toLocaleString();
 const formatCount = (v) => Math.round(v).toLocaleString();

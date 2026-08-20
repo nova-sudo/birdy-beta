@@ -1,125 +1,78 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { renderHook, waitFor } from "@testing-library/react"
+import { describe, it, expect } from "vitest"
+import { renderHook } from "@testing-library/react"
 
-vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-
-import { apiRequest } from "@/lib/api"
 import { useSalesHubSeries } from "../useSalesHubSeries"
 
-// 1,400 leads in the window, one call each. More than a single page, which is
-// the whole point: the endpoint orders leads by *creation* date, not by call
-// recency, so the first page is not a sample of the window — it is a biased
-// slice, and a curve drawn off it undercounts by however much it missed.
-const TOTAL = 1400
-
-const leadAt = (i) => ({
-  id: `l${i}`,
-  call_logs: [
-    {
-      call_time_iso: `2026-07-${String((i % 28) + 1).padStart(2, "0")}T10:00:00Z`,
-      call_status: i % 2 === 0 ? "outbound" : "inbound",
-      duration: 60,
+// Two clients, each with their own precomputed daily call series — the shape
+// /api/client-groups now serves as hotprospector.daily_calls. No fetch: the
+// hook reads straight off the client groups it's handed.
+//
+// Dates sit in different months: the "maximum" preset used below buckets by
+// month (see granularityForRange), and a fixed preset keeps these tests from
+// depending on today's date the way a relative window like "last_30d" would.
+const clientGroups = [
+  {
+    id: "g1",
+    hotprospector: {
+      daily_calls: [
+        { date: "2026-06-15", calls: 5, inbound: 2, talk_min: 12, called: 3 },
+        { date: "2026-07-15", calls: 4, inbound: 1, talk_min: 8, called: 1 },
+      ],
     },
-  ],
-})
+  },
+  {
+    id: "g2",
+    hotprospector: {
+      daily_calls: [{ date: "2026-06-15", calls: 3, inbound: 0, talk_min: 6, called: 2 }],
+    },
+  },
+]
 
-const allLeads = Array.from({ length: TOTAL }, (_, i) => leadAt(i))
-
-beforeEach(() => {
-  vi.mocked(apiRequest).mockImplementation((url) => {
-    const params = new URLSearchParams(url.split("?")[1] ?? "")
-    const skip = Number(params.get("skip") ?? 0)
-    const limit = Number(params.get("limit") ?? TOTAL)
-    return Promise.resolve({
-      ok: true,
-      json: async () => ({ data: allLeads.slice(skip, skip + limit), meta: { total: TOTAL } }),
-    })
-  })
-})
-
-const render = () =>
+const render = (overrides = {}) =>
   renderHook(() =>
     useSalesHubSeries({
-      clientGroups: [],
+      clientGroups,
       groupsLoading: false,
-      datePreset: "last_30d",
+      datePreset: "maximum",
       selectedClientGroup: "all",
+      ...overrides,
     })
   )
 
-const plottedCalls = (result) =>
-  result.current.chartMetrics.calls.values.reduce((a, b) => a + b, 0)
-
-// `streaming` starts false, so waiting on it resolves against empty state.
-// Settle on the thing that actually changes: every page landing.
-const settle = (result) =>
-  waitFor(() => expect(plottedCalls(result)).toBe(TOTAL), { timeout: 5000 })
-
 describe("useSalesHubSeries", () => {
-  it("pages through the whole window rather than plotting the first page", async () => {
+  it("sums every client's daily series with no fetch involved", () => {
     const { result } = render()
 
-    // Settles only once every call in the window is counted. A single-page
-    // fetch would stall at the first page's worth and time out here.
-    await settle(result)
-    expect(plottedCalls(result)).toBe(TOTAL)
+    // June bucket: g1's 5 + g2's 3. July bucket: g1's 4 only.
+    expect(result.current.chartMetrics.calls.values).toEqual([8, 4])
+    expect(result.current.loading).toBe(false)
+    expect(result.current.streaming).toBe(false)
   })
 
-  it("asks for every page, starting with a small one", async () => {
-    const { result } = render()
-    await settle(result)
+  it("scopes to one client when selected", () => {
+    const { result } = render({ selectedClientGroup: "g2" })
 
-    const skips = vi
-      .mocked(apiRequest)
-      .mock.calls.map(([url]) => Number(new URLSearchParams(url.split("?")[1]).get("skip")))
-
-    // A small first page so a curve appears quickly, then the rest behind it.
-    expect(skips[0]).toBe(0)
-    expect(new Set(skips).size).toBeGreaterThan(1)
+    expect(result.current.chartMetrics.calls.values).toEqual([3])
   })
 
-  it("drops its coverage note once the whole window has landed", async () => {
+  it("carries no coverage note — there is nothing partial to report", () => {
     const { result } = render()
-    await settle(result)
 
-    // While pages are still arriving the chart says so; complete, it stops
-    // qualifying a figure that no longer needs qualifying.
     expect(result.current.chartMetrics.calls.coverage).toBeNull()
   })
 
-  it("keeps paging past any round number — a window larger than 40,500 leads", async () => {
-    // The regression this pins: an earlier version capped at 40 pages, so a
-    // busy window stopped dead on 40,500 leads and drew a curve that quietly
-    // omitted everything after it. There is no ceiling now.
-    const BIG = 45_000
-    const big = Array.from({ length: BIG }, (_, i) => leadAt(i))
-    vi.mocked(apiRequest).mockImplementation((url) => {
-      const params = new URLSearchParams(url.split("?")[1] ?? "")
-      const skip = Number(params.get("skip") ?? 0)
-      const limit = Number(params.get("limit") ?? BIG)
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ data: big.slice(skip, skip + limit), meta: { total: BIG } }),
-      })
-    })
+  it("marks every metric pending while client groups are still loading", () => {
+    const { result } = render({ groupsLoading: true })
 
+    expect(result.current.chartMetrics.calls.pending).toBe(true)
+    expect(result.current.loading).toBe(true)
+  })
+
+  it("counts inbound separately, on the same axis as total calls", () => {
     const { result } = render()
-
-    await waitFor(
-      () => expect(result.current.chartMetrics.calls.values.reduce((a, b) => a + b, 0)).toBe(BIG),
-      { timeout: 20000 }
-    )
-    expect(result.current.chartMetrics.calls.coverage).toBeNull()
-  }, 30000)
-
-  it("counts inbound separately, on the same axis as total calls", async () => {
-    const { result } = render()
-    await settle(result)
 
     const { calls, inbound } = result.current.chartMetrics
-    const inboundPlotted = inbound.values.reduce((a, b) => a + b, 0)
-
-    expect(inboundPlotted).toBe(TOTAL / 2)
+    expect(inbound.values).toEqual([2, 1])
     expect(inbound.tooltipLabels).toEqual(calls.tooltipLabels)
   })
 })
