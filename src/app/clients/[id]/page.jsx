@@ -11,6 +11,8 @@ import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
 import { ActivityItem } from "@/components/activity/ActivityItem"
 import { useClientGroups } from "@/lib/useClientGroups"
+import { useCurrency } from "@/hooks/useCurrency"
+import getSymbolFromCurrency from "currency-symbol-map"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
@@ -112,6 +114,9 @@ export default function ClientDetailsPage() {
   const [deleteError, setDeleteError] = useState("")
   const [integrationsOpen, setIntegrationsOpen] = useState(false)
 
+  // ── Currency: user's default, overridden by the ad account's own currency ──
+  const { currency: userCurrency } = useCurrency()
+
   // ── Client status (used in Integrations tab) ──────────────────────────────
   const [clientStatus, setClientStatus] = useState(null)
   const [statusLoading, setStatusLoading] = useState(false)
@@ -142,6 +147,16 @@ export default function ClientDetailsPage() {
     () => (matchingGroup ? [matchingGroup] : []),
     [matchingGroup]
   )
+
+  // Spend is reported by Meta in the ad account's own currency — never converted —
+  // so label it with that currency and only fall back to the user's default.
+  const currencySymbol = useMemo(() => {
+    const code =
+      matchingGroup?.facebook?.currency ||
+      matchingGroup?.ad_account_currency ||
+      userCurrency
+    return getSymbolFromCurrency(code) || "$"
+  }, [matchingGroup, userCurrency])
 
   // ── Derived metrics for Overview stat cards ────────────────────────────────
   const metrics = useMemo(() => {
@@ -320,7 +335,7 @@ export default function ClientDetailsPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Total Spend</p>
-                      <h3 className="text-2xl font-bold mt-1">${metrics.totalSpend.toFixed(2)}</h3>
+                      <h3 className="text-2xl font-bold mt-1">{currencySymbol}{metrics.totalSpend.toFixed(2)}</h3>
                     </div>
                     <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <DollarSign className="h-4 w-4 text-purple-500" />
