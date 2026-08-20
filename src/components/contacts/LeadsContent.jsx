@@ -11,11 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import StyledTable from "@/components/ui/table-container"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -40,6 +35,7 @@ import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLeadHubData } from "@/components/contacts/useLeadHubData"
 import { DATE_PRESETS } from "@/lib/constants"
+import { buildPipelineTabs } from "@/lib/lead-hub-aggregate"
 import { Percent, Target, TrendingUp, UserCheck, Users, XCircle } from "lucide-react"
 
 const baseContactColumns = buildContactColumns()
@@ -188,7 +184,7 @@ export function LeadsContent({
   // The headline figures for the window, the window before it, and the rows the
   // four curves are bucketed from. Separate from the table's own query on
   // purpose — see useLeadHubData.
-  const { kpis, insight, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
+  const { current, kpis, insight, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
     datePreset,
     selectedClientGroup,
     dateRangeLabel,
@@ -200,6 +196,19 @@ export function LeadsContent({
   const chartTabs = useMemo(
     () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
     [chartMetrics]
+  )
+
+  // The selected stage's badge takes the primary tint; the rest sit on the
+  // neutral one, so the count you are looking at reads as part of the chip
+  // rather than as a fifth number competing with it.
+  const pipelineTabs = useMemo(
+    () => buildPipelineTabs(current).map(tab => ({
+      ...tab,
+      badgeClassName: tab.key === selectedOpportunityStatus
+        ? "bg-pd-primary-tint text-pd-primary"
+        : "bg-pd-neutral-badge text-pd-subtle",
+    })),
+    [current, selectedOpportunityStatus]
   )
 
   const kpiTiles = useMemo(
@@ -620,31 +629,22 @@ export function LeadsContent({
           </div>
         </div>
 
-        {/* Opportunity Status Filter Tabs */}
-        <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
-          {/* Pipeline tabs on the handoff's segmented-control spec: the track is
-              the divider tint, the selected stage lifts onto white with the
-              purple-tinted shadow. Radix Tabs still drives the behaviour — only
-              the skin changes. The count badges arrive in LH5, once the stage
-              counts come off the same query the table runs. */}
+        {/* Pipeline tabs on the handoff's segmented-control spec, each carrying
+            the count behind it. PdSegmented rather than Radix Tabs: there are
+            no panels here — the table sits outside and re-queries — so what is
+            left is a choice between five values, which is what a radiogroup
+            with roving focus is. It also draws the design's count badges, which
+            Radix's trigger has no slot for. */}
+        <div className="w-full">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
-              {[
-                { value: "all", label: "All Leads" },
-                { value: "open", label: "Open" },
-                { value: "won", label: "Won" },
-                { value: "abandoned", label: "Abandoned" },
-                { value: "lost", label: "Lost" },
-              ].map(tab => (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
-                >
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
+            <PdSegmented
+              label="Pipeline stage"
+              className="overflow-x-auto"
+              itemClassName="px-[15px] py-[7px] text-[13px]"
+              options={pipelineTabs}
+              value={selectedOpportunityStatus}
+              onChange={setSelectedOpportunityStatus}
+            />
 
             {/* Search, Filters and Columns as the handoff's 38px controls,
                 sitting together at the right end of the tab row. */}
@@ -713,7 +713,7 @@ export function LeadsContent({
               )}
             </div>
           </div>
-        </Tabs>
+        </div>
 
         <StyledTable
           columns={contactColumns}
