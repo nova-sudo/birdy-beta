@@ -8,6 +8,7 @@ export { ActivityRow } from "./ActivityRow";
 export { DeltaPill } from "./DeltaPill";
 export { DiagnosticBanner } from "./DiagnosticBanner";
 export { FunnelStepper } from "./FunnelStepper";
+export { InsightCard } from "./InsightCard";
 export { Leaderboard } from "./Leaderboard";
 export { LoadingPulse, FUNNEL_LOADING, CHART_LOADING, CALL_CHART_LOADING } from "./LoadingPulse";
 export { PdCard } from "./PdCard";

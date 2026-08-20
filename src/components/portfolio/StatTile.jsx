@@ -26,8 +26,17 @@ const LAYOUTS = {
   // Same single row as `strip`, tightened to fit six of them two-across in a
   // narrow column beside a chart. The design tried a stacked icon/value/label
   // tile first and says why it went: the section grew taller than the chart it
-  // sits next to, and the row stopped being a row.
+  // sits next to, and the row stopped being a row. Marketing Hub uses the same
+  // shape under the name `compact`.
   tile: {
+    root: "flex min-w-0 items-center gap-[9px] rounded-xl border border-pd-border bg-pd-surface px-3 py-[11px]",
+    chip: "size-7 rounded-lg",
+    icon: "size-[14px]",
+    value: "text-[17px]",
+    label: "mt-[3px] truncate text-[11px] text-pd-subtle",
+    pillSize: "sm",
+  },
+  compact: {
     root: "flex min-w-0 items-center gap-[9px] rounded-xl border border-pd-border bg-pd-surface px-3 py-[11px]",
     chip: "size-7 rounded-lg",
     icon: "size-[14px]",
