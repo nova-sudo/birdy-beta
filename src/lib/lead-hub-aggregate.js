@@ -198,6 +198,130 @@ export function pointsDelta(current, previous, polarity = HIGHER_IS_BETTER) {
 }
 
 /**
+ * Does this row carry an address anyone could actually reach?
+ *
+ * GHL fills a synthetic `no_email_…` address where a contact arrived without
+ * one, so an absent email and a placeholder email are the same thing — a
+ * record nobody can email. The table's Email column already treats them alike.
+ */
+export function hasEmail(row) {
+  const email = row?.email;
+  return Boolean(email) && !String(email).startsWith("no_email_");
+}
+
+/**
+ * How many unreachable records a group needs before it is worth naming.
+ *
+ * Below this the sentence would be pointing at ordinary noise, and an insight
+ * that cries wolf on a healthy account stops being read at all.
+ */
+export const LEAD_POOL_FLOOR = 10;
+
+/**
+ * The client group leaking the most reachable records, and how many.
+ *
+ * A record with no email can be called but not emailed, which makes it the
+ * cheapest untouched pool an agency has — and it is nearly always one client's
+ * form dropping the field rather than a spread across all of them, which is
+ * what makes naming the group actionable rather than a statistic.
+ *
+ * @returns {{group: string, count: number} | null}
+ */
+export function largestUnreachablePool(rows, floor = LEAD_POOL_FLOOR) {
+  const byGroup = new Map();
+
+  for (const row of rows ?? []) {
+    if (hasEmail(row)) continue;
+    const group = row?.groupName;
+    if (!group) continue;
+    byGroup.set(group, (byGroup.get(group) ?? 0) + 1);
+  }
+
+  const [group, count] = [...byGroup.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  if (!group || count < floor) return null;
+
+  return { group, count };
+}
+
+/**
+ * The Birdy Insights copy for this period.
+ *
+ * The handoff asks for two sentences generated from the data: the headline
+ * movement, then the single most actionable anomaly with its numbers. Both come
+ * from figures already on the screen — no extra endpoint, and nothing asserted
+ * that the rows don't say.
+ *
+ * Returns null when there is nothing worth claiming, so the card can render a
+ * plain waiting state rather than a sentence with holes in it.
+ *
+ * Segments are pre-split rather than a string because the figures and client
+ * names inside the sentence are emphasised; building that from markup here
+ * would mean the copy carried its own styling.
+ *
+ * @param {ReturnType<typeof normaliseLeadStats>} current
+ * @param {ReturnType<typeof normaliseLeadStats>|null} previous
+ * @param {object[]} rows the sampled rows the chart is bucketed from
+ * @param {boolean} sampled whether those rows hit their limit
+ * @returns {{segments: {text: string, strong?: boolean}[]} | null}
+ */
+export function buildLeadInsight(current, previous, rows, sampled = false) {
+  if (!current || current.leads + current.contacts <= 0) return null;
+
+  const segments = [];
+  const say = (text) => segments.push({ text });
+  const emphasise = (text) => segments.push({ text, strong: true });
+
+  // ── Sentence one: the headline movement ────────────────────────────────
+  const leadMove = percentDelta(current.leads, previous?.leads);
+  const rate = `${current.conversionRate.toFixed(1)}%`;
+  const rateMove = pointsDelta(current.conversionRate, previous?.conversionRate);
+
+  if (leadMove) {
+    say("Lead volume is ");
+    say(leadMove.direction === "up" ? "up " : "down ");
+    emphasise(leadMove.delta);
+    if (rateMove) {
+      // The interesting period is the one where the two disagree — volume
+      // rising while the rate falls is the whole reason both are on the card.
+      const agrees = (leadMove.direction === "up") === (rateMove.direction === "up");
+      say(agrees ? " and conversion has " : " but conversion has ");
+      say(rateMove.direction === "up" ? "risen to " : "fallen to ");
+      emphasise(rate);
+      say(". ");
+    } else {
+      say(" at ");
+      emphasise(rate);
+      say(" conversion. ");
+    }
+  } else {
+    // No comparable previous period — state the position rather than a move.
+    say("You're at ");
+    emphasise(Math.round(current.leads).toLocaleString());
+    say(" leads and ");
+    emphasise(Math.round(current.contacts).toLocaleString());
+    say(" contacts this period, converting at ");
+    emphasise(rate);
+    say(". ");
+  }
+
+  // ── Sentence two: the largest pool nobody can email ─────────────────────
+  const pool = largestUnreachablePool(rows);
+  if (!pool) {
+    say("Every client group is capturing an email on nearly all of its records — nothing is going unreachable right now.");
+    return { segments };
+  }
+
+  emphasise(pool.group);
+  // The count comes from a sample on long windows, so it is a floor rather
+  // than a total. Saying "at least" is what keeps it a fact.
+  say(sampled ? " has at least " : " has ");
+  emphasise(pool.count.toLocaleString());
+  say(" records with no email captured — fixing that form would unlock your largest untouched pool.");
+
+  return { segments };
+}
+
+/**
  * The six KPI tiles, with deltas wherever a previous period exists.
  *
  * Two of them are inverted, and the design is explicit that they are coloured
