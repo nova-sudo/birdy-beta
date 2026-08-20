@@ -37,6 +37,55 @@ const num = (v) => {
 const fmt = (d) => format(d, "yyyy-MM-dd");
 
 /**
+ * How many rows the chart asks for to draw its curves.
+ *
+ * There is no per-day endpoint for GHL contacts, so the shape of every series
+ * on this screen is bucketed from rows. Windows longer than this return a
+ * sample, and `scaleSeriesToTotal` puts that sample's shape onto the real
+ * total from meta.stats — see the hook for what that does and does not fix.
+ */
+export const LEAD_SERIES_LIMIT = 2000;
+
+/**
+ * How finely to slice the selected window.
+ *
+ * The Portfolio Dashboard makes this a control because its window and its
+ * granularity are separate questions there. Here the header already carries
+ * two chips and the handoff draws no third, so the window picks its own: a
+ * week of daily points is a curve, a year of them is a smear.
+ */
+export function granularityFor(preset) {
+  if (preset === "this_quarter" || preset === "last_quarter") return "Weekly";
+  if (preset === "this_year" || preset === "last_year" || preset === "maximum") return "Monthly";
+  return "Daily";
+}
+
+/**
+ * Lead or contact?
+ *
+ * This is the core distinction on the screen: a *lead* submitted a form and
+ * carries an email, tags, an opportunity status and a value, while a *contact*
+ * was captured some other way — usually an inbound call — and often carries
+ * none of them. The backend classifies on first-touch attribution
+ * (services/contact_classifier.py); this only reads the answer, from whichever
+ * of the two field names the row happens to use.
+ */
+export function isLeadRow(row) {
+  return String(row?.contactType ?? row?.type ?? "").toLowerCase() === "lead";
+}
+
+/**
+ * A row's opportunity stage, or null where it has no opportunity at all.
+ *
+ * Contacts have no status, and the design renders that as an explicit em dash
+ * rather than as a blank or a zero-th stage.
+ */
+export function rowStatus(row) {
+  const status = row?.opportunities?.[0]?.status ?? row?.opportunityStatus;
+  return status ? String(status).toLowerCase() : null;
+}
+
+/**
  * Presets that are a *prefix* of a calendar unit still running.
  *
  * Month-to-date on the 9th covers nine days, so its predecessor is the first

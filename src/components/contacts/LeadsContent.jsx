@@ -36,9 +36,10 @@ import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
 import { portfolioFontClass } from "@/app/dashboard/fonts"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useHeaderSlot } from "@/components/dashboard-controls"
-import { StatTile } from "@/components/portfolio"
+import { CHART_LOADING, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useLeadHubData } from "@/components/contacts/useLeadHubData"
+import { DATE_PRESETS } from "@/lib/constants"
 import { Percent, Target, TrendingUp, UserCheck, Users, XCircle } from "lucide-react"
 
 const baseContactColumns = buildContactColumns()
@@ -177,13 +178,29 @@ export function LeadsContent({
   const [searchTerm, setSearchTerm] = useState("")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  // The headline figures for the window, and the window before it. Separate
-  // from the table's own query on purpose — see useLeadHubData.
-  const { kpis, statsLoading } = useLeadHubData({
+  const [chartMetric, setChartMetric] = useState("leads")
+
+  const dateRangeLabel = useMemo(
+    () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
+    [datePreset]
+  )
+
+  // The headline figures for the window, the window before it, and the rows the
+  // four curves are bucketed from. Separate from the table's own query on
+  // purpose — see useLeadHubData.
+  const { kpis, chartMetrics, chartFor, statsLoading, seriesLoading } = useLeadHubData({
     datePreset,
     selectedClientGroup,
+    dateRangeLabel,
     ready: !groupsLoading && ghlClientGroups.length > 0,
   })
+
+  const chart = useMemo(() => chartFor(chartMetric), [chartFor, chartMetric])
+
+  const chartTabs = useMemo(
+    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
+    [chartMetrics]
+  )
 
   const kpiTiles = useMemo(
     () => kpis.map(k => ({ ...k, ...(LEAD_KPI_PRESENTATION[k.key] ?? {}) })),
@@ -514,32 +531,76 @@ export function LeadsContent({
             above. The handoff puts both in the header, so the page starts
             straight at its content. */}
 
-        {/* The handoff's six KPI tiles. They describe the whole period, not the
-            open pipeline tab, and a metric with no comparable previous period
-            renders without a pill rather than with a zero — an unknown delta is
-            not a flat one.
+        {/* ── Hero row: trend chart (1.65) · KPI tiles (0.85) ────────────────
+            The handoff's "chart + insights row". Six tiles sit in a 1fr 1fr
+            grid beside the chart so the column's height matches it.
 
-            LH3 moves this grid into the column beside the trend chart, which is
-            where the design puts it; it runs full width until there is a chart
-            to sit next to. */}
-        <div className="grid grid-cols-2 gap-[10px] md:grid-cols-3 lg:grid-cols-6">
-          {groupsLoading || statsLoading
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-[52px] rounded-xl" />
-              ))
-            : kpiTiles.map(tile => (
-                <StatTile
-                  key={tile.key}
-                  layout="compact"
-                  icon={tile.icon}
-                  tone={tile.tone}
-                  value={tile.value}
-                  label={tile.label}
-                  direction={tile.direction}
-                  delta={tile.delta}
-                  polarity={tile.polarity}
-                />
-              ))}
+            The tiles describe the whole period rather than the open pipeline
+            tab, and a metric with no comparable previous period renders without
+            a pill rather than with a zero — an unknown delta is not a flat one.
+
+            LH4 puts the Birdy Insights card above the tiles, where the design
+            has it. */}
+        <div className="flex flex-col gap-[18px] lg:flex-row lg:items-stretch">
+          <div className="flex min-w-0 flex-col lg:flex-[1.65]">
+            {groupsLoading || seriesLoading || statsLoading ? (
+              <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
+            ) : chart ? (
+              <TrendChart
+                className="flex-1"
+                chart={chart}
+                metrics={chartTabs}
+                activeMetric={chartMetric}
+                onMetricChange={setChartMetric}
+                redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup ?? "all"}`}
+              />
+            ) : (
+              <PdCard
+                className="flex-1"
+                title={chartMetrics[chartMetric]?.title ?? "Trend"}
+                // The metric tabs live inside TrendChart, so without them here
+                // a metric with no series would be a dead end — you could
+                // select it and have no way back to one that plots.
+                action={
+                  <PdSegmented
+                    label="Chart metric"
+                    className="shrink-0"
+                    itemClassName="px-[13px] py-[7px]"
+                    options={chartTabs.map(m => ({ key: m.key, label: m.tab }))}
+                    value={chartMetric}
+                    onChange={setChartMetric}
+                  />
+                }
+              >
+                <p className="py-8 text-center text-[12px] text-pd-faint">
+                  No leads or contacts were added in this window, so there is
+                  nothing dated to plot.
+                </p>
+              </PdCard>
+            )}
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+            <div className="grid grid-cols-2 gap-[10px]">
+              {groupsLoading || statsLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-[52px] rounded-xl" />
+                  ))
+                : kpiTiles.map(tile => (
+                    <StatTile
+                      key={tile.key}
+                      layout="compact"
+                      icon={tile.icon}
+                      tone={tile.tone}
+                      value={tile.value}
+                      label={tile.label}
+                      direction={tile.direction}
+                      delta={tile.delta}
+                      polarity={tile.polarity}
+                    />
+                  ))}
+            </div>
+          </div>
         </div>
 
         {/* Opportunity Status Filter Tabs */}
