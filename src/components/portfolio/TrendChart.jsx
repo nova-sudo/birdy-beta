@@ -25,7 +25,11 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
     [chart.values]
   );
 
-  const tone = deltaTone(chart.direction);
+  // Cost metrics invert: the Marketing Hub's CPL tab is bad news when it
+  // rises, and has to read red even though the arrow points up. Colour by
+  // meaning, never by direction. Metrics that pass no polarity keep the
+  // higher-is-better default this chart already used.
+  const tone = deltaTone(chart.direction, chart.polarity);
   const lastIndex = points.length - 1;
 
   // bucketSeries blanks most labels so a long axis stays readable; the two it
