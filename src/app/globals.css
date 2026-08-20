@@ -135,6 +135,12 @@
     --pd-surface: #ffffff;
     --pd-canvas: #F7F7FB;
     --pd-scroll: #DEDCE8;
+    /* Table head and the alternate row. Both sit a hair off white on purpose:
+       the stripe is meant to help the eye track a wide row across, not to
+       divide the table into bands. */
+    --pd-table-head: #FAFAFC;
+    --pd-row-zebra: #FCFCFD;
+    --pd-row-border: #F5F5F8;
     --pd-success: #25A55F;
     --pd-success-bg: #EDF8F1;
     --pd-danger: #E5484D;
@@ -228,6 +234,9 @@
   --color-pd-chevron: var(--pd-chevron);
   --color-pd-surface: var(--pd-surface);
   --color-pd-canvas: var(--pd-canvas);
+  --color-pd-table-head: var(--pd-table-head);
+  --color-pd-row-zebra: var(--pd-row-zebra);
+  --color-pd-row-border: var(--pd-row-border);
   --color-pd-success: var(--pd-success);
   --color-pd-success-bg: var(--pd-success-bg);
   --color-pd-danger: var(--pd-danger);

@@ -80,6 +80,11 @@ const StyledTable = ({
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
+  // The table opens sorted by spend, and used to advertise that with a ↓ on the
+  // header. But an arrow the reader never asked for reads as a control they left
+  // switched on. It stays hidden until someone actually sorts — the default
+  // ordering is unchanged, only the claim about it is withheld.
+  const [hasSorted, setHasSorted] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
 
@@ -404,6 +409,10 @@ const StyledTable = ({
 
   /* ---------- SORT HANDLER ---------- */
   const handleSort = (columnId) => {
+    // Only a real click reveals the indicator. The fallback below that picks a
+    // sort key when none is set is housekeeping, not a choice the reader made,
+    // so it deliberately does not flip this.
+    setHasSorted(true);
     setSortConfig((prev) => ({
       key: columnId,
       direction:
@@ -524,59 +533,42 @@ const StyledTable = ({
 
   return (
     <div className="space-y-4">
+      {/* Zebra rows are painted here rather than with Tailwind classes because
+          the name column is `position: sticky` — it scrolls over its
+          neighbours, so it needs an opaque background of its own that matches
+          the row it belongs to. The two have to agree, and a token is the only
+          way to keep them agreeing. */}
       <style jsx>{`
+        .fixed-column-even,
+        .fixed-column-odd,
+        .fixed-header {
+          text-align: left;
+          min-width: 200px;
+          max-width: 245px;
+          width: 245px;
+        }
+
+        .fixed-column-even {
+          background: var(--pd-surface);
+        }
+        .fixed-column-odd {
+          background: var(--pd-row-zebra);
+        }
+        .fixed-header {
+          background: var(--pd-table-head);
+        }
+
         @media (min-width: 768px) {
-          .fixed-column-even {
-            text-align: left;
-            position: sticky;
-            left: var(--name-sticky-left, 0px);
-            background: white;
-            z-index: 30;
-            min-width: 200px;
-            font-weight: 565;
-            max-width: 245px;
-            width: 245px;
-          }
+          .fixed-column-even,
           .fixed-column-odd {
-            text-align: left;
             position: sticky;
             left: var(--name-sticky-left, 0px);
-            background: #f4f3f9;
             z-index: 30;
-            min-width: 200px;
-            font-weight: 565;
-            max-width: 245px;
-            width: 245px;
           }
           .fixed-header {
             position: sticky;
             left: var(--name-sticky-left, 0px);
             z-index: 40;
-            background: white;
-            min-width: 200px;
-            max-width: 245px;
-            width: 245px;
-          }
-        }
-
-        @media (max-width: 767px) {
-          .fixed-column-even,
-          .fixed-column-odd {
-            text-align: left;
-            background: white;
-            min-width: 200px;
-            max-width: 245px;
-            width: 245px;
-            font-weight: 575;
-          }
-          .fixed-column-odd {
-            background: #f4f3f9;
-          }
-          .fixed-header {
-            background: white;
-            min-width: 200px;
-            max-width: 245px;
-            width: 245px;
           }
         }
 
@@ -593,20 +585,22 @@ const StyledTable = ({
 
       {/* Table */}
       <div
-        className="table-container border rounded-md"
+        className="table-container rounded-2xl border border-pd-border bg-pd-surface"
         style={{
           "--name-sticky-left": `${nameStickyLeft}px`,
           overflowX: isEmptyState ? "hidden" : "auto",
         }}
       >
-        <table className="text-sm w-full" style={isEmptyState ? { width: "100%" } : undefined}>
-          <thead className="top-0 z-40">
-            <tr className="transition-colors data-[state=selected]:bg-muted h-12 bg-white">
+        <table className="w-full text-sm" style={isEmptyState ? { width: "100%" } : undefined}>
+          {/* Uppercase, letter-spaced and a shade off white — the header reads
+              as a label strip rather than a first row of data. */}
+          <thead className="top-0 z-40 border-b border-pd-border bg-pd-table-head text-[12.5px] font-bold tracking-[.03em] text-pd-faint uppercase">
+            <tr className="h-12 bg-pd-table-head transition-colors">
 
               {/* Checkbox header — sticky at left: 0 */}
               {enableSelection && (
                 <th
-                  className="h-12 w-10 px-2 pr-0 min-w-0 bg-white"
+                  className="h-12 w-10 min-w-0 bg-pd-table-head px-2 pr-0"
                   style={{ position: 'sticky', left: 0, zIndex: 51 }}
                 >
                   <div className="flex items-center">
@@ -634,7 +628,7 @@ const StyledTable = ({
               {/* ── Status toggle column — ONLY when NOT isClientMode ── */}
               {showToggleCol && (
                 <th
-                  className="h-12 w-[70px] min-w-[70px] px-1 bg-white text-xs font-semibold text-gray-900/78"
+                  className="h-12 w-[70px] min-w-[70px] bg-pd-table-head px-1"
                   style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 51 }}
                 >
                   <div className="flex items-center justify-center">Status</div>
@@ -648,7 +642,7 @@ const StyledTable = ({
                     onDragStart={(e) => handleDragStart(e, col.id, colIdx)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, col.id, colIdx)}
-                    className={`h-12 font-semibold text-gray-900/78 select-none cursor-default ${
+                    className={`h-12 cursor-default select-none ${
                       colIdx === 0
                         ? "fixed-header"
                         : isEmptyState
@@ -656,34 +650,45 @@ const StyledTable = ({
                           : "min-w-[135px] whitespace-nowrap"
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
-                      <div className="flex items-center gap-1 min-w-0">
-                        <button
-                          onClick={() => col.sortable && handleSort(col.id)}
-                          className={`truncate align-middle text-left items-center gap-1 ${
-                            col.sortable ? "hover:text-foreground cursor-pointer" : "cursor-default"
-                          }`}
-                        >
+                    {/* No vertical rule between columns: the design separates
+                        them by alignment and spacing, and a grid of hairlines
+                        competes with the figures.
+
+                        The source icon sits at the far end, away from the
+                        label, so it marks where the column came from without
+                        crowding the word it belongs to. */}
+                    <div className="flex h-full w-full items-center gap-2 px-[22px]">
+                      <button
+                        onClick={() => col.sortable && handleSort(col.id)}
+                        className={`flex min-w-0 items-center gap-1 truncate text-left align-middle ${
+                          col.sortable ? "cursor-pointer hover:text-pd-ink" : "cursor-default"
+                        }`}
+                      >
+                        <span className="truncate">
                           {typeof col.header === "function" ? col.header() : col.header}
-                          {col.sortable && sortConfig.key === col.id && (
-                            <span className="text-sm px-2 text-right">
-                              {sortConfig.direction === "asc" ? "↑" : "↓ "}
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                      <div className="flex-shrink-0 ml-auto">
+                        </span>
+                        {col.sortable && hasSorted && sortConfig.key === col.id && (
+                          // The active sort column takes the ink colour, so
+                          // the arrow is legible against the muted header.
+                          <span className="shrink-0 text-sm text-pd-ink">
+                            {sortConfig.direction === "asc" ? "↑" : "↓"}
+                          </span>
+                        )}
+                      </button>
+
+                      <div className="ml-auto shrink-0">
                         {col.icons ? (
                           typeof col.icons === "function" ? (
                             (() => {
                               const Icon = col.icons;
-                              return <Icon className="h-4 w-4 text-muted-foreground" />;
+                              return <Icon className="size-4 text-pd-faint" aria-hidden="true" />;
                             })()
                           ) : (
                             <img
                               src={col.icons.src ? col.icons.src : col.icons}
-                              alt={`${col.label} icon`}
-                              className="text-muted-foreground object-scale-down size-4"
+                              alt=""
+                              aria-hidden="true"
+                              className="size-4 object-scale-down"
                             />
                           )
                         ) : null}
@@ -693,9 +698,9 @@ const StyledTable = ({
 
                   {/* ── Dedicated Status column — client mode only, right after Business Name ── */}
                   {colIdx === 0 && isClientMode && (
-                    <th className="h-12 w-[110px] min-w-[110px] font-semibold text-gray-900/78 select-none cursor-default whitespace-nowrap">
-                      <div className="flex items-center justify-between w-full border border-1 border-l-0 border-t-0 border-b-0 px-2 border-[#e4e4e7] h-full gap-2">
-                        <div className="flex items-center gap-1 min-w-0">Status</div>
+                    <th className="h-12 w-[110px] min-w-[110px] cursor-default select-none whitespace-nowrap">
+                      <div className="flex h-full w-full items-center justify-between gap-2 px-[22px]">
+                        <div className="flex min-w-0 items-center gap-1">Status</div>
                       </div>
                     </th>
                   )}
@@ -710,24 +715,24 @@ const StyledTable = ({
               Array.from({ length: pageSize }).map((_, idx) => (
                 <tr
                   key={`skeleton-${idx}`}
-                  className={`border-b ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                  className={`border-b border-pd-row-border ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
                 >
                   {enableSelection && (
                     <td
-                      className={`w-10 px-2 pr-0 min-w-0 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                      className={`w-10 min-w-0 px-2 pr-0 ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
                       style={{ position: 'sticky', left: 0, zIndex: 30 }}
                     >
-                      <Skeleton className="h-4 w-4 rounded" />
+                      <Skeleton className="size-4 rounded" />
                     </td>
                   )}
 
                   {showToggleCol && (
                     <td
-                      className={`w-[70px] min-w-[70px] px-1 ${idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}`}
+                      className={`w-[70px] min-w-[70px] px-1 ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
                       style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                     >
                       <div className="flex items-center justify-center">
-                        <Skeleton className="h-5 w-9 rounded-full" />
+                        <Skeleton className="h-[19px] w-[34px] rounded-full" />
                       </div>
                     </td>
                   )}
@@ -738,19 +743,17 @@ const StyledTable = ({
                   ).map((col, colIdx) => (
                     <Fragment key={`skeleton-${idx}-${col.id}`}>
                       <td
-                        className={`text-foreground truncate ${
+                        className={`truncate ${
                           colIdx === 0
-                            ? idx % 2 === 0
-                              ? "fixed-column-odd h-11"
-                              : "fixed-column-even h-11"
+                            ? `${idx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11`
                             : ""
                         }`}
                       >
                         <div
                           className={
                             colIdx === 0
-                              ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
-                              : "flex items-center px-2 h-11"
+                              ? "flex min-w-0 items-center gap-2 px-[22px] py-3"
+                              : "flex h-11 items-center px-[22px]"
                           }
                         >
                           <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
@@ -758,8 +761,8 @@ const StyledTable = ({
                       </td>
 
                       {colIdx === 0 && isClientMode && (
-                        <td className={idx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white"}>
-                          <div className="flex items-center px-2 h-11">
+                        <td className={idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}>
+                          <div className="flex h-11 items-center px-[22px]">
                             <Skeleton className="h-5 w-16 rounded-full" />
                           </div>
                         </td>
@@ -775,14 +778,15 @@ const StyledTable = ({
                   colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0) + (isClientMode ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
-                  <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground py-10">
+                  <div className="flex flex-col items-center justify-center gap-2 py-10 text-pd-faint">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      className="h-8 w-8 opacity-30"
+                      className="size-8 opacity-40"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
                       strokeWidth={1.5}
+                      aria-hidden="true"
                     >
                       <path
                         strokeLinecap="round"
@@ -790,8 +794,12 @@ const StyledTable = ({
                         d="M9.75 9.75h.008v.008H9.75V9.75zm4.5 0h.008v.008h-.008V9.75zM12 3a9 9 0 100 18A9 9 0 0012 3zm0 13.5a1.5 1.5 0 110-3 1.5 1.5 0 010 3z"
                       />
                     </svg>
-                    <p className="text-sm font-medium">{emptyMessage?.title ?? "No data available"}</p>
-                    <p className="text-xs opacity-60">{emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}</p>
+                    <p className="text-[13.5px] font-semibold text-pd-ink">
+                      {emptyMessage?.title ?? "No data available"}
+                    </p>
+                    <p className="text-[12px]">
+                      {emptyMessage?.subtitle ?? "Try adjusting your filters or date range"}
+                    </p>
                   </div>
                 </td>
               </tr>
@@ -800,7 +808,10 @@ const StyledTable = ({
               paginatedData.map((row, idx) => {
                 const globalIdx = (currentPage - 1) * pageSize + idx;
                 const isSelected = enableSelection && selectedRows.has(row.id);
-                const rowBg = globalIdx % 2 === 0 ? "bg-[#F4F3F9]" : "bg-white";
+                // Alternating white and a hair off it. The stripe is there to
+                // help the eye track one row across a wide table, not to band
+                // the table — anything heavier competes with the figures.
+                const rowBg = globalIdx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface";
                 const isToggling = showToggleCol && togglingRows.has(row.id);
                 const isActive = String(row.status).toLowerCase() === "active";
 
@@ -809,16 +820,16 @@ const StyledTable = ({
                     key={`${row.id ?? 'row'}-${idx}`}
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
-                    className={`border-b transition-colors ${
+                    className={`border-b border-pd-row-border transition-colors ${
                       (row._isCreating || row._isPending)
-                        ? "bg-muted/30 cursor-wait opacity-60 w-fit"
-                        : "hover:bg-muted/50 cursor-pointer w-fit"
-                    } ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
+                        ? "w-fit cursor-wait bg-muted/30 opacity-60"
+                        : "w-fit cursor-pointer hover:bg-pd-divider/60"
+                    } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
                     {/* Checkbox cell */}
                     {enableSelection && (
                       <td
-                        className={`w-10 px-2 pr-0 min-w-0 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
+                        className={`w-10 px-2 pr-0 min-w-0 ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                         style={{ position: 'sticky', left: 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -839,7 +850,7 @@ const StyledTable = ({
                     {/* ── Toggle switch cell — ONLY when NOT isClientMode ── */}
                     {showToggleCol && (
                       <td
-                        className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-primary/5" : ""}`}
+                        className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                         style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -848,15 +859,21 @@ const StyledTable = ({
                             <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
                           </div>
                         ) : (
+                          // 34 × 19 pill around a 15px knob, per the handoff.
+                          // Laid out with justify-content rather than a
+                          // translate so the knob lands on the padding edge at
+                          // either end without a hand-tuned offset.
                           <button
+                            type="button"
+                            role="switch"
+                            aria-checked={isActive}
+                            aria-label={`${isActive ? "Pause" : "Activate"} ${row.name || row.id}`}
                             onClick={() => onStatusToggle?.(row.id, row.status)}
-                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors ${
-                              isActive ? "bg-purple-600" : "bg-gray-300"
+                            className={`flex h-[19px] w-[34px] shrink-0 cursor-pointer items-center rounded-full p-0.5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary ${
+                              isActive ? "justify-end bg-pd-primary" : "justify-start bg-pd-chevron"
                             }`}
                           >
-                            <span className={`pointer-events-none inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform ${
-                              isActive ? "translate-x-[18px]" : "translate-x-[3px]"
-                            }`} />
+                            <span className="pointer-events-none block size-[15px] rounded-full bg-white shadow-sm" />
                           </button>
                         )}
                       </td>
@@ -865,19 +882,19 @@ const StyledTable = ({
                     {visibleColumns.map((col, colIdx) => (
                       <Fragment key={`${row.id || idx}-${col.id}`}>
                         <td
-                          className={`text-foreground truncate ${
+                          className={`truncate ${
                             colIdx === 0
-                              ? globalIdx % 2 === 0
-                                ? "fixed-column-odd h-11"
-                                : "fixed-column-even h-11"
-                              : ""
-                          } ${isSelected && colIdx === 0 ? "!bg-primary/5" : ""}`}
+                              ? // The name carries the row: heavier, in ink,
+                                // against numerics that sit back in body grey.
+                                `${globalIdx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11 text-[14px] font-semibold text-pd-ink`
+                              : "text-[13.5px] text-pd-body"
+                          } ${isSelected && colIdx === 0 ? "!bg-pd-primary-tint" : ""}`}
                         >
                           <div
                             className={
                               colIdx === 0
-                                ? "py-3 px-2 border border-1 border-l-0 border-t-0 border-b-0 border-[#e4e4e7] flex items-center gap-2 min-w-0"
-                                : "min-w-0 px-2"
+                                ? "flex min-w-0 items-center gap-2 px-[22px] py-3"
+                                : "min-w-0 px-[22px]"
                             }
                           >
                             <TooltipProvider>
@@ -914,8 +931,8 @@ const StyledTable = ({
 
                         {/* ── Dedicated Status cell — client mode only, right after Business Name ── */}
                         {colIdx === 0 && isClientMode && (
-                          <td className={isSelected ? "!bg-primary/5" : ""}>
-                            <div className="flex items-center px-2 h-11">
+                          <td className={isSelected ? "!bg-pd-primary-tint" : ""}>
+                            <div className="flex h-11 items-center px-[22px]">
                               {!isRowLoading?.(row) && row.status && (
                                 <span
                                   className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
