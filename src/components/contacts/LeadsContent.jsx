@@ -581,9 +581,15 @@ export function LeadsContent({
                   />
                 }
               >
+                {/* Two different absences, and they need different sentences:
+                    an account with nothing connected has no data source at all,
+                    where a connected one with an empty window has a source that
+                    reported nothing. Telling someone to "try another date
+                    range" when they have no integration is a dead end. */}
                 <p className="py-8 text-center text-[12px] text-pd-faint">
-                  No leads or contacts were added in this window, so there is
-                  nothing dated to plot.
+                  {ghlClientGroups.length === 0
+                    ? "No client group here has GoHighLevel connected, so there are no leads to plot."
+                    : "No leads or contacts were added in this window, so there is nothing dated to plot."}
                 </p>
               </PdCard>
             )}
