@@ -164,15 +164,53 @@ export function previousWindow(preset) {
 export function normaliseLeadStats(stats) {
   if (!stats) return null;
 
+  // Won and abandoned are read as nullable rather than defaulted to zero. Only
+  // four of the six stage figures are ones this screen has always relied on;
+  // a stage the payload doesn't carry should show no badge, because "nothing
+  // in this stage" and "this stage wasn't counted" are different claims and a
+  // zero would state the first while meaning the second.
+  const optional = (v) => (v == null ? null : num(v));
+
   return {
     leads: num(stats.lead_count),
     contacts: num(stats.contact_count),
     opportunities: num(stats.total_opportunities),
     open: num(stats.open),
     lost: num(stats.lost),
+    won: optional(stats.won),
+    abandoned: optional(stats.abandoned),
     // Already in percentage units on the wire — 2.6 means 2.6%.
     conversionRate: num(stats.conversion_rate),
   };
+}
+
+/**
+ * The five pipeline tabs and the count behind each.
+ *
+ * Counts come from the same window-and-group aggregate the tiles read, not
+ * from the table's own query — the table's is narrowed to the open tab, so
+ * reading the badges off it would leave every tab but the current one showing
+ * that tab's figure.
+ *
+ * A stage with no count renders with no badge at all.
+ */
+export function buildPipelineTabs(current) {
+  const stats = current ?? {};
+  const stage = (value) => (value == null ? null : Math.round(value).toLocaleString());
+
+  return [
+    // Every record in the window, leads and contacts alike — this tab lists
+    // both, and a contact has no opportunity stage to fall under.
+    {
+      key: "all",
+      label: "All Leads",
+      badge: current ? stage(num(stats.leads) + num(stats.contacts)) : null,
+    },
+    { key: "open", label: "Open", badge: stage(stats.open) },
+    { key: "won", label: "Won", badge: stage(stats.won) },
+    { key: "abandoned", label: "Abandoned", badge: stage(stats.abandoned) },
+    { key: "lost", label: "Lost", badge: stage(stats.lost) },
+  ];
 }
 
 /**
