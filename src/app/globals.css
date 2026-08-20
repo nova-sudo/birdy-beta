@@ -152,6 +152,18 @@
     --pd-healthy-border: #D5EEDF;
     --pd-neutral-badge: #E7E7ED;
 
+    /* Added for the Lead Hub. Its table is the first on this design
+       system with a header row, zebra striping and empty cells, and
+       those greys are a shade apart from the ones above — close
+       enough that reaching for --pd-divider instead would flatten the
+       distinction the design draws between a row border, a striped
+       row and the header behind them. */
+    --pd-field: #F4F4F8;
+    --pd-divider-soft: #F5F5F8;
+    --pd-table-head: #FAFAFC;
+    --pd-row-zebra: #FCFCFD;
+    --pd-border-input: #DFDFE8;
+
     /* Shadows — one per role in the design's shadow table. */
     --pd-shadow-segment: 0 2px 8px -2px rgba(107, 78, 230, 0.35);
     --pd-shadow-popover: 0 14px 34px -12px rgba(30, 25, 60, 0.28);
@@ -243,6 +255,11 @@
   --color-pd-healthy-surface: var(--pd-healthy-surface);
   --color-pd-healthy-border: var(--pd-healthy-border);
   --color-pd-neutral-badge: var(--pd-neutral-badge);
+  --color-pd-field: var(--pd-field);
+  --color-pd-divider-soft: var(--pd-divider-soft);
+  --color-pd-table-head: var(--pd-table-head);
+  --color-pd-row-zebra: var(--pd-row-zebra);
+  --color-pd-border-input: var(--pd-border-input);
 
   --shadow-pd-segment: var(--pd-shadow-segment);
   --shadow-pd-popover: var(--pd-shadow-popover);

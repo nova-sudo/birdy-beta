@@ -28,6 +28,16 @@ import { ErrorBanner } from "@/components/ErrorBanner"
 import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
 
+// The Lead Hub is drawn on the design system in
+// design_handoff_hubs/Birdy Style Guide.md, against
+// design_handoff_hubs/Lead Hub.dc.html — Poppins for headings and numerals,
+// Inter for body, on the --pd-* tokens in globals.css. The Portfolio Dashboard
+// and the Marketing Hub came from the same bundle, so both are already
+// implemented and this screen scopes them rather than restating them.
+import { portfolioFontClass } from "@/app/dashboard/fonts"
+import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
+import { useHeaderSlot } from "@/components/dashboard-controls"
+
 const baseContactColumns = buildContactColumns()
 
 export function LeadsContent({
@@ -420,127 +430,96 @@ export function LeadsContent({
     [gridItems, groupSearch]
   )
 
+  // ── Top-bar slots ─────────────────────────────────────────────────────────
+  // The handoff puts the title and both filters in the 64px header bar rather
+  // than on the page. That bar is src/app/layout.jsx's, rendered above this
+  // component in the tree, so the two are joined through the context in
+  // dashboard-controls instead of by markup.
+  //
+  // `showHeader` is false where LeadsContent is embedded in the client detail
+  // page; that copy must not claim the top bar from the route that owns it.
+  const headerControls = useMemo(() => {
+    if (!showHeader) return null
+
+    return (
+      <div className="flex items-center gap-[10px]">
+        {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
+        {showGroupFilter && ghlClientGroups.length > 0 && (
+          <ClientGroupPicker
+            gridRef={gridRef}
+            open={gridOpen}
+            setOpen={setGridOpen}
+            label={selectedGroupLabel}
+            search={groupSearch}
+            setSearch={setGroupSearch}
+            items={filteredGridItems}
+            selectedId={selectedClientGroup}
+            onSelect={setSelectedClientGroup}
+          />
+        )}
+      </div>
+    )
+    // Every value read here is either primitive or already memoised, so this
+    // node is stable between renders that don't change a control — which it
+    // has to be, since useHeaderSlot holds it in state.
+  }, [
+    showHeader, setDatePreset, datePreset, showGroupFilter, ghlClientGroups.length,
+    gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
+  ])
+
+  useHeaderSlot({
+    title: showHeader ? "Lead Hub" : undefined,
+    subtitle: showHeader ? "Every lead and contact across all client groups" : undefined,
+    controls: headerControls,
+  })
+
   return (
-    <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
+    <div className={`${portfolioFontClass} mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]`}>
       <div className="flex flex-col gap-6">
         <ErrorBanner error={error} />
 
-        {showHeader && (
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                Lead Hub
-              </h1>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-              py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
-              <div className="flex items-center gap-1">
-                <div className="flex gap-1 md:overflow-x-visible">
-                  {setDatePreset && (
-                    <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-                  )}
-
-                  {/* ── Group Grid Picker ── */}
-                  {showGroupFilter && (
-                    <div className="relative" ref={gridRef}>
-                      {/* Trigger */}
-                      <button
-                        onClick={() => setGridOpen(prev => !prev)}
-                        className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="truncate flex-1 text-left text-gray-800">
-                          {selectedGroupLabel}
-                        </span>
-                        <svg
-                          className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
-                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Dropdown */}
-                      {gridOpen && (
-                        <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-
-                          {/* Search */}
-                          <div className="mb-2 relative">
-                            <input
-                              type="text"
-                              placeholder="Search groups..."
-                              value={groupSearch}
-                              onChange={e => setGroupSearch(e.target.value)}
-                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            />
-                          </div>
-
-                          {/* Grid */}
-                          {filteredGridItems.length > 0 ? (
-                            <div
-                              className="grid gap-1 max-h-72 overflow-y-auto"
-                              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-                            >
-                              {filteredGridItems.map(item => {
-                                const isSelected =
-                                  item.id === "all"
-                                    ? selectedClientGroup === "all" || !selectedClientGroup
-                                    : selectedClientGroup === item.id
-
-                                return (
-                                  <button
-                                    key={item.id}
-                                    onClick={() => {
-                                      setSelectedClientGroup(item.id)
-                                      setGridOpen(false)
-                                      setGroupSearch("")
-                                    }}
-                                    title={item.name}
-                                    className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors
-                                      ${isSelected
-                                        ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                      }`}
-                                  >
-                                    {item.name}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-400 text-center py-3 px-6">
-                              No groups found
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* The title block and the date/group filters sit in the global top bar
+            beside the bell and the profile menu — published by useHeaderSlot
+            above. The handoff puts both in the header, so the page starts
+            straight at its content. */}
 
         <ContactStats metaStats={metaData?.stats} loading={loading} />
 
         {/* Opportunity Status Filter Tabs */}
         <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <TabsList className="flex-1 justify-start overflow-x-auto">
-              <TabsTrigger value="all">All Leads</TabsTrigger>
-              <TabsTrigger value="open">Open</TabsTrigger>
-              <TabsTrigger value="won">Won</TabsTrigger>
-              <TabsTrigger value="abandoned">Abandoned</TabsTrigger>
-              <TabsTrigger value="lost">Lost</TabsTrigger>
+          {/* Pipeline tabs on the handoff's segmented-control spec: the track is
+              the divider tint, the selected stage lifts onto white with the
+              purple-tinted shadow. Radix Tabs still drives the behaviour — only
+              the skin changes. The count badges arrive in LH5, once the stage
+              counts come off the same query the table runs. */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
+              {[
+                { value: "all", label: "All Leads" },
+                { value: "open", label: "Open" },
+                { value: "won", label: "Won" },
+                { value: "abandoned", label: "Abandoned" },
+                { value: "lost", label: "Lost" },
+              ].map(tab => (
+                <TabsTrigger
+                  key={tab.value}
+                  value={tab.value}
+                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+            {/* Search, Filters and Columns as the handoff's 38px controls,
+                sitting together at the right end of the tab row. */}
+            <div className="ml-auto flex w-fit shrink-0 items-center gap-[10px]">
               <Input
-                placeholder="Search leads..."
+                type="search"
+                placeholder="Search leads…"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="text-gray-900 bg-white h-10 w-fit md:w-55 text-sm font-medium"
+                className="h-[38px] w-fit rounded-[10px] border-pd-border bg-pd-surface text-[13px] md:w-[200px]"
               />
 
               {/* ── FilterPanel: between search and columns ── */}
@@ -588,7 +567,12 @@ export function LeadsContent({
               />
 
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-[38px] rounded-[10px] text-[13px] font-semibold text-pd-body"
+                >
                   Clear
                 </Button>
               )}
@@ -611,15 +595,25 @@ export function LeadsContent({
           }}
         />
 
-        <div className="flex justify-center gap-4">
-          <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
-            <ChevronLeft className="h-4 w-4" />Previous
+        <div className="flex items-center justify-center gap-4">
+          <Button
+            variant="ghost"
+            onClick={handlePreviousPage}
+            disabled={currentPage === 1}
+            className="h-[38px] rounded-[10px] text-[13px] font-semibold text-pd-body"
+          >
+            <ChevronLeft className="size-4" />Previous
           </Button>
-          <span className="text-sm font-medium py-2">
+          <span className="text-[12px] text-pd-faint">
             Page {currentPage} of {metaData?.total_pages || 1}
           </span>
-          <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>
-            Next<ChevronRight className="h-4 w-4" />
+          <Button
+            variant="ghost"
+            onClick={handleNextPage}
+            disabled={!metaData?.has_next}
+            className="h-[38px] rounded-[10px] text-[13px] font-semibold text-pd-body"
+          >
+            Next<ChevronRight className="size-4" />
           </Button>
         </div>
       </div>

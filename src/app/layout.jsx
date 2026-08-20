@@ -3,15 +3,12 @@
 import "./globals.css";
 import { Outfit } from "next/font/google";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
 import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
-import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Search, Sparkles, Tag } from 'lucide-react';
-import { APP_VERSION } from "@/lib/changelog";
+import { Search, Sparkles } from 'lucide-react';
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
@@ -37,8 +34,6 @@ export default function RootLayout({ children }) {
     pathname === "/register" ||
     pathname === "/" ||
     pathname.startsWith("/admin");
-
-  const isDashboard = pathname === "/dashboard";
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
@@ -92,26 +87,11 @@ export default function RootLayout({ children }) {
                   <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="md:hidden" />
-                      {/* The dashboard puts its own title here instead of the
-                          wordmark — the page no longer carries one. */}
+                      {/* A page's own title stands in for the wordmark while
+                          you are on it; DashboardHeaderTitle owns that choice,
+                          including the wordmark fallback, so the header does
+                          not branch on the route itself. */}
                       <DashboardHeaderTitle />
-                      <div className={`items-center gap-2 ${isDashboard ? "hidden" : "flex"}`}>
-                        <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
-                        <Link
-                          href="/changelog"
-                          aria-label={`What's new in Birdy — version ${APP_VERSION}`}
-                          title={`What's new — ${APP_VERSION}`}
-                          className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
-                        >
-                          <Badge
-                            variant="secondary"
-                            className="cursor-pointer gap-1 font-semibold transition-colors hover:bg-secondary/70"
-                          >
-                            <Tag className="h-3 w-3 text-purple-500" aria-hidden="true" />
-                            {APP_VERSION}
-                          </Badge>
-                        </Link>
-                      </div>
                     </div>
 
                     {/* Center Ask-Birdy search bar */}
