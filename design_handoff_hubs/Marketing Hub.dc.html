@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+  @keyframes mhDrawA { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes mhDrawB { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes mhFadeA { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mhFadeB { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="width:1600px; height:1040px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex; box-shadow:0 20px 50px -20px rgba(30,25,60,.25);">
+      <!-- rail -->
+      <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+        <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;">
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+        <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></div>
+        <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+        <!-- header -->
+        <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:16px; flex:0 0 auto;">
+          <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Marketing Hub</div><div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Campaign performance across all connected ad accounts</div></div>
+          <div style="flex:1; max-width:420px; margin:0 auto; height:38px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:10px; display:flex; align-items:center; padding:0 13px; gap:9px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg><span style="font-size:13.5px;">Ask Birdy about your marketing data…</span><span style="margin-left:auto; font-size:11px; background:#EAEAF0; padding:2px 7px; border-radius:5px;">⌘K</span></div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <div onClick="{{ toggleRange }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{{ range }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+              <div style="display:{{ rangeMenu }}; position:absolute; top:44px; right:0; width:170px; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:20;">
+                <sc-for list="{{ rangeList }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ r.color }}; background:{{ r.bg }};">{{ r.name }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:relative; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="position:absolute; top:-4px; right:-4px; background:#E5484D; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">9</span></div>
+            <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#7B5FE6,#6B4EE6); display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          </div>
+        </div>
+
+        <div class="scrolly" style="flex:1; min-height:0; padding:22px 24px;">
+          <!-- chart + insights -->
+          <div style="display:flex; gap:18px; margin-bottom:18px; align-items:stretch;">
+            <div style="flex:1.65; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <div><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">{{ chartTitle }}</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">{{ chartSub }}</div></div>
+                <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+                  <sc-for list="{{ chartTabs }}" as="m" hint-placeholder-count="4">
+                    <div onClick="{{ m.pick }}" style="cursor:pointer; padding:7px 13px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ m.color }}; background:{{ m.bg }}; box-shadow:{{ m.shadow }};">{{ m.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 16px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#1F1B33;">{{ chartTotal }}</span><span style="font-size:12.5px; font-weight:600; color:{{ chartDeltaColor }};">{{ chartDelta }}</span></div>
+              <div style="position:relative; height:190px;">
+                <div style="position:absolute; inset:0 0 22px 0;">
+                  <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                    <defs>
+                      <linearGradient id="mhFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#6B4EE6" stop-opacity="0.18"></stop>
+                        <stop offset="100%" stop-color="#6B4EE6" stop-opacity="0"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path d="{{ areaPath }}" fill="url(#mhFill)" style="animation:{{ fadeAnim }};"></path>
+                    <path d="{{ linePath }}" fill="none" stroke="#6B4EE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="stroke-dasharray:2400; animation:{{ drawAnim }};"></path>
+                  </svg>
+                  <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                    <div style="position:absolute; left:{{ p.left }}; top:{{ p.top }}; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:{{ p.fill }}; border:2px solid #fff; box-shadow:{{ p.glow }}; cursor:pointer;" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}"><div style="display:{{ p.tipShow }}; position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:#1F1B33; color:#fff; padding:6px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; box-shadow:0 6px 16px -6px rgba(30,25,60,.5);"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:12.5px; line-height:1;">{{ p.value }}</div><div style="font-size:10.5px; color:#C9BEF3; margin-top:3px;">{{ p.tipLabel }}</div></div></div>
+                  </sc-for>
+                </div>
+                <div style="position:absolute; left:0; right:0; bottom:0; display:flex;">
+                  <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                    <div style="flex:1; text-align:center; font-size:10.5px; color:#9A9AAB;">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex:0.85; min-width:0; display:flex; flex-direction:column; gap:14px;">
+              <div style="background:linear-gradient(135deg,#6B4EE6,#8B6BF0); border:1px solid #5A3FD6; border-radius:16px; padding:16px 18px; box-shadow:0 10px 26px -12px rgba(107,78,230,.6);">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+                  <span style="width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg></span>
+                  <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; color:#fff;">Birdy Insights</span>
+                  <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#fff; background:rgba(255,255,255,.22); padding:2px 8px; border-radius:5px;">AI</span>
+                </div>
+                <div style="font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.5;">Spend is up <strong style="color:#fff;">6.8%</strong> but CPL has climbed to <strong style="color:#fff;">£3.00</strong>. <strong style="color:#fff;">Soup – No Leak Seat</strong> is the worst offender at £9.64 CPL with only 12 results — pausing it would free £115 for your £1.79 CPL winner.</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; font-weight:600; color:#fff;">Ask Birdy about this<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">707</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Active campaigns</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>3.4%</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#EDF8F1; display:flex; align-items:center; justify-content:center; color:#25A55F; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">£4,898.73</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Total ad spend</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>6.8%</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#EAF1FD; display:flex; align-items:center; justify-content:center; color:#3B7DD6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">1,632</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Total leads</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>4.1%</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#FDF1E7; display:flex; align-items:center; justify-content:center; color:#B4530A; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">£3.00</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Average CPL</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#E5484D; background:#FEF1F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>2.6%</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#EAF1FD; display:flex; align-items:center; justify-content:center; color:#3B7DD6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">1.42M</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Impressions</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>8.2%</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                  <span style="width:28px; height:28px; border-radius:8px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+                  <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">3.62%</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Average CTR</div></div>
+                  <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M5 12l7-7 7 7"/></svg>0.4pts</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- tabs + table controls -->
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+                <div onClick="{{ t.pick }}" style="cursor:pointer; display:flex; align-items:center; gap:7px; padding:7px 15px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.icon }}{{ t.label }}</div>
+              </sc-for>
+            </div>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+              <div style="display:flex; align-items:center; gap:9px; height:38px; width:220px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg><span style="font-size:13px;">Search campaigns…</span></div>
+              <div style="display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>Columns<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></div>
+            </div>
+          </div>
+
+          <!-- table -->
+          <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+            <div class="scrolly" style="overflow-x:auto;">
+              <div style="min-width:1280px;">
+                <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+                  <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #CFCFDA; border-radius:4px;"></span></div>
+                  <div style="flex:0 0 62px;">STATUS</div>
+                  <div style="flex:2.4; min-width:210px;">NAME</div>
+                  <div style="flex:1; display:flex; align-items:center; gap:5px;">SPEND <span style="color:#1F1B33;">↓</span></div>
+                  <div style="flex:0.85;">CPL</div>
+                  <div style="flex:0.85;">RESULTS</div>
+                  <div style="flex:1;">IMPRESSIONS</div>
+                  <div style="flex:1;">REACH</div>
+                  <div style="flex:0.85;">CLICKS</div>
+                  <div style="flex:0.8;">CTR</div>
+                  <div style="flex:0.9;">SOCIAL SPEND</div>
+                </div>
+                <sc-for list="{{ rows }}" as="c" hint-placeholder-count="14">
+                  <div style="display:flex; align-items:center; padding:11px 22px; border-bottom:1px solid #F5F5F8; background:{{ c.rowBg }};">
+                    <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #DFDFE8; border-radius:4px;"></span></div>
+                    <div style="flex:0 0 62px;"><span style="display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#6B4EE6; padding:2px; justify-content:flex-end;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></div>
+                    <div style="flex:2.4; min-width:210px; font-size:13.5px; font-weight:600; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.name }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.spend }}</div>
+                    <div style="flex:0.85; font-size:13.5px; color:{{ c.cplColor }}; font-weight:500;">{{ c.cpl }}</div>
+                    <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.results }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#5A5A6E;">{{ c.impressions }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#5A5A6E;">{{ c.reach }}</div>
+                    <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.clicks }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.ctr }}</div>
+                    <div style="flex:0.9; font-size:13.5px; color:#9A9AAB;">{{ c.social }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'Campaigns', range: 'Last 7 days', rangeMenu: false, metric: 'spend', hover: null, anim: 0 };
+
+  set(patch) {
+    this.setState((st) => Object.assign({}, st, typeof patch === 'function' ? patch(st) : patch));
+  }
+
+  renderVals() {
+    const st = this.state;
+    const stop = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); };
+    const icon = (ds, sw) => React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d: d })));
+
+    const TABS = [
+      { label: 'Campaigns', ds: ['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'] },
+      { label: 'Ad Sets',   ds: ['M3 3h18v18H3z', 'M3 9h18', 'M9 21V9'] },
+      { label: 'Ads',       ds: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6', 'M9 15h6'] },
+      { label: 'Leads',     ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'] },
+    ];
+    const tabs = TABS.map((t) => {
+      const on = t.label === st.tab;
+      return {
+        label: t.label,
+        icon: icon(t.ds),
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); this.set({ tab: t.label }); },
+      };
+    });
+
+    const MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+    const METRICS = {
+      spend:       { label: 'Ad spend',    title: 'Total ad spend', sub: 'Combined spend across all connected ad accounts', total: '£4,898.73', delta: '▲ 6.8%',   up: true,  vals: [60,64,58,72,68,76,71,82,78,88,84,95], mult: 52, prefix: '£' },
+      leads:       { label: 'Leads',       title: 'Total leads',    sub: 'Lead volume across all campaigns',                total: '1,632',     delta: '▲ 4.1%',   up: true,  vals: [52,61,58,70,66,74,69,80,86,79,92,100], mult: 16 },
+      cpl:         { label: 'CPL',         title: 'Average CPL',    sub: 'Blended cost per lead across all campaigns',      total: '£3.00',     delta: '▲ 2.6%',   up: false, vals: [74,66,81,58,88,63,77,70,84,60,90,72], mult: 0.034, prefix: '£', dp: 2 },
+      impressions: { label: 'Impressions', title: 'Impressions',    sub: 'Total impressions served',                        total: '1.42M',     delta: '▲ 8.2%',   up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90], mult: 15800 },
+    };
+    const key = st.metric;
+    const c = METRICS[key];
+    const vals = c.vals;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const span = Math.max(max - min, 1), n = vals.length, pad = 14;
+    const halfCol = 100 / (2 * n);
+    const xPct = (i) => halfCol + (i * (100 - 2 * halfCol)) / (n - 1);
+    const xy = vals.map((v, i) => [xPct(i) * 10, 200 - pad - ((v - min) / span) * (200 - pad * 2)]);
+    const linePath = xy.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+    const areaPath = linePath + ' L' + xy[n - 1][0].toFixed(1) + ' 200 L' + xy[0][0].toFixed(1) + ' 200 Z';
+    const fmt = (raw) => {
+      const v = raw * c.mult;
+      if (c.dp) return (c.prefix || '') + v.toFixed(c.dp);
+      if (v >= 1000000) return (v / 1000000).toFixed(2) + 'M';
+      return (c.prefix || '') + Math.round(v).toLocaleString();
+    };
+    const chartPoints = xy.map(([x, y], i) => ({
+      label: MONTHS[i],
+      tipLabel: MONTHS[i] + (i < 5 ? ' 2025' : ' 2026'),
+      value: fmt(vals[i]),
+      left: xPct(i).toFixed(2) + '%',
+      top: ((y / 200) * 100).toFixed(2) + '%',
+      fill: i === n - 1 ? '#6B4EE6' : '#A98BF5',
+      glow: i === n - 1 ? '0 0 0 4px rgba(107,78,230,.18)' : 'none',
+      tipShow: st.hover === i ? 'block' : 'none',
+      enter: () => this.set({ hover: i }),
+      leave: () => this.set({ hover: null }),
+    }));
+    const chartTabs = Object.keys(METRICS).map((k) => {
+      const on = k === key;
+      return {
+        label: METRICS[k].label,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); this.set((p) => ({ metric: k, anim: (p.anim || 0) + 1 })); },
+      };
+    });
+
+    const mk = (name, spend, cpl, results, impressions, reach, clicks, ctr, hot) => ({
+      name, spend, cpl, results, impressions, reach, clicks, ctr,
+      social: '–',
+      cplColor: hot ? '#E5484D' : '#1F1B33',
+    });
+    const raw = [
+      mk('Soup – Body Sculpting – 091225 – Cbo', '£177.74', '£2.78', '64', '13,103', '10,089', '598', '4.56%'),
+      mk('Soup – Body Sculpting – 111225 – Cbo', '£172.33', '£4.79', '36', '24,210', '11,335', '628', '2.59%'),
+      mk('Soup – Body Sculpting – 041025 – Cbo', '£146.84', '£2.72', '54', '27,602', '15,437', '1,245', '4.51%'),
+      mk('Soup – Body Sculpting – 160426 – Cbo', '£131.27', '£7.72', '17', '17,310', '9,416', '524', '3.03%', true),
+      mk('Soup – Body Sculpting Packages', '£125.46', '£6.60', '19', '14,785', '8,934', '539', '3.65%', true),
+      mk('Soup – Body Sculpting – 111225 – Cbo', '£123.88', '£4.96', '25', '16,621', '7,996', '447', '2.69%'),
+      mk('Soup – Body Sculpting – 270825 – Cbo', '£120.40', '£2.08', '58', '24,572', '14,876', '957', '3.89%'),
+      mk('Soup – Lymphatic Body Sculpt & Drainage', '£118.48', '£6.58', '18', '9,568', '5,937', '265', '2.77%', true),
+      mk('Soup – Body Sculpting – 091225 – Cbo', '£117.83', '£2.51', '47', '22,033', '15,921', '1,070', '4.86%'),
+      mk('Soup – Face Sculpting (phase 1)', '£116.66', '£3.65', '32', '10,014', '6,565', '286', '2.86%'),
+      mk('Soup – Body Sculpting – 09/02/26 – Cbo', '£116.51', '£1.79', '65', '18,607', '11,054', '1,152', '6.19%'),
+      mk('Soup – Body Sculpting – 201125 – Cbo', '£116.23', '£3.75', '31', '19,596', '10,042', '583', '2.98%'),
+      mk('Soup (new) – No Leak Seat – 170326', '£115.64', '£9.64', '12', '15,651', '8,370', '296', '1.89%', true),
+      mk('Soup – Body Sculpting – 120126 – Cbo', '£114.02', '£2.94', '39', '16,880', '9,721', '702', '4.16%'),
+    ];
+    const rows = raw.map((r, i) => Object.assign({}, r, { rowBg: i % 2 ? '#fff' : '#FCFCFD' }));
+
+    return {
+      tabs, rows, chartTabs, chartPoints, linePath, areaPath,
+      chartTitle: c.title,
+      chartSub: st.range + ' · ' + c.sub,
+      chartTotal: c.total,
+      chartDelta: c.delta,
+      chartDeltaColor: c.up ? '#25A55F' : '#E5484D',
+      drawAnim: ((st.anim || 0) % 2 ? 'mhDrawB' : 'mhDrawA') + ' 800ms cubic-bezier(.4,0,.2,1) forwards',
+      fadeAnim: ((st.anim || 0) % 2 ? 'mhFadeB' : 'mhFadeA') + ' 800ms ease-out forwards',
+      range: st.range,
+      rangeMenu: st.rangeMenu ? 'block' : 'none',
+      toggleRange: () => this.set((p) => ({ rangeMenu: !p.rangeMenu })),
+      rangeList: ['Today', 'Last 7 days', 'Last 30 days', 'This quarter'].map((nm) => {
+        const on = nm === st.range;
+        return {
+          name: nm,
+          color: on ? '#6B4EE6' : '#5A5A6E',
+          bg: on ? '#F1EEFC' : 'transparent',
+          pick: (ev) => { stop(ev); this.set({ range: nm, rangeMenu: false }); },
+        };
+      }),
+    };
+  }
+}
+</script>
+</body>
+</html>
