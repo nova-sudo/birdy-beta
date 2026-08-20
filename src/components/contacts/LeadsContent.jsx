@@ -1,66 +1,65 @@
 "use client"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
 import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import StyledTable from "@/components/ui/table-container"
+import { PdSegmented } from "@/components/portfolio"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
 import { buildContactColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
 import { ErrorBanner } from "@/components/ErrorBanner"
-import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
+import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
+import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
+
+// ─── Lead Hub table + pipeline tabs ─────────────────────────────────────────
+// The lower half of the Lead Hub — everything the page's shell, chart, insight
+// card and KPI tiles (src/app/contacts/page.jsx) sit above. Shell/header/chart
+// live entirely on the page; this component owns only the pipeline tabs, the
+// table toolbar, and the table itself, the same split Sales-Hub's
+// CallCentreContent draws against its own page.
+//
+// Also embedded read-only inside /clients/[id] (showStatCards defaults true
+// there, and selectedClientGroup/onSelectClientGroup are left uncontrolled so
+// this manages its own single-client scope) — see the client-group-selection
+// comment below for how that split works.
 
 const baseContactColumns = buildContactColumns()
+
+// Every control in the toolbar row wears the design's dropdown trigger: 38px
+// tall, white, hairline border, 10px radius, Inter 600 13px — matches
+// Sales-Hub's CallCentreContent.
+const TOOLBAR_CHIP =
+  "flex h-[38px] cursor-pointer items-center gap-2 rounded-[10px] border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+
+const PIPELINE_TABS = [
+  { key: "all", label: "All Leads", stat: "lead_count" },
+  { key: "open", label: "Open", stat: "open" },
+  { key: "won", label: "Won", stat: "won" },
+  { key: "abandoned", label: "Abandoned", stat: "abandoned" },
+  { key: "lost", label: "Lost", stat: "lost" },
+]
 
 export function LeadsContent({
   clientGroups,
   groupsLoading,
   datePreset,
-  setDatePreset,
-  showGroupFilter = true,
-  showHeader = true,
+  showStatCards = true,
+  selectedClientGroup: controlledClientGroup,
+  onSelectClientGroup,
 }) {
   const [contacts, setContacts] = useState([])
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [progress, setProgress] = useState(13)
   const [customMetrics, setCustomMetrics] = useState([])
-  const [gridOpen, setGridOpen] = useState(false)
-  const [groupSearch, setGroupSearch] = useState("")
-  const gridRef = useRef(null)
+  const [selectedRows, setSelectedRows] = useState(new Set())
 
   const [filterOptions, setFilterOptions] = useState({ sources: [], types: [], tags: [] })
-
-  // Close grid on outside click
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (gridRef.current && !gridRef.current.contains(e.target)) {
-        setGridOpen(false)
-        setGroupSearch("")
-      }
-    }
-    if (gridOpen) document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [gridOpen])
 
   useEffect(() => {
     apiRequest("/api/custom-metrics").then(async res => {
@@ -139,12 +138,16 @@ export function LeadsContent({
   const [selectedTags, setSelectedTags] = useState([])
   const [sortColumn, setSortColumn] = useState("")
   const [sortDirection, setSortDirection] = useState("asc")
-  const [selectedClientGroup, setSelectedClientGroup] = useState(() => {
-    if (!showGroupFilter && clientGroups.length === 1) {
-      return clientGroups[0].id
-    }
-    return "all"
-  })
+
+  // Client-group selection is controlled when the Lead Hub page passes
+  // selectedClientGroup/onSelectClientGroup (it renders its own picker in the
+  // global header) and internal otherwise — the same split
+  // CallCentreContent's selectedClientGroup uses, for the same reason:
+  // /clients/[id] is already scoped to one client and never moves it.
+  const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
+  const selectedClientGroup = controlledClientGroup ?? uncontrolledClientGroup
+  const setSelectedClientGroup = onSelectClientGroup ?? setUncontrolledClientGroup
+
   const [selectedCategory, setSelectedCategory] = useState("columns")
   const [searchTerm, setSearchTerm] = useState("")
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
@@ -233,12 +236,15 @@ export function LeadsContent({
     }
   }
 
-  // When embedded for a single group, auto-select it once groups load
+  // When embedded for a single group under internal (uncontrolled) selection,
+  // auto-select it once groups load. Controlled usage (the Lead Hub page)
+  // owns this decision itself, via its own ClientGroupPicker.
   useEffect(() => {
-    if (!showGroupFilter && ghlClientGroups.length === 1 && selectedClientGroup === "all") {
-      setSelectedClientGroup(ghlClientGroups[0].id)
+    if (controlledClientGroup !== undefined) return
+    if (ghlClientGroups.length === 1 && uncontrolledClientGroup === "all") {
+      setUncontrolledClientGroup(ghlClientGroups[0].id)
     }
-  }, [showGroupFilter, ghlClientGroups, selectedClientGroup])
+  }, [controlledClientGroup, ghlClientGroups, uncontrolledClientGroup])
 
   // Re-fetch whenever the preset, group filter, or group list changes
   useEffect(() => {
@@ -246,17 +252,6 @@ export function LeadsContent({
       fetchContacts(1)
     }
   }, [selectedClientGroup, ghlClientGroups.length, datePreset, selectedSources, selectedTags, selectedOpportunityStatus])
-
-  useEffect(() => {
-    const intervals = [33, 50, 66, 80, 90]
-    let step = 0
-    const timer = setInterval(() => {
-      setProgress(intervals[step])
-      step++
-      if (step >= intervals.length) clearInterval(timer)
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [])
 
   const filteredAndSortedContacts = useMemo(() => {
     let filtered = [...contacts]
@@ -307,7 +302,6 @@ export function LeadsContent({
     setSelectedSources([])
     setSelectedType("all")
     setSelectedOpportunityStatus("all")
-    if (setDatePreset) setDatePreset("last_7d")
     setSelectedClientGroup("all")
     setSelectedTags([])
     setSortColumn("")
@@ -320,8 +314,7 @@ export function LeadsContent({
     selectedType !== "all" ||
     selectedOpportunityStatus !== "all" ||
     selectedClientGroup !== "all" ||
-    selectedTags.length > 0 ||
-    datePreset !== "last_7d"
+    selectedTags.length > 0
 
   const categories = [
     { id: "columns", label: "Columns" },
@@ -403,147 +396,56 @@ export function LeadsContent({
     if (metaData?.has_next) fetchContacts(currentPage + 1)
   }
 
-  const gridItems = useMemo(() => [
-    { id: "all", name: "All Groups" },
-    ...ghlClientGroups.slice(0, 49),
-  ], [ghlClientGroups])
-
-  const selectedGroupLabel = useMemo(() => {
-    if (selectedClientGroup === "all" || !selectedClientGroup) return "All Groups"
-    return ghlClientGroups.find(g => g.id === selectedClientGroup)?.name ?? "All Groups"
-  }, [selectedClientGroup, ghlClientGroups])
-
-  const filteredGridItems = useMemo(() =>
-    gridItems.filter(item =>
-      item.name.toLowerCase().includes(groupSearch.toLowerCase())
-    ),
-    [gridItems, groupSearch]
-  )
+  // Pipeline tabs, with the design's count badges — the same figures the
+  // Lead Hub page's KPI tiles show, sourced here from this fetch's own
+  // meta.stats rather than re-deriving them, since this table already pulls
+  // them on every window/group change.
+  const pipelineTabs = useMemo(() => {
+    const stats = metaData?.stats ?? {}
+    return PIPELINE_TABS.map((tab) => ({
+      key: tab.key,
+      label: tab.label,
+      badge: (stats[tab.stat] ?? 0).toLocaleString(),
+      badgeClassName:
+        tab.key === selectedOpportunityStatus
+          ? "bg-pd-primary-tint text-pd-primary"
+          : "bg-pd-neutral-badge text-pd-subtle",
+    }))
+  }, [metaData, selectedOpportunityStatus])
 
   return (
-    <div className="mx-auto w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)]">
+    <div className="min-w-0">
       <div className="flex flex-col gap-6">
         <ErrorBanner error={error} />
 
-        {showHeader && (
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                Lead Hub
-              </h1>
-            </div>
+        {showStatCards && <ContactStats metaStats={metaData?.stats} loading={loading} />}
 
-            <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-              py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
-              <div className="flex items-center gap-1">
-                <div className="flex gap-1 md:overflow-x-visible">
-                  {setDatePreset && (
-                    <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-                  )}
+        <div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <PdSegmented
+              label="Pipeline stage"
+              className="shrink-0 self-start"
+              itemClassName="px-[15px] py-[7px] text-[13px]"
+              options={pipelineTabs}
+              value={selectedOpportunityStatus}
+              onChange={setSelectedOpportunityStatus}
+            />
 
-                  {/* ── Group Grid Picker ── */}
-                  {showGroupFilter && (
-                    <div className="relative" ref={gridRef}>
-                      {/* Trigger */}
-                      <button
-                        onClick={() => setGridOpen(prev => !prev)}
-                        className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                      >
-                        <span className="truncate flex-1 text-left text-gray-800">
-                          {selectedGroupLabel}
-                        </span>
-                        <svg
-                          className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
-                          fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </button>
-
-                      {/* Dropdown */}
-                      {gridOpen && (
-                        <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-
-                          {/* Search */}
-                          <div className="mb-2 relative">
-                            <input
-                              type="text"
-                              placeholder="Search groups..."
-                              value={groupSearch}
-                              onChange={e => setGroupSearch(e.target.value)}
-                              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            />
-                          </div>
-
-                          {/* Grid */}
-                          {filteredGridItems.length > 0 ? (
-                            <div
-                              className="grid gap-1 max-h-72 overflow-y-auto"
-                              style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-                            >
-                              {filteredGridItems.map(item => {
-                                const isSelected =
-                                  item.id === "all"
-                                    ? selectedClientGroup === "all" || !selectedClientGroup
-                                    : selectedClientGroup === item.id
-
-                                return (
-                                  <button
-                                    key={item.id}
-                                    onClick={() => {
-                                      setSelectedClientGroup(item.id)
-                                      setGridOpen(false)
-                                      setGroupSearch("")
-                                    }}
-                                    title={item.name}
-                                    className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors
-                                      ${isSelected
-                                        ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                      }`}
-                                  >
-                                    {item.name}
-                                  </button>
-                                )
-                              })}
-                            </div>
-                          ) : (
-                            <p className="text-xs text-gray-400 text-center py-3 px-6">
-                              No groups found
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
+            <div className="flex items-center gap-2.5 md:ml-auto">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
+                  aria-hidden="true"
+                />
+                <Input
+                  placeholder="Search leads…"
+                  aria-label="Search leads"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+                />
               </div>
-            </div>
-          </div>
-        )}
 
-        <ContactStats metaStats={metaData?.stats} loading={loading} />
-
-        {/* Opportunity Status Filter Tabs */}
-        <Tabs value={selectedOpportunityStatus} onValueChange={setSelectedOpportunityStatus} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <TabsList className="flex-1 justify-start overflow-x-auto">
-              <TabsTrigger value="all">All Leads</TabsTrigger>
-              <TabsTrigger value="open">Open</TabsTrigger>
-              <TabsTrigger value="won">Won</TabsTrigger>
-              <TabsTrigger value="abandoned">Abandoned</TabsTrigger>
-              <TabsTrigger value="lost">Lost</TabsTrigger>
-            </TabsList>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
-              <Input
-                placeholder="Search leads..."
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="text-gray-900 bg-white h-10 w-fit md:w-55 text-sm font-medium"
-              />
-
-              {/* ── FilterPanel: between search and columns ── */}
               <FilterPanel
                 sources={sources}
                 allTags={allTags}
@@ -551,6 +453,7 @@ export function LeadsContent({
                 setSelectedSources={setSelectedSources}
                 selectedTags={selectedTags}
                 setSelectedTags={setSelectedTags}
+                triggerClassName={TOOLBAR_CHIP}
               />
 
               <ColumnVisibilityDropdown
@@ -573,6 +476,7 @@ export function LeadsContent({
                 toggleColumnVisibility={toggleColumnVisibility}
                 selectAll={selectAll}
                 clearAll={clearAll}
+                triggerClassName={TOOLBAR_CHIP}
                 getIcon={(col) => {
                   const META_COLS = ["ad_name", "adset_name", "campaign_name", "platform", "created_time", "metaCampaign", "metaAdName", "metaAdsetName"]
                   if (META_COLS.includes(col.id)) return metaIco
@@ -588,28 +492,33 @@ export function LeadsContent({
               />
 
               {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-10">
+                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-[38px]">
                   Clear
                 </Button>
               )}
             </div>
           </div>
-        </Tabs>
 
-        <StyledTable
-          columns={contactColumns}
-          data={filteredAndSortedContacts}
-          columnVisibility={columnVisibilityMap}
-          searchQuery=""
-          clickableFirstColumn={false}
-          isLoading={loading}
-          initialColumnOrder={visibleColumns}
-          onColumnOrderChange={(newOrder) => {
-            setVisibleColumns(newOrder)
-            // Auto-persist on drag-reorder (debounced inside the hook).
-            saveViewDebounced(newOrder)
-          }}
-        />
+          <div className="mt-4">
+            <StyledTable
+              columns={contactColumns}
+              data={filteredAndSortedContacts}
+              columnVisibility={columnVisibilityMap}
+              searchQuery=""
+              clickableFirstColumn={false}
+              isLoading={loading}
+              initialColumnOrder={visibleColumns}
+              onColumnOrderChange={(newOrder) => {
+                setVisibleColumns(newOrder)
+                // Auto-persist on drag-reorder (debounced inside the hook).
+                saveViewDebounced(newOrder)
+              }}
+              enableSelection
+              selectedRows={selectedRows}
+              onSelectionChange={setSelectedRows}
+            />
+          </div>
+        </div>
 
         <div className="flex justify-center gap-4">
           <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>

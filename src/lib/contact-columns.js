@@ -27,11 +27,18 @@ export const buildContactColumns = () => [
     defaultVisible: true,
     sortable: true,
     icons: ghl,
-    cell: (value) =>
-      !value || value === "Unknown" ? (
-        <span className="text-muted-foreground text-sm px-2">-</span>
-      ) : (
+    // Falls back to the phone number when no name was captured — a third of
+    // rows are Contacts (usually an inbound call with no form fill), and the
+    // design asks for the local-format number to stand in for the name
+    // rather than leaving the cell to fall through to the phone column's
+    // own placeholder.
+    cell: (value, row) =>
+      value && value !== "Unknown" ? (
         <span className="text-sm text-foreground text-left block">{toTitleCase(value)}</span>
+      ) : row?.phone ? (
+        <span className="text-sm text-foreground text-left block">{row.phone}</span>
+      ) : (
+        <span className="text-muted-foreground text-sm px-2">–</span>
       ),
   },
   {
@@ -59,7 +66,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value || value.startsWith("no_email_") ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
+        <span className="text-muted-foreground font-bold text-sm">–</span>
       ) : (
         <a
           href={`mailto:${value}`}
@@ -79,7 +86,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground font-bold text-sm">-</span>
+        <span className="text-muted-foreground font-bold text-sm">–</span>
       ) : (
         <a
           href={`tel:${value}`}
@@ -99,7 +106,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value) =>
       !value ? (
-        <span className="text-muted-foreground text-sm">-</span>
+        <span className="text-muted-foreground text-sm">–</span>
       ) : (
         <span className="text-sm text-foreground">
           {new Date(value).toLocaleDateString("en-US", {
@@ -118,17 +125,16 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       if (!value || value.length === 0)
-        return <span className="text-muted-foreground text-sm">-</span>
+        return <span className="text-muted-foreground text-sm">–</span>
       const tags = value
       const mainTag = tags[0]
       const hasMoreTags = tags.length > 1
       const score = row?.score ? `+${row.score}` : null
       return (
-        <div className="flex items-center justify-center gap-2 max-w-xs">
-          <Badge variant="secondary" className="flex items-center gap-1 text-xs">
-            <TiTag className="w-3 h-3" />
+        <div className="flex items-center gap-2 max-w-xs">
+          <span className="max-w-[150px] truncate rounded-[6px] border border-pd-border bg-pd-divider px-2 py-[3px] text-[11px] text-pd-body">
             {mainTag}
-          </Badge>
+          </span>
           {score && (
             <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
               {score}
@@ -137,7 +143,9 @@ export const buildContactColumns = () => [
           {hasMoreTags && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{tags.length - 1}</Badge>
+                <span className="shrink-0 rounded-[6px] bg-pd-primary-tint px-[7px] py-[3px] text-[10.5px] font-bold text-pd-primary">
+                  +{tags.length - 1}
+                </span>
               </TooltipTrigger>
               <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
                 {tags.slice(1).map((tag, tagIndex) => (
@@ -161,8 +169,17 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (value, row) => {
       const type = value || row?.contactType
-      if (!type) return <span className="text-muted-foreground text-sm">-</span>
-      return <Badge variant="secondary" className="capitalize">{type}</Badge>
+      if (!type) return <span className="text-muted-foreground text-sm">–</span>
+      const isLead = type === "lead"
+      return (
+        <span
+          className={`inline-block rounded-[6px] px-[9px] py-[3px] text-[11px] font-semibold capitalize ${
+            isLead ? "bg-pd-primary-tint text-pd-primary" : "bg-pd-divider text-pd-subtle"
+          }`}
+        >
+          {type}
+        </span>
+      )
     },
   },
   {
@@ -179,28 +196,35 @@ export const buildContactColumns = () => [
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppStatus = mainOpp.status || "unknown"
+      // open/won/lost match the design's palette exactly; abandoned has no
+      // documented swatch there, so it borrows the amber tone the rest of
+      // this screen already uses for "needs attention" figures.
       const statusColors = {
-        open: "bg-[#DBEAFE] text-[#1D4ED8]",
-        won: "bg-[#DCFCE7] text-[#15803D]",
-        lost: "bg-[#FEE2E2] text-[#B91C1C]",
-        abandoned: "bg-[#FEF9C3] text-[#A16207]",
+        open: "bg-pd-info-bg text-pd-info",
+        won: "bg-pd-success-bg text-pd-success",
+        lost: "bg-pd-danger-bg text-pd-danger",
+        abandoned: "bg-pd-amber-bg text-pd-amber",
       }
+      const tone = statusColors[oppStatus] || "bg-pd-divider text-pd-subtle"
       return (
         <div className="flex items-center gap-2">
-          <Badge className={`capitalize rounded-full ${statusColors[oppStatus] || "bg-gray-100"}`}>
+          <span className={`inline-flex items-center gap-[6px] rounded-[6px] px-[9px] py-[3px] text-[11px] font-semibold capitalize ${tone}`}>
+            <span className="size-[6px] shrink-0 rounded-full bg-current" aria-hidden="true" />
             {oppStatus}
-          </Badge>
+          </span>
           {hasMoreOpps && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
+                <span className="shrink-0 rounded-[6px] bg-pd-primary-tint px-[7px] py-[3px] text-[10.5px] font-bold text-pd-primary">
+                  +{opportunities.length - 1}
+                </span>
               </TooltipTrigger>
               <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
                 {opportunities.slice(1).map((opp, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    <Badge className={`capitalize text-xs ${statusColors[opp.status] || "bg-gray-100"}`}>
+                    <span className={`rounded-[6px] px-2 py-0.5 text-xs font-semibold capitalize ${statusColors[opp.status] || "bg-pd-divider text-pd-subtle"}`}>
                       {opp.status}
-                    </Badge>
+                    </span>
                   </div>
                 ))}
               </TooltipContent>
@@ -288,11 +312,13 @@ export const buildContactColumns = () => [
     id: "country",
     header: "Country",
     label: "Country",
-    defaultVisible: true,
+    // Not one of the design's default-visible columns — still available via
+    // the Columns picker.
+    defaultVisible: false,
     sortable: true,
     icons: ghl,
     cell: (v) => !v
-      ? <span className="text-muted-foreground text-sm">-</span>
+      ? <span className="text-muted-foreground text-sm">–</span>
       : <div className="truncate px-2" title={v}><span className="text-sm font-medium text-foreground">{v}</span></div>,
   },
   {

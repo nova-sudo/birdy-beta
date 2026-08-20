@@ -16,6 +16,7 @@ export function FilterPanel({
   selectedTags = [],
   setSelectedTags,
   onSave,
+  triggerClassName,
 }) {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState("sources")
@@ -96,9 +97,14 @@ export function FilterPanel({
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-10 text-sm rounded-md border border-gray-200 transition-colors duration-150 cursor-pointer">
+        <button
+          className={
+            triggerClassName ??
+            "inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-10 text-sm rounded-md border border-gray-200 transition-colors duration-150 cursor-pointer"
+          }
+        >
           <SlidersHorizontal size={14} />
-          Filters
+          <span className="hidden lg:inline">Filters</span>
           {totalActive > 0 && (
             <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-violet-700">
               {totalActive}

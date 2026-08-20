@@ -535,9 +535,6 @@ export default function ClientDetailsPage() {
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
-            setDatePreset={setDatePreset}
-            showGroupFilter={false}
-            showHeader={false}
           />
         </TabsContent>
 
