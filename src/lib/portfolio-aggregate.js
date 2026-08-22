@@ -10,6 +10,7 @@
 // can't drift into disagreeing about what "leads" means.
 
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "./portfolio-metrics";
+import { activeGroups } from "./client-status";
 
 const num = (v) => {
   const n = typeof v === "string" ? parseFloat(v) : v;
@@ -76,10 +77,11 @@ export function groupMetrics(group) {
   };
 }
 
-/** Only active clients count towards the portfolio — the clients page agrees. */
-export function activeGroups(groups) {
-  return (groups ?? []).filter((g) => (g.client_status ?? "Active") === "Active");
-}
+/** Only active clients count towards the portfolio — the clients page agrees.
+ *  Sourced from lib/client-status so every surface shares one definition;
+ *  comparing `=== "Active"` here missed the 9 groups stored lowercase.
+ *  Re-exported because callers already import it from this module. */
+export { activeGroups };
 
 const SUMMED = [
   "spend",

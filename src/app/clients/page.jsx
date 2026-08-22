@@ -20,6 +20,7 @@ import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Users, Dol
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { activeGroups as selectActive, matchesStatusFilter, statusCounts as countByStatus } from "@/lib/client-status"
 
 import {
   ENHANCED_CLIENT_COLUMNS,
@@ -145,18 +146,13 @@ export default function ClientsPage() {
   const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
 
   // ── Filter groups by status ───────────────────────────────────────────────
-  const filteredByStatus = useMemo(() => {
-    if (statusFilter === "all") return clientGroups
-    return clientGroups.filter(g => (g.client_status ?? "Active") === statusFilter)
-  }, [clientGroups, statusFilter])
+  const filteredByStatus = useMemo(
+    () => clientGroups.filter(g => matchesStatusFilter(g, statusFilter)),
+    [clientGroups, statusFilter],
+  )
 
   // ── Status counts for filter badges ───────────────────────────────────────
-  const statusCounts = useMemo(() => {
-    const all = clientGroups.length
-    const active = clientGroups.filter(g => (g.client_status ?? "Active") === "Active").length
-    const inactive = all - active
-    return { all, active, inactive }
-  }, [clientGroups])
+  const statusCounts = useMemo(() => countByStatus(clientGroups), [clientGroups])
 
   // Build dynamic columns when filteredByStatus changes
   const columns = useMemo(() => {
@@ -543,9 +539,9 @@ export default function ClientsPage() {
 
   // ── Calculate stats from ALL groups (unfiltered) ──────────────────────────
   const calculateStats = () => {
-    const activeClients = clientGroups.filter(g => (g.client_status ?? "Active") === "Active").length
+    const activeGroups = selectActive(clientGroups)
+    const activeClients = activeGroups.length
 
-    const activeGroups = clientGroups.filter(g => (g.client_status ?? "Active") === "Active")
     const totalSpend = activeGroups.reduce((sum, group) => {
       const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
       return sum + spend

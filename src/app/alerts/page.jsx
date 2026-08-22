@@ -72,6 +72,7 @@ import {
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
 } from "@/lib/alert-helpers"
 import ChatConversation from "@/components/chat/ChatConversation"
+import { activeGroups } from "@/lib/client-status"
 
 // ── Tracking mode toggle ──────────────────────────────────────────────────────
 
@@ -673,7 +674,7 @@ export default function AlertsPage() {
 
   // Alerts should only ever target active clients
   const activeClientGroups = useMemo(
-    () => clientGroups.filter(g => (g.client_status ?? "Active") === "Active"),
+    () => activeGroups(clientGroups),
     [clientGroups],
   )
 
