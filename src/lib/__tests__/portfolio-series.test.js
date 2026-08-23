@@ -175,8 +175,7 @@ describe("PREVIOUS_PERIOD", () => {
     expect(PREVIOUS_PERIOD.last_7d).toEqual({ preset: "last_14d", subtractCurrent: true });
   });
 
-  it("uses the natural predecessor where one exists", () => {
-    expect(PREVIOUS_PERIOD.this_month).toEqual({ preset: "last_month" });
+  it("pairs a whole day with a whole day", () => {
     expect(PREVIOUS_PERIOD.today).toEqual({ preset: "yesterday" });
   });
 
@@ -184,6 +183,26 @@ describe("PREVIOUS_PERIOD", () => {
     // These render without delta pills rather than with invented ones.
     expect(PREVIOUS_PERIOD.last_30d).toBeUndefined();
     expect(PREVIOUS_PERIOD.maximum).toBeUndefined();
+  });
+
+  it("does not pair an elapsed period against a complete one", () => {
+    // this_month was paired with last_month, which on the 23rd compares 23
+    // elapsed days against 31 complete ones: £14,295.77 against £26,896.29,
+    // rendered as "Spend down 46.8%" when nothing had dropped. Same for
+    // quarter and year. The API speaks only in presets, so no like-for-like
+    // window is expressible — no pill beats a false one.
+    expect(PREVIOUS_PERIOD.this_month).toBeUndefined();
+    expect(PREVIOUS_PERIOD.this_quarter).toBeUndefined();
+    expect(PREVIOUS_PERIOD.this_year).toBeUndefined();
+  });
+
+  it("only pairs periods of equal length", () => {
+    // The invariant behind the two entries that remain: today vs yesterday is
+    // 1 day vs 1 day, and last_14d minus last_7d is exactly the 7 days before.
+    for (const [preset, cmp] of Object.entries(PREVIOUS_PERIOD)) {
+      expect(cmp.preset).toBeTruthy();
+      expect(preset).not.toMatch(/^this_/);
+    }
   });
 });
 

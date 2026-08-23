@@ -56,6 +56,33 @@ export const MAX_LABELS = 12;
  * @param {string} granularity Daily | Weekly | Monthly
  * @param {(row) => number} [weight] defaults to counting rows
  */
+const DAY_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Parse a date the way the rest of this module reads it back: locally.
+ *
+ * `new Date("2026-08-01")` is specified to parse as UTC midnight, but every
+ * bucket key below is formatted in local time. For anyone west of UTC those
+ * disagree and the whole series shifts a day earlier — a US viewer saw
+ * 2026-08-01 filed under 2026-07-31, and at Weekly/Monthly granularity the
+ * first of a month landed in the previous month. The KPI tiles beside these
+ * charts compare the same strings directly and never shifted, so tile and
+ * chart disagreed at every window edge.
+ *
+ * Anything that is not a bare yyyy-mm-dd (a full timestamp, say) already
+ * carries its own offset and is left to the standard parser.
+ */
+export function parseDayLocal(value) {
+  if (value instanceof Date) return value;
+  // Nullish has to be handled before falling through: `new Date(null)` is the
+  // epoch, not an invalid date, so a missing date would silently bucket at
+  // 1970 instead of being skipped.
+  if (value === null || value === undefined || value === "") return new Date(NaN);
+  const m = DAY_ONLY.exec(String(value));
+  if (!m) return new Date(value);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
+
 export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
   const bucket = BUCKET[granularity] ?? BUCKET.Daily;
   const totals = new Map();
@@ -63,7 +90,7 @@ export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
   for (const row of rows ?? []) {
     const raw = getDate(row);
     if (!raw) continue;
-    const date = raw instanceof Date ? raw : new Date(raw);
+    const date = raw instanceof Date ? raw : parseDayLocal(raw);
     if (Number.isNaN(date.getTime())) continue;
 
     const key = bucket.key(date);
@@ -138,12 +165,30 @@ export function scaleSeriesToTotal(series, total, capped) {
  * Presets absent from this table simply get no deltas, which is why StatTile
  * renders without a pill rather than with a zero.
  */
+/**
+ * The comparable period before each preset — and only where one exists.
+ *
+ * `/api/client-groups` speaks only in preset names (it serves from
+ * `facebook_cache.<preset>`), so a previous period has to be expressible as
+ * another preset. For `today` and `last_7d` one is: yesterday is a whole day
+ * against a whole day, and the seven days before last_7d are exactly
+ * last_14d minus last_7d.
+ *
+ * For `this_month`, `this_quarter` and `this_year` none is. Pairing them with
+ * `last_month` / `last_quarter` / `last_year` compares elapsed days against a
+ * complete period: on the 23rd that is 23 days against 31, which rendered as
+ * "Spend ▼ 46.8%" — a calendar artifact presented as a performance signal.
+ * Measured: £14,295.77 against £26,896.29, when nothing had actually dropped.
+ *
+ * Those now carry no delta at all. It is the same rule the trend charts
+ * already follow — an unknown movement is not a flat one, and it is certainly
+ * not a 46.8% fall. A true month-over-month comparison needs a window the API
+ * cannot currently express; that is the metric-resolver work, not a pairing
+ * table.
+ */
 export const PREVIOUS_PERIOD = {
   today: { preset: "yesterday" },
   last_7d: { preset: "last_14d", subtractCurrent: true },
-  this_month: { preset: "last_month" },
-  this_quarter: { preset: "last_quarter" },
-  this_year: { preset: "last_year" },
 };
 
 /** Subtracts the current period out of an enclosing one, figure by figure. */

@@ -20,7 +20,7 @@
 // client-side, fetching every lead's full call history on every load. See
 // the Sales-Hub README for why that existed and what replaced it.
 
-import { bucketSeries } from "./portfolio-series";
+import { bucketSeries, parseDayLocal } from "./portfolio-series";
 
 /**
  * Pick how finely to bucket a window.
@@ -38,8 +38,11 @@ export function granularityForRange(startDate, endDate) {
   // All-time spans years; anything finer than months is unreadable.
   if (!startDate) return "Monthly";
 
-  const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : new Date();
+  // Parsed locally, like every other date in the series layer. Mixing a
+  // UTC-parsed bound with a local `new Date()` puts the span up to a day out,
+  // which flips the granularity at the 31- and 120-day boundaries.
+  const start = parseDayLocal(startDate);
+  const end = endDate ? parseDayLocal(endDate) : new Date();
   const days = Math.max(1, Math.round((end - start) / 86_400_000));
 
   if (days <= 31) return "Daily";
