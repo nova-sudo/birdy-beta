@@ -7,9 +7,11 @@ import { bucketSeries, PREVIOUS_PERIOD } from "@/lib/portfolio-series";
 import {
   abbreviate,
   aggregateCampaignRows,
+  aggregateGroupInsights,
   buildMarketingInsight,
   buildMarketingKpis,
   campaignRowsFromGroups,
+  coverageNote,
   mergeDailyMetrics,
 } from "@/lib/marketing-aggregate";
 
@@ -149,13 +151,39 @@ export function useMarketingHubData({
 
   // ── Shaping ─────────────────────────────────────────────────────────────
 
-  const current = useMemo(() => aggregateCampaignRows(rows), [rows]);
+  // Tiles read account-level totals; the table below them keeps the campaign
+  // rows. The two differ because /{account}/campaigns omits deleted and
+  // archived campaigns — the rows are the drill-down and may legitimately
+  // account for less than the whole, but the headline must not.
+  // `count` and `activeCampaigns` stay row-derived: they are genuinely
+  // campaign-level facts, not account ones.
+  const current = useMemo(() => {
+    const fromRows = aggregateCampaignRows(rows);
+    const fromAccount = aggregateGroupInsights(clientGroups, selectedClientGroup);
+    if (!fromAccount) return fromRows;
+    return {
+      ...fromRows,
+      ...fromAccount,
+      cpl: fromAccount.leads > 0 ? fromAccount.spend / fromAccount.leads : 0,
+      ctr:
+        fromAccount.impressions > 0
+          ? (fromAccount.clicks / fromAccount.impressions) * 100
+          : 0,
+    };
+  }, [rows, clientGroups, selectedClientGroup]);
 
   const previous = useMemo(() => {
     if (!previousGroups) return null;
-    const enclosing = aggregateCampaignRows(
+    // Must come from the same level as `current`, or the delta pills compare
+    // an account-level figure against a campaign-summed one and report a
+    // change that is really just the difference between two definitions.
+    const rowTotals = aggregateCampaignRows(
       campaignRowsFromGroups(previousGroups, selectedClientGroup)
     );
+    const accountTotals = aggregateGroupInsights(previousGroups, selectedClientGroup);
+    const enclosing = accountTotals
+      ? { ...rowTotals, ...accountTotals }
+      : rowTotals;
     const comparison = PREVIOUS_PERIOD[datePreset];
     if (!comparison?.subtractCurrent) return enclosing;
 
@@ -258,6 +286,14 @@ export function useMarketingHubData({
     const cplSpend = bucketSeries(cplDays, (d) => d.date, granularity, (d) => d.spend);
     const cplLeads = bucketSeries(cplDays, (d) => d.date, granularity, (d) => d.leads);
 
+    // Each headline is the period total; each line is drawn from cached daily
+    // rows that can cover less of the window (400-day retention, and today has
+    // no row until the first refresh after midnight). Where they disagree, say
+    // so on the card rather than letting the two numbers look contradictory.
+    const spendSeries = bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend);
+    const leadSeries = bucketSeries(leadRows, (d) => d.date, granularity, (d) => Number(d.leads) || 0);
+    const sum = (vs) => (vs ?? []).reduce((a, b) => a + b, 0);
+
     return {
       spend: {
         tab: "Ad spend",
@@ -266,14 +302,16 @@ export function useMarketingHubData({
         total: formatMoney(current.spend, 2),
         valuePrefix: currencySymbol,
         decimals: 2,
-        ...bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend),
+        ...spendSeries,
+        coverage: coverageNote(spendDays, sum(spendSeries.values), current.spend),
       },
       leads: {
         tab: "Leads",
         title: "Total leads",
         subtitle: "Lead volume across all campaigns",
         total: Math.round(current.leads).toLocaleString(),
-        ...bucketSeries(leadRows, (d) => d.date, granularity, (d) => Number(d.leads) || 0),
+        ...leadSeries,
+        coverage: coverageNote(leadRows, sum(leadSeries.values), current.leads),
       },
       cpl: {
         tab: "CPL",

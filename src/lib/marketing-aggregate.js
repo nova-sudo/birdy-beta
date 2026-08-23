@@ -92,6 +92,118 @@ export function aggregateCampaignRows(rows) {
 }
 
 /**
+ * The groups a Marketing Hub figure should be built from.
+ *
+ * Two rules, and they are the whole reason this is one function rather than a
+ * filter repeated at each call site:
+ *
+ * 1. On "all", inactive clients are excluded — matching the Clients page,
+ *    which has always filtered them. The two pages disagreeing by ~11% on
+ *    every spend figure was the single most visible discrepancy between them.
+ * 2. When a specific group is picked, it is shown whatever its status. Picking
+ *    a client by name and getting an empty screen because it is archived would
+ *    be a worse bug than the one this fixes.
+ *
+ * Every Marketing aggregate runs through here, so the tiles, the chart and the
+ * table cannot drift apart again.
+ */
+export function scopeGroups(groups, groupId) {
+  const list = groups ?? [];
+  if (groupId && groupId !== "all") {
+    return list.filter((g) => g.id === groupId);
+  }
+  return list.filter(
+    (g) => String(g.client_status ?? "Active").trim().toLowerCase() !== "inactive"
+  );
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function shortDay(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ""));
+  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}` : String(iso ?? "");
+}
+
+/**
+ * Say so when a chart's line covers less than the figure printed above it.
+ *
+ * The headline on each Marketing card is the period total — account-level,
+ * full history. The line beneath it is drawn from the cached daily rows, which
+ * can cover less: `meta_daily_spend` retains 400 days, and today has no row
+ * until the first refresh after midnight. On an all-time window that gap was
+ * enormous — £428,479 printed above a line summing £278,161 — and nothing on
+ * screen explained it, so the card read as self-contradictory.
+ *
+ * Deriving the headline from the line instead would be worse: the total is the
+ * accurate number and the line is the truncated one. So the total stays and
+ * the gap gets stated.
+ *
+ * Returns null when the line does cover the total, which is the normal case.
+ *
+ * @param {object[]} days rows with a `date`, already filtered to the window
+ * @param {number} plotted sum of the values actually drawn
+ * @param {number} total the headline figure
+ */
+export function coverageNote(days, plotted, total) {
+  const list = days ?? [];
+  if (!list.length || !Number.isFinite(total) || total <= 0) return null;
+
+  // 2% absorbs rounding and same-day restatement without hiding a real gap.
+  if (Math.abs(total - plotted) / total <= 0.02) return null;
+
+  let first = list[0].date;
+  let last = list[0].date;
+  for (const d of list) {
+    if (d.date < first) first = d.date;
+    if (d.date > last) last = d.date;
+  }
+
+  return plotted < total
+    ? `chart covers ${shortDay(first)}–${shortDay(last)}; the figure above is the full period`
+    : `chart covers ${shortDay(first)}–${shortDay(last)}`;
+}
+
+/**
+ * Account-level totals for a set of client groups.
+ *
+ * The KPI tiles used to sum the campaign rows beneath them, which is not the
+ * same number. `/{account}/campaigns` omits deleted and archived campaigns, so
+ * spend on them is missing from the rows while the account still reports it —
+ * summing the rows under-reports by however much of the account's history sits
+ * on campaigns Meta no longer lists. Measured across this portfolio: campaign
+ * rows totalled £4,845.99 against £4,973.19 at account level, and one client
+ * returning zero campaigns showed £0 against £4,532 of real spend.
+ *
+ * `metrics.insights` is the account-level figure the backend caches from
+ * `/{account}/insights` — the same edge the daily spend series uses, which is
+ * what makes the tiles and the chart agree.
+ *
+ * Returns null when no group carries insights, so callers can fall back to the
+ * campaign sum rather than render a zero they never measured.
+ */
+export function aggregateGroupInsights(groups, groupId) {
+  let measured = false;
+
+  const totals = scopeGroups(groups, groupId).reduce(
+    (acc, group) => {
+      const ins = group.facebook?.metrics?.insights;
+      if (!ins) return acc;
+      measured = true;
+      acc.spend += num(ins.spend);
+      acc.leads += num(ins.results ?? ins.total_leads);
+      acc.impressions += num(ins.impressions);
+      acc.clicks += num(ins.clicks);
+      acc.reach += num(ins.reach);
+      return acc;
+    },
+    { spend: 0, leads: 0, impressions: 0, clicks: 0, reach: 0 }
+  );
+
+  return measured ? totals : null;
+}
+
+/**
  * The campaign rows hiding inside a /api/client-groups payload.
  *
  * MarketingContent builds far richer rows than this — GHL attribution, tag
@@ -108,9 +220,7 @@ export function aggregateCampaignRows(rows) {
 export function campaignRowsFromGroups(groups, groupId) {
   const rows = [];
 
-  for (const group of groups ?? []) {
-    if (groupId && groupId !== "all" && group.id !== groupId) continue;
-
+  for (const group of scopeGroups(groups, groupId)) {
     for (const c of group.facebook?.campaigns ?? []) {
       const spend = num(c.spend);
       const results = num(c.results);
@@ -150,8 +260,7 @@ export function campaignRowsFromGroups(groups, groupId) {
 export function mergeDailyMetrics(groups, groupId) {
   const byDate = new Map();
 
-  for (const group of groups ?? []) {
-    if (groupId && groupId !== "all" && group.id !== groupId) continue;
+  for (const group of scopeGroups(groups, groupId)) {
     for (const day of group.facebook?.daily_spend ?? []) {
       if (!day?.date) continue;
       const row = byDate.get(day.date) ?? { date: day.date, spend: 0, impressions: 0, impressionDays: 0 };

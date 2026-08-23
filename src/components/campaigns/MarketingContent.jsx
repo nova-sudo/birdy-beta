@@ -42,7 +42,7 @@ import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
-import { isOverCplCeiling } from "@/lib/marketing-aggregate"
+import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
 import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
 
@@ -340,6 +340,10 @@ export function MarketingContent({
       }
     }
 
+    // Rows are built for every group and scoped at render time instead — see
+    // the picker filter below. Scoping here would need selectedClientGroup in
+    // this effect's deps, and rebuilding every row on each picker change to
+    // get the same answer.
     for (const group of clientGroups) {
       const fb = group.facebook || {}
       const groupMeta = {
@@ -487,10 +491,14 @@ export function MarketingContent({
   // Declared above the table's column definitions because formatCellValue reads
   // the blended CPL to decide which cells turn red, and tableColumns memoises
   // the closures that call it.
+  // Scoped by the same rule as the tiles and the chart above (scopeGroups):
+  // inactive clients are out on "All Groups", but a specifically picked client
+  // is shown whatever its status. Rows used to be unscoped here, so the table
+  // totalled ~11% more than the Clients page and than its own hero figures.
   const heroRows = useMemo(() => {
-    if (!selectedClientGroup || selectedClientGroup === "all") return campaigns
-    return campaigns.filter(i => i._groupId === selectedClientGroup)
-  }, [campaigns, selectedClientGroup])
+    const inScope = new Set(scopeGroups(clientGroups, selectedClientGroup).map(g => g.id))
+    return campaigns.filter(i => inScope.has(i._groupId))
+  }, [campaigns, clientGroups, selectedClientGroup])
 
   const [chartMetric, setChartMetric] = useState("spend")
 
