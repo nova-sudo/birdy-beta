@@ -37,7 +37,8 @@ const presetLabel = (preset) =>
 
 export default function SalesHubPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
-    useClientGroups(DEFAULT_DATE_PRESET)
+    // Sales Hub charts hotprospector.daily_calls.
+    useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: true })
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("calls")
 

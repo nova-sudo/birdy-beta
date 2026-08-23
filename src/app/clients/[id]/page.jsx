@@ -136,7 +136,8 @@ export default function ClientDetailsPage() {
     datePreset,
     setDatePreset,
     invalidate,
-  } = useClientGroups(DEFAULT_DATE_PRESET)
+    // Renders CallCentreContent, which charts hotprospector.daily_calls.
+  } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: true })
 
   // Find this specific group from the cached list
   const matchingGroup = useMemo(

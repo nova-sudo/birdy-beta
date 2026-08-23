@@ -72,7 +72,8 @@ export function usePortfolioData({
     error: groupsError,
     datePreset,
     setDatePreset,
-  } = useClientGroups(preset);
+    // The portfolio trend chart reads the daily series.
+  } = useClientGroups(preset, { includeDaily: true });
 
   useEffect(() => {
     if (datePreset !== preset) setDatePreset(preset);

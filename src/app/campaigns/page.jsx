@@ -7,7 +7,8 @@ export default function CampaignsPage() {
   const {
     clientGroups, loading: groupsLoading, error: groupsError,
     datePreset, setDatePreset, invalidate,
-  } = useClientGroups(DEFAULT_DATE_PRESET)
+    // Marketing charts facebook.daily_spend, so it pays for the series.
+  } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: true })
 
   return (
     <MarketingContent
