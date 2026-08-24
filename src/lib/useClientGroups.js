@@ -19,10 +19,17 @@ function cacheKey(preset) {
  * that never touch it. The Clients page alone carried 3.79 MB of lead history
  * it does not plot.
  *
- * Off by default, so a page pays for the series only if it charts them.
+ * ON by default. The saving comes from the pages that do not chart them
+ * opting OUT — Clients and alerts — not from every other page having to
+ * remember to opt in.
+ *
+ * It shipped defaulting to off, and that was wrong: any caller unaware of the
+ * option silently lost its data. The Lead Hub rendered 0 leads while its own
+ * table, served by a different endpoint, showed 1,459. A missing option should
+ * cost a caller a bigger payload, never a wrong number.
  */
 export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) {
-  const { includeDaily = false } = opts
+  const { includeDaily = true } = opts
   const [datePreset, setDatePreset] = useState(initialPreset)
   const [clientGroups, setClientGroups] = useState([])
   const [meta, setMeta] = useState(null)
@@ -54,7 +61,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     try {
       const res = await apiRequest(
         `/api/client-groups?date_preset=${preset}`
-          + (includeDaily ? "&include_daily=true" : ""),
+          + (includeDaily ? "" : "&include_daily=false"),
         { signal: controller.signal }
       )
       if (!res.ok) {

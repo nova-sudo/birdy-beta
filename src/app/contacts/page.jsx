@@ -46,8 +46,7 @@ const presetLabel = (preset) =>
 
 export default function ContactPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
-    // Lead Hub charts gohighlevel.daily_leads.
-    useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: true })
+    useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("leads")
 

@@ -82,7 +82,9 @@ export default function ClientsPage() {
     setDatePreset: setSelectedDateRange,
     invalidate: invalidateClientGroups,
     refresh: refreshClientGroups,
-  } = useClientGroups(DEFAULT_DATE_PRESET)
+    // Opts OUT of the per-day series: this page shows totals, never a trend
+    // chart, and the three daily arrays are 6.38 MB of the response.
+  } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
