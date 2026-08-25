@@ -97,6 +97,9 @@ export default function OnboardingPage() {
   const [booting, setBooting] = useState(true)
   const [bootError, setBootError] = useState(null)
   const [stepIndex, setStepIndex] = useState(0)
+  // Step keys the user skipped past — persisted so the rest of the product
+  // can see exactly which parts of setup were never done.
+  const [skipped, setSkipped] = useState([])
 
   const [name, setName] = useState("")
   const [agency, setAgency] = useState("")
@@ -176,13 +179,37 @@ export default function OnboardingPage() {
   )
 
   const next = useCallback(
-    (dataPatch) => goToIndex(stepIndex + 1, dataPatch),
-    [stepIndex, goToIndex]
+    (dataPatch) => {
+      // Completing a step the normal way clears any earlier skip mark on it
+      // (the user went back and finished what they'd skipped).
+      const key = visibleSteps[Math.min(stepIndex, visibleSteps.length - 1)]
+      let patch = dataPatch
+      if (skipped.includes(key)) {
+        const cleaned = skipped.filter((k) => k !== key)
+        setSkipped(cleaned)
+        patch = { ...(dataPatch || {}), skipped: cleaned }
+      }
+      goToIndex(stepIndex + 1, patch)
+    },
+    [stepIndex, goToIndex, skipped, visibleSteps]
   )
   const back = useCallback(() => goToIndex(stepIndex - 1), [stepIndex, goToIndex])
   const goToKey = useCallback(
     (key, dataPatch) => goToIndex(visibleSteps.indexOf(key), dataPatch),
     [visibleSteps, goToIndex]
+  )
+  // Skip: everything between here and the landing step counts as skipped —
+  // "Skip for now" on slack_connect jumps to completion, which also skips the
+  // channel/frequency/brief and sub-accounts review steps.
+  const skipTo = useCallback(
+    (targetKey, extra) => {
+      const targetIdx = visibleSteps.indexOf(targetKey)
+      const covered = visibleSteps.slice(stepIndex, Math.max(targetIdx, stepIndex))
+      const newSkipped = [...new Set([...skipped, ...covered])]
+      setSkipped(newSkipped)
+      goToIndex(targetIdx, { ...(extra || {}), skipped: newSkipped })
+    },
+    [visibleSteps, stepIndex, skipped, goToIndex]
   )
 
   // ── Boot: resume server-side state + probe integrations ─────────────────
@@ -236,6 +263,7 @@ export default function OnboardingPage() {
           if (data.slack.brief_items) setBriefItems({ ...DEFAULT_BRIEF_ITEMS, ...data.slack.brief_items })
         }
         if (data.wants_sync) setSyncing(true)
+        if (Array.isArray(data.skipped)) setSkipped(data.skipped)
 
         const visible = STEPS.filter((s) => s !== "hp_key" || data.sales_tool === "hp")
         if (!cancelled) setStepIndex(Math.min(state.step || 0, visible.length - 1))
@@ -583,13 +611,14 @@ export default function OnboardingPage() {
   }, [router, firstGroupId])
 
   const doSkip = useCallback(() => {
-    if (currentKey === "sales_tool") { setSalesTool("ghl"); next({ sales_tool: "ghl" }) }
-    else if (currentKey === "hp_key") next()
-    else if (["client_picker", "client_confirm", "meta_ad_picker"].includes(currentKey)) goToKey("kpi_targets")
-    else if (currentKey === "kpi_targets") goToKey("slack_connect")
-    else if (currentKey === "slack_connect") goToKey("completion")
-    else next()
-  }, [currentKey, next, goToKey])
+    const nextKey = visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]
+    if (currentKey === "sales_tool") { setSalesTool("ghl"); skipTo(nextKey, { sales_tool: "ghl" }) }
+    else if (currentKey === "hp_key") skipTo(nextKey)
+    else if (["client_picker", "client_confirm", "meta_ad_picker"].includes(currentKey)) skipTo("kpi_targets")
+    else if (currentKey === "kpi_targets") skipTo("slack_connect")
+    else if (currentKey === "slack_connect") skipTo("completion")
+    else skipTo(nextKey)
+  }, [currentKey, stepIndex, visibleSteps, skipTo])
 
   // ── Derived lists ───────────────────────────────────────────────────────
 
