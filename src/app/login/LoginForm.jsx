@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
-import { publicRequest } from "@/lib/api"
+import { apiRequest, publicRequest } from "@/lib/api"
 import BirdyLogo from "@/components/BirdyLogo"
 
 export default function LoginForm() {
@@ -72,6 +72,25 @@ export default function LoginForm() {
 
       // ── 3. Prefetch client-groups + views (fire-and-forget) ─────────────
       prefetchAfterLogin()
+
+      // ── 3.5 First-run onboarding gate ────────────────────────────────────
+      // A user who has never completed onboarding goes straight to the wizard
+      // instead of the app. Grandfathering for pre-wizard accounts happens
+      // server-side, so existing users always come back completed here.
+      try {
+        const obRes = await apiRequest("/api/onboarding/status")
+        if (obRes.ok) {
+          const ob = await obRes.json()
+          if (!ob.completed) {
+            localStorage.setItem("onboarding_incomplete", "1")
+            router.push("/onboarding")
+            return
+          }
+          localStorage.removeItem("onboarding_incomplete")
+        }
+      } catch {
+        // Status check failing should never block login — fall through.
+      }
 
       // ── 4. Check for expired integration tokens ──────────────────────────
       const intendedRedirect = searchParams.get("redirect") || "/dashboard"

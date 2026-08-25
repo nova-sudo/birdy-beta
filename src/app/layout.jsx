@@ -77,6 +77,7 @@ export default function RootLayout({ children }) {
     pathname === "/login" ||
     pathname === "/register" ||
     pathname === "/" ||
+    pathname === "/onboarding" ||
     pathname.startsWith("/admin");
 
   const [chatOpen, setChatOpen] = useState(false);

@@ -208,10 +208,26 @@ function SettingsPageContent() {
         const errorMsg = searchParams.get("error")
         const errorDescription = searchParams.get("error_description")
 
+        // An OAuth hop started elsewhere (e.g. the onboarding wizard) stashes
+        // its return path here; honour it for every callback shape, not just
+        // the GHL/Meta tokens one below.
+        const storedRedirect = sessionStorage.getItem("post_integration_redirect")
+
         if (errorMsg && status === "error") {
           const msg = `${errorMsg}${errorDescription ? `: ${errorDescription}` : ""}`
           setError(msg)
           toast.error("Connection Failed", { description: msg })
+          if (storedRedirect) {
+            sessionStorage.removeItem("post_integration_redirect")
+            router.push(storedRedirect)
+          }
+          return
+        }
+
+        // Slack's callback returns status=success with no tokens payload.
+        if (status === "success" && !tokenData && storedRedirect) {
+          sessionStorage.removeItem("post_integration_redirect")
+          router.push(storedRedirect)
           return
         }
 
