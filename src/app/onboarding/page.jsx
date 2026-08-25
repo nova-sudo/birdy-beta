@@ -144,7 +144,7 @@ export default function OnboardingPage() {
   const [briefItems, setBriefItems] = useState(DEFAULT_BRIEF_ITEMS)
 
   const [review, setReview] = useState(null)
-  const [reviewLoading, setReviewLoading] = useState(false)
+  const [reviewSettled, setReviewSettled] = useState(false)
   const [importing, setImporting] = useState(false)
   const [completing, setCompleting] = useState(false)
 
@@ -307,17 +307,42 @@ export default function OnboardingPage() {
         })
         .catch(() => setChannels([]))
     }
-    if (currentKey === "sub_accounts_review" && review === null && !reviewLoading) {
-      setReviewLoading(true)
-      apiRequest("/api/onboarding/subaccounts-review")
-        .then(async (res) => {
-          if (!res.ok) throw new Error("review")
-          setReview(await res.json())
-        })
-        .catch(() => setReview({ accounts: [], fb_accounts: [], stats: {} }))
-        .finally(() => setReviewLoading(false))
+  }, [booting, currentKey, locations, adAccounts, channels, ghlStatus, metaStatus, slackStatus])
+
+  // Review step: poll while the background prep job (kicked off at
+  // acceptSync) is still checking sub-accounts, so the table opens with real
+  // 90/30-day activity flags. Gives up after ~100s and shows what's known.
+  useEffect(() => {
+    if (booting || currentKey !== "sub_accounts_review") return
+    let cancelled = false
+    let ticks = 0
+    let timer
+    const tick = async () => {
+      ticks += 1
+      let settled = true
+      try {
+        const res = await apiRequest("/api/onboarding/subaccounts-review")
+        if (cancelled) return
+        if (!res.ok) throw new Error("review")
+        const d = await res.json()
+        setReview(d)
+        settled = d?.prep?.status !== "running"
+      } catch {
+        if (!cancelled) {
+          setReview((prev) => prev || { accounts: [], fb_accounts: [], prep: {}, stats: {} })
+        }
+      }
+      if (cancelled) return
+      if (!settled && ticks < 25) {
+        timer = setTimeout(tick, 4000)
+      } else {
+        setReviewSettled(true)
+      }
     }
-  }, [booting, currentKey, locations, adAccounts, channels, review, reviewLoading, ghlStatus, metaStatus, slackStatus])
+    setReviewSettled(false)
+    tick()
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [booting, currentKey])
 
   // ── OAuth hops ──────────────────────────────────────────────────────────
 
@@ -475,16 +500,12 @@ export default function OnboardingPage() {
 
   const acceptSync = useCallback(() => {
     setSyncing(true)
-    // Warm the review payload so step 18 opens instantly.
-    if (review === null && !reviewLoading) {
-      setReviewLoading(true)
-      apiRequest("/api/onboarding/subaccounts-review")
-        .then(async (res) => { if (res.ok) setReview(await res.json()) })
-        .catch(() => {})
-        .finally(() => setReviewLoading(false))
-    }
+    // Kick off the background review prep: mints location tokens, pulls each
+    // sub-account's most-recent lead, and resolves Facebook matches so the
+    // review step opens with real activity flags.
+    apiRequest("/api/onboarding/prepare-review", { method: "POST" }).catch(() => {})
     goToKey("kpi_targets", { wants_sync: true })
-  }, [goToKey, review, reviewLoading])
+  }, [goToKey])
 
   const applyKpiTargets = useCallback(
     (saveAsDefault) => {
@@ -1333,7 +1354,7 @@ export default function OnboardingPage() {
           {currentKey === "sub_accounts_review" && (
             <ReviewStep
               review={review}
-              loading={reviewLoading || review === null}
+              settled={reviewSettled}
               importing={importing}
               onImport={runImport}
             />

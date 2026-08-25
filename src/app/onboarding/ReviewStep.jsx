@@ -11,17 +11,25 @@ import { PrimaryButton, SpinnerRing, StepHeading } from "./parts"
 
 const NO_MATCH = "No matching ad account found"
 
-export default function ReviewStep({ review, loading, importing, onImport }) {
+export default function ReviewStep({ review, settled, importing, onImport }) {
   // Per-row edits, sparse — row defaults come from the server payload.
   const [rows, setRows] = useState({})
   const [fbMenuOpen, setFbMenuOpen] = useState(null)
   const [statusMenuOpen, setStatusMenuOpen] = useState(null)
   const [fbSearch, setFbSearch] = useState("")
 
-  const accounts = useMemo(
+  const unimported = useMemo(
     () => (review?.accounts || []).filter((a) => !a.already_imported),
     [review]
   )
+  // The prep job decides who belongs in the list: only sub-accounts with a
+  // lead in the last 90 days (unknown recency stays visible rather than
+  // silently hiding someone's client).
+  const accounts = useMemo(
+    () => unimported.filter((a) => a.leads_recent_90 !== false),
+    [unimported]
+  )
+  const hasRecency = unimported.some((a) => a.leads_recent_90 !== null && a.leads_recent_90 !== undefined)
   const fbAccounts = review?.fb_accounts || []
 
   const resolved = accounts.map((account) => {
@@ -32,7 +40,7 @@ export default function ReviewStep({ review, loading, importing, onImport }) {
       importChecked: edit.import !== undefined ? edit.import : true,
       birdyName: edit.birdyName !== undefined ? edit.birdyName : account.name,
       fb,
-      status: edit.status || "active",
+      status: edit.status || account.status_default || "active",
     }
   })
 
@@ -51,17 +59,26 @@ export default function ReviewStep({ review, loading, importing, onImport }) {
   }
 
   const stats = [
-    { label: "Accounts found", value: accounts.length, color: "text-pd-ink" },
-    { label: "Matched to Meta", value: resolved.filter((r) => r.fb).length, color: "text-pd-ink" },
+    { label: "Accounts found", value: unimported.length, color: "text-pd-ink" },
+    {
+      label: "With leads in 90 days",
+      value: hasRecency ? unimported.filter((a) => a.leads_recent_90 === true).length : "—",
+      color: "text-pd-ink",
+    },
     { label: "Active", value: activeCount, color: "text-pd-success" },
     { label: "Inactive", value: resolved.length - activeCount, color: "text-pd-faint" },
   ]
 
-  if (loading) {
+  if (review === null || !settled) {
+    const prep = review?.prep
     return (
       <div className="flex flex-col items-center gap-3 py-16">
         <SpinnerRing size={22} />
-        <div className="text-[13px] text-pd-faint">Reviewing your GHL account…</div>
+        <div className="text-[13px] text-pd-faint">
+          {prep?.status === "running" && prep?.total
+            ? `Analysing your sub-accounts… ${prep.done} of ${prep.total} checked`
+            : "Reviewing your GHL account…"}
+        </div>
       </div>
     )
   }
@@ -72,8 +89,9 @@ export default function ReviewStep({ review, loading, importing, onImport }) {
         <StepHeading small>Here&apos;s what we found in your GHL account</StepHeading>
       </div>
       <div className="mb-5 text-center text-[13.5px] text-pd-faint">
-        These are the sub-accounts you haven&apos;t imported yet. Review the names, Facebook
-        matches and status, untick any you don&apos;t want, then bring them in.
+        {hasRecency
+          ? "We only list sub-accounts with activity in the last 90 days, and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in."
+          : "These are the sub-accounts you haven't imported yet. Review the names, Facebook matches and status, untick any you don't want, then bring them in."}
       </div>
 
       {/* stat banner */}
