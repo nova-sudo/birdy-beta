@@ -5,7 +5,7 @@
 // when the rename/delete affordances appear, and how source + search combine.
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within, fireEvent } from "@testing-library/react"
+import { render, screen, within, fireEvent, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 
@@ -44,6 +44,7 @@ async function open(props = {}) {
   const user = userEvent.setup()
   const onChange = props.onChange ?? vi.fn()
   const views = props.views ?? makeViews()
+  const onSaveDefault = props.onSaveDefault ?? vi.fn().mockResolvedValue(true)
   render(
     <ColumnsMenu
       columns={COLUMNS}
@@ -51,11 +52,12 @@ async function open(props = {}) {
       onChange={onChange}
       defaultColumns={DEFAULTS}
       views={views}
+      onSaveDefault={onSaveDefault}
       {...(props.sources ? { sources: props.sources } : {})}
     />
   )
   await user.click(screen.getByRole("button", { name: /columns/i }))
-  return { user, onChange, views }
+  return { user, onChange, views, onSaveDefault }
 }
 
 // The rename/delete icons only exist while their row is selected AND hovered.
@@ -114,9 +116,16 @@ describe("the protected Default view", () => {
     expect(views.applyView).toHaveBeenCalledWith(null)
   })
 
-  it("offers no Update View button, since it cannot be overwritten", async () => {
-    await open()
-    expect(screen.queryByRole("button", { name: /update view/i })).not.toBeInTheDocument()
+  it("can be saved over, writing the page's own layout", async () => {
+    // Default is not a stored view, so there is nothing to PATCH — the
+    // columns go to the page's own saved layout instead, which is what
+    // brings them back next visit.
+    const { user, onSaveDefault, views } = await open({ visibleColumns: ["spend", "roi"] })
+
+    await user.click(screen.getByRole("button", { name: /save to existing/i }))
+
+    await waitFor(() => expect(onSaveDefault).toHaveBeenCalledWith(["spend", "roi"]))
+    expect(views.updateView).not.toHaveBeenCalled()
   })
 
   it("still offers Save New View", async () => {
@@ -138,24 +147,27 @@ describe("saved views", () => {
     expect(views.applyView).toHaveBeenCalledWith("a")
   })
 
-  it("shows Update View once a stored view is active", async () => {
-    await open({
-      views: makeViews({ views: [view("a", "Meta only")], activeViewId: "a" }),
-    })
-    expect(screen.getByRole("button", { name: /update view/i })).toBeInTheDocument()
-  })
-
-  it("saves the current columns and source in place on Update View", async () => {
+  it("saves the current columns and source in place on Save to existing", async () => {
     const { user, views } = await open({
       views: makeViews({ views: [view("a", "Meta only")], activeViewId: "a" }),
       visibleColumns: ["spend", "roi"],
     })
 
-    await user.click(screen.getByRole("button", { name: /update view/i }))
+    await user.click(screen.getByRole("button", { name: /save to existing/i }))
 
-    expect(views.updateView).toHaveBeenCalledWith("a", {
+    await waitFor(() => expect(views.updateView).toHaveBeenCalledWith("a", {
       state: { visibleColumns: ["spend", "roi"], source: "all" },
+    }))
+  })
+
+  it("does not write the page layout when a stored view is active", async () => {
+    const { user, onSaveDefault } = await open({
+      views: makeViews({ views: [view("a", "Meta only")], activeViewId: "a" }),
     })
+
+    await user.click(screen.getByRole("button", { name: /save to existing/i }))
+
+    await waitFor(() => expect(onSaveDefault).not.toHaveBeenCalled())
   })
 })
 
@@ -357,5 +369,28 @@ describe("custom source lists", () => {
     const dialog = screen.getByRole("dialog")
     expect(within(dialog).getByRole("button", { name: "HP" })).toBeInTheDocument()
     expect(within(dialog).queryByRole("button", { name: "GHL" })).not.toBeInTheDocument()
+  })
+})
+
+
+describe("nothing persists on toggle", () => {
+  it("a column toggle never saves on its own", async () => {
+    // Exploring which columns you want must not quietly overwrite the view
+    // you were on — that is the whole point of the explicit save.
+    const { user, onSaveDefault, views } = await open({
+      views: makeViews({ views: [view("a", "Mine")], activeViewId: "a" }),
+    })
+
+    await user.click(screen.getByRole("button", { name: /ROI/ }))
+
+    expect(onSaveDefault).not.toHaveBeenCalled()
+    expect(views.updateView).not.toHaveBeenCalled()
+  })
+
+  it("select-all does not save either", async () => {
+    const { user, onSaveDefault, views } = await open()
+    await user.click(screen.getByRole("button", { name: /metric name/i }))
+    expect(onSaveDefault).not.toHaveBeenCalled()
+    expect(views.updateView).not.toHaveBeenCalled()
   })
 })

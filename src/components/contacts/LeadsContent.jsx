@@ -78,7 +78,7 @@ export function LeadsContent({
   }, [])
 
   const [currentPage, setCurrentPage] = useState(1)
-  const { savedColumns, saveViewDebounced, viewsLoaded } = useColumnViews("contacts")
+  const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("contacts")
 
   // Filter to GHL groups only
   const ghlClientGroups = useMemo(
@@ -154,12 +154,12 @@ export function LeadsContent({
     if (Array.isArray(s.visibleColumns)) setVisibleColumns(s.visibleColumns)
   }, [])
 
-  // Toggling a column also updates the legacy per-page layout, so the columns
-  // you left on are still there next visit without saving a named view.
-  const setColumnsAndPersist = useCallback((ids) => {
-    setVisibleColumns(ids)
-    saveViewDebounced(ids)
-  }, [saveViewDebounced])
+  // Explicit save only — see ColumnsMenu. Toggling changes the table but is
+  // not written until "Save to existing" or "Save New View".
+  const saveDefaultColumns = useCallback(async (ids) => {
+    await saveToDB(ids)
+    return true
+  }, [saveToDB])
 
   const pageViews = usePageViews("contacts", {
     onApply: applyColumnView,
@@ -434,9 +434,10 @@ export function LeadsContent({
               <ColumnsMenu
                 columns={columnCatalogue}
                 visibleColumns={visibleColumns}
-                onChange={setColumnsAndPersist}
+                onChange={setVisibleColumns}
                 defaultColumns={defaultColumnIds}
                 views={pageViews}
+                onSaveDefault={saveDefaultColumns}
               />
 
               {hasActiveFilters && (
