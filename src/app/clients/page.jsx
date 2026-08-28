@@ -1,7 +1,6 @@
 "use client"
-import { Fragment, useEffect, useState, useMemo } from "react"
+import { Fragment, useEffect, useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { ErrorBanner } from "@/components/ErrorBanner"
@@ -16,11 +15,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Users, DollarSign, UserCheck, Target, Search } from "lucide-react"
+import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Search } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
-import { activeGroups as selectActive, matchesStatusFilter, statusCounts as countByStatus } from "@/lib/client-status"
+import {
+  activeGroups as selectActive,
+  matchesStatusFilter,
+  matchesHealthFilter,
+  statusCounts as countByStatus,
+  healthCounts as countByHealth,
+  HEALTH_VALUES,
+} from "@/lib/client-status"
 
 import {
   ENHANCED_CLIENT_COLUMNS,
@@ -56,19 +62,17 @@ import { Spinner } from "@/components/ui/spinner"
 import Image from "next/image"
 import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
-import getSymbolFromCurrency from "currency-symbol-map";
-import { Skeleton } from "@/components/ui/skeleton"
+import { PdSegmented } from "@/components/portfolio"
+import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { usePageHeader } from "@/components/page-header"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { HealthPill } from "@/components/clients/HealthPill"
+import { usePageViews } from "@/lib/usePageViews"
 
 import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
-import {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
@@ -110,6 +114,9 @@ export default function ClientsPage() {
 
   // ── Status filter ─────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState("all")
+  // Declared here rather than beside the table controls so the saved-view
+  // state memo below can depend on it.
+  const [searchQuery, setSearchQuery] = useState("")
 
   // Sync hook data → local state (local state allows optimistic updates)
   useEffect(() => {
@@ -123,7 +130,6 @@ export default function ClientsPage() {
   }, [fetchedGroups, fetchError])
 
   const [progress, setProgress] = useState(0)
-  const [isOpen, setIsOpen] = useState(false);
   const [customMetrics, setCustomMetrics] = useState([]);
   useEffect(() => {
     apiRequest("/api/custom-metrics").then(async res => {
@@ -148,13 +154,21 @@ export default function ClientsPage() {
   const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
 
   // ── Filter groups by status ───────────────────────────────────────────────
+  // The design's six tabs mix two axes — Active/Inactive are status, and
+  // Healthy/Warning/Critical are health — so one selection resolves against
+  // whichever axis the chosen tab belongs to.
   const filteredByStatus = useMemo(
-    () => clientGroups.filter(g => matchesStatusFilter(g, statusFilter)),
+    () => clientGroups.filter(g =>
+      HEALTH_VALUES.includes(statusFilter)
+        ? matchesHealthFilter(g, statusFilter)
+        : matchesStatusFilter(g, statusFilter)
+    ),
     [clientGroups, statusFilter],
   )
 
   // ── Status counts for filter badges ───────────────────────────────────────
   const statusCounts = useMemo(() => countByStatus(clientGroups), [clientGroups])
+  const healthCounts = useMemo(() => countByHealth(clientGroups), [clientGroups])
 
   // Build dynamic columns when filteredByStatus changes
   const columns = useMemo(() => {
@@ -176,9 +190,25 @@ export default function ClientsPage() {
         icons: Flask,
       }));
 
-    // Combine and deduplicate
+    // Health — a stored per-client choice rather than anything measured, so it
+    // is injected here instead of living in the metric column config.
+    const health = {
+      id: "health",
+      label: "Health",
+      visible: true,
+      sortable: true,
+      category: "core",
+      type: "data",
+      cell: (_v, row) => <HealthPill health={row?.health} withDot={false} />,
+    };
+
+    // Combine and deduplicate — health sits directly after the name column,
+    // where the design puts it.
     const seen = new Set();
-    const all = [...dynamicColumns, ...custom];
+    const [nameCol, ...restDynamic] = dynamicColumns;
+    const all = nameCol
+      ? [nameCol, health, ...restDynamic, ...custom]
+      : [health, ...dynamicColumns, ...custom];
     const deduplicated = all.filter((col) => {
       if (seen.has(col.id)) return false;
       seen.add(col.id);
@@ -224,82 +254,76 @@ export default function ClientsPage() {
     });
   }, [columns]);
 
-  const categories = [
-    { id: 'all', label: 'All Metrics' },
-    { id: 'gohighlevel', label: 'GoHighLevel' },
-    { id: 'metaads', label: 'Meta Ads' },
-    { id: 'hotprospector', label: 'HotProspector' },
-    { id: 'tags', label: 'Lead Tags' },
-    { id: 'formulas', label: 'Formulas' },
-  ];
+  // ── Saved column views ───────────────────────────────────────────────
+  // This page tracks visibility as an id→bool map; the Columns menu speaks in
+  // ordered id arrays, so translate at the boundary. "name" is not toggleable
+  // and stays on regardless of what a view carries.
+  const visibleColumnIds = useMemo(
+    () => columns.filter(c => columnVisibility[c.id]).map(c => c.id),
+    [columns, columnVisibility]
+  )
 
-  const categoryCounts = useMemo(() => {
-    const counts = columns.reduce((acc, col) => {
-      if (col.id === 'name') return acc;
-      const cat = col.category || 'unknown';
-      acc[cat] = (acc[cat] || 0) + 1;
-      return acc;
-    }, {});
-    counts['all'] = Object.values(counts).reduce((a, b) => a + b, 0) || 0;
-    return counts;
-  }, [columns]);
+  const setVisibleColumnIds = useCallback((ids) => {
+    const on = new Set([...ids, "name"])
+    setColumnVisibility(prev => {
+      const updated = { ...prev }
+      Object.keys(updated).forEach(k => { updated[k] = on.has(k) })
+      return updated
+    })
+    // Also autosave into the legacy per-page layout, which is what makes the
+    // columns you left on still be there next visit. Named views are presets
+    // on top of that, not a replacement for it — without this, toggling a
+    // column would only survive if you remembered to save a view.
+    const known = new Set(columnOrder)
+    const ordered = columnOrder.length
+      ? [...columnOrder.filter(id => on.has(id)), ...[...on].filter(id => !known.has(id))]
+      : columns.filter(c => on.has(c.id)).map(c => c.id)
+    saveViewDebounced(ordered)
+  }, [columnOrder, columns, saveViewDebounced])
 
-  const getIcon = (col) => {
-    return (col.icons) ? col.icons : null;
-  };
+  const defaultColumnIds = useMemo(
+    () => columns.filter(c => c.visible).map(c => c.id),
+    [columns]
+  )
 
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const applyColumnView = useCallback((s) => {
+    if (Array.isArray(s.visibleColumns)) setVisibleColumnIds(s.visibleColumns)
+  }, [setVisibleColumnIds])
 
-  const filteredColumns = useMemo(() => columns.filter((col) => {
-    if (col.id === 'name') return false;
-    if (selectedCategory !== 'all' && col.category !== selectedCategory) return false;
-    if (searchTerm && !col.label.toLowerCase().includes(searchTerm.toLowerCase())) return false;
-    return true;
-  }), [columns, selectedCategory, searchTerm]);
+  const pageViews = usePageViews("clients", {
+    onApply: applyColumnView,
+    // Hold the default view until the legacy column layout has loaded and
+    // applied, so it can't be clobbered a tick later.
+    ready: viewsLoaded,
+  })
 
-  const selectAll = () => {
-    const newVisibility = {};
-    filteredColumns.forEach(col => { newVisibility[col.id] = true; });
-    setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
-  };
-
-  const clearAll = () => {
-    const newVisibility = {};
-    filteredColumns.forEach(col => { newVisibility[col.id] = false; });
-    setColumnVisibility(prev => ({ ...prev, ...newVisibility }));
-  };
-
-  const save = async () => {
-    // Save as an ordered list. The order is derived from the user's
-    // drag-reordered columnOrder when present, otherwise from the natural
-    // columns sequence. Hidden columns are excluded.
-    const visibleSet = new Set(
-      Object.entries(columnVisibility).filter(([, v]) => v).map(([k]) => k)
-    )
-    let orderedIds
-    if (columnOrder && columnOrder.length > 0) {
-      // Start from the user-defined order, then append any newly-visible
-      // columns the order list doesn't yet know about.
-      const known = new Set(columnOrder)
-      const tail = [...visibleSet].filter(id => !known.has(id))
-      orderedIds = [...columnOrder.filter(id => visibleSet.has(id)), ...tail]
-    } else {
-      orderedIds = columns.filter(c => visibleSet.has(c.id)).map(c => c.id)
-    }
-    await saveToDB(orderedIds)
-    setIsOpen(false)
+  // The table's own categories, normalised onto the Columns menu's source ids.
+  const COLUMN_SOURCES = [
+    { id: 'all', label: 'All' },
+    { id: 'meta', label: 'Meta' },
+    { id: 'ghl', label: 'GHL' },
+    { id: 'hotprospector', label: 'HP' },
+    { id: 'tags', label: 'Tags' },
+    { id: 'custom', label: 'Custom' },
+  ]
+  const CATEGORY_TO_SOURCE = {
+    metaads: 'meta',
+    gohighlevel: 'ghl',
+    hotprospector: 'hotprospector',
+    tags: 'tags',
+    formulas: 'custom',
   }
 
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const toggleColumnVisibility = (columnId) => {
-    if (columnId === "name") return;
-    setColumnVisibility((prev) => ({
-      ...prev,
-      [columnId]: !(prev[columnId] ?? true),
-    }));
-  };
+  const columnCatalogue = useMemo(
+    () => columns
+      .filter(c => c.id !== 'name')
+      .map(c => ({
+        id: c.id,
+        label: c.label ?? c.id,
+        source: CATEGORY_TO_SOURCE[c.category] ?? 'custom',
+      })),
+    [columns]
+  )
 
   useEffect(() => {
     if (wizardOpen && wizardStep > 1) {
@@ -540,98 +564,41 @@ export default function ClientsPage() {
   )
 
   // ── Calculate stats from ALL groups (unfiltered) ──────────────────────────
-  const calculateStats = () => {
-    const activeGroups = selectActive(clientGroups)
-    const activeClients = activeGroups.length
-
-    const totalSpend = activeGroups.reduce((sum, group) => {
-      const spend = parseFloat(group.facebook?.metrics?.insights?.spend) || 0
-      return sum + spend
-    }, 0)
-
-    // Use results from insights, fallback to summing campaign results, then total_leads
-    const totalLeads = activeGroups.reduce((sum, group) => {
-      let results = parseInt(group.facebook?.metrics?.insights?.results) || 0
-      if (!results && group.facebook?.campaigns?.length) {
-        results = group.facebook.campaigns.reduce((s, c) => s + (c.results || 0), 0)
-      }
-      if (!results) results = parseInt(group.facebook?.metrics?.insights?.total_leads) || 0
-      return sum + results
-    }, 0)
-
-    // CPL = total spend / total results
-    const averageCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
-
-    return {
-      activeClients,
-      totalSpend,
-      totalLeads,
-      averageCPL
-    }
-  }
-
-  const stats = calculateStats()
-
   // ── Filter tab config ─────────────────────────────────────────────────────
+
+  // Title and the date filter belong in the global top bar, which is where the
+  // design puts them and where every other hub already publishes them.
+  // Memoised: publishing sets state on the provider above, so a fresh object
+  // each render would republish each render.
+  const pageHeader = useMemo(
+    () => ({
+      title: (
+        <SalesHubHeaderTitle
+          title="Client Hub"
+          subtitle="Health and performance across every connected client"
+        />
+      ),
+      controls: (
+        <div className="hidden items-center gap-2 md:flex">
+          <DateRangeSelect value={selectedDateRange} onChange={setSelectedDateRange} />
+        </div>
+      ),
+    }),
+    [selectedDateRange, setSelectedDateRange]
+  )
+  usePageHeader(pageHeader)
+
   const filterTabs = [
     { key: "Active", label: "Active", count: statusCounts.active },
+    { key: "Healthy", label: "Healthy", count: healthCounts.healthy },
+    { key: "Warning", label: "Warning", count: healthCounts.warning },
+    { key: "Critical", label: "Critical", count: healthCounts.critical },
     { key: "Inactive", label: "Inactive", count: statusCounts.inactive },
     { key: "all", label: "All Clients", count: statusCounts.all },
   ]
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto gap-6">
-      <div className="">
-        <div className="h-auto mx-auto">
-          <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between">
-              <div>
-                <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                  Client Hub
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg
-            py-1 px-1 flex-nowrap overflow-x-auto md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
-              <div className="flex items-center gap-1">
-                <Input
-                  placeholder="Search clients..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className=" bg-white h-10 text-thin text-sm font-medium"
-                />
-
-                <DateRangeSelect value={selectedDateRange} onChange={setSelectedDateRange} />
-
-                <ColumnVisibilityDropdown
-                  isOpen={isOpen}
-                  setIsOpen={setIsOpen}
-                  categories={categories}
-                  selectedCategory={selectedCategory}
-                  setSelectedCategory={setSelectedCategory}
-                  categoryCounts={categoryCounts}
-                  searchTerm={searchTerm}
-                  setSearchTerm={setSearchTerm}
-                  filteredColumns={filteredColumns}
-                  columnVisibility={columnVisibility}
-                  toggleColumnVisibility={toggleColumnVisibility}
-                  getIcon={getIcon}
-                  selectAll={selectAll}
-                  clearAll={clearAll}
-                  save={save}
-                />
-              </div>
-              <Button
-                onClick={() => setWizardOpen(true)}
-                className="bg-[#713CDD] inline-flex items-center justify-center h-10 px-4 py-2 text-white rounded-lg gap-2"
-              >
-                <Plus className="h-4 w-4 border rounded-full border-2" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+    <SalesHubShell>
 
       {/* Add client dialog */}
       <Dialog
@@ -1088,112 +1055,68 @@ export default function ClientsPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="w-full mx-auto py-6 space-y-6">
-        <ErrorBanner error={error} />
+      <div className="min-w-0">
+      <div className="flex flex-col gap-6">
+      <ErrorBanner error={error} />
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border rounded-lg shadow-sm">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-muted-foreground font-normal text-sm">Total Active Clients</CardTitle>
-                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                  <Users className="h-4 w-4 text-purple-600 font-bold" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="w-full py-4">
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                ) : (
-                  <div className="text-2xl font-bold">{stats.activeClients}</div>
-                )}
-                <p className="text-xs text-[#71658B] mt-1">Connected client groups across all integrations</p>
-              </CardContent>
-          </Card>
+      <div>
 
-          <Card className="border rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-muted-foreground font-normal text-sm">Total Ad Spend</CardTitle>
-              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                <DollarSign className="h-4 w-4 text-purple-600 font-bold" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="w-full py-4">
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : (
-                <div className="text-2xl font-bold">
-                  {getSymbolFromCurrency(userCurrency)}{stats.totalSpend.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              )}
-              <p className="text-xs text-[#71658B] mt-1">Combined Meta ad spend across all clients</p>
-            </CardContent>
-          </Card>
+      {/* Status tabs left, table controls right. Sizing is copied from the
+          Leads and Call Centre strips rather than the handoff's 14px, so the
+          three page-level tab bars stay identical — PdSegmented ships with no
+          padding of its own and takes it from the caller. */}
+      <div className="mb-[14px] flex flex-col gap-3 md:flex-row md:items-center">
+        <PdSegmented
+          role="tablist"
+          label="Filter clients by status"
+          className="shrink-0 self-start"
+          itemClassName="px-[15px] py-[7px] text-[13px]"
+          options={filterTabs.map((t) => ({
+            key: t.key,
+            label: t.label,
+            badge: t.count,
+            badgeClassName: "bg-pd-divider text-pd-muted",
+          }))}
+          value={statusFilter}
+          onChange={setStatusFilter}
+        />
 
-          <Card className="border rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-muted-foreground font-normal text-sm">Total Leads</CardTitle>
-              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                <UserCheck className="h-4 w-4 text-purple-600 font-bold" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="w-full py-4">
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : (
-                <div className="text-2xl font-bold">
-                 {stats.totalLeads}
-                  </div>
-              )}
-              <p className="text-xs text-[#71658B] mt-1">Total results from all active Meta campaigns</p>
-            </CardContent>
-          </Card>
+        <div className="flex items-center gap-2.5 md:ml-auto">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
+              aria-hidden="true"
+            />
+            <Input
+              placeholder="Search clients…"
+              aria-label="Search clients"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+            />
+          </div>
 
-          <Card className="border rounded-lg shadow-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-muted-foreground font-normal text-sm">Average CPL</CardTitle>
-              <div className="h-7 w-8 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
-                <Target className="h-4 w-4 text-purple-600 font-bold" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="w-full py-4">
-                  <Skeleton className="h-4 w-1/2" />
-                </div>
-              ) : (
-                <div className="text-2xl font-bold">
-                  {getSymbolFromCurrency(userCurrency)}{stats.averageCPL.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </div>
-              )}
-              <p className="text-xs text-[#71658B] mt-1">Average cost per lead across all clients</p>
-            </CardContent>
-          </Card>
+          <ColumnsMenu
+            columns={columnCatalogue}
+            visibleColumns={visibleColumnIds}
+            onChange={setVisibleColumnIds}
+            defaultColumns={defaultColumnIds}
+            views={pageViews}
+            sources={COLUMN_SOURCES}
+          />
+
+          <Button
+            onClick={() => setWizardOpen(true)}
+            aria-label="Add client"
+            className="size-[38px] shrink-0 rounded-[10px] bg-pd-primary p-0 text-white hover:bg-pd-primary/90"
+          >
+            <Plus className="size-4" />
+          </Button>
         </div>
-
-        {/* ── Status Filter Bar: All Clients | Active | Inactive ────────── */}
-        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full">
-          <TabsList className="flex-1 justify-start overflow-x-auto w-full">
-            {filterTabs.map((tab) => (
-              <TabsTrigger
-                key={tab.key}
-                value={tab.key}
-              >
-                {tab.label}
-                <span className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-semibold bg-gray-100 text-gray-500 data-[state=active]:bg-white/20 data-[state=active]:text-white">
-                  {tab.count}
-                </span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+      </div>
 
         {/* StyledTable — receives filtered data */}
+        <div className="mt-4">
         <StyledTable
           data={filteredByStatus}
           onRowClick={handleClientGroupClick}
@@ -1218,8 +1141,10 @@ export default function ClientsPage() {
           onStatusToggle={handleStatusToggle}
           togglingRows={togglingRows}
         />
+        </div>
       </div>
-
-    </div>
+      </div>
+      </div>
+    </SalesHubShell>
   )
 }

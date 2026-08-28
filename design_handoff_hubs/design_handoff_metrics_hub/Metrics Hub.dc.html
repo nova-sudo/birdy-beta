@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+</style>
+</helmet>
+
+
+<div style="width:1600px; height:1000px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex;">
+  <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+    <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;">
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 14l4-4 3 3 5-6"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg></div>
+    <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></div>
+    <div style="position:relative; margin-top:6px; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#25A55F;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5"/><path d="M14.5 8.2a5 5 0 0 1 0 7.6"/></svg><span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#25A55F; border:2px solid #fff;"></span></div>
+    <div style="width:28px; height:1px; background:#ECECF2; margin:6px 0;"></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#E5484D;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg></div>
+    <div style="width:28px; height:1px; background:#ECECF2; margin:8px 0 0;"></div>
+    <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+  </div>
+
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+    <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:16px; flex:0 0 auto;">
+      <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Metrics Hub</div><div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Every metric powering your dashboards and formulas</div></div>
+      <div style="flex:1; max-width:420px; margin:0 auto; height:38px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:10px; display:flex; align-items:center; padding:0 13px; gap:9px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"/></svg><span style="font-size:13.5px;">Ask Birdy about your marketing data…</span><span style="margin-left:auto; font-size:11px; background:#EAEAF0; padding:2px 7px; border-radius:5px;">⌘K</span></div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+        <div style="position:relative; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span style="position:absolute; top:-4px; right:-4px; background:#E5484D; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">9</span></div>
+        <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#7B5FE6,#6B4EE6); display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      </div>
+    </div>
+
+    <div class="scrolly" style="flex:1; min-height:0; padding:22px 24px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+        <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+            <div onClick="{{ t.pick }}" style="cursor:pointer; padding:9px 20px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:9px; height:38px; width:220px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg><span style="font-size:13px;">Search metrics…</span></div>
+          <div style="width:38px; height:38px; border-radius:10px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
+        </div>
+      </div>
+
+      <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+        <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+          <div style="flex:1;">METRIC NAME</div>
+          <div style="flex:1.4;">NOTES</div>
+          <div style="flex:0 0 200px; text-align:center;">SOURCE</div>
+          <div style="flex:0 0 160px; text-align:center;">{{ controlsLabel }}</div>
+        </div>
+        <sc-for list="{{ rows }}" as="m" hint-placeholder-count="8">
+          <div style="display:flex; align-items:center; padding:12px 22px; border-bottom:1px solid #F5F5F8;">
+            <div style="flex:1; padding-right:12px;">
+              <div style="font-size:13.5px; font-weight:600; color:#1F1B33;">{{ m.name }}</div>
+            </div>
+            <div style="flex:1.4; padding-right:12px; font-size:12.5px; color:#8A8A9A;">{{ m.sub }}</div>
+            <div style="flex:0 0 200px; display:flex; justify-content:center;"><span style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:{{ m.srcColor }}; background:{{ m.srcBg }}; border:1px solid {{ m.srcBorder }}; padding:4px 11px; border-radius:999px;">{{ m.srcIcon }}{{ m.source }}</span></div>
+            <div style="flex:0 0 160px; display:flex; align-items:center; justify-content:center; gap:8px;">
+              <span onClick="{{ m.toggleVis }}" style="display:{{ m.standardShow }}; cursor:pointer; width:26px; height:26px; border-radius:8px; border:1px solid #ECECF2; align-items:center; justify-content:center; color:#5A5A6E;">{{ m.eyeIcon }}</span>
+              <span onClick="{{ m.editStandard }}" style="display:{{ m.standardShow }}; cursor:pointer; width:26px; height:26px; border-radius:8px; border:1px solid #ECECF2; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></span>
+              <span onClick="{{ m.edit }}" style="display:{{ m.customShow }}; cursor:pointer; width:26px; height:26px; border-radius:8px; border:1px solid #ECECF2; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></span>
+              <span onClick="{{ m.dup }}" style="display:{{ m.dupShow }}; cursor:pointer; width:26px; height:26px; border-radius:8px; border:1px solid #ECECF2; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></span>
+              <span onClick="{{ m.del }}" style="display:{{ m.delShow }}; cursor:pointer; width:26px; height:26px; border-radius:8px; border:1px solid #ECECF2; align-items:center; justify-content:center; color:#E5484D;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:center; gap:6px; margin-top:18px;">
+        <span onClick="{{ prevPage }}" style="display:flex; align-items:center; gap:5px; padding:8px 14px; border-radius:9px; font-size:13.5px; font-weight:600; color:#5A5A6E; cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>Previous</span>
+        <sc-for list="{{ pages }}" as="p" hint-placeholder-count="4">
+          <span onClick="{{ p.pick }}" style="display:{{ p.show }}; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 6px; border-radius:9px; font-size:13.5px; font-weight:600; color:{{ p.color }}; background:{{ p.bg }}; box-shadow:{{ p.shadow }}; cursor:pointer;">{{ p.label }}</span>
+        </sc-for>
+        <span onClick="{{ nextPage }}" style="display:flex; align-items:center; gap:5px; padding:8px 14px; border-radius:9px; font-size:13.5px; font-weight:600; color:#5A5A6E; cursor:pointer;">Next<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'All Metrics', hidden: {}, page: 1 };
+
+  renderVals() {
+    const st = this.state;
+    const icon = (ds, sz) => React.createElement('svg', { width: sz || 12, height: sz || 12, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d })));
+    const META = icon(['M6.9 4.3C4.4 4.3 2 8 2 12c0 2.6 1.1 3.8 1.9 3.8 1.8 0 3-2.9 4-5 1-2 1.7-3 2.6-3', 'M6.9 4.3c2.5 0 4.2 4 5.1 6.5.9-2.5 2.6-6.5 5.1-6.5 2.5 0 4.9 3.7 4.9 7.7 0 2.6-1.1 3.8-1.9 3.8-1.8 0-3-2.9-4-5-1-2-1.7-3-2.6-3']);
+    const GHL = icon(['M4 16l4-6 4 4 4-8 4 6']);
+    const FORMULA = icon(['M9 3H7a2 2 0 0 0-2 2v3.5L3 12l2 3.5V19a2 2 0 0 0 2 2h2', 'M8 8h6', 'M9 12h.01', 'M12 12h.01', 'M15 12h.01']);
+    const EYE = icon(['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z']);
+    const EYE_OFF = icon(['M17.94 17.94A10.5 10.5 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 4.22-5.94', 'M9.9 4.24A9.1 9.1 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19', 'M14.12 14.12a3 3 0 1 1-4.24-4.24', 'M1 1l22 22']);
+
+    const STANDARD = [
+      { name: 'Meta Spend', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'Impressions', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'Clicks', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'Reach', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'Results', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'CTR', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'CPC', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'CPM', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'Meta Leads', source: 'Meta Ads', dashboard: 'All', type: 'meta' },
+      { name: 'GHL Contacts', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'GHL Revenue', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'Won Opps', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'Lost Opps', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'Open Opps', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'Abandoned Opps', source: 'GoHighLevel', dashboard: 'All', type: 'ghl' },
+      { name: 'Revenue', source: 'Sales', dashboard: 'All', type: 'sales' },
+      { name: 'Deals Closed', source: 'Sales', dashboard: 'All', type: 'sales' },
+      { name: 'Avg Deal Size', source: 'Sales', dashboard: 'All', type: 'sales' },
+      { name: 'Pipeline Value', source: 'Sales', dashboard: 'All', type: 'sales' },
+      { name: 'Suggestions Sent', source: 'Birdy', dashboard: 'All', type: 'birdy' },
+      { name: 'Suggestions Approved', source: 'Birdy', dashboard: 'All', type: 'birdy' },
+      { name: 'Auto-Actions Taken', source: 'Birdy', dashboard: 'All', type: 'birdy' },
+      { name: 'Time Saved', source: 'Birdy', dashboard: 'All', type: 'birdy' },
+      { name: 'Tagged Contacts', source: 'Tags', dashboard: 'All', type: 'tag' },
+      { name: 'Tag Applied Rate', source: 'Tags', dashboard: 'All', type: 'tag' },
+      { name: 'Most Used Tag', source: 'Tags', dashboard: 'All', type: 'tag' },
+    ];
+    const CUSTOM = [
+      { name: 'CPA (Ad Spend)', sub: null, dashboard: 'clients' },
+      { name: 'Close Rate', sub: null, dashboard: 'clients' },
+      { name: 'ROAS', sub: null, dashboard: 'clients' },
+      { name: 'Call Answer %', sub: null, dashboard: 'clients' },
+      { name: 'Disqualified', sub: 'People are too far away or its the wrong number', dashboard: 'clients' },
+      { name: 'CPA (SOUP)', sub: 'CPA + PPS Fee', dashboard: 'clients' },
+    ];
+
+    const SALES = icon(['M12 1v22', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']);
+    const BIRDY = icon(['M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z']);
+    const TAG = icon(['M20.6 12.6L13.4 19.8a2 2 0 0 1-2.8 0L3.5 12.7a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2h5.8a2 2 0 0 1 1.4.6l7.5 7.5a2 2 0 0 1 0 2.8z', 'M7.5 7.5h.01']);
+    const STYLE_MAP = {
+      meta: { color: '#3B7DD6', bg: '#EAF1FD', border: '#D6E6FA', icon: META },
+      ghl: { color: '#25A55F', bg: '#EDF8F1', border: '#D5EEDF', icon: GHL },
+      sales: { color: '#B4530A', bg: '#FDF1E7', border: '#F5DDC0', icon: SALES },
+      birdy: { color: '#6B4EE6', bg: '#F1EEFC', border: '#E3DAFB', icon: BIRDY },
+      tag: { color: '#C93B8C', bg: '#FCEDF6', border: '#F5D6EA', icon: TAG },
+    };
+    const srcStyle = (type) => STYLE_MAP[type] || STYLE_MAP.meta;
+
+    const stdRows = STANDARD.map((m) => {
+      const s = srcStyle(m.type);
+      const visible = !st.hidden[m.name];
+      return { name: m.name, type: m.type, sub: '–', source: m.source, srcColor: s.color, srcBg: s.bg, srcBorder: s.border, srcIcon: s.icon, dashboard: m.dashboard, standardShow: 'flex', customShow: 'none', dupShow: 'none', delShow: 'none', edit: () => {}, dup: () => {}, del: () => {}, editStandard: () => {}, eyeIcon: visible ? EYE : EYE_OFF, toggleVis: () => this.setState((s2) => ({ hidden: Object.assign({}, s2.hidden, { [m.name]: visible }) })) };
+    });
+    const customRows = CUSTOM.map((m) => ({
+      name: m.name, sub: m.sub || '–', eyeIcon: EYE, toggleVis: () => {},
+      source: 'Custom Formula', srcColor: '#6B4EE6', srcBg: '#F1EEFC', srcBorder: '#E3DAFB', srcIcon: FORMULA,
+      dashboard: m.dashboard, standardShow: 'none', customShow: 'inline-flex', dupShow: 'inline-flex', delShow: 'inline-flex',
+      edit: () => {}, dup: () => {}, del: () => {},
+    }));
+
+    const DATA = {
+      'All Metrics': stdRows.concat(customRows),
+      'Sales Metrics': stdRows.filter((r) => r.type === 'sales'),
+      'Custom Formulas': customRows,
+      'Meta Metrics': stdRows.filter((r) => r.type === 'meta'),
+      'GoHighLevel Metrics': stdRows.filter((r) => r.type === 'ghl'),
+      'Birdy Metrics': stdRows.filter((r) => r.type === 'birdy'),
+      'Tag Metrics': stdRows.filter((r) => r.type === 'tag'),
+    };
+    const rows = DATA[st.tab] || stdRows;
+
+    const TABS = ['All Metrics', 'GoHighLevel Metrics', 'Meta Metrics', 'Sales Metrics', 'Birdy Metrics', 'Tag Metrics', 'Custom Formulas'];
+    const TAB_LABELS = { 'GoHighLevel Metrics': 'GHL Metrics' };
+    const tabs = TABS.map((label) => {
+      const on = label === st.tab;
+      return { label: TAB_LABELS[label] || label, color: on ? '#1F1B33' : '#6B6480', bg: on ? '#fff' : 'transparent', shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none', pick: () => this.setState({ tab: label }) };
+    });
+
+    const controlsLabel = (st.tab === 'Custom Formulas') ? 'CONTROLS' : 'SHOW / HIDE';
+
+    const TOTAL_PAGES = 20;
+    const cur = st.page;
+    const nums = cur <= 2 ? [1, 2] : [1, cur];
+    const showEllipsis = cur < TOTAL_PAGES - 1;
+    const pageItem = (n, label) => {
+      const on = n === cur;
+      return { label: label || String(n), show: 'flex', color: on ? '#1F1B33' : '#5A5A6E', bg: on ? '#fff' : 'transparent', shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none', pick: () => this.setState({ page: n }) };
+    };
+    const pages = [];
+    if (cur <= 2) {
+      pages.push(pageItem(1), pageItem(2));
+    } else {
+      pages.push(pageItem(1), pageItem(cur));
+    }
+    if (showEllipsis) pages.push({ label: '···', show: 'flex', color: '#9A9AAB', bg: 'transparent', pick: () => {} });
+    pages.push(pageItem(TOTAL_PAGES));
+
+    const prevPage = () => this.setState((s2) => ({ page: Math.max(1, s2.page - 1) }));
+    const nextPage = () => this.setState((s2) => ({ page: Math.min(TOTAL_PAGES, s2.page + 1) }));
+
+    return { tabs, rows, controlsLabel, pages, prevPage, nextPage };
+  }
+}
+</script>
+</body>
+</html>

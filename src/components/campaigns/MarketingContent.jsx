@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,7 +22,8 @@ import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
 import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { usePageViews } from "@/lib/usePageViews"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
@@ -203,12 +204,9 @@ export function MarketingContent({
     setVisibleColumns(prev => ({ ...prev, leads: savedLeads }))
   }, [loadedLeads, savedLeads])
 
-  const [columnsOpen, setColumnsOpen] = useState(false)
   const [gridOpen, setGridOpen] = useState(false)
   const [groupSearch, setGroupSearch] = useState("")
   const gridRef = useRef(null)
-  const [columnsSearch, setColumnsSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
 
   // ── Custom metrics (load from API) ─────────────────────────────────────────
   const [metricsLoaded, setMetricsLoaded] = useState(false)
@@ -507,6 +505,27 @@ export function MarketingContent({
     [datePreset]
   )
 
+  // ── Saved column views ─────────────────────────────────────────────────
+  // Scoped per tab: each of the four tables has its own column catalogue, so
+  // its own set of views. Switching tabs reloads the hook against that key.
+  const tabViewKey = `mktg_${activeTab}`
+  const tabViewsLoaded = {
+    campaigns: loadedCampaigns,
+    adsets: loadedAdsets,
+    ads: loadedAds,
+    leads: loadedLeads,
+  }[activeTab]
+
+  const applyColumnView = useCallback((s) => {
+    if (!Array.isArray(s.visibleColumns)) return
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: s.visibleColumns }))
+  }, [activeTab])
+
+  const pageViews = usePageViews(tabViewKey, {
+    onApply: applyColumnView,
+    ready: !!tabViewsLoaded,
+  })
+
   const {
     current: heroTotals,
     kpis,
@@ -751,13 +770,7 @@ export function MarketingContent({
          "ghl_matched", "ghl_opportunity_status", "ghl_opportunity_value", "ghl_tags"]
       : ["name", "clientGroup", ...baseColumns, ...tagColumnIds, ...activeTabMetrics.map(m => m.id)]
 
-  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "ghl", label: "GHL" }, { id: "tags", label: "Tags" }, { id: "custom", label: "Custom" }]
   const toggleableColumns = getAvailableColumns().filter(col => col !== "name")
-  const metaColCount = toggleableColumns.filter(col => metaColumns.includes(col)).length
-  const ghlColCount = toggleableColumns.filter(col => ghlColumns.includes(col)).length
-  const tagsCount = toggleableColumns.filter(col => tagColumnIds.includes(col)).length
-  const customCount = toggleableColumns.length - metaColCount - ghlColCount - tagsCount
-  const categoryCounts = { all: toggleableColumns.length, meta: metaColCount, ghl: ghlColCount, tags: tagsCount, custom: customCount }
 
   const getColType = (col) => {
     if (metaColumns.includes(col)) return "meta"
@@ -781,43 +794,25 @@ export function MarketingContent({
     }
   })
 
-  const filteredColumns = allColumnsForDropdown.filter(col =>
-    (selectedCategory === "all" || col.type === selectedCategory) &&
-    col.label.toLowerCase().includes(columnsSearch.toLowerCase())
-  )
-
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
   const columnVisibility = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
 
-  const toggleColumn = (col) => {
-    setVisibleColumns(prev => {
-      const cur = prev[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
-      const updated = cur.includes(col) ? cur.filter(c => c !== col) : [...cur, col]
-      return { ...prev, [activeTab]: updated }
-    })
-  }
+  // ── Columns menu plumbing ──────────────────────────────────────────────
+  // `type` is already meta/ghl/tags/custom, which is exactly the menu's source.
+  const columnCatalogue = allColumnsForDropdown.map(c => ({
+    id: c.id,
+    label: c.label,
+    source: c.type,
+  }))
 
-  const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
-  const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
-
-  // Dispatch to the correct per-tab saver
-  const saveView = async () => {
-    const cols = visibleColumns[activeTab]
-    if (activeTab === "campaigns") await saveCampaigns(cols)
-    else if (activeTab === "adsets")  await saveAdsets(cols)
-    else if (activeTab === "ads")     await saveAds(cols)
-    else if (activeTab === "leads")   await saveLeads(cols)
-    setColumnsOpen(false)
-  }
-
-  const getIcon = (col) => {
-    if (col.id === "clientGroup" || col.id === "name") return null
-    // GHL metrics (opp stats, contacts, revenue, tags)
-    if (col.id.startsWith("ghl_") || col.id.startsWith("tag_")) return ghlIco
-    // Custom formula metrics
-    if (customMetrics.some(m => m.id === col.id)) return Flask
-    // Everything else is Meta
-    return metaa
+  // "name" is not user-toggleable outside the Leads tab, so it survives every
+  // write — matching what clearAll has always done.
+  const setTabColumns = (ids) => {
+    const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: next }))
+    // Keep the legacy per-tab layout in step, so the columns you left on are
+    // still there next visit even without saving a named view.
+    saveDebouncedByTab[activeTab]?.(next)
   }
 
   const formatCellValue = (value, col, row) => {
@@ -1218,13 +1213,12 @@ export function MarketingContent({
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
-              <ColumnVisibilityDropdown
-                isOpen={columnsOpen} setIsOpen={setColumnsOpen}
-                categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-                categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
-                filteredColumns={filteredColumns} columnVisibility={columnVisibility}
-                toggleColumnVisibility={toggleColumn} getIcon={getIcon}
-                selectAll={selectAll} clearAll={clearAll} save={saveView}
+              <ColumnsMenu
+                columns={columnCatalogue}
+                visibleColumns={getCurrentVisibleColumns()}
+                onChange={setTabColumns}
+                defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
+                views={pageViews}
               />
             </div>
           </div>

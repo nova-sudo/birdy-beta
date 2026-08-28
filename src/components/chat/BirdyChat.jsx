@@ -9,7 +9,18 @@ import ChatConversation from "@/components/chat/ChatConversation"
  * ChatConversation which forwards them to the backend, where a dynamic
  * system prompt locks the AI to that client's data only.
  */
-export default function BirdyChat({ clientName, clientId }) {
+export default function BirdyChat({
+  clientName,
+  clientId,
+  initialMessage = null,
+  // Supplied by the Client Detail Ask Birdy tab, which owns a thread list and
+  // therefore owns which conversation is open. Left undefined elsewhere, where
+  // ChatConversation keeps its own sessionStorage-backed session.
+  sessionId,
+  onSessionId,
+  initialMessages,
+  onMessagesChange,
+}) {
   const displayName = clientName || "this client"
   const sessionKey = clientId ? `birdy_chat_client_${clientId}` : "birdy_chat_client"
 
@@ -35,6 +46,11 @@ export default function BirdyChat({ clientName, clientId }) {
           page="client_detail"
           clientGroupId={clientId}
           clientName={clientName}
+          initialMessage={initialMessage}
+          sessionId={sessionId}
+          onSessionId={onSessionId}
+          initialMessages={initialMessages}
+          onMessagesChange={onMessagesChange}
           composerCompact
           bubbleWidthClass="max-w-[90%]"
           emptyStateTitle={`Ask me about ${displayName}`}

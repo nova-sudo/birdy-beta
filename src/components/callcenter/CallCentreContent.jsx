@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
 import { PdSegmented } from "@/components/portfolio"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { usePageViews } from "@/lib/usePageViews"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -567,7 +568,6 @@ export function CallCentreContent({
     members: allVisible(MEMBER_COLUMNS),
     calls: allVisible(CALL_COLUMNS),
   })
-  const [colMenuOpen, setColMenuOpen] = useState(false)
 
   // Leads tab (fully loaded, windowed by the date preset — sorted/paginated client-side).
   const [leads, setLeads] = useState([])
@@ -946,18 +946,56 @@ export function CallCentreContent({
 
   const activeColumns = TAB_COLUMNS[activeTab]
   const activeVis = colVis[activeTab]
-  const toggleCol = (id) =>
+
+  // ── Saved column views ─────────────────────────────────────────────────
+  // Scoped per tab, like Marketing: each of the four tables has its own column
+  // set, so its own views. The key is shared between the Sales Hub and
+  // /clients/[id], which draw the same tables.
+  const applyColumnView = useCallback((s) => {
+    if (!Array.isArray(s.visibleColumns)) return
+    const on = new Set(s.visibleColumns)
     setColVis((prev) => ({
       ...prev,
-      [activeTab]: { ...prev[activeTab], [id]: !(prev[activeTab][id] ?? true) },
+      [activeTab]: Object.fromEntries(
+        TAB_COLUMNS[activeTab].map((c, i) => [c.id, i === 0 || on.has(c.id)]),
+      ),
     }))
-  const selectAllCols = () => setColVis((prev) => ({ ...prev, [activeTab]: allVisible(activeColumns) }))
-  const clearCols = () =>
+  }, [activeTab])
+
+  const pageViews = usePageViews(`cc_${activeTab}`, { onApply: applyColumnView })
+
+  // Everything on these tables comes from Hot Prospector except the leading
+  // identity column and the locally derived status, which carry no badge.
+  const columnCatalogue = useMemo(
+    () => activeColumns.map((c) => ({
+      id: c.id,
+      label: c.label,
+      source: c.icons === HP ? "hotprospector" : undefined,
+    })),
+    [activeColumns],
+  )
+
+  const columnSources = useMemo(
+    () => (columnCatalogue.some((c) => c.source === "hotprospector")
+      ? [{ id: "all", label: "All" }, { id: "hotprospector", label: "HP" }]
+      : [{ id: "all", label: "All" }]),
+    [columnCatalogue],
+  )
+
+  const visibleColumnIds = activeColumns.filter((c) => activeVis[c.id]).map((c) => c.id)
+
+  const setVisibleColumnIds = (ids) => {
+    const on = new Set(ids)
     setColVis((prev) => ({
       ...prev,
-      // keep the first (name) column — StyledTable always shows it anyway
-      [activeTab]: Object.fromEntries(activeColumns.map((c, i) => [c.id, i === 0])),
+      [activeTab]: Object.fromEntries(
+        activeColumns.map((c, i) => [c.id, i === 0 || on.has(c.id)]),
+      ),
     }))
+  }
+
+  // "Default" restores this tab's baseline: every column on.
+  const defaultColumnIds = activeColumns.map((c) => c.id)
 
   const StatCard = ({ label, value, desc, Icon }) => (
     <Card className="border rounded-lg shadow-sm">
@@ -1023,21 +1061,13 @@ export function CallCentreContent({
                   className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[220px]"
                 />
               </div>
-              <ColumnVisibilityDropdown
-                isOpen={colMenuOpen}
-                setIsOpen={setColMenuOpen}
-                categories={[{ id: "all", label: "All" }]}
-                selectedCategory="all"
-                setSelectedCategory={() => {}}
-                categoryCounts={{ all: activeColumns.length }}
-                filteredColumns={activeColumns}
-                columnVisibility={activeVis}
-                toggleColumnVisibility={toggleCol}
-                triggerClassName={TOOLBAR_CHIP}
-                getIcon={(col) => (col.icons ? col.icons.src || col.icons : null)}
-                selectAll={selectAllCols}
-                clearAll={clearCols}
-                save={() => setColMenuOpen(false)}
+              <ColumnsMenu
+                columns={columnCatalogue}
+                visibleColumns={visibleColumnIds}
+                onChange={setVisibleColumnIds}
+                defaultColumns={defaultColumnIds}
+                views={pageViews}
+                sources={columnSources}
               />
               {activeTab === "leads" && (
                 <LeadsFilterDropdown
