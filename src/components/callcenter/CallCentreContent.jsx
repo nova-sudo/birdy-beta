@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
-import { PdSegmented } from "@/components/portfolio"
+import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
 import { apiRequest } from "@/lib/api"
@@ -1036,13 +1036,10 @@ export function CallCentreContent({
             and the window filter up in the header — see the shell. */}
         <div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <PdSegmented
-              role="tablist"
+            <PageTabs
               label="Sales Hub section"
               panelId={TABLE_PANEL_ID}
-              className="shrink-0 self-start"
-              itemClassName="px-[15px] py-[7px] text-[13px]"
-              options={sectionTabs}
+              tabs={sectionTabs}
               value={activeTab}
               onChange={setActiveTab}
             />
@@ -1105,7 +1102,7 @@ export function CallCentreContent({
           {/* One panel, whichever section is selected. Radix's Tabs mounted all
               four and hid three; each of these carries its own fetch, so the
               hidden ones were work nobody asked for. */}
-          <div id={TABLE_PANEL_ID} role="tabpanel" className="mt-4">
+          <PageTabPanel id={TABLE_PANEL_ID} label="Sales Hub table" className="mt-4">
             {activeTab === "overview" && showGroupFilter && (
               // One row per client, windowed KPIs — click to drill into Leads.
               <StyledTable
@@ -1178,7 +1175,7 @@ export function CallCentreContent({
                 isLoading={callsLoading}
               />
             )}
-          </div>
+          </PageTabPanel>
         </div>
       </div>
     </div>

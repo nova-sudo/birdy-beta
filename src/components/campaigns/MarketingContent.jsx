@@ -16,7 +16,6 @@ import {
   DollarSign,
   Target,
 } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
@@ -41,7 +40,7 @@ import { usePageHeader } from "@/components/page-header"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { pdFontClass } from "@/lib/pd-fonts"
-import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadingPulse, PageTabPanel, PageTabs, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
@@ -59,6 +58,17 @@ const MARKETING_KPI_PRESENTATION = {
   impressions: { icon: Eye, tone: "info" },
   ctr: { icon: MousePointerClick, tone: "primary" },
 }
+
+// The page's sections, with the tab bar's 14px leading glyph.
+const SECTION_TABS = [
+  { key: "campaigns", label: "Campaigns", icon: LayoutGrid },
+  { key: "adsets", label: "Ad Sets", icon: Grid3X3 },
+  { key: "ads", label: "Ads", icon: FileBarChart },
+  { key: "leads", label: "Leads", icon: Users },
+]
+
+// Ties the tablist to the panel it swaps, for anyone navigating by role.
+const TABLE_PANEL_ID = "marketing-hub-table-panel"
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
@@ -1171,42 +1181,19 @@ export function MarketingContent({
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Section tabs on the handoff's segmented-control spec: the track is
-              the divider tint, the selected item lifts onto white with the
-              purple-tinted shadow. Radix Tabs still drives the behaviour —
-              only the skin changes.
-
-              Radii are written in px on purpose: globals.css sets --radius to
-              1rem, so rounded-md/lg resolve to 14px/16px here, not Tailwind's
-              stock 6px/8px. On a 33px-tall pill that reads as a stadium, which
-              is what made this control look wrong next to the rest of the app. */}
+        <div className="flex w-full flex-col">
+          {/* The app's page tab bar, same component the Sales, Lead and Client
+              hubs use — this page brings only its four sections. It replaced a
+              hand-skinned Radix TabsList that had drifted a pixel off the
+              others on radii and badge tint. */}
           <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
-            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
-              {[
-                { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
-                { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
-                { value: "ads", icon: FileBarChart, label: "Ads" },
-                { value: "leads", icon: Users, label: "Leads" },
-              ].map(tab => {
-                const badge = tabBadge(tab.value)
-                return (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="gap-[7px] rounded-[8px] px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
-                >
-                    <tab.icon className="size-[14px]" />
-                    {tab.label}
-                    {badge !== null && (
-                    <span className="ml-1 rounded-[5px] bg-pd-primary-tint px-1.5 text-[10.5px] font-bold leading-4 text-pd-primary">
-                      {badge}
-                    </span>
-                    )}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
+            <PageTabs
+              label="Marketing Hub section"
+              panelId={TABLE_PANEL_ID}
+              tabs={SECTION_TABS.map(tab => ({ ...tab, badge: tabBadge(tab.key) ?? undefined }))}
+              value={activeTab}
+              onChange={setActiveTab}
+            />
 
             {/* Search and Columns as the handoff's 38px controls, sitting
                 together at the right end of the tab row. */}
@@ -1228,7 +1215,7 @@ export function MarketingContent({
             </div>
           </div>
 
-          <TabsContent value={activeTab} className="mt-4" key={activeTab}>
+          <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
 
             {/* Drill-down breadcrumb */}
             <DrillDownBreadcrumb
@@ -1355,8 +1342,8 @@ export function MarketingContent({
                 }}
               />
             )}
-          </TabsContent>
-        </Tabs>
+          </PageTabPanel>
+        </div>
       </div>
     </div>
   )
