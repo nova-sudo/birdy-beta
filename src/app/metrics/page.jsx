@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { apiRequest } from "@/lib/api"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -367,8 +367,21 @@ const MetricsHub = () => {
     }
   }
 
-  // Title lives in the global top bar, where the design puts it. No controls —
-  // this page's search and + button sit in the toolbar over the table.
+  const openCreateDialog = useCallback(() => {
+    setEditingMetric(null)
+    setDuplicatingFrom(null)
+    setDialogMode("birdy")
+    setBirdyChatKey(k => {
+      sessionStorage.removeItem(`birdy_metric_session_${k + 1}`)
+      return k + 1
+    })
+    setIsCreateDialogOpen(true)
+  }, [])
+
+  // Title and the page's controls both live in the global top bar, in place of
+  // the Birdy wordmark — the same place Marketing, Sales, Leads and the Client
+  // Hub put theirs. The handoff draws the search and + over the table instead,
+  // but one bar for every page beats one screen matching its own mock.
   const header = useMemo(
     () => ({
       title: (
@@ -377,8 +390,30 @@ const MetricsHub = () => {
           subtitle="Every metric powering your dashboards and formulas"
         />
       ),
+      controls: (
+        <div className="flex items-center gap-[10px]">
+          <div className="relative hidden md:block">
+            <Search className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-pd-faint" />
+            <Input
+              type="search"
+              placeholder="Search metrics&hellip;"
+              aria-label="Search metrics"
+              className="h-[38px] w-[220px] rounded-[10px] border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button
+            aria-label="Create a custom metric"
+            onClick={openCreateDialog}
+            className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-[#5A3FD6]"
+          >
+            <Plus className="size-[17px] text-white" />
+          </Button>
+        </div>
+      ),
     }),
-    []
+    [searchQuery, openCreateDialog]
   )
   usePageHeader(header)
 
@@ -597,8 +632,8 @@ const MetricsHub = () => {
     // scroll region, and the pd typefaces the segmented control needs.
     <SalesHubShell>
       <div className="flex flex-col gap-[16px]">
-        {/* Toolbar — tab strip left, search + create right. The title moved to
-            the global header bar; see `header` above. */}
+        {/* Search and create moved up to the global bar with the title, so the
+            toolbar is the tab strip alone. */}
         <div className="flex flex-wrap items-center gap-[12px]">
           <PdSegmented
             role="tablist"
@@ -610,34 +645,6 @@ const MetricsHub = () => {
             className="rounded-[10px]"
             itemClassName="px-[20px] py-[9px] text-[13px] rounded-[8px] whitespace-nowrap"
           />
-
-          <div className="ml-auto flex items-center gap-[10px]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-pd-faint" />
-              <Input
-                type="search"
-                placeholder="Search metrics&hellip;"
-                aria-label="Search metrics"
-                className="h-[38px] w-[220px] rounded-[10px] border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Button
-              aria-label="Create a custom metric"
-              onClick={() => {
-                setEditingMetric(null)
-                setDuplicatingFrom(null)
-                setDialogMode("birdy")
-                setBirdyChatKey(k => k + 1)
-                sessionStorage.removeItem(`birdy_metric_session_${birdyChatKey + 1}`)
-                setIsCreateDialogOpen(true)
-              }}
-              className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-[#5A3FD6]"
-            >
-              <Plus className="size-[17px] text-white" />
-            </Button>
-          </div>
         </div>
 
         <div id="metrics-table" role="tabpanel" className="overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">

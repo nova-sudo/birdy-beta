@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import MetricsHub from "../page"
+import { PageHeaderControls, PageHeaderProvider, PageHeaderTitle } from "@/components/page-header"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
@@ -51,13 +52,37 @@ beforeEach(() => {
   apiRequest.mockImplementation(mockApi)
 })
 
+// Stands in for the global top bar: the page publishes its title and its
+// search/create controls into it, so a bare render would show neither.
+function Harness() {
+  return (
+    <PageHeaderProvider>
+      <header>
+        <PageHeaderTitle />
+        <PageHeaderControls />
+      </header>
+      <MetricsHub />
+    </PageHeaderProvider>
+  )
+}
+
 const table = () => document.getElementById("metrics-table")
 const rowNames = () =>
   [...table().querySelectorAll(".flex-1 > div:first-child")].map((el) => el.textContent)
 
 describe("Metrics Hub", () => {
+  it("puts its title and controls in the global bar, not on the page", async () => {
+    render(<Harness />)
+    await screen.findByText("Meta Spend")
+
+    const bar = document.querySelector("header")
+    expect(within(bar).getByRole("heading", { name: "Metrics Hub" })).toBeInTheDocument()
+    expect(within(bar).getByLabelText("Search metrics")).toBeInTheDocument()
+    expect(within(bar).getByRole("button", { name: "Create a custom metric" })).toBeInTheDocument()
+  })
+
   it("badges each metric with the source it comes from", async () => {
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     // Both Meta categories carry the one badge; the derived ratio is Birdy's.
@@ -70,7 +95,7 @@ describe("Metrics Hub", () => {
 
   it("filters to one source per tab", async () => {
     const user = userEvent.setup()
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     await user.click(screen.getByRole("tab", { name: "Meta Metrics" }))
@@ -82,7 +107,7 @@ describe("Metrics Hub", () => {
 
   it("names the controls column for what its rows can do", async () => {
     const user = userEvent.setup()
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     expect(screen.getByText("SHOW / HIDE")).toBeInTheDocument()
@@ -91,7 +116,7 @@ describe("Metrics Hub", () => {
   })
 
   it("shows a note where there is one and a dash where there isn't", async () => {
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     expect(within(table()).getAllByText("CPA + PPS Fee").length).toBeGreaterThan(0)
@@ -100,7 +125,7 @@ describe("Metrics Hub", () => {
 
   it("persists the show/hide eye", async () => {
     const user = userEvent.setup()
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     await user.click(screen.getByRole("button", { name: "Hide Meta Spend" }))
@@ -124,7 +149,7 @@ describe("Metrics Hub", () => {
         ? Promise.resolve({ ok: false, status: 500 })
         : mockApi(url, options)
     )
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     await user.click(screen.getByRole("button", { name: "Hide Meta Spend" }))
@@ -133,7 +158,7 @@ describe("Metrics Hub", () => {
 
   it("searches names and notes, not the source label", async () => {
     const user = userEvent.setup()
-    render(<MetricsHub />)
+    render(<Harness />)
     await screen.findByText("Meta Spend")
 
     await user.type(screen.getByLabelText("Search metrics"), "PPS")

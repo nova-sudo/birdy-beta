@@ -1,7 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { usePageHeader } from "@/components/page-header"
+import { pdFontClass } from "@/lib/pd-fonts"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
 import { CreditsPanel } from "@/components/settings/CreditsPanel"
@@ -55,6 +57,26 @@ function SettingsPageContent() {
     (["general", "integrations", "billing"].includes(requestedTab)
       ? requestedTab
       : "integrations")
+
+  // Title in the global top bar, in place of the Birdy wordmark — the same
+  // place every other redesigned page puts it. No controls: this page's tabs
+  // are its own navigation, not a filter over shared data.
+  const header = useMemo(
+    () => ({
+      title: (
+        <div className={`${pdFontClass} min-w-0`}>
+          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+            Settings
+          </h1>
+          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+            Your account, your connected sources and your plan
+          </p>
+        </div>
+      ),
+    }),
+    []
+  )
+  usePageHeader(header)
 
   // Separate state variables with clear naming — no ambiguity about which level of nesting.
   //
@@ -627,10 +649,6 @@ function SettingsPageContent() {
 
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
-      <div className="flex gap-4 flex flex-col py-2 md:py-0 md:flex-row md:items-center md:justify-between mb-8">
-        <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Settings</h1>
-      </div>
-
       <div>
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="w-full justify-start">

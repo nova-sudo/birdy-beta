@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { useSearchParams } from "next/navigation"
+import { usePageHeader } from "@/components/page-header"
+import { pdFontClass } from "@/lib/pd-fonts"
 import {
   Dialog,
   DialogContent,
@@ -740,7 +742,9 @@ export default function AlertsPage() {
 
   // ── Form helpers ─────────────────────────────────────────────
 
-  const openCreate = () => {
+  // useCallback because the header memo below closes over it, and an unstable
+  // dep there republishes the top bar on every render.
+  const openCreate = useCallback(() => {
     setEditingAlert(null)
     setForm(EXTENDED_EMPTY_FORM)
     setClientSearch("")
@@ -753,7 +757,7 @@ export default function AlertsPage() {
       return k + 1
     })
     setDialogOpen(true)
-  }
+  }, [])
 
   const openEdit = useCallback((alert) => {
     const realAlert = alert._virtual || alert._isGroup ? { ...alert } : alert
@@ -941,6 +945,32 @@ export default function AlertsPage() {
     }))
   }
 
+  // Title and the create action belong in the global top bar, in place of the
+  // Birdy wordmark — the same place Marketing, Sales, Leads and the Client Hub
+  // put theirs. See components/page-header.jsx.
+  const header = useMemo(
+    () => ({
+      title: (
+        <div className={`${pdFontClass} min-w-0`}>
+          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+            Alerts
+          </h1>
+          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+            Every rule watching your accounts, and everything it has caught
+          </p>
+        </div>
+      ),
+      controls: (
+        <Button onClick={openCreate} className="gap-2 bg-pd-primary text-white hover:bg-[#5A3FD6]">
+          <CirclePlus className="h-4 w-4" />
+          Create Alert
+        </Button>
+      ),
+    }),
+    [openCreate]
+  )
+  usePageHeader(header)
+
   const rowHandlers = {
     evaluating,
     onEdit: openEdit,
@@ -953,18 +983,6 @@ export default function AlertsPage() {
   return (
     <main className="min-h-screen w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div className=" mx-auto">
-
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">Alerts</h1>
-
-          </div>
-          <Button onClick={openCreate} className="bg-[#713cdd] hover:bg-[#5f2fc0] text-white gap-2">
-            <CirclePlus className="h-4 w-4" />
-            Create Alert
-          </Button>
-        </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-4">  

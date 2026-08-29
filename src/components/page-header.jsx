@@ -50,7 +50,12 @@ export function usePageHeader(content) {
   const setSlot = ctx?.setSlot;
 
   useEffect(() => {
-    if (!setSlot) return;
+    // Null means "I am not claiming the bar", not "clear it". Publishing the
+    // null wiped whoever legitimately held the slot: MarketingContent passes
+    // null when it is embedded in the client detail page, so opening that
+    // page's Marketing tab blanked the client name and the date picker back
+    // to the wordmark, and nothing republished them until you navigated away.
+    if (!setSlot || !content) return;
     setSlot(content);
 
     return () => {
