@@ -8,6 +8,8 @@ import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight"
 import { formatTotal, sumCallStats } from "@/lib/saleshub-totals"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { GranularitySelect } from "@/components/GranularitySelect"
+import { useGranularity } from "@/lib/useGranularity"
 import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { InsightCard } from "@/components/saleshub/InsightCard"
@@ -40,6 +42,7 @@ export default function SalesHubPage() {
     useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("calls")
+  const { granularity, setGranularity } = useGranularity(datePreset)
 
   const totals = useMemo(
     () => sumCallStats(clientGroups, selectedClientGroup, datePreset),
@@ -52,6 +55,7 @@ export default function SalesHubPage() {
     groupsLoading,
     datePreset,
     selectedClientGroup,
+    granularity,
   })
 
   // Title and filters live in the global top bar, where the design puts them —
@@ -68,6 +72,7 @@ export default function SalesHubPage() {
       ),
       controls: (
         <div className="hidden items-center gap-2 md:flex">
+          <GranularitySelect value={granularity} onChange={setGranularity} />
           <DateRangeSelect value={datePreset} onChange={setDatePreset} />
           <ClientGroupPicker
             clientGroups={clientGroups}
@@ -77,7 +82,7 @@ export default function SalesHubPage() {
         </div>
       ),
     }),
-    [datePreset, setDatePreset, clientGroups, selectedClientGroup]
+    [granularity, setGranularity, datePreset, setDatePreset, clientGroups, selectedClientGroup]
   )
   usePageHeader(header)
 
@@ -106,7 +111,7 @@ export default function SalesHubPage() {
               onMetricChange={setChartMetric}
               // Keying on metric + window remounts the paths, which is what
               // makes the draw and fade animations replay on every switch.
-              redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
+              redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
             />
           ) : (
             <PdCard className="flex-1" title="Call trend">

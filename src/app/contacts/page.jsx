@@ -15,6 +15,8 @@ import {
 } from "@/lib/leadhub-totals"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { GranularitySelect } from "@/components/GranularitySelect"
+import { useGranularity } from "@/lib/useGranularity"
 import { CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { InsightCard } from "@/components/saleshub/InsightCard"
@@ -49,6 +51,7 @@ export default function ContactPage() {
     useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const [chartMetric, setChartMetric] = useState("leads")
+  const { granularity, setGranularity } = useGranularity(datePreset)
 
   const ghlClientGroups = useMemo(
     () => (clientGroups || []).filter((g) => g.ghl_location_id),
@@ -116,6 +119,7 @@ export default function ContactPage() {
     groupsLoading,
     datePreset,
     selectedClientGroup,
+    granularity,
   })
 
   // Title and filters live in the global top bar, where the design puts them
@@ -130,6 +134,7 @@ export default function ContactPage() {
       ),
       controls: (
         <div className="hidden items-center gap-2 md:flex">
+          <GranularitySelect value={granularity} onChange={setGranularity} />
           <DateRangeSelect value={datePreset} onChange={setDatePreset} />
           <ClientGroupPicker
             clientGroups={ghlClientGroups}
@@ -139,7 +144,7 @@ export default function ContactPage() {
         </div>
       ),
     }),
-    [datePreset, setDatePreset, ghlClientGroups, selectedClientGroup]
+    [granularity, setGranularity, datePreset, setDatePreset, ghlClientGroups, selectedClientGroup]
   )
   usePageHeader(header)
 
@@ -162,7 +167,7 @@ export default function ContactPage() {
               metrics={metrics}
               activeMetric={chartMetric}
               onMetricChange={setChartMetric}
-              redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
+              redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
             />
           ) : (
             <PdCard className="flex-1" title="Lead trend">

@@ -37,7 +37,17 @@ const totalForMetric = (key, rows) => {
   return rows.reduce((sum, d) => sum + (d[field] ?? 0), 0);
 };
 
-export function useLeadHubSeries({ clientGroups, groupsLoading, datePreset, selectedClientGroup }) {
+/**
+ * @param {string} [granularity] Daily | Weekly | Monthly. Omitted, the window
+ *   picks for itself — see useGranularity.
+ */
+export function useLeadHubSeries({
+  clientGroups,
+  groupsLoading,
+  datePreset,
+  selectedClientGroup,
+  granularity,
+}) {
   const dailyRows = useMemo(
     () => mergeDailyLeads(clientGroups, selectedClientGroup),
     [clientGroups, selectedClientGroup]
@@ -53,7 +63,10 @@ export function useLeadHubSeries({ clientGroups, groupsLoading, datePreset, sele
       ? dailyRows.filter((d) => d.date >= prev.start_date && d.date <= prev.end_date)
       : null;
 
-    const series = buildLeadSeries(windowRows, granularityForRange(start_date, end_date));
+    const series = buildLeadSeries(
+      windowRows,
+      granularity ?? granularityForRange(start_date, end_date)
+    );
 
     return LEAD_CHART_METRICS.reduce((acc, metric) => {
       const s = series[metric.key];
@@ -74,7 +87,7 @@ export function useLeadHubSeries({ clientGroups, groupsLoading, datePreset, sele
       };
       return acc;
     }, {});
-  }, [dailyRows, datePreset, groupsLoading]);
+  }, [dailyRows, datePreset, granularity, groupsLoading]);
 
   return {
     chartMetrics,

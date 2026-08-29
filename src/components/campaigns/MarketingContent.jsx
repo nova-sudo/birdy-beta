@@ -33,6 +33,8 @@ import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { GranularitySelect } from "@/components/GranularitySelect"
+import { useGranularity } from "@/lib/useGranularity"
 import { usePageHeader } from "@/components/page-header"
 
 // The Marketing Hub is drawn on the design system in
@@ -499,6 +501,9 @@ export function MarketingContent({
   }, [campaigns, clientGroups, selectedClientGroup])
 
   const [chartMetric, setChartMetric] = useState("spend")
+  // How finely the trend chart buckets — the window's own choice until the
+  // header's chip is used. See useGranularity.
+  const { granularity, setGranularity } = useGranularity(datePreset)
 
   const dateRangeLabel = useMemo(
     () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
@@ -537,6 +542,7 @@ export function MarketingContent({
     rows: heroRows,
     datePreset,
     selectedClientGroup,
+    granularity,
     currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
   })
 
@@ -1008,6 +1014,7 @@ export function MarketingContent({
       ),
       controls: (
         <div className="flex items-center gap-2">
+          <GranularitySelect value={granularity} onChange={setGranularity} />
           {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
           {showGroupFilter && clientGroups.length > 0 && (
             <ClientGroupPicker
@@ -1029,7 +1036,8 @@ export function MarketingContent({
     // node is stable between renders that don't change a control's own state —
     // which it has to be, since usePageHeader holds it in state.
   }, [
-    showHeader, setDatePreset, datePreset, showGroupFilter, clientGroups.length,
+    showHeader, setDatePreset, datePreset, granularity, setGranularity,
+    showGroupFilter, clientGroups.length,
     gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
   ])
 
@@ -1097,7 +1105,7 @@ export function MarketingContent({
                 metrics={chartTabs}
                 activeMetric={chartMetric}
                 onMetricChange={setChartMetric}
-                redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup ?? "all"}`}
+                redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup ?? "all"}`}
               />
             ) : (
               <PdCard
