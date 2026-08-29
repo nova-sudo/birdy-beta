@@ -97,7 +97,12 @@ export default function RootLayout({ children }) {
   useEffect(() => {
     const onAsk = (e) => {
       const msg = e.detail?.message?.trim();
-      if (!msg) return;
+      if (!msg) {
+        // openBirdyChat(): just show the modal — the transcript (including a
+        // reply that finished while it was closed) is already in chat-store.
+        if (e.detail?.open) setChatOpen(true);
+        return;
+      }
       setChatInitialMsg(msg);
       setChatOpen(true);
     };

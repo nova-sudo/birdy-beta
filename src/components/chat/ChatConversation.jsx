@@ -4,6 +4,7 @@ import { Bird, Sparkles, Zap } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { apiRequest } from "@/lib/api"
+import { useChat, sendChatMessage, seedSessionId, markUISubmitted } from "@/lib/chat-store"
 import { useAiCredentials } from "@/hooks/useAiCredentials"
 import { useCredits } from "@/hooks/useCredits"
 import AiCredentialsEmptyState from "@/components/chat/AiCredentialsEmptyState"
@@ -49,16 +50,27 @@ export default function ChatConversation({
   showQuickActions = true,
   quickStarters = null,
 }) {
-  const [messages, setMessages] = useState(initialMessages)
-  const [input, setInput] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [submittedUIs, setSubmittedUIs] = useState(new Set())
-  // Owned here for the modal and inline surfaces, which have no conversation
-  // list of their own. /ask-birdy passes one in instead: its history is stored
-  // server-side, so the session must come from the conversation being opened,
-  // not from sessionStorage — which dies with the tab and left the model with
-  // no memory of the transcript the user was looking at.
+  // Controlled (/ask-birdy) keeps component-local state: its history is
+  // server-side and the session comes from the conversation being opened.
+  // Uncontrolled surfaces (the modal, inline widgets) read from chat-store
+  // instead, so a long analysis survives the modal being closed — the fetch
+  // keeps running, the transcript is intact on reopen, and a toast fires if
+  // the reply lands while nobody is watching.
+  const isControlled = controlledSessionId !== undefined
+  const storeChat = useChat(sessionKey)
+
+  const [localMessages, setLocalMessages] = useState(initialMessages)
+  const [localLoading, setLocalLoading] = useState(false)
+  const [localSubmittedUIs, setLocalSubmittedUIs] = useState(new Set())
   const [sessionId, setSessionId] = useState(controlledSessionId ?? null)
+
+  const messages = isControlled ? localMessages : storeChat.messages
+  const loading = isControlled ? localLoading : storeChat.loading
+  const submittedUIs = isControlled ? localSubmittedUIs : new Set(storeChat.submittedUIs)
+
+  const [input, setInput] = useState("")
+  // Shown once a request runs long enough that "just wait" stops being fair.
+  const [slowNotice, setSlowNotice] = useState(false)
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
   const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
@@ -72,11 +84,22 @@ export default function ChatConversation({
 
   // Restore session — only when the caller isn't supplying one.
   useEffect(() => {
-    if (controlledSessionId !== undefined) return
+    if (isControlled) return
     if (typeof window === "undefined") return
     const stored = sessionStorage.getItem(sessionKey)
-    if (stored) setSessionId(stored)
-  }, [sessionKey, controlledSessionId])
+    if (stored) seedSessionId(sessionKey, stored)
+  }, [sessionKey, isControlled])
+
+  // Surface the "you can close this" hint only after a request has been
+  // running a while — and only on closable surfaces (not /ask-birdy).
+  useEffect(() => {
+    if (!loading || isControlled) {
+      setSlowNotice(false)
+      return
+    }
+    const t = setTimeout(() => setSlowNotice(true), 6000)
+    return () => clearTimeout(t)
+  }, [loading, isControlled])
 
   const onSessionIdRef = useRef(onSessionId)
   useEffect(() => { onSessionIdRef.current = onSessionId }, [onSessionId])
@@ -100,9 +123,38 @@ export default function ChatConversation({
       })
       return
     }
-    setMessages(prev => [...prev, { role: "user", content: text }])
     setInput("")
-    setLoading(true)
+
+    if (!isControlled) {
+      // Store-owned send: survives this component unmounting mid-request.
+      await sendChatMessage(
+        sessionKey,
+        { text, page, clientGroupId, clientName },
+        {
+          persistSession: true,
+          onSessionId: (id) => onSessionIdRef.current?.(id),
+          onToolUsed: (t) => onToolUsedRef.current?.(t),
+          on412: () => {
+            markUnconfigured()
+            refreshCreds()
+            toast.error("AI not configured", {
+              description: "Add your AI key in Settings to keep chatting.",
+            })
+          },
+          on402: () => {
+            refreshCredits?.()
+            toast.error("You're out of Birdy Credits", {
+              description: "Top up to keep using Birdy AI.",
+            })
+          },
+          onSettled: () => refreshCredits?.(),
+        },
+      )
+      return
+    }
+
+    setLocalMessages(prev => [...prev, { role: "user", content: text }])
+    setLocalLoading(true)
     try {
       const res = await apiRequest("/api/chat", {
         method: "POST",
@@ -115,7 +167,7 @@ export default function ChatConversation({
         toast.error("AI not configured", {
           description: "Add your AI key in Settings to keep chatting.",
         })
-        setLoading(false)
+        setLocalLoading(false)
         return
       }
       if (res.status === 402) {
@@ -125,7 +177,7 @@ export default function ChatConversation({
         toast.error("You're out of Birdy Credits", {
           description: "Top up to keep using Birdy AI.",
         })
-        setLoading(false)
+        setLocalLoading(false)
         return
       }
       const data = res.ok ? await res.json() : { reply: "Sorry, something went wrong.", tools_used: [] }
@@ -134,21 +186,18 @@ export default function ChatConversation({
         // A brand-new chat only learns its id from the first reply; the
         // conversation list needs it to keep pointing at the right thread.
         onSessionIdRef.current?.(data.session_id)
-        if (controlledSessionId === undefined) {
-          sessionStorage.setItem(sessionKey, data.session_id)
-        }
       }
       const toolsUsed = data.tools_used || []
-      setMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
+      setLocalMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
       toolsUsed.forEach(t => onToolUsedRef.current?.(t))
       // Refresh the credit balance so the indicator reflects this question's spend.
       refreshCredits?.()
     } catch {
-      setMessages(prev => [...prev, { role: "assistant", content: "Sorry, I hit an error. Please try again.", tools_used: [] }])
+      setLocalMessages(prev => [...prev, { role: "assistant", content: "Sorry, I hit an error. Please try again.", tools_used: [] }])
     } finally {
-      setLoading(false)
+      setLocalLoading(false)
     }
-  }, [loading, sessionId, sessionKey, controlledSessionId, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
@@ -160,7 +209,12 @@ export default function ChatConversation({
   }, [initialMessage, configured, sendMessage])
 
   const handleUISubmit = (uiKey, values) => {
-    setSubmittedUIs(prev => new Set(prev).add(uiKey))
+    if (isControlled) {
+      setLocalSubmittedUIs(prev => new Set(prev).add(uiKey))
+    } else {
+      // Store-tracked so a reopened modal doesn't re-offer answered forms.
+      markUISubmitted(sessionKey, uiKey)
+    }
     sendMessage(`[UI_RESPONSE] ${JSON.stringify(values)}`)
   }
 
@@ -210,6 +264,12 @@ export default function ChatConversation({
               />
             ))}
             {loading && <TypingIndicator />}
+            {loading && slowNotice && (
+              <p className="pl-10 text-[11px] text-gray-400">
+                This is taking a little longer — likely a call analysis. You can
+                close this window; you&apos;ll be notified when it&apos;s done.
+              </p>
+            )}
           </div>
         )}
       </div>

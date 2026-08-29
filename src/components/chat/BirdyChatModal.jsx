@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Bird, MessageSquarePlus, ExternalLink } from "lucide-react"
 import Link from "next/link"
 import ChatConversation from "@/components/chat/ChatConversation"
+import { resetChat } from "@/lib/chat-store"
 
 /**
  * Global chat dialog. Triggered from the header "Ask Birdy..." search bar.
@@ -33,6 +34,9 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("birdy_chat_modal_session")
     }
+    // Transcript lives in chat-store (it survives close/reopen), so "New"
+    // must clear it there too — the remount alone no longer empties it.
+    resetChat("birdy_chat_modal_session")
     setResetKey(k => k + 1)
   }
 

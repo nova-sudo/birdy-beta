@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import SidebarCredits from "@/components/SidebarCredits"
+import SidebarJobs from "@/components/SidebarJobs"
 
 import {
   Tooltip,
@@ -136,6 +137,8 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
+          {/* Background tasks (call analyses etc.) — hidden when idle */}
+          <SidebarJobs />
           {/* Credits-left indicator (bottom-left) */}
           <SidebarCredits />
           <SidebarSeparator />

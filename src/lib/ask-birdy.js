@@ -17,3 +17,11 @@ export function askBirdy(message) {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(ASK_BIRDY_EVENT, { detail: { message } }));
 }
+
+/** Open the assistant without seeding a question — e.g. the "View" action on
+ * a "Birdy finished working" toast, where the answer is already waiting in
+ * the transcript (lib/chat-store.js keeps it across modal close/reopen). */
+export function openBirdyChat() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(ASK_BIRDY_EVENT, { detail: { open: true } }));
+}

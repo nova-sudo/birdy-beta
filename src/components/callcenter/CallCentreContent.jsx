@@ -41,7 +41,10 @@ import {
   X,
   SlidersHorizontal,
   Loader2,
+  Sparkles,
 } from "lucide-react"
+import { toast } from "sonner"
+import { startJob, finishJob } from "@/lib/jobs-store"
 
 // ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
 function CallLogsDialog({ lead }) {
@@ -180,6 +183,296 @@ function CallLogsDialog({ lead }) {
   )
 }
 
+// ── Member AI analysis (Members tab: "analyze this agent's last N calls") ────
+// Runs live in a module-level store so closing the dialog does NOT cancel the
+// analysis — the user is told they'll be notified, and a sonner toast fires on
+// completion whether or not the dialog is still open. Reopening the dialog
+// re-attaches to the same run/result.
+const memberRuns = new Map() // member name -> { status, total, done, calls, failed, error }
+const memberRunListeners = new Set()
+const notifyMemberRuns = () => memberRunListeners.forEach((l) => l())
+
+const MEMBER_ANALYSIS_MAX = 50
+const MEMBER_ANALYSIS_BATCH = 15 // mirrors the backend per-request cap
+
+async function startMemberAnalysis(name, total) {
+  const run = { status: "running", total, done: 0, calls: [], failed: 0, error: null }
+  memberRuns.set(name, run)
+  notifyMemberRuns()
+  // Sidebar "background tasks" indicator (lib/jobs-store.js).
+  const jobId = startJob(`Analyzing ${name}'s calls`, {
+    detail: `Up to ${total} recent calls — results land in the Members tab.`,
+  })
+  try {
+    let before = null
+    while (run.done < total) {
+      const res = await apiRequest("/api/call-analysis/member/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+          agent_name: name,
+          limit: Math.min(MEMBER_ANALYSIS_BATCH, total - run.done),
+          before,
+        }),
+      })
+      if (res.status === 402) throw new Error("Out of Birdy Credits — top up to run analyses.")
+      if (!res.ok) throw new Error("Analysis request failed.")
+      const data = await res.json()
+      run.calls.push(...(data.calls || []))
+      run.failed += data.counts?.failed || 0
+      run.done += data.counts?.selected || 0
+      before = data.next_before
+      notifyMemberRuns()
+      // Fewer recorded calls exist than requested — stop cleanly.
+      if (!before || !(data.counts?.selected > 0) || data.counts?.remaining === 0) break
+    }
+    run.status = "done"
+    finishJob(jobId)
+    toast.success(`Call analysis for ${name} is ready`, {
+      description: `${run.calls.filter((c) => c.summary).length} calls analyzed. Open their Analyze dialog in the Members tab to view.`,
+    })
+  } catch (e) {
+    run.status = "error"
+    run.error = e?.message || "Analysis failed."
+    finishJob(jobId, { status: "error", detail: run.error })
+    toast.error(`Call analysis for ${name} failed`, { description: run.error })
+  }
+  notifyMemberRuns()
+}
+
+const OUTCOME_STYLES = {
+  connected: "bg-green-100/80 text-green-700 border-green-200",
+  appointment_set: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
+  callback_promised: "bg-blue-100/80 text-blue-700 border-blue-200",
+  voicemail: "bg-amber-100/80 text-amber-700 border-amber-200",
+  no_answer: "bg-gray-100/80 text-gray-600 border-gray-200",
+  not_interested: "bg-red-100/80 text-red-700 border-red-200",
+  wrong_number: "bg-red-100/80 text-red-700 border-red-200",
+  other: "bg-gray-100/80 text-gray-600 border-gray-200",
+}
+
+const parseOutcome = (summary) => {
+  const m = /OUTCOME:\s*([a-z_]+)/i.exec(summary || "")
+  return m ? m[1].toLowerCase() : null
+}
+
+function MemberAnalyzeDialog({ member }) {
+  const [open, setOpen] = useState(false)
+  const [countInput, setCountInput] = useState("10")
+  const [estimate, setEstimate] = useState(null)
+  const [estimating, setEstimating] = useState(false)
+  const [, forceRerender] = useState(0)
+
+  const name = member.name && member.name !== "—" ? member.name : null
+  const run = name ? memberRuns.get(name) : null
+  const count = Math.min(MEMBER_ANALYSIS_MAX, Math.max(1, Number(countInput) || 10))
+
+  // Re-render on run-store updates (progress ticks, completion) while open.
+  useEffect(() => {
+    if (!open) return
+    const listener = () => forceRerender((n) => n + 1)
+    memberRunListeners.add(listener)
+    return () => memberRunListeners.delete(listener)
+  }, [open])
+
+  // Debounced cost estimate — refetched when the dialog opens or N changes.
+  useEffect(() => {
+    if (!open || !name) return
+    let cancelled = false
+    setEstimating(true)
+    const t = setTimeout(async () => {
+      try {
+        const res = await apiRequest(
+          `/api/call-analysis/member/estimate?agent_name=${encodeURIComponent(name)}&limit=${count}`,
+        )
+        const data = res.ok ? await res.json() : null
+        if (!cancelled) setEstimate(data)
+      } catch {
+        if (!cancelled) setEstimate(null)
+      } finally {
+        if (!cancelled) setEstimating(false)
+      }
+    }, 350)
+    return () => {
+      cancelled = true
+      clearTimeout(t)
+    }
+  }, [open, name, count])
+
+  if (!name) return <span className="text-sm text-muted-foreground">—</span>
+
+  const running = run?.status === "running"
+  const analyzed = (run?.calls || []).filter((c) => c.summary)
+  const outcomes = analyzed.reduce((acc, c) => {
+    const o = parseOutcome(c.summary) || "other"
+    acc[o] = (acc[o] || 0) + 1
+    return acc
+  }, {})
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="gap-1.5 bg-transparent hover:bg-purple-50 transition-colors">
+          {running ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+          )}
+          {running ? `${run.done}/${run.total}` : "Analyze"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-purple-500" />
+            AI Call Analysis — {name}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Setup: how many calls + cost estimate */}
+        {!run && (
+          <div className="space-y-4 pt-2">
+            <div className="flex items-end gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Last how many calls? (1–{MEMBER_ANALYSIS_MAX})
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={MEMBER_ANALYSIS_MAX}
+                  value={countInput}
+                  onChange={(e) => setCountInput(e.target.value)}
+                  className="w-32"
+                />
+              </div>
+              <Button
+                onClick={() => startMemberAnalysis(name, Math.min(count, estimate?.calls_found ?? count))}
+                disabled={estimating || !estimate || estimate.calls_found === 0}
+                className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Analyze
+              </Button>
+            </div>
+
+            <div className="rounded-lg border border-purple-100 bg-purple-50/50 px-4 py-3 text-sm">
+              {estimating ? (
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Estimating cost…
+                </span>
+              ) : estimate ? (
+                estimate.calls_found === 0 ? (
+                  <span className="text-muted-foreground">No recorded calls found for this member.</span>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="font-semibold text-foreground">
+                      ~{estimate.estimated_credits} credits
+                      <span className="ml-2 font-normal text-muted-foreground">estimated</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {estimate.calls_found} recorded {estimate.calls_found === 1 ? "call" : "calls"}
+                      {estimate.calls_found < estimate.requested && ` (only ${estimate.calls_found} of ${estimate.requested} requested exist)`}
+                      {" · "}{estimate.total_minutes} min of audio
+                      {estimate.already_transcribed > 0 && ` · ${estimate.already_transcribed} already transcribed (free)`}
+                    </p>
+                  </div>
+                )
+              ) : (
+                <span className="text-muted-foreground">Couldn&apos;t fetch a cost estimate.</span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Recordings are transcribed and reviewed by AI. You can close this window while it runs — you&apos;ll be
+              notified when the analysis is done.
+            </p>
+          </div>
+        )}
+
+        {/* Progress */}
+        {running && (
+          <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+            <p className="text-sm font-semibold text-foreground">
+              Analyzing calls… {run.done}/{run.total}
+            </p>
+            <p className="text-xs text-muted-foreground max-w-xs">
+              Transcribing and reviewing {name}&apos;s recordings. Feel free to close this window — you&apos;ll be
+              notified when it&apos;s done.
+            </p>
+          </div>
+        )}
+
+        {/* Error */}
+        {run?.status === "error" && (
+          <div className="space-y-3 py-4">
+            <p className="text-sm text-red-600">{run.error}</p>
+            <Button variant="outline" size="sm" onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}>
+              Try again
+            </Button>
+          </div>
+        )}
+
+        {/* Results */}
+        {run?.status === "done" && (
+          <div className="space-y-4 pt-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {Object.entries(outcomes).map(([o, n]) => (
+                <Badge key={o} variant="outline" className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} border text-xs font-medium`}>
+                  {o.replace(/_/g, " ")}: {n}
+                </Badge>
+              ))}
+              {run.failed > 0 && (
+                <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs font-medium">
+                  {run.failed} failed to transcribe
+                </Badge>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              {run.calls.map((c) => (
+                <div key={c.call_id} className="rounded-lg border border-border bg-card p-4">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <p className="text-xs text-muted-foreground">
+                      {c.started_at ? new Date(c.started_at).toLocaleString() : "—"}
+                      {c.lead_name && ` · ${c.lead_name}`}
+                      {c.duration_seconds != null && ` · ${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s`}
+                    </p>
+                    {c.summary && parseOutcome(c.summary) && (
+                      <Badge
+                        variant="outline"
+                        className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} border text-xs font-medium shrink-0`}
+                      >
+                        {parseOutcome(c.summary).replace(/_/g, " ")}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-foreground whitespace-pre-line">
+                    {c.summary ? c.summary.replace(/\n?OUTCOME:.*$/i, "").trim() : (
+                      <span className="text-red-600">{c.error}</span>
+                    )}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+              New analysis
+            </Button>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+const MEMBER_AI_CELL = (_v, row) => <MemberAnalyzeDialog member={row} />
+
 // ── Column definitions per tab ───────────────────────────────────────────────
 const OVERVIEW_COLUMNS = [
   { id: "name", label: "Client", sortable: true },
@@ -235,6 +528,7 @@ const MEMBER_COLUMNS = [
   { id: "convos", label: "Convos", sortable: true, icons: HP },
   { id: "appts", label: "Appts", sortable: true, icons: HP },
   { id: "talk_min", label: "Talk (min)", sortable: true, icons: HP },
+  { id: "ai", label: "AI Analysis", cell: MEMBER_AI_CELL },
 ]
 
 const DIRECTION_CELL = (_v, row) => (
@@ -275,6 +569,144 @@ const RECORDING_CELL = (_v, row) =>
     <span className="text-sm text-muted-foreground">—</span>
   )
 
+// ── Per-call AI analysis (Calls tab: sparkle button next to play/download) ──
+// Rows here come from the HotProspector cache and carry no Mongo id, so the
+// backend is addressed by recording_url (POST /api/call_logs/analyze matches
+// it against call_logs, or analyzes ad-hoc if the cron hasn't synced it yet).
+// The request registers in lib/jobs-store.js so the sidebar shows it, and the
+// verdict is cached server-side — re-clicking an analyzed call is instant.
+
+function parseAnalysisSections(text) {
+  const grab = (label) => {
+    const re = new RegExp(
+      `${label}:\\s*([\\s\\S]*?)(?=\\n?\\s*(?:WHAT HAPPENED|WHAT WENT WRONG|COACHING|OUTCOME):|$)`,
+      "i",
+    )
+    return re.exec(text || "")?.[1]?.trim() || null
+  }
+  return {
+    happened: grab("WHAT HAPPENED"),
+    wrong: grab("WHAT WENT WRONG"),
+    coaching: grab("COACHING"),
+    outcome: parseOutcome(text),
+  }
+}
+
+function AnalyzeCell({ row }) {
+  const [status, setStatus] = useState("idle") // idle | loading | done
+  const [result, setResult] = useState(null)
+  const [open, setOpen] = useState(false)
+
+  if (!row.recording_url) return <span className="text-sm text-muted-foreground">—</span>
+
+  const analyze = async () => {
+    if (status === "loading") return
+    if (result) {
+      setOpen(true)
+      return
+    }
+    setStatus("loading")
+    const who = row.caller_name && row.caller_name !== "—" ? row.caller_name : row.to_number
+    const jobId = startJob(`Analyzing call — ${who}`, {
+      detail: "Transcribing and reviewing the recording.",
+    })
+    try {
+      const res = await apiRequest("/api/call_logs/analyze", {
+        method: "POST",
+        body: JSON.stringify({
+          recording_url: row.recording_url,
+          agent_name: row.agent_name,
+          lead_name: row.caller_name,
+          direction: row.direction,
+          duration_seconds: row.duration,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.status === 402) throw new Error("Out of Birdy Credits — top up to run analyses.")
+      if (!res.ok) throw new Error(data.detail || "Analysis failed.")
+      finishJob(jobId)
+      setResult(data)
+      setStatus("done")
+      setOpen(true)
+      toast.success("Call analysis ready", {
+        description: data.cached ? "Loaded from a previous analysis (free)." : undefined,
+      })
+    } catch (e) {
+      const msg = e?.message || "Analysis failed."
+      finishJob(jobId, { status: "error", detail: msg })
+      toast.error("Couldn't analyze this call", { description: msg })
+      setStatus("idle")
+    }
+  }
+
+  const sections = result ? parseAnalysisSections(result.analysis) : null
+
+  return (
+    <>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-8 w-8 bg-transparent"
+        onClick={analyze}
+        disabled={status === "loading"}
+        title={result ? "View AI analysis" : "AI analyze this call"}
+      >
+        {status === "loading" ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" />
+        ) : (
+          <Sparkles className={`h-3.5 w-3.5 ${result ? "text-purple-600" : ""}`} />
+        )}
+      </Button>
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-lg bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-purple-600" />
+              Call analysis — {row.caller_name || row.to_number}
+            </DialogTitle>
+          </DialogHeader>
+          {result && (
+            <div className="space-y-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {row.agent_name && <span>Agent: <span className="font-medium text-foreground">{row.agent_name}</span></span>}
+                <span>{DURATION_CELL(row.duration)}</span>
+                {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
+                {sections?.outcome && (
+                  <Badge variant="outline" className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} border text-xs font-medium`}>
+                    {sections.outcome.replace(/_/g, " ")}
+                  </Badge>
+                )}
+              </div>
+              {sections?.happened ? (
+                <>
+                  <AnalysisSection label="What happened" text={sections.happened} />
+                  <AnalysisSection label="What went wrong" text={sections.wrong} />
+                  <AnalysisSection label="Coaching" text={sections.coaching} />
+                </>
+              ) : (
+                <p className="whitespace-pre-wrap text-gray-700">{result.analysis}</p>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
+  )
+}
+
+function AnalysisSection({ label, text }) {
+  if (!text) return null
+  return (
+    <div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="mt-0.5 text-gray-700">{text}</p>
+    </div>
+  )
+}
+
+const ANALYZE_CELL = (_v, row) => <AnalyzeCell row={row} />
+
 const CALL_COLUMNS = [
   { id: "caller_name", label: "Lead", sortable: true, icons: HP },
   { id: "client", label: "Client", sortable: true, icons: HP },
@@ -284,6 +716,7 @@ const CALL_COLUMNS = [
   { id: "to_number", label: "To", sortable: true, icons: HP },
   { id: "call_time", label: "Call Time", sortable: true, icons: HP, cell: CALL_TIME_CELL },
   { id: "recording", label: "Recording", icons: HP, cell: RECORDING_CELL },
+  { id: "analyze", label: "AI", icons: HP, cell: ANALYZE_CELL },
 ]
 
 const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS, calls: CALL_COLUMNS }
@@ -523,6 +956,9 @@ const flattenCalls = (leadsData) =>
       to_number: log.to_number || "—",
       call_time: log.call_time_iso || null,
       recording_url: log.recording_url || null,
+      // The dialing agent (log-level caller_name — distinct from the lead
+      // name above); labels the per-call AI analysis.
+      agent_name: log.caller_name || null,
     }))
   })
 
