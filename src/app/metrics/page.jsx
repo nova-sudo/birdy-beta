@@ -18,7 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Filter, TrendingUp, Calculator, Webhook, BarChart3, Trash2, Copy, PieChart, X, CalculatorIcon, Zap, SquarePlus, Bird } from "lucide-react"
+import { Plus, Trash2, Copy, X, Bird, Eye, EyeOff, Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -33,16 +33,15 @@ import {
 } from "@/lib/metrics-discovery"
 import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP, flaskIcon as Flask, ghlIcon, metaIcon } from "@/lib/icons"
 import MetricPicker from "@/components/ui/MetricPicker"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton"
+import { toast } from "sonner"
+import { usePageHeader } from "@/components/page-header"
+import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { PdSegmented } from "@/components/portfolio"
+import { SourceBadge } from "@/components/metrics/SourceBadge"
+import { SOURCE_TABS, matchesSourceTab, sourceForCategory } from "@/lib/metric-sources"
+import { pageNumbers } from "@/lib/page-numbers"
+import { setCustomMetricsCache } from "@/lib/metrics"
 import { InboxIcon } from "lucide-react"
 import {Hash} from "lucide-react"
 
@@ -183,12 +182,14 @@ const MetricsHub = () => {
   const [clientGroups, setClientGroups] = useState([])
   const [discoveredMetrics, setDiscoveredMetrics] = useState([])
   const [availableMetricsForFormulas, setAvailableMetricsForFormulas] = useState([])
-  const [statistics, setStatistics] = useState(null)
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true)
   const itemsPerPage = 15; // Adjust as needed
 
   const [saving, setSaving] = useState(false)
+  // Metric ids this user has hidden with the show/hide eye. Kept as a Set so
+  // the row render is a lookup rather than a scan of the whole catalog.
+  const [hiddenMetrics, setHiddenMetrics] = useState(() => new Set())
 
   // Form state for creating/editing metrics
   const [metricForm, setMetricForm] = useState({
@@ -204,10 +205,15 @@ const MetricsHub = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [fieldsRes, metricsRes] = await Promise.all([
+        const [fieldsRes, metricsRes, hiddenRes] = await Promise.all([
           apiRequest("/api/custom-metrics/available-fields"),
           apiRequest("/api/custom-metrics"),
+          apiRequest("/api/user/hidden-metrics"),
         ])
+        if (hiddenRes.ok) {
+          const data = await hiddenRes.json()
+          setHiddenMetrics(new Set(data.hidden || []))
+        }
         if (fieldsRes.ok) {
           const data = await fieldsRes.json()
           // Build availableMetricsForFormulas from the lightweight response
@@ -232,13 +238,12 @@ const MetricsHub = () => {
             id: m.id,
             name: m.label,
             label: m.label,
-            source: m.category,
+            source: sourceForCategory(m.category),
             dashboard: m.category === "Campaigns" ? "Marketing Hub" : m.category === "Tags" ? "Clients" : "All",
             description: "",
             category: m.category === "custom" ? "custom" : "standard",
             enabled: true,
           })))
-          setStatistics({ total: metrics.length })
         }
         if (metricsRes.ok) {
           const data = await metricsRes.json()
@@ -246,7 +251,7 @@ const MetricsHub = () => {
             id: m.id,
             name: m.name,
             description: m.description || "",
-            source: "Custom Formula",
+            source: "custom",
             dashboard: (m.dashboards || []).join(", "),
             dashboards: m.dashboards || [],
             formula: m.formula_display || "",
@@ -270,7 +275,6 @@ const MetricsHub = () => {
 
   // Sync custom metrics cache for other modules (metrics.js)
   useEffect(() => {
-    const { setCustomMetricsCache } = require("@/lib/metrics")
     setCustomMetricsCache(customMetrics)
   }, [customMetrics])
 
@@ -281,10 +285,15 @@ const MetricsHub = () => {
   // reference themselves; deeper cycles are caught server-side on save.
   const ICON_MAP = { "Meta Ads": metaIcon, "GoHighLevel": ghlIcon, "Tags": ghlIcon, "Campaigns": metaIcon, "Calculated": Flask, "Custom": Flask, "HotProspector": HP, "Call Center": HP, "Call Center Agents": HP }
   const formulaMetricOptions = useMemo(() => {
-    const baseOptions = availableMetricsForFormulas.map(m => ({
-      ...m,
-      icon: ICON_MAP[m.category] || null,
-    }))
+    const baseOptions = availableMetricsForFormulas
+      // Hiding a metric takes it out of the picker. Formulas that already
+      // reference one keep evaluating — hiding governs what you're offered
+      // next, it isn't a delete.
+      .filter(m => !hiddenMetrics.has(m.id))
+      .map(m => ({
+        ...m,
+        icon: ICON_MAP[m.category] || null,
+      }))
     const editingId = editingMetric?.id
     const customOptions = customMetrics
       .filter(cm => cm.id !== editingId)
@@ -295,32 +304,83 @@ const MetricsHub = () => {
         icon: Flask,
       }))
     return [...baseOptions, ...customOptions]
-  }, [availableMetricsForFormulas, customMetrics, editingMetric])
+  }, [availableMetricsForFormulas, customMetrics, editingMetric, hiddenMetrics])
 
   // Combine discovered and custom metrics
   const allMetrics = [...discoveredMetrics, ...customMetrics]
 
-  // Filter metrics based on active tab and search
+  // Filter by the active source tab and the search box. The tabs are the
+  // metric's SOURCE now — Meta, GHL, Sales, Birdy, Tags — not the old
+  // standard/webhook split, which named an implementation detail nobody
+  // outside the codebase could act on.
+  const query = searchQuery.trim().toLowerCase()
   const filteredMetrics = allMetrics.filter((metric) => {
-    const matchesTab =
-      activeTab === "all" ||
-      (activeTab === "standard" && metric.category === "standard") ||
-      (activeTab === "webhook" && metric.category === "webhook") ||
-      (activeTab === "custom" && metric.category === "custom")
-
     const matchesSearch =
-      searchQuery === "" ||
-      (metric.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (metric.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (metric.source || "").toLowerCase().includes(searchQuery.toLowerCase())
+      query === "" ||
+      (metric.name || "").toLowerCase().includes(query) ||
+      (metric.description || "").toLowerCase().includes(query)
 
-    return matchesTab && matchesSearch
+    return matchesSourceTab(activeTab, metric.source) && matchesSearch
   })
 
   const totalPages = Math.ceil(filteredMetrics.length / itemsPerPage);
   const handlePageChange = (page) => {
     setCurrentPage(page);
   };
+
+  // A narrower tab or a search can leave the current page past the end of the
+  // list — the table then renders empty with pagination still pointing at
+  // page 6 of 2. Snap back rather than showing a blank card.
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [activeTab, query])
+
+  // Show/hide eye. Optimistic: the row flips immediately and reverts if the
+  // write fails, because a toggle that waits on a round trip feels broken.
+  const toggleMetricVisibility = async (metric) => {
+    const willHide = !hiddenMetrics.has(metric.id)
+    setHiddenMetrics((prev) => {
+      const next = new Set(prev)
+      if (willHide) next.add(metric.id)
+      else next.delete(metric.id)
+      return next
+    })
+    try {
+      const res = await apiRequest("/api/user/hidden-metrics", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ metric_id: metric.id, hidden: willHide }),
+      })
+      if (!res.ok) throw new Error(`${res.status}`)
+      const data = await res.json()
+      setHiddenMetrics(new Set(data.hidden || []))
+    } catch {
+      setHiddenMetrics((prev) => {
+        const next = new Set(prev)
+        if (willHide) next.delete(metric.id)
+        else next.add(metric.id)
+        return next
+      })
+      toast.error("Could not save", {
+        description: `"${metric.name}" is still ${willHide ? "visible" : "hidden"}.`,
+      })
+    }
+  }
+
+  // Title lives in the global top bar, where the design puts it. No controls —
+  // this page's search and + button sit in the toolbar over the table.
+  const header = useMemo(
+    () => ({
+      title: (
+        <SalesHubHeaderTitle
+          title="Metrics Hub"
+          subtitle="Every metric powering your dashboards and formulas"
+        />
+      ),
+    }),
+    []
+  )
+  usePageHeader(header)
 
   const currentMetrics = filteredMetrics.slice(
     (currentPage - 1) * itemsPerPage,
@@ -521,168 +581,6 @@ const MetricsHub = () => {
     setMetricForm({ ...metricForm, formulaParts: newParts })
   }
 
-  const getSourceBadge = (source) => {
-    const badges = {
-      "GoHighLevel": {
-        color: "text-[#16A34A] bg-[#F0FDF4] font-semibold border-green-200 rounded-full",
-        image: ghl
-      },
-      "Meta Ads": {
-        color: "text-[#2563EB] bg-[#EFF6FF] font-semibold border-blue-200 rounded-full",
-        image: metaa
-      },
-      "Webhook": {
-        color: "text-[#E11D48] bg-[#FFF1F2] font-semibold border-red-200 rounded-full",
-        image: null
-      },
-      "Custom Formula": {
-        color: "text-[#7854EA] bg-[#F5F3FF] font-semibold border-purple-200 rounded-full",
-        image: Flask
-      },
-      "Calculated": {
-        color: "text-[#EA580C] bg-[#FFF7ED] font-semibold border-orange-200 rounded-full",
-        image: null
-      },
-      "System": {
-        color: "text-[#4B5563] bg-[#F9FAFB] font-semibold border-gray-200 rounded-full",
-        image: null
-      },
-      "HotProspector": {
-        color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
-        image: HP
-      },
-      "Call Center": {
-        color: "text-[#EC4899] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
-        image: HP
-      },
-      "Call Center Agents": {
-        color: "text-[#DB2777] bg-[#FCEBF8] font-semibold border-pink-200 rounded-full",
-        image: HP
-      },
-    }
-
-    const badge = badges[source] || badges["System"]
-
-    return (
-      <Badge variant="outline" className={`w-fit h-7 ${badge.color}`}>
-        {badge.image ? (
-          <img
-            src={badge.image.src}
-            alt={`${source} icon`}
-            className="w-4 h-4"
-          />
-        ) : null}
-        {source}
-      </Badge>
-    )
-  }
-
-  const getDashboardBadge = (dashboard) => {
-    const colors = {
-      Clients: "bg-green-100 text-green-800 rounded-full",
-      Campaigns: "bg-blue-100 text-blue-800 rounded-full",
-      Contacts: "bg-purple-100 text-purple-800 rounded-full",
-    }
-
-    return <Badge className={colors[dashboard] || "bg-gray-100 text-gray-800"}>{dashboard}</Badge>
-  }
-
-  // Function to generate pagination items with ellipsis logic
-  const renderPaginationItems = () => {
-    const items = [];
-    const ellipsis = <PaginationItem key="ellipsis"><PaginationEllipsis /></PaginationItem>;
-
-    if (totalPages <= 5) {
-      // Show all pages if 5 or fewer
-      for (let i = 1; i <= totalPages; i++) {
-        items.push(
-          <PaginationItem key={i}>
-            <PaginationLink
-              href="#"
-              isActive={currentPage === i}
-              onClick={(e) => { e.preventDefault(); handlePageChange(i); }}
-            >
-              {i}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-    } else {
-      // Show first 2, last 2, and current with ellipsis
-      items.push(
-        <PaginationItem key={1}>
-          <PaginationLink
-            href="#"
-            isActive={currentPage === 1}
-            onClick={(e) => { e.preventDefault(); handlePageChange(1); }}
-          >
-            1
-          </PaginationLink>
-        </PaginationItem>
-      );
-
-      if (currentPage > 3) {
-        items.push(ellipsis);
-      } else {
-        items.push(
-          <PaginationItem key={2}>
-            <PaginationLink
-              href="#"
-              isActive={currentPage === 2}
-              onClick={(e) => { e.preventDefault(); handlePageChange(2); }}
-            >
-              2
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-
-      if (currentPage > 2 && currentPage < totalPages - 1) {
-        items.push(
-          <PaginationItem key={currentPage}>
-            <PaginationLink
-              href="#"
-              isActive={true}
-              onClick={(e) => { e.preventDefault(); handlePageChange(currentPage); }}
-            >
-              {currentPage}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-
-      if (currentPage < totalPages - 2) {
-        items.push(ellipsis);
-      } else {
-        items.push(
-          <PaginationItem key={totalPages - 1}>
-            <PaginationLink
-              href="#"
-              isActive={currentPage === totalPages - 1}
-              onClick={(e) => { e.preventDefault(); handlePageChange(totalPages - 1); }}
-            >
-              {totalPages - 1}
-            </PaginationLink>
-          </PaginationItem>
-        );
-      }
-
-      items.push(
-        <PaginationItem key={totalPages}>
-          <PaginationLink
-            href="#"
-            isActive={currentPage === totalPages}
-            onClick={(e) => { e.preventDefault(); handlePageChange(totalPages); }}
-          >
-            {totalPages}
-          </PaginationLink>
-        </PaginationItem>
-      );
-    }
-
-    return items;
-  };
-
   // ── Derived validation used by the metric dialog ─────────────────────────
   // Case-insensitive duplicate-name check across custom metrics. When editing,
   // the metric being edited is excluded. When duplicating or creating, any
@@ -695,31 +593,38 @@ const MetricsHub = () => {
   )
 
   return (
-    <div className="min-h-screen  w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl md:text-3xl lg:text-4xl font-bold text-foreground text-center md:text-left whitespace-nowrap">
-              Metrics Hub
-            </h1>
-          </div>
+    // Same shell as the Lead and Sales hubs: the design's canvas, its 22/24
+    // scroll region, and the pd typefaces the segmented control needs.
+    <SalesHubShell>
+      <div className="flex flex-col gap-[16px]">
+        {/* Toolbar — tab strip left, search + create right. The title moved to
+            the global header bar; see `header` above. */}
+        <div className="flex flex-wrap items-center gap-[12px]">
+          <PdSegmented
+            role="tablist"
+            label="Metric source"
+            panelId="metrics-table"
+            options={SOURCE_TABS}
+            value={activeTab}
+            onChange={setActiveTab}
+            className="rounded-[10px]"
+            itemClassName="px-[20px] py-[9px] text-[13px] rounded-[8px] whitespace-nowrap"
+          />
 
-          <div className="flex items-center justify-between gap-2 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 
-          border rounded-lg py-1 px-1">
+          <div className="ml-auto flex items-center gap-[10px]">
             <div className="relative">
-              <Calculator className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="pointer-events-none absolute left-[13px] top-1/2 size-[15px] -translate-y-1/2 text-pd-faint" />
               <Input
                 type="search"
-                placeholder="Search metrics..."
-                className="bg-white rounded-lg w-fit md:w-55 h-10 px-2 pl-8"
+                placeholder="Search metrics&hellip;"
+                aria-label="Search metrics"
+                className="h-[38px] w-[220px] rounded-[10px] border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" size="sm" className=" bg-white h-10 font-semibold">
-              <Filter className="h-4 w-4" />
-            </Button>
             <Button
+              aria-label="Create a custom metric"
               onClick={() => {
                 setEditingMetric(null)
                 setDuplicatingFrom(null)
@@ -728,202 +633,169 @@ const MetricsHub = () => {
                 sessionStorage.removeItem(`birdy_metric_session_${birdyChatKey + 1}`)
                 setIsCreateDialogOpen(true)
               }}
-              className="h-10 bg-purple-600 hover:bg-purple-700 "
+              className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-[#5A3FD6]"
             >
-              <Plus className="h-4 text-white w-4 border-2 rounded-xl" />
+              <Plus className="size-[17px] text-white" />
             </Button>
           </div>
         </div>
 
-        {/* Stats Cards */}
-        {/* <div className="grid gap-4 mb-0 md:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Total Metrics</CardTitle>
-              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                <PieChart className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics?.total || 0}</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                {statistics?.dynamicCount || 0} dynamic tags
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Standard Metrics</CardTitle>
-              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{statistics?.standardCount || 0}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">By Dashboard</CardTitle>
-              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                <BarChart3 className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm space-y-1 py-2">
-                {statistics?.byDashboard && Object.entries(statistics.byDashboard).map(([dash, count]) => (
-                  <div key={dash} className="flex justify-between">
-                    <span>{dash}:</span>
-                    <span className="font-semibold w-6 text-center">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-medium">Custom Formulas</CardTitle>
-              <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                <Calculator className="h-4 w-4 text-purple-500" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{customMetrics.length}</div>
-            </CardContent>
-          </Card>
-        </div> */}
-
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-0">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="all">All Metrics</TabsTrigger>
-            <TabsTrigger value="standard">Standard Metrics</TabsTrigger>
-            <TabsTrigger value="webhook">Webhook Metrics</TabsTrigger>
-            <TabsTrigger value="custom">Custom Formulas</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="mt-4">
-            <div className="border bg-card overflow-hidden rounded-md shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full caption-bottom text-sm">
-                  <thead className="bg-white sticky top-0 z-20 border-b border-border">
-                    <tr className="border-b-2 border-[#e4e4e7]">
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Metric Name</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Source</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Dashboard</th>
-                      <th className="px-6 py-4 text-left text-sm font-semibold text-[#71658B]">Controls</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {isLoading ? (
-                      Array.from({ length: 8 }).map((_, idx) => (
-                        <tr key={`skeleton-${idx}`} className="border-b bg-white">
-                          <td className="px-4 py-3">
-                            <Skeleton className="h-4 w-40 mb-2" />
-                            <Skeleton className="h-3 w-64" />
-                          </td>
-                          <td className="px-4 py-3"><Skeleton className="h-6 w-28 rounded-full" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-6 w-20 rounded-full" /></td>
-                          <td className="px-4 py-3"><Skeleton className="h-8 w-24 rounded-md" /></td>
-                        </tr>
-                      ))
-                    ) : filteredMetrics.length === 0 ? (
-                      <tr>
-                        <td colSpan={4}>
-                          <div className="flex flex-col items-center justify-center py-16 gap-3 text-muted-foreground">
-                            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                              <InboxIcon className="h-6 w-6 text-muted-foreground/60" />
-                            </div>
-                            <p className="text-sm font-medium">No {activeTab} metrics found</p>
-                            <p className="text-xs text-muted-foreground/70">
-                              {activeTab === "custom"
-                                ? "Create your first custom metric using the + button above."
-                                : "No metrics are available for this category yet."}
-                            </p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : (
-                      currentMetrics.map((metric, idx) => (
-                        <tr key={metric.id} className={`hover:bg-muted/50 bg-white`}>
-                          <td className="px-4 py-2">
-                            <div className="font-semibold text-foreground">{metric.name}</div>
-                            <div className="text-sm text-[#71658B] pr-4 truncate">{metric.description}</div>
-                            {metric.isDynamic && (
-                              <Badge variant="outline" className="mt-1 text-xs">Dynamic</Badge>
-                            )}
-                          </td>
-                          <td className="px-4 py-2">{getSourceBadge(metric.source)}</td>
-                          <td className="px-4 py-2">{getDashboardBadge(metric.dashboard)}</td>
-                          <td className="px-4 py-2">
-                            <div className="flex items-center gap-2">
-                              {metric.category === "custom" ? (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-9 px-3 bg-purple-600 text-white hover:bg-purple-700"
-                                    onClick={() => handleEditMetric(metric)}
-                                  >
-                                    Edit Metric
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 text-muted-foreground hover:bg-muted"
-                                    onClick={() => handleDuplicateMetric(metric)}
-                                    title="Duplicate metric"
-                                  >
-                                    <Copy className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                                    onClick={() => handleDeleteMetric(metric.id)}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <Badge variant="outline">Standard</Badge>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+        <div id="metrics-table" role="tabpanel" className="overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+          <div className="flex items-center border-b border-pd-border bg-pd-table-head px-[22px] py-[13px] text-[11.5px] font-bold tracking-[0.03em] text-pd-faint">
+            <div className="flex-1">METRIC NAME</div>
+            <div className="hidden flex-[1.4] md:block">NOTES</div>
+            <div className="flex-[0_0_200px] text-center">SOURCE</div>
+            {/* Custom formulas are the only rows you can edit, duplicate and
+                delete; everything else offers show/hide alone. */}
+            <div className="flex-[0_0_160px] text-center">
+              {activeTab === "custom" ? "CONTROLS" : "SHOW / HIDE"}
             </div>
-            {!isLoading && totalPages > 1 && (
-              <Pagination className="mt-4">
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage > 1) handlePageChange(currentPage - 1);
-                      }}
-                    />
-                  </PaginationItem>
-                  {renderPaginationItems()}
-                  <PaginationItem>
-                    <PaginationNext
-                      href="#"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        if (currentPage < totalPages) handlePageChange(currentPage + 1);
-                      }}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
+          </div>
+
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, idx) => (
+              <div key={`skeleton-${idx}`} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px]">
+                <div className="flex-1 pr-[12px]"><Skeleton className="h-4 w-40" /></div>
+                <div className="hidden flex-[1.4] pr-[12px] md:block"><Skeleton className="h-3 w-56" /></div>
+                <div className="flex flex-[0_0_200px] justify-center"><Skeleton className="h-6 w-28 rounded-full" /></div>
+                <div className="flex flex-[0_0_160px] justify-center gap-[8px]"><Skeleton className="size-[26px] rounded-[8px]" /></div>
+              </div>
+            ))
+          ) : filteredMetrics.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 text-pd-faint">
+              <div className="flex size-12 items-center justify-center rounded-full bg-pd-divider">
+                <InboxIcon className="size-6 text-pd-chevron" />
+              </div>
+              <p className="text-sm font-medium text-pd-muted">
+                {query
+                  ? `No metrics match "${searchQuery.trim()}"`
+                  : `No ${SOURCE_TABS.find((t) => t.key === activeTab)?.label.toLowerCase() ?? "metrics"} yet`}
+              </p>
+              <p className="text-xs">
+                {activeTab === "custom"
+                  ? "Create your first custom metric using the + button above."
+                  : "No metrics are available for this source yet."}
+              </p>
+            </div>
+          ) : (
+            currentMetrics.map((metric) => {
+              const isCustom = metric.source === "custom"
+              const isHidden = hiddenMetrics.has(metric.id)
+
+              return (
+                <div key={metric.id} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px] last:border-b-0 hover:bg-pd-row-zebra">
+                  <div className="min-w-0 flex-1 pr-[12px]">
+                    <div className={`truncate text-[13.5px] font-semibold ${isHidden ? "text-pd-faint line-through" : "text-pd-ink"}`}>
+                      {metric.name}
+                    </div>
+                    {/* Below md the NOTES column is gone, so the note rides
+                        under the name rather than disappearing. */}
+                    {metric.description && (
+                      <div className="truncate text-[12.5px] text-pd-subtle md:hidden">{metric.description}</div>
+                    )}
+                  </div>
+
+                  <div className="hidden min-w-0 flex-[1.4] truncate pr-[12px] text-[12.5px] text-pd-subtle md:block">
+                    {metric.description || "\u2013"}
+                  </div>
+
+                  <div className="flex flex-[0_0_200px] justify-center">
+                    <SourceBadge source={metric.source} />
+                  </div>
+
+                  <div className="flex flex-[0_0_160px] items-center justify-center gap-[8px]">
+                    {isCustom ? (
+                      <>
+                        <button
+                          type="button"
+                          title="Edit metric"
+                          aria-label={`Edit ${metric.name}`}
+                          onClick={() => handleEditMetric(metric)}
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-primary hover:bg-pd-primary-tint"
+                        >
+                          <Pencil className="size-[14px]" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Duplicate metric"
+                          aria-label={`Duplicate ${metric.name}`}
+                          onClick={() => handleDuplicateMetric(metric)}
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                        >
+                          <Copy className="size-[14px]" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete metric"
+                          aria-label={`Delete ${metric.name}`}
+                          onClick={() => handleDeleteMetric(metric.id)}
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-danger hover:bg-pd-danger-surface"
+                        >
+                          <Trash2 className="size-[14px]" />
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        aria-pressed={isHidden}
+                        title={isHidden ? "Show in the formula builder" : "Hide from the formula builder"}
+                        aria-label={`${isHidden ? "Show" : "Hide"} ${metric.name}`}
+                        onClick={() => toggleMetricVisibility(metric)}
+                        className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                      >
+                        {isHidden ? <EyeOff className="size-[14px]" /> : <Eye className="size-[14px]" />}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
+        {!isLoading && totalPages > 1 && (
+          <nav aria-label="Metrics pages" className="flex items-center justify-center gap-[6px]">
+            <button
+              type="button"
+              disabled={currentPage === 1}
+              onClick={() => handlePageChange(currentPage - 1)}
+              className="flex cursor-pointer items-center gap-[5px] rounded-[9px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+            >
+              <ChevronLeft className="size-[14px]" />
+              Previous
+            </button>
+
+            {pageNumbers(currentPage, totalPages).map((n, i) =>
+              n === "ellipsis" ? (
+                <span key={`gap-${i}`} className="flex h-[36px] min-w-[36px] items-center justify-center text-[13.5px] font-semibold text-pd-faint">
+                  &middot;&middot;&middot;
+                </span>
+              ) : (
+                <button
+                  key={n}
+                  type="button"
+                  aria-current={n === currentPage ? "page" : undefined}
+                  onClick={() => handlePageChange(n)}
+                  className={`flex h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[9px] px-[6px] text-[13.5px] font-semibold ${
+                    n === currentPage ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "text-pd-body"
+                  }`}
+                >
+                  {n}
+                </button>
+              )
             )}
-          </TabsContent>
-        </Tabs>
+
+            <button
+              type="button"
+              disabled={currentPage === totalPages}
+              onClick={() => handlePageChange(currentPage + 1)}
+              className="flex cursor-pointer items-center gap-[5px] rounded-[9px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+            >
+              Next
+              <ChevronRight className="size-[14px]" />
+            </button>
+          </nav>
+        )}
 
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) resetForm() }}>
@@ -1431,7 +1303,7 @@ const MetricsHub = () => {
           </DialogContent>
         </Dialog>
       </div>
-    </div>
+    </SalesHubShell>
   )
 }
 

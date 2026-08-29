@@ -84,19 +84,7 @@ function SettingsPageContent() {
   const [ghlStatus, setGhlStatus] = useState(() => readCachedStatus("goHighLevelIntegration"))
   const [facebookStatus, setFacebookStatus] = useState(() => readCachedStatus("facebookIntegration"))
   const [hotprospectorStatus, setHotprospectorStatus] = useState(() => readCachedStatus("hotprospectorIntegration"))
-  // Separate reader from readCachedStatus() above — the AI credential status
-  // shape uses `configured` (matching useAiCredentials.js, which reads/writes
-  // the same "aiCredentialsIntegration" localStorage key), not `connected`.
-  const readCachedAiStatus = () => {
-    try {
-      const raw = localStorage.getItem("aiCredentialsIntegration")
-      const parsed = raw ? JSON.parse(raw) : null
-      return parsed?.configured ? parsed : { configured: false }
-    } catch {
-      return { configured: false }
-    }
-  }
-  // Same shape convention as AI credentials — `installed`, not `connected`.
+  // Shape convention: Slack reports `installed`, not `connected`.
   const readCachedSlackStatus = () => {
     try {
       const raw = localStorage.getItem("slackBotIntegration")
@@ -326,18 +314,6 @@ function SettingsPageContent() {
           }
         }
 
-        // AI Credentials (BYOK)
-        const aiRes = await apiRequest("/api/integrations/ai/status")
-        if (aiRes.ok) {
-          const aiData = await aiRes.json()
-          setAiStatus(aiData)
-          if (aiData?.configured) {
-            localStorage.setItem("aiCredentialsIntegration", JSON.stringify(aiData))
-          } else {
-            localStorage.removeItem("aiCredentialsIntegration")
-          }
-        }
-
         // Slack bot
         const slackRes = await apiRequest("/api/integrations/slack/status")
         if (slackRes.ok) {
@@ -391,8 +367,6 @@ function SettingsPageContent() {
         setFacebookStatus(readCachedStatus("facebookIntegration"))
       } else if (e.key === "hotprospectorIntegration") {
         setHotprospectorStatus(readCachedStatus("hotprospectorIntegration"))
-      } else if (e.key === "aiCredentialsIntegration") {
-        setAiStatus(readCachedAiStatus())
       } else if (e.key === "slackBotIntegration") {
         setSlackStatus(readCachedSlackStatus())
       }
@@ -535,7 +509,6 @@ function SettingsPageContent() {
         gohighlevel: "/api/integrations/gohighlevel/remove",
         facebook: "/api/integrations/facebook/remove",
         hotprospector: "/api/integrations/hotprospector/remove",
-        ai: "/api/integrations/ai/remove",
         slack: "/api/integrations/slack/remove",
       }
 
@@ -559,10 +532,6 @@ function SettingsPageContent() {
       } else if (integrationType === "hotprospector") {
         localStorage.removeItem("hotprospectorIntegration")
         setHotprospectorStatus({ connected: false })
-      } else if (integrationType === "ai") {
-        localStorage.removeItem("aiCredentialsIntegration")
-        window.dispatchEvent(new Event("aiCredentialsUpdated"))
-        setAiStatus({ configured: false })
       } else if (integrationType === "slack") {
         localStorage.removeItem("slackBotIntegration")
         setSlackStatus({ installed: false })
@@ -572,7 +541,6 @@ function SettingsPageContent() {
         gohighlevel: "GoHighLevel",
         facebook: "Meta (Facebook)",
         hotprospector: "HotProspector",
-        ai: "AI Credentials",
         slack: "Slack Bot",
       }
 
