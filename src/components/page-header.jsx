@@ -52,7 +52,16 @@ export function usePageHeader(content) {
   useEffect(() => {
     if (!setSlot) return;
     setSlot(content);
-    return () => setSlot(null);
+
+    return () => {
+      // Clear only what this effect published. Nulling unconditionally meant
+      // whoever cleaned up last won: navigating between two pages that both
+      // publish a header mounts the incoming one before the outgoing one
+      // unmounts, so the outgoing cleanup ran *after* the new page had
+      // published and blanked it back to the wordmark. Republishing on the
+      // same page (a new date preset, a health change) hit the same edge.
+      setSlot((current) => (current === content ? null : current));
+    };
   }, [content, setSlot]);
 }
 

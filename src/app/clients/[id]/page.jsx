@@ -9,7 +9,7 @@ import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings 
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
-import { ActivityItem } from "@/components/activity/ActivityItem"
+import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -20,10 +20,14 @@ import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import { ClientAskBirdy } from "@/components/clients/ClientAskBirdy"
+import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
+import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPill"
+import { usePageHeader } from "@/components/page-header"
+import { pdFontClass } from "@/lib/pd-fonts"
 import { GoalsStrip } from "@/components/clients/GoalsStrip"
 import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
@@ -89,22 +93,6 @@ function AlertsSkeleton() {
 }
 
 // ── Activity Skeleton ────────────────────────────────────────────────────────
-function ActivitySkeleton() {
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-start gap-3">
-          <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-          <div className="flex-1 space-y-1.5">
-            <Skeleton className="h-3.5 w-40" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── Tab trigger style ────────────────────────────────────────────────────────
 const tabTriggerClass = ""
 
@@ -142,7 +130,7 @@ export default function ClientDetailsPage() {
   const { activity, loading: activityLoading } = useDashboardData()
   const groupNameForActivity = clientData?.group_info?.name
   const clientActivity = useMemo(
-    () => activity.filter((a) => a.client === groupNameForActivity),
+    () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
     [activity, groupNameForActivity]
   )
 
@@ -380,6 +368,68 @@ export default function ClientDetailsPage() {
     }
   }
 
+  const groupName = clientData?.group_info?.name || "Client"
+
+  // The design's sub-line reads "Emma T. · client since Mar 2025". There is no
+  // primary-contact field on a client group, so only the half that exists is
+  // rendered rather than inventing a name.
+  const clientSubline = useMemo(() => {
+    const since = clientData?.group_info?.created_at
+    if (!since) return null
+    const d = new Date(since)
+    if (Number.isNaN(d.getTime())) return null
+    return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
+  }, [clientData])
+
+  // Identity and filters belong in the global top bar, where the design puts
+  // them — in place of the Birdy wordmark, and beside the bell. Declared above
+  // the early return below, because a hook after a conditional return breaks
+  // the Rules of Hooks the moment that branch is taken.
+  const pageHeader = useMemo(
+    () => ({
+      title: (
+        <div className={`${pdFontClass} flex min-w-0 items-center gap-2.5`}>
+          <button
+            onClick={() => router.push("/clients")}
+            aria-label="Back to Client Hub"
+            className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-divider text-pd-body hover:bg-pd-border"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+                {clientLoading ? "…" : groupName}
+              </h1>
+              {!clientLoading && <HealthPill health={clientHealth} />}
+            </div>
+            {clientSubline && (
+              <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+                {clientSubline}
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+      controls: (
+        <div className="hidden items-center gap-2 md:flex">
+          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIntegrationsOpen(true)}
+            title="Client settings"
+            aria-label="Client settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    }),
+    [groupName, clientLoading, clientHealth, clientSubline, datePreset, setDatePreset, router]
+  )
+  usePageHeader(pageHeader)
+
   // ── Error state (only shown if client data fails entirely) ─────────────────
   if (!clientLoading && !clientData) {
     return (
@@ -394,56 +444,8 @@ export default function ClientDetailsPage() {
     )
   }
 
-  const groupName = clientData?.group_info?.name || "Client"
-
-  // The design's sub-line reads "Emma T. · client since Mar 2025". There is no
-  // primary-contact field on a client group, so only the half that exists is
-  // rendered rather than inventing a name.
-  const clientSubline = useMemo(() => {
-    const since = clientData?.group_info?.created_at
-    if (!since) return null
-    const d = new Date(since)
-    if (Number.isNaN(d.getTime())) return null
-    return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
-  }, [clientData])
-
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          {clientLoading ? (
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-48" />
-            </div>
-          ) : (
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5">
-                <h1 className="truncate text-2xl font-bold tracking-tight">{groupName}</h1>
-                <HealthPill health={clientHealth} />
-              </div>
-              {clientSubline && (
-                <p className="mt-0.5 truncate text-[12px] text-pd-faint">{clientSubline}</p>
-              )}
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIntegrationsOpen(true)}
-            title="Integrations & Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <TabsList className="w-full justify-start">
@@ -706,20 +708,42 @@ export default function ClientDetailsPage() {
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
         <TabsContent value="call-centre" className="mt-4">
+          {/* Same chart + insight + KPI row the Sales Hub draws, scoped to
+              this client — the tab used to open straight onto a bare table. */}
+          <CallCentreOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <CallCentreContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
             showGroupFilter={false}
+            showStatCards={false}
           />
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
         <TabsContent value="leads" className="mt-4">
+          {/* Same row the Lead Hub draws, scoped to this client. */}
+          <LeadHubOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <LeadsContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
+            showStatCards={false}
+            // Scoped explicitly. Left uncontrolled it defaults to "all", which
+            // sends an empty `groups` param — and the API reads that as "no
+            // group filter", returning every client's leads on a page that is
+            // supposed to be about one.
+            selectedClientGroup={matchingGroup?.id}
           />
         </TabsContent>
 

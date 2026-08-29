@@ -273,16 +273,19 @@ export default function ClientsPage() {
       Object.keys(updated).forEach(k => { updated[k] = on.has(k) })
       return updated
     })
-    // Also autosave into the legacy per-page layout, which is what makes the
-    // columns you left on still be there next visit. Named views are presets
-    // on top of that, not a replacement for it — without this, toggling a
-    // column would only survive if you remembered to save a view.
+  }, [])
+
+  // Explicit save only — "Save to existing" in the Columns menu writes the
+  // page's own layout, which is what brings these columns back next visit.
+  const saveDefaultColumns = useCallback(async (ids) => {
+    const on = new Set([...ids, "name"])
     const known = new Set(columnOrder)
     const ordered = columnOrder.length
       ? [...columnOrder.filter(id => on.has(id)), ...[...on].filter(id => !known.has(id))]
       : columns.filter(c => on.has(c.id)).map(c => c.id)
-    saveViewDebounced(ordered)
-  }, [columnOrder, columns, saveViewDebounced])
+    await saveToDB(ordered)
+    return true
+  }, [columnOrder, columns, saveToDB])
 
   const defaultColumnIds = useMemo(
     () => columns.filter(c => c.visible).map(c => c.id),

@@ -94,6 +94,8 @@ const SUMMARY = {
     { id: "a1", kind: "action_applied", actor: "birdy", title: "Paused 2 ads", client: "Contour", time: "4 min ago" },
     { id: "a2", kind: "action_applied", actor: "user", title: "Raised budget", client: "Tylaesthetics", time: "1 hr ago" },
     { id: "a3", kind: "suggestion_created", actor: "birdy", title: "noise", client: "x", time: "2 hrs ago" },
+    { id: "a4", kind: "analysis_pass", actor: "birdy", title: "Analyzed Contour — weekly performance", client: "Contour", time: "4d ago" },
+    { id: "a5", actor: "birdy", title: "Analyzed The Body Lab — weekly performance", client: "The Body Lab", time: "4d ago" },
   ],
 };
 
@@ -503,6 +505,10 @@ describe("Portfolio Dashboard", () => {
     expect(screen.getByText("Raised budget").closest("li")).toHaveTextContent("Approved");
     // suggestion_created entries are noise in this feed.
     expect(screen.queryByText("noise")).not.toBeInTheDocument();
+    // So are read-only analysis passes — typed, or recognised by their title.
+    expect(screen.queryByText(/^Analyzed /)).not.toBeInTheDocument();
+    // The badge counts what the feed actually shows.
+    expect(screen.getByRole("tab", { name: /Activity/ })).toHaveTextContent("2");
   });
 
   it("moves an applied suggestion into the feed", async () => {

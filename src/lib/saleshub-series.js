@@ -27,9 +27,12 @@ import { bucketSeries, parseDayLocal } from "./portfolio-series";
  *
  * The design draws twelve monthly points, but it draws one fixed year — a real
  * window is whatever the user picked, and bucketing "today" by month would
- * plot a single point. There is no granularity control on this screen (the
- * design has none), so the window chooses for itself, aiming for a readable
+ * plot a single point. So the window chooses for itself, aiming for a readable
  * number of points rather than a fixed one.
+ *
+ * This is the *default* rather than the last word: the hubs put a granularity
+ * chip in the top bar, and an explicit pick there overrides what this returns.
+ * See useGranularity.
  *
  * @param {string|null} startDate yyyy-MM-dd, or null for all-time
  * @param {string|null} endDate

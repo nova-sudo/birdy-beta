@@ -9,8 +9,14 @@
 // ratio-style metrics like cost per lead or close rate, where lower or
 // bounded-at-100% breaks the metaphor.
 
-import { Banknote, Target, Coins, Percent, Users } from "lucide-react"
+import { Banknote, Target, Coins, Percent, Users, Info } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { formatGoal, ON_TRACK, AT_RISK, BEHIND } from "@/lib/client-goals"
 
 const ICONS = {
@@ -67,13 +73,34 @@ function GoalCell({ goal, currencySymbol, last }) {
         </div>
 
         <div className="mt-1.5 flex items-center gap-2">
-          <span
-            className="min-w-0 flex-1 truncate text-[11px] text-[#8A8A9A]"
-            title={goal.implied ? "Implied from monthly spend ÷ cost per lead" : undefined}
-          >
-            {goal.label}
-            {goal.implied && <span className="ml-1 text-pd-faint">*</span>}
-          </span>
+          {/* "Leads" means different things depending on where it came from —
+              Meta counts form submissions, the CRM counts contact records it
+              created — so every figure says which one it is. */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="flex min-w-0 flex-1 items-center gap-1 text-left"
+                aria-label={`${goal.label}: ${goal.note}`}
+              >
+                <span className="min-w-0 truncate text-[11px] text-[#8A8A9A]">
+                  {goal.label}
+                </span>
+                <Info className="size-3 shrink-0 text-pd-faint/70" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[260px]">
+              <p className="text-[11px] font-semibold">
+                Source: {goal.source}
+              </p>
+              <p className="mt-1 text-[11px] leading-snug">{goal.note}</p>
+              {goal.implied && (
+                <p className="mt-1 text-[11px] leading-snug opacity-80">
+                  Target implied from monthly spend ÷ cost per lead.
+                </p>
+              )}
+            </TooltipContent>
+          </Tooltip>
           {pill && (
             <span
               className="shrink-0 rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold"
@@ -113,6 +140,7 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
   const anyTarget = goals.some((g) => g.target != null)
 
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="mb-[14px] rounded-2xl border border-pd-border bg-pd-surface">
       {/* Horizontal on wide screens as the design draws it; wrapping to two
           rows below that, since five cells at 18px padding do not fit. */}
@@ -134,5 +162,6 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
         </p>
       )}
     </div>
+    </TooltipProvider>
   )
 }

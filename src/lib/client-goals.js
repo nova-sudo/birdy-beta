@@ -56,15 +56,29 @@ const orNull = (v) => (v == null || !Number.isFinite(Number(v)) ? null : Number(
 export function buildClientGoals(group) {
   const targets = group?.targets ?? {}
   const funnel = group?.gohighlevel?.metrics?.funnel ?? null
-  const spend = num(group?.facebook?.metrics?.insights?.spend)
+  const insights = group?.facebook?.metrics?.insights ?? {}
+  const spend = num(insights.spend)
 
-  const leads = num(funnel?.leads)
+  // "Leads" and "cost per lead" mean Meta's figures, matching the Marketing
+  // Hub. The two sources genuinely disagree — for one client over 7 days Meta
+  // reported 51 leads to the CRM cohort's 43, which is a £1.60 CPL against
+  // £1.90 — because a Meta lead is a form submission and a CRM lead is a
+  // contact record that was actually created. Showing the CRM number under an
+  // ads label made the same client look different on two screens.
+  const metaLeads = num(insights.results) || num(insights.total_leads)
+
+  const cohortLeads = num(funnel?.leads)
   const closes = num(funnel?.closes)
   const revenue = num(funnel?.won_revenue)
 
-  // Close rate is only meaningful with a cohort to divide by.
-  const closeRate = leads > 0 ? closes / leads : null
-  const cpl = leads > 0 ? spend / leads : null
+  const leads = metaLeads
+
+  // Close rate stays on the CRM cohort deliberately: closes and the leads they
+  // came from have to describe the same population for the ratio to mean
+  // anything, and Meta has no closes. Dividing CRM closes by Meta leads would
+  // be two different populations.
+  const closeRate = cohortLeads > 0 ? closes / cohortLeads : null
+  const cpl = metaLeads > 0 ? spend / metaLeads : null
 
   // Implied from the two targets that do exist — see the note above.
   const spendTarget = orNull(targets.monthly_spend)
@@ -78,6 +92,8 @@ export function buildClientGoals(group) {
     {
       id: "revenue",
       label: "Revenue",
+      source: "GoHighLevel",
+      note: "Value of opportunities won from leads created in this window.",
       value: revenue,
       target: orNull(targets.monthly_revenue),
       format: "currency",
@@ -86,6 +102,8 @@ export function buildClientGoals(group) {
     {
       id: "closes",
       label: "Monthly closes",
+      source: "GoHighLevel",
+      note: "Leads created in this window that have since been won.",
       value: closes,
       target: orNull(targets.monthly_wins),
       format: "number",
@@ -94,6 +112,8 @@ export function buildClientGoals(group) {
     {
       id: "cpl",
       label: "Cost per lead",
+      source: "Meta",
+      note: "Meta ad spend divided by Meta leads. Matches the Marketing Hub.",
       value: cpl,
       target: cplTarget,
       format: "currency",
@@ -102,6 +122,8 @@ export function buildClientGoals(group) {
     {
       id: "closeRate",
       label: "Close rate",
+      source: "GoHighLevel",
+      note: "Closes divided by CRM leads from the same window — not Meta leads, which have no closes attached.",
       value: closeRate,
       target: orNull(targets.conversion_rate),
       format: "percent",
@@ -110,6 +132,8 @@ export function buildClientGoals(group) {
     {
       id: "leads",
       label: "Number of leads",
+      source: "Meta",
+      note: "Form submissions reported by Meta. The CRM counts leads differently — a contact record it actually created — so the two rarely match exactly.",
       value: leads,
       target: leadsTarget,
       format: "number",
