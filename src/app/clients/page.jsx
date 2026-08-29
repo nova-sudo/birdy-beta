@@ -67,6 +67,7 @@ import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesH
 import { usePageHeader } from "@/components/page-header"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { HealthPill } from "@/components/clients/HealthPill"
+import { metricTone } from "@/lib/metric-tone"
 import { usePageViews } from "@/lib/usePageViews"
 
 import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
@@ -202,10 +203,30 @@ export default function ClientsPage() {
       cell: (_v, row) => <HealthPill health={row?.health} withDot={false} />,
     };
 
+    // Cost per lead reads against the client's own target rather than a
+    // threshold nobody chose — £9 is good or bad depending entirely on what
+    // they set out to pay. Uncoloured where no target exists.
+    const withTone = (list) => list.map((col) =>
+      col.id === "cost_per_lead"
+        ? {
+            ...col,
+            cell: (value, row) => (
+              <span className={metricTone(value, row?.targets?.cpl, "lower")}>
+                {value == null || !Number.isFinite(Number(value)) || Number(value) === 0
+                  ? "—"
+                  : Number(value).toLocaleString(undefined, {
+                      minimumFractionDigits: 2, maximumFractionDigits: 2,
+                    })}
+              </span>
+            ),
+          }
+        : col
+    );
+
     // Combine and deduplicate — health sits directly after the name column,
     // where the design puts it.
     const seen = new Set();
-    const [nameCol, ...restDynamic] = dynamicColumns;
+    const [nameCol, ...restDynamic] = withTone(dynamicColumns);
     const all = nameCol
       ? [nameCol, health, ...restDynamic, ...custom]
       : [health, ...dynamicColumns, ...custom];

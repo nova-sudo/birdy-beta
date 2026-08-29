@@ -3,13 +3,15 @@
 import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { GeneralSettings } from "@/components/settings/GeneralSettings"
+import { CreditsPanel } from "@/components/settings/CreditsPanel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Bot, Target, Sparkles } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Target, Sparkles } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -37,13 +39,22 @@ import {
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { apiRequest } from "@/lib/api"
-import { AI_MODELS } from "@/lib/constants"
-import { Crown, ExternalLink as ExternalLinkIcon, AlertCircle as AlertCircleIcon } from "lucide-react"
+import { Crown } from "lucide-react"
 
 function SettingsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const defaultTab = searchParams.get("tab") || "integrations"
+  // The tabs were general/integrations/capabilities/account and are now
+  // general/integrations/billing. A bookmarked ?tab= from before would select
+  // a tab that no longer exists and render an empty page, so old names map to
+  // where their content went.
+  const TAB_ALIASES = { account: "billing", capabilities: "general" }
+  const requestedTab = searchParams.get("tab")
+  const defaultTab =
+    TAB_ALIASES[requestedTab] ??
+    (["general", "integrations", "billing"].includes(requestedTab)
+      ? requestedTab
+      : "integrations")
 
   // Separate state variables with clear naming — no ambiguity about which level of nesting.
   //
@@ -85,7 +96,6 @@ function SettingsPageContent() {
       return { configured: false }
     }
   }
-  const [aiStatus, setAiStatus] = useState(() => readCachedAiStatus())
   // Same shape convention as AI credentials — `installed`, not `connected`.
   const readCachedSlackStatus = () => {
     try {
@@ -116,9 +126,6 @@ function SettingsPageContent() {
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
-  const [aiDialogOpen, setAiDialogOpen] = useState(false)
-  const [aiCredentials, setAiCredentials] = useState({ provider: "anthropic", api_key: "", model: "" })
-  const [aiValidating, setAiValidating] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
@@ -580,22 +587,6 @@ function SettingsPageContent() {
     }
   }
 
-  const handleTestApi = async (integrationType) => {
-    try {
-      setIsLoading(true)
-      setError(null)
-      const endpoint = integrationType === "gohighlevel" ? "/test" : "/test/facebook"
-      const res = await apiRequest(endpoint)
-      if (!res.ok) throw new Error(`${res.status} ${res.statusText}`)
-      toast.success("Test Successful", { description: "API test passed." })
-    } catch (err) {
-      setError(`Test failed: ${err.message}`)
-      toast.error("Test Failed", { description: err.message })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const handleHotprospectorConnect = async () => {
     try {
       setIsLoading(true)
@@ -622,43 +613,6 @@ function SettingsPageContent() {
       toast.error("Connection Failed", { description: err.message })
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleAiConnect = async () => {
-    try {
-      setAiValidating(true)
-      setError(null)
-      const res = await apiRequest("/api/integrations/ai/connect", {
-        method: "POST",
-        body: JSON.stringify(aiCredentials),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
-        // The backend's `detail` is already a specific, human-readable
-        // rejection reason (e.g. "Invalid Anthropic API key.", "'gpt-4o'
-        // did not respond with a tool call...") — show it directly.
-        throw new Error(data.detail || "Failed to validate your AI credentials.")
-      }
-      const next = {
-        configured: true,
-        provider: data.provider,
-        model: data.model,
-        key_preview: data.key_preview,
-        validated: data.validated,
-      }
-      setAiStatus(next)
-      localStorage.setItem("aiCredentialsIntegration", JSON.stringify(next))
-      window.dispatchEvent(new Event("aiCredentialsUpdated"))
-      setAiDialogOpen(false)
-      setAiCredentials({ provider: "anthropic", api_key: "", model: "" })
-      toast.success("AI Connected", {
-        description: `Birdy AI will now use your ${data.provider} key (${data.model}).`,
-      })
-    } catch (err) {
-      toast.error("Connection Failed", { description: err.message })
-    } finally {
-      setAiValidating(false)
     }
   }
 
@@ -712,23 +666,84 @@ function SettingsPageContent() {
       <div>
         <Tabs defaultValue={defaultTab} className="space-y-6">
           <TabsList className="w-full justify-start">
-            {["general", "integrations", "capabilities", "account"].map((tab) => (
-              <TabsTrigger key={tab} value={tab}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {[
+              { key: "general", label: "General" },
+              { key: "integrations", label: "Integrations" },
+              { key: "billing", label: "Billing" },
+            ].map((tab) => (
+              <TabsTrigger key={tab.key} value={tab.key}>
+                {tab.label}
               </TabsTrigger>
             ))}
           </TabsList>
 
           <TabsContent value="general" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>General Settings</CardTitle>
-                <CardDescription>Manage your general application settings</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground">General settings content goes here.</p>
-              </CardContent>
-            </Card>
+            <GeneralSettings
+              slackConnected={Boolean(slackStatus?.installed)}
+              brief={slackStatus?.brief}
+              onBriefSaved={(brief) => setSlackStatus((prev) => ({ ...prev, brief }))}
+            />
+
+            {/* The design drops the Capabilities tab, but the Media Buying
+                Analyst toggle behind it is real functionality — removing the
+                tab must not remove the switch, so it lives here now. */}
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground mb-1">Agent Capabilities</h2>
+                <p className="text-sm text-muted-foreground">
+                  Optional abilities for the Birdy AI agent. Turn these on to give Birdy extra expertise in chat — they take effect on your next Birdy conversation.
+                </p>
+              </div>
+
+              <Separator />
+
+              {/* Media Buying Analyst — injects senior-media-buyer reasoning into Birdy chat */}
+              <Card className="border-border/50">
+                <CardHeader>
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
+                      <Target className="h-6 w-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <CardTitle className="text-base">Media Buying Analyst</CardTitle>
+                            {capsLoaded && capabilities.media_buying && (
+                              <Badge variant="default" className="text-xs">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />Enabled
+                              </Badge>
+                            )}
+                          </div>
+                          <CardDescription className="text-sm">
+                            Adds senior media-buyer reasoning to Birdy chat — it diagnoses CPL, CTR, CPM and ROAS
+                            across campaigns, ad sets and ads, judges lead quality through GoHighLevel, and recommends
+                            what to scale, kill, and fix. Applies to the Campaigns, Dashboard, client, and Ask&nbsp;Birdy
+                            chats (not the Alerts or Metrics assistants).
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
+                          {savingCapability === "media_buying" && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
+                          <Switch
+                            checked={!!capabilities.media_buying}
+                            onCheckedChange={(v) => toggleCapability("media_buying", v)}
+                            disabled={!capsLoaded || savingCapability === "media_buying"}
+                            aria-label="Toggle the Media Buying Analyst capability"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3 w-3" />
+                More capabilities are coming. Have one in mind? Let us know.
+              </p>
+            </div>
           </TabsContent>
 
           <TabsContent value="integrations" className="space-y-6">
@@ -747,7 +762,7 @@ function SettingsPageContent() {
               <Separator />
 
 
-              {/* Slack Bot */}
+              {/* Slack */}
               <Card className="border-border/50">
                 <CardHeader>
                   <div className="flex items-start gap-4">
@@ -1141,67 +1156,15 @@ function SettingsPageContent() {
             </div>
           </TabsContent>
 
-          <TabsContent value="capabilities" className="space-y-6">
-            <div className="space-y-3">
-              <div>
-                <h2 className="text-lg font-semibold text-foreground mb-1">Agent Capabilities</h2>
-                <p className="text-sm text-muted-foreground">
-                  Optional abilities for the Birdy AI agent. Turn these on to give Birdy extra expertise in chat — they take effect on your next Birdy conversation.
-                </p>
-              </div>
 
-              <Separator />
+          <TabsContent value="billing" className="space-y-6">
+            {/* Credits, packs and the 30-day usage chart the design asks for.
+                The same panel the standalone /credits page renders, so the two
+                cannot drift. */}
+            <CreditsPanel />
 
-              {/* Media Buying Analyst — injects senior-media-buyer reasoning into Birdy chat */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
-                      <Target className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-base">Media Buying Analyst</CardTitle>
-                            {capsLoaded && capabilities.media_buying && (
-                              <Badge variant="default" className="text-xs">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />Enabled
-                              </Badge>
-                            )}
-                          </div>
-                          <CardDescription className="text-sm">
-                            Adds senior media-buyer reasoning to Birdy chat — it diagnoses CPL, CTR, CPM and ROAS
-                            across campaigns, ad sets and ads, judges lead quality through GoHighLevel, and recommends
-                            what to scale, kill, and fix. Applies to the Campaigns, Dashboard, client, and Ask&nbsp;Birdy
-                            chats (not the Alerts or Metrics assistants).
-                          </CardDescription>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0 pt-0.5">
-                          {savingCapability === "media_buying" && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
-                          <Switch
-                            checked={!!capabilities.media_buying}
-                            onCheckedChange={(v) => toggleCapability("media_buying", v)}
-                            disabled={!capsLoaded || savingCapability === "media_buying"}
-                            aria-label="Toggle the Media Buying Analyst capability"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+            <Separator />
 
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <Sparkles className="h-3 w-3" />
-                More capabilities are coming. Have one in mind? Let us know.
-              </p>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="account" className="space-y-6">
             {/* ── Current Plan Card ── */}
             {billingStatus?.subscribed && (() => {
               const PLANS = [
