@@ -45,7 +45,8 @@ function initials(name = "") {
 // ── Pricing controls: markup dial + rate mode, with a live price preview ─────
 function PricingControls({ config, mutate }) {
   const [markup, setMarkup] = useState(config.markup);
-  const [rateMode, setRateMode] = useState(config.rate_mode);
+  // Fixed at managed; the own-key rate has no meaning now that BYOK is gone.
+  const rateMode = "managed";
   const [enforce, setEnforce] = useState(config.enforce);
   const [saving, setSaving] = useState(false);
 
@@ -107,29 +108,14 @@ function PricingControls({ config, mutate }) {
         )}
       </div>
 
-      {/* Rate mode toggle */}
+      {/* Rate mode is no longer a choice: users do not bring their own key,
+          so every question runs on Birdy's account and is billed at the
+          managed rate. Shown, not switchable — CREDITS_RATE_MODE reverts it. */}
       <div className="mt-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] mb-1.5">Active rate</p>
-        <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
-          <button
-            type="button"
-            onClick={() => setRateMode("byok")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              !managedActive ? "bg-white text-gray-900 shadow-sm ring-1 ring-gray-200" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <KeyRound className="h-3.5 w-3.5" /> Own-key (BYOK)
-          </button>
-          <button
-            type="button"
-            onClick={() => setRateMode("managed")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-              managedActive ? "bg-white text-purple-700 shadow-sm ring-1 ring-purple-200" : "text-gray-500 hover:text-gray-700"
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5" /> Managed
-          </button>
-        </div>
+        <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700">
+          <Sparkles className="h-3.5 w-3.5" /> Managed (real model cost)
+        </span>
       </div>
 
       {/* Enforcement (the hard stopper) */}

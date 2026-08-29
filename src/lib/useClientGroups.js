@@ -40,6 +40,13 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
   const pollingRef = useRef(null)
 
   const fetchGroups = useCallback(async (preset, forceRefresh = false) => {
+    // Stale-while-revalidate. The cache used to be a hard short-circuit: it
+    // painted and returned, so an entry written while HotProspector was
+    // mid-sync served zeroes — with `loading` already false, so they read as
+    // finished figures — for the full hour of its TTL. Clearing localStorage
+    // was the only way out. Now the cache still paints immediately, but the
+    // request goes out behind it and corrects the numbers when it lands.
+    let servedFromCache = false
     if (!forceRefresh) {
       const cached = getCachedData(cacheKey(preset))
       if (cached) {
@@ -47,7 +54,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
         setMeta(cached.meta || null)
         setLoading(false)
         setError(null)
-        return
+        servedFromCache = true
       }
     }
 
@@ -55,7 +62,9 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     const controller = new AbortController()
     abortRef.current = controller
 
-    setLoading(true)
+    // Only show the loading state when there is nothing on screen yet;
+    // revalidating behind cached figures must not blank them.
+    if (!servedFromCache) setLoading(true)
     setError(null)
 
     try {
@@ -90,7 +99,9 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
       setClientGroups(groups)
       setMeta(responseMeta)
     } catch (err) {
-      if (err.name !== "AbortError") {
+      // A failed revalidation leaves the cached figures on screen rather than
+      // replacing them with an error — they are stale, not wrong.
+      if (err.name !== "AbortError" && !servedFromCache) {
         setError(err.message)
       }
     } finally {

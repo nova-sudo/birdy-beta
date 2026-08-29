@@ -20,6 +20,8 @@ import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import { ClientAskBirdy } from "@/components/clients/ClientAskBirdy"
+import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
+import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -706,20 +708,37 @@ export default function ClientDetailsPage() {
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
         <TabsContent value="call-centre" className="mt-4">
+          {/* Same chart + insight + KPI row the Sales Hub draws, scoped to
+              this client — the tab used to open straight onto a bare table. */}
+          <CallCentreOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <CallCentreContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
             showGroupFilter={false}
+            showStatCards={false}
           />
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
         <TabsContent value="leads" className="mt-4">
+          {/* Same row the Lead Hub draws, scoped to this client. */}
+          <LeadHubOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <LeadsContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
+            showStatCards={false}
             // Scoped explicitly. Left uncontrolled it defaults to "all", which
             // sends an empty `groups` param — and the API reads that as "no
             // group filter", returning every client's leads on a page that is
