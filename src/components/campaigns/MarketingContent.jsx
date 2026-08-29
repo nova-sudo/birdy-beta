@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -22,15 +22,43 @@ import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
 import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { usePageViews } from "@/lib/usePageViews"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
+import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { usePageHeader } from "@/components/page-header"
+
+// The Marketing Hub is drawn on the design system in
+// design_handoff_hubs/Birdy Style Guide.md — Poppins for headings and numerals,
+// Inter for body, on the --pd-* tokens in globals.css. Both were already
+// implemented for the Portfolio Dashboard, which came from the same handoff
+// bundle, so this screen scopes the same fonts rather than declaring its own.
+import { pdFontClass } from "@/lib/pd-fonts"
+import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
+import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
+import { DATE_PRESETS } from "@/lib/constants"
+import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
+
+// Which icon and colour family each KPI tile wears, from the handoff's tile
+// table — except for spend. The design draws a pound sign, but this screen
+// renders whatever currency the ad account reports, so a neutral note icon goes
+// beside a figure that might be in dollars.
+const MARKETING_KPI_PRESENTATION = {
+  activeCampaigns: { icon: Megaphone, tone: "primary" },
+  spend: { icon: Banknote, tone: "success" },
+  leads: { icon: Users, tone: "info" },
+  cpl: { icon: Target, tone: "amber" },
+  impressions: { icon: Eye, tone: "info" },
+  ctr: { icon: MousePointerClick, tone: "primary" },
+}
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
@@ -123,18 +151,18 @@ export function MarketingContent({
 
   // One stable hook instance per tab — page keys never change between renders,
   // so hook call order is always the same (Rules of Hooks satisfied).
-  const { savedColumns: savedCampaigns, saveView: saveCampaigns, saveViewDebounced: saveCampaignsDebounced, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
+  const { savedColumns: savedCampaigns, saveView: saveCampaigns, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
   const { savedColumns: savedAdsets,    saveView: saveAdsets,    saveViewDebounced: saveAdsetsDebounced,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
   const { savedColumns: savedAds,       saveView: saveAds,       saveViewDebounced: saveAdsDebounced,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
   const { savedColumns: savedLeads,     saveView: saveLeads,     saveViewDebounced: saveLeadsDebounced,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
 
   // Per-tab debounced-save lookup, used by the table's onColumnOrderChange to
   // auto-persist drag-reorder events without needing a manual "Save View".
-  const saveDebouncedByTab = {
-    campaigns: saveCampaignsDebounced,
-    adsets:    saveAdsetsDebounced,
-    ads:       saveAdsDebounced,
-    leads:     saveLeadsDebounced,
+  const saveByTab = {
+    campaigns: saveCampaigns,
+    adsets:    saveAdsets,
+    ads:       saveAds,
+    leads:     saveLeads,
   }
 
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
@@ -176,12 +204,9 @@ export function MarketingContent({
     setVisibleColumns(prev => ({ ...prev, leads: savedLeads }))
   }, [loadedLeads, savedLeads])
 
-  const [columnsOpen, setColumnsOpen] = useState(false)
   const [gridOpen, setGridOpen] = useState(false)
   const [groupSearch, setGroupSearch] = useState("")
   const gridRef = useRef(null)
-  const [columnsSearch, setColumnsSearch] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
 
   // ── Custom metrics (load from API) ─────────────────────────────────────────
   const [metricsLoaded, setMetricsLoaded] = useState(false)
@@ -313,6 +338,10 @@ export function MarketingContent({
       }
     }
 
+    // Rows are built for every group and scoped at render time instead — see
+    // the picker filter below. Scoping here would need selectedClientGroup in
+    // this effect's deps, and rebuilding every row on each picker change to
+    // get the same answer.
     for (const group of clientGroups) {
       const fb = group.facebook || {}
       const groupMeta = {
@@ -449,6 +478,67 @@ export function MarketingContent({
       return row
     })
   }, [allAds, customMetrics])
+
+  // ── Hero row: chart, insight and KPI tiles ────────────────────────────────
+  // These read the campaign rows for the selected client group — the same rows
+  // the table draws — rather than a parallel total of their own, so the tiles
+  // and the table can never disagree and the group picker filters both at once.
+  // Deliberately not narrowed by the drill-down: the hero describes the account
+  // for this period, while the table below is what you have drilled into.
+  //
+  // Declared above the table's column definitions because formatCellValue reads
+  // the blended CPL to decide which cells turn red, and tableColumns memoises
+  // the closures that call it.
+  // Scoped by the same rule as the tiles and the chart above (scopeGroups):
+  // inactive clients are out on "All Groups", but a specifically picked client
+  // is shown whatever its status. Rows used to be unscoped here, so the table
+  // totalled ~11% more than the Clients page and than its own hero figures.
+  const heroRows = useMemo(() => {
+    const inScope = new Set(scopeGroups(clientGroups, selectedClientGroup).map(g => g.id))
+    return campaigns.filter(i => inScope.has(i._groupId))
+  }, [campaigns, clientGroups, selectedClientGroup])
+
+  const [chartMetric, setChartMetric] = useState("spend")
+
+  const dateRangeLabel = useMemo(
+    () => DATE_PRESETS.find(p => p.value === datePreset)?.label ?? datePreset,
+    [datePreset]
+  )
+
+  // ── Saved column views ─────────────────────────────────────────────────
+  // Scoped per tab: each of the four tables has its own column catalogue, so
+  // its own set of views. Switching tabs reloads the hook against that key.
+  const tabViewKey = `mktg_${activeTab}`
+  const tabViewsLoaded = {
+    campaigns: loadedCampaigns,
+    adsets: loadedAdsets,
+    ads: loadedAds,
+    leads: loadedLeads,
+  }[activeTab]
+
+  const applyColumnView = useCallback((s) => {
+    if (!Array.isArray(s.visibleColumns)) return
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: s.visibleColumns }))
+  }, [activeTab])
+
+  const pageViews = usePageViews(tabViewKey, {
+    onApply: applyColumnView,
+    ready: !!tabViewsLoaded,
+  })
+
+  const {
+    current: heroTotals,
+    kpis,
+    insight,
+    chartMetrics,
+    seriesLoading,
+  } = useMarketingHubData({
+    clientGroups,
+    rows: heroRows,
+    datePreset,
+    selectedClientGroup,
+    currencySymbol: getSymbolFromCurrency(userCurrency) || "£",
+  })
 
   // ── Leads fetch ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -680,13 +770,7 @@ export function MarketingContent({
          "ghl_matched", "ghl_opportunity_status", "ghl_opportunity_value", "ghl_tags"]
       : ["name", "clientGroup", ...baseColumns, ...tagColumnIds, ...activeTabMetrics.map(m => m.id)]
 
-  const categories = [{ id: "all", label: "All" }, { id: "meta", label: "Meta" }, { id: "ghl", label: "GHL" }, { id: "tags", label: "Tags" }, { id: "custom", label: "Custom" }]
   const toggleableColumns = getAvailableColumns().filter(col => col !== "name")
-  const metaColCount = toggleableColumns.filter(col => metaColumns.includes(col)).length
-  const ghlColCount = toggleableColumns.filter(col => ghlColumns.includes(col)).length
-  const tagsCount = toggleableColumns.filter(col => tagColumnIds.includes(col)).length
-  const customCount = toggleableColumns.length - metaColCount - ghlColCount - tagsCount
-  const categoryCounts = { all: toggleableColumns.length, meta: metaColCount, ghl: ghlColCount, tags: tagsCount, custom: customCount }
 
   const getColType = (col) => {
     if (metaColumns.includes(col)) return "meta"
@@ -710,43 +794,29 @@ export function MarketingContent({
     }
   })
 
-  const filteredColumns = allColumnsForDropdown.filter(col =>
-    (selectedCategory === "all" || col.type === selectedCategory) &&
-    col.label.toLowerCase().includes(columnsSearch.toLowerCase())
-  )
-
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
   const columnVisibility = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
 
-  const toggleColumn = (col) => {
-    setVisibleColumns(prev => {
-      const cur = prev[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
-      const updated = cur.includes(col) ? cur.filter(c => c !== col) : [...cur, col]
-      return { ...prev, [activeTab]: updated }
-    })
+  // ── Columns menu plumbing ──────────────────────────────────────────────
+  // `type` is already meta/ghl/tags/custom, which is exactly the menu's source.
+  const columnCatalogue = allColumnsForDropdown.map(c => ({
+    id: c.id,
+    label: c.label,
+    source: c.type,
+  }))
+
+  // "name" is not user-toggleable outside the Leads tab, so it survives every
+  // write — matching what clearAll has always done.
+  const setTabColumns = (ids) => {
+    const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: next }))
   }
 
-  const selectAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: getAvailableColumns() }))
-  const clearAll = () => setVisibleColumns(prev => ({ ...prev, [activeTab]: activeTab === "leads" ? [] : ["name"] }))
-
-  // Dispatch to the correct per-tab saver
-  const saveView = async () => {
-    const cols = visibleColumns[activeTab]
-    if (activeTab === "campaigns") await saveCampaigns(cols)
-    else if (activeTab === "adsets")  await saveAdsets(cols)
-    else if (activeTab === "ads")     await saveAds(cols)
-    else if (activeTab === "leads")   await saveLeads(cols)
-    setColumnsOpen(false)
-  }
-
-  const getIcon = (col) => {
-    if (col.id === "clientGroup" || col.id === "name") return null
-    // GHL metrics (opp stats, contacts, revenue, tags)
-    if (col.id.startsWith("ghl_") || col.id.startsWith("tag_")) return ghlIco
-    // Custom formula metrics
-    if (customMetrics.some(m => m.id === col.id)) return Flask
-    // Everything else is Meta
-    return metaa
+  // Explicit save only — see ColumnsMenu. Writes this tab's own layout.
+  const saveDefaultColumns = async (ids) => {
+    const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
+    await saveByTab[activeTab]?.(next)
+    return true
   }
 
   const formatCellValue = (value, col, row) => {
@@ -791,7 +861,17 @@ export function MarketingContent({
       if (fmt === "decimal") return Number(value).toFixed(2)
       return Number(value).toLocaleString()
     }
-    if (["spend", "cpc", "cpm", "cpp", "social_spend", "cpl", "cost_per_result"].includes(col))
+    // CPL turns red when a row costs more than twice what the rest of the
+    // account pays for the same lead. There is no per-campaign CPL target
+    // anywhere in the data, so the ceiling is relative to this selection's own
+    // blended CPL — see CPL_CEILING_MULTIPLE.
+    if (col === "cpl" || col === "cost_per_result") {
+      const money = `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
+      return isOverCplCeiling(row, heroTotals.cpl)
+        ? <span className="font-medium text-pd-danger">{money}</span>
+        : money
+    }
+    if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col))
       return `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
     if (col === "ctr" || col === "conversion_rate") return `${Number(value).toFixed(2)}%`
     if (col === "account_currency") return value.toUpperCase()
@@ -832,19 +912,44 @@ export function MarketingContent({
         render: (value, row) => formatCellValue(value, col, row),
       }
     })
-  }, [visibleColumns, activeTab, customMetrics, userCurrency])
+    // heroTotals.cpl is in here because formatCellValue closes over it to
+    // decide which CPL cells render red; without it the columns keep the
+    // closure from the render where the threshold was last different.
+  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl])
 
-  // ── Summary cards ─────────────────────────────────────────────────────────
-  const metrics = useMemo(() => {
-    let base = campaigns
-    if (selectedClientGroup && selectedClientGroup !== "all")
-      base = campaigns.filter(i => i._groupId === selectedClientGroup)
-    const totalSpend = base.reduce((s, i) => s + (i.spend || 0), 0)
-    const totalLeads = base.reduce((s, i) => s + (i.leads || 0), 0)
-    const activeCampaigns = base.filter(i => String(i.status).toLowerCase() === "active").length
-    const avgCPL = totalLeads > 0 ? totalSpend / totalLeads : 0
-    return { totalSpend, totalLeads, activeCampaigns, avgCPL }
-  }, [campaigns, selectedClientGroup])
+  const kpiTiles = useMemo(
+    () => kpis.map(k => ({ ...k, ...(MARKETING_KPI_PRESENTATION[k.key] ?? {}) })),
+    [kpis]
+  )
+
+  const chartTabs = useMemo(
+    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
+    [chartMetrics]
+  )
+
+  const chart = useMemo(() => {
+    const metric = chartMetrics[chartMetric] ?? chartMetrics.spend
+    if (!metric?.values?.length) return null
+
+    // The chart's headline delta is the same period-over-period figure the tile
+    // for that metric shows — one number, computed once.
+    const kpi = kpis.find(k => k.key === chartMetric)
+    const decimals = metric.decimals ?? 0
+
+    return {
+      ...metric,
+      subtitle: `${dateRangeLabel} · ${metric.subtitle}`,
+      pointValues: metric.values.map(v =>
+        `${metric.valuePrefix ?? ""}${Number(v).toLocaleString(undefined, {
+          minimumFractionDigits: decimals,
+          maximumFractionDigits: decimals,
+        })}`
+      ),
+      direction: kpi?.direction,
+      delta: kpi?.delta,
+      polarity: kpi?.polarity,
+    }
+  }, [chartMetrics, chartMetric, kpis, dateRangeLabel])
 
   // ── Filter condition helpers ──────────────────────────────────────────────
   const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
@@ -882,98 +987,67 @@ export function MarketingContent({
     [gridItems, groupSearch]
   )
 
+  // ── Top-bar slot ──────────────────────────────────────────────────────────
+  // The title and the date/group filters sit in the global header next to the
+  // notifications bell and the profile menu, in place of the Birdy wordmark —
+  // published through page-header's context, since the header is rendered
+  // above this page in the tree. See usePageHeader.
+  //
+  // `showHeader` is false where MarketingContent is embedded inside the client
+  // detail page; that copy must not claim the top bar out from under the route
+  // that owns it.
+  const header = useMemo(() => {
+    if (!showHeader) return null
+
+    return {
+      title: (
+        <div className={`${pdFontClass} min-w-0`}>
+          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+            Marketing Hub
+          </h1>
+          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+            Campaign performance across all connected ad accounts
+          </p>
+        </div>
+      ),
+      controls: (
+        <div className="flex items-center gap-2">
+          {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
+          {showGroupFilter && clientGroups.length > 0 && (
+            <ClientGroupPicker
+              gridRef={gridRef}
+              open={gridOpen}
+              setOpen={setGridOpen}
+              label={selectedGroupLabel}
+              search={groupSearch}
+              setSearch={setGroupSearch}
+              items={filteredGridItems}
+              selectedId={selectedClientGroup}
+              onSelect={setSelectedClientGroup}
+            />
+          )}
+        </div>
+      ),
+    }
+    // filteredGridItems and selectedGroupLabel are themselves memoised, so this
+    // node is stable between renders that don't change a control's own state —
+    // which it has to be, since usePageHeader holds it in state.
+  }, [
+    showHeader, setDatePreset, datePreset, showGroupFilter, clientGroups.length,
+    gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
+  ])
+
+  usePageHeader(header)
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] mx-auto md:w-[calc(100dvw-130px)]">
       <div className="flex flex-col gap-6">
 
-        {/* Header */}
-        {showHeader && (
-          <div className="flex flex-col sm:flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex gap-4 flex-col md:flex-row md:items-center md:justify-between w-full">
-              <div className="whitespace-nowrap">
-                <h1 className="text-2xl md:text-3xl lg:text-4xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                  Marketing Hub
-                </h1>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit">
-              {setDatePreset && (
-                <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-              )}
-              {showGroupFilter && clientGroups.length > 0 && (
-                <div className="relative" ref={gridRef}>
-                  <button
-                    onClick={() => setGridOpen(prev => !prev)}
-                    className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[120px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="truncate flex-1 text-left text-gray-800">
-                      {selectedGroupLabel}
-                    </span>
-                    <svg
-                      className={`w-4 h-4 shrink-0 text-gray-400 transition-transform duration-150 ${gridOpen ? "rotate-180" : ""}`}
-                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-
-                  {gridOpen && (
-                    <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                      <div className="mb-2">
-                        <input
-                          type="text"
-                          placeholder="Search groups..."
-                          value={groupSearch}
-                          onChange={e => setGroupSearch(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-
-                      {filteredGridItems.length > 0 ? (
-                        <div
-                          className="grid gap-1 max-h-72 overflow-y-auto"
-                          style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}
-                        >
-                          {filteredGridItems.map(item => {
-                            const isSelected =
-                              item.id === "all"
-                                ? !selectedClientGroup || selectedClientGroup === "all"
-                                : selectedClientGroup === item.id
-
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => {
-                                  setSelectedClientGroup(item.id)
-                                  setGridOpen(false)
-                                  setGroupSearch("")
-                                }}
-                                title={item.name}
-                                className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors
-                                  ${isSelected
-                                    ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                  }`}
-                              >
-                                {item.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-3 px-6">
-                          No groups found
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-          </div>
-        </div>
-        )}
+        {/* The title block and the date/group filters now live in the global
+            top bar beside the bell and the profile menu — published by
+            usePageHeader above. The handoff puts filters in the header, so the
+            page starts straight at its content. */}
 
         {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
         {(() => {
@@ -1009,36 +1083,105 @@ export function MarketingContent({
           )
         })()}
 
-        {/* Summary cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[
-            { label: "Active Campaigns", icon: LayoutGrid, value: metrics.activeCampaigns },
-            { label: "Total Ad Spend", icon: DollarSign, value: `${getSymbolFromCurrency(userCurrency)}${metrics.totalSpend.toFixed(2)}` },
-            { label: "Total Leads", icon: Target, value: metrics.totalLeads },
-            { label: "Average CPL", icon: TrendingUp, value: metrics.avgCPL > 0 ? `${getSymbolFromCurrency(userCurrency)}${metrics.avgCPL.toFixed(2)}` : "-" },
-          ].map((c, i) => (
-            <Card key={i} className="border shadow-sm rounded-lg">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-muted-foreground font-normal text-sm">{c.label}</CardTitle>
-                <div className="h-7 w-8 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                  <c.icon className="h-4 w-4 text-purple-600" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isLoading
-                  ? <div className="w-full py-4"><Skeleton className="h-4 w-1/2" /></div>
-                  : <div className="text-2xl font-bold">{c.value}</div>
+        {/* ── Hero row: trend chart (1.65) · KPI tiles (0.85) ────────────────
+            The handoff's "chart + insights row". The tiles move out of a full
+            width strip and into the chart's right-hand column, six of them in
+            a 1fr 1fr grid so the column's height matches the chart's.
+
+            A metric with no comparable previous period renders without a pill
+            rather than with a zero: an unknown delta is not a flat one. */}
+        <div className={`${pdFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
+          <div className="flex min-w-0 flex-col lg:flex-[1.65]">
+            {groupsLoading || seriesLoading ? (
+              <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
+            ) : chart ? (
+              <TrendChart
+                className="flex-1"
+                chart={chart}
+                metrics={chartTabs}
+                activeMetric={chartMetric}
+                onMetricChange={setChartMetric}
+                redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup ?? "all"}`}
+              />
+            ) : (
+              <PdCard
+                className="flex-1"
+                title={chartMetrics[chartMetric]?.title ?? "Trend"}
+                // The metric tabs live inside TrendChart, so without them here
+                // a metric with no series would be a dead end — you could
+                // select it and have no way back to one that plots.
+                action={
+                  <PdSegmented
+                    label="Chart metric"
+                    className="shrink-0"
+                    itemClassName="px-[13px] py-[7px]"
+                    options={chartTabs.map(m => ({ key: m.key, label: m.tab }))}
+                    value={chartMetric}
+                    onChange={setChartMetric}
+                  />
                 }
-                <p className="text-xs text-[#71658B] text-muted-foreground">Across all {activeTab}</p>
-              </CardContent>
-            </Card>
-          ))}
+              >
+                <p className="py-8 text-center text-[12px] text-pd-faint">
+                  {{
+                    spend: "No measured daily spend cached for this window yet.",
+                    leads: "No dated leads in this window yet.",
+                    cpl: "No day in this window has both spend and leads recorded.",
+                    // Impressions falls back to the shape of daily spend, so
+                    // reaching here means there is no spend curve either.
+                    impressions:
+                      "No measured daily spend cached for this window yet, so there is nothing to shape delivery against — the total is still in the tiles.",
+                  }[chartMetric] ?? "Nothing to plot for this window yet."}
+                </p>
+              </PdCard>
+            )}
+          </div>
+
+          <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+            {/* Birdy's own voice, and the only saturated surface the style
+                guide allows on a screen. Copy is generated per period from the
+                rows below it — the headline movement, then the single campaign
+                worth acting on. */}
+            {insight ? (
+              <InsightCard segments={insight.segments} />
+            ) : (
+              <PdCard title="Birdy Insights">
+                <p className="text-[12.5px] leading-[1.5] text-pd-body">
+                  Once campaigns in this window have spend against them, Birdy
+                  reads the movement and names what to act on.
+                </p>
+              </PdCard>
+            )}
+
+            <div className="grid grid-cols-2 gap-[10px]">
+              {groupsLoading
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <Skeleton key={i} className="h-[52px] rounded-xl" />
+                  ))
+                : kpiTiles.map(tile => (
+                    <StatTile
+                      key={tile.key}
+                      layout="compact"
+                      icon={tile.icon}
+                      tone={tile.tone}
+                      value={tile.value}
+                      label={tile.label}
+                      direction={tile.direction}
+                      delta={tile.delta}
+                      polarity={tile.polarity}
+                    />
+                  ))}
+            </div>
+          </div>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <TabsList className="flex-1 justify-start overflow-x-auto">
+          {/* Section tabs on the handoff's segmented-control spec: the track is
+              the divider tint, the selected item lifts onto white with the
+              purple-tinted shadow. Radix Tabs still drives the behaviour —
+              only the skin changes. */}
+          <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
+            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
               {[
                 { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
                 { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
@@ -1050,12 +1193,12 @@ export function MarketingContent({
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="gap-2"
+                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
                 >
-                    <tab.icon className="h-4 w-4" />
+                    <tab.icon className="size-[14px]" />
                     {tab.label}
                     {badge !== null && (
-                    <span className="ml-1 bg-purple-100 text-purple-700 rounded-full px-1.5 text-[10px] font-semibold leading-4">
+                    <span className="ml-1 rounded-[5px] bg-pd-primary-tint px-1.5 text-[10.5px] font-bold leading-4 text-pd-primary">
                       {badge}
                     </span>
                     )}
@@ -1064,21 +1207,23 @@ export function MarketingContent({
               })}
             </TabsList>
 
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
+            {/* Search and Columns as the handoff's 38px controls, sitting
+                together at the right end of the tab row. */}
+            <div className="ml-auto flex w-fit shrink-0 items-center gap-[10px]">
               <Input
                 type="search"
-                placeholder={`Search ${activeTab}...`}
-                className="h-10 bg-white w-fit md:w-55 rounded-md text-sm font-medium"
+                placeholder={`Search ${activeTab}…`}
+                className="h-[38px] w-fit rounded-[10px] border-pd-border bg-pd-surface text-[13px] md:w-[220px]"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
-              <ColumnVisibilityDropdown
-                isOpen={columnsOpen} setIsOpen={setColumnsOpen}
-                categories={categories} selectedCategory={selectedCategory} setSelectedCategory={setSelectedCategory}
-                categoryCounts={categoryCounts} searchTerm={columnsSearch} setSearchTerm={setColumnsSearch}
-                filteredColumns={filteredColumns} columnVisibility={columnVisibility}
-                toggleColumnVisibility={toggleColumn} getIcon={getIcon}
-                selectAll={selectAll} clearAll={clearAll} save={saveView}
+              <ColumnsMenu
+                columns={columnCatalogue}
+                visibleColumns={getCurrentVisibleColumns()}
+                onChange={setTabColumns}
+                defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
+                views={pageViews}
+                onSaveDefault={saveDefaultColumns}
               />
             </div>
           </div>

@@ -1,20 +1,21 @@
 "use client"
 
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
+import { PdSegmented } from "@/components/portfolio"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { usePageViews } from "@/lib/usePageViews"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
+import { windowCallTotals } from "@/lib/saleshub-totals"
 import { hpIcon as HP } from "@/lib/icons"
 import {
   CALLS_FETCH_MULTIPLIER,
@@ -35,8 +36,9 @@ import {
   User,
   Mail,
   ChevronDown,
+  LayoutGrid,
+  Search,
   X,
-  History,
   SlidersHorizontal,
   Loader2,
 } from "lucide-react"
@@ -285,6 +287,26 @@ const CALL_COLUMNS = [
 ]
 
 const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS, calls: CALL_COLUMNS }
+
+// The section tabs, with the design's 14px leading glyph. Overview and Members
+// are hub-only: Overview lists one row per client, and Members is account-wide
+// team data with no per-client filter upstream — neither means anything once
+// the view is already scoped to a single client.
+const SECTION_TABS = [
+  { key: "overview", label: "Overview", icon: LayoutGrid, hubOnly: true },
+  { key: "leads", label: "Leads", icon: User, hubOnly: false },
+  { key: "members", label: "Members", icon: Users, hubOnly: true },
+  { key: "calls", label: "Calls", icon: Phone, hubOnly: false },
+]
+
+// Ties the tablist to the panel it swaps, for anyone navigating by role.
+const TABLE_PANEL_ID = "sales-hub-table-panel"
+
+// Every control in the toolbar row wears the design's dropdown trigger: 38px
+// tall, white, hairline border, 10px radius, Inter 600 13px.
+const TOOLBAR_CHIP =
+  "flex h-[38px] cursor-pointer items-center gap-2 rounded-[10px] border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider" 
+
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
 
 const clampCallsLimit = (n) => Math.min(MAX_CALLS_LIMIT, Math.max(MIN_CALLS_LIMIT, Number(n) || DEFAULT_CALLS_LIMIT))
@@ -319,18 +341,15 @@ function CallsFilterDropdown({
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
+        <Button variant="outline" className={TOOLBAR_CHIP}>
+          <SlidersHorizontal className="size-[14px]" />
           <span className="hidden lg:inline">Filters</span>
           {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-purple-700">
+            <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pd-primary px-1 text-[11px] font-bold text-white">
               {activeCount}
             </span>
           )}
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="size-3" />
         </Button>
       </DropdownMenuTrigger>
 
@@ -460,18 +479,15 @@ function LeadsFilterDropdown({ open, setOpen, hideNoDialerActivity, setHideNoDia
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm"
-        >
-          <SlidersHorizontal className="h-4 w-4" />
+        <Button variant="outline" className={TOOLBAR_CHIP}>
+          <SlidersHorizontal className="size-[14px]" />
           <span className="hidden lg:inline">Filters</span>
           {activeCount > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-purple-700">
+            <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pd-primary px-1 text-[11px] font-bold text-white">
               {activeCount}
             </span>
           )}
-          <ChevronDown className="h-4 w-4" />
+          <ChevronDown className="size-3" />
         </Button>
       </DropdownMenuTrigger>
 
@@ -524,17 +540,23 @@ const LEADS_FIRST_BATCH_SIZE = 40
 const LEADS_BACKGROUND_BATCH_SIZE = 200
 const LEADS_BACKGROUND_CONCURRENCY = 6
 
-// showGroupFilter controls both the client picker and the two hub-only tabs
-// (Overview lists one row per client; Members is account-wide HotProspector
-// team data with no per-client filter available upstream) — neither makes
-// sense once the view is already locked to a single client group.
+// showGroupFilter controls the two hub-only tabs (Overview lists one row per
+// client; Members is account-wide HotProspector team data with no per-client
+// filter available upstream) — neither makes sense once the view is already
+// locked to a single client group.
+//
+// The client selection is controlled when `selectedClientGroup` is passed and
+// internal otherwise. The Sales Hub renders the picker itself, in its own
+// header row, and so owns the value; /clients/[id] is already scoped to one
+// client and never moves it, so it passes nothing and this keeps its own.
 export function CallCentreContent({
   clientGroups,
   groupsLoading,
   datePreset,
-  setDatePreset,
   showGroupFilter = true,
-  showHeader = true,
+  showStatCards = true,
+  selectedClientGroup: controlledClientGroup,
+  onSelectClientGroup,
 }) {
   const [activeTab, setActiveTab] = useState(showGroupFilter ? "overview" : "leads")
   const [searchQuery, setSearchQuery] = useState("")
@@ -546,7 +568,6 @@ export function CallCentreContent({
     members: allVisible(MEMBER_COLUMNS),
     calls: allVisible(CALL_COLUMNS),
   })
-  const [colMenuOpen, setColMenuOpen] = useState(false)
 
   // Leads tab (fully loaded, windowed by the date preset — sorted/paginated client-side).
   const [leads, setLeads] = useState([])
@@ -556,11 +577,11 @@ export function CallCentreContent({
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsBackgroundLoading, setLeadsBackgroundLoading] = useState(false)
   const [leadsTotal, setLeadsTotal] = useState(0)
-  // Client filter (top-right picker, like the Leads hub). "all" or a client_group id.
-  const [selectedClientGroup, setSelectedClientGroup] = useState("all")
-  const [gridOpen, setGridOpen] = useState(false)
-  const [groupSearch, setGroupSearch] = useState("")
-  const gridRef = useRef(null)
+  // Client filter: "all" or a client_group id. Controlled by the page on the
+  // Sales Hub, internal on /clients/[id].
+  const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
+  const selectedClientGroup = controlledClientGroup ?? uncontrolledClientGroup
+  const setSelectedClientGroup = onSelectClientGroup ?? setUncontrolledClientGroup
   // Leads tab filter: hide leads with no dialer activity. Sent to the backend
   // as has_calls=true so it's filtered against the whole dataset, not just
   // whatever page/batch has already been fetched.
@@ -602,10 +623,19 @@ export function CallCentreContent({
   }
 
   // ── Overview rows: one per client, windowed call KPIs from /api/client-groups ──
+  //
+  // total_calls/inbound/outbound/talk_time come from hotprospector.daily_calls
+  // (windowCallTotals), the same per-day series the Sales-Hub trend chart
+  // sums, rather than hotprospector.call_stats: that preset cache only
+  // refreshes once a day per location (hp-tick's cron cadence) so it can run
+  // stale against current storage, and drifted from the chart's own totals
+  // for exactly that reason. leads/transfers stay on call_stats — see
+  // saleshub-totals.js's file header for why those two don't move.
   const overviewRows = useMemo(
     () =>
       (clientGroups || []).map((g) => {
         const cs = g.hotprospector?.call_stats || {}
+        const daily = windowCallTotals(g.hotprospector?.daily_calls, datePreset)
         return {
           id: g.id,
           name: g.name || "Unnamed Client",
@@ -615,15 +645,15 @@ export function CallCentreContent({
           // total_leads (full pool) is the same across presets by design.
           total_leads: g.hotprospector?.metrics?.total_leads ?? 0,
           leads: cs.leads_with_calls ?? 0,
-          total_calls: cs.total_calls ?? 0,
-          inbound: cs.inbound_count ?? 0,
-          outbound: cs.outbound_count ?? 0,
+          total_calls: daily.calls,
+          inbound: daily.inbound,
+          outbound: daily.outbound,
           transfers: cs.transfers ?? 0,
-          talk_time: cs.total_talk_min ?? 0,
+          talk_time: daily.talk,
           original: g,
         }
       }),
-    [clientGroups],
+    [clientGroups, datePreset],
   )
 
   // Apply the top-right client-filter selection, then hide 0-call clients from
@@ -895,42 +925,11 @@ export function CallCentreContent({
     }
   }
 
-  // ── Date preset change ──
-  const handlePresetChange = (preset) => {
-    setDatePreset(preset)
-  }
-
-  // ── Top-right client picker (mirrors the Leads hub group picker) ──
-  const clientGridItems = useMemo(
-    () => [
-      { id: "all", name: "All Clients" },
-      ...(clientGroups || []).map((g) => ({ id: g.id, name: g.name || "Unnamed Client" })),
-    ],
-    [clientGroups],
-  )
-  const filteredClientGrid = useMemo(
-    () => clientGridItems.filter((it) => it.name.toLowerCase().includes(groupSearch.toLowerCase())),
-    [clientGridItems, groupSearch],
-  )
+  // Names the current scope for the Leads tab's "showing this client only" chip.
   const selectedClientLabel = useMemo(() => {
     if (selectedClientGroup === "all") return "All Clients"
     return (clientGroups || []).find((g) => g.id === selectedClientGroup)?.name || "All Clients"
   }, [selectedClientGroup, clientGroups])
-  const pickClient = (id) => {
-    setSelectedClientGroup(id)
-    setGridOpen(false)
-    setGroupSearch("")
-  }
-
-  // Close the picker on outside click.
-  useEffect(() => {
-    if (!gridOpen) return
-    const onDocClick = (e) => {
-      if (gridRef.current && !gridRef.current.contains(e.target)) setGridOpen(false)
-    }
-    document.addEventListener("mousedown", onDocClick)
-    return () => document.removeEventListener("mousedown", onDocClick)
-  }, [gridOpen])
 
   // ── Drill from an Overview client row into the Leads tab ──
   const handleDrillIn = (group) => {
@@ -940,20 +939,63 @@ export function CallCentreContent({
   }
 
   // ── Column-visibility dropdown wiring (operates on the active tab's columns) ──
+  const sectionTabs = useMemo(
+    () => SECTION_TABS.filter((t) => showGroupFilter || !t.hubOnly),
+    [showGroupFilter],
+  )
+
   const activeColumns = TAB_COLUMNS[activeTab]
   const activeVis = colVis[activeTab]
-  const toggleCol = (id) =>
+
+  // ── Saved column views ─────────────────────────────────────────────────
+  // Scoped per tab, like Marketing: each of the four tables has its own column
+  // set, so its own views. The key is shared between the Sales Hub and
+  // /clients/[id], which draw the same tables.
+  const applyColumnView = useCallback((s) => {
+    if (!Array.isArray(s.visibleColumns)) return
+    const on = new Set(s.visibleColumns)
     setColVis((prev) => ({
       ...prev,
-      [activeTab]: { ...prev[activeTab], [id]: !(prev[activeTab][id] ?? true) },
+      [activeTab]: Object.fromEntries(
+        TAB_COLUMNS[activeTab].map((c, i) => [c.id, i === 0 || on.has(c.id)]),
+      ),
     }))
-  const selectAllCols = () => setColVis((prev) => ({ ...prev, [activeTab]: allVisible(activeColumns) }))
-  const clearCols = () =>
+  }, [activeTab])
+
+  const pageViews = usePageViews(`cc_${activeTab}`, { onApply: applyColumnView })
+
+  // Everything on these tables comes from Hot Prospector except the leading
+  // identity column and the locally derived status, which carry no badge.
+  const columnCatalogue = useMemo(
+    () => activeColumns.map((c) => ({
+      id: c.id,
+      label: c.label,
+      source: c.icons === HP ? "hotprospector" : undefined,
+    })),
+    [activeColumns],
+  )
+
+  const columnSources = useMemo(
+    () => (columnCatalogue.some((c) => c.source === "hotprospector")
+      ? [{ id: "all", label: "All" }, { id: "hotprospector", label: "HP" }]
+      : [{ id: "all", label: "All" }]),
+    [columnCatalogue],
+  )
+
+  const visibleColumnIds = activeColumns.filter((c) => activeVis[c.id]).map((c) => c.id)
+
+  const setVisibleColumnIds = (ids) => {
+    const on = new Set(ids)
     setColVis((prev) => ({
       ...prev,
-      // keep the first (name) column — StyledTable always shows it anyway
-      [activeTab]: Object.fromEntries(activeColumns.map((c, i) => [c.id, i === 0])),
+      [activeTab]: Object.fromEntries(
+        activeColumns.map((c, i) => [c.id, i === 0 || on.has(c.id)]),
+      ),
     }))
+  }
+
+  // "Default" restores this tab's baseline: every column on.
+  const defaultColumnIds = activeColumns.map((c) => c.id)
 
   const StatCard = ({ label, value, desc, Icon }) => (
     <Card className="border rounded-lg shadow-sm">
@@ -971,130 +1013,61 @@ export function CallCentreContent({
   )
 
   return (
-    <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+    // Width comes from the container now. This used to be sized off the
+    // viewport minus the rail (100dvw-130px), which is the sort of measurement
+    // that goes wrong the moment anything else changes width — and did, inside
+    // the Sales Hub's own scroll region.
+    <div className="min-w-0">
       <div className="flex flex-col gap-6">
-        {/* Header + toolbar */}
-        {showHeader && (
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h1 className="text-xl md:text-3xl lg:text-3xl py-2 md:py-0 font-bold text-foreground text-center md:text-left whitespace-nowrap">
-                Sales Hub
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1 text-center md:text-left">
-                Call-center performance across your Hot Prospector clients
-              </p>
-            </div>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 flex-nowrap overflow-x-auto md:overflow-x-visible md:gap-1 md:py-1 md:px-1 w-fit mx-auto md:mx-0">
-              <DateRangeSelect value={datePreset} onChange={handlePresetChange} />
-
-              {/* Client picker — filters the Overview and scopes the Leads tab */}
-              {showGroupFilter && (
-                <div className="relative" ref={gridRef}>
-                  <button
-                    onClick={() => setGridOpen((p) => !p)}
-                    className="h-10 bg-white font-semibold border border-gray-200 rounded-md px-3 flex items-center gap-2 text-sm min-w-[130px] max-w-[200px] hover:bg-gray-50 transition-colors"
-                  >
-                    <span className="truncate flex-1 text-left text-gray-800">{selectedClientLabel}</span>
-                    <ChevronDown className={`w-4 h-4 shrink-0 text-gray-400 transition-transform ${gridOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  {gridOpen && (
-                    <div className="absolute z-50 mt-1 right-0 w-[320px] max-w-[90vw] bg-white border border-gray-200 rounded-lg shadow-lg p-2">
-                      <div className="mb-2">
-                        <input
-                          type="text"
-                          placeholder="Search clients..."
-                          value={groupSearch}
-                          onChange={(e) => setGroupSearch(e.target.value)}
-                          className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        />
-                      </div>
-                      {filteredClientGrid.length > 0 ? (
-                        <div className="grid gap-1 max-h-72 overflow-y-auto" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-                          {filteredClientGrid.map((item) => {
-                            const isSel = item.id === selectedClientGroup
-                            return (
-                              <button
-                                key={item.id}
-                                onClick={() => pickClient(item.id)}
-                                title={item.name}
-                                className={`text-xs px-2.5 py-2 rounded-md border text-left truncate transition-colors ${
-                                  isSel
-                                    ? "bg-purple-600 text-white border-purple-600 font-semibold"
-                                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-100 hover:border-gray-300"
-                                }`}
-                              >
-                                {item.name}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-gray-400 text-center py-3 px-6">No clients found</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+        {/* Stat cards (windowed). The Sales Hub draws its own six-tile KPI grid
+            from the same figures and turns these off; /clients/[id] has no call
+            KPIs of its own on this tab, so they stay its default. */}
+        {showStatCards && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
+            <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
+            <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
+            <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
           </div>
         )}
 
-        {/* Stat cards (windowed) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
-          <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
-          <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
-          <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
-        </div>
+        {/* Section tabs, and the controls that act on whichever table is under
+            them. The design puts view switches above the content they filter
+            and the window filter up in the header — see the shell. */}
+        <div>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <PdSegmented
+              role="tablist"
+              label="Sales Hub section"
+              panelId={TABLE_PANEL_ID}
+              className="shrink-0 self-start"
+              itemClassName="px-[15px] py-[7px] text-[13px]"
+              options={sectionTabs}
+              value={activeTab}
+              onChange={setActiveTab}
+            />
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <TabsList className="flex-1 justify-start overflow-x-auto">
-              {showGroupFilter && (
-                <TabsTrigger value="overview">
-                  <Users className="h-4 w-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="leads">
-                <Phone className="h-4 w-4 mr-2" />
-                Leads
-              </TabsTrigger>
-              {showGroupFilter && (
-                <TabsTrigger value="members">
-                  <User className="h-4 w-4 mr-2" />
-                  Members
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="calls">
-                <History className="h-4 w-4 mr-2" />
-                Calls
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex items-center gap-1 bg-[#F3F1F9] ring-1 ring-inset ring-gray-100 border rounded-lg py-1 px-1 w-fit shrink-0">
-              <Input
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-white h-10 w-fit md:w-48 text-sm"
-              />
-              <ColumnVisibilityDropdown
-                isOpen={colMenuOpen}
-                setIsOpen={setColMenuOpen}
-                categories={[{ id: "all", label: "All" }]}
-                selectedCategory="all"
-                setSelectedCategory={() => {}}
-                categoryCounts={{ all: activeColumns.length }}
-                filteredColumns={activeColumns}
-                columnVisibility={activeVis}
-                toggleColumnVisibility={toggleCol}
-                getIcon={(col) => (col.icons ? col.icons.src || col.icons : null)}
-                selectAll={selectAllCols}
-                clearAll={clearCols}
-                save={() => setColMenuOpen(false)}
+            <div className="flex items-center gap-2.5 md:ml-auto">
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
+                  aria-hidden="true"
+                />
+                <Input
+                  placeholder="Search…"
+                  aria-label="Search the table"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[220px]"
+                />
+              </div>
+              <ColumnsMenu
+                columns={columnCatalogue}
+                visibleColumns={visibleColumnIds}
+                onChange={setVisibleColumnIds}
+                defaultColumns={defaultColumnIds}
+                views={pageViews}
+                sources={columnSources}
               />
               {activeTab === "leads" && (
                 <LeadsFilterDropdown
@@ -1129,9 +1102,12 @@ export function CallCentreContent({
             </div>
           </div>
 
-          {/* Overview — one row per client, windowed KPIs (click to drill into Leads) */}
-          {showGroupFilter && (
-            <TabsContent value="overview" className="mt-4">
+          {/* One panel, whichever section is selected. Radix's Tabs mounted all
+              four and hid three; each of these carries its own fetch, so the
+              hidden ones were work nobody asked for. */}
+          <div id={TABLE_PANEL_ID} role="tabpanel" className="mt-4">
+            {activeTab === "overview" && showGroupFilter && (
+              // One row per client, windowed KPIs — click to drill into Leads.
               <StyledTable
                 columns={OVERVIEW_COLUMNS}
                 data={filteredOverview}
@@ -1140,44 +1116,49 @@ export function CallCentreContent({
                 isLoading={groupsLoading}
                 onRowClick={handleDrillIn}
               />
-            </TabsContent>
-          )}
-
-          {/* Leads — one row per lead, windowed call logs */}
-          <TabsContent value="leads" className="mt-4">
-            {selectedClientGroup !== "all" && (
-              <div className="mb-3 flex items-center gap-2">
-                <Badge variant="outline" className="gap-2 bg-purple-50 text-purple-700 border-purple-200">
-                  Client: <span className="font-semibold">{selectedClientLabel}</span>
-                  <button onClick={() => pickClient("all")} className="ml-1 hover:text-purple-900" aria-label="Show all clients">
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </Badge>
-                <span className="text-xs text-muted-foreground">Showing this client only</span>
-              </div>
             )}
 
-            {leadsBackgroundLoading && (
-              <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                <span>
-                  Loaded {leads.length} of {leadsTotal} leads — loading the rest in the background…
-                </span>
-              </div>
+            {activeTab === "leads" && (
+              <>
+                {selectedClientGroup !== "all" && (
+                  <div className="mb-3 flex items-center gap-2">
+                    <span className="flex items-center gap-2 rounded-md bg-pd-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-pd-primary">
+                      Client: {selectedClientLabel}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedClientGroup("all")}
+                        className="cursor-pointer hover:text-pd-ink"
+                        aria-label="Show all clients"
+                      >
+                        <X className="size-3.5" />
+                      </button>
+                    </span>
+                    <span className="text-[11.5px] text-pd-faint">Showing this client only</span>
+                  </div>
+                )}
+
+                {leadsBackgroundLoading && (
+                  <div className="mb-3 flex items-center gap-2 text-[11.5px] text-pd-faint">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    <span>
+                      Loaded {leads.length} of {leadsTotal} leads — loading the rest in the
+                      background…
+                    </span>
+                  </div>
+                )}
+
+                <StyledTable
+                  columns={LEAD_COLUMNS}
+                  data={leads}
+                  columnVisibility={colVis.leads}
+                  searchQuery={searchQuery}
+                  isLoading={leadsLoading}
+                />
+              </>
             )}
 
-            <StyledTable
-              columns={LEAD_COLUMNS}
-              data={leads}
-              columnVisibility={colVis.leads}
-              searchQuery={searchQuery}
-              isLoading={leadsLoading}
-            />
-          </TabsContent>
-
-          {/* Members — account-wide HotProspector team */}
-          {showGroupFilter && (
-            <TabsContent value="members" className="mt-4">
+            {activeTab === "members" && showGroupFilter && (
+              // Account-wide HotProspector team.
               <StyledTable
                 columns={MEMBER_COLUMNS}
                 data={members}
@@ -1185,20 +1166,20 @@ export function CallCentreContent({
                 searchQuery={searchQuery}
                 isLoading={false}
               />
-            </TabsContent>
-          )}
+            )}
 
-          {/* Calls — most recent calls across leads (count is user-configurable) */}
-          <TabsContent value="calls" className="mt-4">
-            <StyledTable
-              columns={CALL_COLUMNS}
-              data={filteredCalls}
-              columnVisibility={colVis.calls}
-              searchQuery={searchQuery}
-              isLoading={callsLoading}
-            />
-          </TabsContent>
-        </Tabs>
+            {activeTab === "calls" && (
+              // Most recent calls across leads; the count is user-configurable.
+              <StyledTable
+                columns={CALL_COLUMNS}
+                data={filteredCalls}
+                columnVisibility={colVis.calls}
+                searchQuery={searchQuery}
+                isLoading={callsLoading}
+              />
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

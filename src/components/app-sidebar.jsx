@@ -16,7 +16,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarFooter,
+  SidebarSeparator,
 } from "@/components/ui/sidebar"
+
+import SidebarCredits from "@/components/SidebarCredits"
 
 import {
   Tooltip,
@@ -133,6 +136,9 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter>
+          {/* Credits-left indicator (bottom-left) */}
+          <SidebarCredits />
+          <SidebarSeparator />
           <SidebarMenu>
             <SidebarMenuItem>
               <Tooltip>

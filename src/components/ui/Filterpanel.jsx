@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { SlidersHorizontal, X, Check, ChevronDown } from "lucide-react"
 import {
   DropdownMenu,
@@ -8,97 +8,127 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
-export function FilterPanel({
-  sources = [],
-  allTags = [],
-  selectedSources = [],
-  setSelectedSources,
-  selectedTags = [],
-  setSelectedTags,
-  onSave,
-}) {
+/**
+ * The table toolbar's Filters control.
+ *
+ * Takes arbitrary filter groups rather than a fixed sources/tags pair, so a
+ * page can put every one of its filters here. That matters because filters used
+ * to be split across two controls — some in here, the rest hidden inside the
+ * column-visibility menu — which meant "Filters" didn't show you all of them
+ * and the column menu wasn't only about columns.
+ *
+ * Two selection modes:
+ *   multi   an array of chosen values (Sources, Tags)
+ *   single  one value, with `allValue` meaning "no filter" (Types, Opportunities)
+ *
+ * Choices are drafted locally and only committed on Apply, so a half-made
+ * selection never refetches the table.
+ *
+ * @param {Array} groups  [{ id, label, mode, items, value, onChange, allValue?, allLabel? }]
+ *                        `items` may be strings or { value, label } objects.
+ */
+export function FilterPanel({ groups = [], onSave, triggerClassName }) {
   const [open, setOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState("sources")
+  const [activeTab, setActiveTab] = useState(groups[0]?.id)
   const [search, setSearch] = useState("")
+  const [draft, setDraft] = useState({})
 
-  // Draft state — only committed to parent on "Apply"
-  const [draftSources, setDraftSources] = useState(selectedSources)
-  const [draftTags, setDraftTags] = useState(selectedTags)
+  // Normalise items so a group can be given plain strings.
+  const normalised = useMemo(
+    () =>
+      groups.map((g) => ({
+        ...g,
+        mode: g.mode ?? "multi",
+        allValue: g.allValue ?? "all",
+        options: (g.items ?? []).map((item) =>
+          typeof item === "string" ? { value: item, label: item } : item
+        ),
+      })),
+    [groups]
+  )
 
-  // Sync draft when parent resets from outside
-  useEffect(() => { setDraftSources(selectedSources) }, [selectedSources])
-  useEffect(() => { setDraftTags(selectedTags) }, [selectedTags])
+  // Re-seed the draft whenever the panel opens or the parent resets a value
+  // from outside — otherwise a "Clear all" elsewhere would leave stale ticks.
+  const committed = useMemo(
+    () => Object.fromEntries(normalised.map((g) => [g.id, g.value])),
+    [normalised]
+  )
+  useEffect(() => { setDraft(committed) }, [committed])
 
-  // Reset search on tab change
   useEffect(() => { setSearch("") }, [activeTab])
+  useEffect(() => {
+    if (!normalised.some((g) => g.id === activeTab)) setActiveTab(normalised[0]?.id)
+  }, [normalised, activeTab])
 
-  // Counts (based on draft)
-  const sourceCount = draftSources.length
-  const tagCount = draftTags.length
-  const totalActive = sourceCount + tagCount
+  const group = normalised.find((g) => g.id === activeTab) ?? normalised[0]
 
-  const tabs = [
-    { id: "sources", label: "Sources", count: sourceCount },
-    { id: "tags",    label: "Tags",    count: tagCount },
-  ]
+  /** How many choices a group is currently contributing. */
+  const countFor = (g) => {
+    const value = draft[g.id]
+    if (g.mode === "single") return value && value !== g.allValue ? 1 : 0
+    return (value ?? []).length
+  }
+  const totalActive = normalised.reduce((sum, g) => sum + countFor(g), 0)
 
-  const getItems = () => {
-    switch (activeTab) {
-      case "sources": return sources
-      case "tags":    return allTags
-      default:        return []
-    }
+  const isChecked = (optionValue) => {
+    if (!group) return false
+    const value = draft[group.id]
+    return group.mode === "single"
+      ? value === optionValue
+      : (value ?? []).includes(optionValue)
   }
 
-  const isChecked = (item) => {
-    switch (activeTab) {
-      case "sources": return draftSources.includes(item)
-      case "tags":    return draftTags.includes(item)
-      default:        return false
-    }
-  }
-
-  const toggle = (item) => {
-    switch (activeTab) {
-      case "sources":
-        setDraftSources((prev) =>
-          prev.includes(item) ? prev.filter((s) => s !== item) : [...prev, item]
-        )
-        break
-      case "tags":
-        setDraftTags((prev) =>
-          prev.includes(item) ? prev.filter((t) => t !== item) : [...prev, item]
-        )
-        break
-    }
+  const toggle = (optionValue) => {
+    if (!group) return
+    setDraft((prev) => {
+      const value = prev[group.id]
+      if (group.mode === "single") {
+        // Clicking the chosen one clears back to "all" — otherwise a
+        // single-select filter can only ever be narrowed, never undone.
+        return {
+          ...prev,
+          [group.id]: value === optionValue ? group.allValue : optionValue,
+        }
+      }
+      const list = value ?? []
+      return {
+        ...prev,
+        [group.id]: list.includes(optionValue)
+          ? list.filter((v) => v !== optionValue)
+          : [...list, optionValue],
+      }
+    })
   }
 
   const handleClear = () => {
-    switch (activeTab) {
-      case "sources": setDraftSources([]); break
-      case "tags":    setDraftTags([]);    break
-    }
+    if (!group) return
+    setDraft((prev) => ({
+      ...prev,
+      [group.id]: group.mode === "single" ? group.allValue : [],
+    }))
   }
 
   const handleApply = () => {
-    setSelectedSources?.(draftSources)
-    setSelectedTags?.(draftTags)
+    normalised.forEach((g) => g.onChange?.(draft[g.id]))
     onSave?.()
-    setOpen(false) // ← close panel after apply
+    setOpen(false)
   }
 
-  const filteredItems = getItems().filter((item) =>
-    item.toLowerCase().includes(search.toLowerCase())
+  const visibleOptions = (group?.options ?? []).filter((o) =>
+    String(o.label).toLowerCase().includes(search.toLowerCase())
   )
-
-  const activeTabLabel = tabs.find((t) => t.id === activeTab)?.label ?? "Filters"
 
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-10 text-sm rounded-md border border-gray-200 transition-colors duration-150 cursor-pointer">
+        <button
+          className={
+            triggerClassName ??
+            "inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-10 text-sm rounded-md border border-gray-200 transition-colors duration-150 cursor-pointer"
+          }
+        >
           <SlidersHorizontal size={14} />
-          Filters
+          <span className="hidden lg:inline">Filters</span>
           {totalActive > 0 && (
             <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-violet-700">
               {totalActive}
@@ -114,30 +144,30 @@ export function FilterPanel({
         className="w-[340px] rounded-2xl border border-gray-200 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden p-0 flex flex-col"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
-        {/* Tab bar */}
-        <div className="flex gap-1.5 px-3 pt-2.5 pb-1 shrink-0">
-          {tabs.map((tab) => {
-            const active = tab.id === activeTab
+        {/* Tab bar — one per filter group, wrapping once there are more than
+            a couple, since this panel now carries every filter on the page. */}
+        <div className="flex flex-wrap gap-1.5 px-3 pt-2.5 pb-1 shrink-0">
+          {normalised.map((g) => {
+            const active = g.id === activeTab
+            const count = countFor(g)
             return (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                key={g.id}
+                onClick={() => setActiveTab(g.id)}
                 className={[
-                  "flex-1 inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full",
+                  "inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full",
                   "text-[12px] font-medium cursor-pointer transition-all duration-150 whitespace-nowrap",
-                  active
-                    ? "bg-violet-700 text-white"
-                    : "bg-gray-100 text-gray-700",
+                  active ? "bg-violet-700 text-white" : "bg-gray-100 text-gray-700",
                 ].join(" ")}
               >
-                {tab.label}
-                {tab.count > 0 && (
+                {g.label}
+                {count > 0 && (
                   <span className={[
                     "inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full px-1",
                     "text-[10px] font-bold text-white",
                     active ? "bg-white/25" : "bg-violet-700",
                   ].join(" ")}>
-                    {tab.count}
+                    {count}
                   </span>
                 )}
               </button>
@@ -155,13 +185,15 @@ export function FilterPanel({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
-              placeholder={`Search ${activeTabLabel}…`}
+              placeholder={`Search ${group?.label ?? "filters"}…`}
+              aria-label={`Search ${group?.label ?? "filters"}`}
               autoComplete="off"
               className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
+                aria-label="Clear search"
                 className="absolute right-2.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none p-0"
               >
                 <X size={13} />
@@ -171,32 +203,36 @@ export function FilterPanel({
         </div>
 
         {/* List */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1">
-          {filteredItems.length === 0 ? (
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1 max-h-[280px]">
+          {visibleOptions.length === 0 ? (
             <p className="text-center text-gray-400 text-[12px] py-5">No results</p>
           ) : (
-            filteredItems.map((item) => {
-              const checked = isChecked(item)
+            visibleOptions.map((option) => {
+              const checked = isChecked(option.value)
               return (
-                <label
-                  key={item}
-                  onClick={() => toggle(item)}
-                  className="flex items-center gap-2.5 px-1.5 py-[7px] rounded-lg cursor-pointer hover:bg-violet-50 transition-colors duration-100"
+                <button
+                  key={option.value}
+                  type="button"
+                  role={group?.mode === "single" ? "radio" : "checkbox"}
+                  aria-checked={checked}
+                  onClick={() => toggle(option.value)}
+                  className="flex w-full items-center gap-2.5 px-1.5 py-[7px] rounded-lg cursor-pointer hover:bg-violet-50 transition-colors duration-100 text-left"
                 >
                   <span
                     className={[
-                      "shrink-0 w-[16px] h-[16px] rounded-[4px] flex items-center justify-center transition-all duration-150",
-                      checked
-                        ? "bg-violet-700 border-0"
-                        : "bg-white border border-gray-300",
+                      "shrink-0 w-[16px] h-[16px] flex items-center justify-center transition-all duration-150",
+                      // Round for single-select, square for multi — the shape
+                      // is the only cue that one choice replaces the others.
+                      group?.mode === "single" ? "rounded-full" : "rounded-[4px]",
+                      checked ? "bg-violet-700 border-0" : "bg-white border border-gray-300",
                     ].join(" ")}
                   >
                     {checked && <Check size={10} color="#fff" strokeWidth={3} />}
                   </span>
                   <span className="text-[13px] text-gray-900 flex-1 select-none">
-                    {item}
+                    {option.label}
                   </span>
-                </label>
+                </button>
               )
             })
           )}

@@ -72,6 +72,7 @@ import {
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
 } from "@/lib/alert-helpers"
 import ChatConversation from "@/components/chat/ChatConversation"
+import { activeGroups } from "@/lib/client-status"
 
 // ── Tracking mode toggle ──────────────────────────────────────────────────────
 
@@ -673,7 +674,7 @@ export default function AlertsPage() {
 
   // Alerts should only ever target active clients
   const activeClientGroups = useMemo(
-    () => clientGroups.filter(g => (g.client_status ?? "Active") === "Active"),
+    () => activeGroups(clientGroups),
     [clientGroups],
   )
 
@@ -711,7 +712,9 @@ export default function AlertsPage() {
 
   const fetchClientGroups = useCallback(async () => {
     try {
-      const res = await apiRequest("/api/client-groups")
+      // Only needs names, ids and status to build the target picker — never a
+      // trend chart — so it opts out of the 6.38 MB of per-day series.
+      const res = await apiRequest("/api/client-groups?include_daily=false")
       if (!res.ok) return
       const data = await res.json()
       setClientGroups(data.client_groups || [])

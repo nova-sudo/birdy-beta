@@ -11,16 +11,32 @@ import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
 import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem"
 import { useClientGroups } from "@/lib/useClientGroups"
+import { useCurrency } from "@/hooks/useCurrency"
+import getSymbolFromCurrency from "currency-symbol-map"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import IntegrationsContent from "@/components/integrations/IntegrationsContent"
-import BirdyChat from "@/components/chat/BirdyChat"
+import { ClientAskBirdy } from "@/components/clients/ClientAskBirdy"
+import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
+import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
+import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPill"
+import { usePageHeader } from "@/components/page-header"
+import { pdFontClass } from "@/lib/pd-fonts"
+import { GoalsStrip } from "@/components/clients/GoalsStrip"
+import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
+import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
+import { HistoryBook } from "@/components/clients/HistoryBook"
+import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
+import { InsightCard, SidePanel } from "@/components/portfolio"
+import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
+import { buildFunnelStages } from "@/lib/client-funnel"
+import { buildClientGoals } from "@/lib/client-goals"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -77,22 +93,6 @@ function AlertsSkeleton() {
 }
 
 // ── Activity Skeleton ────────────────────────────────────────────────────────
-function ActivitySkeleton() {
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-start gap-3">
-          <Skeleton className="h-7 w-7 rounded-full shrink-0" />
-          <div className="flex-1 space-y-1.5">
-            <Skeleton className="h-3.5 w-40" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // ── Tab trigger style ────────────────────────────────────────────────────────
 const tabTriggerClass = ""
 
@@ -111,9 +111,19 @@ export default function ClientDetailsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
   const [integrationsOpen, setIntegrationsOpen] = useState(false)
+  // Controlled so the Birdy Insights card can send the reader into the
+  // Ask Birdy tab with its question already asked.
+  const [activeTab, setActiveTab] = useState("overview")
+  const [askPrompt, setAskPrompt] = useState(null)
+
+  // ── Currency: user's default, overridden by the ad account's own currency ──
+  const { currency: userCurrency } = useCurrency()
 
   // ── Client status (used in Integrations tab) ──────────────────────────────
   const [clientStatus, setClientStatus] = useState(null)
+  // Derived weekly from the monthly closes goal — see services/client_health.py.
+  const [clientHealth, setClientHealth] = useState(DEFAULT_CLIENT_HEALTH)
+  const [healthDetail, setHealthDetail] = useState(null)
   const [statusLoading, setStatusLoading] = useState(false)
 
   // ── History Book: dashboard activity feed, filtered to this client ────────
@@ -123,6 +133,54 @@ export default function ClientDetailsPage() {
     () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
     [activity, groupNameForActivity]
   )
+
+  // ── History book: hand-written notes, alongside the generated activity ────
+  const [notes, setNotes] = useState([])
+  const [notesLoading, setNotesLoading] = useState(true)
+
+  useEffect(() => {
+    if (!clientId) return
+    let cancelled = false
+    apiRequest(`/api/client-groups/${clientId}/notes`)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        if (!cancelled) setNotes(data.notes || [])
+      })
+      .catch((err) => console.warn("[client] Could not load notes:", err))
+      .finally(() => { if (!cancelled) setNotesLoading(false) })
+    return () => { cancelled = true }
+  }, [clientId])
+
+  const handleAddNote = async (body) => {
+    try {
+      const res = await apiRequest(`/api/client-groups/${clientId}/notes`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const note = await res.json()
+      setNotes((prev) => [note, ...prev])   // newest first, as the API returns them
+      return true
+    } catch (err) {
+      console.error("[client] Could not save note:", err)
+      return false
+    }
+  }
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      const res = await apiRequest(
+        `/api/client-groups/${clientId}/notes/${noteId}`, { method: "DELETE" }
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setNotes((prev) => prev.filter((n) => n.id !== noteId))
+      return true
+    } catch (err) {
+      console.error("[client] Could not delete note:", err)
+      return false
+    }
+  }
 
   // ── Shared date preset for Marketing & Leads tabs ──────────────────────────
   const {
@@ -140,6 +198,61 @@ export default function ClientDetailsPage() {
   )
   const singleGroupArray = useMemo(
     () => (matchingGroup ? [matchingGroup] : []),
+    [matchingGroup]
+  )
+
+  // Spend is reported by Meta in the ad account's own currency — never converted —
+  // so label it with that currency and only fall back to the user's default.
+  const currencySymbol = useMemo(() => {
+    const code =
+      matchingGroup?.facebook?.currency ||
+      matchingGroup?.ad_account_currency ||
+      userCurrency
+    return getSymbolFromCurrency(code) || "$"
+  }, [matchingGroup, userCurrency])
+
+  // ── Goals: live figures against the client's monthly targets ──────────────
+  const goals = useMemo(
+    () => (matchingGroup ? buildClientGoals(matchingGroup) : []),
+    [matchingGroup]
+  )
+
+  const insight = useMemo(
+    () => (matchingGroup ? buildClientInsight(matchingGroup, goals, currencySymbol) : []),
+    [matchingGroup, goals, currencySymbol]
+  )
+
+  const [railPanel, setRailPanel] = useState("suggestions")
+  const railPanels = useMemo(() => [
+    {
+      key: "suggestions",
+      label: "Suggestions",
+      badge: 0,
+      badgeClassName: "bg-pd-primary-tint text-pd-primary",
+      isEmpty: true,
+      // Suggestions are generated per user, not per client, and nothing scopes
+      // them to one group yet — so this says so rather than showing another
+      // client's.
+      emptyMessage: "Client-scoped suggestions are not available yet",
+      render: () => null,
+    },
+    {
+      key: "activity",
+      label: "Activity",
+      badge: clientActivity.length,
+      badgeClassName: "bg-pd-divider text-pd-muted",
+      isEmpty: clientActivity.length === 0,
+      emptyMessage: "No activity for this client yet",
+      render: () => (
+        <div className="space-y-4">
+          {clientActivity.map((a) => <ActivityItem key={a.id} {...a} />)}
+        </div>
+      ),
+    },
+  ], [clientActivity])
+
+  const funnelStages = useMemo(
+    () => (matchingGroup ? buildFunnelStages(matchingGroup) : null),
     [matchingGroup]
   )
 
@@ -165,6 +278,8 @@ export default function ClientDetailsPage() {
         const result = await response.json()
         setClientData(result.data)
         setClientStatus(result.data?.group_info?.client_status ?? "Active")
+        setClientHealth(result.data?.group_info?.health ?? DEFAULT_CLIENT_HEALTH)
+        setHealthDetail(result.data?.group_info?.health_detail ?? null)
       } catch {
         toast.error("Failed to load client details")
       } finally {
@@ -253,6 +368,68 @@ export default function ClientDetailsPage() {
     }
   }
 
+  const groupName = clientData?.group_info?.name || "Client"
+
+  // The design's sub-line reads "Emma T. · client since Mar 2025". There is no
+  // primary-contact field on a client group, so only the half that exists is
+  // rendered rather than inventing a name.
+  const clientSubline = useMemo(() => {
+    const since = clientData?.group_info?.created_at
+    if (!since) return null
+    const d = new Date(since)
+    if (Number.isNaN(d.getTime())) return null
+    return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
+  }, [clientData])
+
+  // Identity and filters belong in the global top bar, where the design puts
+  // them — in place of the Birdy wordmark, and beside the bell. Declared above
+  // the early return below, because a hook after a conditional return breaks
+  // the Rules of Hooks the moment that branch is taken.
+  const pageHeader = useMemo(
+    () => ({
+      title: (
+        <div className={`${pdFontClass} flex min-w-0 items-center gap-2.5`}>
+          <button
+            onClick={() => router.push("/clients")}
+            aria-label="Back to Client Hub"
+            className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-divider text-pd-body hover:bg-pd-border"
+          >
+            <ArrowLeft className="size-4" />
+          </button>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+                {clientLoading ? "…" : groupName}
+              </h1>
+              {!clientLoading && <HealthPill health={clientHealth} />}
+            </div>
+            {clientSubline && (
+              <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+                {clientSubline}
+              </p>
+            )}
+          </div>
+        </div>
+      ),
+      controls: (
+        <div className="hidden items-center gap-2 md:flex">
+          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIntegrationsOpen(true)}
+            title="Client settings"
+            aria-label="Client settings"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </div>
+      ),
+    }),
+    [groupName, clientLoading, clientHealth, clientSubline, datePreset, setDatePreset, router]
+  )
+  usePageHeader(pageHeader)
+
   // ── Error state (only shown if client data fails entirely) ─────────────────
   if (!clientLoading && !clientData) {
     return (
@@ -267,39 +444,10 @@ export default function ClientDetailsPage() {
     )
   }
 
-  const groupName = clientData?.group_info?.name || "Client"
-
   return (
     <div className="flex flex-col gap-4 w-full">
-      {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.push("/clients")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          {clientLoading ? (
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-48" />
-            </div>
-          ) : (
-            <h1 className="text-2xl font-bold tracking-tight">{groupName}</h1>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIntegrationsOpen(true)}
-            title="Integrations & Settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <Tabs defaultValue="overview" className="flex-1 flex flex-col">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         <TabsList className="w-full justify-start">
           <TabsTrigger value="overview" className={tabTriggerClass}>Overview</TabsTrigger>
           <TabsTrigger value="ask-birdy" className={tabTriggerClass}>Ask Birdy</TabsTrigger>
@@ -310,6 +458,45 @@ export default function ClientDetailsPage() {
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
         <TabsContent value="overview" className="mt-6 space-y-6">
+          {/* Goals — each metric against the target set in Settings. The same
+              monthly-closes target drives the health pill in the header. */}
+          <GoalsStrip
+            goals={goals}
+            currencySymbol={currencySymbol}
+            loading={groupsLoading}
+          />
+
+          {/* Chart left, Birdy's read of the period right — the design's two
+              columns, with the rail fixed at 340px. */}
+          <div className="flex flex-col items-stretch gap-[18px] lg:flex-row">
+            <div className="flex min-w-0 flex-1 flex-col">
+              <ClientTrendChart
+                group={matchingGroup}
+                datePreset={datePreset}
+                currencySymbol={currencySymbol}
+                loading={groupsLoading}
+              />
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-[14px] lg:w-[340px] lg:shrink-0">
+              <InsightCard
+                segments={insight}
+                onAsk={() => {
+                  setAskPrompt(clientInsightPrompt(matchingGroup, goals))
+                  setActiveTab("ask-birdy")
+                }}
+              />
+              <SidePanel
+                panels={railPanels}
+                active={railPanel}
+                onChange={setRailPanel}
+                label="Client panel"
+                id="client-side-panel"
+                className="min-h-[280px] w-full rounded-2xl border border-pd-border"
+              />
+            </div>
+          </div>
+
           {/* Stat Cards */}
           {groupsLoading ? (
             <StatCardsSkeleton />
@@ -320,7 +507,7 @@ export default function ClientDetailsPage() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-muted-foreground text-sm text-[#71658B]">Total Spend</p>
-                      <h3 className="text-2xl font-bold mt-1">${metrics.totalSpend.toFixed(2)}</h3>
+                      <h3 className="text-2xl font-bold mt-1">{currencySymbol}{metrics.totalSpend.toFixed(2)}</h3>
                     </div>
                     <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
                       <DollarSign className="h-4 w-4 text-purple-500" />
@@ -394,8 +581,9 @@ export default function ClientDetailsPage() {
             </div>
           )}
 
-          {/* Alerts + History Book side by side */}
-          <div className="grid gap-6 md:grid-cols-2">
+          {/* Alerts keep their own row — they predate this design and 1d has
+              no equivalent. */}
+          <div className="grid gap-6">
             {/* Client Alerts */}
             <Card>
               <CardHeader className="pb-3">
@@ -478,31 +666,30 @@ export default function ClientDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* History Book */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">History Book</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {clientLoading || activityLoading ? (
-                  <ActivitySkeleton />
-                ) : clientActivity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No activity for this client yet.</p>
-                ) : (
-                  <div className="space-y-4 max-h-[350px] overflow-y-auto">
-                    {clientActivity.map((a) => (
-                      <ActivityItem key={a.id} {...a} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          </div>
+
+          {/* History book beside diagnostics — the design's 1.35 / 0.65 split. */}
+          <div className="grid gap-6 md:grid-cols-[1.35fr_0.65fr] md:items-start">
+            <HistoryBook
+              clientName={groupName}
+              notes={notes}
+              activity={clientActivity}
+              loading={clientLoading || activityLoading || notesLoading}
+              onAddNote={handleAddNote}
+              onDeleteNote={handleDeleteNote}
+            />
+
+            <DiagnosticsFunnel stages={funnelStages} loading={groupsLoading} />
           </div>
         </TabsContent>
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
         <TabsContent value="ask-birdy" className="mt-6">
-          <BirdyChat clientName={matchingGroup?.name} clientId={matchingGroup?.id} />
+          <ClientAskBirdy
+            clientId={matchingGroup?.id}
+            clientName={matchingGroup?.name}
+            initialMessage={askPrompt}
+          />
         </TabsContent>
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}
@@ -521,25 +708,42 @@ export default function ClientDetailsPage() {
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
         <TabsContent value="call-centre" className="mt-4">
+          {/* Same chart + insight + KPI row the Sales Hub draws, scoped to
+              this client — the tab used to open straight onto a bare table. */}
+          <CallCentreOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <CallCentreContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
-            setDatePreset={setDatePreset}
             showGroupFilter={false}
-            showHeader={false}
+            showStatCards={false}
           />
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
         <TabsContent value="leads" className="mt-4">
+          {/* Same row the Lead Hub draws, scoped to this client. */}
+          <LeadHubOverview
+            clientGroups={singleGroupArray}
+            groupsLoading={groupsLoading}
+            datePreset={datePreset}
+            selectedClientGroup={matchingGroup?.id ?? "all"}
+          />
           <LeadsContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
             datePreset={datePreset}
-            setDatePreset={setDatePreset}
-            showGroupFilter={false}
-            showHeader={false}
+            showStatCards={false}
+            // Scoped explicitly. Left uncontrolled it defaults to "all", which
+            // sends an empty `groups` param — and the API reads that as "no
+            // group filter", returning every client's leads on a page that is
+            // supposed to be about one.
+            selectedClientGroup={matchingGroup?.id}
           />
         </TabsContent>
 
@@ -549,18 +753,22 @@ export default function ClientDetailsPage() {
       <Dialog open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Integrations & Settings</DialogTitle>
+            <DialogTitle>{groupName} settings</DialogTitle>
             <DialogDescription>
-              Manage connected integrations, client status, and danger zone actions for {groupName}.
+              Details, monthly targets and connected integrations for {groupName}.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-6">
-            <IntegrationsContent
-              group={matchingGroup}
-              onRefreshComplete={invalidate}
-            />
+          {/* The design splits this modal into Details / Targets / Integrations
+              rather than one long scroll. */}
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="w-full justify-start">
+              <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="targets">Targets</TabsTrigger>
+              <TabsTrigger value="integrations">Integrations</TabsTrigger>
+            </TabsList>
 
+            <TabsContent value="details" className="mt-4 space-y-6">
             <Card>
               <CardContent >
                 <div className="flex items-center justify-between">
@@ -596,6 +804,33 @@ export default function ClientDetailsPage() {
               </CardContent>
             </Card>
 
+            {/* ── Client health ─────────────────────────────────────────────────
+                Derived, not chosen: recomputed every Monday from this client's
+                monthly closes goal. Shown with the figures behind it so the
+                band can be checked rather than just believed. */}
+            <Card>
+              <CardContent>
+                <div className="flex items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">Client Health</p>
+                    <p className="text-xs text-muted-foreground">
+                      {healthDetail?.reason
+                        ? `${healthDetail.reason}${
+                            healthDetail.pace != null
+                              ? ` · ${Math.round(healthDetail.pace * 100)}% of pace`
+                              : ""
+                          }`
+                        : "Set a monthly closes target to track health."}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Recalculated every Monday from the monthly closes goal.
+                    </p>
+                  </div>
+                  <HealthPill health={clientHealth} className="shrink-0" />
+                </div>
+              </CardContent>
+            </Card>
+
             {/* ── Danger Zone ───────────────────────────────────────────────────── */}
             <Card className="border-red-200 bg-red-50/40">
               <CardHeader>
@@ -625,7 +860,24 @@ export default function ClientDetailsPage() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="targets" className="mt-4">
+              <ClientTargetsForm
+                clientId={clientId}
+                targets={matchingGroup?.targets}
+                currencySymbol={currencySymbol}
+                onSaved={() => invalidate()}
+              />
+            </TabsContent>
+
+            <TabsContent value="integrations" className="mt-4">
+              <IntegrationsContent
+                group={matchingGroup}
+                onRefreshComplete={invalidate}
+              />
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
