@@ -80,7 +80,10 @@
       "Bash(rm src/components/portfolio/PortfolioHeader.jsx)",
       "Bash(python -c ' *)",
       "Bash(rm -rf .next)",
-      "Bash(timeout 400 npx next build)"
+      "Bash(timeout 400 npx next build)",
+      "Bash(git checkout *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
     ]
   }
 }
