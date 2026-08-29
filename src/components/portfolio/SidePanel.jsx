@@ -19,13 +19,16 @@ export function SidePanel({
   label = "Panel",
   id = "pd-side-panel",
   emptyMessage = "Nothing here right now",
-  className = "w-[340px]",
+  // The default is the page rail this was built for. Client Detail stacks the
+  // same control as a card in a column, where a left border and a fixed width
+  // would both be wrong — hence overridable rather than baked in.
+  className = "w-[340px] border-l border-pd-border",
   itemClassName = "flex-1 p-2",
 }) {
   const current = panels.find((p) => p.key === active) ?? panels[0];
 
   return (
-    <aside className={`flex shrink-0 flex-col border-l border-pd-border bg-pd-surface ${className}`}>
+    <aside className={`flex shrink-0 flex-col bg-pd-surface ${className}`}>
       <div className="shrink-0 border-b border-pd-divider px-5 py-4">
         <PdSegmented
           role="tablist"

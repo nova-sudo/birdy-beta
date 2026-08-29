@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<meta name="design_doc_mode" content="canvas">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+  .ch2-badge { font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#fff; padding:5px 14px; border-radius:999px; }
+  @keyframes ch2DrawA { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes ch2DrawB { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes ch2FadeA { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ch2FadeB { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</helmet>
+
+<section style="display:flex; gap:64px; padding:72px; align-items:flex-start;">
+  <div id="1b" style="flex:0 0 auto; width:1600px;">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+      <span class="ch2-badge" style="background:#6B4EE6;">1b</span>
+      <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:19px; color:#2A2A3C;">Client Hub</span>
+      <span style="font-size:14px; color:#8A8A9A;">Table-first · no chart/insights section</span>
+    </div>
+
+    <div style="width:1600px; height:1040px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex; box-shadow:0 20px 50px -20px rgba(30,25,60,.25);">
+      <!-- rail -->
+      <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+        <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;">
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></div>
+        <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+        <div style="position:relative; margin-top:6px; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#25A55F;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5"></circle><path d="M14.5 8.2a5 5 0 0 1 0 7.6"></path></svg><span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#25A55F; border:2px solid #fff;"></span></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:6px 0;"></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#E5484D;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:8px 0 0;"></div>
+        <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+        <!-- header -->
+        <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:16px; flex:0 0 auto;">
+          <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Client Hub</div><div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Health and performance across every connected client</div></div>
+          <div style="flex:1; max-width:420px; margin:0 auto; height:38px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:10px; display:flex; align-items:center; padding:0 13px; gap:9px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg><span style="font-size:13.5px;">Ask Birdy about your marketing data…</span><span style="margin-left:auto; font-size:11px; background:#EAEAF0; padding:2px 7px; border-radius:5px;">⌘K</span></div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <div onClick="{{ toggleRange }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ range }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              <div style="display:{{ rangeMenu }}; position:absolute; top:44px; right:0; width:170px; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:20;">
+                <sc-for list="{{ rangeList }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ r.color }}; background:{{ r.bg }};">{{ r.name }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:relative; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg><span style="position:absolute; top:-4px; right:-4px; background:#E5484D; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">9</span></div>
+            <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#7B5FE6,#6B4EE6); display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+          </div>
+        </div>
+
+        <div class="scrolly" style="flex:1; min-height:0; padding:22px 24px;">
+          <!-- tabs + controls -->
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+                <div onClick="{{ t.pick }}" style="cursor:pointer; display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.label }}<span style="font-size:10.5px; font-weight:700; color:{{ t.badgeColor }}; background:{{ t.badgeBg }}; padding:1px 6px; border-radius:5px;">{{ t.count }}</span></div>
+              </sc-for>
+            </div>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+              <div style="display:flex; align-items:center; gap:9px; height:38px; width:200px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg><span style="font-size:13px;">Search clients…</span></div>
+              <div style="display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Columns<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <div style="width:38px; height:38px; border-radius:10px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            </div>
+          </div>
+
+          <!-- table -->
+          <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+            <div class="scrolly" style="overflow-x:auto;">
+              <div style="min-width:1420px;">
+                <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+                  <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #CFCFDA; border-radius:4px;"></span></div>
+                  <div style="flex:1.9; min-width:190px;">BUSINESS NAME</div>
+                  <div style="flex:0.8;">STATUS</div>
+                  <div style="flex:0.85;">HEALTH</div>
+                  <div style="flex:0.8;">GHL LEADS</div>
+                  <div style="flex:0.85;">META LEADS</div>
+                  <div style="flex:0.8;">BOOKINGS</div>
+                  <div style="flex:0.7;">CPL</div>
+                  <div style="flex:1; display:flex; align-items:center; gap:5px;">AD SPEND <span style="color:#1F1B33;">↓</span></div>
+                  <div style="flex:0.8;">CPA</div>
+                  <div style="flex:1;">REVENUE</div>
+                  <div style="flex:0.7;">ROAS</div>
+                  <div style="flex:0.8;">ANSWER %</div>
+                </div>
+                <sc-for list="{{ rows }}" as="c" hint-placeholder-count="14">
+                  <div style="display:flex; align-items:center; padding:12px 22px; border-bottom:1px solid #F5F5F8; background:{{ c.rowBg }};">
+                    <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #DFDFE8; border-radius:4px;"></span></div>
+                    <div style="flex:1.9; min-width:190px; font-size:13.5px; font-weight:600; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.name }}</div>
+                    <div style="flex:0.8;"><span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:{{ c.stateColor }}; background:{{ c.stateBg }}; padding:3px 9px; border-radius:6px;"><span style="width:6px; height:6px; border-radius:50%; background:{{ c.stateColor }};"></span>{{ c.state }}</span></div>
+                    <div style="flex:0.85;"><span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:{{ c.healthColor }}; background:{{ c.healthBg }}; padding:3px 9px; border-radius:6px;">{{ c.health }}</span></div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.ghl }}</div>
+                    <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.meta }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.bookings }}</div>
+                    <div style="flex:0.7; font-size:13.5px; color:{{ c.cplColor }}; font-weight:500;">{{ c.cpl }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.spend }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.cpa }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.revenue }}</div>
+                    <div style="flex:0.7; font-size:13.5px; color:{{ c.roasColor }}; font-weight:500;">{{ c.roas }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.answer }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div id="1a" style="flex:0 0 auto; width:1600px;">
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px;">
+      <span class="ch2-badge" style="background:#6B4EE6;">1a</span>
+      <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:19px; color:#2A2A3C;">Client Hub</span>
+      <span style="font-size:14px; color:#8A8A9A;">Hub layout · chart left · Birdy insights over six client-health KPI tiles</span>
+    </div>
+
+    <div style="width:1600px; height:1040px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex; box-shadow:0 20px 50px -20px rgba(30,25,60,.25);">
+      <!-- rail -->
+      <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+        <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;">
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></div>
+        <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+        <div style="position:relative; margin-top:6px; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#25A55F;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5"></circle><path d="M14.5 8.2a5 5 0 0 1 0 7.6"></path></svg><span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#25A55F; border:2px solid #fff;"></span></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:6px 0;"></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#E5484D;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:8px 0 0;"></div>
+        <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+        <!-- header -->
+        <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:16px; flex:0 0 auto;">
+          <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Client Hub</div><div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Health and performance across every connected client</div></div>
+          <div style="flex:1; max-width:420px; margin:0 auto; height:38px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:10px; display:flex; align-items:center; padding:0 13px; gap:9px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg><span style="font-size:13.5px;">Ask Birdy about your marketing data…</span><span style="margin-left:auto; font-size:11px; background:#EAEAF0; padding:2px 7px; border-radius:5px;">⌘K</span></div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <div onClick="{{ toggleRange }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ range }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              <div style="display:{{ rangeMenu }}; position:absolute; top:44px; right:0; width:170px; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:20;">
+                <sc-for list="{{ rangeList }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ r.color }}; background:{{ r.bg }};">{{ r.name }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="position:relative; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg><span style="position:absolute; top:-4px; right:-4px; background:#E5484D; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">9</span></div>
+            <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#7B5FE6,#6B4EE6); display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+          </div>
+        </div>
+
+        <div class="scrolly" style="flex:1; min-height:0; padding:22px 24px;">
+          <!-- chart + insights -->
+          <div style="display:flex; gap:18px; margin-bottom:18px; align-items:stretch;">
+            <div style="flex:1.65; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                <div><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">{{ chartTitle }}</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">{{ chartSub }}</div></div>
+                <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+                  <sc-for list="{{ chartTabs }}" as="m" hint-placeholder-count="4">
+                    <div onClick="{{ m.pick }}" style="cursor:pointer; padding:7px 13px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ m.color }}; background:{{ m.bg }}; box-shadow:{{ m.shadow }};">{{ m.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 16px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#1F1B33;">{{ chartTotal }}</span><span style="font-size:12.5px; font-weight:600; color:{{ chartDeltaColor }};">{{ chartDelta }}</span></div>
+              <div style="position:relative; height:190px;">
+                <div style="position:absolute; inset:0 0 22px 0;">
+                  <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                    <defs>
+                      <linearGradient id="ch2Fill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#6B4EE6" stop-opacity="0.18"></stop>
+                        <stop offset="100%" stop-color="#6B4EE6" stop-opacity="0"></stop>
+                      </linearGradient>
+                    </defs>
+                    <path d="{{ areaPath }}" fill="url(#ch2Fill)" style="animation:{{ fadeAnim }};"></path>
+                    <path d="{{ linePath }}" fill="none" stroke="#6B4EE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="stroke-dasharray:2400; animation:{{ drawAnim }};"></path>
+                  </svg>
+                  <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                    <div style="position:absolute; left:{{ p.left }}; top:{{ p.top }}; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:{{ p.fill }}; border:2px solid #fff; box-shadow:{{ p.glow }}; cursor:pointer;" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}"><div style="display:{{ p.tipShow }}; position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:#1F1B33; color:#fff; padding:6px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; box-shadow:0 6px 16px -6px rgba(30,25,60,.5);"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:12.5px; line-height:1;">{{ p.value }}</div><div style="font-size:10.5px; color:#C9BEF3; margin-top:3px;">{{ p.tipLabel }}</div></div></div>
+                  </sc-for>
+                </div>
+                <div style="position:absolute; left:0; right:0; bottom:0; display:flex;">
+                  <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                    <div style="flex:1; text-align:center; font-size:10.5px; color:#9A9AAB;">{{ p.label }}</div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="flex:0.85; min-width:0; display:flex; flex-direction:column; gap:14px;">
+              <div style="background:linear-gradient(135deg,#6B4EE6,#8B6BF0); border:1px solid #5A3FD6; border-radius:16px; padding:16px 18px; box-shadow:0 10px 26px -12px rgba(107,78,230,.6);">
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+                  <span style="width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></span>
+                  <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; color:#fff;">Birdy Insights</span>
+                  <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#fff; background:rgba(255,255,255,.22); padding:2px 8px; border-radius:5px;">AI</span>
+                </div>
+                <div style="font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.5;">Spend is up <strong style="color:#fff;">12%</strong> and CPL improved to <strong style="color:#fff;">£9.38</strong>, but <strong style="color:#fff;">3 clients</strong> slipped into Warning this week. <strong style="color:#fff;">Diamond Skin Care</strong> is the biggest risk — £2,199 spend at 5.82x ROAS and a 54% answer rate.</div>
+                <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; font-weight:600; color:#fff;">Ask Birdy about this<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <sc-for list="{{ tiles }}" as="t" hint-placeholder-count="6">
+                  <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                    <span style="width:28px; height:28px; border-radius:8px; background:{{ t.bg }}; display:flex; align-items:center; justify-content:center; color:{{ t.color }}; flex:0 0 auto;">{{ t.icon }}</span>
+                    <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">{{ t.value }}</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ t.label }}</div></div>
+                    <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:{{ t.deltaColor }}; background:{{ t.deltaBg }}; padding:3px 6px; border-radius:6px; flex:0 0 auto;">{{ t.arrow }}{{ t.pct }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+          <!-- tabs + controls -->
+          <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+            <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+              <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+                <div onClick="{{ t.pick }}" style="cursor:pointer; display:flex; align-items:center; gap:7px; padding:7px 14px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.label }}<span style="font-size:10.5px; font-weight:700; color:{{ t.badgeColor }}; background:{{ t.badgeBg }}; padding:1px 6px; border-radius:5px;">{{ t.count }}</span></div>
+              </sc-for>
+            </div>
+            <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+              <div style="display:flex; align-items:center; gap:9px; height:38px; width:200px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg><span style="font-size:13px;">Search clients…</span></div>
+              <div style="display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Columns<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              <div style="width:38px; height:38px; border-radius:10px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></div>
+            </div>
+          </div>
+
+          <!-- table -->
+          <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+            <div class="scrolly" style="overflow-x:auto;">
+              <div style="min-width:1420px;">
+                <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+                  <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #CFCFDA; border-radius:4px;"></span></div>
+                  <div style="flex:1.9; min-width:190px;">BUSINESS NAME</div>
+                  <div style="flex:0.8;">STATUS</div>
+                  <div style="flex:0.85;">HEALTH</div>
+                  <div style="flex:0.8;">GHL LEADS</div>
+                  <div style="flex:0.85;">META LEADS</div>
+                  <div style="flex:0.8;">BOOKINGS</div>
+                  <div style="flex:0.7;">CPL</div>
+                  <div style="flex:1; display:flex; align-items:center; gap:5px;">AD SPEND <span style="color:#1F1B33;">↓</span></div>
+                  <div style="flex:0.8;">CPA</div>
+                  <div style="flex:1;">REVENUE</div>
+                  <div style="flex:0.7;">ROAS</div>
+                  <div style="flex:0.8;">ANSWER %</div>
+                </div>
+                <sc-for list="{{ rows }}" as="c" hint-placeholder-count="14">
+                  <div style="display:flex; align-items:center; padding:12px 22px; border-bottom:1px solid #F5F5F8; background:{{ c.rowBg }};">
+                    <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #DFDFE8; border-radius:4px;"></span></div>
+                    <div style="flex:1.9; min-width:190px; font-size:13.5px; font-weight:600; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.name }}</div>
+                    <div style="flex:0.8;"><span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:{{ c.stateColor }}; background:{{ c.stateBg }}; padding:3px 9px; border-radius:6px;"><span style="width:6px; height:6px; border-radius:50%; background:{{ c.stateColor }};"></span>{{ c.state }}</span></div>
+                    <div style="flex:0.85;"><span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:{{ c.healthColor }}; background:{{ c.healthBg }}; padding:3px 9px; border-radius:6px;">{{ c.health }}</span></div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.ghl }}</div>
+                    <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.meta }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.bookings }}</div>
+                    <div style="flex:0.7; font-size:13.5px; color:{{ c.cplColor }}; font-weight:500;">{{ c.cpl }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.spend }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.cpa }}</div>
+                    <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.revenue }}</div>
+                    <div style="flex:0.7; font-size:13.5px; color:{{ c.roasColor }}; font-weight:500;">{{ c.roas }}</div>
+                    <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.answer }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'All Clients', range: 'Last 30 days', rangeMenu: false, metric: 'spend', hover: null, anim: 0 };
+
+  set(patch) {
+    this.setState((st) => Object.assign({}, st, typeof patch === 'function' ? patch(st) : patch));
+  }
+
+  renderVals() {
+    const st = this.state;
+    const stop = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); };
+    const icon = (ds, size, sw) => React.createElement('svg', { width: size || 14, height: size || 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d: d })));
+    const UP = icon(['M12 19V5', 'M5 12l7-7 7 7'], 10, 3);
+    const DOWN = icon(['M12 5v14', 'M19 12l-7 7-7-7'], 10, 3);
+
+    // ---- section tabs ----
+    const TABS = [
+      { label: 'Active', count: '36' },
+      { label: 'Healthy', count: '26' },
+      { label: 'Warning', count: '8' },
+      { label: 'Critical', count: '2' },
+      { label: 'Inactive', count: '5' },
+      { label: 'All Clients', count: '41' },
+    ];
+    const tabs = TABS.map((t) => {
+      const on = t.label === st.tab;
+      return {
+        label: t.label,
+        count: t.count,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        badgeColor: on ? '#6B4EE6' : '#8A8A9A',
+        badgeBg: on ? '#F1EEFC' : '#E7E7ED',
+        pick: (ev) => { stop(ev); this.set({ tab: t.label }); },
+      };
+    });
+
+    const menu = (items, current, key, menuKey) => items.map((name) => {
+      const on = name === current;
+      return {
+        name,
+        color: on ? '#6B4EE6' : '#5A5A6E',
+        bg: on ? '#F1EEFC' : 'transparent',
+        pick: (ev) => { stop(ev); this.set({ [key]: name, [menuKey]: false }); },
+      };
+    });
+
+    // ---- KPI tiles: client health ----
+    const TILE = [
+      { label: 'Active Clients\n', value: '36', pct: '8.0%',  up: true,  good: true,  bg: '#F1EEFC', color: '#6B4EE6', ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M23 21v-2a4 4 0 0 0-3-3.9'] },
+      { label: 'Healthy clients',      value: '26', pct: '4.2%',  up: true,  good: true,  bg: '#EDF8F1', color: '#25A55F', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M8.5 12l2.5 2.5 4.5-4.5'] },
+      { label: 'Warning clients',      value: '8',  pct: '3',     up: true,  good: false, bg: '#FDF6EC', color: '#E0920A', ds: ['M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', 'M12 9v4', 'M12 17h.01'] },
+      { label: 'Critical clients',     value: '2',  pct: '1',     up: false, good: true,  bg: '#FEF1F1', color: '#E5484D', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M15 9l-6 6', 'M9 9l6 6'] },
+      { label: 'Inactive',             value: '5',  pct: '2',     up: true,  good: false, bg: '#F1F1F5', color: '#8A8A9A', ds: ['M10 15V9', 'M14 15V9', 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z'] },
+      { label: 'Total clients',        value: '41', pct: '6.4%',  up: true,  good: true,  bg: '#EAF1FD', color: '#3B7DD6', ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M23 21v-2a4 4 0 0 0-3-3.9', 'M16 3.1a4 4 0 0 1 0 7.8'] },
+    ];
+    const tiles = TILE.map((t) => ({
+      label: t.label,
+      value: t.value,
+      pct: t.pct,
+      icon: icon(t.ds),
+      bg: t.bg,
+      color: t.color,
+      arrow: t.up ? UP : DOWN,
+      deltaColor: t.good ? '#25A55F' : '#E5484D',
+      deltaBg: t.good ? '#EDF8F1' : '#FEF1F1',
+    }));
+
+    // ---- chart ----
+    const MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+    const METRICS = {
+      spend:   { label: 'Ad spend', title: 'Total ad spend', sub: 'Combined spend across all clients',        total: '£58,021.43', delta: '▲ 12%', up: true,  vals: [60,64,58,72,68,76,71,82,78,88,84,95],  mult: 611 },
+      leads:   { label: 'Leads',    title: 'Total leads',    sub: 'GHL and Meta leads across all clients',    total: '6,186',      delta: '▲ 15%', up: true,  vals: [52,61,58,70,66,74,69,80,86,79,92,100], mult: 62 },
+      cpl:     { label: 'CPL',      title: 'Average CPL',    sub: 'Blended cost per lead across all clients', total: '£9.38',      delta: '▼ 3%',  up: true,  vals: [88,80,91,72,84,66,78,70,62,74,58,66],  mult: 0.11 },
+      revenue: { label: 'Revenue',  title: 'Total revenue',  sub: 'Client-reported revenue attributed',       total: '£428k',      delta: '▲ 9%',  up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90],  mult: 4750 },
+    };
+    const key = st.metric;
+    const c = METRICS[key];
+    const vals = c.vals;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const span = Math.max(max - min, 1), n = vals.length, pad = 14;
+    const halfCol = 100 / (2 * n);
+    const xPct = (i) => halfCol + (i * (100 - 2 * halfCol)) / (n - 1);
+    const xy = vals.map((v, i) => [xPct(i) * 10, 200 - pad - ((v - min) / span) * (200 - pad * 2)]);
+    const linePath = xy.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+    const areaPath = linePath + ' L' + xy[n - 1][0].toFixed(1) + ' 200 L' + xy[0][0].toFixed(1) + ' 200 Z';
+    const fmt = (raw) => {
+      if (key === 'cpl') return '£' + (raw * c.mult).toFixed(2);
+      if (key === 'spend') return '£' + Math.round(raw * c.mult).toLocaleString();
+      if (key === 'revenue') return '£' + Math.round(raw * c.mult).toLocaleString();
+      return Math.round(raw * c.mult).toLocaleString();
+    };
+    const chartPoints = xy.map(([x, y], i) => ({
+      label: MONTHS[i],
+      tipLabel: MONTHS[i] + (i < 5 ? ' 2025' : ' 2026'),
+      value: fmt(vals[i]),
+      left: xPct(i).toFixed(2) + '%',
+      top: ((y / 200) * 100).toFixed(2) + '%',
+      fill: i === n - 1 ? '#6B4EE6' : '#A98BF5',
+      glow: i === n - 1 ? '0 0 0 4px rgba(107,78,230,.18)' : 'none',
+      tipShow: st.hover === i ? 'block' : 'none',
+      enter: () => this.set({ hover: i }),
+      leave: () => this.set({ hover: null }),
+    }));
+    const chartTabs = Object.keys(METRICS).map((k) => {
+      const on = k === key;
+      return {
+        label: METRICS[k].label,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); this.set((p) => ({ metric: k, anim: (p.anim || 0) + 1 })); },
+      };
+    });
+
+    // ---- table ----
+    const HEALTH = {
+      Healthy:  { healthColor: '#25A55F', healthBg: '#EDF8F1' },
+      Warning:  { healthColor: '#E0920A', healthBg: '#FDF6EC' },
+      Critical: { healthColor: '#E5484D', healthBg: '#FEF1F1' },
+    };
+    const mk = (name, state, health, ghl, meta, bookings, cpl, spend, cpa, revenue, roas, answer) => Object.assign({}, HEALTH[health], {
+      name, health, ghl, meta, bookings, cpl, spend, cpa, revenue, roas, answer,
+      state,
+      stateColor: state === 'Active' ? '#25A55F' : '#8A8A9A',
+      stateBg: state === 'Active' ? '#EDF8F1' : '#F1F1F5',
+      cplColor: parseFloat(cpl.replace('£', '')) > 11 ? '#E5484D' : '#1F1B33',
+      roasColor: parseFloat(roas) < 6 ? '#E5484D' : '#1F1B33',
+    });
+    const raw = [
+      mk("Cameron's Aesthetics", 'Active', 'Warning',  '56', '93',  '41', '£6.20',  '£923.18',   '£22.52', '£15,047.00', '16.30x', '75.00%'),
+      mk('Glow Lab MedSpa',      'Active', 'Healthy',  '77', '62',  '27', '£7.43',  '£1,032.97', '£38.26', '£9,558.00',  '9.25x',  '49.40%'),
+      mk("Amy's Lashes & Brows", 'Active', 'Healthy',  '88', '47',  '30', '£10.35', '£1,397.27', '£46.58', '£9,540.00',  '6.83x',  '82.30%'),
+      mk('Silhouettes Beauty',   'Active', 'Healthy',  '40', '109', '23', '£10.26', '£1,528.50', '£66.46', '£9,545.00',  '6.24x',  '53.70%'),
+      mk('Revive Med Aesthetics','Active', 'Healthy',  '68', '76',  '33', '£5.15',  '£741.32',   '£22.46', '£8,481.00',  '11.44x', '47.50%'),
+      mk('Luxe Skin Clinic',     'Active', 'Warning',  '78', '105', '30', '£5.91',  '£1,080.69', '£36.02', '£10,680.00', '9.88x',  '77.80%'),
+      mk('Radiance Beauty Studio','Active','Healthy',  '50', '92',  '28', '£8.34',  '£1,184.36', '£42.30', '£10,668.00', '9.01x',  '78.10%'),
+      mk('Elite Face & Body',    'Active', 'Healthy',  '99', '82',  '28', '£9.06',  '£1,640.19', '£58.58', '£9,156.00',  '5.58x',  '84.60%'),
+      mk('Pure Glow Aesthetics', 'Active', 'Healthy',  '73', '90',  '46', '£11.62', '£1,894.34', '£41.18', '£18,446.00', '9.74x',  '78.20%'),
+      mk('Velvet Touch Spa',     'Active', 'Healthy',  '73', '112', '48', '£11.89', '£2,199.70', '£45.83', '£14,448.00', '6.57x',  '60.40%'),
+      mk('Diamond Skin Care',    'Active', 'Warning',  '94', '91',  '51', '£11.89', '£2,199.96', '£43.14', '£12,801.00', '5.82x',  '54.10%'),
+      mk('Serenity MedSpa',      'Active', 'Healthy',  '61', '100', '32', '£9.31',  '£1,499.11', '£46.85', '£11,296.00', '7.54x',  '55.80%'),
+      mk('Contour Aesthetics',   'Active', 'Critical', '18', '24',  '3',  '£14.80', '£1,204.60', '£98.40', '£2,410.00',  '2.00x',  '31.20%'),
+      mk('Thee Vision Studio',   'Inactive','Critical','0',  '16',  '0',  '£0.00',  '£0.00',     '£0.00',  '£0.00',      '0.00x',  '0.00%'),
+    ];
+    const rows = raw.map((r, i) => Object.assign({}, r, { rowBg: i % 2 ? '#fff' : '#FCFCFD' }));
+
+    return {
+      tabs, tiles, rows,
+      chartTabs, chartPoints, linePath, areaPath,
+      chartTitle: c.title,
+      chartSub: st.range + ' · ' + c.sub,
+      chartTotal: c.total,
+      chartDelta: c.delta,
+      chartDeltaColor: c.up ? '#25A55F' : '#E5484D',
+      drawAnim: ((st.anim || 0) % 2 ? 'ch2DrawB' : 'ch2DrawA') + ' 800ms cubic-bezier(.4,0,.2,1) forwards',
+      fadeAnim: ((st.anim || 0) % 2 ? 'ch2FadeB' : 'ch2FadeA') + ' 800ms ease-out forwards',
+      range: st.range,
+      rangeMenu: st.rangeMenu ? 'block' : 'none',
+      toggleRange: () => this.set((p) => ({ rangeMenu: !p.rangeMenu })),
+      rangeList: menu(['Today', 'Last 7 days', 'Last 30 days', 'This quarter'], st.range, 'range', 'rangeMenu'),
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,8 +1,10 @@
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bird, Sparkles, MessageSquarePlus, Trash2 } from "lucide-react"
+import { Bird, Sparkles, MessageSquarePlus, Trash2, Loader2 } from "lucide-react"
+import { toast } from "sonner"
+import { apiRequest } from "@/lib/api"
 import ChatConversation from "@/components/chat/ChatConversation"
 
 // ── Suggestions shown on the empty sidebar tab ──────────────────────────
@@ -15,107 +17,104 @@ const SUGGESTIONS = [
   "Which ad has the most zombie leads?",
 ]
 
-// ── Conversation storage helpers (localStorage) ──────────────────────────
-const CONVOS_KEY = "birdy_conversations"
-
-function loadConversations() {
-  try {
-    return JSON.parse(localStorage.getItem(CONVOS_KEY) || "[]")
-  } catch { return [] }
-}
-
-function saveConversations(convos) {
-  localStorage.setItem(CONVOS_KEY, JSON.stringify(convos))
-}
+// History lives on the server, in the same append-only archive the Admin
+// console reads. It used to be held in localStorage, which meant it was gone
+// on any other machine — and the session id lived in sessionStorage, which
+// dies with the tab, so reopening an old chat showed the transcript while the
+// model had no memory of it. Both now come from the backend.
+const NEW_CHAT = { id: "__new__", title: "New Conversation", sessionId: null }
 
 export default function AskBirdyPage() {
   const [conversations, setConversations] = useState([])
-  const [activeConvoId, setActiveConvoId] = useState(null)
+  const [loadingList, setLoadingList] = useState(true)
+  const [active, setActive] = useState(NEW_CHAT)
+  const [messages, setMessages] = useState([])
+  const [loadingConvo, setLoadingConvo] = useState(false)
   const [pendingPrompt, setPendingPrompt] = useState(null)
-  const [resetKey, setResetKey] = useState(0) // force-remount ChatConversation on convo switch
-  const savedMessagesRef = useRef([])
+  const [resetKey, setResetKey] = useState(0)
+  const [pendingDelete, setPendingDelete] = useState(null)
 
-  // Load conversations from localStorage on mount
-  useEffect(() => {
-    const convos = loadConversations()
-    setConversations(convos)
-    if (convos.length > 0) {
-      const latest = convos[0]
-      setActiveConvoId(latest.id)
-    } else {
-      // Start empty — user has no saved convos
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await apiRequest("/api/chat/conversations")
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setConversations(data.conversations || [])
+    } catch (err) {
+      console.warn("[ask-birdy] Could not load conversations:", err)
+    } finally {
+      setLoadingList(false)
     }
   }, [])
 
-  // Find the currently active convo object
-  const activeConvo = conversations.find(c => c.id === activeConvoId) || null
+  useEffect(() => { loadConversations() }, [loadConversations])
 
   const startNewConversation = (opts = {}) => {
-    const id = `convo_${Date.now()}`
-    const newConvo = {
-      id,
-      title: opts.title || "New Conversation",
-      messages: [],
-      sessionId: null,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
-    const updated = [newConvo, ...conversations]
-    setConversations(updated)
-    saveConversations(updated)
-    setActiveConvoId(id)
+    setActive(NEW_CHAT)
+    setMessages([])
     setPendingPrompt(opts.prompt || null)
     setResetKey(k => k + 1)
   }
 
-  const switchConversation = (convo) => {
-    if (convo.id === activeConvoId) return
-    setActiveConvoId(convo.id)
-    setPendingPrompt(null)
-    setResetKey(k => k + 1)
-  }
-
-  const deleteConversation = (id, e) => {
-    e.stopPropagation()
-    const updated = conversations.filter(c => c.id !== id)
-    setConversations(updated)
-    saveConversations(updated)
-    if (activeConvoId === id) {
-      if (updated.length > 0) {
-        setActiveConvoId(updated[0].id)
-      } else {
-        setActiveConvoId(null)
-      }
+  const openConversation = async (convo) => {
+    if (convo.session_id === active.sessionId) return
+    setLoadingConvo(true)
+    try {
+      const res = await apiRequest(
+        `/api/chat/conversations/${encodeURIComponent(convo.session_id)}`
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setMessages(data.messages || [])
+      setActive({
+        id: convo.session_id,
+        title: convo.title,
+        sessionId: convo.session_id,
+      })
+      setPendingPrompt(null)
       setResetKey(k => k + 1)
+    } catch (err) {
+      console.error("[ask-birdy] Could not open conversation:", err)
+      toast.error("Could not open that conversation")
+    } finally {
+      setLoadingConvo(false)
     }
   }
 
-  // Called by ChatConversation whenever its internal messages change
-  const handleMessagesChange = (msgs) => {
-    savedMessagesRef.current = msgs
-    if (!activeConvoId) return
-    setConversations(prev => {
-      const updated = prev.map(c => {
-        if (c.id !== activeConvoId) return c
-        // Title from first user message
-        let title = c.title
-        if ((!title || title === "New Conversation") && msgs.length > 0) {
-          const firstUser = msgs.find(m => m.role === "user" && !m.content?.startsWith("[UI_RESPONSE]"))
-          if (firstUser) title = firstUser.content.slice(0, 40) + (firstUser.content.length > 40 ? "…" : "")
-        }
-        return { ...c, title, messages: msgs, updatedAt: new Date().toISOString() }
-      })
-      saveConversations(updated)
-      return updated
-    })
+  const deleteConversation = async (sessionId, e) => {
+    e.stopPropagation()
+    setPendingDelete(sessionId)
+    try {
+      const res = await apiRequest(
+        `/api/chat/conversations/${encodeURIComponent(sessionId)}`,
+        { method: "DELETE" }
+      )
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      setConversations(prev => prev.filter(c => c.session_id !== sessionId))
+      if (active.sessionId === sessionId) startNewConversation()
+      toast.success("Conversation deleted")
+    } catch (err) {
+      console.error("[ask-birdy] Delete failed:", err)
+      toast.error("Could not delete that conversation")
+    } finally {
+      setPendingDelete(null)
+    }
   }
 
-  const handleSuggestion = (prompt) => {
-    startNewConversation({ prompt, title: prompt.slice(0, 40) })
-  }
+  // A new chat has no id until the first reply comes back. Adopt it so the
+  // next message continues the same thread rather than starting another.
+  const handleSessionId = useCallback((sessionId) => {
+    setActive(prev => (prev.sessionId ? prev : { ...prev, sessionId }))
+  }, [])
 
-  const sessionKey = activeConvoId ? `ask_birdy_convo_${activeConvoId}` : "ask_birdy_convo_new"
-  const initialMessages = activeConvo?.messages || []
+  // Titles and ordering are derived server-side, so refresh the list once a
+  // turn completes rather than trying to mirror that logic here.
+  const handleMessagesChange = useCallback((msgs) => {
+    setMessages(msgs)
+    if (msgs.length > 0 && msgs[msgs.length - 1].role === "assistant") {
+      loadConversations()
+    }
+  }, [loadConversations])
 
   return (
     <div className="h-dvh w-full grid grid-cols-[280px_1fr] bg-background">
@@ -151,36 +150,52 @@ export default function AskBirdyPage() {
           </TabsList>
 
           <TabsContent value="convos" className="flex-1 min-h-0 overflow-y-auto p-2 mt-2">
-            {conversations.length === 0 ? (
+            {loadingList ? (
+              <p className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Loading history…
+              </p>
+            ) : conversations.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8 px-4">
                 No conversations yet. Click <strong>New Chat</strong> to start one.
               </p>
             ) : (
               <div className="space-y-1">
                 {conversations.map(c => (
-                  <button
-                    key={c.id}
-                    onClick={() => switchConversation(c)}
-                    className={`w-full group flex items-start justify-between gap-2 p-2 rounded-md text-left text-xs transition ${
-                      activeConvoId === c.id
+                  // Row, not a button: the delete control is a button of its
+                  // own, and a button inside a button is invalid markup that
+                  // keyboard users cannot reach.
+                  <div
+                    key={c.session_id}
+                    className={`group flex items-center gap-1 rounded-md text-xs transition ${
+                      active.sessionId === c.session_id
                         ? "bg-purple-50 text-purple-900 border border-purple-200"
                         : "hover:bg-muted/60 border border-transparent"
                     }`}
                   >
-                    <div className="flex-1 min-w-0">
+                    <button
+                      onClick={() => openConversation(c)}
+                      disabled={loadingConvo}
+                      className="flex-1 min-w-0 p-2 text-left disabled:opacity-60"
+                      aria-current={active.sessionId === c.session_id ? "true" : undefined}
+                    >
                       <p className="font-medium truncate">{c.title}</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {new Date(c.updatedAt).toLocaleDateString()}
+                        {c.updated_at ? new Date(c.updated_at).toLocaleDateString() : ""}
+                        {c.message_count ? ` · ${c.message_count} messages` : ""}
                       </p>
-                    </div>
-                    <span
-                      onClick={(e) => deleteConversation(c.id, e)}
-                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 text-destructive rounded transition cursor-pointer"
-                      aria-label="Delete conversation"
+                    </button>
+                    <button
+                      onClick={(e) => deleteConversation(c.session_id, e)}
+                      disabled={pendingDelete === c.session_id}
+                      className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 hover:bg-destructive/10 text-destructive rounded transition"
+                      aria-label={`Delete conversation: ${c.title}`}
                     >
-                      <Trash2 className="h-3 w-3" />
-                    </span>
-                  </button>
+                      {pendingDelete === c.session_id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Trash2 className="h-3 w-3" />}
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -190,7 +205,7 @@ export default function AskBirdyPage() {
             {SUGGESTIONS.map((s, i) => (
               <button
                 key={i}
-                onClick={() => handleSuggestion(s)}
+                onClick={() => startNewConversation({ prompt: s })}
                 className="w-full text-left text-xs p-2.5 rounded-md border border-border/60 bg-white hover:bg-purple-50 hover:border-purple-300 transition"
               >
                 {s}
@@ -204,8 +219,9 @@ export default function AskBirdyPage() {
       <main className="min-h-0 overflow-hidden">
         <ChatConversation
           key={resetKey}
-          sessionKey={sessionKey}
-          initialMessages={initialMessages}
+          sessionId={active.sessionId}
+          onSessionId={handleSessionId}
+          initialMessages={messages}
           initialMessage={pendingPrompt}
           onMessagesChange={handleMessagesChange}
           bubbleWidthClass="max-w-[80%]"

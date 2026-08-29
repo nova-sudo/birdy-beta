@@ -1,10 +1,11 @@
 "use client"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { usePageViews } from "@/lib/usePageViews"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import ColumnVisibilityDropdown from "@/components/ui/Columns-filter"
 import StyledTable from "@/components/ui/table-container"
 import { PdSegmented } from "@/components/portfolio"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -13,7 +14,6 @@ import { buildContactColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
 import { ErrorBanner } from "@/components/ErrorBanner"
 import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
-import { ghlIcon as ghlIco, metaIcon as metaIco, flaskIcon as flaskIco } from "@/lib/icons"
 import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 
 // ─── Lead Hub table + pipeline tabs ─────────────────────────────────────────
@@ -148,9 +148,45 @@ export function LeadsContent({
   const selectedClientGroup = controlledClientGroup ?? uncontrolledClientGroup
   const setSelectedClientGroup = onSelectClientGroup ?? setUncontrolledClientGroup
 
-  const [selectedCategory, setSelectedCategory] = useState("columns")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+
+  // ── Saved column views ─────────────────────────────────────────────────
+  const applyColumnView = useCallback((s) => {
+    if (Array.isArray(s.visibleColumns)) setVisibleColumns(s.visibleColumns)
+  }, [])
+
+  // Explicit save only — see ColumnsMenu. Toggling changes the table but is
+  // not written until "Save to existing" or "Save New View".
+  const saveDefaultColumns = useCallback(async (ids) => {
+    await saveToDB(ids)
+    return true
+  }, [saveToDB])
+
+  const pageViews = usePageViews("contacts", {
+    onApply: applyColumnView,
+    ready: viewsLoaded,
+  })
+
+  // Contact columns carry a `category`; map it onto the menu's source ids.
+  const CATEGORY_TO_SOURCE = { meta: 'meta', ghl: 'ghl', tags: 'tags', custom: 'custom' }
+
+  const columnCatalogue = useMemo(
+    () => contactColumns.map(c => ({
+      id: c.id,
+      label: c.label ?? c.id,
+      source:
+        CATEGORY_TO_SOURCE[c.category] ??
+        (c.id.startsWith('tag_') ? 'tags'
+          : c.id.startsWith('ghl_') ? 'ghl'
+          : c.id.startsWith('custom_') ? 'custom'
+          : 'meta'),
+    })),
+    [contactColumns]
+  )
+
+  const defaultColumnIds = useMemo(
+    () => baseContactColumns.filter(c => c.defaultVisible).map(c => c.id),
+    []
+  )
 
   const columnVisibilityMap = useMemo(
     () => contactColumns.reduce(
@@ -193,6 +229,21 @@ export function LeadsContent({
     () => [...new Set(contacts.map(c => c.opportunityStatus).filter(Boolean))].sort(),
     [contacts]
   )
+
+  // Every filter on this page, in one control. Sources and Tags narrow to a
+  // set; Types and Opportunities pick one, with "all" meaning unfiltered.
+  const filterGroups = useMemo(() => [
+    { id: "sources", label: "Sources", mode: "multi",
+      items: sources, value: selectedSources, onChange: setSelectedSources },
+    { id: "types", label: "Types", mode: "single",
+      items: types, value: selectedType, onChange: setSelectedType },
+    { id: "opportunities", label: "Opportunities", mode: "single",
+      items: opportunityStatuses, value: selectedOpportunityStatus,
+      onChange: setSelectedOpportunityStatus },
+    { id: "tags", label: "Tags", mode: "multi",
+      items: allTags, value: selectedTags, onChange: setSelectedTags },
+  ], [sources, selectedSources, types, selectedType, opportunityStatuses,
+      selectedOpportunityStatus, allTags, selectedTags])
 
   const fetchContacts = async (page = 1, overrides = {}) => {
     setLoading(true)
@@ -316,78 +367,6 @@ export function LeadsContent({
     selectedClientGroup !== "all" ||
     selectedTags.length > 0
 
-  const categories = [
-    { id: "columns", label: "Columns" },
-    { id: "sources", label: "Sources" },
-    { id: "types", label: "Types" },
-    { id: "opportunities", label: "Opportunities" },
-    { id: "tags", label: "Tags" },
-  ]
-
-  const filteredColumns = useMemo(() => {
-    switch (selectedCategory) {
-      case "columns":
-        return contactColumns.filter(col =>
-          col.label.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      case "sources":
-        return sources
-          .filter(s => s.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(s => ({ id: s, label: s, visible: selectedSources.includes(s) }))
-      case "types":
-        return types
-          .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(t => ({ id: t, label: t, visible: selectedType === t }))
-      case "opportunities":
-        return opportunityStatuses
-          .filter(o => o.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(o => ({ id: o, label: o, visible: selectedOpportunityStatus === o }))
-      case "tags":
-        return allTags
-          .filter(t => t.toLowerCase().includes(searchTerm.toLowerCase()))
-          .map(t => ({ id: t, label: t, visible: selectedTags.includes(t) }))
-      default:
-        return []
-    }
-  }, [selectedCategory, searchTerm, sources, types, opportunityStatuses, allTags, selectedSources, selectedType, selectedOpportunityStatus, selectedTags])
-
-  const toggleColumnVisibility = (id) => {
-    switch (selectedCategory) {
-      case "columns":
-        setVisibleColumns(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-        break
-      case "sources":
-        setSelectedSources(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-        break
-      case "types":
-        setSelectedType(prev => prev === id ? "all" : id)
-        break
-      case "opportunities":
-        setSelectedOpportunityStatus(prev => prev === id ? "all" : id)
-        break
-      case "tags":
-        setSelectedTags(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-        break
-    }
-  }
-
-  const selectAll = () => {
-    switch (selectedCategory) {
-      case "columns": setVisibleColumns(contactColumns.map(c => c.id)); break
-      case "tags": setSelectedTags(allTags); break
-      default: break
-    }
-  }
-
-  const clearAll = () => {
-    switch (selectedCategory) {
-      case "columns": setVisibleColumns([]); break
-      case "sources": setSelectedSources([]); break
-      case "types": setSelectedType("all"); break
-      case "opportunities": setSelectedOpportunityStatus("all"); break
-      case "tags": setSelectedTags([]); break
-    }
-  }
 
   const handlePreviousPage = () => {
     if (currentPage > 1) fetchContacts(currentPage - 1)
@@ -446,49 +425,19 @@ export function LeadsContent({
                 />
               </div>
 
-              <FilterPanel
-                sources={sources}
-                allTags={allTags}
-                selectedSources={selectedSources}
-                setSelectedSources={setSelectedSources}
-                selectedTags={selectedTags}
-                setSelectedTags={setSelectedTags}
-                triggerClassName={TOOLBAR_CHIP}
-              />
+              <FilterPanel groups={filterGroups} triggerClassName={TOOLBAR_CHIP} />
 
-              <ColumnVisibilityDropdown
-                isOpen={isDropdownOpen}
-                setIsOpen={setIsDropdownOpen}
-                categories={categories}
-                selectedCategory={selectedCategory}
-                setSelectedCategory={setSelectedCategory}
-                categoryCounts={{
-                  columns: contactColumns.length,
-                  sources: sources.length,
-                  types: types.length,
-                  opportunities: opportunityStatuses.length,
-                  tags: allTags.length,
-                }}
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                filteredColumns={filteredColumns}
-                columnVisibility={contactColumns.reduce((acc, c) => ({ ...acc, [c.id]: visibleColumns.includes(c.id) }), {})}
-                toggleColumnVisibility={toggleColumnVisibility}
-                selectAll={selectAll}
-                clearAll={clearAll}
-                triggerClassName={TOOLBAR_CHIP}
-                getIcon={(col) => {
-                  const META_COLS = ["ad_name", "adset_name", "campaign_name", "platform", "created_time", "metaCampaign", "metaAdName", "metaAdsetName"]
-                  if (META_COLS.includes(col.id)) return metaIco
-                  if (col.id.startsWith("ghl_") || col.id.startsWith("tag_")) return ghlIco
-                  if (selectedCategory === "tags") return ghlIco
-                  if (col.id?.startsWith("custom_")) return flaskIco
-                  return null
-                }}
-                save={async () => {
-                  await saveToDB(visibleColumns)
-                  setIsDropdownOpen(false)
-                }}
+
+              {/* The dropdown above is this page's filter panel (Sources,
+                  Types, Opportunities, Tags) as well as a column toggle, so it
+                  stays; the Columns menu owns saved views. */}
+              <ColumnsMenu
+                columns={columnCatalogue}
+                visibleColumns={visibleColumns}
+                onChange={setVisibleColumns}
+                defaultColumns={defaultColumnIds}
+                views={pageViews}
+                onSaveDefault={saveDefaultColumns}
               />
 
               {hasActiveFilters && (

@@ -34,6 +34,8 @@ export default function ChatConversation({
   initialMessages = [],
   initialMessage = null,
   sessionKey = "birdy_chat_session",
+  sessionId: controlledSessionId,
+  onSessionId,
   page = null,
   clientGroupId = null,
   clientName = null,
@@ -51,7 +53,12 @@ export default function ChatConversation({
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [submittedUIs, setSubmittedUIs] = useState(new Set())
-  const [sessionId, setSessionId] = useState(null)
+  // Owned here for the modal and inline surfaces, which have no conversation
+  // list of their own. /ask-birdy passes one in instead: its history is stored
+  // server-side, so the session must come from the conversation being opened,
+  // not from sessionStorage — which dies with the tab and left the model with
+  // no memory of the transcript the user was looking at.
+  const [sessionId, setSessionId] = useState(controlledSessionId ?? null)
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
   const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
@@ -63,12 +70,16 @@ export default function ChatConversation({
   useEffect(() => { onMessagesChangeRef.current = onMessagesChange }, [onMessagesChange])
   useEffect(() => { onToolUsedRef.current = onToolUsed }, [onToolUsed])
 
-  // Restore session
+  // Restore session — only when the caller isn't supplying one.
   useEffect(() => {
+    if (controlledSessionId !== undefined) return
     if (typeof window === "undefined") return
     const stored = sessionStorage.getItem(sessionKey)
     if (stored) setSessionId(stored)
-  }, [sessionKey])
+  }, [sessionKey, controlledSessionId])
+
+  const onSessionIdRef = useRef(onSessionId)
+  useEffect(() => { onSessionIdRef.current = onSessionId }, [onSessionId])
 
   // Notify parent
   useEffect(() => {
@@ -120,7 +131,12 @@ export default function ChatConversation({
       const data = res.ok ? await res.json() : { reply: "Sorry, something went wrong.", tools_used: [] }
       if (data.session_id) {
         setSessionId(data.session_id)
-        sessionStorage.setItem(sessionKey, data.session_id)
+        // A brand-new chat only learns its id from the first reply; the
+        // conversation list needs it to keep pointing at the right thread.
+        onSessionIdRef.current?.(data.session_id)
+        if (controlledSessionId === undefined) {
+          sessionStorage.setItem(sessionKey, data.session_id)
+        }
       }
       const toolsUsed = data.tools_used || []
       setMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
@@ -132,7 +148,7 @@ export default function ChatConversation({
     } finally {
       setLoading(false)
     }
-  }, [loading, sessionId, sessionKey, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, controlledSessionId, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.

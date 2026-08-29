@@ -47,3 +47,38 @@ export function statusCounts(groups) {
   const active = list.filter(isActive).length;
   return { all: list.length, active, inactive: list.length - active };
 }
+
+/* ── Health ───────────────────────────────────────────────────────────────
+ * A separate, manually-set axis: a client can be Inactive and Healthy, or
+ * Active and Critical. Nothing derives it — see components/clients/HealthPill.
+ * Normalised the same way status is, so a value stored in another casing still
+ * matches the tab you clicked.
+ */
+
+export const HEALTHY = "Healthy";
+export const WARNING = "Warning";
+export const CRITICAL = "Critical";
+export const HEALTH_VALUES = [HEALTHY, WARNING, CRITICAL];
+
+/** Canonical form of a stored health. Anything unrecognised — including the
+ *  clients who have never had one chosen — reads as Healthy, matching the
+ *  API's own default. */
+export function normalizeHealth(value) {
+  const v = String(value ?? "").trim().toLowerCase();
+  return HEALTH_VALUES.find((h) => h.toLowerCase() === v) ?? HEALTHY;
+}
+
+/** Does a group match a health filter of "all" | "Healthy" | "Warning" | "Critical"? */
+export function matchesHealthFilter(group, filter) {
+  if (!filter || filter === "all") return true;
+  return normalizeHealth(group?.health) === normalizeHealth(filter);
+}
+
+/** Per-health counts for the Client Hub tab badges. */
+export function healthCounts(groups) {
+  const list = groups ?? [];
+  return HEALTH_VALUES.reduce((acc, h) => {
+    acc[h.toLowerCase()] = list.filter((g) => normalizeHealth(g?.health) === h).length;
+    return acc;
+  }, {});
+}

@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+  .cd-badge { font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#fff; padding:5px 14px; border-radius:999px; }
+  @keyframes cdDrawA { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes cdDrawB { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes cdFadeA { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes cdFadeB { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="position:relative; width:1600px; height:1180px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex; box-shadow:0 20px 50px -20px rgba(30,25,60,.25);">
+      <!-- rail -->
+      <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+        <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;">
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"></path></svg></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></div>
+        <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+        <div style="position:relative; margin-top:6px; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#25A55F;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5"></circle><path d="M14.5 8.2a5 5 0 0 1 0 7.6"></path></svg><span style="position:absolute; top:8px; right:8px; width:8px; height:8px; border-radius:50%; background:#25A55F; border:2px solid #fff;"></span></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:6px 0;"></div>
+        <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#E5484D;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><path d="M16 17l5-5-5-5"></path><path d="M21 12H9"></path></svg></div>
+        <div style="width:28px; height:1px; background:#ECECF2; margin:8px 0 0;"></div>
+        <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+      </div>
+
+      <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+        <!-- header -->
+        <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:14px; flex:0 0 auto;">
+          <div style="width:32px; height:32px; border-radius:9px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E; flex:0 0 auto;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg></div>
+          <div>
+            <div style="display:flex; align-items:center; gap:9px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Aura</span><span style="display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; color:#25A55F; background:#EDF8F1; padding:3px 9px; border-radius:6px;"><span style="width:6px; height:6px; border-radius:50%; background:#25A55F;"></span>Healthy</span></div>
+            <div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Emma T. · client since Mar 2025</div>
+          </div>
+          <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+            <div onClick="{{ toggleRange }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ range }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+              <div style="display:{{ rangeMenu }}; position:absolute; top:44px; right:0; width:170px; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:30;">
+                <sc-for list="{{ rangeList }}" as="r" hint-placeholder-count="4">
+                  <div onClick="{{ r.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ r.color }}; background:{{ r.bg }};">{{ r.name }}</div>
+                </sc-for>
+              </div>
+            </div>
+            <div onClick="{{ openSettings }}" style="cursor:pointer; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+          </div>
+        </div>
+
+        <!-- page tabs -->
+        <div style="background:#fff; border-bottom:1px solid #ECECF2; padding:12px 26px 0; flex:0 0 auto;">
+          <div style="display:flex; gap:24px;">
+            <sc-for list="{{ pageTabs }}" as="t" hint-placeholder-count="5">
+              <div onClick="{{ t.pick }}" style="cursor:pointer; display:flex; align-items:center; gap:7px; padding-bottom:12px; border-bottom:{{ t.border }}; margin-bottom:-1px; font-family:'Poppins',sans-serif; font-weight:{{ t.weight }}; font-size:13.5px; color:{{ t.color }};">{{ t.icon }}{{ t.label }}</div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div class="scrolly" style="flex:1; min-height:0; padding:20px 24px;">
+          <!-- ============ OVERVIEW ============ -->
+          <div style="display:{{ showOverview }};">
+            <!-- goals strip -->
+            <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; margin-bottom:14px;">
+              <div style="display:flex; align-items:stretch;">
+                <sc-for list="{{ goals }}" as="g" hint-placeholder-count="5">
+                  <div style="flex:1; min-width:0; display:flex; align-items:center; gap:11px; padding:16px 18px; border-right:{{ g.borderRight }};">
+                    <span style="width:32px; height:32px; border-radius:9px; background:{{ g.iBg }}; display:flex; align-items:center; justify-content:center; color:{{ g.iCol }}; flex:0 0 auto;">{{ g.iconEl }}</span>
+                    <div style="min-width:0;">
+                      <div style="display:flex; align-items:baseline; gap:6px;">
+                        <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:18px; color:#1F1B33; line-height:1;">{{ g.value }}</span>
+                        <span style="font-size:10.5px; color:#9A9AAB; white-space:nowrap;">/ {{ g.target }}</span>
+                      </div>
+                      <div style="display:flex; align-items:center; gap:7px; margin-top:5px;">
+                        <span style="font-size:11px; color:#8A8A9A; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ g.label }}</span>
+                        <span style="font-size:10px; font-weight:700; color:{{ g.color }}; background:{{ g.bg }}; padding:2px 7px; border-radius:5px; flex:0 0 auto;">{{ g.state }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:18px; align-items:flex-start;">
+              <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:18px;">
+              <div style="flex:0 0 auto; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                  <div><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">{{ chartTitle }}</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">{{ chartSub }}</div></div>
+                  <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+                    <sc-for list="{{ chartTabs }}" as="m" hint-placeholder-count="4">
+                      <div onClick="{{ m.pick }}" style="cursor:pointer; padding:7px 13px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ m.color }}; background:{{ m.bg }}; box-shadow:{{ m.shadow }};">{{ m.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 16px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#1F1B33;">{{ chartTotal }}</span><span style="font-size:12.5px; font-weight:600; color:{{ chartDeltaColor }};">{{ chartDelta }}</span></div>
+                <div style="position:relative; height:180px;">
+                  <div style="position:absolute; inset:0 0 22px 0;">
+                    <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                      <defs>
+                        <linearGradient id="cdFill_1d" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#6B4EE6" stop-opacity="0.18"></stop>
+                          <stop offset="100%" stop-color="#6B4EE6" stop-opacity="0"></stop>
+                        </linearGradient>
+                      </defs>
+                      <path d="{{ areaPath }}" fill="url(#cdFill_1d)" style="animation:{{ fadeAnim }};"></path>
+                      <path d="{{ linePath }}" fill="none" stroke="#6B4EE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="stroke-dasharray:2400; animation:{{ drawAnim }};"></path>
+                    </svg>
+                    <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                      <div style="position:absolute; left:{{ p.left }}; top:{{ p.top }}; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:{{ p.fill }}; border:2px solid #fff; box-shadow:{{ p.glow }}; cursor:pointer;" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}"><div style="display:{{ p.tipShow }}; position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:#1F1B33; color:#fff; padding:6px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; box-shadow:0 6px 16px -6px rgba(30,25,60,.5);"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:12.5px; line-height:1;">{{ p.value }}</div><div style="font-size:10.5px; color:#C9BEF3; margin-top:3px;">{{ p.tipLabel }}</div></div></div>
+                    </sc-for>
+                  </div>
+                  <div style="position:absolute; left:0; right:0; bottom:0; display:flex;">
+                    <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                      <div style="flex:1; text-align:center; font-size:10.5px; color:#9A9AAB;">{{ p.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+                <div style="display:grid; grid-template-columns:1.35fr 0.65fr; gap:18px; align-items:stretch;">
+                  <div style="min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px; display:flex; flex-direction:column;">
+                    <div style="display:flex; align-items:center; gap:9px; margin-bottom:16px;">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                      <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">History book</span>
+                    </div>
+                    <div class="scrolly" style="flex:1; min-height:0; max-height:330px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px;">
+                      <sc-for list="{{ notes }}" as="n" hint-placeholder-count="4">
+                        <div style="display:flex; gap:11px; border:1px solid #ECECF2; border-radius:10px; padding:12px 13px; flex:0 0 auto;">
+                          <span style="width:26px; height:26px; border-radius:50%; background:{{ n.bg }}; display:flex; align-items:center; justify-content:center; color:{{ n.color }}; flex:0 0 auto;">{{ n.icon }}</span>
+                          <div style="min-width:0; flex:1;">
+                            <div style="display:flex; align-items:center; gap:7px;"><span style="font-size:10.5px; font-weight:700; color:{{ n.color }}; background:{{ n.bg }}; padding:2px 7px; border-radius:5px;">{{ n.kind }}</span><span style="font-size:11px; color:#9A9AAB;">{{ n.who }} · {{ n.when }}</span></div>
+                            <div style="font-size:12.5px; color:#1F1B33; line-height:1.45; margin-top:5px;">{{ n.body }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                    <div style="margin-top:auto; padding-top:16px; display:flex; align-items:center; gap:10px; background:#F7F7FB; border:1px solid #ECECF2; border-radius:10px; padding:10px 12px;">
+                      <span style="flex:1; font-size:12.5px; color:#9A9AAB;">Add a note about Aura…</span>
+                      <div style="width:28px; height:28px; border-radius:8px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div>
+                    </div>
+                  </div>
+
+                  <div style="flex:1; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden; display:flex; flex-direction:column;">
+                    <div style="flex:1; min-width:0; padding:20px 22px; display:flex; flex-direction:column;">
+                      <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                        <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">Diagnostics engine</span>
+                      </div>
+                      <div style="flex:1; display:flex; flex-direction:column; position:relative;">
+                        <div style="position:absolute; left:15px; top:15px; bottom:15px; width:2px; background:#F1F1F5; z-index:0;"></div>
+                        <sc-for list="{{ funnel4 }}" as="f" hint-placeholder-count="4">
+                          <div style="flex:1; display:flex; align-items:center; gap:10px; padding:0 2px;">
+                            <span style="width:30px; height:30px; border-radius:9px; background:#fff; box-shadow:0 1px 3px rgba(30,25,60,.12); display:flex; align-items:center; justify-content:center; color:{{ f.color }}; flex:0 0 auto; position:relative; z-index:1;">{{ f.icon }}</span>
+                            <span style="font-size:12.5px; color:#5A5A6E; flex:0 0 auto;">{{ f.stage }}</span>
+                            <span style="margin-left:10px; font-size:11px; color:#B4B4C0; flex:1;">{{ f.convPct }}</span>
+                            <span style="display:flex; align-items:center; gap:2px; font-size:11px; font-weight:600; color:{{ f.deltaColor }}; background:{{ f.deltaBg }}; padding:3px 8px; border-radius:999px; flex:0 0 auto; white-space:nowrap; margin-right:8px;">{{ f.deltaArrow }} {{ f.deltaPct }}</span>
+                            <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33; flex:0 0 auto; min-width:40px; text-align:right;">{{ f.count }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div style="background:#FEF6F6; border-top:1px solid #F8DEDE; padding:16px 20px;">
+                      <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+                        <span style="width:30px; height:30px; border-radius:9px; background:#FEF1F1; display:flex; align-items:center; justify-content:center; color:#E5484D; flex:0 0 auto;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+                        <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#E5484D;">Problem found: close rate</span>
+                      </div>
+                      <div style="font-size:12.5px; color:#5A5A6E; line-height:1.5;">Closes are down <strong style="color:#1F1B33;">4.8%</strong> while convos are up <strong style="color:#1F1B33;">6.2%</strong> — the drop is at the closing stage, not lead flow. 3 of 5 lost calls never got a price quote.</div>
+                      <div style="display:flex; gap:8px; margin-top:13px;">
+                        <div style="display:flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:#fff; background:#6B4EE6; padding:8px 13px; border-radius:9px;">View calls<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+                        <div style="font-size:12.5px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #F0DADA; padding:8px 13px; border-radius:9px;">Dismiss</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:0 0 340px; min-width:0; display:flex; flex-direction:column; gap:18px;">
+                <div style="background:linear-gradient(135deg,#6B4EE6,#8B6BF0); border:1px solid #5A3FD6; border-radius:16px; padding:16px 18px; box-shadow:0 10px 26px -12px rgba(107,78,230,.6);">
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+                    <span style="width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></span>
+                    <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; color:#fff;">Birdy Insights</span>
+                    <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#fff; background:rgba(255,255,255,.22); padding:2px 8px; border-radius:5px;">AI</span>
+                  </div>
+                  <div style="font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.5;">{{ tabInsight }}</div>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; font-weight:600; color:#fff;">Ask Birdy about this<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+                </div>
+                <div style="min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+                <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px; margin-bottom:16px;">
+                    <div onClick="{{ showSug }}" style="flex:1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; padding:8px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ sugColor }}; background:{{ sugBg }}; box-shadow:{{ sugShadow }};">Suggestions <span style="font-size:10.5px; font-weight:700; color:{{ sugBadgeColor }}; background:{{ sugBadgeBg }}; padding:1px 6px; border-radius:5px;">4</span></div>
+                    <div onClick="{{ showAct }}" style="flex:1; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:7px; padding:8px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ actColor }}; background:{{ actBg }}; box-shadow:{{ actShadow }};">Activity <span style="font-size:10.5px; font-weight:700; color:{{ actBadgeColor }}; background:{{ actBadgeBg }}; padding:1px 6px; border-radius:5px;">12</span></div>
+                </div>
+                <div style="display:{{ panelSug }}; flex-direction:column; gap:8px;">
+                  <sc-for list="{{ suggestions }}" as="s" hint-placeholder-count="4">
+                    <div style="border:1px solid #ECECF2; border-radius:10px; padding:11px 12px;">
+                      <div style="display:flex; align-items:center; gap:7px;">
+                        <span style="width:7px; height:7px; border-radius:50%; background:{{ s.dot }}; flex:0 0 auto;"></span>
+                        <span style="font-size:10.5px; font-weight:700; color:{{ s.dot }}; flex:0 0 auto;">{{ s.tag }}</span>
+                        <span style="font-size:11px; color:#9A9AAB; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.source }}</span>
+                      </div>
+                      <div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:#1F1B33; line-height:1.3; margin-top:5px;">{{ s.title }}</div>
+                      <div style="display:flex; align-items:flex-end; gap:10px; margin-top:5px;">
+                        <div style="flex:1; min-width:0; font-size:11.5px; color:#6B6480; line-height:1.4;">{{ s.why }}</div>
+                        <div style="display:flex; align-items:center; gap:5px; flex:0 0 auto;">
+                          <div style="display:flex; align-items:center; gap:5px; font-size:11.5px; font-weight:600; color:#fff; background:#6B4EE6; padding:6px 10px; border-radius:7px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9z"></path></svg>Do it</div>
+                          <div title="Dismiss" style="width:28px; height:28px; border-radius:7px; border:1px solid #ECECF2; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg></div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:{{ panelAct }}; flex-direction:column; gap:14px;">
+                  <sc-for list="{{ activity }}" as="a" hint-placeholder-count="6">
+                    <div style="display:flex; gap:11px;">
+                      <span style="width:26px; height:26px; border-radius:50%; background:{{ a.bg }}; display:flex; align-items:center; justify-content:center; color:{{ a.color }}; flex:0 0 auto; font-size:11px; font-weight:700;">{{ a.icon }}</span>
+                      <div style="min-width:0;">
+                        <div style="font-size:12.5px; font-weight:600; color:#1F1B33; line-height:1.35;">{{ a.action }}</div>
+                        <div style="display:flex; align-items:center; gap:6px; margin-top:4px;"><span style="font-size:10.5px; font-weight:700; color:{{ a.color }}; background:{{ a.bg }}; padding:2px 7px; border-radius:5px; flex:0 0 auto;">{{ a.mode }}</span><span style="font-size:11px; color:#9A9AAB;">{{ a.time }}</span></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+            </div>
+          </div>
+
+          <!-- ============ ASK BIRDY ============ -->
+          <div style="display:{{ showAsk }};">
+            <div style="display:flex; gap:18px; height:660px;">
+              <div style="flex:0 0 260px; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:16px; display:flex; flex-direction:column;">
+                <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-size:12.5px; font-weight:600; color:#fff; background:#6B4EE6; padding:9px; border-radius:9px; margin-bottom:14px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>New conversation</div>
+                <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9A9AAB; margin-bottom:10px;">RECENT</div>
+                <div style="background:#F1EEFC; border-radius:10px; padding:11px 12px; margin-bottom:8px;"><div style="font-size:12.5px; font-weight:600; color:#4A3AA0; line-height:1.35;">Why has our close rate dropped?</div><div style="font-size:11px; color:#8A7BC0; margin-top:4px;">Today, 9:14 AM</div></div>
+                <div style="padding:11px 12px; margin-bottom:8px;"><div style="font-size:12.5px; color:#5A5A6E; line-height:1.35;">Which ad set is driving the cheapest leads?</div><div style="font-size:11px; color:#9A9AAB; margin-top:4px;">Yesterday</div></div>
+                <div style="padding:11px 12px;"><div style="font-size:12.5px; color:#5A5A6E; line-height:1.35;">Summarise last month for the client report</div><div style="font-size:11px; color:#9A9AAB; margin-top:4px;">14 Aug 2026</div></div>
+              </div>
+              <div style="flex:1; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; display:flex; flex-direction:column;">
+                <div style="padding:16px 20px; border-bottom:1px solid #F1F1F5; flex:0 0 auto;"><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">Chat with Birdy</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">Ask anything about Aura — Birdy has their ads, calls and CRM data</div></div>
+                <div class="scrolly" style="flex:1; min-height:0; padding:20px; display:flex; flex-direction:column; gap:14px;">
+                  <div style="display:flex; justify-content:flex-end;"><div style="max-width:70%; background:#6B4EE6; color:#fff; border-radius:14px 14px 4px 14px; padding:11px 14px; font-size:13.5px; line-height:1.5;">Why has our close rate dropped this month?</div></div>
+                  <div style="max-width:82%;"><div style="background:#F7F7FB; border:1px solid #ECECF2; border-radius:14px 14px 14px 4px; padding:14px 16px; font-size:13.5px; color:#1F1B33; line-height:1.55;">Close rate fell from 25% to 18% while lead volume held steady, so this is a sales-side issue rather than a traffic one.<br><br>Three signals stand out:<br><br><strong>1. Speed to lead slipped.</strong> Average first-call time went from 4m 12s to 11m 40s after the 6 Aug rota change. Leads called inside 5 minutes still close at 24%.<br><br><strong>2. Price never came up.</strong> In 3 of the 5 lost calls I reviewed, no price was quoted before the call ended.<br><br><strong>3. Afternoon coverage is thin.</strong> 41% of leads arrive between 2–5pm but only 2 agents are rostered.<br><br>The fastest fix is restoring the sub-5-minute callback rule — that alone should recover roughly 4 points of close rate.</div><div style="display:flex; align-items:center; gap:8px; margin-top:8px;"><span style="font-size:11px; color:#9A9AAB;">Birdy · 9:14 AM</span><span style="font-size:11px; font-weight:600; color:#6B4EE6;">Create suggestion</span><span style="font-size:11px; font-weight:600; color:#6B4EE6;">Save to history book</span></div></div>
+                </div>
+                <div style="padding:14px 20px; border-top:1px solid #ECECF2; flex:0 0 auto;"><div style="display:flex; align-items:center; gap:10px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:12px; padding:6px 6px 6px 14px;"><span style="flex:1; font-size:13.5px; color:#9A9AAB;">Ask about Aura's performance…</span><div style="width:34px; height:34px; border-radius:9px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"></path><path d="M22 2l-7 20-4-9-9-4 20-7z"></path></svg></div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ============ MARKETING / CALL CENTRE / LEADS ============ -->
+          <div style="display:{{ showTable }};">
+            <!-- chart + insights (matches Sales / Marketing / Lead Hub) -->
+            <div style="display:flex; gap:18px; margin-bottom:18px; align-items:stretch;">
+              <div style="flex:1.65; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+                <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+                  <div><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">{{ chartTitle }}</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">{{ chartSub }}</div></div>
+                  <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+                    <sc-for list="{{ chartTabs }}" as="m" hint-placeholder-count="4">
+                      <div onClick="{{ m.pick }}" style="cursor:pointer; padding:7px 13px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ m.color }}; background:{{ m.bg }}; box-shadow:{{ m.shadow }};">{{ m.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 16px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#1F1B33;">{{ chartTotal }}</span><span style="font-size:12.5px; font-weight:600; color:{{ chartDeltaColor }};">{{ chartDelta }}</span></div>
+                <div style="position:relative; height:180px;">
+                  <div style="position:absolute; inset:0 0 22px 0;">
+                    <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                      <defs>
+                        <linearGradient id="cdFill2_1d" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stop-color="#6B4EE6" stop-opacity="0.18"></stop>
+                          <stop offset="100%" stop-color="#6B4EE6" stop-opacity="0"></stop>
+                        </linearGradient>
+                      </defs>
+                      <path d="{{ areaPath }}" fill="url(#cdFill2_1d)" style="animation:{{ fadeAnim }};"></path>
+                      <path d="{{ linePath }}" fill="none" stroke="#6B4EE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="stroke-dasharray:2400; animation:{{ drawAnim }};"></path>
+                    </svg>
+                    <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                      <div style="position:absolute; left:{{ p.left }}; top:{{ p.top }}; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:{{ p.fill }}; border:2px solid #fff; box-shadow:{{ p.glow }}; cursor:pointer;" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}"><div style="display:{{ p.tipShow }}; position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:#1F1B33; color:#fff; padding:6px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; box-shadow:0 6px 16px -6px rgba(30,25,60,.5);"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:12.5px; line-height:1;">{{ p.value }}</div><div style="font-size:10.5px; color:#C9BEF3; margin-top:3px;">{{ p.tipLabel }}</div></div></div>
+                    </sc-for>
+                  </div>
+                  <div style="position:absolute; left:0; right:0; bottom:0; display:flex;">
+                    <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                      <div style="flex:1; text-align:center; font-size:10.5px; color:#9A9AAB;">{{ p.label }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:0.85; min-width:0; display:flex; flex-direction:column; gap:14px;">
+                <div style="background:linear-gradient(135deg,#6B4EE6,#8B6BF0); border:1px solid #5A3FD6; border-radius:16px; padding:16px 18px; box-shadow:0 10px 26px -12px rgba(107,78,230,.6);">
+                  <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+                    <span style="width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></span>
+                    <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; color:#fff;">Birdy Insights</span>
+                    <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#fff; background:rgba(255,255,255,.22); padding:2px 8px; border-radius:5px;">AI</span>
+                  </div>
+                  <div style="font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.5;">{{ tabInsight }}</div>
+                  <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; font-weight:600; color:#fff;">Ask Birdy about this<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                  <sc-for list="{{ tabKpis }}" as="k" hint-placeholder-count="6">
+                    <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+                      <span style="width:28px; height:28px; border-radius:8px; background:{{ k.bg }}; display:flex; align-items:center; justify-content:center; color:{{ k.color }}; flex:0 0 auto;">{{ k.icon }}</span>
+                      <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">{{ k.value }}</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ k.label }}</div></div>
+                      <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:{{ k.deltaColor }}; background:{{ k.deltaBg }}; padding:3px 6px; border-radius:6px; flex:0 0 auto;">{{ k.arrow }}{{ k.pct }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+              <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+                <sc-for list="{{ subTabs }}" as="t" hint-placeholder-count="4">
+                  <div style="padding:7px 15px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.label }}</div>
+                </sc-for>
+              </div>
+              <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+                <div style="display:flex; align-items:center; gap:9px; height:38px; width:200px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg><span style="font-size:13px;">{{ searchLabel }}</span></div>
+                <div style="display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Columns<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+              </div>
+            </div>
+            <div style="background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+              <div class="scrolly" style="overflow-x:auto;">
+                <div style="min-width:1240px;">
+                  <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+                    <sc-for list="{{ cols }}" as="c" hint-placeholder-count="8">
+                      <div style="flex:{{ c.flex }}; min-width:{{ c.min }};">{{ c.label }}</div>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ tableRows }}" as="r" hint-placeholder-count="10">
+                    <div style="display:flex; align-items:center; padding:12px 22px; border-bottom:1px solid #F5F5F8; background:{{ r.rowBg }};">
+                      <sc-for list="{{ r.cells }}" as="c" hint-placeholder-count="8">
+                        <div style="flex:{{ c.flex }}; min-width:{{ c.min }}; font-size:13.5px; font-weight:{{ c.weight }}; color:{{ c.color }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.text }}</div>
+                      </sc-for>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ SETTINGS MODAL ============ -->
+      <div style="display:{{ settingsShow }}; position:absolute; inset:0; background:rgba(30,25,60,.42); z-index:40; align-items:flex-start; justify-content:center; padding:60px 0;">
+        <div style="width:1040px; max-height:100%; background:#fff; border-radius:18px; box-shadow:0 30px 70px -20px rgba(30,25,60,.5); display:flex; flex-direction:column; overflow:hidden;">
+          <div style="padding:22px 26px 18px; border-bottom:1px solid #F1F1F5; display:flex; align-items:flex-start; gap:14px; flex:0 0 auto;">
+            <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:18px; color:#1F1B33;">Aura settings</div><div style="font-size:12.5px; color:#9A9AAB; margin-top:3px;">Details, targets, thresholds and integrations</div></div>
+            <div onClick="{{ closeSettings }}" style="cursor:pointer; margin-left:auto; width:32px; height:32px; border-radius:9px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E; flex:0 0 auto;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"></path><path d="M6 6l12 12"></path></svg></div>
+          </div>
+
+          <div class="scrolly" style="flex:1; min-height:0; padding:22px 26px;">
+            <div style="display:flex; gap:6px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:11px; padding:5px; margin-bottom:20px;">
+              <sc-for list="{{ settingsTabs }}" as="t" hint-placeholder-count="3">
+                <div onClick="{{ t.pick }}" style="flex:1; cursor:pointer; text-align:center; padding:9px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.label }}</div>
+              </sc-for>
+            </div>
+
+            <!-- targets -->
+            <div style="display:{{ showTargets }};">
+              <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9A9AAB; margin-bottom:14px;">MONTHLY TARGETS</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px;">
+                <sc-for list="{{ targetFields }}" as="f" hint-placeholder-count="6">
+                  <div>
+                    <div style="font-size:12px; color:#8A8A9A; margin-bottom:6px;">{{ f.label }}</div>
+                    <div style="display:flex; align-items:center; gap:9px; border:1px solid #ECECF2; border-radius:9px; padding:10px 12px;">
+                      <span style="font-size:13px; color:#9A9AAB; flex:0 0 auto;">{{ f.prefix }}</span>
+                      <span style="flex:1; font-size:14px; font-weight:600; color:#1F1B33;">{{ f.value }}</span>
+                      <span style="font-size:12px; color:#9A9AAB; flex:0 0 auto;">{{ f.suffix }}</span>
+                    </div>
+                    <div style="font-size:11.5px; color:#9A9AAB; margin-top:6px;">{{ f.help }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+            </div>
+
+            <!-- integrations -->
+            <div style="display:{{ showIntegrations }};">
+              <div style="display:flex; gap:14px; margin-bottom:20px;">
+                <sc-for list="{{ integrations }}" as="i" hint-placeholder-count="3">
+                  <div style="flex:1; min-width:0; border:1px solid #ECECF2; border-radius:14px; padding:16px 18px;">
+                    <div style="display:flex; align-items:center; gap:9px; margin-bottom:14px;">
+                      <span style="width:30px; height:30px; border-radius:9px; background:{{ i.bg }}; display:flex; align-items:center; justify-content:center; color:{{ i.color }}; flex:0 0 auto; font-family:'Poppins',sans-serif; font-weight:700; font-size:12px;">{{ i.mark }}</span>
+                      <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ i.name }}</span>
+                      <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 8px; border-radius:6px; flex:0 0 auto;">Connected</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:9px;"><span style="font-size:12px; color:#8A8A9A;">{{ i.k1 }}</span><span style="font-size:12px; font-weight:600; color:#1F1B33;">{{ i.v1 }}</span></div>
+                    <div style="display:flex; justify-content:space-between; margin-bottom:14px;"><span style="font-size:12px; color:#8A8A9A;">Last refresh</span><span style="font-size:12px; font-weight:600; color:#1F1B33;">{{ i.refresh }}</span></div>
+                    <div style="display:flex; align-items:center; justify-content:center; gap:7px; font-size:12.5px; font-weight:600; color:#5A5A6E; border:1px solid #ECECF2; border-radius:9px; padding:9px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"></path><path d="M21 4v5h-5"></path></svg>Invalidate &amp; refresh</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <!-- details -->
+            <div style="display:{{ showDetails }};">
+              <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9A9AAB; margin-bottom:14px;">CLIENT DETAILS</div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:22px;">
+                <sc-for list="{{ detailFields }}" as="f" hint-placeholder-count="6">
+                  <div>
+                    <div style="font-size:12px; color:#8A8A9A; margin-bottom:6px;">{{ f.label }}</div>
+                    <div style="font-size:14px; font-weight:500; color:#1F1B33; border:1px solid #ECECF2; border-radius:9px; padding:10px 12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ f.value }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="height:1px; background:#F1F1F5; margin-bottom:20px;"></div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;">
+                <div style="border:1px solid #ECECF2; border-radius:9px; padding:12px 14px;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9A9AAB; margin-bottom:3px;">CLIENT STATUS</div>
+                  <div style="font-size:11px; color:#9A9AAB; margin-bottom:10px;">Set the status of this client.</div>
+                  <div onClick="{{ toggleClientStatusMenu }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; border:1px solid #ECECF2; border-radius:9px; padding:10px 12px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ clientStatusColor }};"></span>
+                    <span style="flex:1; font-size:13.5px; font-weight:600; color:#1F1B33;">{{ clientStatus }}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A9AAB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                    <div style="display:{{ clientStatusMenu }}; position:absolute; bottom:44px; left:0; right:0; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 -14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:30;">
+                      <sc-for list="{{ clientStatusList }}" as="v" hint-placeholder-count="2">
+                        <div onClick="{{ v.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ v.color }}; background:{{ v.bg }};">{{ v.name }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+                <div style="border:1px solid #ECECF2; border-radius:9px; padding:12px 14px;">
+                  <div style="font-size:11px; font-weight:700; letter-spacing:.05em; color:#9A9AAB; margin-bottom:3px;">CLIENT HEALTH</div>
+                  <div style="font-size:11px; color:#9A9AAB; margin-bottom:10px;">Manually set this client's health.</div>
+                  <div onClick="{{ toggleClientHealthMenu }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; border:1px solid #ECECF2; border-radius:9px; padding:10px 12px;">
+                    <span style="width:8px; height:8px; border-radius:50%; background:{{ clientHealthColor }};"></span>
+                    <span style="flex:1; font-size:13.5px; font-weight:600; color:#1F1B33;">{{ clientHealth }}</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9A9AAB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+                    <div style="display:{{ clientHealthMenu }}; position:absolute; bottom:44px; left:0; right:0; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 -14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:30;">
+                      <sc-for list="{{ clientHealthList }}" as="v" hint-placeholder-count="3">
+                        <div onClick="{{ v.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ v.color }}; background:{{ v.bg }};">{{ v.name }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+                <div style="border:1px solid #F8DEDE; background:#FEF6F6; border-radius:9px; padding:12px 14px; display:flex; flex-direction:column;">
+                  <div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:#E5484D; margin-bottom:3px;">Remove client group</div>
+                  <div style="font-size:11px; color:#5A5A6E; margin-bottom:10px; line-height:1.4;">Deletes this client and all its data.</div>
+                  <div style="margin-top:auto; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12px; font-weight:600; color:#fff; background:#E5484D; padding:9px 12px; border-radius:8px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path></svg>Remove</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="padding:16px 26px; border-top:1px solid #F1F1F5; display:flex; align-items:center; gap:10px; flex:0 0 auto;">
+            <span style="font-size:12px; color:#9A9AAB;">Changes apply to Aura only</span>
+            <div style="margin-left:auto; display:flex; gap:10px;">
+              <div onClick="{{ closeSettings }}" style="cursor:pointer; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; padding:10px 18px; border-radius:10px;">Cancel</div>
+              <div onClick="{{ closeSettings }}" style="cursor:pointer; font-size:13px; font-weight:600; color:#fff; background:#6B4EE6; padding:10px 20px; border-radius:10px;">Save changes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { tab: 'Overview', range: 'Last 30 days', rangeMenu: false, metrics: {}, hovers: {}, anim: 0, settings: false, sTab: 'Targets', panel: 'sug' };
+
+  setSlice(k, patch) {
+    this.setState((prev) => ({ [k]: Object.assign({}, prev[k], typeof patch === 'function' ? patch(prev[k]) : patch) }));
+  }
+
+  build() {
+    const st = this.state;
+    const self = { set: (patch) => this.set(patch) };
+    const stop = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); };
+    const ic = (ds, size, sw) => React.createElement('svg', { width: size || 14, height: size || 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d: d })));
+    const UP = ic(['M12 19V5', 'M5 12l7-7 7 7'], 10, 3);
+    const DOWN = ic(['M12 5v14', 'M19 12l-7 7-7-7'], 10, 3);
+    const UP12 = ic(['M12 19V5', 'M5 12l7-7 7 7'], 11, 3);
+    const DOWN12 = ic(['M12 5v14', 'M19 12l-7 7-7-7'], 11, 3);
+
+    // ---------- page tabs ----------
+    const TABS = [
+      { label: 'Overview',    ds: ['M3 3h7v7H3z', 'M14 3h7v7h-7z', 'M14 14h7v7h-7z', 'M3 14h7v7H3z'] },
+      { label: 'Ask Birdy',   ds: ['M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z'] },
+      { label: 'Marketing',   ds: ['M3 11l18-5v12L3 13v-2z', 'M11.6 16.8a3 3 0 1 1-5.8-1.6'] },
+      { label: 'Call Centre', ds: ['M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z'] },
+      { label: 'Leads',       ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'] },
+    ];
+    const pageTabs = TABS.map((t) => {
+      const on = t.label === st.tab;
+      return {
+        label: t.label,
+        icon: ic(t.ds, 15),
+        color: on ? '#1F1B33' : '#8A8A9A',
+        weight: on ? '600' : '500',
+        border: on ? '2px solid #6B4EE6' : '2px solid transparent',
+        pick: (ev) => { stop(ev); self.set({ tab: t.label }); },
+      };
+    });
+
+    // ---------- monthly goals ----------
+    const goalDefs = [
+      { label: 'Net revenue',     value: '£184,250', target: '£200,000', bar: '92%',  state: 'On track', tone: 'good', note: '92% of target',  iBg: '#EDF8F1', iCol: '#25A55F', ds: ['M12 2v20', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'] },
+      { label: 'Monthly closes',  value: '14',       target: '15',       bar: '93%',  state: 'On track', tone: 'good', note: '93% of target',  iBg: '#F1EEFC', iCol: '#6B4EE6', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M8.5 12l2.5 2.5 4.5-4.5'] },
+      { label: 'Cost per lead',   value: '£142',     target: '£100',     bar: '100%', state: 'Behind',   tone: 'bad',  note: '42% over target', iBg: '#FDF1E7', iCol: '#B4530A', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'] },
+      { label: 'Close rate',      value: '18%',      target: '25%',      bar: '72%',  state: 'At risk',  tone: 'warn', note: '72% of target',  iBg: '#FDF6EC', iCol: '#E0920A', ds: ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6'] },
+      { label: 'Number of leads', value: '766',      target: '700',      bar: '100%', state: 'On track', tone: 'good', note: '109% of target', iBg: '#EAF1FD', iCol: '#3B7DD6', ds: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M22 11l-3 3-2-2'] },
+    ];
+    const TONE = {
+      good: { color: '#25A55F', bg: '#EDF8F1', noteColor: '#9A9AAB' },
+      warn: { color: '#E0920A', bg: '#FDF6EC', noteColor: '#9A9AAB' },
+      bad:  { color: '#E5484D', bg: '#FEF1F1', noteColor: '#E5484D' },
+    };
+    const goals = goalDefs.map((g, gi2) => Object.assign({}, g, TONE[g.tone], {
+      borderRight: gi2 === goalDefs.length - 1 ? 'none' : '1px solid #F1F1F5',
+      iconEl: React.createElement('svg', { width: 15, height: 15, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, g.ds.map((d, di) => React.createElement('path', { key: di, d: d }))),
+    }));
+
+    // ---------- chart ----------
+    const MONTHS = ['Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug'];
+    const METRICS = {
+      leads:  { label: 'Leads',   title: 'Leads',        sub: 'Lead volume for Aura',            total: '766',     delta: '▲ 9.4%',   up: true,  vals: [48,56,52,64,60,71,66,78,74,86,80,92], mult: 8.3 },
+      spend:  { label: 'Spend',   title: 'Ad spend',     sub: 'Meta spend for Aura',             total: '£8,742',  delta: '▲ 6.1%',   up: true,  vals: [62,58,70,66,74,69,80,76,84,79,90,95], mult: 92 },
+      cpl:    { label: 'CPL',     title: 'Cost per lead',sub: 'Blended cost per lead for Aura',  total: '£142',    delta: '▲ 12.8%',  up: false, vals: [58,64,55,70,62,78,68,84,72,88,76,94], mult: 1.5 },
+      closes: { label: 'Closes',  title: 'Closes',       sub: 'Consultations won for Aura',      total: '14',      delta: '▼ 4.8%',   up: false, vals: [72,80,68,86,74,90,66,82,70,60,76,58], mult: 0.24 },
+    };
+    const CALL_METRICS = {
+      calls:    { label: 'Total calls',  title: 'Total calls',    sub: 'Call volume for Aura',                    total: '407',     delta: '▲ 9.1%',  up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90], mult: 4.5 },
+      called:   { label: 'Leads called', title: 'Leads called',   sub: 'Leads contacted in the period',           total: '162',     delta: '▲ 7.4%',  up: true,  vals: [52,61,58,70,66,74,69,80,86,79,92,100], mult: 1.6 },
+      inbound:  { label: 'Inbound',      title: 'Inbound calls',  sub: 'Calls received from leads',               total: '24',      delta: '▼ 2.6%',  up: false, vals: [70,64,78,58,82,66,74,60,86,71,63,80], mult: 0.3 },
+      talk:     { label: 'Talk time',    title: 'Total talk time',sub: 'Minutes spent on the phone',              total: '312.8',   delta: '▲ 7.2%',  up: true,  vals: [44,50,47,56,61,55,64,58,72,68,80,88], mult: 3.6 },
+    };
+    const MKT_METRICS = {
+      spend:       { label: 'Ad spend',    title: 'Total ad spend',  sub: 'Meta spend for Aura',                   total: '£8,742',  delta: '▲ 6.1%',  up: true,  vals: [62,58,70,66,74,69,80,76,84,79,90,95], mult: 92 },
+      leads:       { label: 'Leads',       title: 'Total leads',     sub: 'Lead volume across all campaigns',      total: '766',     delta: '▲ 9.4%',  up: true,  vals: [48,56,52,64,60,71,66,78,74,86,80,92], mult: 8.3 },
+      cpl:         { label: 'CPL',         title: 'Average CPL',     sub: 'Blended cost per lead for Aura',        total: '£142',    delta: '▲ 12.8%', up: false, vals: [58,64,55,70,62,78,68,84,72,88,76,94], mult: 1.5 },
+      impressions: { label: 'Impressions', title: 'Impressions',     sub: 'Total impressions served',              total: '62,035',  delta: '▲ 8.2%',  up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90], mult: 690 },
+    };
+    const LEAD_METRICS = {
+      leads:      { label: 'Leads',      title: 'Total leads',     sub: 'Lead volume for Aura',                            total: '766',  delta: '▲ 9.4%',   up: true,  vals: [52,61,58,70,66,74,69,80,86,79,92,100], mult: 8.3 },
+      contacts:   { label: 'Contacts',   title: 'Total contacts',  sub: 'Contacts captured without a lead form',           total: '58',   delta: '▲ 4.6%',   up: true,  vals: [70,64,78,58,82,66,74,60,86,71,63,80], mult: 0.7 },
+      open:       { label: 'Open',       title: 'Open leads',      sub: 'Leads still in an open opportunity stage',        total: '694',  delta: '▲ 8.1%',   up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90], mult: 7.7 },
+      conversion: { label: 'Conversion', title: 'Conversion rate', sub: 'Share of leads converting to a won opportunity',  total: '1.8%', delta: '▼ 0.4pts', up: false, vals: [74,66,81,58,88,63,77,70,84,60,90,72], mult: 0.02 },
+    };
+    const SETS = { 'Overview': METRICS, 'Ask Birdy': METRICS, 'Marketing': MKT_METRICS, 'Call Centre': CALL_METRICS, 'Leads': LEAD_METRICS };
+    const SET = SETS[st.tab] || METRICS;
+    const metricState = st.metrics || {};
+    const hoverState = st.hovers || {};
+    const key = metricState[st.tab] || Object.keys(SET)[0];
+    const c = SET[key];
+    const hoverIdx = hoverState[st.tab];
+    const setMetric = (k) => self.set((p) => ({ metrics: Object.assign({}, p.metrics, { [st.tab]: k }), anim: (p.anim || 0) + 1 }));
+    const setHover = (i) => self.set((p) => ({ hovers: Object.assign({}, p.hovers, { [st.tab]: i }) }));
+    const vals = c.vals;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const span = Math.max(max - min, 1), n = vals.length, pad = 14;
+    const halfCol = 100 / (2 * n);
+    const xPct = (i) => halfCol + (i * (100 - 2 * halfCol)) / (n - 1);
+    const xy = vals.map((v, i) => [xPct(i) * 10, 200 - pad - ((v - min) / span) * (200 - pad * 2)]);
+    const linePath = xy.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+    const areaPath = linePath + ' L' + xy[n - 1][0].toFixed(1) + ' 200 L' + xy[0][0].toFixed(1) + ' 200 Z';
+    const fmt = (raw) => {
+      const v = raw * c.mult;
+      if (key === 'spend') return '£' + Math.round(v).toLocaleString();
+      if (key === 'cpl') return '£' + Math.round(v);
+      if (key === 'conversion') return v.toFixed(1) + '%';
+      if (key === 'talk') return v.toFixed(1);
+      return Math.round(v).toLocaleString();
+    };
+    const chartPoints = xy.map(([x, y], i) => ({
+      label: MONTHS[i],
+      tipLabel: MONTHS[i] + (i < 4 ? ' 2025' : ' 2026'),
+      value: fmt(vals[i]),
+      left: xPct(i).toFixed(2) + '%',
+      top: ((y / 200) * 100).toFixed(2) + '%',
+      fill: i === n - 1 ? '#6B4EE6' : '#A98BF5',
+      glow: i === n - 1 ? '0 0 0 4px rgba(107,78,230,.18)' : 'none',
+      tipShow: hoverIdx === i ? 'block' : 'none',
+      enter: () => setHover(i),
+      leave: () => setHover(null),
+    }));
+    const chartTabs = Object.keys(SET).map((k) => {
+      const on = k === key;
+      return {
+        label: SET[k].label,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); setMetric(k); },
+      };
+    });
+
+    // ---------- overview tiles ----------
+    const TILE = [
+      { label: 'Ad spend',      value: '£8,742', pct: '6.1%',  up: true,  good: true,  bg: '#EDF8F1', color: '#25A55F', ds: ['M12 2v20', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6'] },
+      { label: 'Leads',         value: '766',    pct: '9.4%',  up: true,  good: true,  bg: '#EAF1FD', color: '#3B7DD6', ds: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M22 11l-3 3-2-2'] },
+      { label: 'Cost per lead', value: '£142',   pct: '12.8%', up: true,  good: false, bg: '#FDF1E7', color: '#B4530A', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z'] },
+      { label: 'Closes',        value: '14',     pct: '4.8%',  up: false, good: false, bg: '#F1EEFC', color: '#6B4EE6', ds: ['M8 2v4', 'M16 2v4', 'M3 10h18', 'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z', 'M9 16l2 2 4-4'] },
+      { label: 'Talk time',     value: '312.8',  pct: '7.2%',  up: true,  good: true,  bg: '#F1EEFC', color: '#6B4EE6', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M12 7v5l3 2'] },
+      { label: 'Close rate',    value: '18%',    pct: '2.4pts', up: false, good: false, bg: '#FEF1F1', color: '#E5484D', ds: ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6'] },
+    ];
+    const tiles = TILE.map((t) => ({
+      label: t.label, value: t.value, pct: t.pct, icon: ic(t.ds), bg: t.bg, color: t.color,
+      arrow: t.up ? UP : DOWN,
+      deltaColor: t.good ? '#25A55F' : '#E5484D',
+      deltaBg: t.good ? '#EDF8F1' : '#FEF1F1',
+    }));
+
+    // ---------- diagnostics funnel ----------
+    const F = [
+      { stage: 'Leads',   count: '766', delta: '↑ 9.4%',  good: true,  bg: '#F1EEFC', color: '#6B4EE6', ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'] },
+      { stage: 'Engaged', count: '541', delta: '↑ 7.1%',  good: true,  bg: '#EAF1FD', color: '#3B7DD6', ds: ['M21 11.5a8.4 8.4 0 0 1-8.5 8.5 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7A8.4 8.4 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z'] },
+      { stage: 'Convos',  count: '194', delta: '↑ 6.2%',  good: true,  bg: '#FDF6EC', color: '#E0920A', ds: ['M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.4A8 8 0 1 1 21 12z'] },
+      { stage: 'Closes',  count: '14',  delta: '↓ 4.8%',  good: false, bg: '#FEF1F1', color: '#E5484D', ds: ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M8.5 12l2.5 2.5 4.5-4.5'] },
+      { stage: 'Shows',   count: '11',  delta: '↑ 3.1%',  good: true,  bg: '#EDF8F1', color: '#25A55F', ds: ['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z'] },
+    ];
+    const funnel = F.map((f, i) => ({
+      stage: f.stage, count: f.count, delta: f.delta,
+      deltaColor: f.good ? '#25A55F' : '#E5484D',
+      bg: f.bg, color: f.color, icon: ic(f.ds, 17),
+      arrowShow: i === F.length - 1 ? 'none' : 'block',
+      barPct: Math.max(14, Math.round((parseFloat(f.count.replace(/,/g, '')) / parseFloat(F[0].count.replace(/,/g, ''))) * 100)) + '%',
+    }));
+
+    // ---------- suggestions ----------
+    const suggestions = [
+      { tag: 'HIGH',        dot: '#E5484D', source: 'Call centre · speed to lead', title: 'Restore the 5-minute callback rule', why: 'First-call time slipped 4m 12s → 11m 40s after the 6 Aug rota change. Sub-5-min leads still close at 24%.' },
+      { tag: 'HIGH',        dot: '#E5484D', source: 'Meta Ads · Body Sculpting Cbo', title: 'Pause 2 ads over CPL threshold', why: '£287 CPL against a £100 target with 0 leads in 6 days · £174 spent.' },
+      { tag: 'OPPORTUNITY', dot: '#25A55F', source: 'Meta Ads · 030925 Cbo',        title: 'Scale winning ad set +20%',        why: '£2.07 CPL and 39 results this week — the only set beating target.' },
+      { tag: 'MEDIUM',      dot: '#E0920A', source: 'Call centre · coverage',       title: 'Add an agent 2–5pm',                why: '41% of leads arrive in that window with only 2 agents rostered.' },
+    ];
+
+    // ---------- history book ----------
+    const NOTE = {
+      call:    { kind: 'Client call', color: '#6B4EE6', bg: '#F1EEFC', ds: ['M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z'] },
+      change:  { kind: 'Change',      color: '#3B7DD6', bg: '#EAF1FD', ds: ['M21 12a9 9 0 1 1-3-6.7', 'M21 4v5h-5'] },
+      win:     { kind: 'Win',         color: '#25A55F', bg: '#EDF8F1', ds: ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6'] },
+      risk:    { kind: 'Risk',        color: '#E5484D', bg: '#FEF1F1', ds: ['M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z', 'M12 9v4', 'M12 17h.01'] },
+    };
+    const noteDefs = [
+      { t: 'risk',   who: 'Birdy',    when: '4 min ago',   body: 'Close rate dropped below the 20% floor for the third day running — flagged for review.' },
+      { t: 'call',   who: 'Emma T.',  when: 'Today, 10:05', body: 'Monthly call with Aura. They want more volume on face sculpt and are happy to lift budget to £12k if CPL comes back under £120.' },
+      { t: 'change', who: 'Birdy',    when: 'Yesterday',   body: 'Auto-paused 2 ads on Body Sculpting Cbo after CPL breached £250 for 48 hours.' },
+      { t: 'win',    who: 'Emma T.',  when: '14 Aug 2026', body: 'Record week — 806 clicks at 4.83% CTR on £84 spend. Shared the numbers with the client.' },
+    ];
+    const notes = noteDefs.map((d) => Object.assign({}, NOTE[d.t], { who: d.who, when: d.when, body: d.body, icon: ic(NOTE[d.t].ds, 13) }));
+
+    // ---------- per-tab table content ----------
+    const cell = (text, flex, min, strong, muted) => ({
+      text, flex: String(flex), min: min || '0px',
+      weight: strong ? '600' : (muted ? '400' : '400'),
+      color: strong ? '#1F1B33' : (muted ? '#9A9AAB' : '#5A5A6E'),
+    });
+    let cols = [], tableRows = [], tabKpis = [], subTabs = [], searchLabel = 'Search…';
+    const B = (t) => React.createElement('strong', { style: { color: '#fff' } }, t);
+    let tabInsight = React.createElement(React.Fragment, null,
+      'Leads are up ', B('9.4%'), ' but closes fell ', B('4.8%'), ' — close rate is the bottleneck, not lead flow. ',
+      B('58 leads'), ' have had no contact attempt in 48 hours, and 3 of 5 lost calls never got a price quote.');
+
+    const KPI = (label, value, pct, up, good, bg, color, ds) => ({
+      label, value, pct, icon: ic(ds, 16), bg, color,
+      arrow: up ? UP12 : DOWN12,
+      deltaColor: good ? '#25A55F' : '#E5484D',
+      deltaBg: good ? '#EDF8F1' : '#FEF1F1',
+    });
+    const PHONE = ['M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z'];
+
+    const mkSub = (labels) => labels.map((l, i) => ({
+      label: l,
+      color: i === 0 ? '#1F1B33' : '#6B6480',
+      bg: i === 0 ? '#fff' : 'transparent',
+      shadow: i === 0 ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+    }));
+
+    if (st.tab === 'Marketing') {
+      searchLabel = 'Search campaigns…';
+      subTabs = mkSub(['Campaigns', 'Ad Sets', 'Ads', 'Leads']);
+      tabInsight = React.createElement(React.Fragment, null,
+        'Spend is up 6.1% but CPL has drifted to ', React.createElement('strong', { style: { color: '#fff' } }, '£142'),
+        ' — 42% over target. ', React.createElement('strong', { style: { color: '#fff' } }, 'Body Sculpting 160426'),
+        ' is the worst offender at £287 CPL with 0 results — pausing it would free £174 for your £2.07 CPL winner.');
+      tabKpis = [
+        KPI('Active campaigns', '5',       '1',      true,  true,  '#F1EEFC', '#6B4EE6', ['M3 11l18-5v12L3 13v-2z']),
+        KPI('Ad spend',         '£8,742',  '6.1%',   true,  true,  '#EDF8F1', '#25A55F', ['M12 2v20', 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6']),
+        KPI('Leads',            '766',     '9.4%',   true,  true,  '#EAF1FD', '#3B7DD6', ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z']),
+        KPI('Average CPL',      '£142',    '12.8%',  true,  false, '#FDF1E7', '#B4530A', ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z']),
+        KPI('Impressions',      '62,035',  '8.2%',   true,  true,  '#EAF1FD', '#3B7DD6', ['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z']),
+        KPI('Average CTR',      '4.18%',   '2.1%',   true,  true,  '#F1EEFC', '#6B4EE6', ['M3 3l7.1 17 2.5-6.8 6.8-2.5z']),
+      ];
+      cols = [
+        { label: 'CAMPAIGN', flex: '2.4', min: '210px' },
+        { label: 'SPEND ↓', flex: '1', min: '0px' },
+        { label: 'CPL', flex: '0.9', min: '0px' },
+        { label: 'RESULTS', flex: '0.9', min: '0px' },
+        { label: 'IMPRESSIONS', flex: '1', min: '0px' },
+        { label: 'REACH', flex: '1', min: '0px' },
+        { label: 'CLICKS', flex: '0.9', min: '0px' },
+        { label: 'CTR', flex: '0.8', min: '0px' },
+      ];
+      const mk = (name, spend, cpl, res, imp, reach, clicks, ctr, over) => ({
+        cells: [
+          cell(name, 2.4, '210px', true),
+          cell(spend, 1, '0px', true),
+          Object.assign(cell(cpl, 0.9), { color: over ? '#E5484D' : '#1F1B33', weight: '600' }),
+          cell(res, 0.9), cell(imp, 1), cell(reach, 1), cell(clicks, 0.9), cell(ctr, 0.8),
+        ],
+      });
+      tableRows = [
+        mk('Soup – Body Sculpting – 030925 – Cbo', '£80.74', '£2.07', '39', '16,184', '11,052', '861', '5.32%', false),
+        mk('Soup – Body Sculpting – 160426 – Cbo', '£174.20', '£287.00', '0', '9,412', '6,108', '212', '2.25%', true),
+        mk('Soup – Face Sculpting (phase 1)', '£116.66', '£3.65', '32', '10,014', '6,565', '286', '2.86%', false),
+        mk('Soup – Body Sculpting Packages', '£125.46', '£6.60', '19', '14,785', '8,934', '539', '3.65%', true),
+        mk('Soup – Lymphatic Drainage – 210726', '£98.30', '£4.28', '23', '11,640', '7,215', '402', '3.45%', false),
+      ];
+    } else if (st.tab === 'Call Centre') {
+      searchLabel = 'Search calls…';
+      subTabs = mkSub(['Leads', 'Calls', 'Agents']);
+      tabInsight = React.createElement(React.Fragment, null,
+        'Call volume is up 9.1% but ', React.createElement('strong', { style: { color: '#fff' } }, 'speed to lead has slipped to 11m 40s'),
+        ' since the 6 Aug rota change. Leads called inside 5 minutes still close at ',
+        React.createElement('strong', { style: { color: '#fff' } }, '24%'), ' — restoring the callback rule is the fastest fix.');
+      tabKpis = [
+        KPI('Leads called',   '162',     '7.4%',   true,  true,  '#F1EEFC', '#6B4EE6', ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z']),
+        KPI('Total calls',    '407',     '9.1%',   true,  true,  '#EAF1FD', '#3B7DD6', PHONE),
+        KPI('Speed to lead',  '11m 40s', '7m',     true,  false, '#FDF1E7', '#B4530A', ['M13 2L3 14h9l-1 8 10-12h-9z']),
+        KPI('Answer rate',    '62.4%',   '3.1pts', true,  true,  '#EDF8F1', '#25A55F', PHONE),
+        KPI('Calls per close','5.8',     '0.4',    false, true,  '#EDF8F1', '#25A55F', ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10z']),
+        KPI('Talk time',      '312.8',   '7.2%',   true,  true,  '#F1EEFC', '#6B4EE6', ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M12 7v5l3 2']),
+      ];
+      cols = [
+        { label: 'LEAD', flex: '1.6', min: '160px' },
+        { label: 'PHONE', flex: '1.2', min: '0px' },
+        { label: 'CALLS', flex: '0.7', min: '0px' },
+        { label: 'TALK TIME', flex: '1', min: '0px' },
+        { label: 'FIRST CALL', flex: '1.1', min: '0px' },
+        { label: 'LAST CALL', flex: '1.1', min: '0px' },
+        { label: 'AGENT', flex: '1', min: '0px' },
+        { label: 'DISPOSITION', flex: '1.2', min: '0px' },
+      ];
+      const mk = (name, phone, calls, talk, first, last, agent, disp) => ({
+        cells: [
+          cell(name, 1.6, '160px', true), cell(phone, 1.2), cell(calls, 0.7),
+          cell(talk, 1, '0px', true), cell(first, 1.1, '0px', false, true), cell(last, 1.1, '0px', false, true),
+          cell(agent, 1), cell(disp, 1.2),
+        ],
+      });
+      tableRows = [
+        mk('Kumuduni Weerasuriya', '+447482299588', '4', '12m 08s', '17/08/2026', '17/08/2026', 'Emma T.', 'Consultation booked'),
+        mk('Jenny Page', '+441512008085', '2', '5m 42s', '17/08/2026', '17/08/2026', 'Sana K.', 'Callback requested'),
+        mk('Joanne Roberts', '+447505371301', '3', '8m 15s', '16/08/2026', '17/08/2026', 'Emma T.', 'No answer'),
+        mk('Lindsay Connell', '+447465238999', '1', '2m 04s', '16/08/2026', '16/08/2026', 'Sana K.', 'Not interested'),
+        mk('Alison Miller', '+447974207844', '5', '18m 30s', '15/08/2026', '17/08/2026', 'Emma T.', 'Consultation booked'),
+      ];
+    } else if (st.tab === 'Leads') {
+      searchLabel = 'Search leads…';
+      subTabs = mkSub(['All Leads', 'Open', 'Won', 'Abandoned', 'Lost']);
+      tabInsight = React.createElement(React.Fragment, null,
+        'Lead volume is up 9.4% but conversion has fallen to ', React.createElement('strong', { style: { color: '#fff' } }, '1.8%'),
+        '. ', React.createElement('strong', { style: { color: '#fff' } }, '58 leads'),
+        ' have had no contact attempt in 48 hours — the largest untouched pool this month.');
+      tabKpis = [
+        KPI('Total leads',     '766',  '9.4%',   true,  true,  '#F1EEFC', '#6B4EE6', ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M22 11l-3 3-2-2']),
+        KPI('Total contacts',  '58',   '4.6%',   true,  true,  '#EAF1FD', '#3B7DD6', ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z', 'M22 21v-2a4 4 0 0 0-3-3.9']),
+        KPI('Open leads',      '694',  '8.1%',   true,  true,  '#F1EEFC', '#6B4EE6', ['M3 3v18h18', 'M7 14l4-4 3 3 5-6']),
+        KPI('Won',             '14',   '4.8%',   false, false, '#EDF8F1', '#25A55F', ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M8.5 12l2.5 2.5 4.5-4.5']),
+        KPI('Lost leads',      '31',   '9.8%',   true,  false, '#FEF1F1', '#E5484D', ['M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18z', 'M15 9l-6 6', 'M9 9l6 6']),
+        KPI('Conversion rate', '1.8%', '0.4pts', false, false, '#FDF1E7', '#B4530A', ['M23 6l-9.5 9.5-5-5L1 18', 'M17 6h6v6']),
+      ];
+      cols = [
+        { label: 'NAME', flex: '1.5', min: '150px' },
+        { label: 'EMAIL', flex: '1.8', min: '180px' },
+        { label: 'PHONE', flex: '1.2', min: '0px' },
+        { label: 'DATE ADDED ↓', flex: '1.1', min: '0px' },
+        { label: 'SOURCE', flex: '1.1', min: '0px' },
+        { label: 'TYPE', flex: '0.7', min: '0px' },
+        { label: 'STATUS', flex: '0.9', min: '0px' },
+        { label: 'VALUE', flex: '0.7', min: '0px' },
+      ];
+      const mk = (name, email, phone, date, source, type, status, value) => ({
+        cells: [
+          cell(name, 1.5, '150px', true), cell(email, 1.8, '180px'), cell(phone, 1.2),
+          cell(date, 1.1, '0px', false, true), cell(source, 1.1), cell(type, 0.7),
+          cell(status, 0.9), cell(value, 0.7, '0px', true),
+        ],
+      });
+      tableRows = [
+        mk('Kumuduni Weerasuriya', 'kumudu23@icloud.com', '+447482299588', 'Aug 16, 2026', 'Facebook', 'Lead', 'Open', '£349'),
+        mk('Елена Астапова', 'jelenkauk@hotmail.com', '+447427279000', 'Aug 16, 2026', 'Facebook', 'Lead', 'Open', '£349'),
+        mk('Jenny Page', 'jenmpage@hotmail.co.uk', '+441512008085', 'Aug 16, 2026', 'Facebook', 'Lead', 'Open', '£349'),
+        mk('Janet Seels', '–', '+447565089560', 'Aug 16, 2026', 'Inbound call', 'Contact', 'Open', '—'),
+        mk('Alison Miller', 'alijsanchez@hotmail.com', '+447974207844', 'Aug 16, 2026', 'Facebook', 'Lead', 'Won', '£349'),
+      ];
+    }
+    tableRows = tableRows.map((r, i) => Object.assign({}, r, { rowBg: i % 2 ? '#fff' : '#FCFCFD' }));
+
+    // ---------- settings ----------
+    const S_TABS = ['Details', 'Targets', 'Integrations'];
+    const clientStatus = st.clientStatus || 'Active';
+    const clientStatusMenu = st.clientStatusMenu ? 'block' : 'none';
+    const clientStatusList = ['Active', 'Inactive'].map((v) => ({
+      name: v,
+      color: v === clientStatus ? '#6B4EE6' : '#5A5A6E',
+      bg: v === clientStatus ? '#F1EEFC' : 'transparent',
+      pick: (ev) => { stop(ev); self.set({ clientStatus: v, clientStatusMenu: false }); },
+    }));
+    const HEALTH_TONE = { Healthy: '#25A55F', Warning: '#E0920A', Critical: '#E5484D' };
+    const clientHealth = st.clientHealth || 'Healthy';
+    const clientHealthMenu = st.clientHealthMenu ? 'block' : 'none';
+    const clientHealthList = ['Healthy', 'Warning', 'Critical'].map((v) => ({
+      name: v,
+      color: v === clientHealth ? '#6B4EE6' : '#5A5A6E',
+      bg: v === clientHealth ? '#F1EEFC' : 'transparent',
+      pick: (ev) => { stop(ev); self.set({ clientHealth: v, clientHealthMenu: false }); },
+    }));
+    const settingsTabs = S_TABS.map((l) => {
+      const on = l === st.sTab;
+      return {
+        label: l,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); self.set({ sTab: l }); },
+      };
+    });
+    const targetFields = [
+      { label: 'Target cost per lead',   prefix: '£', value: '100',     suffix: 'per lead',  help: 'Drives the red CPL flag and Birdy pause suggestions' },
+      { label: 'Target monthly closes',  prefix: '',  value: '15',      suffix: 'closes',    help: 'Used for the goal bar and pacing alerts' },
+      { label: 'Target monthly revenue', prefix: '£', value: '200,000', suffix: 'per month', help: 'Net revenue attributed to Aura' },
+      { label: 'Target close rate',      prefix: '',  value: '25',      suffix: '%',         help: 'Convos to closes — feeds the diagnostics engine' },
+      { label: 'Target monthly spend',   prefix: '£', value: '12,000',  suffix: 'per month', help: 'Birdy warns when pacing runs over' },
+      { label: 'Average order value',    prefix: '£', value: '349',     suffix: 'per close', help: 'Used to project revenue from open leads' },
+    ];
+    const ON = { toggleBg: '#6B4EE6', toggleAlign: 'flex-end' };
+    const OFF = { toggleBg: '#CFCFDA', toggleAlign: 'flex-start' };
+    const thresholds = [
+      Object.assign({ label: 'CPL breach alert',      help: 'Alert when an ad set exceeds this multiple of target CPL', value: '2.5×' }, ON),
+      Object.assign({ label: 'Zero-lead window',      help: 'Alert when an active ad set returns no leads for this long', value: '48 hrs' }, ON),
+      Object.assign({ label: 'Speed to lead ceiling', help: 'Alert when average first-call time passes this',            value: '5 min' }, ON),
+      Object.assign({ label: 'Close rate floor',      help: 'Alert when close rate falls below this',                    value: '20%' }, OFF),
+    ];
+    const automations = [
+      Object.assign({ label: 'Auto-pause ads over CPL threshold', help: 'Birdy pauses without asking and logs it to the history book' }, ON),
+      Object.assign({ label: 'Auto-scale winning ad sets',        help: 'Up to +20% per week on sets beating target CPL' }, OFF),
+      Object.assign({ label: 'Weekly client digest',              help: 'Emails Emma T. a performance summary every Monday' }, ON),
+    ];
+    const integrations = [
+      { name: 'GoHighLevel', mark: 'GHL', bg: '#EDF8F1', color: '#25A55F', k1: 'Location', v1: 'Aura', refresh: '17/08, 16:43' },
+      { name: 'Meta Ads',    mark: 'M',   bg: '#EAF1FD', color: '#3B7DD6', k1: 'Currency', v1: 'GBP',  refresh: '17/08, 16:23' },
+      { name: 'HotProspector', mark: 'HP', bg: '#F1EEFC', color: '#6B4EE6', k1: 'Group ID', v1: 'aura-01', refresh: '17/08, 15:46' },
+    ];
+    const detailFields = [
+      { label: 'Client name',     value: 'Aura' },
+      { label: 'Primary contact', value: 'Emma Thompson' },
+      { label: 'Location',       value: 'Glasgow, UK' },
+      { label: 'Client since',   value: 'March 2025' },
+    ];
+
+    return {
+      pageTabs, goals, tiles, funnel, suggestions, notes,
+      chartTabs, chartPoints, linePath, areaPath,
+      chartTitle: c.title,
+      chartSub: st.range + ' · ' + c.sub,
+      chartTotal: c.total,
+      chartDelta: c.delta,
+      chartDeltaColor: c.up ? '#25A55F' : '#E5484D',
+      drawAnim: ((st.anim || 0) % 2 ? 'cdDrawB' : 'cdDrawA') + ' 800ms cubic-bezier(.4,0,.2,1) forwards',
+      fadeAnim: ((st.anim || 0) % 2 ? 'cdFadeB' : 'cdFadeA') + ' 800ms ease-out forwards',
+      showOverview: st.tab === 'Overview' ? 'block' : 'none',
+      showAsk: st.tab === 'Ask Birdy' ? 'block' : 'none',
+      showTable: (st.tab === 'Marketing' || st.tab === 'Call Centre' || st.tab === 'Leads') ? 'block' : 'none',
+      cols, tableRows, tabKpis, subTabs, searchLabel, tabInsight,
+      funnel4: funnel.filter((x, xi) => xi !== 1).map((f, fi, arr) => {
+        const up = f.delta.indexOf('↑') === 0;
+        return Object.assign({}, f, {
+          convPct: fi === 0 ? '100%' : Math.round((parseFloat(f.count.replace(/,/g, '')) / parseFloat(arr[fi - 1].count.replace(/,/g, ''))) * 100) + '%',
+          deltaArrow: up ? '↑' : '↓',
+          deltaPct: f.delta.replace(/[↑↓]\s*/, ''),
+          deltaBg: up ? '#EDF8F1' : '#FEF1F1',
+        });
+      }),
+      funnel4Snake: funnel.filter((x, xi) => xi !== 1).map((f, fi) => Object.assign({}, f, [
+        { gridColumn: '1', gridRow: '1' },
+        { gridColumn: '3', gridRow: '1' },
+        { gridColumn: '3', gridRow: '3' },
+        { gridColumn: '1', gridRow: '3' },
+      ][fi])),
+      panelSug: (st.panel || 'sug') === 'sug' ? 'flex' : 'none',
+      panelAct: st.panel === 'act' ? 'flex' : 'none',
+      sugColor: (st.panel || 'sug') === 'sug' ? '#1F1B33' : '#6B6480',
+      sugBg: (st.panel || 'sug') === 'sug' ? '#fff' : 'transparent',
+      sugShadow: (st.panel || 'sug') === 'sug' ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+      sugBadgeColor: (st.panel || 'sug') === 'sug' ? '#6B4EE6' : '#8A8A9A',
+      sugBadgeBg: (st.panel || 'sug') === 'sug' ? '#F1EEFC' : '#E7E7ED',
+      actColor: st.panel === 'act' ? '#1F1B33' : '#6B6480',
+      actBg: st.panel === 'act' ? '#fff' : 'transparent',
+      actShadow: st.panel === 'act' ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+      actBadgeColor: st.panel === 'act' ? '#6B4EE6' : '#8A8A9A',
+      actBadgeBg: st.panel === 'act' ? '#F1EEFC' : '#E7E7ED',
+      showSug: (ev) => { stop(ev); self.set({ panel: 'sug' }); },
+      showAct: (ev) => { stop(ev); self.set({ panel: 'act' }); },
+      activity: [
+        { action: 'Paused 2 ads over CPL threshold', mode: 'Auto-run', time: '4 min ago',  icon: '⚡', color: '#6B4EE6', bg: '#F1EEFC' },
+        { action: 'Increased daily budget to £48',   mode: 'Approved', time: '22 min ago', icon: '✓', color: '#25A55F', bg: '#EDF8F1' },
+        { action: 'Rotated in new creative set',     mode: 'Approved', time: '1 hr ago',   icon: '✓', color: '#25A55F', bg: '#EDF8F1' },
+        { action: 'Callback rule restored to 5 min', mode: 'Auto-run', time: '3 hrs ago',  icon: '⚡', color: '#6B4EE6', bg: '#F1EEFC' },
+        { action: 'Reallocated £120 to top ad set',  mode: 'Approved', time: '5 hrs ago',  icon: '✓', color: '#25A55F', bg: '#EDF8F1' },
+        { action: 'Fixed GHL lead sync mapping',     mode: 'Auto-run', time: '8 hrs ago',  icon: '⚡', color: '#6B4EE6', bg: '#F1EEFC' },
+      ],
+      range: st.range,
+      rangeMenu: st.rangeMenu ? 'block' : 'none',
+      toggleRange: () => self.set((p) => ({ rangeMenu: !p.rangeMenu })),
+      rangeList: ['Today', 'Last 7 days', 'Last 30 days', 'This quarter'].map((nm) => {
+        const on = nm === st.range;
+        return { name: nm, color: on ? '#6B4EE6' : '#5A5A6E', bg: on ? '#F1EEFC' : 'transparent', pick: (ev) => { stop(ev); self.set({ range: nm, rangeMenu: false }); } };
+      }),
+      settingsShow: st.settings ? 'flex' : 'none',
+      openSettings: () => self.set({ settings: true }),
+      closeSettings: () => self.set({ settings: false }),
+      settingsTabs,
+      showTargets: st.sTab === 'Targets' ? 'block' : 'none',
+      showIntegrations: st.sTab === 'Integrations' ? 'block' : 'none',
+      showDetails: st.sTab === 'Details' ? 'block' : 'none',
+      targetFields, thresholds, automations, integrations, detailFields,
+      clientStatus, clientStatusMenu, clientStatusList,
+      clientStatusColor: clientStatus === 'Active' ? '#25A55F' : '#9A9AAB',
+      toggleClientStatusMenu: (ev) => { stop(ev); self.set((p) => ({ clientStatusMenu: !p.clientStatusMenu, clientHealthMenu: false })); },
+      clientHealth, clientHealthMenu, clientHealthList,
+      clientHealthColor: HEALTH_TONE[clientHealth],
+      toggleClientHealthMenu: (ev) => { stop(ev); self.set((p) => ({ clientHealthMenu: !p.clientHealthMenu, clientStatusMenu: false })); },
+    };
+  }
+
+  renderVals() {
+    return this.build();
+  }
+}
+</script>
+</body>
+</html>
