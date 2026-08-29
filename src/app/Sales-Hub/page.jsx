@@ -29,8 +29,10 @@ import { usePageHeader } from "@/components/page-header"
 //   actually plotted rather than borrowing the tiles'.
 
 export default function SalesHubPage() {
-  const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
-    useClientGroups(DEFAULT_DATE_PRESET)
+  const {
+    clientGroups, loading: groupsLoading, error: groupsError, refresh,
+    datePreset, setDatePreset,
+  } = useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const { granularity, setGranularity } = useGranularity(datePreset)
 
@@ -71,6 +73,8 @@ export default function SalesHubPage() {
         datePreset={datePreset}
         selectedClientGroup={selectedClientGroup}
         granularity={granularity}
+        groupsError={groupsError}
+        onRetry={refresh}
       />
 
       <CallCentreContent

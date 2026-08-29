@@ -186,6 +186,8 @@ export default function ClientDetailsPage() {
   const {
     clientGroups: allGroups,
     loading: groupsLoading,
+    error: groupsError,
+    refresh,
     datePreset,
     setDatePreset,
     invalidate,
@@ -697,7 +699,7 @@ export default function ClientDetailsPage() {
           <MarketingContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
-            groupsError={null}
+            groupsError={groupsError}
             datePreset={datePreset}
             setDatePreset={setDatePreset}
             showGroupFilter={false}
@@ -713,6 +715,8 @@ export default function ClientDetailsPage() {
           <CallCentreOverview
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
+            groupsError={groupsError}
+            onRetry={refresh}
             datePreset={datePreset}
             selectedClientGroup={matchingGroup?.id ?? "all"}
           />
@@ -731,6 +735,8 @@ export default function ClientDetailsPage() {
           <LeadHubOverview
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
+            groupsError={groupsError}
+            onRetry={refresh}
             datePreset={datePreset}
             selectedClientGroup={matchingGroup?.id ?? "all"}
           />

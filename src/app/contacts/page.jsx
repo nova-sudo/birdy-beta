@@ -30,8 +30,10 @@ import { usePageHeader } from "@/components/page-header"
 // this page makes one lightweight call for it (limit=1, stats only) below.
 
 export default function ContactPage() {
-  const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
-    useClientGroups(DEFAULT_DATE_PRESET)
+  const {
+    clientGroups, loading: groupsLoading, error: groupsError, refresh,
+    datePreset, setDatePreset,
+  } = useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const { granularity, setGranularity } = useGranularity(datePreset)
 
@@ -77,6 +79,8 @@ export default function ContactPage() {
         datePreset={datePreset}
         selectedClientGroup={selectedClientGroup}
         granularity={granularity}
+        groupsError={groupsError}
+        onRetry={refresh}
       />
 
       <LeadsContent

@@ -9,7 +9,7 @@
 // lives inside MarketingContent — looked finished.
 
 import { useMemo, useState } from "react"
-import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
+import { CALL_CHART_LOADING, LoadError, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { InsightCard } from "@/components/saleshub/InsightCard"
 import { KpiTiles } from "@/components/saleshub/KpiTiles"
 import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight"
@@ -32,6 +32,8 @@ export function CallCentreOverview({
   datePreset,
   selectedClientGroup = "all",
   granularity,
+  groupsError,
+  onRetry,
 }) {
   const [chartMetric, setChartMetric] = useState("calls")
 
@@ -55,6 +57,12 @@ export function CallCentreOverview({
   const chart = metric && {
     ...metric,
     subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
+  }
+
+  // A failed fetch must not read as a quiet week: every tile below sums an
+  // empty list to 0, and nothing else on the page says why.
+  if (groupsError) {
+    return <LoadError className="mb-[18px]" error={groupsError} onRetry={onRetry} />
   }
 
   return (

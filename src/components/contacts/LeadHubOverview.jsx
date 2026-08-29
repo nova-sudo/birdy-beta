@@ -20,7 +20,7 @@ import {
   windowLeadTotals,
 } from "@/lib/leadhub-totals"
 import { percentDelta } from "@/lib/portfolio-aggregate"
-import { CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, LoadError, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { InsightCard } from "@/components/saleshub/InsightCard"
 import { KpiTiles } from "@/components/saleshub/KpiTiles"
 import { KPI_PRESENTATION } from "@/app/contacts/presentation"
@@ -40,6 +40,8 @@ export function LeadHubOverview({
   datePreset,
   selectedClientGroup = "all",
   granularity,
+  groupsError,
+  onRetry,
 }) {
   const [chartMetric, setChartMetric] = useState("leads")
 
@@ -111,6 +113,12 @@ export function LeadHubOverview({
   const chart = metric && {
     ...metric,
     subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
+  }
+
+  // See CallCentreOverview: zeroes from an empty list are indistinguishable
+  // from a genuinely quiet window unless the failure is stated.
+  if (groupsError) {
+    return <LoadError className="mb-[18px]" error={groupsError} onRetry={onRetry} />
   }
 
   return (

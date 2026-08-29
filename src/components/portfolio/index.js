@@ -10,6 +10,7 @@ export { DiagnosticBanner } from "./DiagnosticBanner";
 export { FunnelStepper } from "./FunnelStepper";
 export { InsightCard } from "./InsightCard";
 export { Leaderboard } from "./Leaderboard";
+export { LoadError } from "./LoadError";
 export { LoadingPulse, FUNNEL_LOADING, CHART_LOADING, CALL_CHART_LOADING } from "./LoadingPulse";
 export { PdCard } from "./PdCard";
 export { PdMenu } from "./PdMenu";

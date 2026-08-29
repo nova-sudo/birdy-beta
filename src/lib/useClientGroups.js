@@ -3,8 +3,18 @@ import { apiRequest } from "./api"
 import { getCachedData, setCachedData, clearCache } from "./cache"
 import { CACHE_KEYS, DEFAULT_DATE_PRESET } from "./constants"
 
-function cacheKey(preset) {
-  return `${CACHE_KEYS.CLIENT_GROUPS}_${preset}`
+// The variant is part of the key, not just the preset.
+//
+// /clients asks for include_daily=false, everyone else asks for the full
+// payload. Sharing one key meant the two overwrote each other: open the
+// Client Hub, then the Lead or Sales Hub, and the hub read back a cached
+// payload with no ghl_daily_leads / meta_daily_spend / hp_daily_calls. Those
+// series are exactly what its KPI tiles and trend chart sum, so it painted
+// zeroes — and with `loading` already false, they read as finished figures.
+// Changing the date preset was the only way out, because that was the only
+// thing that moved the key.
+function cacheKey(preset, includeDaily) {
+  return `${CACHE_KEYS.CLIENT_GROUPS}_${preset}_${includeDaily ? "full" : "lite"}`
 }
 
 /**
@@ -48,7 +58,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     // request goes out behind it and corrects the numbers when it lands.
     let servedFromCache = false
     if (!forceRefresh) {
-      const cached = getCachedData(cacheKey(preset))
+      const cached = getCachedData(cacheKey(preset, includeDaily))
       if (cached) {
         setClientGroups(cached.groups || cached)
         setMeta(cached.meta || null)
@@ -92,7 +102,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
       // Only cache when all groups are fully loaded
       const hasIncomplete = groups.some(g => g.status === "creating" || g.status === "pending")
       if (!hasIncomplete) {
-        setCachedData(cacheKey(preset), { groups, meta: responseMeta })
+        setCachedData(cacheKey(preset, includeDaily), { groups, meta: responseMeta })
       }
       setHasIncompleteGroups(hasIncomplete)
 

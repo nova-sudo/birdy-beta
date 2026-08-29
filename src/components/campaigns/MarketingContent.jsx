@@ -43,7 +43,7 @@ import { usePageHeader } from "@/components/page-header"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { pdFontClass } from "@/lib/pd-fonts"
-import { CHART_LOADING, InsightCard, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
@@ -1056,6 +1056,11 @@ export function MarketingContent({
             top bar beside the bell and the profile menu — published by
             usePageHeader above. The handoff puts filters in the header, so the
             page starts straight at its content. */}
+
+        {/* The prop was accepted and then dropped, so a failed client-groups
+            fetch rendered as an empty account list and zeroed totals — a
+            silent failure that looked like a quiet month. */}
+        {groupsError && <LoadError error={groupsError} onRetry={onCacheInvalidate} />}
 
         {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
         {(() => {
