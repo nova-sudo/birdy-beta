@@ -1049,7 +1049,14 @@ export function MarketingContent({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-dvh w-[calc(100dvw-70px)] mx-auto md:w-[calc(100dvw-130px)]">
+    // Width comes from the container, the way every other hub screen takes it
+    // (SalesHubShell — Sales, Leads, Clients, Dashboard). This used to size
+    // itself off the viewport minus 130px, but the collapsed rail is only 48px
+    // and the layout has already inset this screen by its own p-6: the sum was
+    // ~82px of width thrown away and, being mx-auto, split into gutters far
+    // wider than the neighbouring hubs'. It went wrong in the embedded case
+    // too — /clients/[id]'s Marketing tab measures a viewport it doesn't own.
+    <div className="min-w-0">
       <div className="flex flex-col gap-6">
 
         {/* The title block and the date/group filters now live in the global
