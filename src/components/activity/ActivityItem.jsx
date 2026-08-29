@@ -1,5 +1,12 @@
 import { Zap, Check, Trash2, Clock, RotateCcw } from "lucide-react";
 
+// The only kinds any feed surfaces: things that actually changed something.
+// Analysis passes, freshly-created suggestions and untyped legacy rows are
+// process noise and stay hidden everywhere.
+export const FEED_KINDS = ["action_applied", "suggestion_dismissed"];
+
+export const isFeedActivity = (a) => FEED_KINDS.includes(a?.kind);
+
 // Icon + tone per activity kind, falling back to the actor when kind is absent.
 function activityVisual(kind, isBirdy) {
   switch (kind) {

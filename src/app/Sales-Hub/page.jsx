@@ -3,21 +3,15 @@
 import { useMemo, useState } from "react"
 
 import { useClientGroups } from "@/lib/useClientGroups"
-import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants"
-import { buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight"
-import { formatTotal, sumCallStats } from "@/lib/saleshub-totals"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
+import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { GranularitySelect } from "@/components/GranularitySelect"
 import { useGranularity } from "@/lib/useGranularity"
-import { CALL_CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
-import { InsightCard } from "@/components/saleshub/InsightCard"
-import { KpiTiles } from "@/components/saleshub/KpiTiles"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
-import { KPI_PRESENTATION } from "./presentation"
-import { useSalesHubSeries } from "./useSalesHubSeries"
 
 // ─── Sales Hub ──────────────────────────────────────────────────────────────
 // Call-centre performance across every Hot Prospector client: is the outreach
@@ -33,9 +27,6 @@ import { useSalesHubSeries } from "./useSalesHubSeries"
 //   carry no time dimension. Its series is counted from the call logs of every
 //   lead in the window, paged through in full, and it reports the total it
 //   actually plotted rather than borrowing the tiles'.
-
-const presetLabel = (preset) =>
-  DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
 
 export default function SalesHubPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
@@ -86,13 +77,6 @@ export default function SalesHubPage() {
   )
   usePageHeader(header)
 
-  const metric = chartMetrics[chartMetric]
-  // The design's subtitle reads "<Date range> · <metric sub>", so the chart
-  // always says which window it is drawing.
-  const chart = metric && {
-    ...metric,
-    subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
-  }
 
   return (
     <SalesHubShell>

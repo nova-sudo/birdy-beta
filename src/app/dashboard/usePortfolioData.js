@@ -21,6 +21,7 @@ import {
   subtractPeriods,
 } from "@/lib/portfolio-series";
 import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
+import { isChangeActivity } from "@/lib/activity";
 
 // ─── Where the figures come from ───────────────────────────────────────────
 //
@@ -246,6 +247,10 @@ export function usePortfolioData({
         const data = await res.json();
         if (cancelled) return;
 
+        // Read-only analysis passes and raw proposals are dropped here, so the
+        // feed and its badge both count only changes that were made.
+        const changes = (data.activity ?? []).filter(isChangeActivity);
+
         setRail({
           suggestions: (data.suggestions ?? []).map((s) => ({
             id: s.id,
@@ -254,18 +259,16 @@ export function usePortfolioData({
             title: s.title ?? "",
             why: s.description ?? s.why ?? "",
           })),
-          activity: (data.activity ?? [])
-            .filter((a) => a.kind !== "suggestion_created")
-            .map((a) => ({
-              id: a.id,
-              action: a.title ?? a.action ?? "",
-              client: a.client ?? "",
-              // The feed distinguishes what Birdy did on standing approval from
-              // what the user signed off; `actor` is where that lives.
-              mode: a.actor === "birdy" ? "Auto-run" : "Approved",
-              time: a.time ?? "",
-            })),
-          activityCount: (data.activity ?? []).length,
+          activity: changes.map((a) => ({
+            id: a.id,
+            action: a.title ?? a.action ?? "",
+            client: a.client ?? "",
+            // The feed distinguishes what Birdy did on standing approval from
+            // what the user signed off; `actor` is where that lives.
+            mode: a.actor === "birdy" ? "Auto-run" : "Approved",
+            time: a.time ?? "",
+          })),
+          activityCount: changes.length,
           // Client wins had no home outside the page this screen replaces, so
           // they move into the rail rather than disappearing with it.
           wins: (data.wins ?? []).map((w) => ({

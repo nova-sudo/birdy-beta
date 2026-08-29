@@ -1,31 +1,17 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 
 import { useClientGroups } from "@/lib/useClientGroups"
-import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants"
-import { apiRequest } from "@/lib/api"
-import { presetToDateRange } from "@/lib/date-utils"
-import { buildLeadInsight, insightPrompt } from "@/lib/leadhub-insight"
-import {
-  formatStat,
-  mergeDailyLeads,
-  previousLeadTotals,
-  windowLeadTotals,
-} from "@/lib/leadhub-totals"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
+import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { GranularitySelect } from "@/components/GranularitySelect"
 import { useGranularity } from "@/lib/useGranularity"
-import { CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
-import { InsightCard } from "@/components/saleshub/InsightCard"
-import { KpiTiles } from "@/components/saleshub/KpiTiles"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
-import { percentDelta } from "@/lib/portfolio-aggregate"
-import { KPI_PRESENTATION } from "./presentation"
-import { useLeadHubSeries } from "./useLeadHubSeries"
 
 // ─── Lead Hub ───────────────────────────────────────────────────────────────
 // Every lead and contact across every client group: is lead quality holding
@@ -43,14 +29,10 @@ import { useLeadHubSeries } from "./useLeadHubSeries"
 // cross-client comparison the backend computes live in get_unified_leads —
 // this page makes one lightweight call for it (limit=1, stats only) below.
 
-const presetLabel = (preset) =>
-  DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
-
 export default function ContactPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
     useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
-  const [chartMetric, setChartMetric] = useState("leads")
   const { granularity, setGranularity } = useGranularity(datePreset)
 
   const ghlClientGroups = useMemo(
@@ -148,11 +130,6 @@ export default function ContactPage() {
   )
   usePageHeader(header)
 
-  const metric = chartMetrics[chartMetric]
-  const chart = metric && {
-    ...metric,
-    subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
-  }
 
   return (
     <SalesHubShell>

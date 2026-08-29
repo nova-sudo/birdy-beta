@@ -14,10 +14,10 @@ import {
   BEHIND,
 } from "@/lib/client-goals"
 
-const group = ({ targets = {}, funnel = null, spend = 0 } = {}) => ({
+const group = ({ targets = {}, funnel = null, spend = 0, metaLeads = 0 } = {}) => ({
   targets,
   gohighlevel: { metrics: { funnel } },
-  facebook: { metrics: { insights: { spend } } },
+  facebook: { metrics: { insights: { spend, results: metaLeads } } },
 })
 
 const byId = (goals) => Object.fromEntries(goals.map((g) => [g.id, g]))
@@ -75,35 +75,59 @@ describe("buildClientGoals", () => {
     ])
   })
 
-  it("reads actuals from the cohort funnel", () => {
+  it("reads revenue and closes from the cohort funnel", () => {
     const goals = byId(buildClientGoals(group({
       funnel: { leads: 200, closes: 20, won_revenue: 50000 },
-      spend: 2000,
+      spend: 2000, metaLeads: 240,
     })))
 
     expect(goals.revenue.value).toBe(50000)
     expect(goals.closes.value).toBe(20)
-    expect(goals.leads.value).toBe(200)
   })
 
-  it("derives close rate from the same cohort", () => {
-    // closes/leads is only a real rate because both describe one cohort —
-    // see compute_cohort_funnel's own note on this.
+  it("reports Meta's lead count, not the CRM cohort's", () => {
+    // The two disagree: a Meta lead is a form submission, a CRM lead is a
+    // contact that was actually created. "Leads" on an ads-facing card means
+    // Meta's, so this screen matches the Marketing Hub.
     const goals = byId(buildClientGoals(group({
-      funnel: { leads: 200, closes: 20 },
+      funnel: { leads: 43 }, metaLeads: 51, spend: 81.81,
     })))
-    expect(goals.closeRate.value).toBeCloseTo(0.1)
+    expect(goals.leads.value).toBe(51)
   })
 
-  it("derives cost per lead from spend over that cohort", () => {
+  it("keeps close rate on the CRM cohort, not Meta", () => {
+    // Closes and the leads they came from must describe one population for
+    // the ratio to mean anything, and Meta has no closes — so this one stays
+    // on the funnel even though "leads" above is Meta's.
     const goals = byId(buildClientGoals(group({
-      funnel: { leads: 200 }, spend: 2000,
+      funnel: { leads: 200, closes: 20 }, metaLeads: 500,
     })))
-    expect(goals.cpl.value).toBe(10)
+    expect(goals.closeRate.value).toBeCloseTo(0.1)   // 20/200, not 20/500
+  })
+
+  it("derives cost per lead from spend over META leads", () => {
+    const goals = byId(buildClientGoals(group({
+      funnel: { leads: 43 }, metaLeads: 51, spend: 81.81,
+    })))
+    // 81.81 / 51 = 1.60, which is what the Marketing Hub shows. Over the CRM
+    // cohort it would read 1.90 and the two screens would disagree.
+    expect(goals.cpl.value).toBeCloseTo(1.60, 2)
+  })
+
+  it("falls back to total_leads when results is absent", () => {
+    const goals = byId(buildClientGoals({
+      targets: {},
+      gohighlevel: { metrics: { funnel: { leads: 10 } } },
+      facebook: { metrics: { insights: { spend: 100, total_leads: 25 } } },
+    }))
+    expect(goals.leads.value).toBe(25)
+    expect(goals.cpl.value).toBe(4)
   })
 
   it("leaves ratios unknown rather than zero when there are no leads", () => {
-    const goals = byId(buildClientGoals(group({ funnel: { leads: 0 }, spend: 500 })))
+    const goals = byId(buildClientGoals(group({
+      funnel: { leads: 0 }, metaLeads: 0, spend: 500,
+    })))
     expect(goals.cpl.value).toBeNull()
     expect(goals.closeRate.value).toBeNull()
   })
@@ -160,7 +184,7 @@ describe("targets", () => {
 
   it("gives an untargeted goal no state, rather than claiming it is on track", () => {
     const goals = byId(buildClientGoals(group({
-      funnel: { leads: 200, closes: 20, won_revenue: 50000 },
+      funnel: { leads: 200, closes: 20, won_revenue: 50000 }, metaLeads: 200,
     })))
     expect(goals.revenue.target).toBeNull()
     expect(goals.revenue.state).toBeNull()
@@ -172,7 +196,7 @@ describe("end to end", () => {
     const goals = byId(buildClientGoals(group({
       targets: { monthly_wins: 25, cpl: 12 },
       funnel: { leads: 200, closes: 5 },
-      spend: 2000,          // £10 CPL against a £12 target
+      spend: 2000, metaLeads: 200,   // £10 CPL against a £12 target
     })))
 
     expect(goals.closes.state).toBe(BEHIND)     // 5/25 = 20%

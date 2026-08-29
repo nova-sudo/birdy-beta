@@ -19,6 +19,18 @@ import {
   CLIENT_CHART_METRICS,
 } from "@/lib/client-series"
 
+// A series with gaps still has to draw a continuous line. Holding the last
+// known value across a gap is honest here because the tooltip for that bucket
+// reads "—" rather than repeating the carried figure.
+const carryForward = (values) => {
+  let last = 0
+  return values.map((v) => {
+    if (v == null) return last
+    last = v
+    return v
+  })
+}
+
 const formatValue = (key, value, currencySymbol) => {
   if (value == null || !Number.isFinite(value)) return "—"
   if (key === "spend") {
@@ -84,7 +96,18 @@ export function ClientTrendChart({
       acc[metric.key] = {
         ...metric,
         ...s,
+        // buildChartGeometry does arithmetic on every value, and a gap read as
+        // null lands at the bottom of the axis — which draws a dip the client
+        // never had. Carry the gaps separately for the tooltip and plot the
+        // last known value instead.
+        values: carryForward(s.values),
         total: formatValue(metric.key, headline, currencySymbol),
+        // Required by TrendChart's tooltips and its screen-reader summary,
+        // which indexes into it directly.
+        pointValues: s.values.map((v) =>
+          v == null ? "—" : formatValue(metric.key, v, currencySymbol)
+        ),
+        coverage: null,
         // Rising cost is bad news; TrendChart colours by meaning.
         polarity: metric.key === "cpl" ? "lower" : "higher",
       }

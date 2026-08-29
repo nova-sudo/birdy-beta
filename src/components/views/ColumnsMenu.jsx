@@ -11,8 +11,14 @@
 //                         BOTTOM (not the top, deliberately)
 //
 // A view stores the visible column set and the source it was scoped to.
-// "Default" is synthetic and protected: it is the page's own baseline column
-// set, is never persisted, and can be neither renamed, deleted nor overwritten.
+// "Default" is synthetic: it is the page's own baseline column set and cannot
+// be renamed or deleted. It CAN be saved over — "Save to existing" writes the
+// current columns to the page's own stored layout, which is what makes them
+// come back next visit.
+//
+// Nothing here persists on toggle. Ticking a column changes the table
+// immediately but is not written until an explicit save, so exploring which
+// columns you want cannot quietly overwrite the view you were on.
 //
 // Pair with usePageViews for persistence:
 //   const views = usePageViews("mktg_campaigns", { state, onApply, ready })
@@ -89,6 +95,10 @@ export default function ColumnsMenu({
   defaultColumns = [],       // the protected "Default" view's column set
   views,                     // the usePageViews return value
   sources = DEFAULT_SOURCES, // metric-filter rail options; first must be "all"
+  // Persists the current columns as the page's own layout — where "Save to
+  // existing" writes when no saved view is selected. Without it that button
+  // has nothing to save to on Default.
+  onSaveDefault,
   buttonClassName = "",
 }) {
   const [open, setOpen] = useState(false)
@@ -192,12 +202,23 @@ export default function ColumnsMenu({
     if (updated) setEditTarget(null)
   }
 
-  // Saves in place with a brief green "Updated ✓" flash — no dialog, per spec.
-  const updateInPlace = async () => {
-    const updated = await updateView?.(activeId, {
-      state: { visibleColumns, source },
-    })
-    if (!updated) return
+  // Saves in place with a brief green "Saved ✓" flash — no dialog, per spec.
+  // On a stored view that overwrites the view; on Default it writes the page's
+  // own layout, so the columns you chose are the ones you come back to.
+  const [saveError, setSaveError] = useState(null)
+
+  const saveToExisting = async () => {
+    setSaveError(null)
+    let ok
+    if (activeIsStored) {
+      ok = Boolean(await updateView?.(activeId, { state: { visibleColumns, source } }))
+    } else if (onSaveDefault) {
+      ok = await onSaveDefault(visibleColumns) !== false
+    } else {
+      setSaveError("Nothing to save to")
+      return
+    }
+    if (!ok) return
     setJustUpdated(true)
     clearTimeout(flashRef.current)
     flashRef.current = setTimeout(() => setJustUpdated(false), 1200)
@@ -438,6 +459,36 @@ export default function ColumnsMenu({
                 </div>
               ) : (
                 <div className="flex flex-col gap-[6px]">
+                  {/* Above Save New View: the common case is refining the view
+                      you are already on, not starting another. */}
+                  <button
+                    type="button"
+                    onClick={saveToExisting}
+                    disabled={busy}
+                    className="flex h-8 items-center justify-center gap-[6px] rounded-[8px] text-[12px] font-semibold text-white disabled:opacity-60"
+                    style={{ background: justUpdated ? "#25A55F" : "#6B4EE6" }}
+                  >
+                    {justUpdated ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                        Saved
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                          <path d="M17 21v-8H7v8" />
+                          <path d="M7 3v5h8" />
+                        </svg>
+                        Save to existing
+                      </>
+                    )}
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => { setComposing(true); setNewName("") }}
@@ -445,35 +496,9 @@ export default function ColumnsMenu({
                   >
                     Save New View
                   </button>
-                  {/* Hidden for Default, which cannot be overwritten. */}
-                  {activeIsStored && (
-                    <button
-                      type="button"
-                      onClick={updateInPlace}
-                      disabled={busy}
-                      className="flex h-8 items-center justify-center gap-[6px] rounded-[8px] text-[12px] font-semibold text-white disabled:opacity-60"
-                      style={{ background: justUpdated ? "#25A55F" : "#6B4EE6" }}
-                    >
-                      {justUpdated ? (
-                        <>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                               strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                          Updated
-                        </>
-                      ) : (
-                        <>
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-                            <path d="M17 21v-8H7v8" />
-                            <path d="M7 3v5h8" />
-                          </svg>
-                          Update View
-                        </>
-                      )}
-                    </button>
+
+                  {saveError && (
+                    <p className="text-[10.5px] text-[#E5484D]">{saveError}</p>
                   )}
                 </div>
               )}

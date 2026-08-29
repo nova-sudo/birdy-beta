@@ -153,18 +153,18 @@ export function MarketingContent({
 
   // One stable hook instance per tab — page keys never change between renders,
   // so hook call order is always the same (Rules of Hooks satisfied).
-  const { savedColumns: savedCampaigns, saveView: saveCampaigns, saveViewDebounced: saveCampaignsDebounced, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
+  const { savedColumns: savedCampaigns, saveView: saveCampaigns, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
   const { savedColumns: savedAdsets,    saveView: saveAdsets,    saveViewDebounced: saveAdsetsDebounced,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
   const { savedColumns: savedAds,       saveView: saveAds,       saveViewDebounced: saveAdsDebounced,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
   const { savedColumns: savedLeads,     saveView: saveLeads,     saveViewDebounced: saveLeadsDebounced,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
 
   // Per-tab debounced-save lookup, used by the table's onColumnOrderChange to
   // auto-persist drag-reorder events without needing a manual "Save View".
-  const saveDebouncedByTab = {
-    campaigns: saveCampaignsDebounced,
-    adsets:    saveAdsetsDebounced,
-    ads:       saveAdsDebounced,
-    leads:     saveLeadsDebounced,
+  const saveByTab = {
+    campaigns: saveCampaigns,
+    adsets:    saveAdsets,
+    ads:       saveAds,
+    leads:     saveLeads,
   }
 
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
@@ -816,9 +816,13 @@ export function MarketingContent({
   const setTabColumns = (ids) => {
     const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
     setVisibleColumns(prev => ({ ...prev, [activeTab]: next }))
-    // Keep the legacy per-tab layout in step, so the columns you left on are
-    // still there next visit even without saving a named view.
-    saveDebouncedByTab[activeTab]?.(next)
+  }
+
+  // Explicit save only — see ColumnsMenu. Writes this tab's own layout.
+  const saveDefaultColumns = async (ids) => {
+    const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
+    await saveByTab[activeTab]?.(next)
+    return true
   }
 
   const formatCellValue = (value, col, row) => {
@@ -1227,6 +1231,7 @@ export function MarketingContent({
                 onChange={setTabColumns}
                 defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
                 views={pageViews}
+                onSaveDefault={saveDefaultColumns}
               />
             </div>
           </div>
