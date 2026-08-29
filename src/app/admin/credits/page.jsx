@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import {
-  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck, Gift,
+  Search, Coins, Sparkles, KeyRound, Loader2, Save, Info, TrendingUp, Wallet, ShoppingCart, ShieldCheck, Gift, Phone,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -51,10 +51,11 @@ function PricingControls({ config, mutate }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // No setRateMode: the rate is fixed at "managed" (BYOK is gone) — the
+    // stale setter call here crashed the whole page the moment config loaded.
     setMarkup(config.markup);
-    setRateMode(config.rate_mode);
     setEnforce(config.enforce);
-  }, [config.markup, config.rate_mode, config.enforce]);
+  }, [config.markup, config.enforce]);
 
   const min = config.markup_min ?? 1;
   const max = config.markup_max ?? 20;
@@ -365,6 +366,11 @@ function AccountsTable({ data, loading, onGrant }) {
                       {fmt(a.used_internal)} app · {fmt(a.used_slack)} slack · {fmt(a.used_cron)} cron
                     </span>
                   )}
+                  {a.used_call_analysis > 0 && (
+                    <span className="block text-[10px] font-normal text-amber-600">
+                      {fmt(a.used_call_analysis)} call AI · {fmt(a.audio_minutes)} min audio
+                    </span>
+                  )}
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-sm">
                   <span className={a.purchased_total > 0 ? "font-semibold text-emerald-700" : "text-gray-400"}>
@@ -431,7 +437,7 @@ export default function AdminCreditsPage() {
       )}
 
       {/* Platform totals */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <TotalCard Icon={Wallet} tint="text-emerald-500" label="Outstanding balance" value={totals.balance} />
         <TotalCard
           Icon={TrendingUp}
@@ -441,6 +447,15 @@ export default function AdminCreditsPage() {
           sub={totals.used_total > 0
             ? `${fmt(totals.used_internal)} app · ${fmt(totals.used_slack)} slack · ${fmt(totals.used_cron)} cron`
             : null}
+        />
+        <TotalCard
+          Icon={Phone}
+          tint="text-amber-500"
+          label="Call analysis · all-time"
+          value={totals.used_call_analysis}
+          sub={totals.audio_minutes > 0
+            ? `${fmt(totals.audio_minutes)} min of recordings transcribed`
+            : "No calls analyzed yet"}
         />
         <TotalCard Icon={ShoppingCart} tint="text-blue-500" label="Credits bought · all-time" value={totals.purchased_total} />
       </div>
