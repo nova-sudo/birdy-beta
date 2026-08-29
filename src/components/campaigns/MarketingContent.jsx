@@ -1060,7 +1060,7 @@ export function MarketingContent({
           if (!group.meta_token_error) return null
 
           return (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-amber-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -1071,7 +1071,7 @@ export function MarketingContent({
               </div>
               <a
                 href="/settings?tab=integrations"
-                className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+                className="shrink-0 rounded-[8px] bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
               >
                 Reconnect Meta
               </a>
@@ -1175,7 +1175,12 @@ export function MarketingContent({
           {/* Section tabs on the handoff's segmented-control spec: the track is
               the divider tint, the selected item lifts onto white with the
               purple-tinted shadow. Radix Tabs still drives the behaviour —
-              only the skin changes. */}
+              only the skin changes.
+
+              Radii are written in px on purpose: globals.css sets --radius to
+              1rem, so rounded-md/lg resolve to 14px/16px here, not Tailwind's
+              stock 6px/8px. On a 33px-tall pill that reads as a stadium, which
+              is what made this control look wrong next to the rest of the app. */}
           <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
             <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
               {[
@@ -1189,7 +1194,7 @@ export function MarketingContent({
                 <TabsTrigger
                   key={tab.value}
                   value={tab.value}
-                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
+                  className="gap-[7px] rounded-[8px] px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
                 >
                     <tab.icon className="size-[14px]" />
                     {tab.label}
