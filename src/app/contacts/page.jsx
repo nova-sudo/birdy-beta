@@ -35,74 +35,12 @@ export default function ContactPage() {
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const { granularity, setGranularity } = useGranularity(datePreset)
 
+  // Only GHL-backed groups can appear in the picker — the rest have no leads
+  // to scope to. LeadHubOverview filters the same way for its own fetch.
   const ghlClientGroups = useMemo(
     () => (clientGroups || []).filter((g) => g.ghl_location_id),
     [clientGroups]
   )
-
-  const dailyRows = useMemo(
-    () => mergeDailyLeads(clientGroups, selectedClientGroup),
-    [clientGroups, selectedClientGroup]
-  )
-  const totals = useMemo(
-    () => windowLeadTotals(dailyRows, datePreset),
-    [dailyRows, datePreset]
-  )
-  const previousTotals = useMemo(
-    () => previousLeadTotals(dailyRows, datePreset),
-    [dailyRows, datePreset]
-  )
-  const deltas = useMemo(() => {
-    if (!previousTotals) return undefined
-    return KPI_PRESENTATION.reduce((acc, tile) => {
-      const d = percentDelta(totals[tile.key], previousTotals[tile.key], tile.polarity)
-      if (d) acc[tile.key] = d
-      return acc
-    }, {})
-  }, [totals, previousTotals])
-
-  // The insight card's anomaly clause — the one figure the daily series can't
-  // give, so it's the one thing on this page still fetched live. Scoped to
-  // the same window/group filter as everything else; re-fetched whenever
-  // either changes.
-  const [anomaly, setAnomaly] = useState(null)
-  useEffect(() => {
-    if (ghlClientGroups.length === 0) {
-      setAnomaly(null)
-      return
-    }
-    let cancelled = false
-    const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
-    const { start_date, end_date } = presetToDateRange(datePreset)
-    const qs = new URLSearchParams({ groups: groupsParam, page: "1", limit: "1" })
-    if (start_date) qs.set("start_date", start_date)
-    if (end_date) qs.set("end_date", end_date)
-
-    apiRequest(`/api/leads/unified?${qs.toString()}`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setAnomaly(data?.meta?.stats?.top_missing_email_group ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setAnomaly(null)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [ghlClientGroups.length, selectedClientGroup, datePreset])
-
-  const insight = useMemo(
-    () => buildLeadInsight(totals, previousTotals, anomaly),
-    [totals, previousTotals, anomaly]
-  )
-
-  const { chartMetrics, metrics, loading: seriesLoading } = useLeadHubSeries({
-    clientGroups,
-    groupsLoading,
-    datePreset,
-    selectedClientGroup,
-    granularity,
-  })
 
   // Title and filters live in the global top bar, where the design puts them
   // — see Sales-Hub/page.jsx for the full reasoning and usePageHeader.
@@ -133,41 +71,13 @@ export default function ContactPage() {
 
   return (
     <SalesHubShell>
-      <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
-        <div className="flex min-w-0 flex-col lg:flex-[1.65]">
-          {seriesLoading || metric?.pending ? (
-            <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
-          ) : chart?.values?.length > 0 ? (
-            <TrendChart
-              className="flex-1"
-              chart={chart}
-              metrics={metrics}
-              activeMetric={chartMetric}
-              onMetricChange={setChartMetric}
-              redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
-            />
-          ) : (
-            <PdCard className="flex-1" title="Lead trend">
-              <p className="py-8 text-center text-[12px] text-pd-faint">
-                {totals.lead_count + totals.contact_count > 0
-                  ? "No dated leads in this window yet."
-                  : "No leads captured in this window yet."}
-              </p>
-            </PdCard>
-          )}
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
-          <InsightCard parts={insight} prompt={insightPrompt(insight)} />
-          <KpiTiles
-            tiles={KPI_PRESENTATION}
-            totals={totals}
-            deltas={deltas}
-            loading={groupsLoading}
-            format={formatStat}
-          />
-        </div>
-      </div>
+      <LeadHubOverview
+        clientGroups={clientGroups}
+        groupsLoading={groupsLoading}
+        datePreset={datePreset}
+        selectedClientGroup={selectedClientGroup}
+        granularity={granularity}
+      />
 
       <LeadsContent
         clientGroups={clientGroups}
