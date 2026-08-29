@@ -63,6 +63,7 @@ export const STORAGE_KEYS = {
 export const PUBLIC_ROUTES = ["/", "/login", "/register"]
 
 export const PROTECTED_ROUTES = [
+  "/onboarding",
   "/clients",
   "/call-center",
   "/settings",

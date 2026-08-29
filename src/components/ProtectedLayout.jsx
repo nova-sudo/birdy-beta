@@ -47,16 +47,23 @@ export default function ProtectedLayout({ children }) {
       isAdmin = false;
     }
 
+    // Set by LoginForm / the onboarding wizard from /api/onboarding/status.
+    // While it's up, the wizard is the only place in the app the user can be.
+    const onboardingIncomplete = localStorage.getItem('onboarding_incomplete') === '1';
+
     if ((isProtectedRoute || isAdminRoute) && !isAuthenticated) {
       // Redirect to /login for protected/admin routes if not authenticated
       // (isAdminRoute covers every /admin sub-route, not just the exact path).
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);
+    } else if (isAuthenticated && onboardingIncomplete && pathname !== '/onboarding' && !isPublicRoute) {
+      // First-run onboarding not finished — keep them in the wizard.
+      router.push('/onboarding');
     } else if (isAdminRoute && isAuthenticated && !isAdmin) {
       // Authenticated but not an admin — bounce out of the admin console.
       router.push('/dashboard');
     } else if (isAuthenticated && isPublicRoute && pathname !== '/') {
       // Redirect authenticated users from /login or /register to /clients
-      router.push('/clients');
+      router.push(onboardingIncomplete ? '/onboarding' : '/clients');
     }
   }, [router, pathname]);
 
