@@ -7,6 +7,8 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { GranularitySelect } from "@/components/GranularitySelect"
+import { useGranularity } from "@/lib/useGranularity"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
@@ -31,15 +33,14 @@ export default function ContactPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
     useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
+  const { granularity, setGranularity } = useGranularity(datePreset)
 
+  // Only GHL-backed groups can appear in the picker — the rest have no leads
+  // to scope to. LeadHubOverview filters the same way for its own fetch.
   const ghlClientGroups = useMemo(
     () => (clientGroups || []).filter((g) => g.ghl_location_id),
     [clientGroups]
   )
-
-
-
-
 
   // Title and filters live in the global top bar, where the design puts them
   // — see Sales-Hub/page.jsx for the full reasoning and usePageHeader.
@@ -53,6 +54,7 @@ export default function ContactPage() {
       ),
       controls: (
         <div className="hidden items-center gap-2 md:flex">
+          <GranularitySelect value={granularity} onChange={setGranularity} />
           <DateRangeSelect value={datePreset} onChange={setDatePreset} />
           <ClientGroupPicker
             clientGroups={ghlClientGroups}
@@ -62,7 +64,7 @@ export default function ContactPage() {
         </div>
       ),
     }),
-    [datePreset, setDatePreset, ghlClientGroups, selectedClientGroup]
+    [granularity, setGranularity, datePreset, setDatePreset, ghlClientGroups, selectedClientGroup]
   )
   usePageHeader(header)
 
@@ -74,6 +76,7 @@ export default function ContactPage() {
         groupsLoading={groupsLoading}
         datePreset={datePreset}
         selectedClientGroup={selectedClientGroup}
+        granularity={granularity}
       />
 
       <LeadsContent

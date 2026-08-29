@@ -9,7 +9,7 @@ import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings 
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
-import { ActivityItem } from "@/components/activity/ActivityItem"
+import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -130,7 +130,7 @@ export default function ClientDetailsPage() {
   const { activity, loading: activityLoading } = useDashboardData()
   const groupNameForActivity = clientData?.group_info?.name
   const clientActivity = useMemo(
-    () => activity.filter((a) => a.client === groupNameForActivity),
+    () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
     [activity, groupNameForActivity]
   )
 

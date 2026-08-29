@@ -2,10 +2,10 @@
 
 import { createContext, useContext, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar } from "lucide-react";
+import { GranularitySelect } from "@/components/GranularitySelect";
 import { PdMenu } from "@/components/portfolio/PdMenu";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
-import { GRANULARITIES } from "@/lib/portfolio-series";
 import { pdFontClass } from "@/lib/pd-fonts";
 
 // The dashboard's date range and chart granularity live in the global top bar,
@@ -104,13 +104,7 @@ export function DashboardHeaderControls() {
 
   return (
     <div className="hidden items-center gap-2 md:flex">
-      <PdMenu
-        label="Chart granularity"
-        value={granularity}
-        options={GRANULARITIES}
-        onChange={setGranularity}
-        icon={<Clock className="size-[14px] shrink-0 text-pd-primary" aria-hidden="true" />}
-      />
+      <GranularitySelect value={granularity} onChange={setGranularity} />
       <PdMenu
         label="Date range"
         value={preset}

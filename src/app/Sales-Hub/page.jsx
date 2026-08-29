@@ -7,6 +7,8 @@ import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
+import { GranularitySelect } from "@/components/GranularitySelect"
+import { useGranularity } from "@/lib/useGranularity"
 import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
@@ -30,8 +32,7 @@ export default function SalesHubPage() {
   const { clientGroups, loading: groupsLoading, datePreset, setDatePreset } =
     useClientGroups(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
-
-
+  const { granularity, setGranularity } = useGranularity(datePreset)
 
   // Title and filters live in the global top bar, where the design puts them —
   // in place of the Birdy wordmark, and beside the bell and profile menu.
@@ -47,6 +48,7 @@ export default function SalesHubPage() {
       ),
       controls: (
         <div className="hidden items-center gap-2 md:flex">
+          <GranularitySelect value={granularity} onChange={setGranularity} />
           <DateRangeSelect value={datePreset} onChange={setDatePreset} />
           <ClientGroupPicker
             clientGroups={clientGroups}
@@ -56,7 +58,7 @@ export default function SalesHubPage() {
         </div>
       ),
     }),
-    [datePreset, setDatePreset, clientGroups, selectedClientGroup]
+    [granularity, setGranularity, datePreset, setDatePreset, clientGroups, selectedClientGroup]
   )
   usePageHeader(header)
 
@@ -68,6 +70,7 @@ export default function SalesHubPage() {
         groupsLoading={groupsLoading}
         datePreset={datePreset}
         selectedClientGroup={selectedClientGroup}
+        granularity={granularity}
       />
 
       <CallCentreContent
