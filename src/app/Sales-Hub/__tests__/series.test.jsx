@@ -68,6 +68,24 @@ describe("useSalesHubSeries", () => {
     expect(result.current.loading).toBe(true)
   })
 
+  it("buckets by the granularity it is given, over the window's own choice", () => {
+    // "maximum" picks Monthly for itself. These rows fall one to a month, so
+    // the totals come out the same either way — what the granularity changes
+    // is what each bucket claims to be, which is what the labels report.
+    const auto = render()
+    expect(auto.result.current.chartMetrics.calls.tooltipLabels).toEqual([
+      "June 2026",
+      "July 2026",
+    ])
+
+    const { result } = render({ granularity: "Daily" })
+    expect(result.current.chartMetrics.calls.values).toEqual([8, 4])
+    expect(result.current.chartMetrics.calls.tooltipLabels).toEqual([
+      "15 Jun 2026",
+      "15 Jul 2026",
+    ])
+  })
+
   it("counts inbound separately, on the same axis as total calls", () => {
     const { result } = render()
 

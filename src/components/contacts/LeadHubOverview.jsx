@@ -29,11 +29,17 @@ import { useLeadHubSeries } from "@/app/contacts/useLeadHubSeries"
 const presetLabel = (preset) =>
   DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
 
+/**
+ * @param {string} [granularity] Daily | Weekly | Monthly, from the hub's
+ *   granularity chip. Omitted — as it is on /clients/[id], which carries no
+ *   chip — the date window picks for itself. See useLeadHubSeries.
+ */
 export function LeadHubOverview({
   clientGroups,
   groupsLoading,
   datePreset,
   selectedClientGroup = "all",
+  granularity,
 }) {
   const [chartMetric, setChartMetric] = useState("leads")
 
@@ -98,6 +104,7 @@ export function LeadHubOverview({
     groupsLoading,
     datePreset,
     selectedClientGroup,
+    granularity,
   })
 
   const metric = chartMetrics[chartMetric]
@@ -118,7 +125,7 @@ export function LeadHubOverview({
             metrics={metrics}
             activeMetric={chartMetric}
             onMetricChange={setChartMetric}
-            redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
+            redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
           />
         ) : (
           <PdCard className="flex-1" title="Lead trend">

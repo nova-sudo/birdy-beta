@@ -92,6 +92,23 @@ describe("Sales Hub — top bar", () => {
     )
   })
 
+  it("puts a granularity chip in the bar, defaulted to the window's own choice", async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+
+    // last_7d buckets daily on its own, so that is what the chip reads before
+    // anyone touches it.
+    const chip = await screen.findByRole("button", { name: /chart granularity: daily/i })
+    await user.click(chip)
+    await user.click(await screen.findByRole("option", { name: "Weekly" }))
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /chart granularity: weekly/i })
+      ).toBeInTheDocument()
+    )
+  })
+
   it("releases the bar when the page unmounts", async () => {
     const { unmount, rerender } = render(<Harness />)
     await waitFor(() =>

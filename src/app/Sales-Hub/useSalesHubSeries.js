@@ -19,7 +19,18 @@ import { formatTotal, mergeDailyCalls } from "@/lib/saleshub-totals";
 // curve off it needed every page fetched — thousands of lead records, when the
 // chart only ever wanted four numbers a day. See the Sales-Hub README.
 
-export function useSalesHubSeries({ clientGroups, groupsLoading, datePreset, selectedClientGroup }) {
+/**
+ * @param {string} [granularity] Daily | Weekly | Monthly. Omitted — as it is
+ *   wherever the screen carries no granularity chip — the window picks for
+ *   itself. See useGranularity.
+ */
+export function useSalesHubSeries({
+  clientGroups,
+  groupsLoading,
+  datePreset,
+  selectedClientGroup,
+  granularity,
+}) {
   const dailyRows = useMemo(
     () => mergeDailyCalls(clientGroups, selectedClientGroup),
     [clientGroups, selectedClientGroup]
@@ -30,7 +41,10 @@ export function useSalesHubSeries({ clientGroups, groupsLoading, datePreset, sel
     const windowRows = dailyRows.filter(
       (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
     );
-    const series = buildSalesSeries(windowRows, granularityForRange(start_date, end_date));
+    const series = buildSalesSeries(
+      windowRows,
+      granularity ?? granularityForRange(start_date, end_date)
+    );
 
     return SALES_CHART_METRICS.reduce((acc, metric) => {
       const s = series[metric.key];
@@ -48,7 +62,7 @@ export function useSalesHubSeries({ clientGroups, groupsLoading, datePreset, sel
       };
       return acc;
     }, {});
-  }, [dailyRows, datePreset, groupsLoading]);
+  }, [dailyRows, datePreset, granularity, groupsLoading]);
 
   return {
     chartMetrics,

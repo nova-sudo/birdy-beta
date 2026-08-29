@@ -21,11 +21,17 @@ import { useSalesHubSeries } from "@/app/Sales-Hub/useSalesHubSeries"
 const presetLabel = (preset) =>
   DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
 
+/**
+ * @param {string} [granularity] Daily | Weekly | Monthly, from the hub's
+ *   granularity chip. Omitted — as it is on /clients/[id], which carries no
+ *   chip — the date window picks for itself. See useSalesHubSeries.
+ */
 export function CallCentreOverview({
   clientGroups,
   groupsLoading,
   datePreset,
   selectedClientGroup = "all",
+  granularity,
 }) {
   const [chartMetric, setChartMetric] = useState("calls")
 
@@ -40,6 +46,7 @@ export function CallCentreOverview({
     groupsLoading,
     datePreset,
     selectedClientGroup,
+    granularity,
   })
 
   const metric = chartMetrics[chartMetric]
@@ -64,7 +71,7 @@ export function CallCentreOverview({
             onMetricChange={setChartMetric}
             // Keying on metric + window remounts the paths, which is what
             // makes the draw and fade animations replay on every switch.
-            redrawKey={`${chartMetric}-${datePreset}-${selectedClientGroup}`}
+            redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
           />
         ) : (
           <PdCard className="flex-1" title="Call trend">
