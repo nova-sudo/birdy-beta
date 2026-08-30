@@ -70,6 +70,7 @@ import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { HealthPill } from "@/components/clients/HealthPill"
 import { metricTone } from "@/lib/metric-tone"
 import { usePageViews } from "@/lib/usePageViews"
+import getSymbolFromCurrency from "currency-symbol-map"
 
 import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
@@ -217,6 +218,10 @@ export default function ClientsPage() {
     // Cost per lead reads against the client's own target rather than a
     // threshold nobody chose — £9 is good or bad depending entirely on what
     // they set out to pay. Uncoloured where no target exists.
+    //
+    // A `cell` of its own opts the column out of the table's formatting, so the
+    // currency symbol every other cost column gets is added back here — without
+    // it the column read "9.00", a cost with no currency on it.
     const withTone = (list) => list.map((col) =>
       col.id === "cost_per_lead"
         ? {
@@ -225,9 +230,9 @@ export default function ClientsPage() {
               <span className={metricTone(value, row?.targets?.cpl, "lower")}>
                 {value == null || !Number.isFinite(Number(value)) || Number(value) === 0
                   ? "—"
-                  : Number(value).toLocaleString(undefined, {
+                  : `${getSymbolFromCurrency(userCurrency) || "$"}${Number(value).toLocaleString(undefined, {
                       minimumFractionDigits: 2, maximumFractionDigits: 2,
-                    })}
+                    })}`}
               </span>
             ),
           }
@@ -249,7 +254,7 @@ export default function ClientsPage() {
 
     console.log("✅ Final columns:", deduplicated.length);
     return deduplicated;
-  }, [customMetrics, filteredByStatus]);
+  }, [customMetrics, filteredByStatus, userCurrency]);
 
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const map = {};
