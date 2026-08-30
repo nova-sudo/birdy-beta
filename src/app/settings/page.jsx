@@ -52,11 +52,24 @@ function SettingsPageContent() {
   // where their content went.
   const TAB_ALIASES = { account: "billing", capabilities: "general" }
   const requestedTab = searchParams.get("tab")
-  const defaultTab =
+  const urlTab =
     TAB_ALIASES[requestedTab] ??
     (["general", "integrations", "billing"].includes(requestedTab)
       ? requestedTab
       : "integrations")
+
+  // Controlled rather than defaultValue: links into a tab (the sidebar credits
+  // indicator points at ?tab=billing) are client-side navigations that don't
+  // remount this page, so an uncontrolled default would leave the reader on
+  // whichever tab they were already looking at.
+  const [activeTab, setActiveTab] = useState(urlTab)
+  useEffect(() => { setActiveTab(urlTab) }, [urlTab])
+
+  // Keep the URL in step so the tab survives a reload and can be shared.
+  const handleTabChange = (value) => {
+    setActiveTab(value)
+    router.replace(`/settings?tab=${value}`, { scroll: false })
+  }
 
   // Title in the global top bar, in place of the Birdy wordmark — the same
   // place every other redesigned page puts it. No controls: this page's tabs
@@ -650,7 +663,7 @@ function SettingsPageContent() {
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div>
-        <Tabs defaultValue={defaultTab} className="space-y-6">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
           <TabsList className="w-full justify-start">
             {[
               { key: "general", label: "General" },
