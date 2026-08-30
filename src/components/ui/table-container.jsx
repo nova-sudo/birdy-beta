@@ -77,6 +77,7 @@ const StyledTable = ({
   initialColumnOrder = [],
   onColumnOrderChange,
   emptyMessage,
+  initialPageSize = 15,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -95,7 +96,7 @@ const StyledTable = ({
   }, [initialColumnOrder]);
   const isClientMode = Array.isArray(customMetrics) && setCustomMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   // Toggle column is only visible when NOT in client mode
   const showToggleCol = !isClientMode && enableStatusToggle;

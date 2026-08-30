@@ -115,7 +115,9 @@ export default function ClientsPage() {
   const [togglingRows, setTogglingRows] = useState(new Set())
 
   // ── Status filter ─────────────────────────────────────────────────────────
-  const [statusFilter, setStatusFilter] = useState("all")
+  // Opens on Active: the clients being worked on are what the hub is for, and
+  // paused ones are a tab away.
+  const [statusFilter, setStatusFilter] = useState("Active")
   // Declared here rather than beside the table controls so the saved-view
   // state memo below can depend on it.
   const [searchQuery, setSearchQuery] = useState("")
@@ -1170,6 +1172,9 @@ export default function ClientsPage() {
           enableStatusToggle={true}
           onStatusToggle={handleStatusToggle}
           togglingRows={togglingRows}
+          // Dropping the Status column freed the vertical room for a longer
+          // page, so the roster fits in fewer clicks.
+          initialPageSize={20}
         />
         </div>
       </div>
