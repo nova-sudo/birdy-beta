@@ -45,10 +45,13 @@ export function PageTabs({
       options={options}
       value={value}
       onChange={onChange}
-      // self-start keeps the track hugging its tabs inside the column that
-      // stacks it above the toolbar on mobile; max-w-full + overflow lets a
-      // long strip scroll there instead of squeezing every label.
-      className={cn("shrink-0 self-start max-w-full overflow-x-auto", className)}
+      // The track hugs its tabs rather than spanning the page: w-fit does that
+      // anywhere, self-start also stops a flex row stretching it. self-start
+      // alone was inert on Settings and Alerts, where the strip sits in a plain
+      // block inside Radix's Tabs, and the bar ran the full window width.
+      // max-w-full + overflow lets a strip too long for a narrow window scroll
+      // instead of squeezing every label.
+      className={cn("w-fit shrink-0 self-start max-w-full overflow-x-auto", className)}
       itemClassName={cn("shrink-0 px-[15px] py-[7px] text-[13px]", itemClassName)}
     />
   );
