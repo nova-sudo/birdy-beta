@@ -388,6 +388,33 @@
     color: var(--primary-foreground);
     background-color: var(--primary);
   }
+
+  /* Tailwind v4's preflight gives buttons `cursor: default`, so every control
+     we build out of a <button> — the Columns menu and its rails, the status
+     tabs, table headers, dropdown items — reads as inert text on hover. Put
+     the pointer back on anything that is actually clickable, app-wide, rather
+     than sprinkling `cursor-pointer` on each control. */
+  button:not(:disabled):not([aria-disabled="true"]),
+  summary,
+  label[for],
+  [role="button"]:not([aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="menuitemcheckbox"]:not([aria-disabled="true"]),
+  [role="menuitemradio"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not([aria-disabled="true"]),
+  [role="switch"]:not([aria-disabled="true"]),
+  [role="combobox"]:not([aria-disabled="true"]),
+  a[href] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled="true"],
+  [data-disabled] {
+    cursor: not-allowed;
+  }
 }
 
 /* Scrollbar hiding utility */

@@ -571,6 +571,18 @@ const StyledTable = ({
           background: var(--pd-table-head);
         }
 
+        /* …and the hover tint has to agree too, or the row lights up either
+           side of a business name that stays stubbornly white. It can't just
+           repeat the row's class: that tint is 60% opaque, and a sticky cell
+           has to stay solid or the columns sliding under it show through. So
+           mix it into the row's own background and paint the result. */
+        tr.row-hoverable:hover .fixed-column-even {
+          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
+        }
+        tr.row-hoverable:hover .fixed-column-odd {
+          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-row-zebra));
+        }
+
         @media (min-width: 768px) {
           .fixed-column-even,
           .fixed-column-odd {
@@ -821,7 +833,7 @@ const StyledTable = ({
                     className={`border-b border-pd-row-border transition-colors ${
                       (row._isCreating || row._isPending)
                         ? "w-fit cursor-wait bg-muted/30 opacity-60"
-                        : "w-fit cursor-pointer hover:bg-pd-divider/60"
+                        : "row-hoverable w-fit cursor-pointer hover:bg-pd-divider/60"
                     } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
                     {/* Checkbox cell */}

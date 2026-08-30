@@ -60,7 +60,6 @@ export function LeadsContent({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [customMetrics, setCustomMetrics] = useState([])
-  const [selectedRows, setSelectedRows] = useState(new Set())
 
   const [filterOptions, setFilterOptions] = useState({ sources: [], types: [], tags: [] })
 
@@ -461,9 +460,6 @@ export function LeadsContent({
                 // Auto-persist on drag-reorder (debounced inside the hook).
                 saveViewDebounced(newOrder)
               }}
-              enableSelection
-              selectedRows={selectedRows}
-              onSelectionChange={setSelectedRows}
             />
           </PageTabPanel>
         </div>
