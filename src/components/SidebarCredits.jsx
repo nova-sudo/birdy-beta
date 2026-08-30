@@ -23,10 +23,16 @@ const TONES = {
 
 /**
  * Bottom-left "credits left" indicator. Expanded: a compact bar + remaining
- * count that links to /credits. Collapsed (icon rail): a coin icon with a
- * status dot and a hover tooltip. Always visible so users can watch the balance
- * fall, per the billing strategy.
+ * count. Collapsed (icon rail): a coin icon with a status dot and a hover
+ * tooltip. Always visible so users can watch the balance fall, per the billing
+ * strategy.
+ *
+ * Both forms land on Settings → Billing, which holds the balance, the top-up
+ * packs and the plan in one place — the standalone /credits page shows only
+ * part of that.
  */
+const BILLING_HREF = "/settings?tab=billing";
+
 export default function SidebarCredits() {
   const { open, isMobile } = useSidebar();
   const expanded = isMobile ? true : open;
@@ -54,7 +60,7 @@ export default function SidebarCredits() {
           <Tooltip>
             <TooltipTrigger asChild>
               <SidebarMenuButton asChild>
-                <Link href="/credits" className="relative">
+                <Link href={BILLING_HREF} className="relative">
                   <Coins className={c.text} />
                   <span className={`absolute right-1 top-1 h-1.5 w-1.5 rounded-full ${c.dot}`} />
                 </Link>
@@ -73,7 +79,7 @@ export default function SidebarCredits() {
   return (
     <div className="px-2 pb-1">
       <Link
-        href="/credits"
+        href={BILLING_HREF}
         className="block rounded-lg border border-gray-100 bg-gray-50/70 px-2.5 py-2 transition hover:bg-gray-100"
       >
         <div className="flex items-center justify-between">

@@ -53,7 +53,7 @@ function SettingsPageContent() {
   // where their content went.
   const TAB_ALIASES = { account: "billing", capabilities: "general" }
   const requestedTab = searchParams.get("tab")
-  const defaultTab =
+  const urlTab =
     TAB_ALIASES[requestedTab] ??
     (["general", "integrations", "billing"].includes(requestedTab)
       ? requestedTab
@@ -61,14 +61,26 @@ function SettingsPageContent() {
 
   // Radix still swaps the panels; the strip above them is the app's shared
   // page tab bar, so Settings stops carrying its own unstyled TabsList.
-  // Controlled now, because PageTabs reports the change rather than Radix's
-  // own trigger doing it.
-  const [tab, setTab] = useState(defaultTab)
+  //
+  // Controlled rather than defaultValue, for two reasons: PageTabs reports the
+  // change rather than a Radix trigger doing it, and links into a tab (the
+  // sidebar credits indicator points at ?tab=billing) are client-side
+  // navigations that don't remount this page — an uncontrolled default would
+  // leave the reader on whichever tab they were already looking at.
+  const [tab, setTab] = useState(urlTab)
+  useEffect(() => { setTab(urlTab) }, [urlTab])
+
   const SETTINGS_TABS = [
     { key: "general", label: "General" },
     { key: "integrations", label: "Integrations" },
     { key: "billing", label: "Billing" },
   ]
+
+  // Keep the URL in step so the tab survives a reload and can be shared.
+  const handleTabChange = (value) => {
+    setTab(value)
+    router.replace(`/settings?tab=${value}`, { scroll: false })
+  }
 
   // Title in the global top bar, in place of the Birdy wordmark — the same
   // place every other redesigned page puts it. No controls: this page's tabs
@@ -662,13 +674,13 @@ function SettingsPageContent() {
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div>
-        <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
           <div className={pdFontClass}>
             <PageTabs
               label="Settings section"
               tabs={SETTINGS_TABS}
               value={tab}
-              onChange={setTab}
+              onChange={handleTabChange}
             />
           </div>
 

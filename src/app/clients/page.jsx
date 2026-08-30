@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
 import {
   activeGroups as selectActive,
+  isActive,
   matchesStatusFilter,
   matchesHealthFilter,
   statusCounts as countByStatus,
@@ -117,7 +118,9 @@ export default function ClientsPage() {
   const [togglingRows, setTogglingRows] = useState(new Set())
 
   // ── Status filter ─────────────────────────────────────────────────────────
-  const [statusFilter, setStatusFilter] = useState("all")
+  // Opens on Active: the clients being worked on are what the hub is for, and
+  // paused ones are a tab away.
+  const [statusFilter, setStatusFilter] = useState("Active")
   // Declared here rather than beside the table controls so the saved-view
   // state memo below can depend on it.
   const [searchQuery, setSearchQuery] = useState("")
@@ -160,11 +163,13 @@ export default function ClientsPage() {
   // ── Filter groups by status ───────────────────────────────────────────────
   // The design's six tabs mix two axes — Active/Inactive are status, and
   // Healthy/Warning/Critical are health — so one selection resolves against
-  // whichever axis the chosen tab belongs to.
+  // whichever axis the chosen tab belongs to. The health tabs read as a
+  // breakdown of the Active tab, so they only ever consider active clients:
+  // an inactive client's health says nothing about a live account.
   const filteredByStatus = useMemo(
     () => clientGroups.filter(g =>
       HEALTH_VALUES.includes(statusFilter)
-        ? matchesHealthFilter(g, statusFilter)
+        ? isActive(g) && matchesHealthFilter(g, statusFilter)
         : matchesStatusFilter(g, statusFilter)
     ),
     [clientGroups, statusFilter],
@@ -172,7 +177,10 @@ export default function ClientsPage() {
 
   // ── Status counts for filter badges ───────────────────────────────────────
   const statusCounts = useMemo(() => countByStatus(clientGroups), [clientGroups])
-  const healthCounts = useMemo(() => countByHealth(clientGroups), [clientGroups])
+  const healthCounts = useMemo(
+    () => countByHealth(selectActive(clientGroups)),
+    [clientGroups],
+  )
 
   // Build dynamic columns when filteredByStatus changes
   const columns = useMemo(() => {
@@ -1163,6 +1171,9 @@ export default function ClientsPage() {
           enableStatusToggle={true}
           onStatusToggle={handleStatusToggle}
           togglingRows={togglingRows}
+          // Dropping the Status column freed the vertical room for a longer
+          // page, so the roster fits in fewer clicks.
+          initialPageSize={20}
         />
         </PageTabPanel>
       </div>

@@ -13,7 +13,12 @@
 export const SOURCE_STYLES = {
   meta: { label: "Meta Ads", color: "#3B7DD6", bg: "#EAF1FD", border: "#D6E6FA" },
   ghl: { label: "GoHighLevel", color: "#25A55F", bg: "#EDF8F1", border: "#D5EEDF" },
-  sales: { label: "Sales", color: "#B4530A", bg: "#FDF1E7", border: "#F5DDC0" },
+  // Named for the system the numbers come out of, not the department they
+  // describe — "Sales" left the row unable to answer the one question the
+  // column asks. Every call-centre metric in the catalog is an `hp_*` field
+  // pulled from HotProspector, the only dialler wired to Birdy; the day a
+  // second one lands, this splits by metric rather than by category.
+  sales: { label: "HotProspector", color: "#B4530A", bg: "#FDF1E7", border: "#F5DDC0" },
   birdy: { label: "Birdy", color: "#6B4EE6", bg: "#F1EEFC", border: "#E3DAFB" },
   tag: { label: "Tags", color: "#C93B8C", bg: "#FCEDF6", border: "#F5D6EA" },
   custom: { label: "Custom Formula", color: "#6B4EE6", bg: "#F1EEFC", border: "#E3DAFB" },

@@ -9,9 +9,15 @@ describe("sourceForCategory", () => {
     expect(sourceForCategory("Campaigns")).toBe("meta")
   })
 
-  it("collapses both call-centre categories onto Sales", () => {
+  it("collapses both call-centre categories onto one badge", () => {
     expect(sourceForCategory("Call Center")).toBe("sales")
     expect(sourceForCategory("Call Center Agents")).toBe("sales")
+  })
+
+  it("badges call-centre metrics with the dialler they come from", () => {
+    // The column answers "where does this number come from" — "Sales" named a
+    // department instead, which is no answer at all.
+    expect(SOURCE_STYLES.sales.label).toBe("HotProspector")
   })
 
   it("files GHL opportunity fields under GoHighLevel", () => {

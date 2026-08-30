@@ -88,7 +88,8 @@ describe("Metrics Hub", () => {
     // Both Meta categories carry the one badge; the derived ratio is Birdy's.
     expect(within(table()).getAllByText("Meta Ads")).toHaveLength(2)
     expect(within(table()).getAllByText("GoHighLevel")).toHaveLength(1)
-    expect(within(table()).getAllByText("Sales")).toHaveLength(1)
+    // Call-centre metrics name their dialler, not the department.
+    expect(within(table()).getAllByText("HotProspector")).toHaveLength(1)
     expect(within(table()).getAllByText("Birdy")).toHaveLength(1)
     expect(within(table()).getAllByText("Custom Formula")).toHaveLength(1)
   })

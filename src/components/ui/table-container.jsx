@@ -77,6 +77,7 @@ const StyledTable = ({
   initialColumnOrder = [],
   onColumnOrderChange,
   emptyMessage,
+  initialPageSize = 15,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -95,7 +96,7 @@ const StyledTable = ({
   }, [initialColumnOrder]);
   const isClientMode = Array.isArray(customMetrics) && setCustomMetrics !== undefined;
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(15);
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   // Toggle column is only visible when NOT in client mode
   const showToggleCol = !isClientMode && enableStatusToggle;
@@ -696,14 +697,6 @@ const StyledTable = ({
                     </div>
                   </th>
 
-                  {/* ── Dedicated Status column — client mode only, right after Business Name ── */}
-                  {colIdx === 0 && isClientMode && (
-                    <th className="h-12 w-[110px] min-w-[110px] cursor-default select-none whitespace-nowrap">
-                      <div className="flex h-full w-full items-center justify-between gap-2 px-[22px]">
-                        <div className="flex min-w-0 items-center gap-1">Status</div>
-                      </div>
-                    </th>
-                  )}
                 </Fragment>
               ))}
             </tr>
@@ -760,13 +753,6 @@ const StyledTable = ({
                         </div>
                       </td>
 
-                      {colIdx === 0 && isClientMode && (
-                        <td className={idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}>
-                          <div className="flex h-11 items-center px-[22px]">
-                            <Skeleton className="h-5 w-16 rounded-full" />
-                          </div>
-                        </td>
-                      )}
                     </Fragment>
                   ))}
                 </tr>
@@ -775,7 +761,7 @@ const StyledTable = ({
               /* CASE 2: Done loading, no data */
               <tr>
                 <td
-                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0) + (isClientMode ? 1 : 0)}
+                  colSpan={visibleColumns.length + (enableSelection ? 1 : 0) + (showToggleCol ? 1 : 0)}
                   className="h-48 text-center align-middle"
                 >
                   <div className="flex flex-col items-center justify-center gap-2 py-10 text-pd-faint">
@@ -897,6 +883,18 @@ const StyledTable = ({
                                 : "min-w-0 px-[22px]"
                             }
                           >
+                            {/* ── Client status — a dot rather than a badge, so
+                                the state reads at a glance without spending a
+                                column on it. Green is active, grey paused. ── */}
+                            {colIdx === 0 && isClientMode && row.status && !isRowLoading?.(row) && (
+                              <span
+                                title={row.status}
+                                aria-label={row.status}
+                                className={`size-2 shrink-0 rounded-full ${
+                                  isActive ? "bg-[#15803D]" : "bg-pd-faint"
+                                }`}
+                              />
+                            )}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -929,27 +927,6 @@ const StyledTable = ({
                           </div>
                         </td>
 
-                        {/* ── Dedicated Status cell — client mode only, right after Business Name ── */}
-                        {colIdx === 0 && isClientMode && (
-                          <td className={isSelected ? "!bg-pd-primary-tint" : ""}>
-                            <div className="flex h-11 items-center px-[22px]">
-                              {!isRowLoading?.(row) && row.status && (
-                                <span
-                                  className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-[3px] rounded-full select-none ${
-                                    isActive
-                                      ? "bg-[#DCFCE7] text-[#15803D]"
-                                      : "bg-[#FEF9C3] text-[#A16207]"
-                                  }`}
-                                >
-                                  <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                                    isActive ? "bg-[#15803D]" : "bg-[#A16207]"
-                                  }`} />
-                                  <span className="hidden sm:inline">{row.status}</span>
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        )}
                       </Fragment>
                     ))}
                   </tr>

@@ -14,7 +14,13 @@ const GLYPHS = {
     "M6.9 4.3c2.5 0 4.2 4 5.1 6.5.9-2.5 2.6-6.5 5.1-6.5 2.5 0 4.9 3.7 4.9 7.7 0 2.6-1.1 3.8-1.9 3.8-1.8 0-3-2.9-4-5-1-2-1.7-3-2.6-3",
   ],
   ghl: ["M4 16l4-6 4 4 4-8 4 6"],
-  sales: ["M12 1v22", "M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"],
+  // HotProspector's own mark is a flame, so the badge draws one instead of the
+  // dollar sign it carried while the pill just said "Sales". Drawn in
+  // currentColor like its neighbours rather than dropping in the blue PNG
+  // logo, which would fight the orange pill it sits in.
+  sales: [
+    "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.4-.5-2-1-3-1.1-2.1-.2-4 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.2.4-2.3 1-3a2.5 2.5 0 0 0 2.5 2.5z",
+  ],
   birdy: ["M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"],
   tag: [
     "M20.6 12.6L13.4 19.8a2 2 0 0 1-2.8 0L3.5 12.7a2 2 0 0 1-.6-1.4V5.5a2 2 0 0 1 2-2h5.8a2 2 0 0 1 1.4.6l7.5 7.5a2 2 0 0 1 0 2.8z",
