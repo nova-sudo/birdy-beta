@@ -16,7 +16,6 @@ import {
   DollarSign,
   Target,
 } from "lucide-react"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
@@ -43,7 +42,7 @@ import { usePageHeader } from "@/components/page-header"
 // implemented for the Portfolio Dashboard, which came from the same handoff
 // bundle, so this screen scopes the same fonts rather than declaring its own.
 import { pdFontClass } from "@/lib/pd-fonts"
-import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PageTabPanel, PageTabs, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
@@ -61,6 +60,17 @@ const MARKETING_KPI_PRESENTATION = {
   impressions: { icon: Eye, tone: "info" },
   ctr: { icon: MousePointerClick, tone: "primary" },
 }
+
+// The page's sections, with the tab bar's 14px leading glyph.
+const SECTION_TABS = [
+  { key: "campaigns", label: "Campaigns", icon: LayoutGrid },
+  { key: "adsets", label: "Ad Sets", icon: Grid3X3 },
+  { key: "ads", label: "Ads", icon: FileBarChart },
+  { key: "leads", label: "Leads", icon: Users },
+]
+
+// Ties the tablist to the panel it swaps, for anyone navigating by role.
+const TABLE_PANEL_ID = "marketing-hub-table-panel"
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
@@ -1084,7 +1094,7 @@ export function MarketingContent({
           if (!group.meta_token_error) return null
 
           return (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-amber-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -1095,7 +1105,7 @@ export function MarketingContent({
               </div>
               <a
                 href="/settings?tab=integrations"
-                className="shrink-0 rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+                className="shrink-0 rounded-[8px] bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
               >
                 Reconnect Meta
               </a>
@@ -1195,37 +1205,19 @@ export function MarketingContent({
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Section tabs on the handoff's segmented-control spec: the track is
-              the divider tint, the selected item lifts onto white with the
-              purple-tinted shadow. Radix Tabs still drives the behaviour —
-              only the skin changes. */}
+        <div className="flex w-full flex-col">
+          {/* The app's page tab bar, same component the Sales, Lead and Client
+              hubs use — this page brings only its four sections. It replaced a
+              hand-skinned Radix TabsList that had drifted a pixel off the
+              others on radii and badge tint. */}
           <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
-            <TabsList className="h-auto justify-start gap-[5px] overflow-x-auto rounded-[10px] border border-pd-border bg-pd-divider p-1">
-              {[
-                { value: "campaigns", icon: LayoutGrid, label: "Campaigns" },
-                { value: "adsets", icon: Grid3X3, label: "Ad Sets" },
-                { value: "ads", icon: FileBarChart, label: "Ads" },
-                { value: "leads", icon: Users, label: "Leads" },
-              ].map(tab => {
-                const badge = tabBadge(tab.value)
-                return (
-                <TabsTrigger
-                  key={tab.value}
-                  value={tab.value}
-                  className="gap-[7px] rounded-lg px-[15px] py-[7px] font-pd-display text-[13px] font-semibold text-pd-muted data-[state=active]:bg-pd-surface data-[state=active]:text-pd-ink data-[state=active]:shadow-pd-segment"
-                >
-                    <tab.icon className="size-[14px]" />
-                    {tab.label}
-                    {badge !== null && (
-                    <span className="ml-1 rounded-[5px] bg-pd-primary-tint px-1.5 text-[10.5px] font-bold leading-4 text-pd-primary">
-                      {badge}
-                    </span>
-                    )}
-                  </TabsTrigger>
-                )
-              })}
-            </TabsList>
+            <PageTabs
+              label="Marketing Hub section"
+              panelId={TABLE_PANEL_ID}
+              tabs={SECTION_TABS.map(tab => ({ ...tab, badge: tabBadge(tab.key) ?? undefined }))}
+              value={activeTab}
+              onChange={setActiveTab}
+            />
 
             {/* Search and Columns as the handoff's 38px controls, sitting
                 together at the right end of the tab row. */}
@@ -1248,7 +1240,7 @@ export function MarketingContent({
             </div>
           </div>
 
-          <TabsContent value={activeTab} className="mt-4" key={activeTab}>
+          <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
 
             {/* Drill-down breadcrumb */}
             <DrillDownBreadcrumb
@@ -1375,8 +1367,8 @@ export function MarketingContent({
                 }}
               />
             )}
-          </TabsContent>
-        </Tabs>
+          </PageTabPanel>
+        </div>
       </div>
     </div>
   )

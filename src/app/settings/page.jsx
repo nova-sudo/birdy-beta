@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
+import { PageTabs } from "@/components/portfolio"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
 import { CreditsPanel } from "@/components/settings/CreditsPanel"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -58,16 +59,26 @@ function SettingsPageContent() {
       ? requestedTab
       : "integrations")
 
-  // Controlled rather than defaultValue: links into a tab (the sidebar credits
-  // indicator points at ?tab=billing) are client-side navigations that don't
-  // remount this page, so an uncontrolled default would leave the reader on
-  // whichever tab they were already looking at.
-  const [activeTab, setActiveTab] = useState(urlTab)
-  useEffect(() => { setActiveTab(urlTab) }, [urlTab])
+  // Radix still swaps the panels; the strip above them is the app's shared
+  // page tab bar, so Settings stops carrying its own unstyled TabsList.
+  //
+  // Controlled rather than defaultValue, for two reasons: PageTabs reports the
+  // change rather than a Radix trigger doing it, and links into a tab (the
+  // sidebar credits indicator points at ?tab=billing) are client-side
+  // navigations that don't remount this page — an uncontrolled default would
+  // leave the reader on whichever tab they were already looking at.
+  const [tab, setTab] = useState(urlTab)
+  useEffect(() => { setTab(urlTab) }, [urlTab])
+
+  const SETTINGS_TABS = [
+    { key: "general", label: "General" },
+    { key: "integrations", label: "Integrations" },
+    { key: "billing", label: "Billing" },
+  ]
 
   // Keep the URL in step so the tab survives a reload and can be shared.
   const handleTabChange = (value) => {
-    setActiveTab(value)
+    setTab(value)
     router.replace(`/settings?tab=${value}`, { scroll: false })
   }
 
@@ -663,18 +674,15 @@ function SettingsPageContent() {
   return (
     <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
       <div>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="w-full justify-start">
-            {[
-              { key: "general", label: "General" },
-              { key: "integrations", label: "Integrations" },
-              { key: "billing", label: "Billing" },
-            ].map((tab) => (
-              <TabsTrigger key={tab.key} value={tab.key}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs value={tab} onValueChange={handleTabChange} className="space-y-6">
+          <div className={pdFontClass}>
+            <PageTabs
+              label="Settings section"
+              tabs={SETTINGS_TABS}
+              value={tab}
+              onChange={handleTabChange}
+            />
+          </div>
 
           <TabsContent value="general" className="space-y-6">
             <GeneralSettings
