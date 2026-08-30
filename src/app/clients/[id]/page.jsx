@@ -33,7 +33,7 @@ import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
 import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
-import { InsightCard, SidePanel, UnderlineTabs } from "@/components/portfolio"
+import { InsightCard, PageTabs, SidePanel, UnderlineTabs } from "@/components/portfolio"
 import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
 import { buildFunnelStages } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
@@ -119,6 +119,9 @@ export default function ClientDetailsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState("")
   const [integrationsOpen, setIntegrationsOpen] = useState(false)
+  // Controlled so the settings modal's segmented control can drive it. The
+  // handoff opens on Details.
+  const [settingsTab, setSettingsTab] = useState("details")
   // Controlled so the Birdy Insights card can send the reader into the
   // Ask Birdy tab with its question already asked.
   const [activeTab, setActiveTab] = useState("overview")
@@ -778,12 +781,21 @@ export default function ClientDetailsPage() {
 
           {/* The design splits this modal into Details / Targets / Integrations
               rather than one long scroll. */}
-          <Tabs defaultValue="details" className="w-full">
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="targets">Targets</TabsTrigger>
-              <TabsTrigger value="integrations">Integrations</TabsTrigger>
-            </TabsList>
+          <Tabs value={settingsTab} onValueChange={setSettingsTab} className="w-full">
+            {/* The handoff calls for a segmented control here, which is the
+                shared page tab bar — the same one Settings itself uses. */}
+            <div className={pdFontClass}>
+              <PageTabs
+                label="Client settings section"
+                tabs={[
+                  { key: "details", label: "Details" },
+                  { key: "targets", label: "Targets" },
+                  { key: "integrations", label: "Integrations" },
+                ]}
+                value={settingsTab}
+                onChange={setSettingsTab}
+              />
+            </div>
 
             <TabsContent value="details" className="mt-4 space-y-6">
             <Card>
