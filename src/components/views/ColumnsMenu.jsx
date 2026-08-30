@@ -45,6 +45,10 @@ const SOURCE_STYLE = {
   meta:          { color: "#3B7DD6", bg: "#EAF1FD", border: "#D7E4F9", label: "Meta" },
   ghl:           { color: "#25A55F", bg: "#EDF8F1", border: "#D5EEDF", label: "GHL" },
   tags:          { color: "#25A55F", bg: "#EDF8F1", border: "#D5EEDF", label: "Tags" },
+  // Birdy's own derived metrics. Shares the Metrics Hub's purple with Custom —
+  // both are ours rather than a platform's — and the label is what tells a
+  // built-in ratio apart from a formula the user wrote.
+  birdy:         { color: "#6B4EE6", bg: "#F1EEFC", border: "#E2DAFA", label: "Birdy" },
   custom:        { color: "#6B4EE6", bg: "#F1EEFC", border: "#E2DAFA", label: "Custom" },
   hotprospector: { color: "#D9722B", bg: "#FDF1E8", border: "#F7DFC9", label: "HP" },
 }
