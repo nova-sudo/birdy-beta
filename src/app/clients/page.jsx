@@ -62,7 +62,7 @@ import { Spinner } from "@/components/ui/spinner"
 import Image from "next/image"
 import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
-import { PdSegmented } from "@/components/portfolio"
+import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
@@ -76,6 +76,9 @@ import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
+
+// Ties the status tabs to the table they filter, for anyone navigating by role.
+const CLIENTS_PANEL_ID = "clients-table-panel"
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -1085,21 +1088,17 @@ export default function ClientsPage() {
 
       <div>
 
-      {/* Status tabs left, table controls right. Sizing is copied from the
-          Leads and Call Centre strips rather than the handoff's 14px, so the
-          three page-level tab bars stay identical — PdSegmented ships with no
-          padding of its own and takes it from the caller. */}
+      {/* Status tabs left, table controls right. PageTabs carries the sizing,
+          so this strip stays identical to the Leads, Marketing and Call Centre
+          ones without any page repeating the measurements. */}
       <div className="mb-[14px] flex flex-col gap-3 md:flex-row md:items-center">
-        <PdSegmented
-          role="tablist"
+        <PageTabs
           label="Filter clients by status"
-          className="shrink-0 self-start"
-          itemClassName="px-[15px] py-[7px] text-[13px]"
-          options={filterTabs.map((t) => ({
+          panelId={CLIENTS_PANEL_ID}
+          tabs={filterTabs.map((t) => ({
             key: t.key,
             label: t.label,
             badge: t.count,
-            badgeClassName: "bg-pd-divider text-pd-muted",
           }))}
           value={statusFilter}
           onChange={setStatusFilter}
@@ -1140,7 +1139,7 @@ export default function ClientsPage() {
       </div>
 
         {/* StyledTable — receives filtered data */}
-        <div className="mt-4">
+        <PageTabPanel id={CLIENTS_PANEL_ID} label="Clients" className="mt-4">
         <StyledTable
           data={filteredByStatus}
           onRowClick={handleClientGroupClick}
@@ -1165,7 +1164,7 @@ export default function ClientsPage() {
           onStatusToggle={handleStatusToggle}
           togglingRows={togglingRows}
         />
-        </div>
+        </PageTabPanel>
       </div>
       </div>
       </div>

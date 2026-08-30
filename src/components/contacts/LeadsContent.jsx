@@ -7,7 +7,7 @@ import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StyledTable from "@/components/ui/table-container"
-import { PdSegmented } from "@/components/portfolio"
+import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
 import { buildContactColumns } from "@/lib/contact-columns"
@@ -35,6 +35,9 @@ const baseContactColumns = buildContactColumns()
 // Sales-Hub's CallCentreContent.
 const TOOLBAR_CHIP =
   "flex h-[38px] cursor-pointer items-center gap-2 rounded-[10px] border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+
+// Ties the pipeline tabs to the table they filter, for anyone navigating by role.
+const LEADS_PANEL_ID = "lead-hub-table-panel"
 
 const PIPELINE_TABS = [
   { key: "all", label: "All Leads", stat: "lead_count" },
@@ -381,16 +384,13 @@ export function LeadsContent({
   // them on every window/group change.
   const pipelineTabs = useMemo(() => {
     const stats = metaData?.stats ?? {}
+    // PageTabs tints the badges (purple on the active tab, neutral elsewhere).
     return PIPELINE_TABS.map((tab) => ({
       key: tab.key,
       label: tab.label,
       badge: (stats[tab.stat] ?? 0).toLocaleString(),
-      badgeClassName:
-        tab.key === selectedOpportunityStatus
-          ? "bg-pd-primary-tint text-pd-primary"
-          : "bg-pd-neutral-badge text-pd-subtle",
     }))
-  }, [metaData, selectedOpportunityStatus])
+  }, [metaData])
 
   return (
     <div className="min-w-0">
@@ -401,11 +401,10 @@ export function LeadsContent({
 
         <div>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <PdSegmented
+            <PageTabs
               label="Pipeline stage"
-              className="shrink-0 self-start"
-              itemClassName="px-[15px] py-[7px] text-[13px]"
-              options={pipelineTabs}
+              panelId={LEADS_PANEL_ID}
+              tabs={pipelineTabs}
               value={selectedOpportunityStatus}
               onChange={setSelectedOpportunityStatus}
             />
@@ -448,7 +447,7 @@ export function LeadsContent({
             </div>
           </div>
 
-          <div className="mt-4">
+          <PageTabPanel id={LEADS_PANEL_ID} label="Leads" className="mt-4">
             <StyledTable
               columns={contactColumns}
               data={filteredAndSortedContacts}
@@ -466,7 +465,7 @@ export function LeadsContent({
               selectedRows={selectedRows}
               onSelectionChange={setSelectedRows}
             />
-          </div>
+          </PageTabPanel>
         </div>
 
         <div className="flex justify-center gap-4">
