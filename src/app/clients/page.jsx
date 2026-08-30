@@ -33,6 +33,8 @@ import {
   ENHANCED_CLIENT_COLUMNS,
   ENHANCED_CATEGORIES,
   COLUMN_PRESETS,
+  COLUMN_MENU_SOURCES,
+  columnMenuSource,
   buildDynamicColumns,
   getTagCount
 } from '@/lib/enhanced-columns-config';
@@ -337,30 +339,13 @@ export default function ClientsPage() {
     ready: viewsLoaded,
   })
 
-  // The table's own categories, normalised onto the Columns menu's source ids.
-  const COLUMN_SOURCES = [
-    { id: 'all', label: 'All' },
-    { id: 'meta', label: 'Meta' },
-    { id: 'ghl', label: 'GHL' },
-    { id: 'hotprospector', label: 'HP' },
-    { id: 'tags', label: 'Tags' },
-    { id: 'custom', label: 'Custom' },
-  ]
-  const CATEGORY_TO_SOURCE = {
-    metaads: 'meta',
-    gohighlevel: 'ghl',
-    hotprospector: 'hotprospector',
-    tags: 'tags',
-    formulas: 'custom',
-  }
-
   const columnCatalogue = useMemo(
     () => columns
       .filter(c => c.id !== 'name')
       .map(c => ({
         id: c.id,
         label: c.label ?? c.id,
-        source: CATEGORY_TO_SOURCE[c.category] ?? 'custom',
+        source: columnMenuSource(c),
       })),
     [columns]
   )
@@ -1138,7 +1123,7 @@ export default function ClientsPage() {
             onChange={setVisibleColumnIds}
             defaultColumns={defaultColumnIds}
             views={pageViews}
-            sources={COLUMN_SOURCES}
+            sources={COLUMN_MENU_SOURCES}
           />
 
           <Button

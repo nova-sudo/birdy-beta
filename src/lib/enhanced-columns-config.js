@@ -132,6 +132,53 @@ export const buildDynamicColumns = (clientGroups) => {
   return [...BASE_CLIENT_COLUMNS, ...tagColumns];
 };
 
+// ===== COLUMNS MENU SOURCES =====
+// The rail and badges in the Columns menu (components/views/ColumnsMenu).
+// `birdy` is the Metrics Hub's own source for numbers we derive, and is what
+// keeps a built-in ratio apart from a formula the user wrote.
+export const COLUMN_MENU_SOURCES = [
+  { id: 'all', label: 'All' },
+  { id: 'meta', label: 'Meta' },
+  { id: 'ghl', label: 'GHL' },
+  { id: 'hotprospector', label: 'HP' },
+  { id: 'tags', label: 'Tags' },
+  { id: 'birdy', label: 'Birdy' },
+  { id: 'custom', label: 'Custom' },
+];
+
+const CATEGORY_TO_SOURCE = {
+  metaads: 'meta',
+  gohighlevel: 'ghl',
+  hotprospector: 'hotprospector',
+  tags: 'tags',
+  formulas: 'custom',
+};
+
+const ICON_TO_SOURCE = new Map([
+  [metaa, 'meta'],
+  [ghl, 'ghl'],
+  [HP, 'hotprospector'],
+]);
+
+/**
+ * Which source badge a client column wears in the Columns menu.
+ *
+ * `calculated` and `core` have no category entry, and the page's old
+ * `?? 'custom'` fallback filed every one of them under Custom — so Cost Per
+ * Lead sat in the menu badged as a user-written formula while its own header
+ * carried the Meta icon and the Metrics Hub listed it under Meta. The icon is
+ * the source the header already claims, so read it off that before falling
+ * back. A column with no icon at all (Health, Account Age) is one Birdy
+ * derives: its own bucket, not a custom formula.
+ *
+ * @param {{category?: string, icons?: unknown}} column
+ * @returns {string} one of COLUMN_MENU_SOURCES' ids
+ */
+export const columnMenuSource = (column) =>
+  CATEGORY_TO_SOURCE[column?.category] ??
+  ICON_TO_SOURCE.get(column?.icons) ??
+  'birdy';
+
 // ===== HELPER: Get tag count from tag breakdown =====
 export const getTagCount = (group, tagName) => {
   const tagBreakdown = group?.gohighlevel?.metrics?.tag_breakdown || {};
