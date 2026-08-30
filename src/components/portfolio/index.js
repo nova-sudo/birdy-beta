@@ -21,5 +21,6 @@ export { StatStrip } from "./StatStrip";
 export { StatTile } from "./StatTile";
 export { SuggestionCard } from "./SuggestionCard";
 export { TrendChart } from "./TrendChart";
+export { UnderlineTabs } from "./UnderlineTabs";
 export { WinCard } from "./WinCard";
 export { TONES, toneClass } from "./tones";

@@ -3,9 +3,9 @@ import { useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings } from "lucide-react"
+import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
@@ -33,7 +33,7 @@ import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
 import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
-import { InsightCard, SidePanel } from "@/components/portfolio"
+import { InsightCard, SidePanel, UnderlineTabs } from "@/components/portfolio"
 import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
 import { buildFunnelStages } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
@@ -94,7 +94,15 @@ function AlertsSkeleton() {
 
 // ── Activity Skeleton ────────────────────────────────────────────────────────
 // ── Tab trigger style ────────────────────────────────────────────────────────
-const tabTriggerClass = ""
+// The handoff's five workspace tabs (section 3), with the leading icons it
+// names: grid, sparkle, megaphone, phone, user-check.
+const CLIENT_TABS = [
+  { key: "overview", label: "Overview", icon: LayoutGrid },
+  { key: "ask-birdy", label: "Ask Birdy", icon: Sparkles },
+  { key: "marketing", label: "Marketing", icon: Megaphone },
+  { key: "call-centre", label: "Call Centre", icon: Phone },
+  { key: "leads", label: "Leads", icon: UserCheck },
+]
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -450,13 +458,16 @@ export default function ClientDetailsPage() {
     <div className="flex flex-col gap-4 w-full">
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        <TabsList className="w-full justify-start">
-          <TabsTrigger value="overview" className={tabTriggerClass}>Overview</TabsTrigger>
-          <TabsTrigger value="ask-birdy" className={tabTriggerClass}>Ask Birdy</TabsTrigger>
-          <TabsTrigger value="marketing" className={tabTriggerClass}>Marketing</TabsTrigger>
-          <TabsTrigger value="call-centre" className={tabTriggerClass}>Call Centre</TabsTrigger>
-          <TabsTrigger value="leads" className={tabTriggerClass}>Leads</TabsTrigger>
-        </TabsList>
+        {/* The handoff draws this bar edge to edge under the client header, so
+            it bleeds the layout's own p-4/md:p-6 and carries its own padding.
+            Radix still swaps the panels; the strip is the design's. */}
+        <UnderlineTabs
+          label="Client workspace"
+          tabs={CLIENT_TABS}
+          value={activeTab}
+          onChange={setActiveTab}
+          className={`${pdFontClass} -mx-4 -mt-4 md:-mx-6 md:-mt-6`}
+        />
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
         <TabsContent value="overview" className="mt-6 space-y-6">
