@@ -90,8 +90,27 @@ describe("Metrics Hub", () => {
     expect(within(table()).getAllByText("GoHighLevel")).toHaveLength(1)
     // Call-centre metrics name their dialler, not the department.
     expect(within(table()).getAllByText("HotProspector")).toHaveLength(1)
-    expect(within(table()).getAllByText("Birdy")).toHaveLength(1)
+    // Conversion Rate from the catalog, plus ROAS, which Birdy ships itself.
+    expect(within(table()).getAllByText("Birdy")).toHaveLength(2)
     expect(within(table()).getAllByText("Custom Formula")).toHaveLength(1)
+  })
+
+  it("lists ROAS as a Birdy metric the catalog never sent", async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findByText("Meta Spend")
+
+    await user.click(screen.getByRole("tab", { name: "Birdy Metrics" }))
+    expect(rowNames()).toEqual(["Conversion Rate", "ROAS"])
+  })
+
+  it("offers a Birdy metric show/hide only — never a delete", async () => {
+    render(<Harness />)
+    await screen.findByText("ROAS")
+
+    expect(screen.getByRole("button", { name: "Hide ROAS" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Delete ROAS" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Edit ROAS" })).not.toBeInTheDocument()
   })
 
   it("filters to one source per tab", async () => {

@@ -5,6 +5,8 @@
  */
 
 import { extractUniqueTags } from './enhanced-columns-config';
+import { defaultMetricFormat } from './default-metrics';
+import { formatMetric } from './format-metric';
 
 // Base metric ID to data key mapping
 const BASE_METRIC_MAPPING = {
@@ -39,7 +41,8 @@ const BASE_METRIC_MAPPING = {
   "conversion_rate": "conversion_rate",
   "cost_per_lead": "cost_per_lead",
   "engagement_rate": "engagement_rate",
-  
+  "roas": "roas",
+
   // Campaigns dashboard (Facebook/Meta - Campaigns, Ad Sets, Ads)
   spend: "spend",
   impressions: "impressions",
@@ -131,6 +134,8 @@ const METRIC_DISPLAY_NAMES = {
   cpl: "CPL",
   cost_per_result: "Cost Per Result",
   conversion_rate: "Conv. Rate",
+  // Without this the id-formatting fallback would title-case it to "Roas".
+  roas: "ROAS",
   spend: "Spend",
   impressions: "Impressions",
   clicks: "Clicks",
@@ -271,7 +276,15 @@ export function formatMetricValue(value, metricId) {
     if (isNaN(parsed)) return "-"
     value = parsed
   }
-  
+
+  // Birdy's own metrics carry their format with the definition, so ROAS reads
+  // "15.4x" wherever it lands rather than falling through to the substring
+  // rules below, which would round it to a bare "15".
+  const defaultFormat = defaultMetricFormat(metricId)
+  if (defaultFormat) {
+    return formatMetric(value, defaultFormat)
+  }
+
   // Check if it's a currency metric
   if (
     metricId.includes("revenue") ||
@@ -349,7 +362,8 @@ export function getAvailableMetrics(clientGroups = []) {
     { id: "conversion_rate", label: "Conversion Rate", category: "Calculated" },
     { id: "cost_per_lead", label: "Cost Per Lead", category: "Calculated" },
     { id: "engagement_rate", label: "Engagement Rate", category: "Calculated" },
-    
+    { id: "roas", label: "ROAS", category: "Calculated" },
+
     // Campaigns (for Campaigns dashboard)
     { id: "spend", label: "Spend", category: "Campaigns" },
     { id: "impressions", label: "Impressions", category: "Campaigns" },

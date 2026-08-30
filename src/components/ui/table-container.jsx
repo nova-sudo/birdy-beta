@@ -16,6 +16,8 @@ import {
   evaluateFormula,
   formatMetricValue,
 } from "@/lib/metrics";
+import { applyDefaultMetrics, defaultMetricFormat } from "@/lib/default-metrics";
+import { formatMetric } from "@/lib/format-metric";
 import {
   Pagination,
   PaginationContent,
@@ -305,6 +307,9 @@ const StyledTable = ({
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
         base.cost_per_lead = metaLeads > 0 ? (metaSpend / metaLeads) : 0;
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
+        // ROAS and any other Birdy metric — one definition, applied after the
+        // base fields it divides are on the row.
+        applyDefaultMetrics(base);
 
         base.meta_freshness = getDataFreshness(group.last_meta_refresh);
         base.ghl_freshness = getDataFreshness(group.last_ghl_refresh);
@@ -496,6 +501,13 @@ const StyledTable = ({
     if (columnId === "name" || columnId === "full_name" || columnId === "contactName") {
       const str = String(value);
       return str.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+    }
+
+    // Birdy's own metrics format from their definition, ahead of the substring
+    // rules below — "roas" matches none of them and would print a bare 15.
+    const defaultFormat = defaultMetricFormat(columnId);
+    if (defaultFormat) {
+      return formatMetric(value, defaultFormat, getSymbolFromCurrency(userCurrency));
     }
 
     const customMatch = customMetrics?.find((m) => m.id === columnId);
