@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch"
 import { useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
+import { PageTabs } from "@/components/portfolio"
 import {
   Dialog,
   DialogContent,
@@ -986,32 +987,33 @@ export default function AlertsPage() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-4">  
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="active">
-              Active Alerts
-              {alerts.counts?.active > 0 && (
-                <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                  {alerts.counts.active}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="triggered">
-              Triggered
-              {alerts.counts?.triggered > 0 && (
-                <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
-                  {alerts.counts.triggered}
-                </span>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="paused">
-              Snoozed / Paused
-              {alerts.counts?.paused > 0 && (
-                <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
-                  {alerts.counts.paused}
-                </span>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          {/* The app's page tab bar. Triggered and Snoozed keep their own badge
+              colours — red and amber carry meaning here, so they override the
+              strip's default tint rather than reading as a plain count. Active
+              has no such meaning and takes the default. A count of 0 passes
+              undefined, which renders no badge at all. */}
+          <div className={pdFontClass}>
+            <PageTabs
+              label="Alert state"
+              tabs={[
+                { key: "active", label: "Active Alerts", badge: alerts.counts?.active || undefined },
+                {
+                  key: "triggered",
+                  label: "Triggered",
+                  badge: alerts.counts?.triggered || undefined,
+                  badgeClassName: "bg-red-100 text-red-600",
+                },
+                {
+                  key: "paused",
+                  label: "Snoozed / Paused",
+                  badge: alerts.counts?.paused || undefined,
+                  badgeClassName: "bg-orange-100 text-orange-700",
+                },
+              ]}
+              value={activeTab}
+              onChange={setActiveTab}
+            />
+          </div>
 
           {isLoading ? (
             // <div className="flex items-center justify-center py-24">

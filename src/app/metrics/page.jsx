@@ -37,7 +37,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { toast } from "sonner"
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
-import { PdSegmented } from "@/components/portfolio"
+import { PageTabs, PageTabPanel } from "@/components/portfolio"
 import { SourceBadge } from "@/components/metrics/SourceBadge"
 import { SOURCE_TABS, matchesSourceTab, sourceForCategory } from "@/lib/metric-sources"
 import { pageNumbers } from "@/lib/page-numbers"
@@ -635,19 +635,19 @@ const MetricsHub = () => {
         {/* Search and create moved up to the global bar with the title, so the
             toolbar is the tab strip alone. */}
         <div className="flex flex-wrap items-center gap-[12px]">
-          <PdSegmented
-            role="tablist"
+          {/* The app's page tab bar. This page had been re-typing its own
+              sizing onto PdSegmented — 20/9 padding against everyone else's
+              15/7 — which is the drift PageTabs exists to stop. */}
+          <PageTabs
             label="Metric source"
             panelId="metrics-table"
-            options={SOURCE_TABS}
+            tabs={SOURCE_TABS}
             value={activeTab}
             onChange={setActiveTab}
-            className="rounded-[10px]"
-            itemClassName="px-[20px] py-[9px] text-[13px] rounded-[8px] whitespace-nowrap"
           />
         </div>
 
-        <div id="metrics-table" role="tabpanel" className="overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+        <PageTabPanel id="metrics-table" label="Metrics" className="overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
           <div className="flex items-center border-b border-pd-border bg-pd-table-head px-[22px] py-[13px] text-[11.5px] font-bold tracking-[0.03em] text-pd-faint">
             <div className="flex-1">METRIC NAME</div>
             <div className="hidden flex-[1.4] md:block">NOTES</div>
@@ -758,7 +758,7 @@ const MetricsHub = () => {
               )
             })
           )}
-        </div>
+        </PageTabPanel>
 
         {!isLoading && totalPages > 1 && (
           <nav aria-label="Metrics pages" className="flex items-center justify-center gap-[6px]">
