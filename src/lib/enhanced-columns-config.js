@@ -58,7 +58,10 @@ export const BASE_CLIENT_COLUMNS = [
   { id: "conversion_rate", label: "Conversion Rate", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
   { id: "cost_per_lead", label: "Cost Per Lead", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
   { id: "engagement_rate", label: "Engagement Rate", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
-  
+  // GHL won revenue over Meta spend — see lib/default-metrics.js for the
+  // definition every consumer of ROAS shares.
+  { id: "roas", label: "ROAS", visible: false, sortable: true, icons: metaa, category: 'calculated', type: 'calculated' },
+
   // Data Freshness
   { id: "account_age_days", label: "Account Age (Days)", visible: false, sortable: true, category: 'core', type: 'data' },
   { id: "meta_freshness", label: "Meta Data Age", visible: false, sortable: false, icons: metaa, category: 'metaads', type: 'data' },
@@ -221,6 +224,7 @@ export const buildMetricMapping = (clientGroups) => {
     "conversion_rate": "conversion_rate",
     "cost_per_lead": "cost_per_lead",
     "engagement_rate": "engagement_rate",
+    "roas": "roas",
     // Campaigns dashboard (Facebook/Meta)
     "spend": "spend",
     "impressions": "impressions",
@@ -291,8 +295,9 @@ export const buildFormulaMetrics = (clientGroups) => {
     { id: "conversion_rate", label: "Conversion Rate", category: "Calculated" },
     { id: "cost_per_lead", label: "Cost Per Lead", category: "Calculated" },
     { id: "engagement_rate", label: "Engagement Rate", category: "Calculated" },
+    { id: "roas", label: "ROAS", category: "Calculated" },
   ];
-  
+
   // Add dynamic tag metrics
   const uniqueTags = extractUniqueTags(clientGroups);
   const tagMetrics = uniqueTags.map(tag => {

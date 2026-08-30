@@ -8,6 +8,8 @@ import {
   evaluateFormula,
   formatMetricValue,
 } from "@/lib/metrics";
+import { applyDefaultMetrics, defaultMetricFormat } from "@/lib/default-metrics";
+import { formatMetric } from "@/lib/format-metric";
 
 /**
  * Reusable container for dashboard tables with glassmorphism styling
@@ -210,6 +212,9 @@ const StyledTable = ({
         base.conversion_rate = metaClicks > 0 ? ((metaLeads / metaClicks) * 100) : 0;
         base.cost_per_lead = metaLeads > 0 ? (metaSpend / metaLeads) : 0;
         base.engagement_rate = metaImpressions > 0 ? (((metaClicks + metaResults) / metaImpressions) * 100) : 0;
+        // ROAS and any other Birdy metric — one definition, applied after the
+        // base fields it divides are on the row.
+        applyDefaultMetrics(base);
 
         // Data freshness
         base.meta_freshness = getDataFreshness(group.last_meta_refresh);
@@ -341,6 +346,13 @@ const StyledTable = ({
     if (typeof value === "object") {
       console.warn(`Object detected in cell for column ${columnId}:`, value);
       return "—";
+    }
+
+    // Birdy's own metrics format from their definition, ahead of the substring
+    // rules below — "roas" matches none of them and would print a bare 15.
+    const defaultFormat = defaultMetricFormat(columnId);
+    if (defaultFormat) {
+      return formatMetric(value, defaultFormat);
     }
 
     // Custom metrics formatting

@@ -17,6 +17,11 @@ export function formatMetric(value, format = "integer", currencySymbol = "$") {
       return `${num.toFixed(2)}%`
     case "decimal":
       return num.toFixed(2)
+    // A multiple of spend — ROAS and anything else read as "n times back".
+    // One decimal, because the second one is noise at this scale, and the
+    // trailing x so 15.4 can't be mistaken for a count or a currency.
+    case "multiplier":
+      return `${num.toFixed(1)}x`
     case "compact":
       return formatCompact(num)
     case "integer":

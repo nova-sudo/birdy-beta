@@ -42,6 +42,7 @@ import { SourceBadge } from "@/components/metrics/SourceBadge"
 import { SOURCE_TABS, matchesSourceTab, sourceForCategory } from "@/lib/metric-sources"
 import { pageNumbers } from "@/lib/page-numbers"
 import { setCustomMetricsCache } from "@/lib/metrics"
+import { DEFAULT_METRICS } from "@/lib/default-metrics"
 import { InboxIcon } from "lucide-react"
 import {Hash} from "lucide-react"
 
@@ -222,7 +223,23 @@ const MetricsHub = () => {
             label: m.label,
             category: m.category,
             level: m.level,
+            description: m.description || "",
           }))
+          // Birdy's own metrics are computed client-side (lib/default-metrics.js)
+          // rather than served by the catalog endpoint, so merge them in here.
+          // They land in the table like any other base metric — badged Birdy,
+          // show/hide as their only control, no delete. Skipped if the backend
+          // ever starts shipping one of them itself.
+          for (const dm of DEFAULT_METRICS) {
+            if (metrics.some(m => m.id === dm.id)) continue
+            metrics.push({
+              id: dm.id,
+              label: dm.label,
+              category: dm.category,
+              level: dm.level,
+              description: dm.description || "",
+            })
+          }
           // Add tags
           for (const tag of (data.tags || [])) {
             const tagId = `tag_${tag.replace(/[^a-z0-9]/gi, '_').toLowerCase()}`
@@ -240,7 +257,7 @@ const MetricsHub = () => {
             label: m.label,
             source: sourceForCategory(m.category),
             dashboard: m.category === "Campaigns" ? "Marketing Hub" : m.category === "Tags" ? "Clients" : "All",
-            description: "",
+            description: m.description || "",
             category: m.category === "custom" ? "custom" : "standard",
             enabled: true,
           })))
@@ -958,6 +975,7 @@ const MetricsHub = () => {
                           meta_cpc: "group", meta_cpm: "group", meta_leads: "group",
                           ghl_contacts: "group", ghl_revenue: "group", ghl_conversion: "group",
                           conversion_rate: "group", cost_per_lead: "group", engagement_rate: "group",
+                          roas: "group",
                           spend: "campaign", impressions: "campaign", clicks: "campaign",
                           reach: "campaign", results: "campaign", leads: "campaign",
                           ctr: "campaign", cpc: "campaign", cpm: "campaign",
@@ -1200,6 +1218,7 @@ const MetricsHub = () => {
                                 meta_ctr: 3.0, ctr: 3.0, meta_cpc: 0.67, cpc: 0.67,
                                 meta_cpm: 20.0, cpm: 20.0, ghl_contacts: 200, frequency: 2.5,
                                 conversion_rate: 8.0, cost_per_lead: 8.33, engagement_rate: 3.24,
+                                ghl_revenue: 4200, roas: 4.2,
                               }
                               // Recursively resolve a metric reference's sample value.
                               // For built-ins, look up sampleData. For custom metrics
