@@ -14,7 +14,13 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, XCircle, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Target, Sparkles } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Target, Sparkles, Trash2 } from "lucide-react"
+import {
+  IntegrationTile,
+  IntegrationAction,
+  IntegrationDangerAction,
+  IntegrationSiteLink,
+} from "@/components/settings/IntegrationTile"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -630,23 +636,45 @@ function SettingsPageContent() {
     }
   }
 
-  // Reusable remove button with confirmation
-  const RemoveButton = ({ integrationType, label }) => {
+  // Tiles are a quarter of the row wide, so a full date-and-time stamp would
+  // wrap onto its own line and break the key/value row. The date is the part
+  // that matters for an expiring token anyway.
+  const formatExpiry = (value) => {
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "—"
+    return date.toLocaleDateString(undefined, {
+      day: "2-digit", month: "2-digit", year: "numeric",
+    })
+  }
+
+  // Reusable remove button with confirmation.
+  //
+  // `compact` drops it to an icon-only square: a tile that also needs a
+  // Reconnect button has no room for two full-width labels beside the site
+  // link, and the trash glyph is the same affordance the handoff draws.
+  const RemoveButton = ({ integrationType, label, compact = false }) => {
     const isRemoving = removingIntegration === integrationType
     return (
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button
-            variant="outline"
-            size="sm"
+          <IntegrationDangerAction
             disabled={isRemoving}
-            className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors disabled:opacity-50"
+            aria-label={compact ? `Remove ${label}` : undefined}
+            title={compact ? `Remove ${label}` : undefined}
+            className={compact ? "w-[38px] flex-none px-0" : undefined}
           >
-            {isRemoving
-              ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Removing…</>
-              : "Remove"
-            }
-          </Button>
+            {isRemoving ? (
+              <>
+                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                {!compact && "Removing…"}
+              </>
+            ) : (
+              <>
+                <Trash2 className="size-3.5" aria-hidden="true" />
+                {!compact && "Remove"}
+              </>
+            )}
+          </IntegrationDangerAction>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -753,414 +781,395 @@ function SettingsPageContent() {
             </div>
           </TabsContent>
 
-          <TabsContent value="integrations" className="space-y-6">
+          {/* Poppins/Inter are scoped to the subtree that uses them, the way
+              every other redesigned screen applies them. */}
+          <TabsContent value="integrations" className={`${pdFontClass} space-y-6`}>
             {error && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            <div className="space-y-3">
+
+            <section className="space-y-[14px]">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-1">Connected Services</h2>
-                <p className="text-sm text-muted-foreground">Manage your third-party service integrations</p>
+                <h2 className="font-pd-display text-[16px] font-semibold text-pd-ink">
+                  Connected services
+                </h2>
+                <p className="mt-1 text-[13px] text-pd-faint">
+                  Manage your third-party service integrations
+                </p>
               </div>
 
-              <Separator />
-
-
-              {/* Slack */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-[#4A154B] to-[#611f69] flex items-center justify-center shrink-0">
-                      <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-base">Slack Bot</CardTitle>
-                        {slackStatus.installed && (
-                          <Badge variant="default" className="text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />Connected
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-sm">
-                        Talk to Birdy AI from Slack — @mention the bot or DM it directly, using this account's own AI key.
-                      </CardDescription>
-                      {slackStatus.installed && (
-                        <p className="text-xs text-muted-foreground mt-1">{slackStatus.team_name || slackStatus.team_id}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {slackStatus.installed ? (
-                      <RemoveButton integrationType="slack" label="Slack Bot" />
-                    ) : statusInitialLoading ? (
-                      <Button size="sm" disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Checking…
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={handleConnectSlack} disabled={isLoading}>
-                        {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Connect
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href="https://slack.com" target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-
-                  {slackStatus.installed && (
-                    <div className="mt-4 pt-4 border-t border-border/40 space-y-2">
-                      <div>
-                        <p className="text-sm font-medium text-foreground">AI suggestions channel</p>
-                        <p className="text-xs text-muted-foreground">
-                          Birdy posts each new suggestion here with “Do it for me” and “Ignore” buttons. Change it anytime.
-                        </p>
-                      </div>
-                      {channelsError ? (
-                        <Alert>
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription className="text-xs">
-                            Couldn’t load channels — your Slack connection predates channel support.{" "}
-                            <button onClick={handleConnectSlack} className="underline font-medium">
-                              Reconnect Slack
-                            </button>{" "}
-                            to enable it.
-                          </AlertDescription>
-                        </Alert>
+              {/* Four across on a wide screen, as the handoff draws it, folding
+                  to two and then one rather than shrinking a tile past the
+                  point its description and buttons still read. */}
+              <div className="grid gap-[14px] sm:grid-cols-2 xl:grid-cols-4">
+                <IntegrationTile
+                  name="Slack"
+                  chipClassName="bg-pd-primary-tint text-pd-primary"
+                  icon={
+                    <svg className="size-[15px]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zM6.313 15.165a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.834 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.834 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.834 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.834zM8.834 6.313a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.834a2.528 2.528 0 0 1 2.522-2.521h6.312zM18.956 8.834a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.834a2.528 2.528 0 0 1-2.522 2.521h-2.522V8.834zM17.688 8.834a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.312zM15.165 18.956a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.522v-2.522h2.52zM15.165 17.688a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z" />
+                    </svg>
+                  }
+                  description="Talk to Birdy AI from Slack — @mention or DM it directly."
+                  status={
+                    slackStatus.installed
+                      ? "connected"
+                      : statusInitialLoading ? "checking" : "disconnected"
+                  }
+                  meta={
+                    slackStatus.installed
+                      ? { label: "Workspace", value: slackStatus.team_name || slackStatus.team_id || "—" }
+                      : undefined
+                  }
+                  actions={
+                    <>
+                      {slackStatus.installed ? (
+                        <RemoveButton integrationType="slack" label="Slack" />
                       ) : (
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Select
-                            value={slackStatus.notify_channel_id || ""}
-                            onValueChange={saveSlackChannel}
-                            disabled={savingChannel}
-                            onOpenChange={(o) => { if (o) loadSlackChannels() }}
+                        <IntegrationAction
+                          onClick={handleConnectSlack}
+                          disabled={isLoading || statusInitialLoading}
+                        >
+                          {(isLoading || statusInitialLoading) && (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                          )}
+                          {statusInitialLoading ? "Checking…" : "Connect"}
+                        </IntegrationAction>
+                      )}
+                      <IntegrationSiteLink href="https://slack.com" label="Open Slack" />
+                    </>
+                  }
+                >
+                  {/* The handoff keeps this deliberately bare — no heading, no
+                      helper copy, just the channel Birdy posts suggestions to.
+                      The label lives on the control for screen readers. */}
+                  {slackStatus.installed && (
+                    channelsError ? (
+                      <Alert className="py-2">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        <AlertDescription className="text-[11.5px]">
+                          Couldn’t load channels — your Slack connection predates channel
+                          support.{" "}
+                          <button onClick={handleConnectSlack} className="font-semibold underline">
+                            Reconnect Slack
+                          </button>{" "}
+                          to enable it.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={slackStatus.notify_channel_id || ""}
+                          onValueChange={saveSlackChannel}
+                          disabled={savingChannel}
+                          onOpenChange={(o) => { if (o) loadSlackChannels() }}
+                        >
+                          <SelectTrigger
+                            aria-label="Channel Birdy posts AI suggestions to"
+                            className="h-[34px] min-w-0 flex-1 rounded-[9px] border-pd-border text-[12.5px]"
                           >
-                            <SelectTrigger className="w-[240px]">
-                              <SelectValue placeholder={channelsLoading ? "Loading channels…" : "Select a channel…"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">— Don’t post —</SelectItem>
-                              {slackChannels.map((c) => (
-                                <SelectItem key={c.id} value={c.id}>
-                                  {c.is_private ? "🔒 " : "# "}{c.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {savingChannel && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                        </div>
-                      )}
-                      {slackStatus.notify_channel_name && !channelsError && (
-                        <p className="text-xs text-green-600 flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          Posting to #{slackStatus.notify_channel_name}
-                        </p>
-                      )}
-                    </div>
+                            <SelectValue
+                              placeholder={channelsLoading ? "Loading channels…" : "Select a channel…"}
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— Don’t post —</SelectItem>
+                            {slackChannels.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.is_private ? "🔒 " : "# "}{c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {savingChannel && (
+                          <Loader2 className="size-3.5 shrink-0 animate-spin text-pd-faint" />
+                        )}
+                      </div>
+                    )
                   )}
-                </CardContent>
-              </Card>
+                </IntegrationTile>
 
-              {/* GoHighLevel */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shrink-0">
-                      <Plug2 className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-base">GoHighLevel</CardTitle>
-                        {ghlStatus.connected && (
-                          <Badge variant={ghlStatus.token_expired ? "destructive" : "default"} className="text-xs">
-                            {ghlStatus.token_expired
-                              ? <><XCircle className="h-3 w-3 mr-1" />Expired</>
-                              : <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
-                            }
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-sm">CRM and marketing automation platform for agencies</CardDescription>
-                      {ghlStatus.connected && ghlStatus.expires_at && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Expires: {new Date(ghlStatus.expires_at).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {ghlStatus.connected ? (
-                      <>
-                        {ghlStatus.token_expired && (
-                          <Button size="sm" variant="destructive" onClick={() => handleConnect("gohighlevel")} disabled={isLoading}>
-                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Reconnect
-                          </Button>
-                        )}
-                        <RemoveButton integrationType="gohighlevel" label="GoHighLevel" />
-                      </>
-                    ) : statusInitialLoading ? (
-                      <Button size="sm" disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Checking…
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => handleConnect("gohighlevel")} disabled={isLoading}>
-                        {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Connect
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href="https://www.gohighlevel.com" target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Meta */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center shrink-0">
-                      <svg className="h-6 w-6 text-white" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-base">Meta (Facebook)</CardTitle>
-                        {facebookStatus.connected && (
-                          <Badge variant={facebookStatus.token_expired ? "destructive" : "default"} className="text-xs">
-                            {facebookStatus.token_expired
-                              ? <><XCircle className="h-3 w-3 mr-1" />Expired</>
-                              : <><CheckCircle2 className="h-3 w-3 mr-1" />Connected</>
-                            }
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-sm">Access Facebook insights and marketing tools</CardDescription>
-                      {facebookStatus.connected && facebookStatus.expires_at && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Expires: {new Date(facebookStatus.expires_at).toLocaleString()}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {facebookStatus.connected ? (
-                      <>
-                        {facebookStatus.token_expired && (
-                          <Button size="sm" variant="destructive" onClick={() => handleConnect("facebook")} disabled={isLoading}>
-                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Reconnect
-                          </Button>
-                        )}
-                        <RemoveButton integrationType="facebook" label="Meta (Facebook)" />
-                      </>
-                    ) : statusInitialLoading ? (
-                      <Button size="sm" disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Checking…
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={() => handleConnect("facebook")} disabled={isLoading}>
-                        {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Connect
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href="https://developers.facebook.com" target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* HotProspector */}
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shrink-0">
-                      <Phone className="h-6 w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-base">HotProspector</CardTitle>
-                        {hotprospectorStatus.connected && (
-                          <Badge variant="default" className="text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />Connected
-                          </Badge>
-                        )}
-                      </div>
-                      <CardDescription className="text-sm">Lead generation and call center management platform</CardDescription>
-                      {hotprospectorStatus.connected && hotprospectorStatus.api_uid && (
-                        <p className="text-xs text-muted-foreground mt-1">API UID: {hotprospectorStatus.api_uid}</p>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {hotprospectorStatus.connected ? (
-                      <RemoveButton integrationType="hotprospector" label="HotProspector" />
-                    ) : statusInitialLoading ? (
-                      <Button size="sm" disabled>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Checking…
-                      </Button>
-                    ) : (
-                      <Dialog open={hotprospectorDialogOpen} onOpenChange={setHotprospectorDialogOpen}>
-                        <DialogTrigger asChild>
-                          <Button size="sm" disabled={isLoading}>
-                            {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                            Connect
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Connect HotProspector</DialogTitle>
-                            <DialogDescription>Enter your HotProspector API credentials.</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="api_uid">API UID</Label>
-                              <Input
-                                id="api_uid"
-                                placeholder="Enter your API UID"
-                                value={hotprospectorCredentials.api_uid}
-                                onChange={(e) =>
-                                  setHotprospectorCredentials((prev) => ({ ...prev, api_uid: e.target.value }))
-                                }
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="api_key">API Key</Label>
-                              <Input
-                                id="api_key"
-                                type="password"
-                                placeholder="Enter your API Key"
-                                value={hotprospectorCredentials.api_key}
-                                onChange={(e) =>
-                                  setHotprospectorCredentials((prev) => ({ ...prev, api_key: e.target.value }))
-                                }
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setHotprospectorDialogOpen(false)
-                                setHotprospectorCredentials({ api_uid: "", api_key: "" })
-                              }}
+                <IntegrationTile
+                  name="GoHighLevel"
+                  chipClassName="bg-pd-info-bg text-pd-info"
+                  icon={<Plug2 className="size-[15px]" />}
+                  description="CRM and marketing automation platform for agencies."
+                  status={
+                    ghlStatus.connected
+                      ? (ghlStatus.token_expired ? "expired" : "connected")
+                      : statusInitialLoading ? "checking" : "disconnected"
+                  }
+                  meta={
+                    ghlStatus.connected && ghlStatus.expires_at
+                      ? { label: "Expires", value: formatExpiry(ghlStatus.expires_at) }
+                      : undefined
+                  }
+                  actions={
+                    <>
+                      {ghlStatus.connected ? (
+                        <>
+                          {ghlStatus.token_expired && (
+                            <IntegrationAction
+                              onClick={() => handleConnect("gohighlevel")}
+                              disabled={isLoading}
                             >
-                              Cancel
-                            </Button>
-                            <Button
-                              onClick={handleHotprospectorConnect}
-                              disabled={isLoading || !hotprospectorCredentials.api_uid || !hotprospectorCredentials.api_key}
+                              {isLoading && (
+                                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                              )}
+                              Reconnect
+                            </IntegrationAction>
+                          )}
+                          <RemoveButton
+                            integrationType="gohighlevel"
+                            label="GoHighLevel"
+                            compact={ghlStatus.token_expired}
+                          />
+                        </>
+                      ) : (
+                        <IntegrationAction
+                          onClick={() => handleConnect("gohighlevel")}
+                          disabled={isLoading || statusInitialLoading}
+                        >
+                          {(isLoading || statusInitialLoading) && (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                          )}
+                          {statusInitialLoading ? "Checking…" : "Connect"}
+                        </IntegrationAction>
+                      )}
+                      <IntegrationSiteLink
+                        href="https://www.gohighlevel.com"
+                        label="Open GoHighLevel"
+                      />
+                    </>
+                  }
+                />
+
+                <IntegrationTile
+                  name="Meta"
+                  chipClassName="bg-pd-info-bg text-pd-info"
+                  icon={
+                    <svg className="size-[15px]" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                  }
+                  description="Access Facebook insights and marketing tools."
+                  status={
+                    facebookStatus.connected
+                      ? (facebookStatus.token_expired ? "expired" : "connected")
+                      : statusInitialLoading ? "checking" : "disconnected"
+                  }
+                  meta={
+                    facebookStatus.connected && facebookStatus.expires_at
+                      ? { label: "Expires", value: formatExpiry(facebookStatus.expires_at) }
+                      : undefined
+                  }
+                  actions={
+                    <>
+                      {facebookStatus.connected ? (
+                        <>
+                          {facebookStatus.token_expired && (
+                            <IntegrationAction
+                              onClick={() => handleConnect("facebook")}
+                              disabled={isLoading}
                             >
-                              {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                              Connect
-                            </Button>
-                          </DialogFooter>
-                        </DialogContent>
-                      </Dialog>
-                    )}
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href="https://hotprospector.com" target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                              {isLoading && (
+                                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                              )}
+                              Reconnect
+                            </IntegrationAction>
+                          )}
+                          <RemoveButton
+                            integrationType="facebook"
+                            label="Meta (Facebook)"
+                            compact={facebookStatus.token_expired}
+                          />
+                        </>
+                      ) : (
+                        <IntegrationAction
+                          onClick={() => handleConnect("facebook")}
+                          disabled={isLoading || statusInitialLoading}
+                        >
+                          {(isLoading || statusInitialLoading) && (
+                            <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                          )}
+                          {statusInitialLoading ? "Checking…" : "Connect"}
+                        </IntegrationAction>
+                      )}
+                      <IntegrationSiteLink
+                        href="https://developers.facebook.com"
+                        label="Open Meta for Developers"
+                      />
+                    </>
+                  }
+                />
 
-              <Separator className="my-4" />
+                <IntegrationTile
+                  name="Hot Prospector"
+                  chipClassName="bg-pd-primary-tint text-pd-primary"
+                  icon={<Phone className="size-[15px]" />}
+                  description="Sales dialler and CRM — call and close data for Birdy."
+                  status={
+                    hotprospectorStatus.connected
+                      ? "connected"
+                      : statusInitialLoading ? "checking" : "disconnected"
+                  }
+                  meta={
+                    hotprospectorStatus.connected && hotprospectorStatus.api_uid
+                      // Labelled for what it actually is. The handoff calls this
+                      // row "Group ID", but the value we store and send is the
+                      // account's API UID.
+                      ? { label: "API UID", value: hotprospectorStatus.api_uid }
+                      : undefined
+                  }
+                  actions={
+                    <>
+                      {hotprospectorStatus.connected ? (
+                        <RemoveButton integrationType="hotprospector" label="HotProspector" />
+                      ) : (
+                        <Dialog open={hotprospectorDialogOpen} onOpenChange={setHotprospectorDialogOpen}>
+                          <DialogTrigger asChild>
+                            <IntegrationAction disabled={isLoading || statusInitialLoading}>
+                              {(isLoading || statusInitialLoading) && (
+                                <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                              )}
+                              {statusInitialLoading ? "Checking…" : "Connect"}
+                            </IntegrationAction>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Connect HotProspector</DialogTitle>
+                              <DialogDescription>Enter your HotProspector API credentials.</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div className="space-y-2">
+                                <Label htmlFor="api_uid">API UID</Label>
+                                <Input
+                                  id="api_uid"
+                                  placeholder="Enter your API UID"
+                                  value={hotprospectorCredentials.api_uid}
+                                  onChange={(e) =>
+                                    setHotprospectorCredentials((prev) => ({ ...prev, api_uid: e.target.value }))
+                                  }
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label htmlFor="api_key">API Key</Label>
+                                <Input
+                                  id="api_key"
+                                  type="password"
+                                  placeholder="Enter your API Key"
+                                  value={hotprospectorCredentials.api_key}
+                                  onChange={(e) =>
+                                    setHotprospectorCredentials((prev) => ({ ...prev, api_key: e.target.value }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => {
+                                  setHotprospectorDialogOpen(false)
+                                  setHotprospectorCredentials({ api_uid: "", api_key: "" })
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                onClick={handleHotprospectorConnect}
+                                disabled={isLoading || !hotprospectorCredentials.api_uid || !hotprospectorCredentials.api_key}
+                              >
+                                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                Connect
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                      <IntegrationSiteLink
+                        href="https://hotprospector.com"
+                        label="Open Hot Prospector"
+                      />
+                    </>
+                  }
+                />
+              </div>
+            </section>
 
-              {/* Refresh All Groups */}
+            {/* Not in the handoff, but real functionality that has nowhere
+                else to live — kept here on the same card chrome as the tiles
+                above rather than left on the old shadcn card. */}
+            <section className="space-y-[14px] border-t border-pd-divider pt-6">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-1">Data Refresh</h2>
-                <p className="text-sm text-muted-foreground">Manually refresh cached data for all client groups</p>
+                <h2 className="font-pd-display text-[16px] font-semibold text-pd-ink">
+                  Data refresh
+                </h2>
+                <p className="mt-1 text-[13px] text-pd-faint">
+                  Manually refresh cached data for all client groups
+                </p>
               </div>
 
-              <Card className="border-border/50">
-                <CardHeader>
-                  <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center shrink-0">
-                      <RefreshCw className={`h-6 w-6 text-white ${refreshCycle.running ? "animate-spin" : ""}`} />
+              <div className="max-w-[520px] rounded-[14px] border border-pd-border bg-pd-surface px-[18px] py-4">
+                <div className="mb-3.5 flex items-center gap-[9px]">
+                  <span
+                    aria-hidden="true"
+                    className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-pd-primary-tint text-pd-primary"
+                  >
+                    <RefreshCw className={`size-[15px] ${refreshCycle.running ? "animate-spin" : ""}`} />
+                  </span>
+                  <h3 className="truncate font-pd-display text-[14px] font-semibold text-pd-ink">
+                    Refresh all groups
+                  </h3>
+                  {refreshCycle.running && (
+                    <span className="ml-auto shrink-0 rounded-md bg-pd-primary-tint px-2 py-[3px] text-[10.5px] font-bold text-pd-primary">
+                      Running
+                    </span>
+                  )}
+                </div>
+
+                <p className="mb-3 text-[12px] leading-[1.45] text-pd-subtle">
+                  Refreshes Meta and GHL data for every client group, one at a time, every
+                  15 minutes.
+                </p>
+
+                {refreshCycle.running && refreshCycle.current_group && (
+                  <div className="mb-3.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 text-[12px]">
+                      <span className="truncate text-pd-subtle">{refreshCycle.current_group}</span>
+                      <span className="shrink-0 font-semibold text-pd-ink">
+                        {refreshCycle.groups_done} / {refreshCycle.groups_total}
+                      </span>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <CardTitle className="text-base">Refresh All Groups</CardTitle>
-                        {refreshCycle.running && (
-                          <Badge variant="default" className="text-xs">
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />Running
-                          </Badge>
-                        )}
+                    {refreshCycle.groups_total > 0 && (
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-pd-divider">
+                        <div
+                          className="h-full rounded-full bg-pd-primary transition-all duration-500"
+                          style={{ width: `${(refreshCycle.groups_done / refreshCycle.groups_total) * 100}%` }}
+                        />
                       </div>
-                      <CardDescription className="text-sm">
-                        Refreshes Meta and GHL data for every client group, one at a time, every 15 minutes.
-                      </CardDescription>
-                      {refreshCycle.running && refreshCycle.current_group && (
-                        <div className="mt-2 space-y-1">
-                          <p className="text-xs text-muted-foreground">
-                            Currently refreshing: <span className="font-medium text-foreground">{refreshCycle.current_group}</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Progress: {refreshCycle.groups_done} / {refreshCycle.groups_total} groups
-                          </p>
-                          {refreshCycle.groups_total > 0 && (
-                            <div className="w-full bg-muted rounded-full h-1.5 mt-1">
-                              <div
-                                className="bg-purple-500 h-1.5 rounded-full transition-all duration-500"
-                                style={{ width: `${(refreshCycle.groups_done / refreshCycle.groups_total) * 100}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-2">
-                    {refreshCycle.running ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                        onClick={handleStopRefreshAll}
-                      >
-                        Stop
-                      </Button>
-                    ) : (
-                      <Button size="sm" onClick={handleStartRefreshAll} disabled={true}>
-                        {refreshStarting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                        Start Refresh Cycle
-                      </Button>
                     )}
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  {refreshCycle.running ? (
+                    <IntegrationDangerAction onClick={handleStopRefreshAll} className="flex-none px-4">
+                      Stop
+                    </IntegrationDangerAction>
+                  ) : (
+                    <IntegrationAction onClick={handleStartRefreshAll} disabled className="flex-none px-4">
+                      {refreshStarting && (
+                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
+                      )}
+                      Start refresh cycle
+                    </IntegrationAction>
+                  )}
+                </div>
+              </div>
+            </section>
           </TabsContent>
 
 
