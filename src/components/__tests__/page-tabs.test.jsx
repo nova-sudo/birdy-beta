@@ -71,4 +71,12 @@ describe("PageTabs", () => {
       expect(tab).toHaveClass("px-[15px]", "py-[7px]", "text-[13px]")
     }
   })
+
+  it("hugs its tabs instead of spanning whatever it sits in", () => {
+    // self-start on its own does nothing in a block parent — which is what
+    // Settings and Alerts give it — and the strip ran the full window width.
+    render(<PageTabs tabs={TABS} value="active" onChange={() => {}} label="Alert state" />)
+
+    expect(screen.getByRole("tablist")).toHaveClass("w-fit")
+  })
 })
