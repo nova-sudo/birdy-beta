@@ -29,6 +29,7 @@ import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
+import AdsGallery, { AdsViewSwitch } from "@/components/campaigns/AdsGallery"
 import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
 import { useCurrency } from "@/hooks/useCurrency"
 import { DateRangeSelect } from "@/components/DateRangeSelect"
@@ -102,6 +103,9 @@ export function MarketingContent({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState("campaigns")
+  // Ads-tab-only layout switch: the same rows and column order drawn either as
+  // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
+  const [adsView, setAdsView] = useState("table")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterConditions, setFilterConditions] = useState([])
 
@@ -163,18 +167,28 @@ export function MarketingContent({
 
   // One stable hook instance per tab — page keys never change between renders,
   // so hook call order is always the same (Rules of Hooks satisfied).
-  const { savedColumns: savedCampaigns, saveView: saveCampaigns, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
+  const { savedColumns: savedCampaigns, saveView: saveCampaigns, saveViewDebounced: saveCampaignsDebounced, viewsLoaded: loadedCampaigns } = useColumnViews("mktg_campaigns")
   const { savedColumns: savedAdsets,    saveView: saveAdsets,    saveViewDebounced: saveAdsetsDebounced,    viewsLoaded: loadedAdsets    } = useColumnViews("mktg_adsets")
   const { savedColumns: savedAds,       saveView: saveAds,       saveViewDebounced: saveAdsDebounced,       viewsLoaded: loadedAds       } = useColumnViews("mktg_ads")
   const { savedColumns: savedLeads,     saveView: saveLeads,     saveViewDebounced: saveLeadsDebounced,     viewsLoaded: loadedLeads     } = useColumnViews("mktg_leads")
 
-  // Per-tab debounced-save lookup, used by the table's onColumnOrderChange to
-  // auto-persist drag-reorder events without needing a manual "Save View".
+  // Explicit-save lookup for the Columns menu's "Save" actions.
   const saveByTab = {
     campaigns: saveCampaigns,
     adsets:    saveAdsets,
     ads:       saveAds,
     leads:     saveLeads,
+  }
+
+  // Per-tab debounced-save lookup, used by onColumnOrderChange to auto-persist
+  // drag-reorder events without needing a manual "Save View". This was
+  // referenced but never defined, so reordering a column threw a
+  // ReferenceError after the optimistic state update.
+  const saveDebouncedByTab = {
+    campaigns: saveCampaignsDebounced,
+    adsets:    saveAdsetsDebounced,
+    ads:       saveAdsDebounced,
+    leads:     saveLeadsDebounced,
   }
 
   const [visibleColumns, setVisibleColumns] = useState(DEFAULT_VISIBLE_COLUMNS)
@@ -419,6 +433,11 @@ export function MarketingContent({
           ...ghlFor(oppRollup.by_ad, ad.id),
           id: ad.id, name: ad.name,
           status: (ad.status || "inactive").toLowerCase(),
+          // Creative identity for the gallery view's thumbnail. The URL is a
+          // signed Meta CDN link that can expire between cache refreshes —
+          // AdsGallery falls back to a placeholder when it 404s.
+          creative_image: ad.creative_image || "",
+          creative_title: ad.creative_title || "",
           _campaignId: ad.campaign_id || "", _adsetId: ad.adset_id || "",
           campaign_name: ad.campaign_id || "",
           spend: adSpend, impressions: ad.impressions || 0, clicks: adClicks,
@@ -828,6 +847,15 @@ export function MarketingContent({
     setVisibleColumns(prev => ({ ...prev, [activeTab]: next }))
   }
 
+  // One shared order for the Ads tab's two layouts: a drag in either the
+  // table's headers or a gallery card's metric rows writes the same
+  // visibleColumns slot and persists the same debounced way, so the other
+  // layout reorders with it instantly.
+  const handleColumnOrderChange = (newOrder) => {
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
+    saveDebouncedByTab[activeTab]?.(newOrder)
+  }
+
   // Explicit save only — see ColumnsMenu. Writes this tab's own layout.
   const saveDefaultColumns = async (ids) => {
     const next = activeTab === "leads" || ids.includes("name") ? ids : ["name", ...ids]
@@ -1222,6 +1250,10 @@ export function MarketingContent({
             {/* Search and Columns as the handoff's 38px controls, sitting
                 together at the right end of the tab row. */}
             <div className="ml-auto flex w-fit shrink-0 items-center gap-[10px]">
+              {/* Table/gallery switch — Ads tab only, per the handoff. */}
+              {activeTab === "ads" && (
+                <AdsViewSwitch value={adsView} onChange={setAdsView} />
+              )}
               <Input
                 type="search"
                 placeholder={`Search ${activeTab}…`}
@@ -1326,6 +1358,15 @@ export function MarketingContent({
                 <h3 className="text-lg font-semibold mb-2">Error loading data</h3>
                 <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
               </div>
+            ) : activeTab === "ads" && adsView === "gallery" ? (
+              <AdsGallery
+                rows={getFilteredDataForTab()}
+                columns={tableColumns}
+                onOrderChange={handleColumnOrderChange}
+                onStatusToggle={handleStatusToggle}
+                togglingRows={togglingRows}
+                isLoading={isLoading || groupsLoading}
+              />
             ) : (
               <StyledTable
                 columns={tableColumns}
@@ -1360,11 +1401,7 @@ export function MarketingContent({
                   // already an ordered array of visible IDs — feed it as the
                   // initial order, and any drag updates the same slot.
                 initialColumnOrder={visibleColumns[activeTab] || []}
-                onColumnOrderChange={(newOrder) => {
-                  setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
-                  // Auto-persist the new order for the active tab (debounced).
-                  saveDebouncedByTab[activeTab]?.(newOrder)
-                }}
+                onColumnOrderChange={handleColumnOrderChange}
               />
             )}
           </PageTabPanel>
