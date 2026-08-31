@@ -83,23 +83,26 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
   }, [loadThreads])
 
   return (
-    <div className="flex flex-col gap-[18px] lg:flex-row">
+    // The design fixes this row's height and lets each pane scroll inside it,
+    // so the composer stays put instead of walking down the page as a thread
+    // grows. Stacked below lg, where a fixed height would trap the chat.
+    <div className="flex flex-col gap-[18px] lg:h-[660px] lg:flex-row">
       {/* ── Thread rail ────────────────────────────────────────────── */}
-      <aside className="flex shrink-0 flex-col gap-3 lg:w-[260px]">
+      <aside className="flex shrink-0 flex-col rounded-2xl border border-pd-border bg-pd-surface p-4 lg:w-[260px]">
         <Button
           onClick={startNew}
-          className="w-full gap-2 bg-[#6B4EE6] text-white hover:bg-[#5B3FD6]"
+          className="w-full gap-2 rounded-[9px] bg-[#6B4EE6] text-[12.5px] font-semibold text-white hover:bg-[#5B3FD6]"
           size="sm"
         >
           <MessageSquarePlus className="size-3.5" />
           New conversation
         </Button>
 
-        <p className="px-1 text-[10px] font-bold uppercase tracking-[.04em] text-pd-faint">
+        <p className="mb-2.5 mt-3.5 text-[11px] font-bold uppercase tracking-[.05em] text-pd-faint">
           Recent
         </p>
 
-        <div className="max-h-[560px] space-y-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto max-lg:max-h-[320px]">
           {loadingThreads ? (
             <p className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
               <Loader2 className="size-3 animate-spin" />
@@ -111,21 +114,31 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
             </p>
           ) : (
             threads.map((thread) => (
+              // The design marks the open thread with a tint alone — no border,
+              // which would shift the text of every other row by a pixel.
               <button
                 key={thread.session_id}
                 onClick={() => openThread(thread)}
                 disabled={opening}
                 aria-current={activeSessionId === thread.session_id ? "true" : undefined}
-                className={`w-full rounded-[10px] border p-2.5 text-left transition disabled:opacity-60 ${
+                className={`w-full rounded-[10px] px-3 py-[11px] text-left transition disabled:opacity-60 ${
                   activeSessionId === thread.session_id
-                    ? "border-[#6B4EE6] bg-[#F1EEFC]"
-                    : "border-transparent hover:bg-pd-divider"
+                    ? "bg-[#F1EEFC]"
+                    : "hover:bg-pd-divider"
                 }`}
               >
-                <p className="truncate text-xs font-medium text-pd-ink">
+                <p
+                  className={`truncate text-[12.5px] font-semibold leading-[1.35] ${
+                    activeSessionId === thread.session_id ? "text-[#4A3AA0]" : "text-[#5A5A6E]"
+                  }`}
+                >
                   {thread.title}
                 </p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                <p
+                  className={`mt-1 text-[11px] ${
+                    activeSessionId === thread.session_id ? "text-[#8A7BC0]" : "text-pd-faint"
+                  }`}
+                >
                   {thread.updated_at
                     ? new Date(thread.updated_at).toLocaleDateString()
                     : ""}
