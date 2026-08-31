@@ -89,6 +89,9 @@ const StyledTable = ({
   // ordering is unchanged, only the claim about it is withheld.
   const [hasSorted, setHasSorted] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState(null);
+  // The header currently hovered mid-drag — wears the dashed drop-target
+  // border so the drag shows exactly where the column will land.
+  const [dragOverColumn, setDragOverColumn] = useState(null);
   const [columnOrder, setColumnOrder] = useState(initialColumnOrder || []);
 
   useEffect(() => {
@@ -433,13 +436,17 @@ const StyledTable = ({
     e.dataTransfer.effectAllowed = "move";
   };
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e, columnId, colIdx) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    // dragover refires continuously while hovering — only write on change.
+    const next = colIdx === 0 ? null : columnId;
+    if (dragOverColumn !== next) setDragOverColumn(next);
   };
 
   const handleDrop = (e, targetId, targetColIdx) => {
     e.preventDefault();
+    setDragOverColumn(null);
     if (!draggedColumn || draggedColumn === targetId || targetColIdx === 0) {
       setDraggedColumn(null);
       return;
@@ -665,15 +672,31 @@ const StyledTable = ({
                   <th
                     draggable={colIdx !== 0}
                     onDragStart={(e) => handleDragStart(e, col.id, colIdx)}
-                    onDragOver={handleDragOver}
+                    onDragOver={(e) => handleDragOver(e, col.id, colIdx)}
+                    onDragLeave={() => { if (dragOverColumn === col.id) setDragOverColumn(null); }}
                     onDrop={(e) => handleDrop(e, col.id, colIdx)}
-                    className={`h-12 cursor-default select-none ${
+                    onDragEnd={() => { setDraggedColumn(null); setDragOverColumn(null); }}
+                    className={`h-12 select-none ${colIdx === 0 ? "cursor-default" : "cursor-grab"} ${
                       colIdx === 0
                         ? "fixed-header"
                         : isEmptyState
                           ? ""
                           : "min-w-[135px] whitespace-nowrap"
-                    }`}
+                    } ${draggedColumn === col.id ? "bg-pd-primary-tint" : ""}`}
+                    // Straight-edged dashed line on the live drop target, per
+                    // the handoff. Reserved as transparent so hovering doesn't
+                    // nudge the header a couple of pixels sideways.
+                    style={
+                      colIdx === 0
+                        ? undefined
+                        : {
+                            borderLeft: `2px dashed ${
+                              draggedColumn && dragOverColumn === col.id && draggedColumn !== col.id
+                                ? "var(--pd-primary)"
+                                : "transparent"
+                            }`,
+                          }
+                    }
                   >
                     {/* No vertical rule between columns: the design separates
                         them by alignment and spacing, and a grid of hairlines
