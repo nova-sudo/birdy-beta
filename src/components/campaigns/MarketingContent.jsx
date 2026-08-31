@@ -433,10 +433,14 @@ export function MarketingContent({
           ...ghlFor(oppRollup.by_ad, ad.id),
           id: ad.id, name: ad.name,
           status: (ad.status || "inactive").toLowerCase(),
-          // Creative identity for the gallery view's thumbnail. The URL is a
-          // signed Meta CDN link that can expire between cache refreshes —
-          // AdsGallery falls back to a placeholder when it 404s.
+          // Creative identity for the gallery view's thumbnail. image_url is
+          // only set for image creatives; creative_thumbnail is the video
+          // poster (or Meta's small thumb). Both are signed Meta CDN links
+          // that can expire between cache refreshes — AdsGallery falls back
+          // to a placeholder when they 404.
           creative_image: ad.creative_image || "",
+          creative_thumbnail: ad.creative_thumbnail || "",
+          creative_video_id: ad.creative_video_id || "",
           creative_title: ad.creative_title || "",
           _campaignId: ad.campaign_id || "", _adsetId: ad.adset_id || "",
           campaign_name: ad.campaign_id || "",

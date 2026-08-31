@@ -122,21 +122,32 @@ export default function AdsGallery({
       {sortedRows.map((row, cardIdx) => {
         const isActive = String(row.status).toLowerCase() === "active"
         const isToggling = togglingRows.has(row.id)
-        const thumbnail = !failedImages.has(row.id) && row.creative_image
+        // image_url only exists for image creatives; creative_thumbnail is
+        // the video poster (or Meta's small fallback thumb).
+        const thumbnail = !failedImages.has(row.id) && (row.creative_image || row.creative_thumbnail)
+        const isVideo = Boolean(row.creative_video_id)
 
         return (
           <div key={row.id ?? cardIdx} className="overflow-hidden rounded-[14px] border border-pd-border bg-pd-surface">
             {/* Creative thumbnail, or the handoff's grey placeholder with a
                 centred play badge when there is none (or the URL expired). */}
-            <div className="flex h-[190px] items-center justify-center overflow-hidden bg-pd-divider">
+            <div className="relative flex h-[190px] items-center justify-center overflow-hidden bg-pd-divider">
               {thumbnail ? (
-                <img
-                  src={row.creative_image}
-                  alt={row.creative_title || row.name || "Ad creative"}
-                  loading="lazy"
-                  className="h-full w-full object-cover"
-                  onError={() => setFailedImages(prev => new Set(prev).add(row.id))}
-                />
+                <>
+                  <img
+                    src={thumbnail}
+                    alt={row.creative_title || row.name || "Ad creative"}
+                    loading="lazy"
+                    className="h-full w-full object-cover"
+                    onError={() => setFailedImages(prev => new Set(prev).add(row.id))}
+                  />
+                  {/* A video creative wears its play badge over the poster. */}
+                  {isVideo && (
+                    <span className="absolute flex size-11 items-center justify-center rounded-full bg-black/45">
+                      <Play className="size-4 fill-white text-white" aria-hidden="true" />
+                    </span>
+                  )}
+                </>
               ) : (
                 <span className="flex size-11 items-center justify-center rounded-full bg-pd-border-strong">
                   <Play className="size-4 fill-pd-faint text-pd-faint" aria-hidden="true" />

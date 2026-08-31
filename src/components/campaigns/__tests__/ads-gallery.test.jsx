@@ -42,6 +42,19 @@ describe("AdsGallery", () => {
     expect(imgs[0]).toHaveAttribute("src", "https://cdn.example/x.jpg")
   })
 
+  it("falls back to the video poster and badges the card as a video", () => {
+    render(
+      <AdsGallery
+        rows={[{
+          id: "v1", name: "Video Ad", status: "active", spend: 1, cpl: 1, clicks: 1,
+          creative_image: "", creative_thumbnail: "https://cdn.example/poster.jpg", creative_video_id: "77",
+        }]}
+        columns={COLUMNS}
+      />
+    )
+    expect(screen.getByRole("img")).toHaveAttribute("src", "https://cdn.example/poster.jpg")
+  })
+
   it("wires the status toggle to the same handler the table uses", async () => {
     const user = userEvent.setup()
     const onStatusToggle = vi.fn()
