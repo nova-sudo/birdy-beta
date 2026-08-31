@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Plug2, Phone, RefreshCw, Target, Sparkles, Trash2 } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
 import {
   IntegrationTile,
   IntegrationAction,
@@ -157,9 +157,6 @@ function SettingsPageContent() {
   // status loads. Returning users with a cached connected state never see
   // this because the cache short-circuits them straight to "Connected".
   const [statusInitialLoading, setStatusInitialLoading] = useState(true)
-
-  const [refreshCycle, setRefreshCycle] = useState({ running: false, groups_done: 0, groups_total: 0, current_group: null })
-  const [refreshStarting, setRefreshStarting] = useState(false)
 
   const [billingStatus, setBillingStatus] = useState(null)
   const [loadingPortal, setLoadingPortal] = useState(false)
@@ -378,10 +375,6 @@ function SettingsPageContent() {
           }
         }
 
-        // Refresh cycle status
-        const cycleRes = await apiRequest("/api/client-groups/refresh-all/status")
-        if (cycleRes.ok) setRefreshCycle(await cycleRes.json())
-
       } catch (err) {
         console.error("init error:", err)
         setError(`Failed to fetch integration status: ${err.message}`)
@@ -426,53 +419,6 @@ function SettingsPageContent() {
     window.addEventListener("storage", onStorage)
     return () => window.removeEventListener("storage", onStorage)
   }, [])
-
-  // ── Refresh-all cycle polling ──────────────────────────────────────────
-  useEffect(() => {
-    if (!refreshCycle.running) return
-    const interval = setInterval(async () => {
-      try {
-        const res = await apiRequest("/api/client-groups/refresh-all/status")
-        if (res.ok) {
-          const data = await res.json()
-          setRefreshCycle(data)
-          if (!data.running) clearInterval(interval)
-        }
-      } catch { /* ignore */ }
-    }, 10_000)
-    return () => clearInterval(interval)
-  }, [refreshCycle.running])
-
-  const handleStartRefreshAll = async () => {
-    try {
-      setRefreshStarting(true)
-      const res = await apiRequest("/api/client-groups/refresh-all", { method: "POST" })
-      if (!res.ok) throw new Error("Failed to start")
-      const data = await res.json()
-      if (data.status === "already_running") {
-        toast.info("Refresh cycle is already running")
-      } else {
-        toast.success("Refresh cycle started", { description: "Groups will refresh one by one, every 15 minutes." })
-      }
-      // Fetch initial status
-      const statusRes = await apiRequest("/api/client-groups/refresh-all/status")
-      if (statusRes.ok) setRefreshCycle(await statusRes.json())
-    } catch (err) {
-      toast.error("Failed to start refresh", { description: err.message })
-    } finally {
-      setRefreshStarting(false)
-    }
-  }
-
-  const handleStopRefreshAll = async () => {
-    try {
-      await apiRequest("/api/client-groups/refresh-all", { method: "DELETE" })
-      setRefreshCycle(prev => ({ ...prev, running: false, current_group: null }))
-      toast.success("Refresh cycle stopped")
-    } catch (err) {
-      toast.error("Failed to stop", { description: err.message })
-    }
-  }
 
   const handleConnect = async (integrationType) => {
     try {
@@ -1099,77 +1045,6 @@ function SettingsPageContent() {
               </div>
             </section>
 
-            {/* Not in the handoff, but real functionality that has nowhere
-                else to live — kept here on the same card chrome as the tiles
-                above rather than left on the old shadcn card. */}
-            <section className="space-y-[14px] border-t border-pd-divider pt-6">
-              <div>
-                <h2 className="font-pd-display text-[16px] font-semibold text-pd-ink">
-                  Data refresh
-                </h2>
-                <p className="mt-1 text-[13px] text-pd-faint">
-                  Manually refresh cached data for all client groups
-                </p>
-              </div>
-
-              <div className="max-w-[520px] rounded-[14px] border border-pd-border bg-pd-surface px-[18px] py-4">
-                <div className="mb-3.5 flex items-center gap-[9px]">
-                  <span
-                    aria-hidden="true"
-                    className="flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-pd-primary-tint text-pd-primary"
-                  >
-                    <RefreshCw className={`size-[15px] ${refreshCycle.running ? "animate-spin" : ""}`} />
-                  </span>
-                  <h3 className="truncate font-pd-display text-[14px] font-semibold text-pd-ink">
-                    Refresh all groups
-                  </h3>
-                  {refreshCycle.running && (
-                    <span className="ml-auto shrink-0 rounded-md bg-pd-primary-tint px-2 py-[3px] text-[10.5px] font-bold text-pd-primary">
-                      Running
-                    </span>
-                  )}
-                </div>
-
-                <p className="mb-3 text-[12px] leading-[1.45] text-pd-subtle">
-                  Refreshes Meta and GHL data for every client group, one at a time, every
-                  15 minutes.
-                </p>
-
-                {refreshCycle.running && refreshCycle.current_group && (
-                  <div className="mb-3.5 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2 text-[12px]">
-                      <span className="truncate text-pd-subtle">{refreshCycle.current_group}</span>
-                      <span className="shrink-0 font-semibold text-pd-ink">
-                        {refreshCycle.groups_done} / {refreshCycle.groups_total}
-                      </span>
-                    </div>
-                    {refreshCycle.groups_total > 0 && (
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-pd-divider">
-                        <div
-                          className="h-full rounded-full bg-pd-primary transition-all duration-500"
-                          style={{ width: `${(refreshCycle.groups_done / refreshCycle.groups_total) * 100}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-2">
-                  {refreshCycle.running ? (
-                    <IntegrationDangerAction onClick={handleStopRefreshAll} className="flex-none px-4">
-                      Stop
-                    </IntegrationDangerAction>
-                  ) : (
-                    <IntegrationAction onClick={handleStartRefreshAll} disabled className="flex-none px-4">
-                      {refreshStarting && (
-                        <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />
-                      )}
-                      Start refresh cycle
-                    </IntegrationAction>
-                  )}
-                </div>
-              </div>
-            </section>
           </TabsContent>
 
 
