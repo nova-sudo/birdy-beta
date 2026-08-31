@@ -10,7 +10,7 @@
 // for a refit.
 
 import { useState } from "react"
-import { BookOpen, Send, Loader2, Trash2, StickyNote } from "lucide-react"
+import { Book, Send, Loader2, Trash2, StickyNote } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -104,7 +104,7 @@ export function HistoryBook({
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface">
       <div className="flex items-center gap-2 border-b border-pd-border px-[22px] py-4">
-        <BookOpen className="size-4 text-[#6B4EE6]" aria-hidden="true" />
+        <Book className="size-4 text-[#6B4EE6]" aria-hidden="true" />
         <p className="font-pd-display text-[15px] font-semibold text-pd-ink">
           History book
         </p>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, DollarSign, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck } from "lucide-react"
+import { ArrowLeft, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
@@ -24,7 +24,6 @@ import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
-import { Skeleton } from "@/components/ui/skeleton"
 import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPill"
 import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
@@ -35,8 +34,10 @@ import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
 import { InsightCard, PageTabs, SidePanel, UnderlineTabs } from "@/components/portfolio"
 import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
-import { buildFunnelStages } from "@/lib/client-funnel"
+import { buildFunnelStages, buildPreviousFunnel } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
+import { diagnoseFunnel } from "@/lib/portfolio-metrics"
+import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -51,48 +52,6 @@ function ComingSoon({ title }) {
   )
 }
 
-// ── Stat Cards Skeleton ──────────────────────────────────────────────────────
-function StatCardsSkeleton() {
-  return (
-    <div className="grid gap-4 md:grid-cols-5">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={i} className="bg-white">
-          <CardContent className="pt-0">
-            <div className="flex justify-between items-start">
-              <div className="space-y-2 flex-1">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-7 w-32" />
-              </div>
-              <Skeleton className="h-7 w-7 rounded-md" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  )
-}
-
-// ── Alerts Skeleton ──────────────────────────────────────────────────────────
-function AlertsSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="p-4 border rounded-lg space-y-2">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1.5 flex-1">
-              <Skeleton className="h-4 w-36" />
-              <Skeleton className="h-3 w-52" />
-            </div>
-            <Skeleton className="h-5 w-16 rounded-full" />
-          </div>
-          <Skeleton className="h-2 w-full rounded-full" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ── Activity Skeleton ────────────────────────────────────────────────────────
 // ── Tab trigger style ────────────────────────────────────────────────────────
 // The handoff's five workspace tabs (section 3), with the leading icons it
 // names: grid, sparkle, megaphone, phone, user-check.
@@ -112,8 +71,6 @@ export default function ClientDetailsPage() {
   // ── Overview data ──────────────────────────────────────────────────────────
   const [clientData, setClientData] = useState(null)
   const [clientLoading, setClientLoading] = useState(true)
-  const [alerts, setAlerts] = useState([])
-  const [alertsLoading, setAlertsLoading] = useState(true)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [deleteInput, setDeleteInput] = useState("")
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -264,21 +221,51 @@ export default function ClientDetailsPage() {
     },
   ], [clientActivity])
 
-  const funnelStages = useMemo(
-    () => (matchingGroup ? buildFunnelStages(matchingGroup) : null),
-    [matchingGroup]
+  // ── Diagnostics: the previous window, for the per-stage deltas ─────────────
+  // Only some presets have a previous period expressible as another preset —
+  // "last 7 days" against "last 14 days" minus itself. Elsewhere there is no
+  // comparison and the card says so instead of inventing movement.
+  const comparison = PREVIOUS_PERIOD[datePreset]
+  const [enclosingFunnel, setEnclosingFunnel] = useState(null)
+
+  useEffect(() => {
+    if (!clientId || !comparison) {
+      setEnclosingFunnel(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`)
+        if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`)
+        const data = await res.json()
+        const group = (data.client_groups ?? []).find((g) => g.id === clientId)
+        if (!cancelled) setEnclosingFunnel(group?.gohighlevel?.metrics?.funnel ?? null)
+      } catch {
+        // No comparison is a fine outcome — the deltas just don't render.
+        if (!cancelled) setEnclosingFunnel(null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [clientId, comparison])
+
+  const previousFunnel = useMemo(
+    () =>
+      buildPreviousFunnel(
+        matchingGroup?.gohighlevel?.metrics?.funnel ?? null,
+        enclosingFunnel,
+        comparison ?? {}
+      ),
+    [matchingGroup, enclosingFunnel, comparison]
   )
 
-  // ── Derived metrics for Overview stat cards ────────────────────────────────
-  const metrics = useMemo(() => {
-    const campaigns = matchingGroup?.facebook?.campaigns || []
-    const totalSpend = campaigns.reduce((s, c) => s + (c.spend || 0), 0)
-    const totalClicks = campaigns.reduce((s, c) => s + (c.clicks || 0), 0)
-    const totalImpressions = campaigns.reduce((s, c) => s + (c.impressions || 0), 0)
-    const avgCtr = totalImpressions > 0 ? ((totalClicks / totalImpressions) * 100).toFixed(2) : "0"
-    const totalTalkMin = matchingGroup?.hotprospector?.call_stats?.total_talk_min ?? 0
-    return { totalSpend, totalClicks, totalImpressions, avgCtr, totalTalkMin }
-  }, [matchingGroup])
+  const funnelStages = useMemo(
+    () => (matchingGroup ? buildFunnelStages(matchingGroup, previousFunnel) : null),
+    [matchingGroup, previousFunnel]
+  )
+
+  // The verdict under the funnel — the same rule the Portfolio Dashboard reads.
+  const diagnosis = useMemo(() => diagnoseFunnel(funnelStages ?? []), [funnelStages])
 
   // ── Fetch client details ────────────────────────────────────────────────────
   useEffect(() => {
@@ -300,40 +287,6 @@ export default function ClientDetailsPage() {
       }
     })()
   }, [clientId])
-
-  // ── Fetch alerts for this client ───────────────────────────────────────────
-  useEffect(() => {
-    if (!clientId) return
-    ;(async () => {
-      try {
-        setAlertsLoading(true)
-        const res = await apiRequest("/api/alerts")
-        if (!res.ok) return
-        const data = await res.json()
-        const all = [...(data.active || []), ...(data.triggered || []), ...(data.paused || [])]
-        setAlerts(all.filter((a) => (a.target_group_ids || []).includes(clientId)))
-      } catch {
-        // Alerts are non-critical — silently fail
-      } finally {
-        setAlertsLoading(false)
-      }
-    })()
-  }, [clientId])
-
-  // ── Delete alert ────────────────────────────────────────────────────────────
-  const handleDeleteAlert = async (alertId) => {
-    try {
-      const res = await apiRequest(`/api/alerts/${alertId}`, { method: "DELETE" })
-      if (res.ok) {
-        setAlerts((prev) => prev.filter((a) => a.id !== alertId))
-        toast.success("Alert deleted")
-      } else {
-        toast.error("Failed to delete alert")
-      }
-    } catch {
-      toast.error("Failed to delete alert")
-    }
-  }
 
   // ── Toggle client status (used in Integrations tab) ────────────────────────
   const handleToggleStatus = async () => {
@@ -458,7 +411,12 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    // The design's type scale is Poppins for headings and numerals over Inter
+    // for body, and it applies to every tab — not just the bar. Scoping the
+    // fonts here rather than on the tab strip is what makes `font-pd-display`
+    // resolve inside the panels; without it the goal figures, chart totals and
+    // card titles silently fall back to the app's own face.
+    <div className={`${pdFontClass} flex flex-col gap-4 w-full`}>
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
         {/* The handoff draws this bar edge to edge under the client header, so
@@ -469,11 +427,11 @@ export default function ClientDetailsPage() {
           tabs={CLIENT_TABS}
           value={activeTab}
           onChange={setActiveTab}
-          className={`${pdFontClass} -mx-4 -mt-4 md:-mx-6 md:-mt-6`}
+          className="-mx-4 -mt-4 md:-mx-6 md:-mt-6"
         />
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="mt-6 space-y-6">
+        <TabsContent value="overview" className="mt-5 space-y-[18px]">
           {/* Goals — each metric against the target set in Settings. The same
               monthly-closes target drives the health pill in the header. */}
           <GoalsStrip
@@ -482,16 +440,38 @@ export default function ClientDetailsPage() {
             loading={groupsLoading}
           />
 
-          {/* Chart left, Birdy's read of the period right — the design's two
-              columns, with the rail fixed at 340px. */}
+          {/* 1d: the chart and, beneath it, the history book beside
+              diagnostics all share one left column, so the 340px rail runs the
+              full height of both rows. */}
           <div className="flex flex-col items-stretch gap-[18px] lg:flex-row">
-            <div className="flex min-w-0 flex-1 flex-col">
+            <div className="flex min-w-0 flex-1 flex-col gap-[18px]">
               <ClientTrendChart
                 group={matchingGroup}
                 datePreset={datePreset}
                 currencySymbol={currencySymbol}
                 loading={groupsLoading}
               />
+
+              {/* The design's 1.35 / 0.65 split, stretched so both cards end
+                  level with the rail beside them. */}
+              <div className="grid gap-[18px] md:grid-cols-[1.35fr_0.65fr] md:items-stretch">
+                <HistoryBook
+                  clientName={groupName}
+                  notes={notes}
+                  activity={clientActivity}
+                  loading={clientLoading || activityLoading || notesLoading}
+                  onAddNote={handleAddNote}
+                  onDeleteNote={handleDeleteNote}
+                />
+
+                <DiagnosticsFunnel
+                  stages={funnelStages}
+                  loading={groupsLoading}
+                  diagnosis={diagnosis}
+                  hasComparison={previousFunnel != null}
+                  onViewCalls={() => setActiveTab("call-centre")}
+                />
+              </div>
             </div>
 
             <div className="flex min-w-0 flex-col gap-[14px] lg:w-[340px] lg:shrink-0">
@@ -508,199 +488,16 @@ export default function ClientDetailsPage() {
                 onChange={setRailPanel}
                 label="Client panel"
                 id="client-side-panel"
-                className="min-h-[280px] w-full rounded-2xl border border-pd-border"
+                className="min-h-[280px] w-full flex-1 rounded-2xl border border-pd-border"
               />
             </div>
-          </div>
-
-          {/* Stat Cards */}
-          {groupsLoading ? (
-            <StatCardsSkeleton />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-5">
-              <Card className="bg-white border-purple-100">
-                <CardContent className="pt-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Spend</p>
-                      <h3 className="text-2xl font-bold mt-1">{currencySymbol}{metrics.totalSpend.toFixed(2)}</h3>
-                    </div>
-                    <div className="h-7 w-7 bg-[#713CDD1A] rounded-md flex items-center justify-center">
-                      <DollarSign className="h-4 w-4 text-purple-500" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-blue-100">
-                <CardContent className="pt-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Impressions</p>
-                      <h3 className="text-2xl font-bold mt-1">{metrics.totalImpressions.toLocaleString()}</h3>
-                    </div>
-                    <div className="h-7 w-7 bg-blue-100 rounded-md flex items-center justify-center">
-                      <svg className="h-4 w-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-green-100">
-                <CardContent className="pt-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-muted-foreground text-sm text-[#71658B]">Total Clicks</p>
-                      <h3 className="text-2xl font-bold mt-1">{metrics.totalClicks.toLocaleString()}</h3>
-                    </div>
-                    <div className="h-7 w-7 bg-green-100 rounded-md flex items-center justify-center">
-                      <svg className="h-4 w-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                      </svg>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-orange-100">
-                <CardContent className="pt-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-muted-foreground text-sm text-[#71658B]">Avg CTR</p>
-                      <h3 className="text-2xl font-bold mt-1">{metrics.avgCtr}%</h3>
-                    </div>
-                    <div className="h-7 w-7 bg-orange-100 rounded-md flex items-center justify-center">
-                      <svg className="h-4 w-4 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                      </svg>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-teal-100">
-                <CardContent className="pt-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="text-muted-foreground text-sm text-[#71658B]">Talk Time (min)</p>
-                      <h3 className="text-2xl font-bold mt-1">{metrics.totalTalkMin.toLocaleString()}</h3>
-                    </div>
-                    <div className="h-7 w-7 bg-teal-100 rounded-md flex items-center justify-center">
-                      <Clock className="h-4 w-4 text-teal-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Alerts keep their own row — they predate this design and 1d has
-              no equivalent. */}
-          <div className="grid gap-6">
-            {/* Client Alerts */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Client Alerts</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {alertsLoading ? (
-                  <AlertsSkeleton />
-                ) : alerts.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No alerts for now.</p>
-                ) : (
-                  <div className="space-y-3 max-h-[350px] overflow-y-auto">
-                    {alerts.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className={`p-4 border rounded-lg ${
-                          alert.status === "triggered"
-                            ? "border-l-4 border-l-yellow-400"
-                            : alert.status === "active"
-                            ? "border-l-4 border-l-green-400"
-                            : "border-l-4 border-l-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm">{alert.name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {alert.metric_label} {alert.condition_display} per {alert.condition?.period}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <Badge
-                              variant={alert.status === "triggered" ? "destructive" : alert.status === "active" ? "default" : "secondary"}
-                              className="text-xs"
-                            >
-                              {alert.status}
-                            </Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-red-600"
-                              onClick={() => handleDeleteAlert(alert.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {alert.last_eval_result && (
-                          <div className="mt-3 space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-muted-foreground">
-                                Current: <span className="font-semibold text-foreground">{Number(alert.current_value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
-                              </span>
-                              <span className="text-muted-foreground">
-                                Threshold: <span className="font-semibold text-foreground">{Number(alert.last_eval_result.threshold || 0).toLocaleString()}</span>
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-100 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full transition-all ${
-                                  alert.progress_pct >= 100 ? "bg-red-500" : alert.progress_pct >= 75 ? "bg-yellow-500" : "bg-green-500"
-                                }`}
-                                style={{ width: `${Math.min(alert.progress_pct || 0, 100)}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-muted-foreground">{alert.last_eval_result.message}</p>
-                          </div>
-                        )}
-
-                        {alert.last_triggered_at && (
-                          <p className="text-[10px] text-muted-foreground mt-2">
-                            Last triggered: {new Date(alert.last_triggered_at).toLocaleDateString()} {new Date(alert.last_triggered_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-          </div>
-
-          {/* History book beside diagnostics — the design's 1.35 / 0.65 split. */}
-          <div className="grid gap-6 md:grid-cols-[1.35fr_0.65fr] md:items-start">
-            <HistoryBook
-              clientName={groupName}
-              notes={notes}
-              activity={clientActivity}
-              loading={clientLoading || activityLoading || notesLoading}
-              onAddNote={handleAddNote}
-              onDeleteNote={handleDeleteNote}
-            />
-
-            <DiagnosticsFunnel stages={funnelStages} loading={groupsLoading} />
           </div>
         </TabsContent>
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
-        <TabsContent value="ask-birdy" className="mt-6">
+        {/* Every panel opens on the same gutter below the tab strip — the
+            design's 20px content inset, not a different one per tab. */}
+        <TabsContent value="ask-birdy" className="mt-5">
           <ClientAskBirdy
             clientId={matchingGroup?.id}
             clientName={matchingGroup?.name}
@@ -709,7 +506,7 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}
-        <TabsContent value="marketing" className="mt-4">
+        <TabsContent value="marketing" className="mt-5">
           <MarketingContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
@@ -723,7 +520,7 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
-        <TabsContent value="call-centre" className="mt-4">
+        <TabsContent value="call-centre" className="mt-5">
           {/* Same chart + insight + KPI row the Sales Hub draws, scoped to
               this client — the tab used to open straight onto a bare table. */}
           <CallCentreOverview
@@ -744,7 +541,7 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
-        <TabsContent value="leads" className="mt-4">
+        <TabsContent value="leads" className="mt-5">
           {/* Same row the Lead Hub draws, scoped to this client. */}
           <LeadHubOverview
             clientGroups={singleGroupArray}
