@@ -189,7 +189,7 @@ export default function AdsGallery({
                     onDragStart={() => setDrag({ id: col.id, overId: null, cardIdx })}
                     onDragOver={(e) => {
                       e.preventDefault()
-                      e.dataTransfer.dropEffect = "move"
+                      if (e.dataTransfer) e.dataTransfer.dropEffect = "move"
                       if (drag.overId !== col.id) setDrag(prev => ({ ...prev, overId: col.id }))
                     }}
                     onDragLeave={() => setDrag(prev => (prev.overId === col.id ? { ...prev, overId: null } : prev))}
