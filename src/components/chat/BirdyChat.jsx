@@ -1,6 +1,5 @@
 "use client"
 import { Card } from "@/components/ui/card"
-import { Bird } from "lucide-react"
 import ChatConversation from "@/components/chat/ChatConversation"
 
 /**
@@ -25,17 +24,18 @@ export default function BirdyChat({
   const sessionKey = clientId ? `birdy_chat_client_${clientId}` : "birdy_chat_client"
 
   return (
-    <Card className="h-[calc(100vh-280px)] min-h-[500px] bg-[#FAFAFA] overflow-hidden flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b shrink-0 bg-white">
-        <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white">
-          <Bird className="h-3.5 w-3.5" />
+    // Height comes from the row this sits in — the Ask Birdy tab pins that to
+    // the design's 660px — with the min-height covering the stacked layout
+    // below lg, where the row has no height of its own.
+    <Card className="flex h-full min-h-[500px] flex-col overflow-hidden rounded-2xl border-pd-border bg-pd-surface">
+      {/* Header — the design titles the pane and says what it is scoped to,
+          rather than badging it with an avatar. */}
+      <div className="shrink-0 border-b border-pd-divider px-5 py-4">
+        <div className="font-pd-display text-[15px] font-semibold text-pd-ink">
+          Chat with Birdy
         </div>
-        <div>
-          <div className="text-sm font-semibold leading-tight">Birdy AI</div>
-          <div className="text-[10px] text-muted-foreground leading-tight">
-            Scoped to <span className="font-medium text-purple-600">{displayName}</span>
-          </div>
+        <div className="mt-0.5 text-[12px] text-pd-faint">
+          Ask anything about {displayName} — campaigns, leads, calls and revenue.
         </div>
       </div>
 
