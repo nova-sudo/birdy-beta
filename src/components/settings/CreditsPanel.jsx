@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  Zap, AlertCircle, Loader2, Check, Sparkles, KeyRound,
+  Zap, Loader2, Check,
 } from "lucide-react";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
 import {
@@ -11,6 +11,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest } from "@/lib/api";
 import { useCredits } from "@/hooks/useCredits";
 
@@ -73,6 +74,34 @@ function TopupModal({ pack, email, onClose, onComplete }) {
   );
 }
 
+// The balance and the packs land from two different requests, so the row
+// would otherwise assemble itself card by card in front of the reader. These
+// hold its shape until each half arrives.
+function BalanceSkeleton() {
+  return (
+    <div className="rounded-2xl border-2 border-gray-200 bg-white p-5">
+      <Skeleton className="h-3 w-20" />
+      <Skeleton className="mt-2 h-9 w-24" />
+      <Skeleton className="mt-2 h-3 w-36" />
+    </div>
+  );
+}
+
+function PackSkeleton() {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 flex flex-col">
+      <div className="flex items-center gap-2">
+        <Skeleton className="h-9 w-9 rounded-xl" />
+        <div className="flex-1">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="mt-1.5 h-3 w-10" />
+        </div>
+      </div>
+      <Skeleton className="mt-4 h-10 w-full rounded-xl" />
+    </div>
+  );
+}
+
 /**
  * Everything on the Credits page below its heading.
  *
@@ -84,6 +113,9 @@ export function CreditsPanel() {
   const { status, loading: statusLoading, refresh } = useCredits();
   const [usage, setUsage] = useState(null);
   const [packs, setPacks] = useState([]);
+  // First load only — the post-top-up refetches below re-run loadUsage, and
+  // swapping loaded cards back to skeletons would read as a glitch.
+  const [packsLoading, setPacksLoading] = useState(true);
   const [checkoutPack, setCheckoutPack] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [storedEmail] = useState(getStoredEmail);
@@ -98,6 +130,8 @@ export function CreditsPanel() {
       if (p.ok) setPacks((await p.json()).packs || []);
     } catch {
       // non-fatal
+    } finally {
+      setPacksLoading(false);
     }
   }, []);
 
@@ -122,26 +156,23 @@ export function CreditsPanel() {
 
   const s = status || {};
   const balance = s.balance ?? 0;
-  const allowance = s.allowance ?? 0;
-  const used = s.used ?? 0;
   const topup = s.topup_balance ?? 0;
   const isOut = !!s.out;
   const low = !!s.low;
   const enforced = !!s.enforced;
-  const rateMode = s.rate_mode ?? "byok";
-  const usedPct = allowance > 0 ? Math.min(100, Math.round((used / allowance) * 100)) : 0;
+
+  // The backend still serves a 10,000-credit pack; the design only offers the
+  // three smaller ones, so the big pack is filtered out here rather than
+  // pulled from the API (other surfaces may still want it).
+  const visiblePacks = packs.filter((pack) => pack.credits < 10_000);
 
   const tone = isOut ? "red" : low ? "amber" : "emerald";
   const toneText = { red: "text-red-600", amber: "text-amber-600", emerald: "text-emerald-600" }[tone];
-  const toneBar = { red: "bg-red-500", amber: "bg-amber-500", emerald: "bg-emerald-500" }[tone];
 
-  if (statusLoading && !status) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
-      </div>
-    );
-  }
+  // The panel used to withhold everything behind one centred spinner. It now
+  // draws its own layout straight away and fills each card in as its request
+  // lands, so nothing below the row jumps once the balance arrives.
+  const balancePending = statusLoading && !status;
 
   return (
     <div className="w-full">
@@ -154,96 +185,64 @@ export function CreditsPanel() {
         </div>
       )}
 
-      {/* Balance + allowance */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        {/* Balance hero */}
-        <div className={`md:col-span-1 rounded-2xl border-2 p-5 ${isOut ? "border-red-200 bg-red-50" : low ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
-          <p className="text-xs font-medium text-gray-500">Credits left</p>
-          <p className={`mt-1 text-4xl font-extrabold ${toneText}`}>{balance.toLocaleString()}</p>
-          <p className="mt-1 text-xs text-gray-500">
-            {topup > 0 && <>includes {topup.toLocaleString()} top-up · </>}
-            {isOut ? "Out of credits" : low ? "Running low" : "Available now"}
-          </p>
-          {!enforced && (
-            <p className="mt-2 text-[11px] text-gray-400">
-              Metering is live; usage isn&apos;t blocked yet.
+      {/* Balance and the packs that top it up, on one row — the balance reads
+          as the first card in the same strip rather than a separate hero, so
+          "how many left" and "buy more" sit side by side. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {/* Balance */}
+        {balancePending ? (
+          <BalanceSkeleton />
+        ) : (
+          <div className={`rounded-2xl border-2 p-5 ${isOut ? "border-red-200 bg-red-50" : low ? "border-amber-200 bg-amber-50" : "border-emerald-200 bg-emerald-50"}`}>
+            <p className="text-xs font-medium text-gray-500">Credits left</p>
+            <p className={`mt-1 text-4xl font-extrabold ${toneText}`}>{balance.toLocaleString()}</p>
+            <p className="mt-1 text-xs text-gray-500">
+              {topup > 0 && <>includes {topup.toLocaleString()} top-up · </>}
+              {isOut ? "Out of credits" : low ? "Running low" : "Available now"}
             </p>
-          )}
-        </div>
-
-        {/* Allowance usage */}
-        <div className="md:col-span-2 rounded-2xl border border-gray-200 bg-white p-5">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-900">This period&apos;s allowance</p>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-gray-500">
-              {rateMode === "managed"
-                ? <><Sparkles className="w-3.5 h-3.5 text-purple-500" /> Managed rate</>
-                : <><KeyRound className="w-3.5 h-3.5 text-gray-400" /> Own-key rate</>}
-            </span>
+            {!enforced && (
+              <p className="mt-2 text-[11px] text-gray-400">
+                Metering is live; usage isn&apos;t blocked yet.
+              </p>
+            )}
           </div>
-          {allowance > 0 ? (
-            <>
-              <div className="mt-3 flex items-baseline justify-between text-sm">
-                <span className="text-gray-500">Used</span>
-                <span className="font-medium text-gray-700">
-                  {Math.round(used).toLocaleString()} / {allowance.toLocaleString()}
-                </span>
+        )}
+
+        {/* Top-up packs. Three skeletons, because that's how many the design
+            offers — see the pack filter above. */}
+        {packsLoading && [0, 1, 2].map((i) => <PackSkeleton key={i} />)}
+
+        {!packsLoading && visiblePacks.map((pack) => {
+          const configured = !!pack.plan_id;
+          return (
+            <div key={pack.id} className="rounded-2xl border border-gray-200 bg-white p-5 flex flex-col">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-purple-50">
+                  <Zap className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-bold text-gray-900">{pack.credits.toLocaleString()} credits</p>
+                  <p className="text-xs text-gray-500">${pack.price}</p>
+                </div>
               </div>
-              <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
-                <div className={`h-full rounded-full ${toneBar}`} style={{ width: `${usedPct}%` }} />
-              </div>
-              {s.current_period_end && (
-                <p className="mt-2 text-xs text-gray-400">
-                  Resets {new Date(s.current_period_end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </p>
-              )}
-            </>
-          ) : (
-            <div className="mt-3 flex items-center gap-2 rounded-xl bg-gray-50 border border-gray-100 px-3 py-3 text-sm text-gray-600">
-              <AlertCircle className="w-4 h-4 shrink-0 text-gray-400" />
-              No plan allowance.{" "}
-              <a href="/billing" className="font-medium text-purple-600 underline underline-offset-2">Subscribe</a>{" "}
-              for monthly credits, or top up below.
+              <button
+                type="button"
+                disabled={!configured}
+                onClick={() => configured && setCheckoutPack(pack)}
+                className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {configured ? "Add credits" : "Coming soon"}
+              </button>
             </div>
-          )}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Top-up packs */}
-      <div className="mb-8">
-        <h2 className="text-sm font-semibold text-gray-900 mb-3">Buy more credits</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {packs.map((pack) => {
-            const configured = !!pack.plan_id;
-            return (
-              <div key={pack.id} className="rounded-2xl border border-gray-200 bg-white p-5 flex flex-col">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-xl bg-purple-50">
-                    <Zap className="w-5 h-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-gray-900">{pack.credits.toLocaleString()} credits</p>
-                    <p className="text-xs text-gray-500">${pack.price}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  disabled={!configured}
-                  onClick={() => configured && setCheckoutPack(pack)}
-                  className="mt-4 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-colors bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {configured ? "Buy" : "Coming soon"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        {packs.some((p) => !p.plan_id) && (
-          <p className="mt-2 text-xs text-gray-400">
-            Top-up packs activate once their Whop plans are configured.
-          </p>
-        )}
-      </div>
+      {visiblePacks.some((p) => !p.plan_id) && (
+        <p className="-mt-4 mb-6 text-xs text-gray-400">
+          Top-up packs activate once their Whop plans are configured.
+        </p>
+      )}
 
       {/* Usage breakdown */}
       <div className="rounded-2xl border border-gray-200 bg-white p-5">

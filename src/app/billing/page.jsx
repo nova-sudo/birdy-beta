@@ -2,8 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import {
-  Check, Zap, TrendingUp, Building2,
-  Plus, ExternalLink, AlertCircle,
+  Check, Plus, ExternalLink, AlertCircle,
   Loader2, Crown,
 } from "lucide-react";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
@@ -23,53 +22,9 @@ const WHOP_ENVIRONMENT =
 const EXTRA_CLIENT_PLAN_ID = process.env.NEXT_PUBLIC_WHOP_PLAN_EXTRA_CLIENT ?? "";
 const EXTRA_CLIENT_PRICE = 10;
 
-const PLANS = [
-  {
-    id: "starter",
-    name: "Starter",
-    price: 97,
-    maxClients: 3,
-    planId: process.env.NEXT_PUBLIC_WHOP_PLAN_STARTER ?? "",
-    icon: Zap,
-    color: "blue",
-    supportsExtraSlots: false,
-    features: ["Up to 3 client groups"],
-  },
-  {
-    id: "growth",
-    name: "Growth",
-    price: 297,
-    maxClients: 10,
-    planId: process.env.NEXT_PUBLIC_WHOP_PLAN_GROWTH ?? "",
-    icon: TrendingUp,
-    color: "purple",
-    popular: true,
-    supportsExtraSlots: false,
-    features: ["Up to 10 client groups"],
-  },
-  {
-    id: "scale",
-    name: "Scale",
-    price: 497,
-    maxClients: 25,
-    planId: process.env.NEXT_PUBLIC_WHOP_PLAN_SCALE ?? "",
-    icon: Building2,
-    color: "emerald",
-    supportsExtraSlots: true,
-    features: [
-      "Up to 25 client groups",
-      "Extra client slots (+$10/mo each)",
-    ],
-  },
-];
-
-const PLAN_ORDER = ["starter", "growth", "scale"];
-
-const COLOR_CLASSES = {
-  blue: { bg: "bg-blue-600", light: "bg-blue-50", border: "border-blue-500", text: "text-blue-600", button: "bg-blue-600 hover:bg-blue-700", badge: "bg-blue-100 text-blue-700" },
-  purple: { bg: "bg-purple-600", light: "bg-purple-50", border: "border-purple-500", text: "text-purple-600", button: "bg-purple-600 hover:bg-purple-700", badge: "bg-purple-100 text-purple-700" },
-  emerald: { bg: "bg-emerald-600", light: "bg-emerald-50", border: "border-emerald-500", text: "text-emerald-600", button: "bg-emerald-600 hover:bg-emerald-700", badge: "bg-emerald-100 text-emerald-700" },
-};
+// Tiers, order and palette are shared with the Settings Billing tab, which
+// shows the same three plans.
+import { PLANS, PLAN_ORDER, COLOR_CLASSES } from "@/components/billing/plans";
 
 // Best-effort read of the signed-in user's email so we can prefill the Whop
 // checkout form. In this app the account id (user_id) *is* the email, so this

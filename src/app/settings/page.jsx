@@ -8,13 +8,14 @@ import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/portfolio"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
 import { CreditsPanel } from "@/components/settings/CreditsPanel"
+import { PlanPicker } from "@/components/billing/PlanPicker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
 import {
   IntegrationTile,
   IntegrationAction,
@@ -48,7 +49,6 @@ import {
 import { Suspense } from "react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { apiRequest } from "@/lib/api"
-import { Crown } from "lucide-react"
 
 function SettingsPageContent() {
   const router = useRouter()
@@ -1048,136 +1048,36 @@ function SettingsPageContent() {
           </TabsContent>
 
 
-          <TabsContent value="billing" className="space-y-6">
+          {/* Poppins/Inter, same as the Integrations tab — the pd- headings
+              below are Poppins only inside this wrapper. */}
+          <TabsContent value="billing" className={`${pdFontClass} space-y-6`}>
             {/* Credits, packs and the 30-day usage chart the design asks for.
                 The same panel the standalone /credits page renders, so the two
-                cannot drift. */}
+                cannot drift — the heading is the tab's own because /credits
+                already carries one of its own above the panel. */}
+            <div>
+              <h2 className="font-pd-display text-[19px] font-bold tracking-[-0.02em] text-pd-ink">
+                Birdy Credits
+              </h2>
+              <p className="mt-1 text-[13px] text-pd-faint">
+                Your AI usage this billing period. A credit is about one cent of AI work — a
+                typical Ask Birdy question costs a handful.
+              </p>
+            </div>
+
             <CreditsPanel />
 
             <Separator />
 
-            {/* ── Current Plan Card ── */}
-            {billingStatus?.subscribed && (() => {
-              const PLANS = [
-                { id: "starter", name: "Starter", color: "blue",    maxClients: 3  },
-                { id: "growth",  name: "Growth",  color: "purple",  maxClients: 10 },
-                { id: "scale",   name: "Scale",   color: "emerald", maxClients: 25 },
-              ]
-              const COLOR_CLASSES = {
-                blue:    { border: "border-blue-500",    light: "bg-blue-50",    text: "text-blue-600",    bg: "bg-blue-600"    },
-                purple:  { border: "border-purple-500",  light: "bg-purple-50",  text: "text-purple-600",  bg: "bg-purple-600"  },
-                emerald: { border: "border-emerald-500", light: "bg-emerald-50", text: "text-emerald-600", bg: "bg-emerald-600" },
-              }
-              const STATUS_STYLES = {
-                active:   "bg-green-100 text-green-700 border-green-200",
-                trialing: "bg-blue-100 text-blue-700 border-blue-200",
-                past_due: "bg-amber-100 text-amber-700 border-amber-200",
-                canceled: "bg-red-100 text-red-700 border-red-200",
-                inactive: "bg-gray-100 text-gray-600 border-gray-200",
-              }
-              const STATUS_LABELS = { active: "Active", trialing: "Trial", past_due: "Past Due", canceled: "Canceled", inactive: "No Plan" }
-
-              const plan = PLANS.find(p => p.id === billingStatus.plan?.id)
-              if (!plan) return null
-              const c = COLOR_CLASSES[plan.color]
-              const usagePct = Math.min(100, (billingStatus.client_count / Math.max(billingStatus.client_limit, 1)) * 100)
-
-              return (
-                <div className={`rounded-2xl border-2 ${c.border} ${c.light} p-5`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Crown className={`w-6 h-6 ${c.text}`} />
-                      <div>
-                        <p className="text-xs text-gray-500 font-medium">Current Plan</p>
-                        <h3 className={`text-xl font-bold ${c.text}`}>{plan.name}</h3>
-                      </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${STATUS_STYLES[billingStatus.status] ?? STATUS_STYLES.inactive}`}>
-                        {STATUS_LABELS[billingStatus.status] ?? billingStatus.status}
-                      </span>
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
-                        <span>Client groups</span>
-                        <span className="font-medium text-gray-700">
-                          {billingStatus.client_count} / {billingStatus.client_limit}
-                          {billingStatus.extra_clients_paid > 0 && (
-                            <span className="ml-1 text-emerald-600">(+{billingStatus.extra_clients_paid} extra)</span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="h-2 bg-white rounded-full border border-gray-200 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${usagePct >= 90 ? "bg-red-500" : c.bg}`}
-                          style={{ width: `${usagePct}%` }}
-                        />
-                      </div>
-                    </div>
-
-                    {billingStatus.current_period_end && (
-                      <div className="text-sm text-gray-600 shrink-0">
-                        <p className="text-xs text-gray-400 mb-0.5">
-                          {billingStatus.cancel_at_period_end ? "Cancels" : "Renews"}
-                        </p>
-                        <p className="font-medium">
-                          {new Date(billingStatus.current_period_end).toLocaleDateString("en-US", {
-                            month: "short", day: "numeric", year: "numeric",
-                          })}
-                        </p>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handlePortal}
-                      disabled={loadingPortal}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-300 text-sm font-medium text-gray-700 hover:bg-white transition-colors disabled:opacity-60 shrink-0"
-                    >
-                      {loadingPortal
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <ExternalLink className="w-4 h-4" />
-                      }
-                      Manage Billing
-                    </button>
-                  </div>
-
-                  {billingStatus.cancel_at_period_end && (
-                    <div className="mt-3 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      Your subscription will cancel at the end of this billing period.
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-semibold text-2xl">Account Information</CardTitle>
-                <CardDescription className="text-[#71658B] mb-2">Manage your account preferences</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <h1 className="text-sm font-semibold leading-none">Name</h1>
-                  <input
-                    type="text"
-                    value={user?.name ?? ""}
-                    readOnly
-                    disabled
-                    className="flex bg-[#F9F8FC] font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                  <div className="space-y-2 mt-6">
-                    <h1 className="text-sm font-semibold leading-none">Email</h1>
-                    <input
-                      type="text"
-                      value={user?.email ?? ""}
-                      readOnly
-                      disabled
-                      className="bg-[#F9F8FC] flex font-semibold h-10 w-full rounded-md border border-input px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* ── Your plan ──
+                The three tiers as /billing draws them, with the status, the
+                renewal date and the portal link the old current-plan bar
+                carried folded in underneath. */}
+            <PlanPicker
+              billingStatus={billingStatus}
+              onManage={handlePortal}
+              loadingManage={loadingPortal}
+            />
           </TabsContent>
         </Tabs>
       </div>
