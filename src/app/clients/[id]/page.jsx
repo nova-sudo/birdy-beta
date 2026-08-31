@@ -34,8 +34,10 @@ import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
 import { InsightCard, PageTabs, SidePanel, UnderlineTabs } from "@/components/portfolio"
 import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
-import { buildFunnelStages } from "@/lib/client-funnel"
+import { buildFunnelStages, buildPreviousFunnel } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
+import { diagnoseFunnel } from "@/lib/portfolio-metrics"
+import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -219,10 +221,51 @@ export default function ClientDetailsPage() {
     },
   ], [clientActivity])
 
-  const funnelStages = useMemo(
-    () => (matchingGroup ? buildFunnelStages(matchingGroup) : null),
-    [matchingGroup]
+  // ── Diagnostics: the previous window, for the per-stage deltas ─────────────
+  // Only some presets have a previous period expressible as another preset —
+  // "last 7 days" against "last 14 days" minus itself. Elsewhere there is no
+  // comparison and the card says so instead of inventing movement.
+  const comparison = PREVIOUS_PERIOD[datePreset]
+  const [enclosingFunnel, setEnclosingFunnel] = useState(null)
+
+  useEffect(() => {
+    if (!clientId || !comparison) {
+      setEnclosingFunnel(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await apiRequest(`/api/client-groups?date_preset=${comparison.preset}`)
+        if (!res.ok) throw new Error(`client-groups ${comparison.preset} → ${res.status}`)
+        const data = await res.json()
+        const group = (data.client_groups ?? []).find((g) => g.id === clientId)
+        if (!cancelled) setEnclosingFunnel(group?.gohighlevel?.metrics?.funnel ?? null)
+      } catch {
+        // No comparison is a fine outcome — the deltas just don't render.
+        if (!cancelled) setEnclosingFunnel(null)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [clientId, comparison])
+
+  const previousFunnel = useMemo(
+    () =>
+      buildPreviousFunnel(
+        matchingGroup?.gohighlevel?.metrics?.funnel ?? null,
+        enclosingFunnel,
+        comparison ?? {}
+      ),
+    [matchingGroup, enclosingFunnel, comparison]
   )
+
+  const funnelStages = useMemo(
+    () => (matchingGroup ? buildFunnelStages(matchingGroup, previousFunnel) : null),
+    [matchingGroup, previousFunnel]
+  )
+
+  // The verdict under the funnel — the same rule the Portfolio Dashboard reads.
+  const diagnosis = useMemo(() => diagnoseFunnel(funnelStages ?? []), [funnelStages])
 
   // ── Fetch client details ────────────────────────────────────────────────────
   useEffect(() => {
@@ -421,7 +464,13 @@ export default function ClientDetailsPage() {
                   onDeleteNote={handleDeleteNote}
                 />
 
-                <DiagnosticsFunnel stages={funnelStages} loading={groupsLoading} />
+                <DiagnosticsFunnel
+                  stages={funnelStages}
+                  loading={groupsLoading}
+                  diagnosis={diagnosis}
+                  hasComparison={previousFunnel != null}
+                  onViewCalls={() => setActiveTab("call-centre")}
+                />
               </div>
             </div>
 
