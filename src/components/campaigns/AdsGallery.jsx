@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutGrid, Loader2, Play, Table, ExternalLink } from "lucide-react"
+import { LayoutGrid, Loader2, Play, Table } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { apiRequest } from "@/lib/api"
 
@@ -47,31 +47,36 @@ export function AdsViewSwitch({ value, onChange }) {
   )
 }
 
-// Video ad previews: the gallery only ever stores a poster image
-// (creative_thumbnail/creative_image), never a playable source — like those,
-// the actual video source is a signed CDN link that expires, so it's fetched
-// fresh from Meta the moment the reader opens the preview rather than cached
-// alongside the rest of the ad row.
-function VideoPreviewDialog({ videoId, title, poster, onClose }) {
-  const [state, setState] = useState({ status: "loading", source: null, permalink: null, error: null })
+// Video ad previews: Meta blocks the raw video `source` URL for a lot of ad
+// creatives (download-protected, still processing, licensed audio, ...) even
+// with full ads_read access, so this renders Meta's own ad-preview iframe
+// (GET /{ad_id}/previews) instead of pulling the asset directly — that's
+// Meta serving its own render rather than handing back the raw file, so it
+// works for every ad regardless of those restrictions.
+function VideoPreviewDialog({ adId, title, onClose }) {
+  const [state, setState] = useState({ status: "loading", previewUrl: null, width: null, height: null, error: null })
 
   useEffect(() => {
     let cancelled = false
-    setState({ status: "loading", source: null, permalink: null, error: null })
-    apiRequest(`/api/facebook/video/${videoId}`)
+    setState({ status: "loading", previewUrl: null, width: null, height: null, error: null })
+    apiRequest(`/api/facebook/ad-preview/${adId}`)
       .then(async (res) => {
         const d = await res.json().catch(() => ({}))
         if (cancelled) return
-        if (!res.ok) throw new Error(d?.detail || "Couldn't load this video")
-        if (!d.source) throw new Error("This video has no playable source")
-        setState({ status: "ready", source: d.source, permalink: d.permalink_url, error: null })
+        if (!res.ok) throw new Error(d?.detail || "Couldn't load this preview")
+        if (!d.preview_url) throw new Error("No preview available for this ad")
+        setState({ status: "ready", previewUrl: d.preview_url, width: d.width, height: d.height, error: null })
       })
       .catch((e) => {
         if (cancelled) return
-        setState({ status: "error", source: null, permalink: null, error: String(e.message || e) })
+        setState({ status: "error", previewUrl: null, width: null, height: null, error: String(e.message || e) })
       })
     return () => { cancelled = true }
-  }, [videoId])
+  }, [adId])
+
+  // Meta's preview iframe has a fixed intrinsic size — scale it down to fit
+  // the dialog rather than cropping or leaving it oversized.
+  const scale = state.width ? Math.min(1, 620 / state.width) : 1
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
@@ -79,33 +84,22 @@ function VideoPreviewDialog({ videoId, title, poster, onClose }) {
         <DialogHeader className="border-b border-pd-divider px-4 py-3 text-left">
           <DialogTitle className="truncate">{title || "Ad preview"}</DialogTitle>
         </DialogHeader>
-        <div className="flex min-h-[240px] items-center justify-center bg-black p-0">
+        <div className="flex min-h-[240px] items-center justify-center overflow-auto bg-pd-divider p-4">
           {state.status === "loading" && (
-            <Loader2 className="size-8 animate-spin text-white/70" aria-hidden="true" />
+            <Loader2 className="size-8 animate-spin text-pd-faint" aria-hidden="true" />
           )}
           {state.status === "error" && (
-            <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
-              <p className="text-[13.5px] text-white/80">{state.error}</p>
-              {state.permalink && (
-                <a
-                  href={state.permalink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pd-primary hover:underline"
-                >
-                  Open on Facebook <ExternalLink className="size-3.5" aria-hidden="true" />
-                </a>
-              )}
-            </div>
+            <p className="px-6 py-10 text-center text-[13.5px] text-pd-faint">{state.error}</p>
           )}
           {state.status === "ready" && (
-            // eslint-disable-next-line jsx-a11y/media-has-caption
-            <video
-              controls
-              autoPlay
-              poster={poster || undefined}
-              src={state.source}
-              className="max-h-[70vh] w-full"
+            <iframe
+              key={state.previewUrl}
+              src={state.previewUrl}
+              width={state.width || 500}
+              height={state.height || 720}
+              scrolling="no"
+              style={{ border: "none", transform: `scale(${scale})`, transformOrigin: "center" }}
+              title={title || "Ad preview"}
             />
           )}
         </div>
@@ -307,9 +301,8 @@ export default function AdsGallery({
 
       {previewRow && (
         <VideoPreviewDialog
-          videoId={previewRow.creative_video_id}
+          adId={previewRow.id}
           title={previewRow.creative_title || previewRow.name}
-          poster={(!failedImages.has(previewRow.id) && (previewRow.creative_image || previewRow.creative_thumbnail)) || undefined}
           onClose={() => setPreviewRow(null)}
         />
       )}
