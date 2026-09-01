@@ -1,0 +1,68 @@
+/* birdy-animations.css — Birdy mascot motion set.
+   Nine states the header mark switches between; `follow` is the default.
+   Usage: <svg class="birdy" data-birdy-state="follow"> … </svg>
+   Set --birdy-speed-k (1 = normal, 2 = half speed) to retime everything.
+   Ported verbatim from the design handoff (design_handoff_birdy_animations). */
+
+.birdy [data-p]{
+  animation-timing-function: cubic-bezier(.34,1.56,.64,1);
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+@media (prefers-reduced-motion: reduce){
+  .birdy [data-p]{ animation: none !important; }
+}
+.birdy[data-birdy-paused="true"] [data-p]{ animation-play-state: paused; }
+
+@keyframes brd-breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(.99,1.018)}}
+@keyframes brd-blink{0%,92%,100%{transform:scaleY(0)}94%,96.5%{transform:scaleY(1)}99%{transform:scaleY(0)}}
+@keyframes brd-cheer{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-120px) rotate(-2.2deg)}50%{transform:translateY(-56px) rotate(0)}75%{transform:translateY(-120px) rotate(2.2deg)}}
+@keyframes brd-squint{0%,100%{transform:scaleY(0)}14%,68%{transform:scaleY(.5)}}
+@keyframes brd-spark{0%,10%{opacity:0;transform:scale(.3) rotate(-25deg)}30%{opacity:1;transform:scale(1.12) rotate(0)}45%{transform:scale(.95) rotate(6deg)}70%{opacity:1}100%{opacity:0;transform:scale(.6) rotate(18deg)}}
+@keyframes brd-hover{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-72px) rotate(1deg)}}
+@keyframes brd-orbit{0%,100%{transform:translate(34px,-28px)}25%{transform:translate(-34px,-28px)}50%{transform:translate(-34px,28px)}75%{transform:translate(34px,28px)}}
+@keyframes brd-yay{0%{transform:translateY(0) scale(1,1)}10%{transform:translateY(0) scale(1.09,.88)}30%{transform:translateY(-285px) scale(.92,1.11)}44%{transform:translateY(-215px) scale(1,1)}56%{transform:translateY(0) scale(1.11,.87)}70%{transform:translateY(0) scale(.97,1.03)}82%,100%{transform:translateY(0) scale(1,1)}}
+@keyframes brd-pop{0%,18%{opacity:0;transform:scale(.4)}34%{opacity:1;transform:scale(1.16)}44%{transform:scale(1)}84%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.04)}}
+@keyframes brd-slump{0%{transform:translate(0,0) rotate(0) scale(1,1)}8%{transform:translate(-36px,0) rotate(-1.6deg) scale(1,1)}17%{transform:translate(36px,0) rotate(1.6deg) scale(1,1)}26%{transform:translate(-18px,0) rotate(-.8deg) scale(1,1)}40%,100%{transform:translate(0,58px) rotate(2deg) scale(1.02,.96)}}
+@keyframes brd-lookdown{0%{transform:translate(0,0)}40%,100%{transform:translate(0,46px)}}
+@keyframes brd-halflid{0%,100%{transform:scaleY(.36)}50%{transform:scaleY(.48)}}
+@keyframes brd-peek{0%,8%{transform:translateY(760px)}34%{transform:translateY(-46px)}48%{transform:translateY(10px)}58%,78%{transform:translateY(0)}92%,100%{transform:translateY(760px)}}
+@keyframes brd-lookup{0%,100%{transform:translate(-34px,-46px)}50%{transform:translate(-6px,-54px)}}
+@keyframes brd-no{0%,100%{transform:translateX(0) rotate(0)}14%{transform:translateX(-54px) rotate(-2.2deg)}30%{transform:translateX(52px) rotate(2.2deg)}46%{transform:translateX(-36px) rotate(-1.5deg)}62%{transform:translateX(28px) rotate(1deg)}78%{transform:translateX(-10px) rotate(0)}}
+@keyframes brd-love{0%,100%{transform:translateY(0) scale(1,1)}18%{transform:translateY(-30px) scale(1.05,1.05)}36%{transform:translateY(0) scale(1,1)}54%{transform:translateY(-30px) scale(1.05,1.05)}72%{transform:translateY(0) scale(1,1)}}
+@keyframes brd-crossL{0%,100%{transform:translate(26px,0)}50%{transform:translate(30px,-8px)}}
+@keyframes brd-crossR{0%,100%{transform:translate(-26px,0)}50%{transform:translate(-30px,-8px)}}
+@keyframes brd-heart{0%{opacity:0;transform:translate(0,60px) scale(.3)}20%{opacity:1;transform:translate(0,0) scale(1)}70%{opacity:.9;transform:translate(34px,-230px) scale(1.05)}100%{opacity:0;transform:translate(66px,-420px) scale(.9)}}
+@keyframes brd-alert{0%,100%{transform:translate(0,0) rotate(0)}6%{transform:translate(0,-40px) rotate(0)}12%{transform:translate(-14px,0) rotate(-2deg)}18%{transform:translate(14px,0) rotate(2deg)}24%{transform:translate(-8px,0) rotate(-1deg)}32%,100%{transform:translate(0,0) rotate(0)}}
+@keyframes brd-ring{0%,4%{opacity:0;transform:scale(.4)}12%{opacity:1;transform:scale(1)}40%{opacity:.35;transform:scale(1.5)}52%,100%{opacity:0;transform:scale(1.7)}}
+@keyframes brd-hbeat{0%,4%{opacity:0;transform:scale(.5)}12%{opacity:1;transform:scale(1.12)}20%{transform:scale(1)}38%{transform:scale(1.12)}50%{transform:scale(1)}84%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1)}}
+
+.birdy[data-birdy-state=follow] [data-p=bird]{animation-name:brd-breathe;animation-duration:calc(4s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=follow] [data-p^=lid]{animation-name:brd-blink;animation-duration:calc(5.4s*var(--birdy-speed-k,1));animation-timing-function:linear}
+.birdy[data-birdy-state=celebrate] [data-p=bird]{animation-name:brd-cheer;animation-duration:calc(1.2s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=celebrate] [data-p^=lid]{animation-name:brd-squint;animation-duration:calc(1.2s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=celebrate] [data-p^=sp]{animation-name:brd-spark;animation-duration:calc(1.2s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=celebrate] [data-p=sp2]{animation-delay:calc(.15s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=celebrate] [data-p=sp3]{animation-delay:calc(.3s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=loading] [data-p=bird]{animation-name:brd-hover;animation-duration:calc(1.6s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=loading] [data-p^=eye]{animation-name:brd-orbit;animation-duration:calc(2.4s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=success] [data-p=bird]{animation-name:brd-yay;animation-duration:calc(2.1s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=success] [data-p^=lid]{animation-name:brd-squint;animation-duration:calc(2.1s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=success] [data-p=check]{animation-name:brd-pop;animation-duration:calc(2.1s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=error] [data-p=bird]{animation-name:brd-slump;animation-duration:calc(2.8s*var(--birdy-speed-k,1));animation-timing-function:ease-out}
+.birdy[data-birdy-state=error] [data-p^=eye]{animation-name:brd-lookdown;animation-duration:calc(2.8s*var(--birdy-speed-k,1));animation-timing-function:ease-out}
+.birdy[data-birdy-state=error] [data-p^=lid]{animation-name:brd-halflid;animation-duration:calc(2.8s*var(--birdy-speed-k,1));animation-timing-function:ease-out}
+.birdy[data-birdy-state=peek] [data-p=bird]{animation-name:brd-peek;animation-duration:calc(3.4s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=peek] [data-p^=eye]{animation-name:brd-lookup;animation-duration:calc(3.4s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=no] [data-p=bird]{animation-name:brd-no;animation-duration:calc(1.5s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=no] [data-p^=lid]{animation-name:brd-halflid;animation-duration:calc(1.5s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=love] [data-p=bird]{animation-name:brd-love;animation-duration:calc(2.2s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=love] [data-p=eyeL]{animation-name:brd-crossL;animation-duration:calc(2.2s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=love] [data-p=eyeR]{animation-name:brd-crossR;animation-duration:calc(2.2s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=love] [data-p^=hrt]{animation-name:brd-heart;animation-duration:calc(2.2s*var(--birdy-speed-k,1));animation-timing-function:ease-out}
+.birdy[data-birdy-state=love] [data-p=hrt2]{animation-delay:calc(.55s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=love] [data-p=hrt3]{animation-delay:calc(1.1s*var(--birdy-speed-k,1))}
+.birdy[data-birdy-state=alert] [data-p=bird]{animation-name:brd-alert;animation-duration:calc(2.4s*var(--birdy-speed-k,1));animation-timing-function:ease-in-out}
+.birdy[data-birdy-state=alert] [data-p^=lid]{animation-name:brd-blink;animation-duration:calc(2.4s*var(--birdy-speed-k,1));animation-timing-function:linear}
+.birdy[data-birdy-state=alert] [data-p=ring]{animation-name:brd-ring;animation-duration:calc(2.4s*var(--birdy-speed-k,1));animation-timing-function:ease-out}
+.birdy[data-birdy-state=alert] [data-p=dot]{animation-name:brd-hbeat;animation-duration:calc(2.4s*var(--birdy-speed-k,1))}

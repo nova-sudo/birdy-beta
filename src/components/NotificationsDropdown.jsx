@@ -5,6 +5,7 @@ import { Bell, BellRing, X, User } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { apiRequest } from "@/lib/api"
 import { formatRelative } from "@/lib/alert-helpers"
+import { flash as flashBirdy } from "@/components/birdy/birdy-store"
 
 function formatTriggerDate(dateStr) {
   if (!dateStr) return null
@@ -77,12 +78,30 @@ export default function NotificationsDropdown() {
   const wasOpenRef = useRef(false)
   const ref = useRef(null)
   const router = useRouter()
+  // Raw triggered count from the last successful fetch (pre-dismissal), so a
+  // later fetch that turns up more alerts than before can nudge the mascot —
+  // there's no live push here, so "arrived" is approximated as "more than
+  // last time we checked". null until the first fetch lands, so mount never
+  // counts as an arrival.
+  const lastSeenCountRef = useRef(null)
 
   const visibleAlerts = alerts.filter((row) => !dismissedIds.has(rowKey(row)))
   const groups = groupTriggeredRows(visibleAlerts)
 
   // Total count = sub-alerts for parent groups + 1 per simple alert
   const totalCount = groups.reduce((sum, { children }) => sum + (children.length > 0 ? children.length : 1), 0)
+
+  const applyFetchedAlerts = (triggeredList) => {
+    setAlerts(triggeredList)
+    const count = groupTriggeredRows(triggeredList).reduce(
+      (sum, { children }) => sum + (children.length > 0 ? children.length : 1),
+      0
+    )
+    if (lastSeenCountRef.current !== null && count > lastSeenCountRef.current) {
+      flashBirdy("alert")
+    }
+    lastSeenCountRef.current = count
+  }
 
   useEffect(() => {
     if (!open) return
@@ -91,7 +110,7 @@ export default function NotificationsDropdown() {
       .then((res) => (res.ok ? res.json() : {}))
       .then((data) => {
         const triggeredList = Array.isArray(data.triggered) ? data.triggered : []
-        setAlerts(triggeredList)
+        applyFetchedAlerts(triggeredList)
       })
       .catch(() => setAlerts([]))
       .finally(() => setLoading(false))
@@ -103,7 +122,7 @@ export default function NotificationsDropdown() {
       .then((res) => (res.ok ? res.json() : {}))
       .then((data) => {
         const triggeredList = Array.isArray(data.triggered) ? data.triggered : []
-        setAlerts(triggeredList)
+        applyFetchedAlerts(triggeredList)
       })
       .catch(() => {})
   }, [])

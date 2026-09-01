@@ -14,6 +14,7 @@ import { Search, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION } from "@/lib/changelog";
 import { ASK_BIRDY_EVENT } from "@/lib/ask-birdy";
 import BirdyChatModal from "@/components/chat/BirdyChatModal";
+import BirdyDefs from "@/components/birdy/BirdyDefs";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
 import { Toaster } from "@/components/ui/sonner";
@@ -136,6 +137,7 @@ export default function RootLayout({ children }) {
     <html suppressHydrationWarning>
       <head />
       <body suppressHydrationWarning className={`${outfit.className} antialiased`}>
+        <BirdyDefs />
         <ProtectedLayout>
           <SidebarProvider open={false}>
             {!hideSidebar && (

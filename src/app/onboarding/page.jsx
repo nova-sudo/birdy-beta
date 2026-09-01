@@ -28,6 +28,8 @@ import {
 } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
+import Birdy from "@/components/birdy/Birdy"
+import { useBirdy } from "@/components/birdy/use-birdy"
 import {
   FacebookGlyph,
   IconChip,
@@ -161,6 +163,11 @@ export default function OnboardingPage() {
   )
   const currentKey = visibleSteps[Math.min(stepIndex, visibleSteps.length - 1)]
   const phase = PHASE_OF[currentKey]
+
+  const { state: birdyState, flash: flashBirdy } = useBirdy()
+  useEffect(() => {
+    if (currentKey === "completion") flashBirdy("celebrate")
+  }, [currentKey, flashBirdy])
 
   const persistState = useCallback((payload) => {
     apiRequest("/api/onboarding/state", {
@@ -792,11 +799,9 @@ export default function OnboardingPage() {
 
           {currentKey === "welcome" && (
             <div className="w-full max-w-[440px]">
-              <img
-                src="/onboarding-mascot-zoom.png"
-                alt="Birdy"
-                className="mx-auto mb-[26px] block h-16 w-16 rounded-[18px] border border-pd-border-strong object-cover"
-              />
+              <div className="mx-auto mb-[26px] flex h-16 w-16 items-center justify-center rounded-[18px] border border-pd-border-strong bg-white">
+                <Birdy state={birdyState} size={52} />
+              </div>
               <div className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></div>
               <div className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
                 We&apos;ll get you set up with your first client in under 10 minutes.
@@ -1391,11 +1396,9 @@ export default function OnboardingPage() {
 
           {currentKey === "completion" && (
             <div className="w-full max-w-[440px]">
-              <img
-                src="/onboarding-mascot.png"
-                alt="Birdy"
-                className="mx-auto mb-[22px] block h-[110px] w-[110px] rounded-3xl border border-pd-border object-cover"
-              />
+              <div className="mx-auto mb-[22px] flex h-[110px] w-[110px] items-center justify-center rounded-3xl border border-pd-border bg-white">
+                <Birdy state={birdyState} size={92} />
+              </div>
               <div className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></div>
               <div className="mb-[26px] text-[14px] text-pd-faint">
                 Here&apos;s everything Birdy just connected{agency ? ` for ${agency}` : ""}. We&apos;ll

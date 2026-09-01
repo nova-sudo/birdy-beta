@@ -1,9 +1,13 @@
+import { setBusy } from "@/components/birdy/birdy-store"
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://birdy-backend.vercel.app"
 
 /**
  * Make an authenticated API request.
  * Automatically includes auth token, credentials, and handles 401 → logout.
+ * The Birdy mascot floats (its "loading" state) for as long as any request
+ * made through here or publicRequest() is in flight — see birdy-store.js.
  */
 export async function apiRequest(endpoint, options = {}) {
   const token = localStorage.getItem("auth_token")
@@ -17,11 +21,17 @@ export async function apiRequest(endpoint, options = {}) {
     headers["Authorization"] = `Bearer ${token}`
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  })
+  setBusy(true)
+  let response
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    })
+  } finally {
+    setBusy(false)
+  }
 
   if (response.status === 401) {
     localStorage.removeItem("auth_token")
@@ -45,9 +55,14 @@ export async function publicRequest(endpoint, options = {}) {
     ...options.headers,
   }
 
-  return fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-    credentials: "include",
-  })
+  setBusy(true)
+  try {
+    return await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      credentials: "include",
+    })
+  } finally {
+    setBusy(false)
+  }
 }

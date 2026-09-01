@@ -3,9 +3,10 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
-import Image from "next/image"
 import { apiRequest } from "@/lib/api"
 import { APP_VERSION } from "@/lib/changelog"
+import Birdy from "@/components/birdy/Birdy"
+import { useBirdy } from "@/components/birdy/use-birdy"
 import {
   Sidebar,
   SidebarContent,
@@ -57,6 +58,7 @@ export function AppSidebar() {
   const navItems = items
   const [showLogoutDialog, setShowLogoutDialog] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { state: birdyState } = useBirdy()
   const {
     open,
     setOpen,
@@ -91,19 +93,11 @@ export function AppSidebar() {
       >
         <SidebarContent className="pt-2">
           <SidebarGroup>
-            <SidebarMenuButton size="lg" asChild className="rounded-none">
+            <SidebarMenuButton size="lg" asChild className="rounded-none h-16 overflow-visible">
               <Link href="/clients">
-                <Image
-                  src="/top-left-mascot.jpeg"
-                  alt="Birdy"
-                  width={32}
-                  height={32}
-                  className="h-full w-full rounded-sm"
-                />
-                <div className="flex flex-col gap-0.5 text-purple-900 leading-none">
-                  <span className="font-bold">Birdy Ai</span>
-                  <span className="text-xs">{APP_VERSION}</span>
-                </div>
+                <span className="flex h-10 w-10 shrink-0 items-end justify-center overflow-hidden rounded-full border border-purple-100 bg-purple-50">
+                  <Birdy state={birdyState} size={33} speedK={1.15} />
+                </span>
               </Link>
             </SidebarMenuButton>
 

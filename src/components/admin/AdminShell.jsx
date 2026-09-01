@@ -6,9 +6,10 @@
 // so the console reads as a separate internal tool.
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Users, MessageSquare, BarChart3, Coins, Percent, ArrowLeft, UserRound } from "lucide-react";
+import Birdy from "@/components/birdy/Birdy";
+import { useBirdy } from "@/components/birdy/use-birdy";
 
 const NAV = [
   { label: "Agencies", href: "/admin/agencies", Icon: Users },
@@ -19,19 +20,18 @@ const NAV = [
 ];
 
 function AdminRail({ pathname }) {
+  const { state: birdyState } = useBirdy();
   return (
     <nav
       aria-label="Admin sections"
       className="flex w-16 shrink-0 flex-col items-center gap-2 bg-[#1E1A2E] py-4"
     >
-      <Link href="/admin/agencies" className="mb-3" aria-label="Birdy admin home">
-        <Image
-          src="/top-left-mascot.jpeg"
-          alt="Birdy"
-          width={36}
-          height={36}
-          className="h-9 w-9 rounded-lg border border-white/15 object-cover"
-        />
+      <Link
+        href="/admin/agencies"
+        className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-white/15"
+        aria-label="Birdy admin home"
+      >
+        <Birdy state={birdyState} size={36} speedK={1.15} />
       </Link>
 
       {NAV.map(({ label, href, Icon }) => {

@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
 import Silk from "@/components/Silk"
-import BirdyLogo from "@/components/BirdyLogo"
+import Birdy from "@/components/birdy/Birdy"
+import { useBirdy } from "@/components/birdy/use-birdy"
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({ name: "", email: "", password: "", default_currency: "" })
@@ -17,6 +18,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const { state: birdyState, flash: flashBirdy } = useBirdy()
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.id]: e.target.value })
@@ -38,12 +40,15 @@ export default function RegisterPage() {
       const data = await response.json()
 
       if (response.ok && data.message === "Registration successful") {
+        flashBirdy("celebrate")
         router.push("/clients")
       } else {
         setError(data.detail || "Registration failed. Please try again.")
+        flashBirdy("error")
       }
     } catch (err) {
       setError("Registration failed. Please try again.")
+      flashBirdy("error")
     } finally {
       setIsLoading(false)
     }
@@ -58,7 +63,7 @@ export default function RegisterPage() {
             <Card className="shadow-md border bg-white">
               <CardHeader className="space-y-1 text-center pb-8">
                 <div className="mx-auto mb-4 flex justify-center">
-                  <BirdyLogo variant="icon" theme="light" size={56} priority />
+                  <Birdy state={birdyState} size={56} />
                 </div>
                 <CardTitle className="text-2xl font-bold text-gray-900">Create your account</CardTitle>
                 <CardDescription className="text-gray-600">Get started with your free account</CardDescription>
@@ -206,8 +211,9 @@ export default function RegisterPage() {
           />
           <div className="pointer-events-none absolute inset-0 text-white">
             {/* Top-left: Birdy lockup */}
-            <div className="absolute left-8 top-8">
-              <BirdyLogo variant="lockup" theme="dark" size={36} />
+            <div className="absolute left-8 top-8 flex items-center gap-2">
+              <Birdy state={birdyState} size={36} />
+              <span className="text-xl font-bold text-white drop-shadow">Birdy</span>
             </div>
 
             {/* Centered hero */}
