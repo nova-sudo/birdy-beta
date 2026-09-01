@@ -1,20 +1,20 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bird, Sparkles, MessageSquarePlus, Trash2, Loader2 } from "lucide-react"
+import { useState, useEffect, useCallback, useMemo } from "react"
+import { Globe, MessageSquarePlus, Trash2, Loader2, UserRound, Bird } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import ChatConversation from "@/components/chat/ChatConversation"
+import { usePageHeader } from "@/components/page-header"
+import { pdFontClass } from "@/lib/pd-fonts"
+import { PdSegmented } from "@/components/portfolio"
 
-// ── Suggestions shown on the empty sidebar tab ──────────────────────────
-const SUGGESTIONS = [
-  "Give me a summary of all my clients",
-  "How many leads did I get this week?",
-  "Compare this week to last week",
-  "Which campaign has the best CTR?",
-  "Show me my won opportunities and revenue",
-  "Which ad has the most zombie leads?",
+// The Ask Birdy handoff's sidebar filter. Scope comes from the server: a
+// thread is "client" while every tagged turn in it points at exactly one
+// client, else "global" — derived per turn by the orchestrator, never stored.
+const SCOPE_TABS = [
+  { key: "all", label: "All" },
+  { key: "global", label: "Global" },
+  { key: "clients", label: "Clients" },
 ]
 
 // History lives on the server, in the same append-only archive the Admin
@@ -33,6 +33,7 @@ export default function AskBirdyPage() {
   const [pendingPrompt, setPendingPrompt] = useState(null)
   const [resetKey, setResetKey] = useState(0)
   const [pendingDelete, setPendingDelete] = useState(null)
+  const [scopeFilter, setScopeFilter] = useState("all")
 
   const loadConversations = useCallback(async () => {
     try {
@@ -107,8 +108,9 @@ export default function AskBirdyPage() {
     setActive(prev => (prev.sessionId ? prev : { ...prev, sessionId }))
   }, [])
 
-  // Titles and ordering are derived server-side, so refresh the list once a
-  // turn completes rather than trying to mirror that logic here.
+  // Titles, ordering and scope are derived server-side, so refresh the list
+  // once a turn completes rather than trying to mirror that logic here — the
+  // header badge reads the active row out of the refreshed list.
   const handleMessagesChange = useCallback((msgs) => {
     setMessages(msgs)
     if (msgs.length > 0 && msgs[msgs.length - 1].role === "assistant") {
@@ -116,71 +118,113 @@ export default function AskBirdyPage() {
     }
   }, [loadConversations])
 
+  // ── Scope of the active conversation ─────────────────────────────────────
+  // One source of truth: the conversation list's own row. A brand-new chat
+  // has no row yet and wears the neutral "not saved yet" pill until the first
+  // reply lands and the list refresh brings its scope back.
+  const activeConvo = useMemo(
+    () => conversations.find(c => c.session_id === active.sessionId) || null,
+    [conversations, active.sessionId]
+  )
+  const isClientScoped = activeConvo?.scope === "client" && activeConvo?.client_name
+
+  const filteredConversations = useMemo(() => {
+    if (scopeFilter === "global") return conversations.filter(c => c.scope !== "client")
+    if (scopeFilter === "clients") return conversations.filter(c => c.scope === "client")
+    return conversations
+  }, [conversations, scopeFilter])
+
+  // ── Global header slot: title + subtitle, like every other hub ──────────
+  const header = useMemo(() => ({
+    title: (
+      <div className={`${pdFontClass} min-w-0`}>
+        <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+          Ask Birdy
+        </h1>
+        <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
+          Your marketing co-pilot across every client
+        </p>
+      </div>
+    ),
+    controls: null,
+  }), [])
+  usePageHeader(header)
+
   return (
-    <div className="h-dvh w-full grid grid-cols-[280px_1fr] bg-background">
-      {/* ── Sidebar ─────────────────────────────────────────────────── */}
-      <aside className="border-r border-border/60 bg-white flex flex-col">
-        <div className="p-4 border-b border-border/60">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white">
-              <Bird className="h-4 w-4" />
-            </div>
-            <div>
-              <h1 className="text-sm font-semibold leading-tight">Ask Birdy</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">Your marketing co-pilot</p>
-            </div>
-          </div>
-          <Button
+    <div className={`${pdFontClass} flex h-full min-h-0 w-full gap-4`}>
+      {/* ── Conversation sidebar (fixed 280px) ─────────────────────────── */}
+      <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+        <div className="flex flex-col gap-3 border-b border-pd-border p-3">
+          <button
+            type="button"
             onClick={() => startNewConversation()}
-            className="w-full gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-            size="sm"
+            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-pd-primary font-pd-display text-[13px] font-semibold text-white transition-colors hover:bg-pd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
           >
-            <MessageSquarePlus className="h-3.5 w-3.5" />
+            <MessageSquarePlus className="size-4" aria-hidden="true" />
             New Chat
-          </Button>
+          </button>
+          <PdSegmented
+            label="Conversation scope"
+            options={SCOPE_TABS}
+            value={scopeFilter}
+            onChange={setScopeFilter}
+            itemClassName="flex-1 px-2 py-[5px] text-[12px]"
+          />
         </div>
 
-        <Tabs defaultValue="convos" className="flex-1 min-h-0 flex flex-col">
-          <TabsList className="mx-3 mt-3 bg-muted/50">
-            <TabsTrigger value="convos" className="flex-1 text-xs">Convos</TabsTrigger>
-            <TabsTrigger value="suggested" className="flex-1 text-xs">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Suggested
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="convos" className="flex-1 min-h-0 overflow-y-auto p-2 mt-2">
-            {loadingList ? (
-              <p className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Loading history…
-              </p>
-            ) : conversations.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-8 px-4">
-                No conversations yet. Click <strong>New Chat</strong> to start one.
-              </p>
-            ) : (
-              <div className="space-y-1">
-                {conversations.map(c => (
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          {loadingList ? (
+            <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-pd-faint">
+              <Loader2 className="size-3 animate-spin" />
+              Loading history…
+            </p>
+          ) : filteredConversations.length === 0 ? (
+            <p className="px-4 py-8 text-center text-[12px] text-pd-faint">
+              {conversations.length === 0
+                ? <>No conversations yet. Click <strong>New Chat</strong> to start one.</>
+                : "Nothing in this scope yet."}
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {filteredConversations.map(c => {
+                const selected = active.sessionId === c.session_id
+                const clientScoped = c.scope === "client" && c.client_name
+                return (
                   // Row, not a button: the delete control is a button of its
                   // own, and a button inside a button is invalid markup that
                   // keyboard users cannot reach.
                   <div
                     key={c.session_id}
-                    className={`group flex items-center gap-1 rounded-md text-xs transition ${
-                      active.sessionId === c.session_id
-                        ? "bg-purple-50 text-purple-900 border border-purple-200"
-                        : "hover:bg-muted/60 border border-transparent"
+                    className={`group flex items-center gap-1 overflow-hidden rounded-[10px] transition-colors ${
+                      selected ? "bg-pd-primary-tint" : "hover:bg-pd-divider"
                     }`}
                   >
                     <button
                       onClick={() => openConversation(c)}
                       disabled={loadingConvo}
-                      className="flex-1 min-w-0 p-2 text-left disabled:opacity-60"
-                      aria-current={active.sessionId === c.session_id ? "true" : undefined}
+                      className="min-w-0 flex-1 cursor-pointer p-2 text-left disabled:opacity-60"
+                      aria-current={selected ? "true" : undefined}
                     >
-                      <p className="font-medium truncate">{c.title}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {/* Badge first, hard-clipped so a long client name can
+                          never push the sidebar wider — see the handoff. */}
+                      <span
+                        className={`mb-1 flex w-fit max-w-full items-center gap-1 overflow-hidden rounded-full px-2 py-px text-[10px] font-semibold ${
+                          clientScoped
+                            ? "bg-pd-primary-tint text-pd-primary"
+                            : "bg-pd-info-bg text-pd-info"
+                        }`}
+                      >
+                        {clientScoped
+                          ? <UserRound className="size-2.5 shrink-0" aria-hidden="true" />
+                          : <Globe className="size-2.5 shrink-0" aria-hidden="true" />}
+                        <span className="truncate">{clientScoped ? c.client_name : "Global"}</span>
+                      </span>
+                      <p className={`truncate text-[12.5px] ${
+                        selected ? "font-semibold text-[#4A3AA0]" : "font-medium text-pd-ink"
+                      }`}>
+                        {c.title}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10.5px] text-pd-faint">
                         {c.updated_at ? new Date(c.updated_at).toLocaleDateString() : ""}
                         {c.message_count ? ` · ${c.message_count} messages` : ""}
                       </p>
@@ -188,47 +232,87 @@ export default function AskBirdyPage() {
                     <button
                       onClick={(e) => deleteConversation(c.session_id, e)}
                       disabled={pendingDelete === c.session_id}
-                      className="mr-1 shrink-0 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 p-1 hover:bg-destructive/10 text-destructive rounded transition"
+                      className="mr-1 shrink-0 rounded p-1 text-pd-danger opacity-0 transition hover:bg-pd-danger-bg focus-visible:opacity-100 group-hover:opacity-100"
                       aria-label={`Delete conversation: ${c.title}`}
                     >
                       {pendingDelete === c.session_id
-                        ? <Loader2 className="h-3 w-3 animate-spin" />
-                        : <Trash2 className="h-3 w-3" />}
+                        ? <Loader2 className="size-3 animate-spin" />
+                        : <Trash2 className="size-3" />}
                     </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="suggested" className="flex-1 min-h-0 overflow-y-auto p-3 mt-2 space-y-2">
-            {SUGGESTIONS.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => startNewConversation({ prompt: s })}
-                className="w-full text-left text-xs p-2.5 rounded-md border border-border/60 bg-white hover:bg-purple-50 hover:border-purple-300 transition"
-              >
-                {s}
-              </button>
-            ))}
-          </TabsContent>
-        </Tabs>
+                )
+              })}
+            </div>
+          )}
+        </div>
       </aside>
 
-      {/* ── Main chat pane ─────────────────────────────────────────── */}
-      <main className="min-h-0 overflow-hidden">
-        <ChatConversation
-          key={resetKey}
-          sessionId={active.sessionId}
-          onSessionId={handleSessionId}
-          initialMessages={messages}
-          initialMessage={pendingPrompt}
-          onMessagesChange={handleMessagesChange}
-          bubbleWidthClass="max-w-[80%]"
-          emptyStateTitle="How can I help?"
-          emptyStateSubtitle="Ask about your campaigns, leads, opportunities, or custom metrics."
-          showQuickActions
-        />
+      {/* ── Chat pane ──────────────────────────────────────────────────── */}
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-pd-border px-5 py-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-pd-primary text-white">
+              <Bird className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="truncate font-pd-display text-[14.5px] font-semibold leading-tight text-pd-ink">
+                {activeConvo ? "Chat with Birdy" : "New conversation"}
+              </h2>
+              <p className="truncate text-[11.5px] leading-tight text-pd-faint">
+                {isClientScoped
+                  ? `Scoped to ${activeConvo.client_name} — Birdy answers from this client's data.`
+                  : activeConvo
+                    ? "Birdy answers from every client in your workspace."
+                    : "Ask anything — this chat is saved once you send your first message."}
+              </p>
+            </div>
+          </div>
+
+          {/* The second half of the global/client indicator: a scope badge
+              pinned to the right, neutral until a new chat is saved. */}
+          {isClientScoped ? (
+            <span className="flex max-w-[40%] items-center gap-1.5 overflow-hidden rounded-full border border-[#E3DAFB] bg-pd-primary-tint px-2.5 py-1 text-[11px] font-semibold text-pd-primary">
+              <UserRound className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{activeConvo.client_name} · client conversation</span>
+            </span>
+          ) : activeConvo ? (
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#D6E6FA] bg-pd-info-bg px-2.5 py-1 text-[11px] font-semibold text-pd-info">
+              <Globe className="size-3" aria-hidden="true" />
+              Global conversation
+            </span>
+          ) : (
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-pd-border bg-[#F4F4F8] px-2.5 py-1 text-[11px] font-semibold text-pd-subtle">
+              <Globe className="size-3" aria-hidden="true" />
+              Global · not saved yet
+            </span>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {/* No clientGroupId here even for client-scoped threads: passing it
+              would pin the analysis tools to that client (see
+              _CLIENT_PINNED_GROUP_TOOLS) — right on a client's own page,
+              wrong on the workspace hub, where the user may pivot to another
+              client mid-thread. Scope stays derived from what the model
+              actually queries. */}
+          <ChatConversation
+            key={resetKey}
+            sessionId={active.sessionId}
+            onSessionId={handleSessionId}
+            initialMessages={messages}
+            initialMessage={pendingPrompt}
+            onMessagesChange={handleMessagesChange}
+            bubbleWidthClass="max-w-[80%]"
+            composerPlaceholder={
+              isClientScoped
+                ? `Ask Birdy about ${activeConvo.client_name}…`
+                : "Ask Birdy about the whole workspace…"
+            }
+            emptyStateTitle="Start a new conversation"
+            emptyStateSubtitle="Ask about your campaigns, leads, opportunities, or custom metrics — across every client, or drill into one."
+            showQuickActions
+          />
+        </div>
       </main>
     </div>
   )

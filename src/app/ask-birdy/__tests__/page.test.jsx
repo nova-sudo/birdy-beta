@@ -7,12 +7,15 @@
 // starts over with the old transcript on screen.
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 const apiRequest = vi.fn()
 vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+// next/font hits the network at module load, which a unit test has no business
+// doing — the class names are all the page uses.
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({
@@ -187,19 +190,147 @@ describe("starting a new chat", () => {
     await waitFor(() => expect(chatProps.current.sessionId).toBe("chat_assigned"))
   })
 
-  it("sends a suggestion straight into a fresh chat", async () => {
+  it("is marked unsaved until the first reply gives it a scope", async () => {
+    // A chat with no server row yet has no scope to claim, so it says so
+    // rather than asserting it is global and then possibly changing its mind.
     seed([])
+    render(<AskBirdyPage />)
+
+    expect(await screen.findByText(/not saved yet/i)).toBeInTheDocument()
+  })
+})
+
+// ── global vs client scope ────────────────────────────────────────────────
+//
+// The whole point of the redesign: which conversations are about the
+// workspace and which are about one client, visible without opening them.
+// Scope is decided server-side and arrives on each row; the page only has to
+// show it consistently in the four places the handoff calls for — the row
+// badge, the header badge, the header description, and the composer
+// placeholder.
+
+describe("conversation scope", () => {
+  const globalConvo = (id, title) =>
+    convo(id, title, { scope: "global", client_group_id: null, client_name: null })
+  const clientConvo = (id, title, name = "Aura") =>
+    convo(id, title, { scope: "client", client_group_id: "g1", client_name: name })
+
+  // The filter control also spells "Global", so a bare text query would match
+  // it too — badges are asserted on the row they belong to.
+  const rowFor = async (title) =>
+    (await screen.findByText(title)).closest("button")
+
+  it("badges each row as global or as its client", async () => {
+    seed([globalConvo("s1", "Whole account"), clientConvo("s2", "Aura's CPL")])
+    render(<AskBirdyPage />)
+
+    expect(within(await rowFor("Whole account")).getByText("Global")).toBeInTheDocument()
+    expect(within(await rowFor("Aura's CPL")).getByText("Aura")).toBeInTheDocument()
+  })
+
+  it("filters the list down to client conversations", async () => {
+    seed([globalConvo("s1", "Whole account"), clientConvo("s2", "Aura's CPL")])
     const user = userEvent.setup()
     render(<AskBirdyPage />)
 
-    await user.click(await screen.findByRole("tab", { name: /suggested/i }))
-    await user.click(screen.getByText("How many leads did I get this week?"))
+    await user.click(await screen.findByRole("radio", { name: "Clients" }))
+
+    expect(screen.getByText("Aura's CPL")).toBeInTheDocument()
+    expect(screen.queryByText("Whole account")).not.toBeInTheDocument()
+  })
+
+  it("filters the list down to global conversations", async () => {
+    seed([globalConvo("s1", "Whole account"), clientConvo("s2", "Aura's CPL")])
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByRole("radio", { name: "Global" }))
+
+    expect(screen.getByText("Whole account")).toBeInTheDocument()
+    expect(screen.queryByText("Aura's CPL")).not.toBeInTheDocument()
+  })
+
+  it("does not change the open conversation when the filter changes", async () => {
+    // The filter is a view of the list, not a navigation control — filtering
+    // a thread out of sight must not close it.
+    seed([globalConvo("s1", "Whole account"), clientConvo("s2", "Aura's CPL")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s2", messages: [{ role: "user", content: "Aura's CPL" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Aura's CPL"))
+    await waitFor(() => expect(chatProps.current.sessionId).toBe("s2"))
+
+    await user.click(screen.getByRole("radio", { name: "Global" }))
+    expect(chatProps.current.sessionId).toBe("s2")
+  })
+
+  it("badges an open client conversation with that client, in the header", async () => {
+    seed([clientConvo("s1", "Aura's CPL")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s1", messages: [{ role: "user", content: "Aura's CPL" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Aura's CPL"))
+
+    expect(await screen.findByText(/Aura · client conversation/)).toBeInTheDocument()
+  })
+
+  it("badges an open workspace conversation as global", async () => {
+    seed([globalConvo("s1", "Whole account")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s1", messages: [{ role: "user", content: "Whole account" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Whole account"))
+
+    expect(await screen.findByText("Global conversation")).toBeInTheDocument()
+  })
+
+  it("names the client in the composer placeholder", async () => {
+    seed([clientConvo("s1", "Aura's CPL")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s1", messages: [{ role: "user", content: "Aura's CPL" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Aura's CPL"))
 
     await waitFor(() =>
-      expect(chatProps.current.initialMessage).toBe(
-        "How many leads did I get this week?"
-      )
+      expect(chatProps.current.composerPlaceholder).toMatch(/about Aura/i)
     )
+  })
+
+  it("never pins the chat to a client, so a thread can pivot to another", async () => {
+    // Passing clientGroupId would pin every analysis tool to that client
+    // server-side. Right on a client's own page, wrong on the workspace hub.
+    seed([clientConvo("s1", "Aura's CPL")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s1", messages: [{ role: "user", content: "Aura's CPL" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Aura's CPL"))
+    await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
+
+    expect(chatProps.current.clientGroupId ?? null).toBeNull()
+  })
+
+  it("treats a row with no scope field as global", async () => {
+    // Threads archived before scope existed carry none; they must not fall
+    // out of the list or render a blank badge.
+    seed([convo("s1", "Older thread")])
+    render(<AskBirdyPage />)
+
+    expect(within(await rowFor("Older thread")).getByText("Global")).toBeInTheDocument()
   })
 })
 
