@@ -62,8 +62,8 @@ export default function RegisterPage() {
           <div className="w-full max-w-sm">
             <Card className="shadow-md border bg-white">
               <CardHeader className="space-y-1 text-center pb-8">
-                <div className="mx-auto mb-4 flex justify-center">
-                  <Birdy state={birdyState} size={56} />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border border-purple-100 bg-purple-50">
+                  <Birdy state={birdyState} size={52} />
                 </div>
                 <CardTitle className="text-2xl font-bold text-gray-900">Create your account</CardTitle>
                 <CardDescription className="text-gray-600">Get started with your free account</CardDescription>

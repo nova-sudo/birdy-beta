@@ -26,8 +26,20 @@
 @keyframes brd-slump{0%{transform:translate(0,0) rotate(0) scale(1,1)}8%{transform:translate(-36px,0) rotate(-1.6deg) scale(1,1)}17%{transform:translate(36px,0) rotate(1.6deg) scale(1,1)}26%{transform:translate(-18px,0) rotate(-.8deg) scale(1,1)}40%,100%{transform:translate(0,58px) rotate(2deg) scale(1.02,.96)}}
 @keyframes brd-lookdown{0%{transform:translate(0,0)}40%,100%{transform:translate(0,46px)}}
 @keyframes brd-halflid{0%,100%{transform:scaleY(.36)}50%{transform:scaleY(.48)}}
-@keyframes brd-peek{0%,8%{transform:translateY(760px)}34%{transform:translateY(-46px)}48%{transform:translateY(10px)}58%,78%{transform:translateY(0)}92%,100%{transform:translateY(760px)}}
-@keyframes brd-lookup{0%,100%{transform:translate(-34px,-46px)}50%{transform:translate(-6px,-54px)}}
+/* --birdy-peek-x/-rot/-eye-x/-eye-y: randomized per peek by Birdy.jsx so
+   consecutive peeks read as looking from different angles. Default to 0 —
+   the original fixed motion — when unset. */
+@keyframes brd-peek{
+  0%,8%{transform:translateY(760px) translateX(var(--birdy-peek-x,0px)) rotate(var(--birdy-peek-rot,0deg))}
+  34%{transform:translateY(-46px) translateX(var(--birdy-peek-x,0px)) rotate(var(--birdy-peek-rot,0deg))}
+  48%{transform:translateY(10px) translateX(var(--birdy-peek-x,0px)) rotate(var(--birdy-peek-rot,0deg))}
+  58%,78%{transform:translateY(0) translateX(var(--birdy-peek-x,0px)) rotate(var(--birdy-peek-rot,0deg))}
+  92%,100%{transform:translateY(760px) translateX(var(--birdy-peek-x,0px)) rotate(var(--birdy-peek-rot,0deg))}
+}
+@keyframes brd-lookup{
+  0%,100%{transform:translate(calc(-34px + var(--birdy-peek-eye-x,0px)),calc(-46px + var(--birdy-peek-eye-y,0px)))}
+  50%{transform:translate(calc(-6px + var(--birdy-peek-eye-x,0px)),calc(-54px + var(--birdy-peek-eye-y,0px)))}
+}
 @keyframes brd-no{0%,100%{transform:translateX(0) rotate(0)}14%{transform:translateX(-54px) rotate(-2.2deg)}30%{transform:translateX(52px) rotate(2.2deg)}46%{transform:translateX(-36px) rotate(-1.5deg)}62%{transform:translateX(28px) rotate(1deg)}78%{transform:translateX(-10px) rotate(0)}}
 @keyframes brd-love{0%,100%{transform:translateY(0) scale(1,1)}18%{transform:translateY(-30px) scale(1.05,1.05)}36%{transform:translateY(0) scale(1,1)}54%{transform:translateY(-30px) scale(1.05,1.05)}72%{transform:translateY(0) scale(1,1)}}
 @keyframes brd-crossL{0%,100%{transform:translate(26px,0)}50%{transform:translate(30px,-8px)}}

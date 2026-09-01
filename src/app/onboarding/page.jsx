@@ -828,8 +828,8 @@ export default function OnboardingPage() {
 
           {currentKey === "welcome" && (
             <div className="w-full max-w-[440px]">
-              <div className="mx-auto mb-[26px] flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
-                <Birdy state={birdyState} size={52} />
+              <div className="mx-auto mb-[26px] flex h-20 w-20 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
+                <Birdy state={birdyState} size={65} />
               </div>
               <div className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></div>
               <div className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
@@ -1433,8 +1433,8 @@ export default function OnboardingPage() {
 
           {currentKey === "completion" && (
             <div className="w-full max-w-[440px]">
-              <div className="mx-auto mb-[22px] flex h-[110px] w-[110px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
-                <Birdy state={birdyState} size={92} />
+              <div className="mx-auto mb-[22px] flex h-[136px] w-[136px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
+                <Birdy state={birdyState} size={114} />
               </div>
               <div className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></div>
               <div className="mb-[26px] text-[14px] text-pd-faint">
