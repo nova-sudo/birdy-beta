@@ -28,10 +28,10 @@ function AdminRail({ pathname }) {
     >
       <Link
         href="/admin/agencies"
-        className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg border border-white/15"
+        className="mb-3 flex h-9 w-9 items-end justify-center overflow-hidden rounded-full border border-white/15 bg-white/10"
         aria-label="Birdy admin home"
       >
-        <Birdy state={birdyState} size={36} speedK={1.15} />
+        <Birdy state={birdyState} size={30} speedK={1.15} />
       </Link>
 
       {NAV.map(({ label, href, Icon }) => {
