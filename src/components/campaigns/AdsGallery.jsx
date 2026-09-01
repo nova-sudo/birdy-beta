@@ -1,7 +1,9 @@
 "use client"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutGrid, Play, Table } from "lucide-react"
+import { LayoutGrid, Loader2, Play, Table, ExternalLink } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { apiRequest } from "@/lib/api"
 
 // The Ads tab's two layouts show the same metrics in the same order — the
 // handoff's one shared order array. This grid is the gallery half; the table
@@ -45,6 +47,73 @@ export function AdsViewSwitch({ value, onChange }) {
   )
 }
 
+// Video ad previews: the gallery only ever stores a poster image
+// (creative_thumbnail/creative_image), never a playable source — like those,
+// the actual video source is a signed CDN link that expires, so it's fetched
+// fresh from Meta the moment the reader opens the preview rather than cached
+// alongside the rest of the ad row.
+function VideoPreviewDialog({ videoId, title, poster, onClose }) {
+  const [state, setState] = useState({ status: "loading", source: null, permalink: null, error: null })
+
+  useEffect(() => {
+    let cancelled = false
+    setState({ status: "loading", source: null, permalink: null, error: null })
+    apiRequest(`/api/facebook/video/${videoId}`)
+      .then(async (res) => {
+        const d = await res.json().catch(() => ({}))
+        if (cancelled) return
+        if (!res.ok) throw new Error(d?.detail || "Couldn't load this video")
+        if (!d.source) throw new Error("This video has no playable source")
+        setState({ status: "ready", source: d.source, permalink: d.permalink_url, error: null })
+      })
+      .catch((e) => {
+        if (cancelled) return
+        setState({ status: "error", source: null, permalink: null, error: String(e.message || e) })
+      })
+    return () => { cancelled = true }
+  }, [videoId])
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-2xl overflow-hidden p-0 gap-0">
+        <DialogHeader className="border-b border-pd-divider px-4 py-3 text-left">
+          <DialogTitle className="truncate">{title || "Ad preview"}</DialogTitle>
+        </DialogHeader>
+        <div className="flex min-h-[240px] items-center justify-center bg-black p-0">
+          {state.status === "loading" && (
+            <Loader2 className="size-8 animate-spin text-white/70" aria-hidden="true" />
+          )}
+          {state.status === "error" && (
+            <div className="flex flex-col items-center gap-3 px-6 py-10 text-center">
+              <p className="text-[13.5px] text-white/80">{state.error}</p>
+              {state.permalink && (
+                <a
+                  href={state.permalink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-pd-primary hover:underline"
+                >
+                  Open on Facebook <ExternalLink className="size-3.5" aria-hidden="true" />
+                </a>
+              )}
+            </div>
+          )}
+          {state.status === "ready" && (
+            // eslint-disable-next-line jsx-a11y/media-has-caption
+            <video
+              controls
+              autoPlay
+              poster={poster || undefined}
+              src={state.source}
+              className="max-h-[70vh] w-full"
+            />
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 const CARD_SKELETON_COUNT = 8
 
 export default function AdsGallery({
@@ -63,6 +132,8 @@ export default function AdsGallery({
   // A failed load drops the card back to the placeholder rather than showing
   // the browser's broken-image glyph.
   const [failedImages, setFailedImages] = useState(() => new Set())
+  // Which video ad's preview dialog is open, if any.
+  const [previewRow, setPreviewRow] = useState(null)
 
   // The name lives in the card's fixed header row; everything else becomes a
   // metric row, in the shared order.
@@ -130,8 +201,17 @@ export default function AdsGallery({
         return (
           <div key={row.id ?? cardIdx} className="overflow-hidden rounded-[14px] border border-pd-border bg-pd-surface">
             {/* Creative thumbnail, or the handoff's grey placeholder with a
-                centred play badge when there is none (or the URL expired). */}
-            <div className="relative flex h-[190px] items-center justify-center overflow-hidden bg-pd-divider">
+                centred play badge when there is none (or the URL expired).
+                A video creative's badge doubles as the play button — click to
+                open a modal that fetches a fresh source and actually plays it. */}
+            <div
+              role={isVideo ? "button" : undefined}
+              tabIndex={isVideo ? 0 : undefined}
+              aria-label={isVideo ? `Play ${row.name || "ad"} preview` : undefined}
+              onClick={isVideo ? () => setPreviewRow(row) : undefined}
+              onKeyDown={isVideo ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreviewRow(row) } } : undefined}
+              className={`relative flex h-[190px] items-center justify-center overflow-hidden bg-pd-divider ${isVideo ? "cursor-pointer" : ""}`}
+            >
               {thumbnail ? (
                 <>
                   <img
@@ -224,6 +304,15 @@ export default function AdsGallery({
           </div>
         )
       })}
+
+      {previewRow && (
+        <VideoPreviewDialog
+          videoId={previewRow.creative_video_id}
+          title={previewRow.creative_title || previewRow.name}
+          poster={(!failedImages.has(previewRow.id) && (previewRow.creative_image || previewRow.creative_thumbnail)) || undefined}
+          onClose={() => setPreviewRow(null)}
+        />
+      )}
     </div>
   )
 }

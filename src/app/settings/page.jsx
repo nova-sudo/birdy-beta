@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { Loader2, CheckCircle2, AlertCircle, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, AlertTriangle, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
 import {
   IntegrationTile,
   IntegrationAction,
@@ -166,6 +166,8 @@ function SettingsPageContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
+  const [deleteAccountText, setDeleteAccountText] = useState("")
+  const [deletingAccount, setDeletingAccount] = useState(false)
   // ── Capabilities (Settings → Capabilities tab) ────────────────────────────
   // Per-user Birdy agent ability toggles, persisted server-side via
   // /api/capabilities. `capsLoaded` gates the switches until the real values
@@ -593,6 +595,31 @@ function SettingsPageContent() {
     })
   }
 
+  // Permanently deletes the account and every collection Birdy keyed to it
+  // (see DELETE /api/account in routers/settings.py). Blocked server-side
+  // (409) while a paid subscription is still active — Whop cancellation only
+  // happens through the hosted portal, so deleting first would leave an
+  // orphaned subscription billing nobody.
+  const handleDeleteAccount = async () => {
+    setDeletingAccount(true)
+    try {
+      const res = await apiRequest("/api/account", { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(typeof data?.detail === "string" ? data.detail : "Failed to delete account")
+        return
+      }
+      await apiRequest("/api/logout", { method: "POST" }).catch(() => {})
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = "/"
+    } catch (e) {
+      toast.error(e?.message || "Failed to delete account")
+    } finally {
+      setDeletingAccount(false)
+    }
+  }
+
   // Reusable remove button with confirmation.
   //
   // `compact` drops it to an icon-only square: a tile that also needs a
@@ -724,6 +751,75 @@ function SettingsPageContent() {
                 <Sparkles className="h-3 w-3" />
                 More capabilities are coming. Have one in mind? Let us know.
               </p>
+            </div>
+
+            {/* Danger Zone — irreversible, so a plain confirm click isn't
+                enough: the AlertDialog also requires typing DELETE. */}
+            <div className="space-y-3">
+              <div>
+                <h2 className="text-lg font-semibold text-destructive mb-1">Danger Zone</h2>
+                <p className="text-sm text-muted-foreground">
+                  Irreversible account actions.
+                </p>
+              </div>
+
+              <Separator />
+
+              <Card className="border-destructive/40">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 min-w-0">
+                      <div className="h-12 w-12 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+                        <AlertTriangle className="h-6 w-6 text-destructive" />
+                      </div>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base">Delete account</CardTitle>
+                        <CardDescription className="text-sm">
+                          Permanently deletes your account, all client groups, connected
+                          integrations, call logs, alerts and chat history. This cannot be undone.
+                          If you have an active subscription, cancel it from the Billing tab first.
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <AlertDialog onOpenChange={(open) => { if (!open) setDeleteAccountText("") }}>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="shrink-0">
+                          <Trash2 className="h-4 w-4" />
+                          Delete account
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This permanently deletes your account and everything Birdy stored for
+                            it — client groups, integrations, call logs, alerts and chat history.
+                            There is no way to recover it. Type <strong>DELETE</strong> to confirm.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <Input
+                          value={deleteAccountText}
+                          onChange={(e) => setDeleteAccountText(e.target.value)}
+                          placeholder="Type DELETE to confirm"
+                          autoComplete="off"
+                        />
+                        <AlertDialogFooter>
+                          <AlertDialogCancel disabled={deletingAccount}>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            disabled={deleteAccountText !== "DELETE" || deletingAccount}
+                            onClick={handleDeleteAccount}
+                          >
+                            {deletingAccount
+                              ? <><Loader2 className="size-3.5 animate-spin" />Deleting…</>
+                              : "Yes, delete my account"}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardHeader>
+              </Card>
             </div>
           </TabsContent>
 

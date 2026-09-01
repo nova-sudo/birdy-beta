@@ -13,5 +13,7 @@ export const CALLS_FETCH_MULTIPLIER = 20
 export const MIN_CALLS_TO_FETCH = 500
 export const MAX_LEADS_TO_FETCH = 2000
 export const MIN_CALLS_LIMIT = 5
-export const MAX_CALLS_LIMIT = 100
+// Matches MAX_LEADS_TO_FETCH — showing more calls than the leads batch we
+// fetch is never possible anyway, so that's the real ceiling.
+export const MAX_CALLS_LIMIT = MAX_LEADS_TO_FETCH
 export const DEFAULT_CALLS_LIMIT = 20

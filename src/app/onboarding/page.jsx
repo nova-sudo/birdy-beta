@@ -46,13 +46,14 @@ import {
   UnderlineInput,
 } from "./parts"
 import ReviewStep from "./ReviewStep"
+import BillingStep from "./BillingStep"
 
 const STEPS = [
   "welcome", "welcome_name", "agency", "connect_ghl",
   "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
   "client_confirm", "sync_prompt",
   "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
-  "slack_frequency", "brief_content", "sub_accounts_review", "completion",
+  "slack_frequency", "brief_content", "sub_accounts_review", "billing", "completion",
 ]
 
 const PHASE_OF = {
@@ -62,12 +63,12 @@ const PHASE_OF = {
   client_picker: 4, client_confirm: 4, meta_ad_picker: 4, sync_prompt: 4,
   kpi_targets: 5, kpi_default: 5,
   slack_connect: 6, slack_channel: 6, slack_frequency: 6, brief_content: 6,
-  sub_accounts_review: 7, completion: 8,
+  sub_accounts_review: 7, billing: 8, completion: 9,
 }
 
 const PHASE_LABEL = {
   1: "Welcome", 2: "Core connections", 3: "Sales stack", 4: "First client",
-  5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Finished",
+  5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Billing", 9: "Finished",
 }
 
 const SKIP_STEPS = [
@@ -154,6 +155,10 @@ export default function OnboardingPage() {
   const [completing, setCompleting] = useState(false)
 
   const pendingTargetsRef = useRef(null)
+  // Selected sub-accounts payload from ReviewStep, held here while the
+  // mandatory billing step runs — runImport actually fires only after
+  // BillingStep confirms an active subscription.
+  const pendingImportRef = useRef(null)
 
   // ── Step machinery ──────────────────────────────────────────────────────
 
@@ -607,6 +612,30 @@ export default function OnboardingPage() {
     },
     [goToKey]
   )
+
+  // ReviewStep's "Import" button lands here instead of hitting the API
+  // directly. Nothing selected means nothing to load and nothing to pay
+  // for, so that case skips billing entirely; otherwise payment is a hard
+  // gate before import-subaccounts (the actual client-data load) ever runs.
+  const handleReviewContinue = useCallback(
+    (accounts) => {
+      if (!accounts.length) {
+        goToKey("completion")
+        return
+      }
+      pendingImportRef.current = accounts
+      goToKey("billing")
+    },
+    [goToKey]
+  )
+
+  // BillingStep confirmed (or found) an active subscription — proceed with
+  // the import that was waiting on it.
+  const handleBillingSubscribed = useCallback(() => {
+    const accounts = pendingImportRef.current || []
+    pendingImportRef.current = null
+    runImport(accounts)
+  }, [runImport])
 
   const finish = useCallback(async () => {
     setCompleting(true)
@@ -1389,8 +1418,16 @@ export default function OnboardingPage() {
             <ReviewStep
               review={review}
               settled={reviewSettled}
+              importing={false}
+              onImport={handleReviewContinue}
+            />
+          )}
+
+          {currentKey === "billing" && (
+            <BillingStep
+              accountCount={(pendingImportRef.current || []).length}
+              onSubscribed={handleBillingSubscribed}
               importing={importing}
-              onImport={runImport}
             />
           )}
 
