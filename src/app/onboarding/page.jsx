@@ -799,7 +799,7 @@ export default function OnboardingPage() {
 
           {currentKey === "welcome" && (
             <div className="w-full max-w-[440px]">
-              <div className="mx-auto mb-[26px] flex h-16 w-16 items-center justify-center rounded-[18px] border border-pd-border-strong bg-white">
+              <div className="mx-auto mb-[26px] flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
                 <Birdy state={birdyState} size={52} />
               </div>
               <div className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></div>
@@ -1396,7 +1396,7 @@ export default function OnboardingPage() {
 
           {currentKey === "completion" && (
             <div className="w-full max-w-[440px]">
-              <div className="mx-auto mb-[22px] flex h-[110px] w-[110px] items-center justify-center rounded-3xl border border-pd-border bg-white">
+              <div className="mx-auto mb-[22px] flex h-[110px] w-[110px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
                 <Birdy state={birdyState} size={92} />
               </div>
               <div className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></div>
