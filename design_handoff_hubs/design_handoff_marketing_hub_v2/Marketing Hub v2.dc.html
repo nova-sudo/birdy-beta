@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+  @keyframes mhDrawA { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes mhDrawB { from { stroke-dashoffset: 2400; } to { stroke-dashoffset: 0; } }
+  @keyframes mhFadeA { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes mhFadeB { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</helmet>
+
+<div style="width:1600px; height:1040px; background:#F7F7FB; border:1px solid #E3E3EC; border-radius:16px; overflow:hidden; display:flex; box-shadow:0 20px 50px -20px rgba(30,25,60,.25);">
+  <div style="width:68px; background:#fff; border-right:1px solid #ECECF2; display:flex; flex-direction:column; align-items:center; padding:20px 0; gap:8px; flex:0 0 auto;">
+    <img src="uploads/birdy-mascot.png" alt="Birdy" style="width:38px; height:38px; border-radius:10px; border:1px solid #E3E3EC; object-fit:cover; margin-bottom:14px;" />
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><path d="M9 22V12h6v10"></path></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 14l4-4 3 3 5-6"></path></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.4 2.1L8.1 9.9a16 16 0 0 0 6 6l1.2-1.2a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.9.7a2 2 0 0 1 1.7 2z"></path></svg></div>
+    <div style="width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg></div>
+    <div style="margin-top:auto; width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; color:#9A9AAB;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></div>
+    <span style="margin-top:10px; font-size:10.5px; font-weight:600; color:#8A8A9A; background:#F1F1F5; padding:4px 7px; border-radius:6px;">Beta 1.7</span>
+  </div>
+
+  <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+    <div style="height:64px; background:#fff; border-bottom:1px solid #ECECF2; display:flex; align-items:center; padding:0 26px; gap:16px; flex:0 0 auto;">
+      <div><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:19px; color:#1F1B33;">Marketing Hub</div><div style="font-size:12px; color:#9A9AAB; margin-top:1px;">Campaign performance across all connected ad accounts</div></div>
+      <div style="flex:1; max-width:420px; margin:0 auto; height:38px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:10px; display:flex; align-items:center; padding:0 13px; gap:9px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg><span style="font-size:13.5px;">Ask Birdy about your marketing data…</span><span style="margin-left:auto; font-size:11px; background:#EAEAF0; padding:2px 7px; border-radius:5px;">⌘K</span></div>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+        <div onClick="{{ toggleRange }}" style="position:relative; cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B4EE6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>{{ range }}<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+          <div style="display:{{ rangeMenu }}; position:absolute; top:44px; right:0; width:170px; background:#fff; border:1px solid #ECECF2; border-radius:12px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); padding:6px; z-index:20;">
+            <sc-for list="{{ rangeList }}" as="r" hint-placeholder-count="4">
+              <div onClick="{{ r.pick }}" style="padding:9px 11px; border-radius:8px; font-size:13px; font-weight:500; color:{{ r.color }}; background:{{ r.bg }};">{{ r.name }}</div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="position:relative; width:38px; height:38px; border-radius:10px; background:#F4F4F8; display:flex; align-items:center; justify-content:center; color:#5A5A6E;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.7 21a2 2 0 0 1-3.4 0"></path></svg><span style="position:absolute; top:-4px; right:-4px; background:#E5484D; color:#fff; font-size:10px; font-weight:700; min-width:18px; height:18px; border-radius:9px; display:flex; align-items:center; justify-content:center; padding:0 4px;">9</span></div>
+        <div style="width:38px; height:38px; border-radius:10px; background:linear-gradient(135deg,#7B5FE6,#6B4EE6); display:flex; align-items:center; justify-content:center; color:#fff;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></div>
+      </div>
+    </div>
+
+    <div class="scrolly" style="flex:1; min-height:0; padding:22px 24px;">
+      <div style="display:flex; gap:18px; margin-bottom:18px; align-items:stretch;">
+        <div style="flex:1.65; min-width:0; background:#fff; border:1px solid #ECECF2; border-radius:16px; padding:20px 22px;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between;">
+            <div><div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:15px; color:#1F1B33;">{{ chartTitle }}</div><div style="font-size:12px; color:#9A9AAB; margin-top:2px;">{{ chartSub }}</div></div>
+            <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+              <sc-for list="{{ chartTabs }}" as="m" hint-placeholder-count="4">
+                <div onClick="{{ m.pick }}" style="cursor:pointer; padding:7px 13px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:12.5px; color:{{ m.color }}; background:{{ m.bg }}; box-shadow:{{ m.shadow }};">{{ m.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:flex; align-items:baseline; gap:10px; margin:14px 0 16px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#1F1B33;">{{ chartTotal }}</span><span style="font-size:12.5px; font-weight:600; color:{{ chartDeltaColor }};">{{ chartDelta }}</span></div>
+          <div style="position:relative; height:190px;">
+            <div style="position:absolute; inset:0 0 22px 0;">
+              <svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="position:absolute; inset:0; width:100%; height:100%;">
+                <defs>
+                  <linearGradient id="mhFillV2" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#6B4EE6" stop-opacity="0.18"></stop>
+                    <stop offset="100%" stop-color="#6B4EE6" stop-opacity="0"></stop>
+                  </linearGradient>
+                </defs>
+                <path d="{{ areaPath }}" fill="url(#mhFillV2)" style="animation:{{ fadeAnim }};"></path>
+                <path d="{{ linePath }}" fill="none" stroke="#6B4EE6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" style="stroke-dasharray:2400; animation:{{ drawAnim }};"></path>
+              </svg>
+              <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                <div style="position:absolute; left:{{ p.left }}; top:{{ p.top }}; width:10px; height:10px; margin:-5px 0 0 -5px; border-radius:50%; background:{{ p.fill }}; border:2px solid #fff; box-shadow:{{ p.glow }}; cursor:pointer;" onMouseEnter="{{ p.enter }}" onMouseLeave="{{ p.leave }}"><div style="display:{{ p.tipShow }}; position:absolute; bottom:15px; left:50%; transform:translateX(-50%); background:#1F1B33; color:#fff; padding:6px 10px; border-radius:8px; white-space:nowrap; pointer-events:none; box-shadow:0 6px 16px -6px rgba(30,25,60,.5);"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:12.5px; line-height:1;">{{ p.value }}</div><div style="font-size:10.5px; color:#C9BEF3; margin-top:3px;">{{ p.tipLabel }}</div></div></div>
+              </sc-for>
+            </div>
+            <div style="position:absolute; left:0; right:0; bottom:0; display:flex;">
+              <sc-for list="{{ chartPoints }}" as="p" hint-placeholder-count="12">
+                <div style="flex:1; text-align:center; font-size:10.5px; color:#9A9AAB;">{{ p.label }}</div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:0.85; min-width:0; display:flex; flex-direction:column; gap:14px;">
+          <div style="background:linear-gradient(135deg,#6B4EE6,#8B6BF0); border:1px solid #5A3FD6; border-radius:16px; padding:16px 18px; box-shadow:0 10px 26px -12px rgba(107,78,230,.6);">
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:9px;">
+              <span style="width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,.2); display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17l-1.9-5.1L4.5 10l5.6-1.4z"></path></svg></span>
+              <span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:13.5px; color:#fff;">Birdy Insights</span>
+              <span style="margin-left:auto; font-size:10.5px; font-weight:700; color:#fff; background:rgba(255,255,255,.22); padding:2px 8px; border-radius:5px;">AI</span>
+            </div>
+            <div style="font-size:12.5px; color:rgba(255,255,255,.88); line-height:1.5;">Spend is up <strong style="color:#fff;">6.8%</strong> but CPL has climbed to <strong style="color:#fff;">£3.00</strong>. <strong style="color:#fff;">Soup – No Leak Seat</strong> is the worst offender at £9.64 CPL with only 12 results — pausing it would free £115 for your £1.79 CPL winner.</div>
+            <div style="display:flex; align-items:center; gap:6px; margin-top:11px; font-size:12px; font-weight:600; color:#fff;">Ask Birdy about this<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">707</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Active campaigns</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>3.4%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#EDF8F1; display:flex; align-items:center; justify-content:center; color:#25A55F; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">£4,898.73</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Total ad spend</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>6.8%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#EAF1FD; display:flex; align-items:center; justify-content:center; color:#3B7DD6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">1,632</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Total leads</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>4.1%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#FDF1E7; display:flex; align-items:center; justify-content:center; color:#B4530A; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 6l-9.5 9.5-5-5L1 18"></path><path d="M17 6h6v6"></path></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">£3.00</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Average CPL</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#E5484D; background:#FEF1F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>2.6%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#EAF1FD; display:flex; align-items:center; justify-content:center; color:#3B7DD6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">1.42M</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Impressions</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>8.2%</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #ECECF2; border-radius:12px; padding:11px 12px; min-width:0;">
+              <span style="width:28px; height:28px; border-radius:8px; background:#F1EEFC; display:flex; align-items:center; justify-content:center; color:#6B4EE6; flex:0 0 auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg></span>
+              <div style="min-width:0;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:17px; color:#1F1B33; line-height:1;">3.62%</div><div style="font-size:11px; color:#8A8A9A; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">Average CTR</div></div>
+              <span style="margin-left:auto; display:flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:#25A55F; background:#EDF8F1; padding:3px 6px; border-radius:6px; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"></path><path d="M5 12l7-7 7 7"></path></svg>0.4pts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:14px;">
+        <div style="display:flex; gap:5px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:10px; padding:4px;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+            <div onClick="{{ t.pick }}" style="cursor:pointer; display:flex; align-items:center; gap:7px; padding:7px 15px; border-radius:8px; font-family:'Poppins',sans-serif; font-weight:600; font-size:13px; color:{{ t.color }}; background:{{ t.bg }}; box-shadow:{{ t.shadow }};">{{ t.icon }}{{ t.label }}</div>
+          </sc-for>
+        </div>
+        <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+          <div style="display:{{ adsViewSwitchShow }}; gap:4px; background:#F1F1F5; border:1px solid #ECECF2; border-radius:9px; padding:3px;">
+            <sc-for list="{{ adsViewToggle }}" as="vt" hint-placeholder-count="2">
+              <div onClick="{{ vt.pick }}" style="cursor:pointer; display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:7px; color:{{ vt.color }}; background:{{ vt.bg }}; box-shadow:{{ vt.shadow }};">{{ vt.icon }}</div>
+            </sc-for>
+          </div>
+          <div style="display:flex; align-items:center; gap:9px; height:38px; width:220px; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px; color:#9A9AAB;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg><span style="font-size:13px;">Search campaigns…</span></div>
+          <div style="position:relative;">
+            <div onClick="{{ toggleCols }}" style="cursor:pointer; display:flex; align-items:center; gap:8px; height:38px; font-size:13px; font-weight:600; color:#5A5A6E; background:#fff; border:1px solid #ECECF2; border-radius:10px; padding:0 13px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>Columns<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg></div>
+
+            <sc-if value="{{ colOpen }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; top:44px; right:0; width:480px; height:560px; background:#fff; border:1px solid #ECECF2; border-radius:14px; box-shadow:0 14px 34px -12px rgba(30,25,60,.28); z-index:30; overflow:hidden; display:flex;">
+              <div style="width:160px; background:#FAFAFC; border-right:1px solid #ECECF2; display:flex; flex-direction:column;">
+                <div style="font-size:10px; font-weight:700; letter-spacing:.04em; color:#9A9AAB; padding:12px 14px 10px; border-bottom:1px solid #ECECF2;">SAVED VIEWS</div>
+                <sc-for list="{{ savedViews }}" as="v" hint-placeholder-count="3">
+                  <div onClick="{{ v.pick }}" onMouseEnter="{{ v.enter }}" onMouseLeave="{{ v.leave }}" style="cursor:pointer; display:{{ v.viewShow }}; align-items:center; gap:6px; padding:8px 14px; background:{{ v.bg }}; border-left:3px solid {{ v.borderColor }};">
+                    <span style="font-size:12.5px; font-weight:{{ v.weight }}; color:{{ v.color }}; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ v.name }}</span>
+                    <span onClick="{{ v.rename }}" style="cursor:pointer; color:#9A9AAB; flex:0 0 auto; opacity:{{ v.pencilOpacity }};"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"></path></svg></span>
+                    <span onClick="{{ v.delete }}" style="cursor:pointer; color:#E5484D; flex:0 0 auto; opacity:{{ v.trashOpacity }};"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg></span>
+                  </div>
+                  <div style="display:{{ v.confirmShow }}; flex-direction:column; gap:6px; padding:8px 14px; background:#FEF6F6;">
+                    <span style="font-size:11.5px; font-weight:600; color:#5A5A6E;">Delete "{{ v.name }}"?</span>
+                    <div style="display:flex; gap:6px;">
+                      <div onClick="{{ v.deleteConfirm }}" style="cursor:pointer; flex:1; text-align:center; padding:6px 0; border-radius:7px; background:#E5484D; font-family:'Poppins',sans-serif; font-size:11.5px; font-weight:600; color:#fff;">Delete</div>
+                      <div onClick="{{ v.deleteCancel }}" style="cursor:pointer; flex:1; text-align:center; padding:6px 0; border-radius:7px; border:1px solid #ECECF2; background:#fff; font-family:'Poppins',sans-serif; font-size:11.5px; font-weight:600; color:#5A5A6E;">Cancel</div>
+                    </div>
+                  </div>
+                  <div style="display:{{ v.editShow }}; align-items:center; gap:5px; padding:6px 11px;">
+                    <input value="{{ v.editValue }}" onChange="{{ v.editChange }}" style="flex:1; min-width:0; height:26px; font-size:12px; font-family:'Inter',sans-serif; color:#1F1B33; background:#fff; border:1px solid #6B4EE6; border-radius:6px; padding:0 7px; outline:none;" />
+                    <span onClick="{{ v.editConfirm }}" style="cursor:pointer; width:20px; height:20px; border-radius:6px; background:#6B4EE6; display:flex; align-items:center; justify-content:center; color:#fff; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                    <span onClick="{{ v.editCancel }}" style="cursor:pointer; width:20px; height:20px; border-radius:6px; border:1px solid #ECECF2; display:flex; align-items:center; justify-content:center; color:#5A5A6E; flex:0 0 auto;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></span>
+                  </div>
+                </sc-for>
+                <div style="font-size:10px; font-weight:700; letter-spacing:.04em; color:#9A9AAB; padding:14px 14px 6px;">METRIC FILTER</div>
+                <sc-for list="{{ sourceTabs }}" as="s" hint-placeholder-count="5">
+                  <div onClick="{{ s.pick }}" onMouseEnter="{{ s.enter }}" onMouseLeave="{{ s.leave }}" style="cursor:pointer; padding:8px 14px; font-size:12.5px; font-weight:{{ s.weight }}; color:{{ s.color }}; background:{{ s.bg }}; border-left:3px solid {{ s.borderColor }};">{{ s.label }}</div>
+                </sc-for>
+                <div style="margin-top:auto; padding:9px 14px 14px;">
+                  <div style="display:{{ saveRowShow }}; flex-direction:column; gap:6px;">
+                    <input value="{{ newName }}" onChange="{{ nameChange }}" placeholder="View name…" style="width:100%; height:32px; font-size:12px; font-family:'Inter',sans-serif; color:#1F1B33; background:#fff; border:1px solid #ECECF2; border-radius:7px; padding:0 10px; outline:none;" />
+                    <div style="display:flex; gap:6px;">
+                      <div onClick="{{ confirmSave }}" style="cursor:pointer; flex:1; text-align:center; padding:7px 0; border-radius:7px; background:{{ confirmBg }}; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; color:#fff;">Save</div>
+                      <div onClick="{{ cancelSave }}" style="cursor:pointer; flex:1; text-align:center; padding:7px 0; border-radius:7px; border:1px solid #ECECF2; background:#fff; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; color:#5A5A6E;">Cancel</div>
+                    </div>
+                  </div>
+                  <div style="display:{{ footerShow }}; flex-direction:column; gap:6px;">
+                    <div onClick="{{ startSave }}" style="display:{{ saveAsShow }}; align-items:center; justify-content:center; height:32px; border-radius:8px; border:1px solid #ECECF2; background:#fff; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; color:#5A5A6E; cursor:pointer;">Save New View</div>
+                    <div onClick="{{ saveBtnClick }}" style="display:{{ updateBtnShow }}; cursor:pointer; height:32px; align-items:center; justify-content:center; gap:6px; border-radius:8px; background:{{ saveBtnBg }}; font-family:'Poppins',sans-serif; font-size:12px; font-weight:600; color:#fff;">{{ saveBtnLabel }}</div>
+                  </div>
+                </div>
+              </div>
+              <div style="flex:1; display:flex; flex-direction:column; min-width:0;">
+                <div onClick="{{ toggleAll }}" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 29px 10px 14px; border-bottom:1px solid #ECECF2;">
+                  <span style="width:14px; height:14px; border-radius:4px; background:{{ allCheckBg }}; border:{{ allCheckBorder }}; display:flex; align-items:center; justify-content:center; flex:0 0 auto;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:{{ allTickShow }};"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                  <span style="font-size:10px; font-weight:700; letter-spacing:.04em; color:#9A9AAB; flex:1;">METRIC NAME</span>
+                  <span style="font-size:10px; font-weight:700; letter-spacing:.04em; color:#9A9AAB;">SOURCE</span>
+                </div>
+                <div class="scrolly" style="flex:1; overflow-y:auto;">
+                  <sc-for list="{{ colItems }}" as="ci" hint-placeholder-count="9">
+                    <div onClick="{{ ci.toggle }}" style="cursor:pointer; display:flex; align-items:center; gap:10px; padding:8px 14px;" style-hover="background:#F1F1F5;">
+                      <span style="width:14px; height:14px; border-radius:4px; background:{{ ci.checkBg }}; border:{{ ci.checkBorder }}; display:flex; align-items:center; justify-content:center; flex:0 0 auto;"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="display:{{ ci.tickShow }};"><path d="M20 6L9 17l-5-5"></path></svg></span>
+                      <span style="font-size:12.5px; font-weight:600; color:#1F1B33; flex:1;">{{ ci.label }}</span>
+                      <span style="display:flex; align-items:center; gap:4px; font-size:10px; font-weight:600; color:{{ ci.srcColor }}; background:{{ ci.srcBg }}; border:1px solid {{ ci.srcBorder }}; padding:2px 7px; border-radius:999px;">{{ ci.srcIcon }}{{ ci.srcName }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="padding:10px 14px; border-top:1px solid #ECECF2;">
+                  <div style="height:32px; background:#F4F4F8; border:1px solid #ECECF2; border-radius:8px; display:flex; align-items:center; padding:0 10px; gap:7px; color:#9A9AAB;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="M21 21l-4.3-4.3"></path></svg><input value="{{ searchValue }}" onChange="{{ searchChange }}" placeholder="{{ searchPlaceholder }}" style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-size:12px; font-family:'Inter',sans-serif; color:#1F1B33;" /></div>
+                </div>
+              </div>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:{{ tableShow }}; background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+        <div class="scrolly" style="overflow-x:auto;">
+          <div style="min-width:1280px;">
+            <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+              <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #CFCFDA; border-radius:4px;"></span></div>
+              <div style="flex:0 0 62px;">STATUS</div>
+              <div style="flex:2.4; min-width:210px;">NAME</div>
+              <div style="flex:1; display:flex; align-items:center; gap:5px;">SPEND <span style="color:#1F1B33;">↓</span></div>
+              <div style="flex:0.85;">CPL</div>
+              <div style="flex:0.85;">RESULTS</div>
+              <div style="flex:1;">IMPRESSIONS</div>
+              <div style="flex:1;">REACH</div>
+              <div style="flex:0.85;">CLICKS</div>
+              <div style="flex:0.8;">CTR</div>
+              <div style="flex:0.9;">SOCIAL SPEND</div>
+            </div>
+            <sc-for list="{{ rows }}" as="c" hint-placeholder-count="14">
+              <div style="display:flex; align-items:center; padding:11px 22px; border-bottom:1px solid #F5F5F8; background:{{ c.rowBg }};">
+                <div style="flex:0 0 26px;"><span style="display:block; width:15px; height:15px; border:1.5px solid #DFDFE8; border-radius:4px;"></span></div>
+                <div style="flex:0 0 62px;"><span style="display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#6B4EE6; padding:2px; justify-content:flex-end;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></div>
+                <div style="flex:2.4; min-width:210px; font-size:13.5px; font-weight:600; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.name }}</div>
+                <div style="flex:1; font-size:13.5px; color:#1F1B33; font-weight:500;">{{ c.spend }}</div>
+                <div style="flex:0.85; font-size:13.5px; color:{{ c.cplColor }}; font-weight:500;">{{ c.cpl }}</div>
+                <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.results }}</div>
+                <div style="flex:1; font-size:13.5px; color:#5A5A6E;">{{ c.impressions }}</div>
+                <div style="flex:1; font-size:13.5px; color:#5A5A6E;">{{ c.reach }}</div>
+                <div style="flex:0.85; font-size:13.5px; color:#5A5A6E;">{{ c.clicks }}</div>
+                <div style="flex:0.8; font-size:13.5px; color:#5A5A6E;">{{ c.ctr }}</div>
+                <div style="flex:0.9; font-size:13.5px; color:#9A9AAB;">{{ c.social }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display:{{ adsTableShow }}; background:#fff; border:1px solid #ECECF2; border-radius:16px; overflow:hidden;">
+        <div class="scrolly" style="overflow-x:auto;">
+          <div style="min-width:1280px;">
+            <div style="display:flex; align-items:center; padding:13px 22px; border-bottom:1px solid #ECECF2; background:#FAFAFC; font-size:11.5px; font-weight:700; letter-spacing:.03em; color:#9A9AAB;">
+              <div style="flex:0 0 84px;">STATUS</div>
+              <div style="flex:2.4; min-width:210px;">NAME</div>
+              <sc-for list="{{ tableCols }}" as="col" hint-placeholder-count="6">
+                <div draggable="true" onDragStart="{{ col.onDragStart }}" onDragOver="{{ col.onDragOver }}" onDragLeave="{{ col.onDragLeave }}" onDrop="{{ col.onDrop }}" onDragEnd="{{ col.onDragEnd }}" style="cursor:grab; flex:{{ col.flex }}; border-radius:0; background:{{ col.dragging }}; border-left:{{ col.dropBorder }};">{{ col.label }}</div>
+              </sc-for>
+            </div>
+            <sc-for list="{{ rows }}" as="c" hint-placeholder-count="14">
+              <div style="display:flex; align-items:center; padding:11px 22px; border-bottom:1px solid #F5F5F8; background:{{ c.rowBg }};">
+                <div style="flex:0 0 84px;">
+                  <sc-if value="{{ c.isOn }}" hint-placeholder-val="{{ true }}"><span onClick="{{ c.toggleActive }}" style="cursor:pointer; display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#6B4EE6; padding:2px; justify-content:flex-end;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></sc-if>
+                  <sc-if value="{{ c.isOff }}" hint-placeholder-val="{{ false }}"><span onClick="{{ c.toggleActive }}" style="cursor:pointer; display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#DFDFE8; padding:2px; justify-content:flex-start;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></sc-if>
+                </div>
+                <div style="flex:2.4; min-width:210px; font-size:13.5px; font-weight:600; color:#1F1B33; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; padding-right:12px;">{{ c.name }}</div>
+                <sc-for list="{{ c.cells }}" as="cell" hint-placeholder-count="6">
+                  <div style="flex:{{ cell.flex }}; font-size:13.5px; color:{{ cell.color }}; font-weight:500;">{{ cell.value }}</div>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <div style="display:{{ galleryShow }}; grid-template-columns:repeat(4, 1fr); gap:16px;">
+        <sc-for list="{{ galleryCards }}" as="g" hint-placeholder-count="6">
+          <div style="background:#fff; border:1px solid #ECECF2; border-radius:14px; overflow:hidden;">
+            <div style="height:190px; background:#F1F1F5; display:flex; align-items:center; justify-content:center;">
+              <span style="width:44px; height:44px; border-radius:50%; background:#E3E3EC; display:flex; align-items:center; justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="#9A9AAB" stroke="none"><path d="M8 5v14l11-7z"></path></svg></span>
+            </div>
+            <div style="padding:14px 18px;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:10px; border-bottom:1px solid #F5F5F8; margin-bottom:6px;">
+                <div style="min-width:0; overflow:hidden;"><div style="font-size:11px; color:#9A9AAB; margin-bottom:3px;">Ad Name</div><div title="{{ g.name }}" style="font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#1F1B33; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ g.name }}</div></div>
+                <div style="flex:0 0 auto; text-align:right;">
+                  <div style="font-size:11px; color:#9A9AAB; margin-bottom:3px;">Status</div>
+                  <sc-if value="{{ g.isOn }}" hint-placeholder-val="{{ true }}"><span onClick="{{ g.toggleActive }}" style="cursor:pointer; display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#6B4EE6; padding:2px; justify-content:flex-end;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></sc-if>
+                  <sc-if value="{{ g.isOff }}" hint-placeholder-val="{{ false }}"><span onClick="{{ g.toggleActive }}" style="cursor:pointer; display:flex; align-items:center; width:34px; height:19px; border-radius:999px; background:#DFDFE8; padding:2px; justify-content:flex-start;"><span style="width:15px; height:15px; border-radius:50%; background:#fff;"></span></span></sc-if>
+                </div>
+              </div>
+              <sc-for list="{{ g.metrics }}" as="mrow" hint-placeholder-count="4">
+                <div draggable="true" onDragStart="{{ mrow.onDragStart }}" onDragOver="{{ mrow.onDragOver }}" onDragLeave="{{ mrow.onDragLeave }}" onDrop="{{ mrow.onDrop }}" onDragEnd="{{ mrow.onDragEnd }}" style="cursor:grab; display:flex; align-items:center; gap:6px; justify-content:space-between; padding:6px 4px; border-radius:0; background:{{ mrow.dragging }}; border-top:{{ mrow.dropBorder }};"><span style="font-size:13px; color:#9A9AAB;">{{ mrow.label }}</span><span style="font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:{{ mrow.valueColor }};">{{ mrow.value }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    tab: 'Campaigns', range: 'Last 7 days', rangeMenu: false, metric: 'spend', hover: null, anim: 0,
+    colOpen: false, view: 'Default', checks: {}, source: 'All', searchValue: '',
+    savedList: ['Default', 'Meta Only', 'Compact'], recentList: ['This Week', 'Q3 Report'],
+    saving: false, newName: '', editTarget: null, editValue: '', savedSnapshot: '{}',
+    hoverView: null, hoverSource: null, deleteTarget: null, adsView: 'table',
+    cardMetricOrder: ['Revenue', 'ROAS', 'Spend', 'Results', 'CPL', 'Impressions', 'Reach', 'Clicks', 'CTR', 'Social Spend'], dragLabel: null, dragOverLabel: null, dragCardIdx: null, activeToggles: {},
+  };
+
+  set(patch) { this.setState((st) => Object.assign({}, st, typeof patch === 'function' ? patch(st) : patch)); }
+
+  buildColMenu(st) {
+    const icon = (ds, sz) => React.createElement('svg', { width: sz || 10, height: sz || 10, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d })));
+    const META = icon(['M6.9 4.3C4.4 4.3 2 8 2 12c0 2.6 1.1 3.8 1.9 3.8 1.8 0 3-2.9 4-5 1-2 1.7-3 2.6-3', 'M6.9 4.3c2.5 0 4.2 4 5.1 6.5.9-2.5 2.6-6.5 5.1-6.5 2.5 0 4.9 3.7 4.9 7.7 0 2.6-1.1 3.8-1.9 3.8-1.8 0-3-2.9-4-5-1-2-1.7-3-2.6-3']);
+    const GHL = icon(['M4 16l4-6 4 4 4-8 4 6']);
+    const FORMULA = icon(['M9 3H7a2 2 0 0 0-2 2v3.5L3 12l2 3.5V19a2 2 0 0 0 2 2h2', 'M8 8h6']);
+    const SRC = {
+      meta: { name: 'Meta', color: '#3B7DD6', bg: '#EAF1FD', border: '#D6E6FA', icon: META },
+      ghl: { name: 'GHL', color: '#25A55F', bg: '#EDF8F1', border: '#D5EEDF', icon: GHL },
+      custom: { name: 'Custom', color: '#6B4EE6', bg: '#F1EEFC', border: '#E3DAFB', icon: FORMULA },
+    };
+    const COLS = [
+      { label: 'Ad Account', src: 'meta' }, { label: 'Spend', src: 'meta' }, { label: 'Results', src: 'meta' }, { label: 'CPL', src: 'meta' },
+      { label: 'Cost Per Result', src: 'meta' }, { label: 'Conv. Rate', src: 'meta' }, { label: 'Social Spend', src: 'meta' }, { label: 'Impressions', src: 'meta' }, { label: 'Clicks', src: 'meta' },
+      { label: 'Pipeline Stage', src: 'ghl' }, { label: 'Opportunity Value', src: 'ghl' },
+      { label: 'ROAS', src: 'custom' },
+    ];
+    const filterSrc = st.source;
+    let filtered = (!filterSrc || filterSrc === 'All') ? COLS : COLS.filter((c) => c.src === filterSrc.toLowerCase());
+    const q = (st.searchValue || '').trim().toLowerCase();
+    if (q) filtered = filtered.filter((c) => c.label.toLowerCase().includes(q));
+    const checks = st.checks;
+    const colItems = filtered.map((c) => {
+      const on = checks[c.label] !== undefined ? checks[c.label] : (c.label !== 'Cost Per Result' && c.label !== 'Conv. Rate' && c.label !== 'Pipeline Stage' && c.label !== 'Opportunity Value' && c.label !== 'ROAS');
+      const s = SRC[c.src];
+      return {
+        label: c.label, checkBg: on ? '#6B4EE6' : 'transparent', checkBorder: on ? 'none' : '2px solid #DFDFE8', tickShow: on ? 'block' : 'none',
+        srcName: s.name, srcColor: s.color, srcBg: s.bg, srcBorder: s.border, srcIcon: s.icon,
+        toggle: () => this.set((s2) => ({ checks: Object.assign({}, s2.checks, { [c.label]: !on }) })),
+      };
+    });
+
+    const cRenameStart = (name) => this.set({ editTarget: name, editValue: name });
+    const cRenameCancel = () => this.set({ editTarget: null, editValue: '' });
+    const cRenameConfirm = () => {
+      this.set((s2) => {
+        const oldName = s2.editTarget;
+        const name = s2.editValue.trim();
+        if (!oldName || !name) return { editTarget: null, editValue: '' };
+        return {
+          savedList: s2.savedList.map((n) => (n === oldName ? name : n)),
+          recentList: s2.recentList.map((n) => (n === oldName ? name : n)),
+          view: s2.view === oldName ? name : s2.view,
+          editTarget: null, editValue: '',
+        };
+      });
+    };
+    const isExisting = st.savedList.includes(st.view);
+    const cDeleteStart = (name) => this.set({ deleteTarget: name });
+    const cDeleteCancel = () => this.set({ deleteTarget: null });
+    const cDeleteConfirm = (name) => {
+      this.set((s2) => {
+        const newSaved = s2.savedList.filter((n) => n !== name);
+        const newRecent = s2.recentList.filter((n) => n !== name);
+        const newView = s2.view === name ? (newSaved[0] || 'Default') : s2.view;
+        return { savedList: newSaved, recentList: newRecent, view: newView, deleteTarget: null };
+      });
+    };
+    const savedViews = st.savedList.map((name) => {
+      const on = name === st.view;
+      const editing = st.editTarget === name;
+      const deleting = st.deleteTarget === name;
+      const hovered = st.hoverView === name;
+      return {
+        name, weight: on ? 700 : 500, color: on ? '#6B4EE6' : '#1F1B33',
+        bg: on ? '#F1EEFC' : (hovered ? '#F1F1F5' : 'transparent'), borderColor: on ? '#6B4EE6' : 'transparent',
+        pick: () => this.set({ view: name, savedSnapshot: JSON.stringify(st.checks) }),
+        rename: name === 'Default' ? ((ev) => ev.stopPropagation()) : ((ev) => { ev.stopPropagation(); cRenameStart(name); }),
+        delete: name === 'Default' ? ((ev) => ev.stopPropagation()) : ((ev) => { ev.stopPropagation(); cDeleteStart(name); }),
+        deleteConfirm: () => cDeleteConfirm(name), deleteCancel: cDeleteCancel,
+        enter: () => this.set({ hoverView: name }), leave: () => this.set({ hoverView: null }),
+        viewShow: (editing || deleting) ? 'none' : 'flex', editShow: editing ? 'flex' : 'none', confirmShow: deleting ? 'flex' : 'none',
+        editValue: st.editValue, editChange: (ev) => this.set({ editValue: ev.target.value }),
+        editConfirm: cRenameConfirm, editCancel: cRenameCancel,
+        pencilOpacity: (name !== 'Default' && on && hovered) ? 1 : 0,
+        trashOpacity: (name !== 'Default' && on && hovered) ? 1 : 0,
+      };
+    });
+    const SOURCES = ['All', 'Meta', 'GHL', 'Tags', 'Custom'];
+    const sourceTabs = SOURCES.map((label) => {
+      const on = label === (st.source || 'All');
+      const hovered = st.hoverSource === label;
+      return {
+        label, weight: on ? 700 : 500, color: on ? '#6B4EE6' : '#1F1B33',
+        bg: on ? '#F1EEFC' : (hovered ? '#F1F1F5' : 'transparent'), borderColor: on ? '#6B4EE6' : 'transparent',
+        pick: () => this.set({ source: label }),
+        enter: () => this.set({ hoverSource: label }), leave: () => this.set({ hoverSource: null }),
+      };
+    });
+
+    const allOn = colItems.length > 0 && colItems.every((c) => c.tickShow === 'block');
+    const toggleAll = () => {
+      const labels = colItems.map((c) => c.label);
+      this.set((s2) => {
+        const next = {};
+        labels.forEach((l) => { next[l] = !allOn; });
+        return { checks: Object.assign({}, s2.checks, next) };
+      });
+    };
+    const startSave = () => this.set({ saving: true, newName: '' });
+    const cancelSave = () => this.set({ saving: false, newName: '' });
+    const nameChange = (ev) => this.set({ newName: ev.target.value });
+    const confirmSave = () => {
+      const name = st.newName.trim();
+      if (!name) return;
+      this.set((s2) => {
+        const alreadySaved = s2.savedList.includes(name);
+        const newSaved = alreadySaved ? s2.savedList : s2.savedList.concat([name]);
+        const newRecent = [name].concat(s2.recentList.filter((n) => n !== name)).slice(0, 3);
+        return { savedList: newSaved, recentList: newRecent, view: name, saving: false, newName: '' };
+      });
+    };
+    const updateExisting = () => {
+      this.set({ justUpdated: true, savedSnapshot: JSON.stringify(st.checks) });
+      setTimeout(() => this.set({ justUpdated: false }), 1200);
+    };
+    const saveBtnClick = isExisting ? updateExisting : startSave;
+
+    return {
+      colOpen: st.colOpen, toggleCols: (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); this.set((s2) => ({ colOpen: !s2.colOpen })); },
+      savedViews, sourceTabs, colItems, searchValue: st.searchValue, searchChange: (ev) => this.set({ searchValue: ev.target.value }),
+      searchPlaceholder: `Search in ${st.source || 'All'}…`,
+      saveRowShow: st.saving ? 'flex' : 'none', footerShow: st.saving ? 'none' : 'flex',
+      startSave, cancelSave, nameChange, confirmSave, newName: st.newName, confirmBg: st.newName.trim() ? '#6B4EE6' : '#C9BEF3',
+      saveBtnClick, saveBtnLabel: st.justUpdated ? 'Updated' : (isExisting ? 'Update View' : 'Save View'),
+      saveBtnBg: st.justUpdated ? '#25A55F' : '#6B4EE6',
+      saveAsShow: isExisting ? 'flex' : 'none',
+      updateBtnShow: (isExisting && st.view !== 'Default') ? 'flex' : 'none',
+      toggleAll, allCheckBg: allOn ? '#6B4EE6' : 'transparent', allCheckBorder: allOn ? 'none' : '2px solid #DFDFE8', allTickShow: allOn ? 'block' : 'none',
+    };
+  }
+
+  renderVals() {
+    const st = this.state;
+    const stop = (ev) => { if (ev && ev.stopPropagation) ev.stopPropagation(); };
+    const icon = (ds, sw) => React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: sw || 2, strokeLinecap: 'round', strokeLinejoin: 'round' }, ds.map((d, i) => React.createElement('path', { key: i, d: d })));
+
+    const TABS = [
+      { label: 'Campaigns', ds: ['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z'] },
+      { label: 'Ad Sets',   ds: ['M3 3h18v18H3z', 'M3 9h18', 'M9 21V9'] },
+      { label: 'Ads',       ds: ['M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', 'M14 2v6h6', 'M9 15h6'] },
+      { label: 'Leads',     ds: ['M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8z'] },
+    ];
+    const tabs = TABS.map((t) => {
+      const on = t.label === st.tab;
+      return {
+        label: t.label,
+        icon: icon(t.ds),
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); this.set({ tab: t.label }); },
+      };
+    });
+
+    const MONTHS = ['Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun','Jul'];
+    const METRICS = {
+      spend:       { label: 'Ad spend',    title: 'Total ad spend', sub: 'Combined spend across all connected ad accounts', total: '£4,898.73', delta: '▲ 6.8%',   up: true,  vals: [60,64,58,72,68,76,71,82,78,88,84,95], mult: 52, prefix: '£' },
+      leads:       { label: 'Leads',       title: 'Total leads',    sub: 'Lead volume across all campaigns',                total: '1,632',     delta: '▲ 4.1%',   up: true,  vals: [52,61,58,70,66,74,69,80,86,79,92,100], mult: 16 },
+      cpl:         { label: 'CPL',         title: 'Average CPL',    sub: 'Blended cost per lead across all campaigns',      total: '£3.00',     delta: '▲ 2.6%',   up: false, vals: [74,66,81,58,88,63,77,70,84,60,90,72], mult: 0.034, prefix: '£', dp: 2 },
+      impressions: { label: 'Impressions', title: 'Impressions',    sub: 'Total impressions served',                        total: '1.42M',     delta: '▲ 8.2%',   up: true,  vals: [48,55,62,58,66,72,64,78,70,84,80,90], mult: 15800 },
+    };
+    const key = st.metric;
+    const c = METRICS[key];
+    const vals = c.vals;
+    const max = Math.max(...vals), min = Math.min(...vals);
+    const span = Math.max(max - min, 1), n = vals.length, pad = 14;
+    const halfCol = 100 / (2 * n);
+    const xPct = (i) => halfCol + (i * (100 - 2 * halfCol)) / (n - 1);
+    const xy = vals.map((v, i) => [xPct(i) * 10, 200 - pad - ((v - min) / span) * (200 - pad * 2)]);
+    const linePath = xy.map(([x, y], i) => (i === 0 ? 'M' : 'L') + x.toFixed(1) + ' ' + y.toFixed(1)).join(' ');
+    const areaPath = linePath + ' L' + xy[n - 1][0].toFixed(1) + ' 200 L' + xy[0][0].toFixed(1) + ' 200 Z';
+    const fmt = (raw) => {
+      const v = raw * c.mult;
+      if (c.dp) return (c.prefix || '') + v.toFixed(c.dp);
+      if (v >= 1000000) return (v / 1000000).toFixed(2) + 'M';
+      return (c.prefix || '') + Math.round(v).toLocaleString();
+    };
+    const chartPoints = xy.map(([x, y], i) => ({
+      label: MONTHS[i],
+      tipLabel: MONTHS[i] + (i < 5 ? ' 2025' : ' 2026'),
+      value: fmt(vals[i]),
+      left: xPct(i).toFixed(2) + '%',
+      top: ((y / 200) * 100).toFixed(2) + '%',
+      fill: i === n - 1 ? '#6B4EE6' : '#A98BF5',
+      glow: i === n - 1 ? '0 0 0 4px rgba(107,78,230,.18)' : 'none',
+      tipShow: st.hover === i ? 'block' : 'none',
+      enter: () => this.set({ hover: i }),
+      leave: () => this.set({ hover: null }),
+    }));
+    const chartTabs = Object.keys(METRICS).map((k) => {
+      const on = k === key;
+      return {
+        label: METRICS[k].label,
+        color: on ? '#1F1B33' : '#6B6480',
+        bg: on ? '#fff' : 'transparent',
+        shadow: on ? '0 2px 8px -2px rgba(107,78,230,.35)' : 'none',
+        pick: (ev) => { stop(ev); this.set((p) => ({ metric: k, anim: (p.anim || 0) + 1 })); },
+      };
+    });
+
+    const mk = (name, spend, cpl, results, impressions, reach, clicks, ctr, hot) => {
+      const spendNum = parseFloat(spend.replace(/[£,]/g, '')) || 0;
+      const roasNum = hot ? (0.7 + (spendNum % 10) / 20) : (2 + (spendNum % 10));
+      const revenueNum = spendNum * roasNum;
+      return {
+        name, spend, cpl, results, impressions, reach, clicks, ctr,
+        social: '–',
+        cplColor: hot ? '#E5484D' : '#1F1B33',
+        roas: roasNum.toFixed(2) + 'x',
+        revenue: '£' + Math.round(revenueNum).toLocaleString(),
+        roasColor: roasNum >= 2 ? '#25A55F' : (roasNum >= 1 ? '#B4530A' : '#9A9AAB'),
+        active: !hot,
+      };
+    };
+    const rawCampaigns = [
+      mk('Soup – Body Sculpting – 091225 – Cbo', '£177.74', '£2.78', '64', '13,103', '10,089', '598', '4.56%'),
+      mk('Soup – Body Sculpting – 111225 – Cbo', '£172.33', '£4.79', '36', '24,210', '11,335', '628', '2.59%'),
+      mk('Soup – Body Sculpting – 041025 – Cbo', '£146.84', '£2.72', '54', '27,602', '15,437', '1,245', '4.51%'),
+      mk('Soup – Body Sculpting – 160426 – Cbo', '£131.27', '£7.72', '17', '17,310', '9,416', '524', '3.03%', true),
+      mk('Soup – Body Sculpting Packages', '£125.46', '£6.60', '19', '14,785', '8,934', '539', '3.65%', true),
+      mk('Soup – Body Sculpting – 111225 – Cbo', '£123.88', '£4.96', '25', '16,621', '7,996', '447', '2.69%'),
+      mk('Soup – Body Sculpting – 270825 – Cbo', '£120.40', '£2.08', '58', '24,572', '14,876', '957', '3.89%'),
+      mk('Soup – Lymphatic Body Sculpt & Drainage', '£118.48', '£6.58', '18', '9,568', '5,937', '265', '2.77%', true),
+      mk('Soup – Body Sculpting – 091225 – Cbo', '£117.83', '£2.51', '47', '22,033', '15,921', '1,070', '4.86%'),
+      mk('Soup – Face Sculpting (phase 1)', '£116.66', '£3.65', '32', '10,014', '6,565', '286', '2.86%'),
+      mk('Soup – Body Sculpting – 09/02/26 – Cbo', '£116.51', '£1.79', '65', '18,607', '11,054', '1,152', '6.19%'),
+      mk('Soup – Body Sculpting – 201125 – Cbo', '£116.23', '£3.75', '31', '19,596', '10,042', '583', '2.98%'),
+      mk('Soup (new) – No Leak Seat – 170326', '£115.64', '£9.64', '12', '15,651', '8,370', '296', '1.89%', true),
+      mk('Soup – Body Sculpting – 120126 – Cbo', '£114.02', '£2.94', '39', '16,880', '9,721', '702', '4.16%'),
+    ];
+    const rawAds = [
+      mk('Body Sculpting – UGC Testimonial v3', '£177.74', '£2.78', '64', '13,103', '10,089', '598', '4.56%'),
+      mk('Body Sculpting – Before & After Carousel', '£172.33', '£4.79', '36', '24,210', '11,335', '628', '2.59%'),
+      mk('Body Sculpting – Static Offer 20% Off', '£146.84', '£2.72', '54', '27,602', '15,437', '1,245', '4.51%'),
+      mk('Body Sculpting – Founder Intro Video', '£131.27', '£7.72', '17', '17,310', '9,416', '524', '3.03%', true),
+      mk('Body Sculpting Packages – Bundle Static', '£125.46', '£6.60', '19', '14,785', '8,934', '539', '3.65%', true),
+      mk('Body Sculpting – Client Reaction Reel', '£123.88', '£4.96', '25', '16,621', '7,996', '447', '2.69%'),
+      mk('Body Sculpting – Limited Slots Countdown', '£120.40', '£2.08', '58', '24,572', '14,876', '957', '3.89%'),
+      mk('Lymphatic Drainage – Explainer Video', '£118.48', '£6.58', '18', '9,568', '5,937', '265', '2.77%', true),
+      mk('Body Sculpting – Instagram Story Ad', '£117.83', '£2.51', '47', '22,033', '15,921', '1,070', '4.86%'),
+      mk('Face Sculpting – Phase 1 Teaser', '£116.66', '£3.65', '32', '10,014', '6,565', '286', '2.86%'),
+      mk('Body Sculpting – Book Now Carousel', '£116.51', '£1.79', '65', '18,607', '11,054', '1,152', '6.19%'),
+      mk('Body Sculpting – Results in 30 Days', '£116.23', '£3.75', '31', '19,596', '10,042', '583', '2.98%'),
+      mk('No Leak Seat – Product Demo', '£115.64', '£9.64', '12', '15,651', '8,370', '296', '1.89%', true),
+      mk('Body Sculpting – FAQ Carousel', '£114.02', '£2.94', '39', '16,880', '9,721', '702', '4.16%'),
+    ];
+    const raw = st.tab === 'Ads' ? rawAds : rawCampaigns;
+    const isActive = (idx, s2) => {
+      const key = 'active_' + (s2 || st).tab + '_' + idx;
+      const ov = (s2 || st).activeToggles ? (s2 || st).activeToggles[key] : undefined;
+      return ov !== undefined ? ov : raw[idx].active;
+    };
+    const toggleActive = (idx) => this.set((s2) => {
+      const key = 'active_' + st.tab + '_' + idx;
+      return { activeToggles: Object.assign({}, s2.activeToggles, { [key]: !isActive(idx, s2) }) };
+    });
+    const rows = raw.map((r, i) => Object.assign({}, r, {
+      rowBg: i % 2 ? '#fff' : '#FCFCFD',
+      isOn: isActive(i),
+      isOff: !isActive(i),
+      toggleActive: () => toggleActive(i),
+    }));
+
+    const adsViewToggle = ['table', 'gallery'].map((v) => {
+      const on = st.adsView === v;
+      return {
+        key: v,
+        icon: v === 'table'
+          ? icon(['M3 3h18v18H3z', 'M3 9h18', 'M9 21V9'])
+          : icon(['M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z']),
+        bg: on ? '#fff' : 'transparent',
+        color: on ? '#1F1B33' : '#9A9AAB',
+        shadow: on ? '0 2px 6px -2px rgba(30,25,60,.25)' : 'none',
+        pick: () => this.set({ adsView: v }),
+      };
+    });
+    const checks = st.checks;
+    const checkedOn = (label) => checks[label] !== undefined ? checks[label] : (label !== 'Cost Per Result' && label !== 'Conv. Rate' && label !== 'Pipeline Stage' && label !== 'Opportunity Value' && label !== 'ROAS');
+    const FIELD_DEFS = {
+      Revenue: { key: 'revenue', flex: 1 },
+      ROAS: { key: 'roas', flex: 0.8 },
+      Spend: { key: 'spend', flex: 1 },
+      Results: { key: 'results', flex: 0.85 },
+      CPL: { key: 'cpl', flex: 0.85, color: (r) => r.cplColor },
+      Impressions: { key: 'impressions', flex: 1 },
+      Reach: { key: 'reach', flex: 1 },
+      Clicks: { key: 'clicks', flex: 0.85 },
+      CTR: { key: 'ctr', flex: 0.8 },
+      'Social Spend': { key: 'social', flex: 0.9 },
+    };
+    const orderedLabels = st.cardMetricOrder.filter((l) => l === 'Revenue' || l === 'ROAS' || l === 'Reach' || l === 'CTR' || checkedOn(l));
+    const reorderMetric = (fromLabel, toLabel) => {
+      if (fromLabel === toLabel) return;
+      this.set((s2) => {
+        const order = s2.cardMetricOrder.slice();
+        const fromIdx = order.indexOf(fromLabel), toIdx = order.indexOf(toLabel);
+        if (fromIdx < 0 || toIdx < 0) return {};
+        order.splice(fromIdx, 1);
+        order.splice(toIdx, 0, fromLabel);
+        return { cardMetricOrder: order };
+      });
+    };
+    const dragProps = (label, cardIdx) => {
+      const scoped = cardIdx === undefined || st.dragCardIdx === cardIdx;
+      return {
+        dragging: (scoped && st.dragLabel === label) ? '#F1EEFC' : 'transparent',
+        dropBorder: (scoped && st.dragOverLabel === label && st.dragLabel !== label) ? '2px dashed #6B4EE6' : '2px dashed transparent',
+        onDragStart: () => this.set({ dragLabel: label, dragCardIdx: cardIdx !== undefined ? cardIdx : null }),
+        onDragOver: (ev) => { ev.preventDefault(); if (st.dragOverLabel !== label) this.set({ dragOverLabel: label }); },
+        onDragLeave: () => this.set((s2) => (s2.dragOverLabel === label ? { dragOverLabel: null } : {})),
+        onDrop: (ev) => { ev.preventDefault(); reorderMetric(st.dragLabel, label); this.set({ dragLabel: null, dragOverLabel: null, dragCardIdx: null }); },
+        onDragEnd: () => this.set({ dragLabel: null, dragOverLabel: null, dragCardIdx: null }),
+      };
+    };
+
+    const tableCols = st.tab === 'Ads' ? orderedLabels.map((label) => {
+      const def = FIELD_DEFS[label];
+      return Object.assign({ label, flex: def.flex }, dragProps(label));
+    }) : null;
+    if (tableCols) {
+      rows.forEach((r) => {
+        r.cells = orderedLabels.map((label) => {
+          const def = FIELD_DEFS[label];
+          const color = typeof def.color === 'function' ? def.color(r) : (def.color || '#1F1B33');
+          return { value: r[def.key] != null ? r[def.key] : '–', color, flex: def.flex };
+        });
+      });
+    }
+
+    const galleryCards = st.tab === 'Ads' ? rows.map((r, i) => {
+      const metrics = orderedLabels.map((label) => {
+        const def = FIELD_DEFS[label];
+        const color = typeof def.color === 'function' ? def.color(r) : (def.color || '#1F1B33');
+        return Object.assign({ label, value: r[def.key] != null ? r[def.key] : '–', valueColor: color }, dragProps(label, i));
+      });
+      return { name: r.name, isOn: r.isOn, isOff: r.isOff, toggleActive: r.toggleActive, metrics };
+    }) : [];
+
+    return {
+      tabs, rows, chartTabs, chartPoints, linePath, areaPath,
+      adsViewToggle, galleryCards, tableCols, adsViewSwitchShow: st.tab === 'Ads' ? 'flex' : 'none',
+      tableShow: st.tab !== 'Ads' ? 'block' : 'none',
+      adsTableShow: (st.tab === 'Ads' && st.adsView === 'table') ? 'block' : 'none',
+      galleryShow: (st.tab === 'Ads' && st.adsView === 'gallery') ? 'grid' : 'none',
+      ...this.buildColMenu(st),
+      chartTitle: c.title,
+      chartSub: st.range + ' · ' + c.sub,
+      chartTotal: c.total,
+      chartDelta: c.delta,
+      chartDeltaColor: c.up ? '#25A55F' : '#E5484D',
+      drawAnim: ((st.anim || 0) % 2 ? 'mhDrawB' : 'mhDrawA') + ' 800ms cubic-bezier(.4,0,.2,1) forwards',
+      fadeAnim: ((st.anim || 0) % 2 ? 'mhFadeB' : 'mhFadeA') + ' 800ms ease-out forwards',
+      range: st.range,
+      rangeMenu: st.rangeMenu ? 'block' : 'none',
+      toggleRange: () => this.set((p) => ({ rangeMenu: !p.rangeMenu })),
+      rangeList: ['Today', 'Last 7 days', 'Last 30 days', 'This quarter'].map((nm) => {
+        const on = nm === st.range;
+        return {
+          name: nm,
+          color: on ? '#6B4EE6' : '#5A5A6E',
+          bg: on ? '#F1EEFC' : 'transparent',
+          pick: (ev) => { stop(ev); this.set({ range: nm, rangeMenu: false }); },
+        };
+      }),
+    };
+  }
+}
+
+</script>
+</body>
+</html>
