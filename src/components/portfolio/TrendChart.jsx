@@ -141,6 +141,13 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
+            // Normalises the path to one unit long for dash purposes, so the
+            // draw animation's stroke-dasharray covers all of it whatever the
+            // series does. Without it the dash was a fixed length in viewBox
+            // units, and any line longer than that — a wide date range, or a
+            // jagged one — was drawn only as far as the dash reached and then
+            // silently cut off. See .pd-chart-line in globals.css.
+            pathLength="1"
             // Without this the non-uniform viewBox scaling would squash the
             // stroke horizontally along with everything else.
             vectorEffect="non-scaling-stroke"

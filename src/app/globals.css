@@ -428,9 +428,22 @@
 /* The line draws itself by walking a dash offset the length of the path, and
    the gradient area fades in behind it. Both replay whenever the metric or
    timeframe changes — the chart element is keyed on that pair, so React
-   remounts it and the animations restart from the top. */
+   remounts it and the animations restart from the top.
+
+   The dash is expressed as a FRACTION of the path, not a length in user
+   units: the line carries pathLength="1" (see TrendChart), which tells the
+   browser to treat the path as one unit long however long it really is, so
+   one dash of 1 always covers exactly the whole line.
+
+   It used to be a hardcoded 2400, which is only long enough for a short,
+   smooth series. Past that the dash pattern repeats — 2400 on, 2400 off — so
+   the line drew normally and then simply stopped, with the area fill
+   carrying on underneath it. A 30-day series measures ~2100 units typically
+   and over 5000 when it is jagged, and 90 days averages ~5400, so the longer
+   the range the earlier the line gave up: at 4000 units it vanished 60% of
+   the way across. */
 @keyframes pd-chart-draw {
-  from { stroke-dashoffset: 2400; }
+  from { stroke-dashoffset: 1; }
   to   { stroke-dashoffset: 0; }
 }
 
@@ -445,7 +458,7 @@
 }
 
 .pd-chart-line {
-  stroke-dasharray: 2400;
+  stroke-dasharray: 1;
   animation: pd-chart-draw 800ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
