@@ -673,7 +673,12 @@ export default function OnboardingPage() {
   const clientItems = (locations || [])
     .filter((l) => (l.name || "").toLowerCase().includes(clientQuery))
     .map((l) => {
-      const id = l.id || l._id
+      // GHL's location shape varies by which upstream endpoint answered
+      // (see fetch_locations in integrations/gohighlevel.py) — some only
+      // carry `locationId`, not `id`/`_id`. Missing this fallback left every
+      // row's id `undefined`, so every row compared equal to the (also
+      // undefined) unselected state and all looked selected at once.
+      const id = l.id || l._id || l.locationId
       return {
         id,
         title: l.name || "Unknown",
@@ -932,6 +937,15 @@ export default function OnboardingPage() {
                     onPick={(item) => {
                       setSelectedClient(item.raw)
                       setClientNameConfirm(item.raw.name || "")
+                      // connect_meta (the very next step) does a full OAuth
+                      // redirect away and back, which wipes any React state
+                      // that isn't persisted — save the pick immediately so
+                      // it survives that round-trip (restored in boot() via
+                      // data.first_client).
+                      persistState({ data: { first_client: {
+                        ghl_location_id: item.raw.id,
+                        name: item.raw.name,
+                      } } })
                     }}
                     emptyText="No sub-accounts match that search"
                   />
@@ -989,7 +1003,19 @@ export default function OnboardingPage() {
                   <PickList
                     items={adItems}
                     selectedId={selectedAd?.id}
-                    onPick={(item) => setSelectedAd(item.raw)}
+                    onPick={(item) => {
+                      setSelectedAd(item.raw)
+                      // Same reasoning as client_picker's onPick — persist the
+                      // full draft (not just the ad account) since $set on
+                      // onboarding.data.first_client replaces the whole field
+                      // rather than merging into what client_picker saved.
+                      persistState({ data: { first_client: {
+                        ghl_location_id: selectedClient?.id,
+                        name: clientNameConfirm || selectedClient?.name,
+                        meta_ad_account_id: item.raw.id,
+                        currency: item.raw.currency || null,
+                      } } })
+                    }}
                     emptyText="No ad accounts match that search"
                   />
                 </>
