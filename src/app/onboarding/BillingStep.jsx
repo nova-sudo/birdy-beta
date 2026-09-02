@@ -7,7 +7,7 @@
 // @whop/checkout/react), styled with the wizard's own pd-* look instead of
 // that page's Tailwind-gray cards.
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
@@ -34,6 +34,14 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
   const [selectedPlan, setSelectedPlan] = useState(null)
   const [error, setError] = useState(null)
   const [email] = useState(getStoredEmail)
+
+  // Cheapest plan that fits the number of sub-accounts about to be
+  // imported — ReviewStep caps selection at 25 (Scale's own max), so this
+  // always resolves to a real plan rather than falling off the end.
+  const recommendedPlanId = useMemo(() => {
+    const fit = PLANS.find((p) => accountCount <= p.maxClients)
+    return (fit || PLANS[PLANS.length - 1]).id
+  }, [accountCount])
 
   const checkStatus = useCallback(async () => {
     try {
@@ -123,15 +131,24 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
           <div className="mb-6 grid grid-cols-1 gap-[14px] sm:grid-cols-3">
             {PLANS.map((plan) => {
               const Icon = plan.icon
+              const isRecommended = plan.id === recommendedPlanId
               return (
                 <div
                   key={plan.id}
                   onClick={() => plan.planId && setSelectedPlan(plan)}
-                  className={`cursor-pointer rounded-[14px] border-2 px-5 py-[22px] text-center transition-colors ${
+                  className={`relative cursor-pointer rounded-[14px] border-2 px-5 py-[22px] text-center transition-colors ${
                     plan.planId ? "" : "cursor-not-allowed opacity-50"
                   }`}
-                  style={{ borderColor: "#ECECF2", background: "#fff" }}
+                  style={{
+                    borderColor: isRecommended ? "#6B4EE6" : "#ECECF2",
+                    background: isRecommended ? "#F7F5FE" : "#fff",
+                  }}
                 >
+                  {isRecommended && (
+                    <span className="absolute -top-[11px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-pd-primary px-[10px] py-[3px] text-[10px] font-bold text-white">
+                      RECOMMENDED FOR YOU
+                    </span>
+                  )}
                   <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-pd-primary-tint text-pd-primary">
                     <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
                   </div>

@@ -11,6 +11,11 @@ import { PrimaryButton, SpinnerRing, StepHeading } from "./parts"
 
 const NO_MATCH = "No matching ad account found"
 
+// The largest plan (Scale) supports 25 client groups — pre-selecting or
+// allowing more than that would just get silently truncated later by
+// check_client_limit during the actual import, so it's capped here instead.
+const MAX_IMPORT_SELECTION = 25
+
 export default function ReviewStep({ review, settled, importing, onImport }) {
   // Per-row edits, sparse — row defaults come from the server payload.
   const [rows, setRows] = useState({})
@@ -32,12 +37,24 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const hasRecency = unimported.some((a) => a.leads_recent_90 !== null && a.leads_recent_90 !== undefined)
   const fbAccounts = review?.fb_accounts || []
 
+  // Only pre-check sub-accounts with a lead in the last 7 days, most-recent
+  // first, capped at MAX_IMPORT_SELECTION — everything else still shows in
+  // the table (untouched by this), just unchecked by default.
+  const autoCheckedIds = useMemo(() => {
+    const eligible = accounts
+      .filter((a) => a.leads_recent_7)
+      .slice()
+      .sort((a, b) => new Date(b.last_lead_at || 0) - new Date(a.last_lead_at || 0))
+      .slice(0, MAX_IMPORT_SELECTION)
+    return new Set(eligible.map((a) => a.location_id))
+  }, [accounts])
+
   const resolved = accounts.map((account) => {
     const edit = rows[account.location_id] || {}
     const fb = edit.fb !== undefined ? edit.fb : account.fb_match
     return {
       ...account,
-      importChecked: edit.import !== undefined ? edit.import : true,
+      importChecked: edit.import !== undefined ? edit.import : autoCheckedIds.has(account.location_id),
       birdyName: edit.birdyName !== undefined ? edit.birdyName : account.name,
       fb,
       status: edit.status || account.status_default || "active",
@@ -48,6 +65,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], ...changes } }))
 
   const importCount = resolved.filter((r) => r.importChecked).length
+  const atSelectionCap = importCount >= MAX_IMPORT_SELECTION
   const activeCount = resolved.filter((r) => r.status === "active").length
   const fbQuery = fbSearch.toLowerCase()
   const fbOptions = fbAccounts.filter((a) => (a.name || "").toLowerCase().includes(fbQuery))
@@ -90,7 +108,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       </div>
       <div className="mb-5 text-center text-[13.5px] text-pd-faint">
         {hasRecency
-          ? "We only list sub-accounts with activity in the last 90 days, and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in."
+          ? `We've pre-selected sub-accounts with a lead in the last 7 days (up to ${MAX_IMPORT_SELECTION}) and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in.`
           : "These are the sub-accounts you haven't imported yet. Review the names, Facebook matches and status, untick any you don't want, then bring them in."}
       </div>
 
@@ -128,10 +146,16 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
               className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[10px] last:border-b-0"
               style={{ opacity: row.importChecked ? 1 : 0.5 }}
             >
-              {/* import checkbox */}
+              {/* import checkbox — unchecking is always allowed; checking a
+                  new one is blocked once MAX_IMPORT_SELECTION is reached. */}
               <span
-                onClick={() => patch(row.location_id, { import: !row.importChecked })}
-                className="flex h-[19px] w-[19px] shrink-0 cursor-pointer items-center justify-center rounded-[5px] border-[1.5px] text-xs text-white"
+                onClick={() => {
+                  if (!row.importChecked && atSelectionCap) return
+                  patch(row.location_id, { import: !row.importChecked })
+                }}
+                className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-xs text-white ${
+                  !row.importChecked && atSelectionCap ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
                 style={{
                   borderColor: row.importChecked ? "#6B4EE6" : "#DFDFE8",
                   background: row.importChecked ? "#6B4EE6" : "#fff",
@@ -251,6 +275,12 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       {/* click-catcher for open dropdowns */}
       {(fbMenuOpen || statusMenuOpen) && (
         <div className="fixed inset-0 z-[5]" onClick={closeMenus} />
+      )}
+
+      {atSelectionCap && (
+        <div className="mt-[14px] text-center text-[12.5px] text-pd-faint">
+          You&apos;ve selected the maximum of {MAX_IMPORT_SELECTION} sub-accounts for this import — untick one to pick another.
+        </div>
       )}
 
       <div className="relative z-[6] mt-[26px] text-center">
