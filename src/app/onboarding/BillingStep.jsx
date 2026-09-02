@@ -101,7 +101,7 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
         <div className="text-[13px] text-pd-faint">
           {importing
             ? `Bringing in your ${accountCount} sub-account${accountCount === 1 ? "" : "s"}…`
-            : "This usually takes a few seconds."}
+            : "This usually takes a few seconds — safe to leave this open, it'll pick up automatically."}
         </div>
         {error && <div className="mt-4 text-[12.5px] text-pd-faint">{error}</div>}
       </div>
@@ -161,6 +161,13 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
               environment={WHOP_ENVIRONMENT}
               theme="light"
               skipRedirect
+              // Some payment methods (3DS, buy-now-pay-later) leave the page
+              // entirely regardless of skipRedirect — without an explicit
+              // returnUrl, Whop has nowhere of ours to send the browser back
+              // to. The wizard's own persisted step + pending_import (not
+              // this component's local state) is what actually recovers on
+              // that reload — see handleReviewContinue/boot() in page.jsx.
+              returnUrl={typeof window !== "undefined" ? `${window.location.origin}/onboarding` : undefined}
               prefill={email ? { email } : undefined}
               onComplete={pollUntilSubscribed}
               fallback={

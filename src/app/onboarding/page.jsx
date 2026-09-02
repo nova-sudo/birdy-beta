@@ -276,6 +276,11 @@ export default function OnboardingPage() {
         }
         if (data.wants_sync) setSyncing(true)
         if (Array.isArray(data.skipped)) setSkipped(data.skipped)
+        // Recover the sub-accounts picked in ReviewStep if a checkout redirect
+        // (or an impatient refresh during "Activating your subscription…")
+        // reloaded the page while the billing step was waiting on it — an
+        // in-memory ref alone doesn't survive that.
+        if (Array.isArray(data.pending_import)) pendingImportRef.current = data.pending_import
 
         const visible = STEPS.filter((s) => s !== "hp_key" || data.sales_tool === "hp")
         if (!cancelled) setStepIndex(Math.min(state.step || 0, visible.length - 1))
@@ -617,6 +622,11 @@ export default function OnboardingPage() {
   // directly. Nothing selected means nothing to load and nothing to pay
   // for, so that case skips billing entirely; otherwise payment is a hard
   // gate before import-subaccounts (the actual client-data load) ever runs.
+  //
+  // The payload is persisted server-side (not just kept in the ref) because
+  // a Whop checkout can leave the page for 3DS/BNPL, and a human waiting on
+  // "Activating your subscription…" can just as easily hit refresh — either
+  // one wipes an in-memory ref and would otherwise import zero accounts.
   const handleReviewContinue = useCallback(
     (accounts) => {
       if (!accounts.length) {
@@ -624,7 +634,7 @@ export default function OnboardingPage() {
         return
       }
       pendingImportRef.current = accounts
-      goToKey("billing")
+      goToKey("billing", { pending_import: accounts })
     },
     [goToKey]
   )
@@ -634,8 +644,9 @@ export default function OnboardingPage() {
   const handleBillingSubscribed = useCallback(() => {
     const accounts = pendingImportRef.current || []
     pendingImportRef.current = null
+    persistState({ data: { pending_import: [] } })
     runImport(accounts)
-  }, [runImport])
+  }, [runImport, persistState])
 
   const finish = useCallback(async () => {
     setCompleting(true)
