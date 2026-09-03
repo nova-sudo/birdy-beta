@@ -663,7 +663,10 @@ export default function OnboardingPage() {
     else if (currentKey === "hp_key") skipTo(nextKey)
     else if (["client_picker", "client_confirm", "meta_ad_picker"].includes(currentKey)) skipTo("kpi_targets")
     else if (currentKey === "kpi_targets") skipTo("slack_connect")
-    else if (currentKey === "slack_connect") skipTo("completion")
+    // Used to jump straight to "completion" — written before sub_accounts_review
+    // and billing existed after this point. Skipping Slack must not also skip
+    // the mandatory review + payment gate.
+    else if (currentKey === "slack_connect") skipTo("sub_accounts_review")
     else skipTo(nextKey)
   }, [currentKey, stepIndex, visibleSteps, skipTo])
 
