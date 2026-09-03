@@ -132,6 +132,7 @@ export default function OnboardingPage() {
 
   const [firstGroupId, setFirstGroupId] = useState(null)
   const [creationError, setCreationError] = useState(null)
+  const [creatingFirstClient, setCreatingFirstClient] = useState(false)
 
   const [syncing, setSyncing] = useState(false)
   const [syncGhlPct, setSyncGhlPct] = useState(0)
@@ -444,8 +445,15 @@ export default function OnboardingPage() {
     []
   )
 
-  const createFirstClient = useCallback(() => {
-    if (!selectedClient || firstGroupId) return
+  // Awaited by the client_confirm Confirm button (see below) so a failure
+  // blocks the wizard right there with a visible, retryable error instead of
+  // advancing regardless — the first client group is free (billing_middleware
+  // allows a subscription-less user's very first one), so a failure here is
+  // a real problem (GHL/network/500), not an expected payment wall.
+  const createFirstClient = useCallback(async () => {
+    if (firstGroupId) return true
+    if (!selectedClient) return false
+    setCreationError(null)
     const clientName = clientNameConfirm.trim() || selectedClient.name
     const payload = {
       name: clientName,
@@ -456,49 +464,52 @@ export default function OnboardingPage() {
       call_log_provider: salesTool === "hp" ? "hotprospector" : "ghl",
       notes: "",
     }
-    apiRequest("/api/client-groups", { method: "POST", body: JSON.stringify(payload) })
-      .then(async (res) => {
-        const d = await res.json().catch(() => ({}))
-        let groupId = d?.client_group?.id || null
-        if (!res.ok && res.status !== 409) {
-          const detail = d?.detail
-          setCreationError(
-            typeof detail === "string" ? detail : detail?.message || "Client creation failed"
-          )
-          return
-        }
-        if (res.status === 409 || !groupId) {
-          // Duplicate (e.g. wizard re-run) — find the existing group instead.
-          try {
-            const listRes = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-            if (listRes.ok) {
-              const list = await listRes.json()
-              const match = (list?.client_groups || []).find(
-                (g) => g.ghl_location_id === selectedClient.id
-              )
-              if (match) groupId = match.id
-            }
-          } catch { /* ignore — targets fall back to onboarding state */ }
-        }
-        if (groupId) {
-          setFirstGroupId(groupId)
-          persistState({ data: { first_client: {
-            group_id: groupId,
-            name: clientName,
-            ghl_location_id: selectedClient.id,
-            meta_ad_account_id: selectedAd?.id || null,
-            currency: selectedAd?.currency || null,
-          } } })
-          if (pendingTargetsRef.current) {
-            applyTargets(groupId, pendingTargetsRef.current)
-            pendingTargetsRef.current = null
+    try {
+      const res = await apiRequest("/api/client-groups", { method: "POST", body: JSON.stringify(payload) })
+      const d = await res.json().catch(() => ({}))
+      let groupId = d?.client_group?.id || null
+      if (!res.ok && res.status !== 409) {
+        const detail = d?.detail
+        setCreationError(
+          typeof detail === "string" ? detail : detail?.message || "Client creation failed"
+        )
+        return false
+      }
+      if (res.status === 409 || !groupId) {
+        // Duplicate (e.g. wizard re-run) — find the existing group instead.
+        try {
+          const listRes = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+          if (listRes.ok) {
+            const list = await listRes.json()
+            const match = (list?.client_groups || []).find(
+              (g) => g.ghl_location_id === selectedClient.id
+            )
+            if (match) groupId = match.id
           }
-        }
-      })
-      .catch((e) => {
-        console.error("Client creation failed:", e)
-        setCreationError("Client creation failed — you can add them from the Clients page later.")
-      })
+        } catch { /* ignore — targets fall back to onboarding state */ }
+      }
+      if (!groupId) {
+        setCreationError("Client creation failed — please try again.")
+        return false
+      }
+      setFirstGroupId(groupId)
+      persistState({ data: { first_client: {
+        group_id: groupId,
+        name: clientName,
+        ghl_location_id: selectedClient.id,
+        meta_ad_account_id: selectedAd?.id || null,
+        currency: selectedAd?.currency || null,
+      } } })
+      if (pendingTargetsRef.current) {
+        applyTargets(groupId, pendingTargetsRef.current)
+        pendingTargetsRef.current = null
+      }
+      return true
+    } catch (e) {
+      console.error("Client creation failed:", e)
+      setCreationError("Client creation failed — check your connection and try again.")
+      return false
+    }
   }, [selectedClient, selectedAd, clientNameConfirm, salesTool, firstGroupId, persistState, applyTargets])
 
   // ── Background sync badge ───────────────────────────────────────────────
@@ -1146,11 +1157,22 @@ export default function OnboardingPage() {
                 onChange={(e) => setClientNameConfirm(e.target.value)}
                 placeholder="Client name"
               />
+              {creationError && (
+                <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-left text-[12.5px] text-pd-body">
+                  {creationError}
+                </div>
+              )}
               <PrimaryButton
-                disabled={!clientNameConfirm.trim() || !selectedClient}
-                onClick={() => { createFirstClient(); next() }}
+                disabled={!clientNameConfirm.trim() || !selectedClient || creatingFirstClient}
+                onClick={async () => {
+                  setCreatingFirstClient(true)
+                  const ok = await createFirstClient()
+                  setCreatingFirstClient(false)
+                  if (ok) next()
+                }}
+                arrow={!creatingFirstClient}
               >
-                Confirm
+                {creatingFirstClient ? <><SpinnerRing />Creating client…</> : "Confirm"}
               </PrimaryButton>
             </div>
           )}
@@ -1181,11 +1203,6 @@ export default function OnboardingPage() {
                   Whilst we finish onboarding, Birdy can add the rest of your clients for you in
                   the background.
                 </div>
-                {creationError && (
-                  <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-[12.5px] text-pd-body">
-                    {creationError}
-                  </div>
-                )}
                 <PrimaryButton onClick={acceptSync}>Yes, add all my clients</PrimaryButton>
               </div>
             </>
