@@ -182,6 +182,8 @@ TXT
 
 # ---- 04 spreadsheets --------------------------------------------------
 cp results/Comparison_Sequential_vs_MPI.xlsx "$STAGE/04_Spreadsheets/"
+# Clear the tool name openpyxl leaves in the author field.
+python3 bench/set_doc_props.py "$STAGE/04_Spreadsheets/Comparison_Sequential_vs_MPI.xlsx" ""
 cp results/benchmark.csv "$STAGE/04_Spreadsheets/benchmark_raw_data.csv"
 python3 bench/export_csv_tables.py "$STAGE/04_Spreadsheets"
 cat > "$STAGE/04_Spreadsheets/README.txt" <<'TXT'
