@@ -1,0 +1,8 @@
+=== MPI COLLECTIVE I/O  3840x2160  P=2  reps=60
+=== 2026-09-05T05:07:57Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=2 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.008327 scatter_s=0.000000 compute_s=0.004016 gather_s=0.000000 write_s=0.028870 total_s=0.040964
+throughput_mpixels_per_s=2065.53

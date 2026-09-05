@@ -1,0 +1,433 @@
+Distributed Image Greyscale -- full run transcript
+Generated 2026-09-05T05:08:27Z
+
+
+
+########## 00_build.log ##########
+
+=== BUILD
+=== 2026-09-05T05:07:42Z
+
+rm -rf bin images/*.ppm images/*.pgm
+mkdir -p bin
+cc -O2 -Wall -Wextra -std=c99 -o bin/greyscale_seq src/greyscale_seq.c src/ppm.c 
+mpicc -O2 -Wall -Wextra -std=c99 -o bin/greyscale_mpi src/greyscale_mpi.c src/ppm.c 
+cc -O2 -Wall -Wextra -std=c99 -o bin/genimage tools/genimage.c src/ppm.c 
+mpicc -O2 -Wall -Wextra -std=c99 -o bin/mpi_startup tools/mpi_startup.c 
+
+
+########## 01_environment.log ##########
+
+=== ENVIRONMENT
+=== 2026-09-05T05:07:44Z
+
+--- host ---
+Linux 6.18.44-fc-v24 x86_64 GNU/Linux
+
+--- cpu ---
+model: Intel(R) Xeon(R) Processor @ 2.10GHz
+logical cores: 4
+Thread(s) per core:                      1
+Core(s) per socket:                      4
+Socket(s):                               1
+L1d cache:                               192 KiB (4 instances)
+L1i cache:                               128 KiB (4 instances)
+L2 cache:                                8 MiB (4 instances)
+L3 cache:                                260 MiB (1 instance)
+
+--- memory ---
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       603Mi        14Gi        12Mi       383Mi        15Gi
+
+--- compiler ---
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+
+--- mpi ---
+mpirun (Open MPI) 4.1.6
+
+--- mpi fixed startup cost (3 runs each) ---
+np=1  init_ms=658.352 finalize_ms=44.094 startup_total_ms=702.446
+np=1  init_ms=239.469 finalize_ms=45.551 startup_total_ms=285.020
+np=1  init_ms=236.871 finalize_ms=44.823 startup_total_ms=281.694
+np=2  init_ms=261.292 finalize_ms=45.453 startup_total_ms=306.744
+np=2  init_ms=261.021 finalize_ms=46.847 startup_total_ms=307.868
+np=2  init_ms=260.688 finalize_ms=47.268 startup_total_ms=307.956
+np=3  init_ms=283.017 finalize_ms=44.541 startup_total_ms=327.558
+np=3  init_ms=282.190 finalize_ms=46.003 startup_total_ms=328.193
+np=3  init_ms=288.053 finalize_ms=43.526 startup_total_ms=331.579
+np=4  init_ms=313.225 finalize_ms=46.815 startup_total_ms=360.040
+np=4  init_ms=307.705 finalize_ms=47.132 startup_total_ms=354.837
+np=4  init_ms=311.099 finalize_ms=44.997 startup_total_ms=356.096
+genimage: wrote images/hd_1920x1080.ppm (1920x1080, 5.9 MiB)
+genimage: wrote images/hd_3840x2160.ppm (3840x2160, 23.7 MiB)
+genimage: wrote images/hd_7680x4320.ppm (7680x4320, 94.9 MiB)
+
+
+########## 02_correctness.log ##########
+
+=== CORRECTNESS
+=== 2026-09-05T05:08:26Z
+
+Every MPI output is compared byte-for-byte against the sequential
+output for the same image. Fixed-point arithmetic makes this an exact
+test, so any difference at all is a failure.
+
+--- 1920x1080 ---
+  reference  92e19ca195e801f4  images/out_seq_1920x1080.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p1.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p1.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p2.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p2.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p3.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p3.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p4.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p4.pgm
+
+--- 3840x2160 ---
+  reference  e70c7bf6a5e9bd14  images/out_seq_3840x2160.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p1.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p1.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p2.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p2.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p3.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p3.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p4.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p4.pgm
+
+--- 7680x4320 ---
+  reference  e754b17895867d3b  images/out_seq_7680x4320.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p1.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p1.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p2.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p2.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p3.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p3.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p4.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p4.pgm
+
+RESULT: all outputs byte-identical to the sequential reference.
+
+
+########## 10_sequential_1920x1080.log ##########
+
+=== SEQUENTIAL  1920x1080  reps=60
+=== 2026-09-05T05:07:50Z
+
+$ ./bin/greyscale_seq images/hd_1920x1080.ppm images/out_seq.pgm 60
+
+mode=sequential procs=1 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.002973 compute_s=0.001946 compute_mean_s=0.002106 write_s=0.009238 total_s=0.014157
+throughput_mpixels_per_s=1065.31
+
+
+########## 10_sequential_3840x2160.log ##########
+
+=== SEQUENTIAL  3840x2160  reps=60
+=== 2026-09-05T05:07:54Z
+
+$ ./bin/greyscale_seq images/hd_3840x2160.ppm images/out_seq.pgm 60
+
+mode=sequential procs=1 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.064216 compute_s=0.008504 compute_mean_s=0.009387 write_s=0.037008 total_s=0.109727
+throughput_mpixels_per_s=975.39
+
+
+########## 10_sequential_7680x4320.log ##########
+
+=== SEQUENTIAL  7680x4320  reps=60
+=== 2026-09-05T05:08:02Z
+
+$ ./bin/greyscale_seq images/hd_7680x4320.ppm images/out_seq.pgm 60
+
+mode=sequential procs=1 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.350460 compute_s=0.053838 compute_mean_s=0.059059 write_s=0.124403 total_s=0.528701
+throughput_mpixels_per_s=616.25
+
+
+########## 20_scatter_1920x1080_p1.log ##########
+
+=== MPI SCATTER/GATHER  1920x1080  P=1  reps=60
+=== 2026-09-05T05:07:50Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=1 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.011536 scatter_s=0.030005 compute_s=0.001955 gather_s=0.010551 write_s=0.009773 total_s=0.063867
+throughput_mpixels_per_s=1060.65
+
+
+########## 20_scatter_1920x1080_p2.log ##########
+
+=== MPI SCATTER/GATHER  1920x1080  P=2  reps=60
+=== 2026-09-05T05:07:51Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=2 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.002952 scatter_s=0.003926 compute_s=0.001007 gather_s=0.005120 write_s=0.008850 total_s=0.021852
+throughput_mpixels_per_s=2058.90
+
+
+########## 20_scatter_1920x1080_p3.log ##########
+
+=== MPI SCATTER/GATHER  1920x1080  P=3  reps=60
+=== 2026-09-05T05:07:52Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=3 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.003106 scatter_s=0.003928 compute_s=0.000654 gather_s=0.002593 write_s=0.009638 total_s=0.019932
+throughput_mpixels_per_s=3169.98
+
+
+########## 20_scatter_1920x1080_p4.log ##########
+
+=== MPI SCATTER/GATHER  1920x1080  P=4  reps=60
+=== 2026-09-05T05:07:53Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=4 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.002971 scatter_s=0.003861 compute_s=0.000480 gather_s=0.009595 write_s=0.009399 total_s=0.026331
+throughput_mpixels_per_s=4318.43
+
+
+########## 20_scatter_3840x2160_p1.log ##########
+
+=== MPI SCATTER/GATHER  3840x2160  P=1  reps=60
+=== 2026-09-05T05:07:54Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=1 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.011624 scatter_s=0.019202 compute_s=0.008074 gather_s=0.036498 write_s=0.036481 total_s=0.111908
+throughput_mpixels_per_s=1027.28
+
+
+########## 20_scatter_3840x2160_p2.log ##########
+
+=== MPI SCATTER/GATHER  3840x2160  P=2  reps=60
+=== 2026-09-05T05:07:56Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=2 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.012207 scatter_s=0.036054 compute_s=0.003853 gather_s=0.006296 write_s=0.041522 total_s=0.099902
+throughput_mpixels_per_s=2152.49
+
+
+########## 20_scatter_3840x2160_p3.log ##########
+
+=== MPI SCATTER/GATHER  3840x2160  P=3  reps=60
+=== 2026-09-05T05:07:58Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=3 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.087023 scatter_s=0.017771 compute_s=0.002861 gather_s=0.018613 write_s=0.049716 total_s=0.175873
+throughput_mpixels_per_s=2899.61
+
+
+########## 20_scatter_3840x2160_p4.log ##########
+
+=== MPI SCATTER/GATHER  3840x2160  P=4  reps=60
+=== 2026-09-05T05:07:59Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=4 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.012742 scatter_s=0.014776 compute_s=0.002147 gather_s=0.023031 write_s=0.059277 total_s=0.096757
+throughput_mpixels_per_s=3864.02
+
+
+########## 20_scatter_7680x4320_p1.log ##########
+
+=== MPI SCATTER/GATHER  7680x4320  P=1  reps=60
+=== 2026-09-05T05:08:06Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=1 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.169925 scatter_s=0.469526 compute_s=0.052837 gather_s=0.097993 write_s=0.148886 total_s=0.939273
+throughput_mpixels_per_s=627.93
+
+
+########## 20_scatter_7680x4320_p2.log ##########
+
+=== MPI SCATTER/GATHER  7680x4320  P=2  reps=60
+=== 2026-09-05T05:08:15Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=2 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.049727 scatter_s=0.135651 compute_s=0.025831 gather_s=0.177914 write_s=0.125748 total_s=0.514947
+throughput_mpixels_per_s=1284.40
+
+
+########## 20_scatter_7680x4320_p3.log ##########
+
+=== MPI SCATTER/GATHER  7680x4320  P=3  reps=60
+=== 2026-09-05T05:08:20Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=3 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.072905 scatter_s=0.183125 compute_s=0.017435 gather_s=0.230221 write_s=0.139509 total_s=0.565454
+throughput_mpixels_per_s=1902.96
+
+
+########## 20_scatter_7680x4320_p4.log ##########
+
+=== MPI SCATTER/GATHER  7680x4320  P=4  reps=60
+=== 2026-09-05T05:08:23Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=4 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.159015 scatter_s=0.144320 compute_s=0.008754 gather_s=0.186619 write_s=0.162869 total_s=0.661284
+throughput_mpixels_per_s=3789.82
+
+
+########## 30_mpiio_1920x1080_p1.log ##########
+
+=== MPI COLLECTIVE I/O  1920x1080  P=1  reps=60
+=== 2026-09-05T05:07:50Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=1 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.136680 scatter_s=0.000000 compute_s=0.001780 gather_s=0.000000 write_s=0.009773 total_s=0.148246
+throughput_mpixels_per_s=1164.91
+
+
+########## 30_mpiio_1920x1080_p2.log ##########
+
+=== MPI COLLECTIVE I/O  1920x1080  P=2  reps=60
+=== 2026-09-05T05:07:51Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=2 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.003327 scatter_s=0.000000 compute_s=0.000947 gather_s=0.000000 write_s=0.014574 total_s=0.018747
+throughput_mpixels_per_s=2190.72
+
+
+########## 30_mpiio_1920x1080_p3.log ##########
+
+=== MPI COLLECTIVE I/O  1920x1080  P=3  reps=60
+=== 2026-09-05T05:07:52Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=3 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.007179 scatter_s=0.000000 compute_s=0.000645 gather_s=0.000000 write_s=0.015536 total_s=0.023275
+throughput_mpixels_per_s=3216.13
+
+
+########## 30_mpiio_1920x1080_p4.log ##########
+
+=== MPI COLLECTIVE I/O  1920x1080  P=4  reps=60
+=== 2026-09-05T05:07:53Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=4 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.012905 scatter_s=0.000000 compute_s=0.000477 gather_s=0.000000 write_s=0.023604 total_s=0.036991
+throughput_mpixels_per_s=4345.44
+
+
+########## 30_mpiio_3840x2160_p1.log ##########
+
+=== MPI COLLECTIVE I/O  3840x2160  P=1  reps=60
+=== 2026-09-05T05:07:55Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=1 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.013486 scatter_s=0.000000 compute_s=0.008251 gather_s=0.000000 write_s=0.039215 total_s=0.060974
+throughput_mpixels_per_s=1005.26
+
+
+########## 30_mpiio_3840x2160_p2.log ##########
+
+=== MPI COLLECTIVE I/O  3840x2160  P=2  reps=60
+=== 2026-09-05T05:07:57Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=2 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.008327 scatter_s=0.000000 compute_s=0.004016 gather_s=0.000000 write_s=0.028870 total_s=0.040964
+throughput_mpixels_per_s=2065.53
+
+
+########## 30_mpiio_3840x2160_p3.log ##########
+
+=== MPI COLLECTIVE I/O  3840x2160  P=3  reps=60
+=== 2026-09-05T05:07:59Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=3 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.047846 scatter_s=0.000000 compute_s=0.002663 gather_s=0.000000 write_s=0.049282 total_s=0.099766
+throughput_mpixels_per_s=3114.56
+
+
+########## 30_mpiio_3840x2160_p4.log ##########
+
+=== MPI COLLECTIVE I/O  3840x2160  P=4  reps=60
+=== 2026-09-05T05:08:00Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=4 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.073516 scatter_s=0.000000 compute_s=0.002217 gather_s=0.000000 write_s=0.071081 total_s=0.146577
+throughput_mpixels_per_s=3740.59
+
+
+########## 30_mpiio_7680x4320_p1.log ##########
+
+=== MPI COLLECTIVE I/O  7680x4320  P=1  reps=60
+=== 2026-09-05T05:08:11Z
+
+$ mpirun -np 1 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=1 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.051304 scatter_s=0.000000 compute_s=0.055457 gather_s=0.000000 write_s=0.151778 total_s=0.258608
+throughput_mpixels_per_s=598.26
+
+
+########## 30_mpiio_7680x4320_p2.log ##########
+
+=== MPI COLLECTIVE I/O  7680x4320  P=2  reps=60
+=== 2026-09-05T05:08:17Z
+
+$ mpirun -np 2 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=2 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.026102 scatter_s=0.000000 compute_s=0.026865 gather_s=0.000000 write_s=0.201765 total_s=0.254247
+throughput_mpixels_per_s=1234.96
+
+
+########## 30_mpiio_7680x4320_p3.log ##########
+
+=== MPI COLLECTIVE I/O  7680x4320  P=3  reps=60
+=== 2026-09-05T05:08:22Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=3 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.076221 scatter_s=0.000000 compute_s=0.011821 gather_s=0.000000 write_s=0.218922 total_s=0.304902
+throughput_mpixels_per_s=2806.78
+
+
+########## 30_mpiio_7680x4320_p4.log ##########
+
+=== MPI COLLECTIVE I/O  7680x4320  P=4  reps=60
+=== 2026-09-05T05:08:25Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=4 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.068629 scatter_s=0.000000 compute_s=0.008975 gather_s=0.000000 write_s=0.208605 total_s=0.285295
+throughput_mpixels_per_s=3696.87

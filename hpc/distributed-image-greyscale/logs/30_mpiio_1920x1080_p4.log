@@ -1,0 +1,8 @@
+=== MPI COLLECTIVE I/O  1920x1080  P=4  reps=60
+=== 2026-09-05T05:07:53Z
+
+$ mpirun -np 4 ./bin/greyscale_mpi images/hd_1920x1080.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=4 width=1920 height=1080 pixels=2073600 reps=60
+read_s=0.012905 scatter_s=0.000000 compute_s=0.000477 gather_s=0.000000 write_s=0.023604 total_s=0.036991
+throughput_mpixels_per_s=4345.44

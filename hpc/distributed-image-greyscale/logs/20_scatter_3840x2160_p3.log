@@ -1,0 +1,8 @@
+=== MPI SCATTER/GATHER  3840x2160  P=3  reps=60
+=== 2026-09-05T05:07:58Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_3840x2160.ppm images/out_mpi.pgm 60
+
+mode=mpi-scatter procs=3 width=3840 height=2160 pixels=8294400 reps=60
+read_s=0.087023 scatter_s=0.017771 compute_s=0.002861 gather_s=0.018613 write_s=0.049716 total_s=0.175873
+throughput_mpixels_per_s=2899.61

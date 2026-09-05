@@ -1,0 +1,8 @@
+=== MPI COLLECTIVE I/O  7680x4320  P=3  reps=60
+=== 2026-09-05T05:08:22Z
+
+$ mpirun -np 3 ./bin/greyscale_mpi images/hd_7680x4320.ppm images/out_mpiio.pgm 60 --mpiio
+
+mode=mpi-mpiio procs=3 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.076221 scatter_s=0.000000 compute_s=0.011821 gather_s=0.000000 write_s=0.218922 total_s=0.304902
+throughput_mpixels_per_s=2806.78

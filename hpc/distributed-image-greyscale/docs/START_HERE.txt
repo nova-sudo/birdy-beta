@@ -1,0 +1,54 @@
+DISTRIBUTED IMAGE GREYSCALE -- SEQUENTIAL vs. MPI (C)
+======================================================
+Project 1: for a High Definition image, generate a greyscale image.
+Implemented sequentially and with MPI, with the improvement measured.
+
+START WITH
+----------
+  Project_Presentation.html     open in any browser. 13 slides, arrow keys to
+                                advance. Every slide names the file and line
+                                where its claim can be checked.
+  05_Report/REPORT.md           the full write-up: problem, analysis,
+                                partitioning, solution, limits, conclusion.
+
+CONTENTS
+--------
+  Project_Presentation.html     the presentation (self-contained, no internet
+                                needed except for web fonts)
+  01_Sequential_Code/           the sequential C implementation, compiles on
+                                its own with plain gcc -- no MPI required
+  02_MPI_Code/                  the MPI C implementation, both distribution
+                                strategies, compiles with mpicc
+  03_Logs_and_Data/             raw program output for all 27 runs, the
+                                correctness proof, and the timing data
+  04_Spreadsheets/              the Excel comparison workbook (+ CSV copies)
+  05_Report/                    REPORT.md and the project README
+
+THE THREE HEADLINE NUMBERS
+--------------------------
+  4.11x   compute speed-up on 4 cores at HD (103% parallel efficiency)
+  0.88x   end-to-end speed-up at HD -- the parallel program is SLOWER
+  0       bytes of difference between the MPI and sequential output
+
+All three are true at once. The report explains why, and that explanation is
+the actual result of the project: greyscale conversion is a perfect
+decomposition problem and a poor distribution problem.
+
+WHERE TO CHECK EACH CLAIM
+-------------------------
+  "the outputs are identical"    03_Logs_and_Data/logs/02_correctness.log
+  "compute scales ~4x"           04_Spreadsheets/ -> Compute Comparison sheet
+  "the MPI program is slower"    04_Spreadsheets/ -> End-to-End Comparison sheet
+  "communication costs more
+   than the computation"         04_Spreadsheets/ -> Overhead Analysis sheet
+  "MPI_Init costs ~390 ms"       03_Logs_and_Data/logs/01_environment.log
+  raw output of any single run   03_Logs_and_Data/logs/<mode>_<res>_p<N>.log
+
+REBUILDING FROM SCRATCH
+-----------------------
+  cd 01_Sequential_Code && make demo
+  cd 02_MPI_Code && make && mpirun -np 4 ./greyscale_mpi ../hd.ppm out.pgm 20
+
+Requires only a C compiler and an MPI implementation. There is no third-party
+image library: the PPM/PGM codec is about 150 lines in ppm.c, deliberately, so
+that no compressed-format decoder sits in the timing path.

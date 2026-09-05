@@ -1,0 +1,44 @@
+=== ENVIRONMENT
+=== 2026-09-05T05:07:44Z
+
+--- host ---
+Linux 6.18.44-fc-v24 x86_64 GNU/Linux
+
+--- cpu ---
+model: Intel(R) Xeon(R) Processor @ 2.10GHz
+logical cores: 4
+Thread(s) per core:                      1
+Core(s) per socket:                      4
+Socket(s):                               1
+L1d cache:                               192 KiB (4 instances)
+L1i cache:                               128 KiB (4 instances)
+L2 cache:                                8 MiB (4 instances)
+L3 cache:                                260 MiB (1 instance)
+
+--- memory ---
+               total        used        free      shared  buff/cache   available
+Mem:            15Gi       603Mi        14Gi        12Mi       383Mi        15Gi
+
+--- compiler ---
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+
+--- mpi ---
+mpirun (Open MPI) 4.1.6
+
+--- mpi fixed startup cost (3 runs each) ---
+np=1  init_ms=658.352 finalize_ms=44.094 startup_total_ms=702.446
+np=1  init_ms=239.469 finalize_ms=45.551 startup_total_ms=285.020
+np=1  init_ms=236.871 finalize_ms=44.823 startup_total_ms=281.694
+np=2  init_ms=261.292 finalize_ms=45.453 startup_total_ms=306.744
+np=2  init_ms=261.021 finalize_ms=46.847 startup_total_ms=307.868
+np=2  init_ms=260.688 finalize_ms=47.268 startup_total_ms=307.956
+np=3  init_ms=283.017 finalize_ms=44.541 startup_total_ms=327.558
+np=3  init_ms=282.190 finalize_ms=46.003 startup_total_ms=328.193
+np=3  init_ms=288.053 finalize_ms=43.526 startup_total_ms=331.579
+np=4  init_ms=313.225 finalize_ms=46.815 startup_total_ms=360.040
+np=4  init_ms=307.705 finalize_ms=47.132 startup_total_ms=354.837
+np=4  init_ms=311.099 finalize_ms=44.997 startup_total_ms=356.096
+genimage: wrote images/hd_1920x1080.ppm (1920x1080, 5.9 MiB)
+genimage: wrote images/hd_3840x2160.ppm (3840x2160, 23.7 MiB)
+genimage: wrote images/hd_7680x4320.ppm (7680x4320, 94.9 MiB)

@@ -1,0 +1,8 @@
+=== SEQUENTIAL  7680x4320  reps=60
+=== 2026-09-05T05:08:02Z
+
+$ ./bin/greyscale_seq images/hd_7680x4320.ppm images/out_seq.pgm 60
+
+mode=sequential procs=1 width=7680 height=4320 pixels=33177600 reps=60
+read_s=0.350460 compute_s=0.053838 compute_mean_s=0.059059 write_s=0.124403 total_s=0.528701
+throughput_mpixels_per_s=616.25

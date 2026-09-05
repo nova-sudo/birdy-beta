@@ -56,7 +56,7 @@ body{
 .slide{
   scroll-snap-align:start;
   min-height:100svh; display:flex; flex-direction:column; justify-content:center;
-  padding:clamp(24px,3.4vw,56px) clamp(20px,5vw,80px) 56px;
+  padding:clamp(24px,3.4vw,56px) clamp(20px,5vw,80px) 76px;
   border-bottom:1px solid var(--rule);
   position:relative;
 }
@@ -82,7 +82,7 @@ a{color:var(--accent)}
 
 /* ---- pieces --------------------------------------------- */
 .grid{display:grid; gap:14px}
-.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g2{grid-template-columns:repeat(auto-fit,minmax(390px,1fr))}
 .g3{grid-template-columns:repeat(auto-fit,minmax(228px,1fr))}
 .g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
 
@@ -119,8 +119,10 @@ td.num{font-family:var(--f-mono)}
 .hl-bad{color:var(--bad); font-weight:600}
 
 pre{margin:0; padding:14px 16px; background:var(--sunken); border:1px solid var(--rule);
-    border-radius:10px; overflow-x:auto; font-family:var(--f-mono); font-size:13px;
+    border-radius:10px; overflow-x:auto; font-family:var(--f-mono); font-size:12.5px;
     line-height:1.6; color:var(--ink-2)}
+/* Shell transcripts wrap instead of clipping; code listings keep their layout. */
+pre.sh{white-space:pre-wrap; overflow-wrap:anywhere}
 pre b{color:var(--accent); font-weight:600}
 
 ul{margin:0; padding-left:1.1em; display:flex; flex-direction:column; gap:7px; color:var(--ink-2); max-width:66ch}
@@ -134,6 +136,22 @@ figure{margin:0; display:flex; flex-direction:column; gap:8px}
 figcaption{font-size:13px; color:var(--ink-3); font-family:var(--f-mono)}
 svg{display:block; width:100%; height:auto}
 .chart{max-height:min(44svh,330px)}
+
+/* Evidence footer: every claim on a slide names the file that backs it. */
+.ev{margin-top:2px; padding-top:10px; border-top:1px solid var(--rule);
+    font-family:var(--f-mono); font-size:12px; color:var(--ink-3);
+    display:flex; flex-wrap:wrap; align-items:baseline; gap:5px 16px}
+.ev b{color:var(--accent); font-weight:600; font-size:10.5px;
+      letter-spacing:.11em; text-transform:uppercase}
+.ev code{font-size:12px; color:var(--ink-2); background:var(--surface-2);
+         border:1px solid var(--rule); padding:1px 6px; border-radius:4px; white-space:nowrap}
+.ev .f{color:var(--ink-2)}
+.tree{font-family:var(--f-mono); font-size:12.5px; line-height:1.72; color:var(--ink-2);
+      background:var(--sunken); border:1px solid var(--rule); border-radius:10px;
+      padding:16px 18px; overflow-x:auto; margin:0}
+.tree b{color:var(--ink); font-weight:600}
+.tree i{color:var(--accent); font-style:normal}
+.tree span{color:var(--ink-3)}
 
 /* ---- luma progress rail: black-to-white, the subject itself -- */
 .rail{position:fixed; left:0; right:0; bottom:0; height:6px; z-index:9;
@@ -210,7 +228,70 @@ svg{display:block; width:100%; height:auto}
   </div>
 </section>
 
-<!-- ============ 2 · THE PROBLEM ============ -->
+<!-- ============ 2 · WHERE EVERYTHING IS ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">Orientation · Where everything is</div>
+    <h2>Every claim in this deck names the file that proves it</h2>
+    <p class="lead">The zip is organised so a reader who has never seen the project can check any number
+      without reading the code first. From here on, each slide ends with an
+      <span class="mono" style="color:var(--accent)">EVIDENCE</span> line pointing into it.</p>
+
+    <div class="grid g2" style="align-items:start">
+      <pre class="tree"><b>Distributed_Image_Greyscale/</b>
+├── <i>Project_Presentation.html</i>   <span>← this deck</span>
+├── START_HERE.txt              <span>orientation + headline numbers</span>
+├── <b>01_Sequential_Code/</b>         <span>builds with plain gcc, no MPI</span>
+│   ├── greyscale_seq.c         <span>the sequential program</span>
+│   ├── <i>greyscale.h</i>              <span>the kernel — identical to 02/</span>
+│   ├── ppm.c · ppm.h           <span>PPM/PGM codec</span>
+│   ├── genimage.c              <span>test-image generator</span>
+│   └── Makefile                <span>make demo runs it end to end</span>
+├── <b>02_MPI_Code/</b>                <span>builds with mpicc</span>
+│   ├── greyscale_mpi.c         <span>both distribution strategies</span>
+│   ├── <i>greyscale.h</i>              <span>byte-identical to 01/</span>
+│   ├── mpi_startup.c           <span>measures MPI_Init cost</span>
+│   └── Makefile
+├── <b>03_Logs_and_Data/</b>
+│   ├── logs/                   <span>raw output, all 27 runs</span>
+│   ├── benchmark.csv           <span>the timing table</span>
+│   ├── environment.txt         <span>machine + toolchain</span>
+│   └── analysis.md             <span>generated speed-up tables</span>
+├── <b>04_Spreadsheets/</b>
+│   ├── Comparison_....xlsx     <span>6 sheets, live formulas</span>
+│   └── table_*.csv             <span>same tables, plain CSV</span>
+└── <b>05_Report/</b>
+    └── REPORT.md               <span>the full write-up</span></pre>
+
+      <div style="display:flex; flex-direction:column; gap:12px">
+        <div class="scroller">
+          <table>
+            <thead><tr><th>To check this claim…</th><th>…open this</th></tr></thead>
+            <tbody>
+              <tr><td>The MPI output is identical</td><td class="num">logs/02_correctness.log</td></tr>
+              <tr><td>Compute scales ~4×</td><td class="num">xlsx › Compute Comparison</td></tr>
+              <tr><td>The MPI program is slower</td><td class="num">xlsx › End-to-End Comparison</td></tr>
+              <tr><td>Communication &gt; computation</td><td class="num">xlsx › Overhead Analysis</td></tr>
+              <tr><td>MPI_Init costs ~390 ms</td><td class="num">logs/01_environment.log</td></tr>
+              <tr><td>Any single run's raw output</td><td class="num">logs/&lt;mode&gt;_&lt;res&gt;_p&lt;N&gt;.log</td></tr>
+              <tr><td>The build is warning-clean</td><td class="num">logs/00_build.log</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">The two code directories are <strong>independently compilable</strong>. Neither
+          needs the other, neither needs the original repository, and
+          <span class="mono">01/greyscale.h</span> and <span class="mono">02/greyscale.h</span> are the same
+          file — which is what makes the comparison fair. Prove it with
+          <span class="mono">diff</span>.</div>
+      </div>
+    </div>
+
+    <p class="ev"><b>Evidence</b> <code>START_HERE.txt</code> <code>03_Logs_and_Data/README.txt</code>
+      <code>04_Spreadsheets/README.txt</code></p>
+  </div>
+</section>
+
+<!-- ============ 3 · THE PROBLEM ============ -->
 <section class="slide">
   <div class="inner">
     <div class="eyebrow">1 · The problem</div>
@@ -244,6 +325,9 @@ svg{display:block; width:100%; height:auto}
     <div class="callout">The interesting question is not <em>can we compute Y</em>. It is: given P processors,
       how do we split the image so the work divides cleanly, the data movement doesn't eat the gain,
       and the distributed output is byte-for-byte identical?</div>
+
+    <p class="ev"><b>Evidence</b> <code>01_Sequential_Code/greyscale.h</code>
+      <span class="f">the weights and the kernel</span> <code>05_Report/REPORT.md §1</code></p>
   </div>
 </section>
 
@@ -292,6 +376,9 @@ svg{display:block; width:100%; height:auto}
       </table>
     </div>
     <p>Two terms in the middle column do not divide by P. That is the entire story.</p>
+
+    <p class="ev"><b>Evidence</b> <code>05_Report/REPORT.md §2.2–2.3</code>
+      <code>xlsx › Overhead Analysis</code> <span class="f">the ratio, measured</span></p>
   </div>
 </section>
 
@@ -357,6 +444,9 @@ else            nrows = base;</pre>
         </div>
       </div>
     </div>
+
+    <p class="ev"><b>Evidence</b> <code>02_MPI_Code/greyscale_mpi.c</code>
+      <span class="f">partition_rows()</span> <code>05_Report/REPORT.md §3</code></p>
   </div>
 </section>
 
@@ -405,6 +495,10 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
         comparison. The benchmark re-runs that comparison after <em>every</em> run at <em>every</em> process
         count, so no timing is ever reported for a configuration that produced a wrong image.</p>
     </div>
+
+    <p class="ev"><b>Evidence</b> <code>02_MPI_Code/greyscale_mpi.c</code>
+      <span class="f">both branches</span> <code>logs/02_correctness.log</code>
+      <span class="f">24 outputs, all IDENTICAL</span></p>
   </div>
 </section>
 
@@ -470,6 +564,9 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
       past a cache that can't hold it; four ranks stream 5.9 MiB each, which fits. The bonus vanishes at 8K
       (99 %) — a quarter of an 8K image is still 23.7 MiB and still misses cache. The memory wall, visible in
       the data.</p>
+
+    <p class="ev"><b>Evidence</b> <code>xlsx › Compute Comparison</code>
+      <code>logs/20_scatter_*_p*.log</code> <span class="f">the compute_s= field</span></p>
   </div>
 </section>
 
@@ -547,6 +644,10 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
     </div>
     <p>Scatter + gather alone costs about <strong>2.6–3.2× the entire sequential computation</strong>.
       Cutting compute by 4× cannot pay for that, because the communication term never divides by P.</p>
+
+    <p class="ev"><b>Evidence</b> <code>xlsx › End-to-End Comparison</code>
+      <code>xlsx › Overhead Analysis</code>
+      <code>logs/</code> <span class="f">scatter_s= gather_s= total_s=</span></p>
   </div>
 </section>
 
@@ -591,6 +692,10 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
       <p><strong>Over 200× the HD conversion itself</strong>, and ~75× the full sequential read-convert-write.
         HD is far below the threshold where distribution can pay for itself.</p>
     </div>
+
+    <p class="ev"><b>Evidence</b> <code>logs/01_environment.log</code>
+      <span class="f">3 runs per P</span> <code>xlsx › MPI Startup Cost</code>
+      <code>02_MPI_Code/mpi_startup.c</code></p>
   </div>
 </section>
 
@@ -631,6 +736,10 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
     <div class="callout">Where MPI <em>would</em> earn its keep here: not one image across many ranks, but
       <strong>many images across many ranks</strong> — each rank takes whole files, and the communication is a
       filename instead of a frame.</div>
+
+    <p class="ev"><b>Evidence</b> <code>05_Report/REPORT.md §6</code>
+      <code>02_MPI_Code/greyscale_mpi.c</code>
+      <span class="f">the INT_MAX and nranks &gt; height guards</span></p>
   </div>
 </section>
 
@@ -673,6 +782,10 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
     <p>We report kernel speed-up and program speed-up side by side throughout, precisely because reporting only
       the first would have made this look like a 4.11× success when the user-visible result at HD is 0.88× —
       and 0.005× once MPI startup is counted.</p>
+
+    <p class="ev"><b>Evidence</b> <code>05_Report/REPORT.md §7</code>
+      <code>xlsx › Compute Comparison</code> <span class="f">vs</span>
+      <code>xlsx › End-to-End Comparison</code></p>
   </div>
 </section>
 
@@ -681,7 +794,7 @@ grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
   <div class="inner">
     <div class="eyebrow">Appendix</div>
     <h2>Reproduce every number</h2>
-    <pre>$ make                 <b># gcc + mpicc, no other dependencies</b>
+    <pre class="sh">$ make                 <b># gcc + mpicc, no other dependencies</b>
 $ make image           <b># generate the 1920x1080 HD test image</b>
 $ make check           <b># convert 3 ways, prove outputs are byte-identical</b>
 $ make bench           <b># resolution x ranks x strategy sweep</b>
@@ -712,8 +825,58 @@ HD 2.1 MPx · 4K 8.3 MPx · 8K 33.2 MPx</pre>
           so they are byte-reproducible on any machine and are not committed to the repository.</p>
       </div>
     </div>
-    <p class="mono" style="color:var(--ink-3); font-size:13px">
-      hpc/distributed-image-greyscale/ — REPORT.md · results/analysis.md · results/benchmark.csv</p>
+    <p class="ev"><b>Evidence</b> <code>logs/00_build.log</code>
+      <span class="f">warning-clean build</span> <code>03_Logs_and_Data/environment.txt</code></p>
+  </div>
+</section>
+
+<!-- ============ 13 · VERIFY IT YOURSELF ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">Appendix · Check any claim yourself</div>
+    <h2>Four commands, from the unzipped folder</h2>
+
+    <div class="grid g2" style="align-items:start; grid-template-columns:repeat(2,minmax(0,1fr))">
+      <div class="panel">
+        <h3>1 · The kernel really is shared</h3>
+        <pre class="sh">$ diff 01_Sequential_Code/greyscale.h 02_MPI_Code/greyscale.h
+<b>(no output — the files are identical)</b></pre>
+        <p>Both programs compile the same arithmetic, so any timing difference between them is
+          parallelisation and nothing else.</p>
+      </div>
+      <div class="panel">
+        <h3>2 · Build and run the sequential version</h3>
+        <pre class="sh">$ cd 01_Sequential_Code &amp;&amp; make demo
+genimage: wrote hd.ppm (1920x1080, 5.9 MiB)
+mode=sequential procs=1 pixels=2073600
+read_s=… <b>compute_s=0.001970</b> write_s=… </pre>
+        <p>Needs only <span class="mono">gcc</span>. No MPI, no image library.</p>
+      </div>
+      <div class="panel">
+        <h3>3 · Build and run both MPI strategies</h3>
+        <pre class="sh">$ cd 02_MPI_Code &amp;&amp; make
+$ mpirun -np 4 ./greyscale_mpi img.ppm a.pgm 20
+$ mpirun -np 4 ./greyscale_mpi img.ppm b.pgm 20 <b>--mpiio</b></pre>
+        <p>Each prints one <span class="mono">key=value</span> line per phase — the same fields the
+          spreadsheets and the report are built from.</p>
+      </div>
+      <div class="panel">
+        <h3>4 · Confirm the output is identical</h3>
+        <pre class="sh">$ cmp ../01_Sequential_Code/hd_grey.pgm a.pgm
+$ cmp ../01_Sequential_Code/hd_grey.pgm b.pgm
+<b>(no output — byte-for-byte identical)</b></pre>
+        <p>Already done for all 24 MPI configurations, with SHA-256 sums, in
+          <span class="mono">logs/02_correctness.log</span>.</p>
+      </div>
+    </div>
+
+    <div class="callout">If a number in this deck disagrees with what you measure, the machine is the
+      difference, not the method — <span class="mono">03_Logs_and_Data/environment.txt</span> records the exact
+      CPU, compiler and MPI build every figure came from, and the workbook recalculates from measured inputs
+      you can overwrite with your own.</div>
+
+    <p class="ev"><b>Evidence</b> <code>START_HERE.txt</code>
+      <code>01_Sequential_Code/README.txt</code> <code>02_MPI_Code/README.txt</code></p>
   </div>
 </section>
 

@@ -1,0 +1,41 @@
+=== CORRECTNESS
+=== 2026-09-05T05:08:26Z
+
+Every MPI output is compared byte-for-byte against the sequential
+output for the same image. Fixed-point arithmetic makes this an exact
+test, so any difference at all is a failure.
+
+--- 1920x1080 ---
+  reference  92e19ca195e801f4  images/out_seq_1920x1080.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p1.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p1.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p2.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p2.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p3.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p3.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpi_1920x1080_p4.pgm
+  IDENTICAL  92e19ca195e801f4  images/out_mpiio_1920x1080_p4.pgm
+
+--- 3840x2160 ---
+  reference  e70c7bf6a5e9bd14  images/out_seq_3840x2160.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p1.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p1.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p2.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p2.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p3.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p3.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpi_3840x2160_p4.pgm
+  IDENTICAL  e70c7bf6a5e9bd14  images/out_mpiio_3840x2160_p4.pgm
+
+--- 7680x4320 ---
+  reference  e754b17895867d3b  images/out_seq_7680x4320.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p1.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p1.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p2.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p2.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p3.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p3.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpi_7680x4320_p4.pgm
+  IDENTICAL  e754b17895867d3b  images/out_mpiio_7680x4320_p4.pgm
+
+RESULT: all outputs byte-identical to the sequential reference.
