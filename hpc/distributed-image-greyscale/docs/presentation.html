@@ -1,0 +1,770 @@
+<title>Greyscale at Scale</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600&display=swap">
+<style>
+/* ============================================================
+   Greyscale at Scale — deck
+   Palette: cool instrument greys (the subject is literally grey),
+   petrol-teal accent, and the three BT.601 channel hues used only
+   where they carry data.
+   ============================================================ */
+:root {
+  --ground:#E9EAEC; --surface:#FFFFFF; --surface-2:#F2F3F5; --sunken:#DFE1E5;
+  --ink:#16181C; --ink-2:#4A5058; --ink-3:#767D87;
+  --rule:#D2D5DA; --rule-strong:#B6BBC2;
+  --accent:#0F6E77; --accent-soft:#DAEBEC; --accent-ink:#0B5158;
+  --good:#2C7A4B; --bad:#A83A2E; --warn:#8C6110;
+  --chR:#C0453A; --chG:#3C8A4E; --chB:#35619F;
+  --shadow:0 1px 2px rgba(20,24,30,.06), 0 8px 24px -12px rgba(20,24,30,.18);
+
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"Source Sans 3","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground:#111317; --surface:#1A1D22; --surface-2:#22262C; --sunken:#0C0E11;
+    --ink:#EDEFF2; --ink-2:#AAB2BC; --ink-3:#7C848F;
+    --rule:#2E333A; --rule-strong:#414852;
+    --accent:#4FC5CE; --accent-soft:#12343A; --accent-ink:#8FE0E6;
+    --good:#62C98A; --bad:#E8776A; --warn:#D9A94A;
+    --chR:#E0776C; --chG:#6FC183; --chB:#6F9BE0;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+  }
+}
+:root[data-theme="dark"] {
+  --ground:#111317; --surface:#1A1D22; --surface-2:#22262C; --sunken:#0C0E11;
+  --ink:#EDEFF2; --ink-2:#AAB2BC; --ink-3:#7C848F;
+  --rule:#2E333A; --rule-strong:#414852;
+  --accent:#4FC5CE; --accent-soft:#12343A; --accent-ink:#8FE0E6;
+  --good:#62C98A; --bad:#E8776A; --warn:#D9A94A;
+  --chR:#E0776C; --chG:#6FC183; --chB:#6F9BE0;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:var(--f-body); font-size:16px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+  scroll-snap-type:y proximity; scroll-behavior:smooth;
+}
+@media (prefers-reduced-motion:reduce){ body{scroll-behavior:auto} }
+
+/* ---- slide shell ---------------------------------------- */
+.slide{
+  scroll-snap-align:start;
+  min-height:100svh; display:flex; flex-direction:column; justify-content:center;
+  padding:clamp(24px,3.4vw,56px) clamp(20px,5vw,80px) 56px;
+  border-bottom:1px solid var(--rule);
+  position:relative;
+}
+.inner{width:100%; max-width:1080px; margin:0 auto; display:flex; flex-direction:column; gap:clamp(13px,1.6vw,22px)}
+
+.eyebrow{
+  font-family:var(--f-mono); font-size:12px; font-weight:600;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--accent);
+  display:flex; align-items:center; gap:10px;
+}
+.eyebrow::after{content:""; flex:1; height:1px; background:var(--rule); min-width:24px}
+
+h1{font-family:var(--f-display); font-weight:800; font-size:clamp(34px,6.2vw,68px); line-height:1.03;
+   letter-spacing:-.025em; margin:0; text-wrap:balance}
+h2{font-family:var(--f-display); font-weight:700; font-size:clamp(26px,3.8vw,42px); line-height:1.1;
+   letter-spacing:-.02em; margin:0; text-wrap:balance}
+h3{font-family:var(--f-display); font-weight:700; font-size:16px; letter-spacing:.005em; margin:0}
+p{margin:0; max-width:66ch; color:var(--ink-2)}
+p.lead{font-size:clamp(17px,1.7vw,21px); color:var(--ink); max-width:60ch}
+strong{color:var(--ink); font-weight:600}
+code,.mono{font-family:var(--f-mono); font-size:.88em}
+a{color:var(--accent)}
+
+/* ---- pieces --------------------------------------------- */
+.grid{display:grid; gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(228px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
+
+.panel{background:var(--surface); border:1px solid var(--rule); border-radius:10px;
+       padding:18px 20px; display:flex; flex-direction:column; gap:8px}
+.panel h3{display:flex; align-items:baseline; gap:9px}
+.panel p{font-size:14.5px}
+
+.stat{background:var(--surface); border:1px solid var(--rule); border-radius:10px; padding:16px 18px;
+      display:flex; flex-direction:column; gap:3px}
+.stat .v{font-family:var(--f-display); font-weight:800; font-size:clamp(28px,3.4vw,40px);
+         line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums}
+.stat .k{font-family:var(--f-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-3)}
+.stat .n{font-size:13.5px; color:var(--ink-2)}
+.stat.win{border-left:3px solid var(--good)}
+.stat.loss{border-left:3px solid var(--bad)}
+.v.good{color:var(--good)} .v.bad{color:var(--bad)}
+
+.tag{font-family:var(--f-mono); font-size:11px; font-weight:600; letter-spacing:.07em;
+     text-transform:uppercase; padding:2px 7px; border-radius:4px;
+     background:var(--accent-soft); color:var(--accent-ink); white-space:nowrap}
+.tag.bad{background:color-mix(in srgb,var(--bad) 16%,transparent); color:var(--bad)}
+.tag.good{background:color-mix(in srgb,var(--good) 16%,transparent); color:var(--good)}
+
+.scroller{overflow-x:auto; border:1px solid var(--rule); border-radius:10px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; font-size:14.5px; font-variant-numeric:tabular-nums}
+th,td{padding:9px 14px; text-align:right; border-bottom:1px solid var(--rule); white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-family:var(--f-mono); font-size:11px; font-weight:600; letter-spacing:.08em;
+         text-transform:uppercase; color:var(--ink-3); background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+td.num{font-family:var(--f-mono)}
+.hl-good{color:var(--good); font-weight:600}
+.hl-bad{color:var(--bad); font-weight:600}
+
+pre{margin:0; padding:14px 16px; background:var(--sunken); border:1px solid var(--rule);
+    border-radius:10px; overflow-x:auto; font-family:var(--f-mono); font-size:13px;
+    line-height:1.6; color:var(--ink-2)}
+pre b{color:var(--accent); font-weight:600}
+
+ul{margin:0; padding-left:1.1em; display:flex; flex-direction:column; gap:7px; color:var(--ink-2); max-width:66ch}
+li::marker{color:var(--ink-3)}
+
+.callout{border-left:3px solid var(--accent); background:var(--surface); padding:14px 18px;
+         border-radius:0 10px 10px 0; font-size:clamp(15px,1.5vw,18px); color:var(--ink)}
+.callout.bad{border-left-color:var(--bad)}
+
+figure{margin:0; display:flex; flex-direction:column; gap:8px}
+figcaption{font-size:13px; color:var(--ink-3); font-family:var(--f-mono)}
+svg{display:block; width:100%; height:auto}
+.chart{max-height:min(44svh,330px)}
+
+/* ---- luma progress rail: black-to-white, the subject itself -- */
+.rail{position:fixed; left:0; right:0; bottom:0; height:6px; z-index:9;
+      background:linear-gradient(90deg,#000 0%,#fff 100%); opacity:.9}
+.rail::after{content:""; position:absolute; inset:0 0 0 0; background:var(--ground);
+             transform-origin:right center; transform:scaleX(var(--rest,1))}
+.railwrap{position:fixed; left:0; right:0; bottom:0; height:6px; z-index:9;
+          display:flex; align-items:stretch; pointer-events:none; background:var(--rule)}
+.counter{position:fixed; right:clamp(14px,2.5vw,28px); bottom:20px; z-index:10;
+         font-family:var(--f-mono); font-size:11.5px; letter-spacing:.08em; color:var(--ink-3);
+         background:var(--surface); border:1px solid var(--rule); border-radius:20px;
+         padding:5px 12px; font-variant-numeric:tabular-nums}
+.hint{position:fixed; left:clamp(14px,2.5vw,28px); bottom:20px; z-index:10;
+      font-family:var(--f-mono); font-size:11.5px; color:var(--ink-3)}
+.hint kbd{font-family:var(--f-mono); border:1px solid var(--rule); border-radius:4px;
+          padding:1px 5px; background:var(--surface); color:var(--ink-2)}
+@media (max-width:720px){ .hint{display:none} }
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:4px}
+
+/* title slide ramp */
+.ramp{display:flex; height:52px; border-radius:8px; overflow:hidden; border:1px solid var(--rule-strong)}
+.ramp span{flex:1}
+.footline{display:flex; flex-wrap:wrap; gap:8px 22px; font-family:var(--f-mono); font-size:12.5px; color:var(--ink-3)}
+.footline b{color:var(--ink-2); font-weight:400}
+
+@media print{
+  body{scroll-snap-type:none}
+  .slide{min-height:auto; page-break-after:always; border-bottom:none}
+  .rail,.counter,.hint{display:none}
+}
+</style>
+
+<div class="railwrap" aria-hidden="true"><div class="rail" id="rail"></div></div>
+<div class="counter" id="counter">01 / 11</div>
+<div class="hint"><kbd>↓</kbd> <kbd>↑</kbd> to advance</div>
+
+<!-- ============ 1 · TITLE ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">Project 1 · Distributed Image Greyscale</div>
+    <h1>Greyscale at Scale</h1>
+    <p class="lead">Converting an HD image to greyscale, written twice — sequential C and MPI C —
+      and measured without flattering either one.</p>
+
+    <div class="ramp" id="ramp" aria-hidden="true"></div>
+
+    <div class="grid g3">
+      <div class="stat win">
+        <span class="k">Compute speed-up</span>
+        <span class="v good">4.11×</span>
+        <span class="n">on 4 cores · 103 % parallel efficiency</span>
+      </div>
+      <div class="stat loss">
+        <span class="k">End-to-end, HD</span>
+        <span class="v bad">0.88×</span>
+        <span class="n">the parallel program is <em>slower</em></span>
+      </div>
+      <div class="stat">
+        <span class="k">Output difference</span>
+        <span class="v">0 bytes</span>
+        <span class="n">MPI result is bit-identical to sequential</span>
+      </div>
+    </div>
+
+    <p>Both figures are true at the same time. Reconciling them is what this project is about.</p>
+
+    <div class="footline">
+      <span><b>Kernel</b> ITU-R BT.601 luma</span>
+      <span><b>Machine</b> 4-core Xeon @ 2.80 GHz</span>
+      <span><b>MPI</b> Open MPI 4.1.6</span>
+      <span><b>Build</b> gcc 13.3 −O2</span>
+      <span><b>Sizes</b> HD · 4K · 8K</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2 · THE PROBLEM ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">1 · The problem</div>
+    <h2>Three bytes in, one byte out — 2 073 600 times</h2>
+    <p class="lead">Greyscale is not the average of R, G and B. The eye is far more sensitive to green,
+      so the standard weights them unequally:</p>
+
+    <pre><b>Y = 0.299·R + 0.587·G + 0.114·B</b>      ITU-R BT.601 luma</pre>
+
+    <figure>
+      <svg viewBox="0 0 720 96" role="img" aria-label="Relative BT.601 channel weights: red 29.9 percent, green 58.7 percent, blue 11.4 percent">
+        <g font-family="JetBrains Mono, monospace" font-size="13">
+          <rect x="0" y="12" width="215" height="28" fill="var(--chR)" rx="3"/>
+          <rect x="219" y="12" width="423" height="28" fill="var(--chG)" rx="3"/>
+          <rect x="646" y="12" width="74" height="28" fill="var(--chB)" rx="3"/>
+          <text x="0"   y="62" fill="var(--chR)">RED 0.299</text>
+          <text x="219" y="62" fill="var(--chG)">GREEN 0.587</text>
+          <text x="600" y="62" fill="var(--chB)">BLUE 0.114</text>
+          <text x="0"   y="86" fill="var(--ink-3)">A naive (R+G+B)/3 makes skies too bright and foliage too dark.</text>
+        </g>
+      </svg>
+    </figure>
+
+    <div class="grid g4">
+      <div class="stat"><span class="k">HD frame</span><span class="v">2.07 M</span><span class="n">pixels at 1920 × 1080</span></div>
+      <div class="stat"><span class="k">Input</span><span class="v">5.9 MiB</span><span class="n">RGB, 3 bytes/pixel</span></div>
+      <div class="stat"><span class="k">Output</span><span class="v">2.0 MiB</span><span class="n">luma, 1 byte/pixel</span></div>
+      <div class="stat"><span class="k">Sequential cost</span><span class="v">1.88 ms</span><span class="n">the entire conversion</span></div>
+    </div>
+
+    <div class="callout">The interesting question is not <em>can we compute Y</em>. It is: given P processors,
+      how do we split the image so the work divides cleanly, the data movement doesn't eat the gain,
+      and the distributed output is byte-for-byte identical?</div>
+  </div>
+</section>
+
+<!-- ============ 3 · THE ANALYSIS ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">2 · The analysis</div>
+    <h2>Embarrassingly parallel — and that is the trap</h2>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>Dependency structure <span class="tag good">ideal</span></h3>
+        <p>Output pixel <em>i</em> depends only on input pixel <em>i</em>. No neighbourhood, no accumulator,
+          no ordering. The dependency graph is 2 073 600 disconnected nodes.</p>
+        <ul>
+          <li>No halo exchange — unlike a blur or Sobel filter</li>
+          <li>No reduction — nothing to combine at the end</li>
+          <li>No synchronisation inside the loop</li>
+          <li>Amdahl serial fraction of the computation: <strong>0</strong></li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Arithmetic intensity <span class="tag bad">the catch</span></h3>
+        <p>Per pixel: 3 multiplies, 2 adds, 1 shift — over 3 bytes in and 1 byte out.</p>
+        <pre>≈ 6 ops / 4 bytes = <b>1.5 ops per byte</b></pre>
+        <p>The roofline model calls that <strong>memory-bandwidth bound</strong>: the CPU waits on bytes,
+          it does not multiply them. Measured: 1.10 GPixel/s ≈ 4.4 GB/s — DRAM-class, not ALU-class.</p>
+      </div>
+    </div>
+
+    <div class="callout bad">If the kernel is bandwidth-bound, then <strong>moving the image between ranks
+      costs the same order of magnitude as converting it</strong> — the worst possible ratio for a
+      distributed implementation. This prediction, made before writing a line of MPI, is what every
+      measurement later confirms.</div>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>Phase</th><th>Sequential</th><th>MPI · scatter / gather</th><th>MPI · parallel I/O</th></tr></thead>
+        <tbody>
+          <tr><td>read</td><td class="num">3N / D</td><td class="num">3N / D <span style="color:var(--ink-3)">(rank 0 only)</span></td><td class="num">3N / (P·D)</td></tr>
+          <tr><td>distribute</td><td class="num">—</td><td class="num hl-bad">3N / β</td><td class="num">—</td></tr>
+          <tr><td>compute</td><td class="num">4N / B</td><td class="num hl-good">4N / (P·B)</td><td class="num hl-good">4N / (P·B)</td></tr>
+          <tr><td>collect</td><td class="num">—</td><td class="num hl-bad">N / β</td><td class="num">—</td></tr>
+          <tr><td>write</td><td class="num">N / D</td><td class="num">N / D <span style="color:var(--ink-3)">(rank 0 only)</span></td><td class="num">N / (P·D)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Two terms in the middle column do not divide by P. That is the entire story.</p>
+  </div>
+</section>
+
+<!-- ============ 4 · PARTITIONING ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">3 · Data partitioning</div>
+    <h2>Contiguous row bands</h2>
+
+    <div class="grid g2" style="align-items:start">
+      <figure>
+        <svg viewBox="0 0 420 260" role="img" aria-label="The 1920 by 1080 RGB image split into four horizontal row bands, each mapping to the matching band of the luma output">
+          <g font-family="JetBrains Mono, monospace" font-size="10.5">
+            <text x="0" y="12" fill="var(--ink-3)">RGB INPUT · 5.9 MiB</text>
+            <text x="270" y="12" fill="var(--ink-3)">LUMA OUT · 2.0 MiB</text>
+            <g>
+              <rect x="0" y="22" width="180" height="52" fill="var(--surface-2)" stroke="var(--rule-strong)"/>
+              <rect x="0" y="74" width="180" height="52" fill="var(--surface)"   stroke="var(--rule-strong)"/>
+              <rect x="0" y="126" width="180" height="52" fill="var(--surface-2)" stroke="var(--rule-strong)"/>
+              <rect x="0" y="178" width="180" height="52" fill="var(--surface)"   stroke="var(--rule-strong)"/>
+              <text x="10" y="44" fill="var(--ink)">rank 0</text><text x="10" y="60" fill="var(--ink-3)">rows 0–269</text>
+              <text x="10" y="96" fill="var(--ink)">rank 1</text><text x="10" y="112" fill="var(--ink-3)">rows 270–539</text>
+              <text x="10" y="148" fill="var(--ink)">rank 2</text><text x="10" y="164" fill="var(--ink-3)">rows 540–809</text>
+              <text x="10" y="200" fill="var(--ink)">rank 3</text><text x="10" y="216" fill="var(--ink-3)">rows 810–1079</text>
+            </g>
+            <g stroke="var(--accent)" fill="none" stroke-width="1.4">
+              <path d="M186 48 H262"/><path d="M186 100 H262"/><path d="M186 152 H262"/><path d="M186 204 H262"/>
+            </g>
+            <g fill="var(--accent)">
+              <path d="M262 44 l8 4 -8 4 z"/><path d="M262 96 l8 4 -8 4 z"/>
+              <path d="M262 148 l8 4 -8 4 z"/><path d="M262 200 l8 4 -8 4 z"/>
+            </g>
+            <g>
+              <rect x="272" y="22" width="60" height="52" fill="#3a3a3a" stroke="var(--rule-strong)"/>
+              <rect x="272" y="74" width="60" height="52" fill="#6e6e6e" stroke="var(--rule-strong)"/>
+              <rect x="272" y="126" width="60" height="52" fill="#9c9c9c" stroke="var(--rule-strong)"/>
+              <rect x="272" y="178" width="60" height="52" fill="#cfcfcf" stroke="var(--rule-strong)"/>
+            </g>
+            <text x="272" y="248" fill="var(--ink-3)">1 555 200 B in → 518 400 B out, per rank</text>
+          </g>
+        </svg>
+      </figure>
+
+      <div style="display:flex; flex-direction:column; gap:14px">
+        <div class="panel">
+          <h3>Why rows, not pixels or tiles</h3>
+          <p>A row band is contiguous in <em>both</em> buffers at once — bytes
+            <span class="mono">[first·W·3, …)</span> of the RGB image and <span class="mono">[first·W, …)</span>
+            of the luma image. One <span class="mono">MPI_Scatterv</span> of plain bytes moves it: no derived
+            datatypes, no packing, and every rank streams linearly — exactly what a bandwidth-bound kernel wants.</p>
+          <p>A row is also the smallest unit that <strong>never splits a pixel</strong>. Cyclic per-pixel
+            distribution would balance perfectly and destroy cache locality; 2-D tiles are for stencils and buy
+            nothing here.</p>
+        </div>
+        <div class="panel">
+          <h3>When the height doesn't divide</h3>
+          <p>1080 rows over 7 ranks is 154 remainder 2. We spread the remainder one row at a time over the
+            lowest ranks instead of dumping it on the last one.</p>
+          <pre>if (rank &lt; rem) nrows = base + <b>1</b>;
+else            nrows = base;</pre>
+          <p>Maximum imbalance: <strong>exactly one row</strong> — 1920 of 2 073 600 pixels, under 0.1 % —
+            and it stays at one row however large P grows.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5 · THE SOLUTION ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">4 · The solution</div>
+    <h2>Two strategies, one kernel</h2>
+    <p class="lead"><span class="mono">greyscale.h</span> is included by both binaries, so the sequential and
+      parallel programs execute <strong>the same instructions on the same bytes</strong>. Every timing
+      difference is parallelisation, never a different arithmetic path.</p>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>A · Scatterv / Gatherv <span class="tag">textbook</span></h3>
+        <pre>rank 0: read whole PPM
+   all: MPI_Bcast   header
+   all: <b>MPI_Scatterv</b> RGB band
+   all: greyscale_kernel(band)
+   all: <b>MPI_Gatherv</b>  luma band
+rank 0: write whole PGM</pre>
+        <p>The <em>v</em> variants are required, not stylistic: bands differ in size, so explicit
+          <span class="mono">counts[]</span> and <span class="mono">displs[]</span> are mandatory.</p>
+        <p><strong>Structural flaw:</strong> rank 0 is a serial funnel for the whole image, twice, and holds
+          O(4N) memory alone.</p>
+      </div>
+      <div class="panel">
+        <h3>B · Collective MPI-IO <span class="tag good">shipping</span></h3>
+        <pre>   all: <b>MPI_File_read_at_all</b>  (own range)
+   all: greyscale_kernel(band)
+   all: <b>MPI_File_write_at_all</b> (own range)</pre>
+        <p>No scatter, no gather, no rank-0 bottleneck. Each rank only ever holds its own band, so peak memory
+          drops from O(4N) on one rank to <strong>O(4N/P) per rank</strong>.</p>
+        <p>The only serial byte left in the program is the 15-byte PGM header, written by rank 0.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Fixed point, so correctness is an exact test</h3>
+      <pre>#define GS_WR 19595u   /* round(0.299 · 65536) */
+#define GS_WG 38470u   /* round(0.587 · 65536) */
+#define GS_WB  7471u   /* round(0.114 · 65536)  — sums to exactly 65536 */
+grey[i] = (GS_WR*r + GS_WG*g + GS_WB*b) &gt;&gt; 16;</pre>
+      <p>Integer arithmetic is associativity-safe, so the result is bit-identical on every rank and every
+        machine. That lets us verify with <span class="mono">cmp</span> — an exact test — instead of an epsilon
+        comparison. The benchmark re-runs that comparison after <em>every</em> run at <em>every</em> process
+        count, so no timing is ever reported for a configuration that produced a wrong image.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6 · COMPUTE SCALING ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">5 · Results — the parallel work</div>
+    <h2>The decomposition is close to perfect</h2>
+
+    <figure>
+      <svg class="chart" viewBox="0 0 862 330" role="img" aria-label="Compute speed-up versus process count. All three resolutions track the ideal line, reaching 4.11x at HD, 4.16x at 4K and 3.97x at 8K on four ranks.">
+        <g font-family="JetBrains Mono, monospace" font-size="11.5" fill="var(--ink-3)">
+          <!-- axes: x = ranks 1..4 mapped 80..700, y = speedup 0..4.4 mapped 285..30 -->
+          <line x1="80" y1="285" x2="712" y2="285" stroke="var(--rule-strong)"/>
+          <line x1="80" y1="285" x2="80"  y2="24"  stroke="var(--rule-strong)"/>
+          <g stroke="var(--rule)" stroke-dasharray="2 4">
+            <line x1="80" y1="227.1" x2="712" y2="227.1"/>
+            <line x1="80" y1="169.2" x2="712" y2="169.2"/>
+            <line x1="80" y1="111.3" x2="712" y2="111.3"/>
+            <line x1="80" y1="53.4"  x2="712" y2="53.4"/>
+          </g>
+          <text x="70" y="289" text-anchor="end">0×</text>
+          <text x="70" y="231" text-anchor="end">1×</text>
+          <text x="70" y="173" text-anchor="end">2×</text>
+          <text x="70" y="115" text-anchor="end">3×</text>
+          <text x="70" y="57"  text-anchor="end">4×</text>
+          <text x="80"  y="307" text-anchor="middle">1</text>
+          <text x="286" y="307" text-anchor="middle">2</text>
+          <text x="493" y="307" text-anchor="middle">3</text>
+          <text x="700" y="307" text-anchor="middle">4</text>
+          <text x="396" y="325" text-anchor="middle">MPI ranks</text>
+
+          <!-- ideal -->
+          <path d="M80 227.1 L700 53.4" fill="none" stroke="var(--ink-3)" stroke-width="1.2" stroke-dasharray="5 5"/>
+          <text x="640" y="44" fill="var(--ink-3)">ideal</text>
+
+          <!-- 8K: 1.00 2.00 3.01 3.97 -->
+          <path d="M80 227.1 L286 169.2 L493 110.7 L700 55.1" fill="none" stroke="var(--chB)" stroke-width="2"/>
+          <!-- 4K: 1.01 2.05 3.11 4.16 -->
+          <path d="M80 226.5 L286 166.3 L493 104.9 L700 44.1" fill="none" stroke="var(--chG)" stroke-width="2"/>
+          <!-- HD: 1.01 1.98 3.08 4.11 -->
+          <path d="M80 226.5 L286 170.4 L493 106.7 L700 47.0" fill="none" stroke="var(--chR)" stroke-width="2"/>
+
+          <g fill="var(--chR)"><circle cx="80" cy="226.5" r="3.4"/><circle cx="286" cy="170.4" r="3.4"/><circle cx="493" cy="106.7" r="3.4"/><circle cx="700" cy="47" r="4.4"/></g>
+          <g fill="var(--chG)"><circle cx="80" cy="226.5" r="3.4"/><circle cx="286" cy="166.3" r="3.4"/><circle cx="493" cy="104.9" r="3.4"/><circle cx="700" cy="44.1" r="4.4"/></g>
+          <g fill="var(--chB)"><circle cx="80" cy="227.1" r="3.4"/><circle cx="286" cy="169.2" r="3.4"/><circle cx="493" cy="110.7" r="3.4"/><circle cx="700" cy="55.1" r="4.4"/></g>
+
+          <text x="712" y="48"  fill="var(--chG)">4.16× 4K</text>
+          <text x="712" y="34"  fill="var(--chR)">4.11× HD</text>
+          <text x="712" y="60"  fill="var(--chB)">3.97× 8K</text>
+        </g>
+      </svg>
+      <figcaption>Compute-phase speed-up, best of 9 trials. Labels sit at the measured value.</figcaption>
+    </figure>
+
+    <div class="grid g3">
+      <div class="stat win"><span class="k">HD 1920×1080</span><span class="v good">4.11×</span><span class="n">1.881 ms → 0.458 ms · 103 % eff.</span></div>
+      <div class="stat win"><span class="k">4K 3840×2160</span><span class="v good">4.16×</span><span class="n">7.840 ms → 1.883 ms · 104 % eff.</span></div>
+      <div class="stat win"><span class="k">8K 7680×4320</span><span class="v good">3.97×</span><span class="n">32.642 ms → 8.226 ms · 99 % eff.</span></div>
+    </div>
+
+    <p><strong>Efficiency above 100 % is real, not an error.</strong> One rank converting 4K streams 23.7 MiB
+      past a cache that can't hold it; four ranks stream 5.9 MiB each, which fits. The bonus vanishes at 8K
+      (99 %) — a quarter of an 8K image is still 23.7 MiB and still misses cache. The memory wall, visible in
+      the data.</p>
+  </div>
+</section>
+
+<!-- ============ 7 · END TO END ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">5 · Results — the whole program</div>
+    <h2>Speed-up of the kernel is not speed-up of the program</h2>
+
+    <figure>
+      <svg class="chart" viewBox="0 0 760 300" role="img" aria-label="End-to-end speed-up by resolution. Scatter-gather reaches only 0.54, 0.61 and 0.69 times sequential. MPI-IO reaches 0.88 times at HD, still below break-even, then 1.10 at 4K and 1.70 at 8K.">
+        <g font-family="JetBrains Mono, monospace" font-size="11.5" fill="var(--ink-3)">
+          <!-- x: 0..1.8x mapped 120..700 ; rows -->
+          <line x1="120" y1="34" x2="120" y2="262" stroke="var(--rule-strong)"/>
+          <g stroke="var(--rule)" stroke-dasharray="2 4">
+            <line x1="281" y1="34" x2="281" y2="262"/>
+            <line x1="442" y1="34" x2="442" y2="262"/>
+            <line x1="603" y1="34" x2="603" y2="262"/>
+          </g>
+          <!-- break-even -->
+          <line x1="442" y1="26" x2="442" y2="266" stroke="var(--ink-2)" stroke-width="1.6"/>
+          <text x="450" y="18" fill="var(--ink-2)">break-even 1.00×</text>
+          <g>
+            <rect x="120" y="8" width="11" height="11" fill="var(--bad)" rx="2"/>
+            <text x="137" y="18" fill="var(--ink-2)">scatter/gather, P=4</text>
+            <rect x="286" y="8" width="11" height="11" fill="var(--good)" rx="2"/>
+            <text x="303" y="18" fill="var(--ink-2)">MPI-IO, best P</text>
+          </g>
+          <text x="120" y="280" text-anchor="middle">0</text>
+          <text x="281" y="280" text-anchor="middle">0.5×</text>
+          <text x="603" y="280" text-anchor="middle">1.5×</text>
+
+          <!-- rows: HD, 4K, 8K ; two bars each -->
+          <!-- scale: value * 322 px per 1.0 -->
+          <g>
+            <text x="112" y="52" text-anchor="end" fill="var(--ink)">HD</text>
+            <rect x="120" y="40" width="173.9" height="15" fill="var(--bad)" rx="2"/>
+            <text x="299" y="52" fill="var(--bad)">0.54×</text>
+            <rect x="120" y="59" width="283.4" height="15" fill="var(--bad)" rx="2"/>
+            <text x="396" y="71" text-anchor="end" fill="#fff">0.88×</text>
+          </g>
+          <g>
+            <text x="112" y="126" text-anchor="end" fill="var(--ink)">4K</text>
+            <rect x="120" y="114" width="196.4" height="15" fill="var(--bad)" rx="2"/>
+            <text x="322" y="126" fill="var(--bad)">0.61×</text>
+            <rect x="120" y="133" width="354.2" height="15" fill="var(--good)" rx="2"/>
+            <text x="480" y="145" fill="var(--good)">1.10×</text>
+          </g>
+          <g>
+            <text x="112" y="200" text-anchor="end" fill="var(--ink)">8K</text>
+            <rect x="120" y="188" width="222.2" height="15" fill="var(--bad)" rx="2"/>
+            <text x="348" y="200" fill="var(--bad)">0.69×</text>
+            <rect x="120" y="207" width="547.4" height="15" fill="var(--good)" rx="2"/>
+            <text x="673" y="219" fill="var(--good)">1.70×</text>
+          </g>
+          <text x="120" y="248" fill="var(--ink-3)">scatter/gather at P = 4 · MPI-IO at its best P = 2</text>
+        </g>
+      </svg>
+      <figcaption>Wall-clock speed-up of the complete conversion, read and write included.</figcaption>
+    </figure>
+
+    <div class="callout bad"><strong>The textbook design never wins.</strong> Across all 12 measured
+      configurations, <span class="mono">Scatterv</span>/<span class="mono">Gatherv</span> lands between
+      0.51× and 0.69× — always slower than the sequential program it was meant to accelerate.</div>
+
+    <div class="scroller">
+      <table>
+        <thead><tr><th>At P = 4</th><th>seq. compute</th><th>communication alone</th><th>ratio</th><th>end-to-end</th></tr></thead>
+        <tbody>
+          <tr><td>1920 × 1080</td><td class="num">1.88 ms</td><td class="num hl-bad">5.93 ms</td><td class="num">3.2×</td><td class="num hl-bad">0.54×</td></tr>
+          <tr><td>3840 × 2160</td><td class="num">7.84 ms</td><td class="num hl-bad">23.14 ms</td><td class="num">3.0×</td><td class="num hl-bad">0.61×</td></tr>
+          <tr><td>7680 × 4320</td><td class="num">32.64 ms</td><td class="num hl-bad">83.96 ms</td><td class="num">2.6×</td><td class="num hl-bad">0.69×</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Scatter + gather alone costs about <strong>2.6–3.2× the entire sequential computation</strong>.
+      Cutting compute by 4× cannot pay for that, because the communication term never divides by P.</p>
+  </div>
+</section>
+
+<!-- ============ 8 · LIMITS I ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">6 · Our limits</div>
+    <h2>Where it stops, and why</h2>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>The memory wall, not Amdahl</h3>
+        <p>The parallel fraction of the computation is 1.0, so Amdahl's law predicts unbounded scaling. We stop
+          at ~4× because the real serial resource is the <strong>memory controller</strong> — which Amdahl's law
+          does not model. Our 4-core box sits just below that knee; at P = 32 we would not see 100 % efficiency.</p>
+      </div>
+      <div class="panel">
+        <h3>One shared disk <span class="tag bad">worst regression</span></h3>
+        <p>Beyond P = 2, MPI-IO gets <em>worse</em>. Compute keeps scaling perfectly (10.9 ms, 8.1 ms) — it is
+          purely the I/O term that collapses when three processes seek against one device.</p>
+        <div class="scroller"><table>
+          <thead><tr><th>8K, MPI-IO</th><th>P=1</th><th>P=2</th><th>P=3</th><th>P=4</th></tr></thead>
+          <tbody>
+            <tr><td>I/O</td><td class="num">54.9</td><td class="num hl-good">35.7</td><td class="num hl-bad">139.4</td><td class="num hl-bad">116.1</td></tr>
+            <tr><td>end-to-end</td><td class="num">87.1</td><td class="num hl-good">51.9</td><td class="num hl-bad">150.2</td><td class="num hl-bad">122.6</td></tr>
+          </tbody></table></div>
+        <p>Collective I/O cannot fix physics. A striped parallel filesystem — Lustre, GPFS — is the actual
+          prerequisite, and we don't have one.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>The bill before the first pixel</h3>
+      <p>All timings above exclude MPI startup, so they measure the algorithm rather than the runtime. For a
+        user converting one HD image, that exclusion is generous to the point of fiction:</p>
+      <div class="grid g4">
+        <div class="stat"><span class="k">MPI_Init, P=1</span><span class="v">292<span style="font-size:.5em"> ms</span></span></div>
+        <div class="stat"><span class="k">P=2</span><span class="v">327<span style="font-size:.5em"> ms</span></span></div>
+        <div class="stat"><span class="k">P=3</span><span class="v">365<span style="font-size:.5em"> ms</span></span></div>
+        <div class="stat loss"><span class="k">P=4</span><span class="v bad">392<span style="font-size:.5em"> ms</span></span><span class="n">grows with P</span></div>
+      </div>
+      <p><strong>Over 200× the HD conversion itself</strong>, and ~75× the full sequential read-convert-write.
+        HD is far below the threshold where distribution can pay for itself.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9 · LIMITS II ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">6 · Our limits, continued</div>
+    <h2>What we chose not to solve</h2>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>A single shared-memory node</h3>
+        <p>Every rank here is a process on one machine, so MPI messages are memcpys through shared memory — the
+          <em>best possible</em> case for the scatter/gather design. On a real cluster its cost would be far
+          worse than the 0.51–0.69× we measured. Our verdict against it is a conservative one.</p>
+      </div>
+      <div class="panel">
+        <h3>PPM / PGM only</h3>
+        <p>Deliberate. A compressed format would put an entropy decoder in the timing path and measure libjpeg
+          rather than our decomposition. The cost: 8-bit samples only — 16-bit PPM is rejected with a clear
+          error rather than silently mangled.</p>
+      </div>
+      <div class="panel">
+        <h3>A 2 GiB ceiling on strategy A</h3>
+        <p><span class="mono">MPI_Scatterv</span> takes <span class="mono">int</span> counts, so images above
+          ~715 MPixel overflow the count array. We detect it and refuse, pointing the user at
+          <span class="mono">--mpiio</span>, which uses 64-bit <span class="mono">MPI_Offset</span>. A general
+          fix needs the MPI-4 large-count variants.</p>
+      </div>
+      <div class="panel">
+        <h3>P ≤ height · no fault tolerance</h3>
+        <p>More ranks than rows would leave a rank idle; we detect and abort rather than silently doing nothing.
+          A rank dying takes down <span class="mono">MPI_COMM_WORLD</span>. Weights are hard-coded to BT.601;
+          BT.709 would be three constants.</p>
+      </div>
+    </div>
+
+    <div class="callout">Where MPI <em>would</em> earn its keep here: not one image across many ranks, but
+      <strong>many images across many ranks</strong> — each rank takes whole files, and the communication is a
+      filename instead of a frame.</div>
+  </div>
+</section>
+
+<!-- ============ 10 · CONCLUSION ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">7 · Conclusion</div>
+    <h2>A perfect decomposition problem and a poor distribution problem</h2>
+    <p class="lead">Separating those two statements is the result of this project.</p>
+
+    <div class="grid g2">
+      <div class="panel" style="border-left:3px solid var(--good)">
+        <h3>What worked</h3>
+        <ul>
+          <li>Row-band partitioning with remainder spreading: <strong>3.97–4.16× compute speed-up</strong> on
+            4 cores, 99–104 % efficiency</li>
+          <li>Superlinear at HD and 4K from cache effects, exactly where the model says it should be</li>
+          <li>Output <strong>byte-identical</strong> to sequential at every process count, verified
+            automatically after every benchmark run</li>
+        </ul>
+      </div>
+      <div class="panel" style="border-left:3px solid var(--bad)">
+        <h3>What didn't — and matters more</h3>
+        <ul>
+          <li>Scatterv/Gatherv is <strong>0.51–0.69×</strong>: always slower, everywhere we measured</li>
+          <li>Its communication alone is ~2.6× the whole sequential computation</li>
+          <li>Collective MPI-IO turns 0.57× into <strong>1.70×</strong> at 8K — but only to P = 2, before one
+            shared disk becomes the wall</li>
+          <li>And a ~392 ms <span class="mono">MPI_Init</span> bill no scaling repays for a 1.9 ms job</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="callout">The question to ask before distributing a workload is <em>not</em> "does it
+      parallelise?" — everything embarrassingly parallel does. It is:
+      <strong>is there more arithmetic per byte than there is cost to move that byte?</strong>
+      For greyscale conversion at HD the answer is no, and the right engineering decision is to keep the data
+      where it already is.</div>
+
+    <p>We report kernel speed-up and program speed-up side by side throughout, precisely because reporting only
+      the first would have made this look like a 4.11× success when the user-visible result at HD is 0.88× —
+      and 0.005× once MPI startup is counted.</p>
+  </div>
+</section>
+
+<!-- ============ 11 · REPRODUCE ============ -->
+<section class="slide">
+  <div class="inner">
+    <div class="eyebrow">Appendix</div>
+    <h2>Reproduce every number</h2>
+    <pre>$ make                 <b># gcc + mpicc, no other dependencies</b>
+$ make image           <b># generate the 1920x1080 HD test image</b>
+$ make check           <b># convert 3 ways, prove outputs are byte-identical</b>
+$ make bench           <b># resolution x ranks x strategy sweep</b>
+$ python3 bench/analyze.py
+
+OK: MPI output is byte-identical to the sequential output</pre>
+
+    <div class="grid g2">
+      <div class="panel">
+        <h3>Measurement discipline</h3>
+        <ul>
+          <li>Kernel repeated 60× in-process; <strong>best of 9 trials</strong> — the minimum, not the mean,
+            since the mean tracks whatever else the scheduler ran</li>
+          <li>Parallel phases reduced with <span class="mono">MPI_MAX</span>: a phase costs what its slowest
+            rank costs</li>
+          <li>The repetition loop is subtracted from the total, so sequential and MPI totals are directly
+            comparable</li>
+          <li>Correctness re-checked after every single run, at every P</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h3>Environment</h3>
+        <pre>Intel Xeon @ 2.80 GHz · 4 cores
+Open MPI 4.1.6
+gcc 13.3.0 · -O2 -Wall -Wextra -std=c99
+HD 2.1 MPx · 4K 8.3 MPx · 8K 33.2 MPx</pre>
+        <p>Test images are generated by a deterministic integer hash, not <span class="mono">rand()</span>,
+          so they are byte-reproducible on any machine and are not committed to the repository.</p>
+      </div>
+    </div>
+    <p class="mono" style="color:var(--ink-3); font-size:13px">
+      hpc/distributed-image-greyscale/ — REPORT.md · results/analysis.md · results/benchmark.csv</p>
+  </div>
+</section>
+
+<script>
+(function () {
+  // Title-slide luma ramp: 24 steps of the very transform the deck is about.
+  var ramp = document.getElementById("ramp");
+  if (ramp) {
+    for (var i = 0; i < 24; i++) {
+      var s = document.createElement("span");
+      var v = Math.round(255 * i / 23);
+      s.style.background = "rgb(" + v + "," + v + "," + v + ")";
+      ramp.appendChild(s);
+    }
+  }
+
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var counter = document.getElementById("counter");
+  var rail = document.getElementById("rail");
+  var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+
+  function current() {
+    var mid = window.scrollY + window.innerHeight / 2, best = 0;
+    for (var i = 0; i < slides.length; i++) {
+      if (slides[i].offsetTop <= mid) best = i;
+    }
+    return best;
+  }
+
+  function update() {
+    var i = current();
+    counter.textContent = pad(i + 1) + " / " + pad(slides.length);
+    // The rail reveals the black-to-white ramp as the deck advances.
+    var frac = slides.length > 1 ? i / (slides.length - 1) : 1;
+    rail.style.setProperty("--rest", (1 - frac).toFixed(4));
+  }
+
+  function go(delta) {
+    var i = Math.max(0, Math.min(slides.length - 1, current() + delta));
+    slides[i].scrollIntoView({ block: "start" });
+  }
+
+  addEventListener("scroll", update, { passive: true });
+  addEventListener("resize", update);
+  addEventListener("keydown", function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "ArrowDown" || e.key === "PageDown" || e.key === " ") { e.preventDefault(); go(1); }
+    else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); go(-1); }
+    else if (e.key === "Home") { e.preventDefault(); slides[0].scrollIntoView(); }
+    else if (e.key === "End") { e.preventDefault(); slides[slides.length - 1].scrollIntoView(); }
+  });
+  update();
+})();
+</script>
