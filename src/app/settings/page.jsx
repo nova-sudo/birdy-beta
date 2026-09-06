@@ -160,6 +160,7 @@ function SettingsPageContent() {
 
   const [billingStatus, setBillingStatus] = useState(null)
   const [loadingPortal, setLoadingPortal] = useState(false)
+  const [subscriptionBusy, setSubscriptionBusy] = useState(false)
 
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
@@ -226,6 +227,35 @@ function SettingsPageContent() {
       setSavingCapability(null)
     }
   }
+
+  // Cancelling and un-cancelling happen in place now — Whop's API supports
+  // both, so the only thing still worth a trip to its portal is a plan change
+  // or a card update. Both refetch the billing status rather than patching it
+  // locally, so what the page shows is what the server will report on reload.
+  const mutateSubscription = async (endpoint, successMessage) => {
+    setSubscriptionBusy(true)
+    try {
+      const res = await apiRequest(endpoint, { method: "POST" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.detail ?? "Something went wrong. Please try again.")
+      const refreshed = await apiRequest("/api/billing/status")
+      if (refreshed.ok) setBillingStatus(await refreshed.json())
+      toast.success(successMessage)
+    } catch (err) {
+      toast.error("Subscription", { description: err.message })
+    } finally {
+      setSubscriptionBusy(false)
+    }
+  }
+
+  const handleCancelSubscription = () =>
+    mutateSubscription(
+      "/api/billing/cancel",
+      "Your subscription will end when the current period does."
+    )
+
+  const handleReactivateSubscription = () =>
+    mutateSubscription("/api/billing/reactivate", "Your subscription will keep running.")
 
   const handlePortal = async () => {
     setLoadingPortal(true)
@@ -1077,6 +1107,9 @@ function SettingsPageContent() {
               billingStatus={billingStatus}
               onManage={handlePortal}
               loadingManage={loadingPortal}
+              onCancel={handleCancelSubscription}
+              onReactivate={handleReactivateSubscription}
+              busySubscription={subscriptionBusy}
             />
           </TabsContent>
         </Tabs>

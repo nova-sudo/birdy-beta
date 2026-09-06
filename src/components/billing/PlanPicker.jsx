@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { PLANS, PLAN_ORDER, STATUS_STYLES, STATUS_LABELS } from "./plans";
@@ -147,7 +148,15 @@ function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
  * Plans come from the shared module /billing sells from, so prices and limits
  * can't drift between the two pages.
  */
-export function PlanPicker({ billingStatus, onManage, loadingManage }) {
+export function PlanPicker({
+  billingStatus,
+  onManage,
+  loadingManage,
+  onCancel,
+  onReactivate,
+  busySubscription,
+}) {
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const subscribed = !!billingStatus?.subscribed;
   const current = PLANS.find((p) => p.id === billingStatus?.plan?.id);
   const status = billingStatus?.status;
@@ -225,32 +234,66 @@ export function PlanPicker({ billingStatus, onManage, loadingManage }) {
         </div>
       )}
 
-      {/* Cancelling is the thing people come to this page to find, and until
-          this line existed the page never said the word — the only route to it
-          was guessing that "Manage billing" opens a portal that offers it.
+      {/* Cancelling happens here, not in Whop's portal. The page used to not
+          even say the word "cancel" — the only route to it was guessing that
+          a button labelled "Manage billing" opened a portal that offered it.
+          Whop's API cancels a membership directly (memberships.cancel, via
+          POST /api/billing/cancel), so the portal is now only for the things
+          that genuinely need it: changing plan and updating a card.
 
-          Whop's API *can* cancel a membership (whop-sdk memberships.cancel,
-          which billing.cancel_membership wraps for account deletion), so a
-          real in-app cancel button is buildable and this is signposting by
-          choice, not by necessity. The portal is still the better default for
-          a customer doing it themselves: it shows what they lose and when,
-          handles proration and win-back, and leaves Whop as the single source
-          of truth for the membership's state — which matters while
-          /api/billing/status is a webhook-fed mirror with no reconciliation. */}
+          At period end, never immediately: the customer has paid for the
+          period they are in, and taking access back the moment they click is
+          taking back something they own. */}
       {subscribed && !billingStatus?.cancel_at_period_end && (
         <p className="mt-[10px] text-[12px] leading-[1.45] text-pd-faint">
-          Need to change plan, update your payment details, or cancel your subscription?
-          All three are handled in the Whop billing portal —{" "}
+          Changing plan or updating your card happens in the Whop portal.{" "}
           <button
             type="button"
-            onClick={onManage}
-            disabled={loadingManage}
-            className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline disabled:opacity-60"
+            onClick={() => setConfirmingCancel(true)}
+            disabled={busySubscription}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-body underline disabled:opacity-60"
           >
-            open it here
+            Cancel your subscription
           </button>
           .
         </p>
+      )}
+
+      {confirmingCancel && (
+        <div className="mt-[14px] rounded-xl border border-pd-border bg-pd-canvas px-4 py-[14px] text-[12px] leading-[1.45] text-pd-body">
+          <p className="font-semibold text-pd-ink">Cancel your subscription?</p>
+          <p className="mt-1">
+            You keep {current?.name ? `${current.name} ` : ""}access until{" "}
+            <span className="font-semibold text-pd-ink">
+              {billingStatus?.current_period_end
+                ? new Date(billingStatus.current_period_end).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "short", year: "numeric",
+                  })
+                : "the end of the current period"}
+            </span>
+            , and you&apos;re not charged again. After that your client groups stop refreshing.
+            You can undo this any time before then.
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => { await onCancel?.(); setConfirmingCancel(false) }}
+              disabled={busySubscription}
+              className="flex items-center gap-[7px] rounded-[9px] border border-pd-danger-border bg-pd-danger-surface px-4 py-[9px] text-[13px] font-semibold text-pd-danger transition-colors disabled:opacity-60"
+            >
+              {busySubscription && <Loader2 className="size-[14px] animate-spin" />}
+              Yes, cancel it
+            </button>
+            <button
+              type="button"
+              onClick={() => setConfirmingCancel(false)}
+              disabled={busySubscription}
+              className="rounded-[9px] border border-[#DFDFE8] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
+            >
+              Keep my subscription
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Problem surface: #FEF6F6 on a #F8DEDE border, 12px radius, 14px 16px. */}
@@ -265,11 +308,11 @@ export function PlanPicker({ billingStatus, onManage, loadingManage }) {
                 as making one. */}
             <button
               type="button"
-              onClick={onManage}
-              disabled={loadingManage}
+              onClick={onReactivate}
+              disabled={busySubscription}
               className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline disabled:opacity-60"
             >
-              Reactivate it in the billing portal
+              Keep my subscription
             </button>
             .
           </span>
