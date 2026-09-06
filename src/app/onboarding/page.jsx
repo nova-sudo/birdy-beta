@@ -868,7 +868,7 @@ export default function OnboardingPage() {
 
   if (booting) {
     return (
-      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-[#EEEDF3]`}>
+      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white`}>
         <SpinnerRing size={26} />
       </div>
     )
@@ -876,7 +876,7 @@ export default function OnboardingPage() {
 
   if (bootError) {
     return (
-      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-[#EEEDF3] px-6`}>
+      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white px-6`}>
         <div className="max-w-md rounded-[20px] border border-pd-border-strong bg-white p-8 text-center shadow-[0_20px_60px_-24px_rgba(30,25,60,0.3)]">
           <div className="mb-3 font-pd-display text-lg font-bold text-pd-ink">Something went wrong</div>
           <div className="mb-6 text-[13.5px] text-pd-body">{bootError}</div>
@@ -890,12 +890,22 @@ export default function OnboardingPage() {
   const stepTotal = visibleSteps.length - 1
 
   return (
-    <div className={`${pdFontClass} flex min-h-svh flex-col items-center justify-center bg-[#EEEDF3] px-3 py-6 sm:px-6`}>
-      <div className="relative flex h-[min(820px,calc(100svh-48px))] w-full max-w-[1080px] flex-col overflow-hidden rounded-[20px] border border-pd-border-strong bg-white shadow-[0_20px_60px_-24px_rgba(30,25,60,0.3)] sm:h-[min(760px,calc(100svh-48px))]">
+    // The wizard owns the whole viewport rather than floating as a card on a
+    // grey page. It is the only thing the user can do at this point — there is
+    // no app behind it to look at — so the card's border, shadow and 1080px cap
+    // were framing emptiness. Full-bleed also stops the taller steps (the
+    // sub-accounts table, the billing tiers) scrolling inside a box that is
+    // itself shorter than the screen.
+    <div className={`${pdFontClass} flex h-svh flex-col bg-white`}>
+      <div className="relative flex h-full w-full flex-col overflow-hidden">
 
         {/* top bar */}
         {currentKey !== "welcome" && (
-          <div className="flex shrink-0 items-center gap-[14px] border-b border-pd-divider px-[18px] pb-[14px] pt-4 sm:px-8 sm:pb-4 sm:pt-5">
+          <div className="shrink-0 border-b border-pd-divider px-[18px] pb-[14px] pt-4 sm:px-8 sm:pb-4 sm:pt-5">
+            {/* The bar spans the window, its contents do not: a progress bar
+                stretched across an ultrawide monitor reads as a loading screen
+                rather than a step indicator. */}
+            <div className="mx-auto flex w-full max-w-[1080px] items-center gap-[14px]">
             <button
               type="button"
               onClick={back}
@@ -930,6 +940,7 @@ export default function OnboardingPage() {
                 their own words ("I don't currently call my leads", "I don't
                 use Slack") rather than being bypassed by a generic escape
                 hatch that also skipped the things that weren't optional. */}
+            </div>
           </div>
         )}
 
