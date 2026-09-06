@@ -7,13 +7,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Lock, Mail, User } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { publicRequest } from "@/lib/api"
 import Silk from "@/components/Silk"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
 
 export default function RegisterPage() {
-  const [formData, setFormData] = useState({ name: "", email: "", password: "", default_currency: "" })
+  // Email + password only. Name and currency used to live on this form, but
+  // asking for them before the account exists is friction with no payoff —
+  // the onboarding wizard collects both immediately afterwards (its
+  // welcome_name step PUTs to /api/onboarding/state, which writes users.name).
+  const [formData, setFormData] = useState({ email: "", password: "" })
   const [error, setError] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -30,18 +35,37 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      const response = await fetch("https://birdy-backend.vercel.app/api/register", {
+      // publicRequest (not a raw fetch at a hardcoded host) so the base URL
+      // comes from NEXT_PUBLIC_API_URL like every other call, and so the
+      // auth_token / refresh_token cookies this endpoint sets are actually
+      // stored — it sends credentials: "include".
+      const response = await publicRequest("/api/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
-        credentials: "include",
       })
 
       const data = await response.json()
 
       if (response.ok && data.message === "Registration successful") {
+        // /api/register already mints the session cookies, so the user is
+        // genuinely signed in here. Mirror what LoginForm persists, because
+        // ProtectedLayout gates on these localStorage keys rather than on the
+        // cookie — without them a brand-new account was bounced to /login
+        // immediately after signing up.
+        const now = new Date()
+        const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 days, matching JWT_EXPIRY_MINUTES
+
+        localStorage.setItem("user", JSON.stringify(data.user))
+        localStorage.setItem(
+          "user_authenticated",
+          JSON.stringify({ value: true, expires_at: expiresAt.toISOString() })
+        )
+        // A just-created account has by definition not finished the wizard, so
+        // this needs no /api/onboarding/status round-trip the way login does.
+        localStorage.setItem("onboarding_incomplete", "1")
+
         flashBirdy("celebrate")
-        router.push("/clients")
+        router.push("/onboarding")
       } else {
         setError(data.detail || "Registration failed. Please try again.")
         flashBirdy("error")
@@ -77,22 +101,6 @@ export default function RegisterPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-sm font-medium text-gray-800">Full name</Label>
-                    <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
-                      <Input
-                        type="text"
-                        id="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        className="pl-10 h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20"
-                        placeholder="Enter your full name"
-                        required
-                      />
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium text-gray-800">Email address</Label>
                     <div className="relative">
@@ -131,28 +139,6 @@ export default function RegisterPage() {
                       </button>
                     </div>
                     <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <select
-                      value={formData.default_currency}
-                      onChange={(e) => setFormData({ ...formData, default_currency: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-                    >
-                      <option value="">Select your currency</option>
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="CNY">CNY - Chinese Yuan</option>
-                      <option value="JPY">JPY - Japanese Yen</option>
-                      <option value="GBP">GBP - British Pound</option>
-                      <option value="INR">INR - Indian Rupee</option>
-                      <option value="CAD">CAD - Canadian Dollar</option>
-                      <option value="AUD">AUD - Australian Dollar</option>
-                      <option value="CHF">CHF - Swiss Franc</option>
-                      <option value="MXN">MXN - Mexican Peso</option>
-                      <option value="AED">AED - UAE Dirham</option>
-                      <option value="SAR">SAR - Saudi Riyal</option>
-                    </select>
                   </div>
 
                   <Button
