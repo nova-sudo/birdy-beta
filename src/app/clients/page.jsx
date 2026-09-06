@@ -78,6 +78,7 @@ import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
+import { isAwaitingFirstData } from "@/lib/client-loading"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
@@ -135,6 +136,11 @@ export default function ClientsPage() {
       ...group,
       _isPending: group.status === "pending",
       _isCreating: group.status === "creating",
+      // Distinct from the two above: the client exists and can be opened, but
+      // none of its integrations has finished a first refresh, so its figures
+      // are not yet measurements. Without this a bulk import filled the table
+      // with rows reporting a confident 0 for everything.
+      _isSyncing: isAwaitingFirstData(group),
     }))
     setClientGroups(groups)
   }, [fetchedGroups, fetchError])
@@ -1149,7 +1155,7 @@ export default function ClientsPage() {
           enableEnhancedExtraction={true}
           getTagCount={getTagCount}
           isLoading={loading}
-          isRowLoading={(row) => row._isPending || row._isCreating}
+          isRowLoading={(row) => row._isPending || row._isCreating || row._isSyncing}
           initialColumnOrder={columnOrder}
           onColumnOrderChange={(newOrder) => {
             setColumnOrder(newOrder)

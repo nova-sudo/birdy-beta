@@ -283,6 +283,12 @@ const StyledTable = ({
         original: group,
         _isCreating: group._isCreating || false,
         _isPending: group._isPending || false,
+        // One flag for "this row's figures are placeholders". It covers the
+        // optimistic row the Add-client dialog inserts before the server has
+        // answered, as well as a real group whose first refresh has not landed
+        // — the two look identical to a reader, so they should look identical
+        // on the row.
+        _isSyncing: group._isSyncing || group._isCreating || group._isPending || false,
         leads: ghlContacts,
         "ad-spend": metaSpend,
         clicks: metaClicks,
@@ -868,7 +874,11 @@ const StyledTable = ({
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
                     className={`border-b border-pd-row-border transition-colors ${
                       (row._isCreating || row._isPending)
-                        ? "w-fit cursor-wait bg-muted/30 opacity-60"
+                        // Not clickable yet — the document isn't there to open.
+                        // The row keeps its full opacity now that its cells
+                        // shimmer: dimming on top of that read as "disabled",
+                        // which is the wrong idea. It is working, not inert.
+                        ? "w-fit cursor-wait"
                         : "row-hoverable w-fit cursor-pointer hover:bg-pd-divider/60"
                     } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
@@ -955,6 +965,22 @@ const StyledTable = ({
                                 }`}
                               />
                             )}
+                            {/* A client whose first sync has not landed takes a
+                                pulsing dot in place of the status one. It reads
+                                as "working" at a glance, in the same 8px the
+                                status dot spends, and it is the only thing on
+                                the row that distinguishes "no data yet" from
+                                "no data". */}
+                            {colIdx === 0 && isClientMode && row._isSyncing && (
+                              <span
+                                title="Syncing — first data still loading"
+                                aria-label="Syncing, first data still loading"
+                                className="relative flex size-2 shrink-0"
+                              >
+                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-pd-primary opacity-70" />
+                                <span className="relative inline-flex size-2 rounded-full bg-pd-primary" />
+                              </span>
+                            )}
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -970,6 +996,20 @@ const StyledTable = ({
                                       >
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                       </button>
+                                    ) : row._isSyncing && colIdx !== 0 ? (
+                                      // Every figure on a syncing row is a
+                                      // placeholder, so it is drawn as one. A
+                                      // shimmer says "not in yet"; the 0 that
+                                      // used to sit here said "measured, and
+                                      // the answer is none", which was a claim
+                                      // we had no basis for. Widths vary by
+                                      // column index rather than randomly, so
+                                      // they stay put across re-renders instead
+                                      // of twitching on every poll.
+                                      <Skeleton
+                                        className="h-[10px] rounded-full"
+                                        style={{ width: `${38 + ((colIdx * 17) % 34)}%` }}
+                                      />
                                     ) : (
                                       <span className="truncate min-w-0 block">
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
