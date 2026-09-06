@@ -18,6 +18,7 @@ import {
 } from "@/lib/metrics";
 import { applyDefaultMetrics, defaultMetricFormat } from "@/lib/default-metrics";
 import { formatMetric } from "@/lib/format-metric";
+import { groupHasCallCentre } from "@/lib/call-centre-availability";
 import {
   Pagination,
   PaginationContent,
@@ -224,14 +225,26 @@ const StyledTable = ({
       const metaLeads = metaResults || group.facebook?.metrics?.insights?.total_leads || 0;
       const hpLeads = group.hotprospector?.metrics?.total_leads ?? 0;
 
-      // Call Center (HotProspector) — per-preset windowed stats from call_stats
+      // Call Center (HotProspector) — per-preset windowed stats from call_stats.
+      //
+      // A client whose sales answer was "I don't currently call my leads" has
+      // no dialler feeding these, so every one of them is `null` rather than 0:
+      // getCellValue already draws null as "—", and the sort comparator already
+      // coerces it, so the row reads "not measured" instead of "measured, and
+      // the answer is none". Those are different claims and only one is true.
+      const hasCallCentre = groupHasCallCentre(group);
       const hpStats = group.hotprospector?.call_stats || {};
-      const hpTotalCalls = hpStats.total_calls ?? 0;
-      const hpLeadsWithCalls = hpStats.leads_with_calls ?? 0;
+      const hpStat = (value) => (hasCallCentre ? value ?? 0 : null);
+      const hpTotalCalls = hpStat(hpStats.total_calls);
+      const hpLeadsWithCalls = hpStat(hpStats.leads_with_calls);
       const hpTotalLeads = hpStats.total_leads ?? hpLeads;
-      const hpAnswered = hpStats.answered_calls ?? 0;
-      const hpConnectRate = hpTotalLeads > 0 ? (hpLeadsWithCalls / hpTotalLeads) * 100 : 0;
-      const hpAnswerRate = hpTotalCalls > 0 ? (hpAnswered / hpTotalCalls) * 100 : 0;
+      const hpAnswered = hpStat(hpStats.answered_calls);
+      const hpConnectRate = !hasCallCentre
+        ? null
+        : hpTotalLeads > 0 ? (hpLeadsWithCalls / hpTotalLeads) * 100 : 0;
+      const hpAnswerRate = !hasCallCentre
+        ? null
+        : hpTotalCalls > 0 ? (hpAnswered / hpTotalCalls) * 100 : 0;
 
       const base = {
         id: group.id,
@@ -259,12 +272,12 @@ const StyledTable = ({
         meta_leads: metaLeads,
         hp_leads: hpLeads,
         hp_total_calls: hpTotalCalls,
-        hp_inbound: hpStats.inbound_count ?? 0,
-        hp_outbound: hpStats.outbound_count ?? 0,
-        hp_transfers: hpStats.transfers ?? 0,
+        hp_inbound: hpStat(hpStats.inbound_count),
+        hp_outbound: hpStat(hpStats.outbound_count),
+        hp_transfers: hpStat(hpStats.transfers),
         hp_leads_with_calls: hpLeadsWithCalls,
         hp_answered_calls: hpAnswered,
-        hp_talk_time: hpStats.total_talk_min ?? 0,
+        hp_talk_time: hpStat(hpStats.total_talk_min),
         hp_connect_rate: hpConnectRate,
         hp_answer_rate: hpAnswerRate,
         original: group,

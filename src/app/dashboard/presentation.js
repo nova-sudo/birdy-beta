@@ -36,6 +36,37 @@ export const CALL_PRESENTATION = {
   conversion: { icon: CalendarCheck, tone: "success" },
 };
 
+/**
+ * Which of those six figures a call centre has to report for.
+ *
+ * Five of the six. `conversion` is the odd one out and it is worth saying why,
+ * because it sits in a card headed "Call insights" and looks like the others:
+ * it is closes ÷ leads — GHL won opportunities over Meta results — and a
+ * client with no dialler still has both. Greying it out would be telling the
+ * reader we can't measure something we can measure perfectly well.
+ *
+ * `perClose` goes the other way and is included: calls ÷ closes has a real
+ * denominator but no numerator, and a ratio is only as available as its worst
+ * input.
+ *
+ * Mapped from buildCallInsights in lib/portfolio-aggregate.js, whose figures
+ * come out of `hotprospector.call_stats` — the catalogue's "Call Center"
+ * category, enumerated in lib/metric-sources.js.
+ */
+export const CALL_CENTRE_STAT_KEYS = ["total", "speed", "answer", "perLead", "perClose"];
+
+/**
+ * And which funnel stage. Exactly one: Called is the only stage the call
+ * centre reports — Leads is Meta, In CRM and Closes are GHL opportunities.
+ *
+ * The stages after it stay real. That holds because this funnel is a cohort,
+ * not a drop-off: every stage counts the same window's contacts and is
+ * measured against the cohort rather than against the stage above it, so
+ * Closes does not pass through Called on its way and does not become
+ * unknowable when Called does. See buildFunnel's own note on the subject.
+ */
+export const CALL_CENTRE_FUNNEL_KEYS = ["called"];
+
 // Tints run purple → blue → amber → green down the funnel, matching the KPI
 // strip so a stage and its headline number read as the same thing.
 export const FUNNEL_PRESENTATION = {

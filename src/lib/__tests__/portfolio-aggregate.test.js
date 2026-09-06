@@ -245,6 +245,11 @@ describe("buildCallInsights", () => {
     talkTime: 340,
     hpLeads: 100,
     closes: 20,
+    // Calls per close divides by this rather than by `closes` — the closes of
+    // clients that actually have a dialler. Every real caller gets it from
+    // aggregatePortfolio; here the two are equal because this fixture has no
+    // client without one, which is the case the ratio has always assumed.
+    callCentreCloses: 20,
     leads: 200,
   };
 
@@ -263,9 +268,82 @@ describe("buildCallInsights", () => {
   });
 
   it("shows a dash rather than a divide-by-zero", () => {
-    const rows = buildCallInsights({ totalCalls: 0, answeredCalls: 0, talkTime: 0, hpLeads: 0, closes: 0, leads: 0 });
+    const rows = buildCallInsights({
+      totalCalls: 0, answeredCalls: 0, talkTime: 0, hpLeads: 0,
+      closes: 0, callCentreCloses: 0, leads: 0,
+    });
     expect(rows.find((r) => r.key === "answer").value).toBe("—");
     expect(rows.find((r) => r.key === "perLead").value).toBe("—");
+  });
+});
+
+// ─── Clients with no call centre ────────────────────────────────────────────
+// `call_log_provider: "none"` is the onboarding wizard's "I don't currently
+// call my leads". Such a client still runs ads and still closes business —
+// they just have nothing behind any call figure — so the question every
+// aggregate here has to answer is which of its numbers they belong in.
+
+describe("a mixed portfolio", () => {
+  const quiet = (props) => ({ ...group(props), call_log_provider: "none" });
+  const dialling = (props) => ({ ...group(props), call_log_provider: "hotprospector" });
+
+  // 200 calls against 20 wins for the client who dials: 10.0 calls per close.
+  const CALLS = { total_calls: 200, answered_calls: 100, total_leads: 100, total_talk_min: 340 };
+
+  it("reports the same calls-per-close as the dialling clients alone", () => {
+    // The bug: 80 wins from a client who could never have contributed a call
+    // land in the denominator, and 200 ÷ 100 reads 2.0 — a portfolio that
+    // looks five times better at closing by phone than it is.
+    const mixed = aggregatePortfolio([
+      dialling({ id: "loud", won: 20, results: 100, calls: CALLS }),
+      quiet({ id: "quiet", won: 80, results: 400 }),
+    ]);
+    const alone = aggregatePortfolio([
+      dialling({ id: "loud", won: 20, results: 100, calls: CALLS }),
+    ]);
+
+    const perClose = (totals) =>
+      buildCallInsights(totals).find((r) => r.key === "perClose").value;
+
+    expect(perClose(mixed)).toBe("10.0");
+    expect(perClose(mixed)).toBe(perClose(alone));
+  });
+
+  it("keeps the quiet client's wins in every figure that is not about calling", () => {
+    // Excluded from one denominator, not deleted from the portfolio. Closed
+    // Leads and conversion rate are GHL over Meta and stay whole.
+    const mixed = aggregatePortfolio([
+      dialling({ id: "loud", won: 20, results: 100, calls: CALLS }),
+      quiet({ id: "quiet", won: 80, results: 400 }),
+    ]);
+
+    expect(mixed.closes).toBe(100);
+    expect(mixed.callCentreCloses).toBe(20);
+    expect(buildCallInsights(mixed).find((r) => r.key === "conversion").value).toBe("20.0%");
+  });
+
+  it("ignores call stats left behind on a client who has since gone quiet", () => {
+    // The hp-tick cron filters on the provider, so it stops writing but never
+    // clears what it wrote. Reading those leftovers would put calls in the
+    // numerator while the matching closes are correctly kept out of the
+    // denominator — the same bug, pointing the other way.
+    const stale = aggregatePortfolio([
+      quiet({ id: "quiet", won: 80, results: 400, calls: CALLS }),
+    ]);
+
+    expect(stale.totalCalls).toBe(0);
+    expect(stale.talkTime).toBe(0);
+    expect(stale.hpLeads).toBe(0);
+  });
+
+  it("treats a client with no stored provider as one that dials", () => {
+    // The field is newly projected; absent means "we don't know", and dropping
+    // a client's real call figures off a stale payload is worse than the
+    // dilution being fixed here.
+    const legacy = aggregatePortfolio([group({ id: "old", won: 20, results: 100, calls: CALLS })]);
+
+    expect(legacy.totalCalls).toBe(200);
+    expect(legacy.callCentreCloses).toBe(20);
   });
 });
 

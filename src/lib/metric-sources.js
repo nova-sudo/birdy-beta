@@ -40,6 +40,78 @@ const CATEGORY_TO_SOURCE = {
 }
 
 /**
+ * The two catalogue categories whose metrics only exist because a call centre
+ * reported them. Both map to the `sales` badge above; they are named again
+ * here because "which badge does this wear" and "does this number have a
+ * source for this client" are different questions with the same answer today
+ * and no guarantee of it tomorrow.
+ */
+export const CALL_CENTRE_CATEGORIES = ["Call Center", "Call Center Agents"];
+
+/**
+ * Every metric id in the backend catalogue that a call centre — and only a
+ * call centre — can answer. Transcribed from `base_metrics` in
+ * birdy-backend/routers/metrics.py, which is the source of truth for what
+ * exists and which category it sits in.
+ *
+ * Enumerated rather than derived because the list is what a client with
+ * `call_log_provider: "none"` has no source for, and that has to be readable
+ * by anyone auditing which figures Birdy greys out. When a metric is added to
+ * either category upstream, it belongs here too — isCallCentreMetric is the
+ * only thing that reads it, and a missing id shows up as a stray `0` on a
+ * screen that has nothing behind it.
+ *
+ * Note what is deliberately *not* here: `conversion_rate`, `cost_per_lead` and
+ * the GHL opportunity metrics. A close rate is Meta leads over GHL wins; it
+ * survives a client having no dialler and must keep its real value, even when
+ * it is drawn in a card called "Call insights".
+ */
+export const CALL_CENTRE_METRIC_IDS = [
+  // "Call Center" — per client, windowed by the selected date preset.
+  "hp_leads",
+  "hp_total_calls",
+  "hp_inbound",
+  "hp_outbound",
+  "hp_transfers",
+  "hp_leads_with_calls",
+  "hp_answered_calls",
+  "hp_talk_time",
+  "hp_connect_rate",
+  "hp_answer_rate",
+  // "Call Center Agents" — per agent, account-wide (the Sales Hub's Members
+  // tab). No per-client filter exists upstream, so these dim only when the
+  // whole account has no dialler.
+  "hp_agent_outbound",
+  "hp_agent_inbound",
+  "hp_agent_dialed",
+  "hp_agent_answered",
+  "hp_agent_convos",
+  "hp_agent_appts",
+  "hp_agent_talk_min",
+  "hp_agent_sms",
+  "hp_agent_answer_rate",
+];
+
+const CALL_CENTRE_METRIC_SET = new Set(CALL_CENTRE_METRIC_IDS);
+
+/**
+ * Is this catalogue metric one a client without a call centre cannot have?
+ *
+ * Custom formulas are not resolved here. A formula that references an `hp_*`
+ * field is only as available as its inputs, but that is a question for
+ * whatever evaluates the formula — this answers for base metrics only, and
+ * says no for anything it doesn't recognise so an unknown id keeps its value.
+ */
+export function isCallCentreMetric(metricId) {
+  return CALL_CENTRE_METRIC_SET.has(metricId);
+}
+
+/** Same question, asked of a catalogue row's `category`. */
+export function isCallCentreCategory(category) {
+  return CALL_CENTRE_CATEGORIES.includes(category);
+}
+
+/**
  * @param {string} category Backend `category`, or "Custom Formula".
  * @returns {"meta"|"ghl"|"sales"|"birdy"|"tag"|"custom"} Falls back to `birdy`
  *   — a category we haven't mapped is something Birdy computed, and a neutral

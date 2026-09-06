@@ -21,11 +21,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useDashboardControls } from "@/components/dashboard-controls";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 import {
+  CALL_CENTRE_FUNNEL_KEYS,
+  CALL_CENTRE_STAT_KEYS,
   CALL_PRESENTATION,
   FUNNEL_PRESENTATION,
   KPI_PRESENTATION,
   withPresentation,
 } from "./presentation";
+import {
+  CallCentreUnavailable,
+  UnavailableNote,
+  withUnavailable,
+} from "@/components/callcenter/CallCentreUnavailable";
 import { pdFontClass } from "@/lib/pd-fonts";
 import {
   applySuggestionRequest,
@@ -103,6 +110,7 @@ export default function PortfolioDashboardPage() {
     error,
     hasClients,
     hasComparison,
+    hasCallCentre,
   } = usePortfolioData({ preset, granularity, chartMetric });
 
   // Optimistic rail state layered over what the hook fetched, so acting on a
@@ -159,12 +167,41 @@ export default function PortfolioDashboardPage() {
   }, [clientCount, setClientCount]);
 
   const kpiStats = useMemo(() => withPresentation(kpis, KPI_PRESENTATION), [kpis]);
+
+  // Where no client in the portfolio has a dialler, the call-centre figures
+  // are replaced by the grey placeholder rather than drawn as the zeroes they
+  // sum to. Everything the placeholder touches is enumerated in
+  // presentation.js — notably NOT the whole card: conversion rate is closes
+  // over leads and stays real, and the funnel keeps three of its four stages.
   const callStats = useMemo(
-    () => withPresentation(callInsights, CALL_PRESENTATION),
-    [callInsights]
+    () =>
+      withUnavailable(withPresentation(callInsights, CALL_PRESENTATION), {
+        keys: CALL_CENTRE_STAT_KEYS,
+        when: !hasCallCentre,
+      }),
+    [callInsights, hasCallCentre]
   );
-  const funnelStages = useMemo(() => withPresentation(funnel, FUNNEL_PRESENTATION), [funnel]);
-  const diagnosis = useMemo(() => diagnoseFunnel(funnel), [funnel]);
+
+  // Dimmed *after* the presentation table rather than before it: that table
+  // hands the Called stage its amber tone, and applying it second would paint
+  // the icon chip back in beside the grey dash.
+  const funnelStages = useMemo(
+    () =>
+      withUnavailable(withPresentation(funnel, FUNNEL_PRESENTATION), {
+        keys: CALL_CENTRE_FUNNEL_KEYS,
+        // FunnelStepper's figure lives in `count`, not `value`.
+        field: "count",
+        when: !hasCallCentre,
+      }),
+    [funnel, hasCallCentre]
+  );
+
+  // Diagnosed from the very rows the funnel draws, so the verdict can never
+  // name a stage the screen has just admitted it cannot see. withUnavailable
+  // strips the deltas, and diagnoseFunnel only considers stages that carry
+  // one — "Problem found: call coverage" for a portfolio with no call centre
+  // would be a verdict about nothing.
+  const diagnosis = useMemo(() => diagnoseFunnel(funnelStages), [funnelStages]);
 
   const chartTabs = useMemo(
     () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
@@ -254,7 +291,17 @@ export default function PortfolioDashboardPage() {
           <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
             <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
 
-            {(chartMetric === "calls"
+            {/* The Calls tab stays in the strip rather than being hidden: the
+                reader picked a metric and deserves an answer about it, and a
+                tab that quietly disappears when a client is onboarded a
+                certain way is harder to explain than one that says why. */}
+            {chartMetric === "calls" && !hasCallCentre ? (
+              <CallCentreUnavailable
+                className="mb-[18px] h-[340px]"
+                title="No call data across your clients"
+                body="None of your clients use a call centre, so there's no call volume to plot. Ad spend, leads and closes are unaffected."
+              />
+            ) : (chartMetric === "calls"
               ? callsLoading || chartMetrics.calls?.pending
               : seriesLoading) ? (
               <LoadingPulse
@@ -321,12 +368,23 @@ export default function PortfolioDashboardPage() {
               </PdCard>
             </div>
 
+            {/* The cells stay even when none of them can be filled in — the
+                reader still needs to know which six figures Birdy tracks here,
+                and an empty card answers "what am I missing out on?" with
+                nothing at all. The heading note carries the reason and the way
+                out of it. */}
             <PdCard
               title="Call insights"
               action={
                 <span className="text-[12px] text-pd-faint">Across all client call centres</span>
               }
             >
+              {!hasCallCentre && (
+                <UnavailableNote
+                  className="mb-3.5"
+                  body="None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
+                />
+              )}
               <StatStrip stats={callStats} variant="separate" label="Call insights" />
             </PdCard>
           </div>

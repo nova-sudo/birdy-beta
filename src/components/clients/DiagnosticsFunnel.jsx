@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { DiagnosticBanner } from "@/components/portfolio"
 import { deltaTone } from "@/lib/portfolio-metrics"
-import { formatSharePct } from "@/lib/client-funnel"
+import { formatSharePct, formatStageCount } from "@/lib/client-funnel"
 
 const ICONS = {
   leads: Users,
@@ -190,8 +190,18 @@ export function DiagnosticsFunnel({
                   <StageDelta direction={stage.direction} delta={stage.delta} />
                 )}
 
-                <span className="min-w-[40px] shrink-0 text-right font-pd-display text-[19px] font-bold text-pd-ink">
-                  {stage.count.toLocaleString()}
+                {/* A stage the client has no data source for reads as a grey
+                    dash, not a bold 0 — the Called stage for a client whose
+                    sales answer was "I don't call my leads". formatStageCount
+                    keeps stage.count a real number for callers doing
+                    arithmetic and only changes what is drawn. */}
+                <span
+                  className={`min-w-[40px] shrink-0 text-right font-pd-display text-[19px] font-bold ${
+                    stage.unavailable ? "text-pd-faint" : "text-pd-ink"
+                  }`}
+                  title={stage.unavailable ? "Not available — no call-centre integration" : undefined}
+                >
+                  {formatStageCount(stage)}
                 </span>
               </li>
             )

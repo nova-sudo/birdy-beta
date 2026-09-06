@@ -19,9 +19,26 @@
  * Note the window under-reports at its recent end: a cohort goes on closing
  * after its window ends, so "last 7 days" reads lower than "last month" for
  * reasons that have nothing to do with performance.
+ *
+ * ── One stage can be missing entirely ──────────────────────────────────────
+ * `called` is the only stage a call centre reports, and a client whose
+ * `call_log_provider` is "none" has no call centre. Their funnel is not a
+ * funnel with a zero in it — it is a funnel with a hole in it, and the two
+ * read as opposite things: a zero says "nobody rang these leads", the hole
+ * says "nobody is measuring whether anyone rang them".
+ *
+ * The stages *below* it are untouched, and that is the whole reason the cohort
+ * framing above is worth its cost. Closes counts contacts who reached a won
+ * opportunity in GHL; it does not pass through Called on the way, so knocking
+ * Called out does not make Closes unknowable, or even smaller. A conventional
+ * drop-off funnel would have to blank everything downstream of a missing step
+ * — every later percentage would be of a number nobody has. This one doesn't,
+ * because every stage is measured against the cohort rather than against the
+ * stage above it. So exactly one stage goes grey.
  */
 
 import { percentDelta } from "@/lib/portfolio-aggregate"
+import { groupHasCallCentre } from "@/lib/call-centre-availability"
 
 // `issue` and `stageNoun` exist for diagnoseFunnel, which builds the verdict
 // sentence out of them — "Problem found: close rate", "the drop is at the
@@ -34,7 +51,22 @@ export const FUNNEL_STAGES = [
   { id: "closes", label: "Closed", key: "closes", issue: "close rate", stageNoun: "closing" },
 ]
 
+/** The one stage a call centre reports. Named so the reason is greppable. */
+export const CALL_CENTRE_STAGE_ID = "called"
+
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
+
+/**
+ * What to print in a stage's number slot.
+ *
+ * `count` stays a real number on an unavailable stage rather than becoming
+ * null or a dash: callers do arithmetic on it, and a stage that renders
+ * correctly but breaks a sum has only moved the bug. The display string is a
+ * separate field so both readings stay available at once.
+ */
+export function formatStageCount(stage) {
+  return stage?.unavailable ? "—" : num(stage?.count).toLocaleString()
+}
 
 /**
  * @param group a client group as /api/client-groups returns it
@@ -50,10 +82,12 @@ export function buildFunnelStages(group, previous = null) {
   if (!funnel) return null
 
   const cohort = num(funnel.leads)
+  const hasCallCentre = groupHasCallCentre(group)
 
   return FUNNEL_STAGES.map((stage) => {
     const count = num(funnel[stage.key])
-    const change = previous ? percentDelta(count, num(previous[stage.key])) : null
+    const unavailable = stage.id === CALL_CENTRE_STAGE_ID && !hasCallCentre
+    const change = previous && !unavailable ? percentDelta(count, num(previous[stage.key])) : null
 
     return {
       ...stage,
@@ -61,8 +95,18 @@ export function buildFunnelStages(group, previous = null) {
       // a number, not the pill-style string percentDelta returns.
       stage: stage.label,
       count,
-      // The first stage IS the cohort, so a percentage of itself is noise.
-      share: stage.id === "leads" || cohort === 0 ? null : count / cohort,
+      countLabel: unavailable ? "—" : count.toLocaleString(),
+      // The first stage IS the cohort, so a percentage of itself is noise;
+      // and a stage with no source has no share of the cohort either, because
+      // that percentage would be arithmetic on a number nobody measured.
+      share: unavailable || stage.id === "leads" || cohort === 0 ? null : count / cohort,
+      // Renderers key off this to draw the grey placeholder instead of the
+      // figure. Note there is deliberately no delta above: diagnoseFunnel only
+      // considers stages that carry one, so an unavailable stage can never be
+      // named as the funnel's problem. "Problem found: call coverage" for a
+      // client who told us they don't call anyone is the sort of verdict that
+      // makes a reader stop trusting the banner.
+      ...(unavailable ? { unavailable: true } : {}),
       ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
     }
   })

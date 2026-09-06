@@ -17,6 +17,8 @@ import { formatTotal, sumCallStats } from "@/lib/saleshub-totals"
 import { DATE_PRESETS } from "@/lib/constants"
 import { KPI_PRESENTATION } from "@/app/Sales-Hub/presentation"
 import { useSalesHubSeries } from "@/app/Sales-Hub/useSalesHubSeries"
+import { scopeHasCallCentre } from "@/lib/call-centre-availability"
+import { CallCentreUnavailable } from "@/components/callcenter/CallCentreUnavailable"
 
 const presetLabel = (preset) =>
   DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
@@ -36,6 +38,16 @@ export function CallCentreOverview({
   onRetry,
 }) {
   const [chartMetric, setChartMetric] = useState("calls")
+
+  // Everything below this line is a sum over HotProspector caches. A client
+  // who told us at onboarding that they don't call their leads has none of
+  // those caches, so every sum lands on a well-formatted 0 — indistinguishable
+  // from a quiet week, and meaning the opposite of one. See
+  // lib/call-centre-availability.js.
+  const available = useMemo(
+    () => scopeHasCallCentre(clientGroups, selectedClientGroup),
+    [clientGroups, selectedClientGroup]
+  )
 
   const totals = useMemo(
     () => sumCallStats(clientGroups, selectedClientGroup, datePreset),
@@ -63,6 +75,28 @@ export function CallCentreOverview({
   // empty list to 0, and nothing else on the page says why.
   if (groupsError) {
     return <LoadError className="mb-[18px]" error={groupsError} onRetry={onRetry} />
+  }
+
+  // The same two columns, so switching clients doesn't reflow the page — the
+  // chart becomes the explanation, and the tiles keep their labels but lose
+  // their figures. The insight card is the one thing that goes: its copy is
+  // generated from these totals (buildSalesInsight), so leaving it in would
+  // have Birdy narrating a week that was never measured.
+  if (!available && !groupsLoading) {
+    return (
+      <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
+        <CallCentreUnavailable className="min-w-0 lg:flex-[1.65]" />
+        <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
+          <KpiTiles
+            tiles={KPI_PRESENTATION}
+            totals={totals}
+            loading={false}
+            format={formatTotal}
+            unavailable
+          />
+        </div>
+      </div>
+    )
   }
 
   return (

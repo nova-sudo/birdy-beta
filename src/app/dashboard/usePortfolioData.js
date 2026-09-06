@@ -22,6 +22,7 @@ import {
 } from "@/lib/portfolio-series";
 import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 import { isChangeActivity } from "@/lib/activity";
+import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 
 // ─── Where the figures come from ───────────────────────────────────────────
 //
@@ -294,6 +295,20 @@ export function usePortfolioData({
 
   const current = useMemo(() => aggregatePortfolio(clientGroups), [clientGroups]);
 
+  // Does anybody in this portfolio actually dial? The call figures below are
+  // sums over `hotprospector.call_stats`, and a client whose
+  // `call_log_provider` is "none" contributes nothing to them — which sums to
+  // a clean 0 and reads as "a very quiet week" rather than "we have no source
+  // for this". Where no active client has a call centre, the screen renders
+  // the placeholder instead of that 0.
+  //
+  // A *mixed* portfolio keeps its real numbers: the sums are still true, just
+  // of fewer clients. The one ratio that needed telling which clients count is
+  // calls-per-close, whose denominator is a GHL figure rather than a
+  // HotProspector one — it now divides by `callCentreCloses`, summed only over
+  // clients that could have contributed a call. See buildCallInsights.
+  const hasCallCentre = useMemo(() => portfolioHasCallCentre(clientGroups), [clientGroups]);
+
   const previous = useMemo(() => {
     if (!previousGroups) return null;
     const enclosing = aggregatePortfolio(previousGroups);
@@ -415,6 +430,7 @@ export function usePortfolioData({
     error: groupsError,
     hasClients: current.clientCount > 0,
     hasComparison: previous != null,
+    hasCallCentre,
   };
 }
 

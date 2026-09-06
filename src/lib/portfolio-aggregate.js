@@ -11,6 +11,7 @@
 
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "./portfolio-metrics";
 import { activeGroups } from "./client-status";
+import { groupHasCallCentre } from "./call-centre-availability";
 
 const num = (v) => {
   const n = typeof v === "string" ? parseFloat(v) : v;
@@ -28,7 +29,19 @@ const num = (v) => {
 export function groupMetrics(group) {
   const insights = group.facebook?.metrics?.insights ?? {};
   const opps = group.gohighlevel?.metrics?.opportunity_stats ?? {};
-  const calls = group.hotprospector?.call_stats ?? {};
+
+  // A client whose `call_log_provider` is "none" told us at onboarding that
+  // they don't call their leads, so their call figures are not zero — they do
+  // not exist. The distinction is not cosmetic here: the caches are only
+  // *usually* empty for such a client. `hotprospector_call_cache` is written
+  // by the hp-tick cron, which filters on the provider, so a group switched to
+  // "none" keeps whatever the cron left behind the last time it did dial.
+  // Reading those leftovers would put calls in the numerator of every ratio
+  // below while the matching closes are correctly kept out of the denominator
+  // — the mirror image of the bug this file is being fixed for. The setting
+  // wins over the leftovers, the same rule /api/call_logs applies server-side.
+  const hasCallCentre = groupHasCallCentre(group);
+  const calls = hasCallCentre ? (group.hotprospector?.call_stats ?? {}) : {};
   // The cohort funnel for the requested window, or null when the backend has
   // not cached that preset yet. There is deliberately no lifetime fallback —
   // see buildFunnel.
@@ -52,6 +65,18 @@ export function groupMetrics(group) {
     spend,
     leads,
     closes,
+    // Whether this client has a dialler at all. Kept on the row so the
+    // leaderboards and any future per-client view can ask without re-reading
+    // the raw group, and so aggregatePortfolio can split the closes below.
+    hasCallCentre,
+    // The same closes, restricted to clients that could have contributed a
+    // call. This is the denominator "calls per close" needs: dividing the
+    // portfolio's calls by *every* client's wins counts wins from clients who
+    // never had a call in the numerator, which drags the ratio down and makes
+    // a mixed portfolio look more efficient at closing-by-phone than it is.
+    // Excluded from the denominator, not counted as zero — the two differ, and
+    // only the first is a true statement about the clients who do dial.
+    callCentreCloses: hasCallCentre ? closes : 0,
     revenue: num(opps.won_revenue),
     contacts: num(group.gohighlevel?.metrics?.total_contacts),
     totalOpps: num(opps.total_opportunities),
@@ -87,6 +112,10 @@ const SUMMED = [
   "spend",
   "leads",
   "closes",
+  // Summed alongside `closes` rather than derived from it: which clients dial
+  // is a property of the rows, and by the time we hold the totals the rows
+  // that contributed them are no longer distinguishable.
+  "callCentreCloses",
   "revenue",
   "contacts",
   "totalOpps",
@@ -209,7 +238,26 @@ export function buildKpis(current, previous, formatMoney) {
   ];
 }
 
-/** Six call-centre figures. Three of them improve as they fall. */
+/**
+ * Six call-centre figures. Three of them improve as they fall.
+ *
+ * @param {object} current an aggregatePortfolio result. Two of the ratios here
+ *   need denominators that only it can supply — `callCentreCloses` in
+ *   particular — so this does not accept a hand-assembled totals object with
+ *   the same field names and quietly do something plausible with it.
+ *
+ * Where each denominator excludes the clients with no dialler, and why:
+ *
+ *   answer     both sides are HotProspector fields, so a client with none
+ *              contributes nothing to either. Nothing to exclude.
+ *   perLead    `hpLeads` is a HotProspector count for the same reason.
+ *   perClose   the odd one out. `closes` is a GHL figure and a client can
+ *              close plenty of business without ever picking up a phone, so
+ *              this is the one ratio that has to be told which clients count.
+ *   conversion deliberately portfolio-wide: it is closes over leads, has
+ *              nothing to do with the call centre, and stays true for every
+ *              client whether they dial or not.
+ */
 export function buildCallInsights(current) {
   const pct = (n) => `${n.toFixed(1)}%`;
   const ratio = (a, b) => (b > 0 ? (a / b).toFixed(1) : "—");
@@ -242,7 +290,7 @@ export function buildCallInsights(current) {
     {
       key: "perClose",
       label: "Calls per close",
-      value: ratio(current.totalCalls, current.closes),
+      value: ratio(current.totalCalls, current.callCentreCloses),
       polarity: LOWER_IS_BETTER,
     },
     {
