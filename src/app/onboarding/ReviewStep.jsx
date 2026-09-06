@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { FakeProgressBar, PrimaryButton, ProgressBar, SpinnerRing, StepHeading } from "./parts"
+import { FakeProgressBar, PrimaryButton, ProgressBar, SearchInput, SpinnerRing, StepHeading } from "./parts"
 
 const NO_MATCH = "No matching ad account found"
 
@@ -19,6 +19,7 @@ const MAX_IMPORT_SELECTION = 25
 export default function ReviewStep({ review, settled, importing, onImport }) {
   // Per-row edits, sparse — row defaults come from the server payload.
   const [rows, setRows] = useState({})
+  const [search, setSearch] = useState("")
   const [fbMenuOpen, setFbMenuOpen] = useState(null)
   const [statusMenuOpen, setStatusMenuOpen] = useState(null)
   const [fbSearch, setFbSearch] = useState("")
@@ -60,6 +61,22 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       status: edit.status || account.status_default || "active",
     }
   })
+
+  // Filtering is a view concern and deliberately nothing more. Counts, the
+  // auto-check cap and what actually gets imported all read `resolved`, not
+  // this — searching must never silently drop a sub-account someone already
+  // ticked, which is exactly what filtering the source list would do.
+  const query = search.trim().toLowerCase()
+  const visible = query
+    ? resolved.filter((row) =>
+        [row.birdyName, row.name, row.fb?.name].some(
+          (field) => (field || "").toLowerCase().includes(query)
+        )
+      )
+    : resolved
+  const hiddenChecked = resolved.filter(
+    (row) => row.importChecked && !visible.includes(row)
+  ).length
 
   const patch = (id, changes) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], ...changes } }))
@@ -141,6 +158,17 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         ))}
       </div>
 
+      {/* Search. The per-row Facebook dropdown has always had its own filter,
+          but the table itself had none — and with 173 sub-accounts, finding the
+          one you care about meant scrolling for it. Matches either side of the
+          pairing, GHL name or ad-account name, because the job on this step is
+          checking that the two line up. */}
+      <SearchInput
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={`Search ${resolved.length} sub-account${resolved.length === 1 ? "" : "s"} or ad accounts…`}
+      />
+
       {/* table */}
       <div className="overflow-hidden rounded-xl border border-pd-border text-left">
         <div className="flex items-center gap-[11px] border-b border-pd-border bg-pd-table-head px-[14px] py-[10px] text-[11px] font-bold tracking-[0.03em] text-pd-faint">
@@ -156,7 +184,12 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
               Every sub-account with a Birdy import is already in — nothing left to review.
             </div>
           )}
-          {resolved.map((row) => (
+          {resolved.length > 0 && visible.length === 0 && (
+            <div className="px-[14px] py-8 text-center text-[12.5px] text-pd-faint">
+              No sub-account or ad account matches &ldquo;{search.trim()}&rdquo;.
+            </div>
+          )}
+          {visible.map((row) => (
             <div
               key={row.location_id}
               className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[10px] last:border-b-0"
@@ -291,6 +324,18 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       {/* click-catcher for open dropdowns */}
       {(fbMenuOpen || statusMenuOpen) && (
         <div className="fixed inset-0 z-[5]" onClick={closeMenus} />
+      )}
+
+      {query && visible.length > 0 && (
+        <div className="mt-[14px] text-center text-[12.5px] text-pd-faint">
+          Showing {visible.length} of {resolved.length}
+          {/* Said out loud because the Import button counts every ticked row,
+              including the ones this search is hiding — without this the count
+              looks wrong. */}
+          {hiddenChecked > 0 && (
+            <> · {hiddenChecked} selected {hiddenChecked === 1 ? "row is" : "rows are"} hidden by this search</>
+          )}
+        </div>
       )}
 
       {atSelectionCap && (

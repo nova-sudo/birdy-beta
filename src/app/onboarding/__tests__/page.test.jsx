@@ -232,6 +232,81 @@ describe("onboarding wizard", () => {
     expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy()
   })
 
+  // ── Finishing lands on the client they just set up ─────────────────────
+
+  it("opens the first client, not the hub", async () => {
+    const user = userEvent.setup()
+    // The whole wizard exists to produce this one client. The hub is a list
+    // they have no reason to read yet.
+    bootAt(19, { data: { ...PICKED_CLIENT, first_client: {
+      ...PICKED_CLIENT.first_client, group_id: "grp_1",
+    } } })
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/clients/grp_1"))
+  })
+
+  it("recovers the client id from the server when the tab lost it", async () => {
+    const user = userEvent.setup()
+    // The id is set when background creation resolves, but an OAuth hop, a
+    // Whop checkout redirect or a refresh all wipe React state in between.
+    // First read (boot) has no group_id; the second (on finish) does.
+    let statusCalls = 0
+    bootAt(19, {
+      data: PICKED_CLIENT,
+      overrides: {
+        "/api/onboarding/status": () => {
+          statusCalls += 1
+          return json({
+            completed: false,
+            step: 19,
+            data: statusCalls === 1
+              ? PICKED_CLIENT
+              : { ...PICKED_CLIENT, first_client: { ...PICKED_CLIENT.first_client, group_id: "grp_recovered" } },
+          })
+        },
+      },
+    })
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/clients/grp_recovered"))
+  })
+
+  it("falls back to matching the GHL location when no id was ever stored", async () => {
+    const user = userEvent.setup()
+    bootAt(19, {
+      data: PICKED_CLIENT,
+      overrides: {
+        "/api/client-groups?date_preset=today&include_daily=false": () =>
+          json({ client_groups: [
+            { id: "grp_other", ghl_location_id: "loc_999" },
+            { id: "grp_matched", ghl_location_id: "loc_1" },
+          ] }),
+      },
+    })
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/clients/grp_matched"))
+  })
+
+  it("still lets them in when there is no client to open", async () => {
+    const user = userEvent.setup()
+    // Creation failed and they chose to continue without it — the hub is the
+    // honest destination, and being stuck in the wizard helps nobody.
+    bootAt(19, { data: {} })
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/clients"))
+  })
+
   // ── Connect buttons aren't live before we know they're needed ──────────
 
   it("does not offer Connect GHL while the status probe is still in flight", async () => {

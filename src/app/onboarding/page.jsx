@@ -735,14 +735,56 @@ export default function OnboardingPage() {
     runImport(accounts)
   }, [runImport, persistState])
 
+  // Where "Take a look at Birdy" lands. The point of the wizard is the client
+  // they just set up, so it opens that client — not the hub, which is a list
+  // they have no reason to read yet.
+  //
+  // firstGroupId is the in-memory answer, but it is not a reliable one on its
+  // own: it is set when the background creation resolves, and the OAuth hops,
+  // a Whop checkout redirect and a plain refresh all wipe React state between
+  // then and here. boot() restores it, so usually it is there — but "usually"
+  // is how someone ends up on the hub wondering where their client went. So
+  // the server-side copy is the fallback, and the group list after that.
+  const resolveFirstClientPath = useCallback(async () => {
+    if (firstGroupId) return `/clients/${firstGroupId}`
+
+    try {
+      const res = await apiRequest("/api/onboarding/status")
+      if (res.ok) {
+        const state = await res.json()
+        const saved = state?.data?.first_client?.group_id
+        if (saved) return `/clients/${saved}`
+      }
+    } catch { /* fall through to the list */ }
+
+    // Last resort: the group exists, we just never learned its id — creation
+    // succeeded while the tab was away, or the persist that followed it failed.
+    // Matching on the GHL location is exact, so this is a lookup, not a guess.
+    if (selectedClient?.id) {
+      try {
+        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+        if (res.ok) {
+          const list = await res.json()
+          const match = (list?.client_groups || []).find(
+            (g) => g.ghl_location_id === selectedClient.id
+          )
+          if (match?.id) return `/clients/${match.id}`
+        }
+      } catch { /* fall through to the hub */ }
+    }
+
+    return "/clients"
+  }, [firstGroupId, selectedClient])
+
   const finish = useCallback(async () => {
     setCompleting(true)
     try {
       await apiRequest("/api/onboarding/complete", { method: "POST" })
     } catch { /* flag stays server-side incomplete; still let them in */ }
+    const destination = await resolveFirstClientPath()
     localStorage.removeItem("onboarding_incomplete")
-    router.push(firstGroupId ? `/clients/${firstGroupId}` : "/clients")
-  }, [router, firstGroupId])
+    router.push(destination)
+  }, [router, resolveFirstClientPath])
 
   // "I don't use Slack". Marking the opt-out drops SLACK_CONFIG_STEPS from
   // visibleSteps, so the plain next() lands on sub_accounts_review — the same
