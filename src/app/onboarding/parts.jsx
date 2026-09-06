@@ -6,6 +6,7 @@
 // Portfolio Dashboard / Sales Hub screens (globals.css), Poppins for
 // headings, Inter for body (lib/pd-fonts).
 
+import { useEffect, useRef, useState } from "react"
 import { ArrowRight, Check, Search } from "lucide-react"
 
 export function PrimaryButton({ children, onClick, disabled, arrow = true, className = "" }) {
@@ -41,6 +42,86 @@ export function SpinnerRing({ size = 16 }) {
       className="animate-spin rounded-full border-2 border-[#E4DDF9] border-t-pd-primary"
       style={{ width: size, height: size }}
     />
+  )
+}
+
+/**
+ * Determinate progress bar. `value` is 0–100; anything outside is clamped, so
+ * a caller computing a percentage from a not-yet-known total can pass junk
+ * without drawing a bar wider than its track.
+ */
+export function ProgressBar({ value, className = "" }) {
+  const pct = Math.max(0, Math.min(100, Number(value) || 0))
+  return (
+    <div
+      className={`h-[6px] w-full overflow-hidden rounded-full bg-pd-primary-tint ${className}`}
+      role="progressbar"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div
+        className="h-full rounded-full bg-pd-primary transition-[width] duration-500 ease-out"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  )
+}
+
+/**
+ * Progress for work whose duration we cannot measure — a GHL sub-account list
+ * that takes as long as the agency is large, the first client's historical
+ * pull, the bulk import. There is no percentage to report, but a bare spinner
+ * on a 30-second wait reads as "stuck" and people reload, which is worse than
+ * slow.
+ *
+ * So the bar advances on a decaying curve: fast at first, asymptotically
+ * approaching `ceiling` and never reaching it. It is honest about direction
+ * (something is happening) without claiming a completion time it cannot know,
+ * and it structurally cannot hit 100% while the work is still running —
+ * `done` is the only thing that finishes it.
+ *
+ * `expectedMs` is the half-life, not a deadline: roughly how long the work
+ * usually takes. Overshooting it just means the curve flattens rather than
+ * the bar lying.
+ */
+export function useFakeProgress(active, { expectedMs = 12000, ceiling = 92, done = false } = {}) {
+  const [pct, setPct] = useState(0)
+  const startedAt = useRef(null)
+
+  useEffect(() => {
+    if (done) {
+      setPct(100)
+      return
+    }
+    if (!active) {
+      setPct(0)
+      startedAt.current = null
+      return
+    }
+    startedAt.current = Date.now()
+    setPct(0)
+    const tick = () => {
+      const elapsed = Date.now() - (startedAt.current || Date.now())
+      // 1 - 0.5^(t/half-life): 50% at expectedMs, 75% at double, never 100%.
+      setPct(ceiling * (1 - Math.pow(0.5, elapsed / expectedMs)))
+    }
+    tick()
+    const timer = setInterval(tick, 400)
+    return () => clearInterval(timer)
+  }, [active, done, expectedMs, ceiling])
+
+  return pct
+}
+
+/** `useFakeProgress` wired straight into a `ProgressBar`, with an optional caption. */
+export function FakeProgressBar({ active = true, done = false, expectedMs, caption, className = "" }) {
+  const pct = useFakeProgress(active, { expectedMs, done })
+  return (
+    <div className={className}>
+      <ProgressBar value={pct} />
+      {caption && <div className="mt-[9px] text-center text-[12.5px] text-pd-faint">{caption}</div>}
+    </div>
   )
 }
 

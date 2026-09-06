@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import getSymbolFromCurrency from "currency-symbol-map"
 import {
   AlertCircle,
   ChevronLeft,
@@ -23,19 +24,23 @@ import {
   Eye,
   EyeOff,
   Home,
+  PhoneOff,
   Phone,
   RotateCcw,
 } from "lucide-react"
 import { apiRequest } from "@/lib/api"
+import { STORAGE_KEYS } from "@/lib/constants"
 import { pdFontClass } from "@/lib/pd-fonts"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import {
   FacebookGlyph,
+  FakeProgressBar,
   IconChip,
   InitialsAvatar,
   PickList,
   PrimaryButton,
+  ProgressBar,
   SearchInput,
   SecondaryButton,
   SlackGlyph,
@@ -51,7 +56,7 @@ import BillingStep from "./BillingStep"
 const STEPS = [
   "welcome", "welcome_name", "agency", "connect_ghl",
   "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
-  "client_confirm", "sync_prompt",
+  "client_confirm", "client_currency", "sync_prompt",
   "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
   "slack_frequency", "brief_content", "sub_accounts_review", "billing", "completion",
 ]
@@ -60,7 +65,7 @@ const PHASE_OF = {
   welcome: 1, welcome_name: 1, agency: 1,
   connect_ghl: 2, connect_meta: 2,
   sales_tool: 3, hp_key: 3,
-  client_picker: 4, client_confirm: 4, meta_ad_picker: 4, sync_prompt: 4,
+  client_picker: 4, client_confirm: 4, client_currency: 4, meta_ad_picker: 4, sync_prompt: 4,
   kpi_targets: 5, kpi_default: 5,
   slack_connect: 6, slack_channel: 6, slack_frequency: 6, brief_content: 6,
   sub_accounts_review: 7, billing: 8, completion: 9,
@@ -71,9 +76,25 @@ const PHASE_LABEL = {
   5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Billing", 9: "Finished",
 }
 
-const SKIP_STEPS = [
-  "sales_tool", "hp_key", "client_picker", "client_confirm",
-  "meta_ad_picker", "kpi_targets", "slack_connect",
+// Dropped wholesale when the user says they have no Slack workspace.
+const SLACK_CONFIG_STEPS = ["slack_channel", "slack_frequency", "brief_content"]
+
+// The twelve the sign-up form used to offer, before currency moved in here.
+// Mirrored server-side by SUPPORTED_CURRENCIES in routers/onboarding.py, which
+// is what actually guards users.default_currency.
+const CURRENCY_OPTIONS = [
+  { code: "GBP", label: "British Pound" },
+  { code: "USD", label: "US Dollar" },
+  { code: "EUR", label: "Euro" },
+  { code: "CAD", label: "Canadian Dollar" },
+  { code: "AUD", label: "Australian Dollar" },
+  { code: "AED", label: "UAE Dirham" },
+  { code: "SAR", label: "Saudi Riyal" },
+  { code: "CHF", label: "Swiss Franc" },
+  { code: "INR", label: "Indian Rupee" },
+  { code: "MXN", label: "Mexican Peso" },
+  { code: "JPY", label: "Japanese Yen" },
+  { code: "CNY", label: "Chinese Yuan" },
 ]
 
 const TIME_OPTIONS = ["7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "12:00 PM", "5:00 PM"]
@@ -100,18 +121,22 @@ export default function OnboardingPage() {
   const [booting, setBooting] = useState(true)
   const [bootError, setBootError] = useState(null)
   const [stepIndex, setStepIndex] = useState(0)
-  // Step keys the user skipped past — persisted so the rest of the product
-  // can see exactly which parts of setup were never done.
-  const [skipped, setSkipped] = useState([])
 
   const [name, setName] = useState("")
   const [agency, setAgency] = useState("")
 
-  // Connection states: idle | connecting | error | success
-  const [ghlStatus, setGhlStatus] = useState("idle")
-  const [metaStatus, setMetaStatus] = useState("idle")
-  const [slackStatus, setSlackStatus] = useState("idle")
-  const [hpStatus, setHpStatus] = useState("idle")
+  // Connection states: checking | idle | connecting | error | success.
+  //
+  // "checking" is the initial value, not "idle", because boot() probes all
+  // four integrations in the background and those probes take a moment. Coming
+  // back from a GHL OAuth hop, an already-connected user was shown a live
+  // "Connect GHL" button for as long as /api/status took to answer — pressing
+  // it started a second, pointless round-trip. The button now can't be pressed
+  // until we know whether it's needed at all.
+  const [ghlStatus, setGhlStatus] = useState("checking")
+  const [metaStatus, setMetaStatus] = useState("checking")
+  const [slackStatus, setSlackStatus] = useState("checking")
+  const [hpStatus, setHpStatus] = useState("checking")
   const [hpUid, setHpUid] = useState("")
   const [hpKey, setHpKey] = useState("")
   const [hpVisible, setHpVisible] = useState(false)
@@ -130,9 +155,17 @@ export default function OnboardingPage() {
   const [adSearch, setAdSearch] = useState("")
   const [selectedAd, setSelectedAd] = useState(null)
 
+  // Currency for the first client account, chosen on client_currency. Pre-set
+  // from the Meta ad account when we know it — that is the currency the spend
+  // figures are actually denominated in, so it's the right default and usually
+  // the right answer.
+  const [currency, setCurrency] = useState("")
+
   const [firstGroupId, setFirstGroupId] = useState(null)
   const [creationError, setCreationError] = useState(null)
-  const [creatingFirstClient, setCreatingFirstClient] = useState(false)
+  // idle | creating | done | error. The wizard no longer waits on this: see
+  // startFirstClientCreation.
+  const [creationState, setCreationState] = useState("idle")
 
   const [syncing, setSyncing] = useState(false)
   const [syncGhlPct, setSyncGhlPct] = useState(0)
@@ -145,6 +178,10 @@ export default function OnboardingPage() {
   const [channels, setChannels] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
   const [selectedChannel, setSelectedChannel] = useState(null)
+  // "I don't use Slack" — drops the channel/frequency/brief steps rather than
+  // stranding a user with no workspace on a step they cannot complete. Slack
+  // is the one connection Birdy genuinely works without.
+  const [slackOptOut, setSlackOptOut] = useState(false)
   const [frequency, setFrequency] = useState(null)
   const [notifyTime, setNotifyTime] = useState("9:00 AM")
   const [notifyDay, setNotifyDay] = useState("Monday")
@@ -163,9 +200,19 @@ export default function OnboardingPage() {
 
   // ── Step machinery ──────────────────────────────────────────────────────
 
+  // Two steps are conditional. hp_key only exists for a Hot Prospector user,
+  // and the three Slack configuration steps only exist for someone who has a
+  // Slack workspace to configure. Filtering them out (rather than jumping over
+  // them) keeps stepIndex meaningful: "Step 12 of 17" counts what this
+  // particular user will actually be asked.
   const visibleSteps = useMemo(
-    () => STEPS.filter((s) => s !== "hp_key" || salesTool === "hp"),
-    [salesTool]
+    () =>
+      STEPS.filter((s) => {
+        if (s === "hp_key") return salesTool === "hp"
+        if (SLACK_CONFIG_STEPS.includes(s)) return !slackOptOut
+        return true
+      }),
+    [salesTool, slackOptOut]
   )
   const currentKey = visibleSteps[Math.min(stepIndex, visibleSteps.length - 1)]
   const phase = PHASE_OF[currentKey]
@@ -192,37 +239,13 @@ export default function OnboardingPage() {
   )
 
   const next = useCallback(
-    (dataPatch) => {
-      // Completing a step the normal way clears any earlier skip mark on it
-      // (the user went back and finished what they'd skipped).
-      const key = visibleSteps[Math.min(stepIndex, visibleSteps.length - 1)]
-      let patch = dataPatch
-      if (skipped.includes(key)) {
-        const cleaned = skipped.filter((k) => k !== key)
-        setSkipped(cleaned)
-        patch = { ...(dataPatch || {}), skipped: cleaned }
-      }
-      goToIndex(stepIndex + 1, patch)
-    },
-    [stepIndex, goToIndex, skipped, visibleSteps]
+    (dataPatch) => goToIndex(stepIndex + 1, dataPatch),
+    [stepIndex, goToIndex]
   )
   const back = useCallback(() => goToIndex(stepIndex - 1), [stepIndex, goToIndex])
   const goToKey = useCallback(
     (key, dataPatch) => goToIndex(visibleSteps.indexOf(key), dataPatch),
     [visibleSteps, goToIndex]
-  )
-  // Skip: everything between here and the landing step counts as skipped —
-  // "Skip for now" on slack_connect jumps to completion, which also skips the
-  // channel/frequency/brief and sub-accounts review steps.
-  const skipTo = useCallback(
-    (targetKey, extra) => {
-      const targetIdx = visibleSteps.indexOf(targetKey)
-      const covered = visibleSteps.slice(stepIndex, Math.max(targetIdx, stepIndex))
-      const newSkipped = [...new Set([...skipped, ...covered])]
-      setSkipped(newSkipped)
-      goToIndex(targetIdx, { ...(extra || {}), skipped: newSkipped })
-    },
-    [visibleSteps, stepIndex, skipped, goToIndex]
   )
 
   // ── Boot: resume server-side state + probe integrations ─────────────────
@@ -248,6 +271,9 @@ export default function OnboardingPage() {
         if (data.agency) setAgency(data.agency)
         else if (state.agency_name) setAgency(state.agency_name)
         if (data.sales_tool) setSalesTool(data.sales_tool)
+        if (data.currency) setCurrency(data.currency)
+        else if (state.default_currency) setCurrency(state.default_currency)
+        if (data.slack_opt_out) setSlackOptOut(true)
         if (data.first_client) {
           if (data.first_client.ghl_location_id) {
             setSelectedClient({ id: data.first_client.ghl_location_id, name: data.first_client.name })
@@ -276,41 +302,55 @@ export default function OnboardingPage() {
           if (data.slack.brief_items) setBriefItems({ ...DEFAULT_BRIEF_ITEMS, ...data.slack.brief_items })
         }
         if (data.wants_sync) setSyncing(true)
-        if (Array.isArray(data.skipped)) setSkipped(data.skipped)
         // Recover the sub-accounts picked in ReviewStep if a checkout redirect
         // (or an impatient refresh during "Activating your subscription…")
         // reloaded the page while the billing step was waiting on it — an
         // in-memory ref alone doesn't survive that.
         if (Array.isArray(data.pending_import)) pendingImportRef.current = data.pending_import
 
-        const visible = STEPS.filter((s) => s !== "hp_key" || data.sales_tool === "hp")
+        const visible = STEPS.filter((s) => {
+          if (s === "hp_key") return data.sales_tool === "hp"
+          if (SLACK_CONFIG_STEPS.includes(s)) return !data.slack_opt_out
+          return true
+        })
         if (!cancelled) setStepIndex(Math.min(state.step || 0, visible.length - 1))
 
         // Probe live connection status in the background so a returning OAuth
         // hop shows green — deliberately not awaited: first paint shouldn't
         // wait on three integration round-trips.
+        //
+        // Every path out of a probe must land the status somewhere other than
+        // "checking", including the failures. A probe that errors leaves the
+        // step showing a spinner forever otherwise, which is a worse failure
+        // than the "clickable too early" one this replaced: "idle" at least
+        // offers the user the Connect button, which is the correct recovery
+        // when we genuinely don't know whether they're connected.
         apiRequest("/api/status")
           .then(async (res) => {
-            if (cancelled || !res.ok) return
-            const s = await res.json()
-            if (s?.gohighlevel?.agency?.connected) setGhlStatus("success")
-            if (s?.facebook?.connected) setMetaStatus("success")
+            if (cancelled) return
+            const s = res.ok ? await res.json() : null
+            setGhlStatus(s?.gohighlevel?.agency?.connected ? "success" : "idle")
+            setMetaStatus(s?.facebook?.connected ? "success" : "idle")
           })
-          .catch(() => {})
+          .catch(() => {
+            if (cancelled) return
+            setGhlStatus("idle")
+            setMetaStatus("idle")
+          })
         apiRequest("/api/integrations/slack/status")
           .then(async (res) => {
-            if (cancelled || !res.ok) return
-            const s = await res.json()
-            if (s?.installed) setSlackStatus("success")
+            if (cancelled) return
+            const s = res.ok ? await res.json() : null
+            setSlackStatus(s?.installed ? "success" : "idle")
           })
-          .catch(() => {})
+          .catch(() => { if (!cancelled) setSlackStatus("idle") })
         apiRequest("/api/hotprospector/status")
           .then(async (res) => {
-            if (cancelled || !res.ok) return
-            const s = await res.json()
-            if (s?.connected) setHpStatus("success")
+            if (cancelled) return
+            const s = res.ok ? await res.json() : null
+            setHpStatus(s?.connected ? "success" : "idle")
           })
-          .catch(() => {})
+          .catch(() => { if (!cancelled) setHpStatus("idle") })
       } catch (e) {
         console.error("Onboarding boot failed:", e)
         if (!cancelled) setBootError("Couldn't load your onboarding progress. Refresh to try again.")
@@ -445,23 +485,37 @@ export default function OnboardingPage() {
     []
   )
 
-  // Awaited by the client_confirm Confirm button (see below) so a failure
-  // blocks the wizard right there with a visible, retryable error instead of
-  // advancing regardless — the first client group is free (billing_middleware
-  // allows a subscription-less user's very first one), so a failure here is
-  // a real problem (GHL/network/500), not an expected payment wall.
-  const createFirstClient = useCallback(async () => {
+  // Creates the first client group. The request blocks server-side on a full
+  // GHL history fetch, so it is slow — see startFirstClientCreation, which is
+  // what the wizard actually calls and which does not wait for it.
+  //
+  // The first client group is free (billing_middleware allows a
+  // subscription-less user's very first one), so a failure here is a real
+  // problem — GHL, network, a 500 — not an expected payment wall, which is why
+  // the caller surfaces it rather than swallowing it.
+  // `chosenCurrency` is passed in rather than read off state because the
+  // client_currency step starts creation in the same handler that sets it, and
+  // a state update isn't visible to a callback created in that render.
+  const createFirstClient = useCallback(async (chosenCurrency) => {
     if (firstGroupId) return true
     if (!selectedClient) return false
     setCreationError(null)
+    const groupCurrency = chosenCurrency || currency || selectedAd?.currency || null
     const clientName = clientNameConfirm.trim() || selectedClient.name
     const payload = {
       name: clientName,
       ghl_location_id: selectedClient.id,
       meta_ad_account_id: selectedAd?.id || null,
       hotprospector_group_id: null,
-      ad_account_currency: selectedAd?.currency || null,
-      call_log_provider: salesTool === "hp" ? "hotprospector" : "ghl",
+      // The user's explicit answer on client_currency wins over the ad
+      // account's own currency: they may report in a different one than Meta
+      // bills them in, and the whole point of asking was to stop guessing.
+      ad_account_currency: groupCurrency,
+      // "none" is a real, persisted answer — "I don't currently call my
+      // leads" — not a missing value. The Sales Hub and every call-centre
+      // metric read it to render "not available" instead of a misleading 0.
+      call_log_provider:
+        salesTool === "hp" ? "hotprospector" : salesTool === "none" ? "none" : "ghl",
       notes: "",
     }
     try {
@@ -498,7 +552,7 @@ export default function OnboardingPage() {
         name: clientName,
         ghl_location_id: selectedClient.id,
         meta_ad_account_id: selectedAd?.id || null,
-        currency: selectedAd?.currency || null,
+        currency: groupCurrency,
       } } })
       if (pendingTargetsRef.current) {
         applyTargets(groupId, pendingTargetsRef.current)
@@ -510,7 +564,29 @@ export default function OnboardingPage() {
       setCreationError("Client creation failed — check your connection and try again.")
       return false
     }
-  }, [selectedClient, selectedAd, clientNameConfirm, salesTool, firstGroupId, persistState, applyTargets])
+  }, [selectedClient, selectedAd, clientNameConfirm, salesTool, currency, firstGroupId, persistState, applyTargets])
+
+  // Fire-and-forget wrapper. The creation request blocks on a full GHL history
+  // fetch and routinely takes tens of seconds; making the user watch a
+  // "Creating client…" spinner for that long, before they have seen a single
+  // thing Birdy does, was the worst dead spot in the wizard.
+  //
+  // Nothing between here and the completion step needs the group id: the KPI
+  // step already parks its targets in pendingTargetsRef and createFirstClient
+  // applies them the moment the id lands, and the sync badge already has a
+  // branch for "creation still running". So the wizard carries on and the
+  // result is reported asynchronously — as a badge while it runs, and as a
+  // blocking error on the completion step if it fails, which is the last
+  // point at which we can still do something about it.
+  const startFirstClientCreation = useCallback((chosenCurrency) => {
+    if (firstGroupId || creationState === "creating") return
+    setCreationState("creating")
+    setCreationError(null)
+    createFirstClient(chosenCurrency).then(
+      (ok) => setCreationState(ok ? "done" : "error"),
+      () => setCreationState("error")
+    )
+  }, [createFirstClient, firstGroupId, creationState])
 
   // ── Background sync badge ───────────────────────────────────────────────
 
@@ -668,18 +744,16 @@ export default function OnboardingPage() {
     router.push(firstGroupId ? `/clients/${firstGroupId}` : "/clients")
   }, [router, firstGroupId])
 
-  const doSkip = useCallback(() => {
-    const nextKey = visibleSteps[Math.min(stepIndex + 1, visibleSteps.length - 1)]
-    if (currentKey === "sales_tool") { setSalesTool("ghl"); skipTo(nextKey, { sales_tool: "ghl" }) }
-    else if (currentKey === "hp_key") skipTo(nextKey)
-    else if (["client_picker", "client_confirm", "meta_ad_picker"].includes(currentKey)) skipTo("kpi_targets")
-    else if (currentKey === "kpi_targets") skipTo("slack_connect")
-    // Used to jump straight to "completion" — written before sub_accounts_review
-    // and billing existed after this point. Skipping Slack must not also skip
-    // the mandatory review + payment gate.
-    else if (currentKey === "slack_connect") skipTo("sub_accounts_review")
-    else skipTo(nextKey)
-  }, [currentKey, stepIndex, visibleSteps, skipTo])
+  // "I don't use Slack". Marking the opt-out drops SLACK_CONFIG_STEPS from
+  // visibleSteps, so the plain next() lands on sub_accounts_review — the same
+  // mechanism that hides hp_key for a non-HotProspector user. Deliberately not
+  // a jump: a jump would have to know what comes after Slack, and the last
+  // thing that did (the old "Skip for now") sent people straight past the
+  // mandatory billing gate.
+  const declineSlack = useCallback(() => {
+    setSlackOptOut(true)
+    next({ slack_opt_out: true })
+  }, [next])
 
   // ── Derived lists ───────────────────────────────────────────────────────
 
@@ -730,10 +804,30 @@ export default function OnboardingPage() {
 
   const clientDisplayName = clientNameConfirm.trim() || selectedClient?.name || "your first client"
 
+  // The targets step asks for a cost-per-acquisition and a Slack preview
+  // quotes one back. Both used to be hardcoded to £, which read as a
+  // conversion to anyone who had just told us they work in dollars — the
+  // number they typed was their own currency, but the wizard relabelled it.
+  // Falls back to the picker's own default rather than to $, so a user who
+  // reaches the targets step before the currency step still sees one
+  // consistent symbol.
+  const currencySymbol =
+    getSymbolFromCurrency(currency || selectedAd?.currency || "GBP") || "£"
+
   // ── Render helpers ──────────────────────────────────────────────────────
 
-  const renderConnectStates = ({ status, onConnect, onRetry, connectLabel, connectingLabel, successLabel, errorTitle, errorBody, connectDisabled }) => (
+  const renderConnectStates = ({ status, onConnect, onRetry, onContinue, connectLabel, connectingLabel, successLabel, errorTitle, errorBody, connectDisabled }) => (
     <>
+      {/* Boot hasn't finished asking whether this is already connected. Show
+          the wait rather than a Connect button we may be about to replace —
+          the button was live and pressable for the whole round-trip, so
+          returning from an OAuth hop invited a second, pointless one. */}
+      {status === "checking" && (
+        <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-faint">
+          <SpinnerRing />
+          Checking connection…
+        </div>
+      )}
       {status === "idle" && (
         <PrimaryButton onClick={onConnect} disabled={connectDisabled} arrow={false}>
           {connectLabel}
@@ -764,7 +858,7 @@ export default function OnboardingPage() {
       {status === "success" && (
         <>
           <SuccessRow>{successLabel}</SuccessRow>
-          <PrimaryButton onClick={() => next()}>Continue</PrimaryButton>
+          <PrimaryButton onClick={onContinue || (() => next())}>Continue</PrimaryButton>
         </>
       )}
     </>
@@ -828,30 +922,64 @@ export default function OnboardingPage() {
                 ))}
               </div>
             </div>
-            {SKIP_STEPS.includes(currentKey) && (
-              <button
-                type="button"
-                onClick={doSkip}
-                className="shrink-0 cursor-pointer whitespace-nowrap border-0 bg-transparent text-[12.5px] font-semibold text-pd-subtle transition-colors hover:text-pd-body"
-              >
-                Skip for now
-              </button>
-            )}
+            {/* "Skip for now" used to live here. It was removed deliberately:
+                every step it let people past — the first client, the KPI
+                targets, the sales tool — is something the product cannot work
+                without, so skipping produced an account that looked set up and
+                showed nothing. Steps that genuinely are optional now say so in
+                their own words ("I don't currently call my leads", "I don't
+                use Slack") rather than being bypassed by a generic escape
+                hatch that also skipped the things that weren't optional. */}
           </div>
         )}
 
-        {/* sync corner badge */}
-        {showSyncBadge && (
-          <div className="absolute right-4 top-[76px] z-10 flex items-center gap-[9px] rounded-[11px] border border-pd-border bg-white px-[13px] py-[9px] shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-            <SpinnerRing />
-            <div>
-              <div className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</div>
-              <div className="text-[10.5px] text-pd-faint">
-                GHL {Math.round(syncGhlPct)}% · Meta {Math.round(syncMetaPct)}%
-              </div>
+        {/* Background-work corner badge. Since client creation stopped
+            blocking the wizard, this is the only place the user can see that
+            it is happening — and the only place a failure surfaces before the
+            completion step, so the error branch has to be actionable. */}
+        {creationState === "error" ? (
+          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-[11px] border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+            <div className="mb-[2px] flex items-center gap-[7px]">
+              <AlertCircle className="h-[13px] w-[13px] shrink-0 text-pd-danger" strokeWidth={2.4} />
+              <span className="text-[11.5px] font-semibold text-pd-danger">
+                Couldn&apos;t add {clientDisplayName}
+              </span>
             </div>
+            <div className="mb-[7px] text-[10.5px] leading-normal text-pd-body">
+              {creationError || "We'll ask you to retry before you finish."}
+            </div>
+            <button
+              type="button"
+              onClick={startFirstClientCreation}
+              className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-pd-primary underline"
+            >
+              Try again
+            </button>
           </div>
-        )}
+        ) : creationState === "creating" ? (
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-[11px] border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+            <div className="mb-[7px] flex items-center gap-[9px]">
+              <SpinnerRing />
+              <span className="text-[11.5px] font-semibold text-pd-ink">Adding {clientDisplayName}</span>
+            </div>
+            <FakeProgressBar expectedMs={18000} />
+          </div>
+        ) : showSyncBadge ? (
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-[11px] border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+            <div className="mb-[8px] flex items-center gap-[9px]">
+              <SpinnerRing />
+              <span className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</span>
+            </div>
+            <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
+              <span>GHL</span><span>{Math.round(syncGhlPct)}%</span>
+            </div>
+            <ProgressBar value={syncGhlPct} className="mb-[7px]" />
+            <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
+              <span>Meta</span><span>{Math.round(syncMetaPct)}%</span>
+            </div>
+            <ProgressBar value={syncMetaPct} />
+          </div>
+        ) : null}
 
         {/* content */}
         <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
@@ -928,7 +1056,9 @@ export default function OnboardingPage() {
               <div className="mb-4 text-center">
                 <StepHeading small>Let&apos;s choose your first client to onboard!</StepHeading>
               </div>
-              {ghlStatus !== "success" ? (
+              {ghlStatus === "checking" ? (
+                <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your GHL connection…" /></div>
+              ) : ghlStatus !== "success" ? (
                 <div className="py-6 text-center text-[13px] text-pd-faint">
                   Connect GHL first and your sub-accounts will show up here.
                 </div>
@@ -937,7 +1067,12 @@ export default function OnboardingPage() {
                   {locationsError}
                 </div>
               ) : locations === null ? (
-                <div className="flex justify-center py-10"><SpinnerRing size={22} /></div>
+                // A large agency's location list is genuinely slow — hundreds
+                // of sub-accounts, paged out of GHL. A bare spinner here reads
+                // as "hung" and people reload mid-fetch.
+                <div className="py-10">
+                  <FakeProgressBar expectedMs={9000} caption="Fetching your GHL sub-accounts…" />
+                </div>
               ) : (
                 <>
                   <SearchInput
@@ -997,7 +1132,9 @@ export default function OnboardingPage() {
               <div className="mb-4 text-center">
                 <StepHeading small>Which Meta ad account is {clientDisplayName}?</StepHeading>
               </div>
-              {metaStatus !== "success" ? (
+              {metaStatus === "checking" ? (
+                <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your Meta connection…" /></div>
+              ) : metaStatus !== "success" ? (
                 <div className="py-6 text-center text-[13px] text-pd-faint">
                   Connect Meta first and your ad accounts will show up here.
                 </div>
@@ -1006,7 +1143,9 @@ export default function OnboardingPage() {
                   {adError}
                 </div>
               ) : adAccounts === null ? (
-                <div className="flex justify-center py-10"><SpinnerRing size={22} /></div>
+                <div className="py-10">
+                  <FakeProgressBar expectedMs={6000} caption="Fetching your Meta ad accounts…" />
+                </div>
               ) : (
                 <>
                   <SearchInput
@@ -1041,42 +1180,57 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "sales_tool" && (
-            <div className="w-full max-w-[440px]">
+            <div className="w-full max-w-[620px]">
               <div className="mb-2"><StepHeading>What do you use for sales?</StepHeading></div>
               <div className="mb-7 text-[14px] text-pd-faint">
                 This decides where Birdy pulls call and close data from.
               </div>
-              <div className="flex gap-[14px]">
-                <div
-                  onClick={() => { setSalesTool("ghl"); next({ sales_tool: "ghl" }) }}
-                  className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
-                  style={{
-                    borderColor: salesTool === "ghl" ? "#6B4EE6" : "#ECECF2",
-                    background: salesTool === "ghl" ? "#F1EEFC" : "#fff",
-                  }}
-                >
-                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-pd-primary-tint text-pd-primary">
-                    <Home className="h-[18px] w-[18px]" strokeWidth={2} />
+              <div className="flex flex-col gap-[14px] sm:flex-row">
+                {[
+                  {
+                    id: "ghl",
+                    label: "GHL",
+                    desc: ghlStatus === "success" ? "Already connected" : "Uses your GHL connection",
+                    icon: <Home className="h-[18px] w-[18px]" strokeWidth={2} />,
+                    chip: "bg-pd-primary-tint text-pd-primary",
+                  },
+                  {
+                    id: "hp",
+                    label: "Hot Prospector",
+                    desc: "Connect with an API key",
+                    icon: <Phone className="h-[18px] w-[18px]" strokeWidth={2} />,
+                    chip: "bg-pd-warning-bg text-pd-warning",
+                  },
+                  // The honest third answer. Without it, an agency that doesn't
+                  // call its leads had to claim a dialler it doesn't use, and
+                  // then every call-centre metric in the product reported a
+                  // confident 0 — indistinguishable from "you made no calls".
+                  // Answering "none" makes those read "not available" instead,
+                  // with a route to connect a tool later.
+                  {
+                    id: "none",
+                    label: "I don't call my leads",
+                    desc: "Skip call tracking for now",
+                    icon: <PhoneOff className="h-[18px] w-[18px]" strokeWidth={2} />,
+                    chip: "bg-pd-table-head text-pd-subtle",
+                  },
+                ].map((opt) => (
+                  <div
+                    key={opt.id}
+                    onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
+                    className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
+                    style={{
+                      borderColor: salesTool === opt.id ? "#6B4EE6" : "#ECECF2",
+                      background: salesTool === opt.id ? "#F1EEFC" : "#fff",
+                    }}
+                  >
+                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] ${opt.chip}`}>
+                      {opt.icon}
+                    </div>
+                    <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
+                    <div className="text-[11.5px] text-pd-faint">{opt.desc}</div>
                   </div>
-                  <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">GHL</div>
-                  <div className="text-[11.5px] text-pd-faint">
-                    {ghlStatus === "success" ? "Already connected" : "Uses your GHL connection"}
-                  </div>
-                </div>
-                <div
-                  onClick={() => { setSalesTool("hp"); next({ sales_tool: "hp" }) }}
-                  className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
-                  style={{
-                    borderColor: salesTool === "hp" ? "#6B4EE6" : "#ECECF2",
-                    background: salesTool === "hp" ? "#F1EEFC" : "#fff",
-                  }}
-                >
-                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-pd-warning-bg text-pd-warning">
-                    <Phone className="h-[18px] w-[18px]" strokeWidth={2} />
-                  </div>
-                  <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">Hot Prospector</div>
-                  <div className="text-[11.5px] text-pd-faint">Connect with an API key</div>
-                </div>
+                ))}
               </div>
             </div>
           )}
@@ -1087,7 +1241,7 @@ export default function OnboardingPage() {
               <div className="mb-[22px] text-[14px] leading-normal text-pd-body">
                 Paste your API UID and key below — both are in your Hot Prospector settings.
               </div>
-              {hpStatus !== "success" && (
+              {hpStatus !== "success" && hpStatus !== "checking" && (
                 <>
                   <input
                     value={hpUid}
@@ -1112,6 +1266,14 @@ export default function OnboardingPage() {
                     </button>
                   </div>
                 </>
+              )}
+              {/* Same reason as the OAuth steps: don't offer the key form
+                  before we know whether a key is already on file. */}
+              {hpStatus === "checking" && (
+                <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-faint">
+                  <SpinnerRing />
+                  Checking connection…
+                </div>
               )}
               {hpStatus === "idle" && (
                 <PrimaryButton disabled={!hpUid.trim() || !hpKey.trim()} onClick={connectHp} arrow={false}>
@@ -1157,22 +1319,68 @@ export default function OnboardingPage() {
                 onChange={(e) => setClientNameConfirm(e.target.value)}
                 placeholder="Client name"
               />
-              {creationError && (
-                <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-left text-[12.5px] text-pd-body">
-                  {creationError}
-                </div>
-              )}
+              {/* Creation used to fire here and be awaited. It now happens on
+                  the next step (client_currency), because the currency is part
+                  of the payload and because nothing about naming a client
+                  needs a network round-trip. */}
               <PrimaryButton
-                disabled={!clientNameConfirm.trim() || !selectedClient || creatingFirstClient}
-                onClick={async () => {
-                  setCreatingFirstClient(true)
-                  const ok = await createFirstClient()
-                  setCreatingFirstClient(false)
-                  if (ok) next()
-                }}
-                arrow={!creatingFirstClient}
+                disabled={!clientNameConfirm.trim() || !selectedClient}
+                // $set on onboarding.data.first_client replaces the whole
+                // field, so the draft has to be re-sent complete — including
+                // a group_id if creation already succeeded and the user came
+                // back to rename. Dropping it would strand the group.
+                onClick={() => next({ first_client: {
+                  ...(firstGroupId ? { group_id: firstGroupId } : {}),
+                  ghl_location_id: selectedClient?.id,
+                  name: clientNameConfirm.trim(),
+                  meta_ad_account_id: selectedAd?.id || null,
+                  currency: currency || selectedAd?.currency || null,
+                } })}
               >
-                {creatingFirstClient ? <><SpinnerRing />Creating client…</> : "Confirm"}
+                Confirm
+              </PrimaryButton>
+            </div>
+          )}
+
+          {currentKey === "client_currency" && (
+            <div className="w-full max-w-[440px]">
+              <div className="mb-2">
+                <StepHeading small>What currency does {clientDisplayName} report in?</StepHeading>
+              </div>
+              <div className="mb-[26px] text-[13.5px] leading-normal text-pd-body">
+                Every spend, cost and revenue figure for this client is shown in this currency.
+                {selectedAd?.currency
+                  ? ` We've pre-filled it from their Meta ad account.`
+                  : ""}
+              </div>
+              <select
+                value={currency || selectedAd?.currency || "GBP"}
+                onChange={(e) => setCurrency(e.target.value)}
+                className="mb-[30px] w-full rounded-[10px] border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
+              >
+                {CURRENCY_OPTIONS.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.label} ({getSymbolFromCurrency(c.code) || c.code})
+                  </option>
+                ))}
+              </select>
+              <PrimaryButton
+                onClick={() => {
+                  const chosen = currency || selectedAd?.currency || "GBP"
+                  setCurrency(chosen)
+                  // Also the account-wide default. The sign-up form used to ask
+                  // for this; now this step is the only place it gets set, and
+                  // useCurrency reads the localStorage copy synchronously on
+                  // first render, so writing it here stops the rest of the app
+                  // rendering "$" for a user who just said GBP.
+                  try {
+                    localStorage.setItem(STORAGE_KEYS.DEFAULT_CURRENCY, chosen)
+                  } catch { /* private mode — the server copy still wins on next login */ }
+                  startFirstClientCreation(chosen)
+                  next({ currency: chosen })
+                }}
+              >
+                Continue
               </PrimaryButton>
             </div>
           )}
@@ -1203,7 +1411,7 @@ export default function OnboardingPage() {
                   Whilst we finish onboarding, Birdy can add the rest of your clients for you in
                   the background.
                 </div>
-                <PrimaryButton onClick={acceptSync}>Yes, add all my clients</PrimaryButton>
+                <PrimaryButton onClick={acceptSync}>Continue onboarding</PrimaryButton>
               </div>
             </>
           )}
@@ -1220,7 +1428,7 @@ export default function OnboardingPage() {
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Cost per acquisition target</div>
                 <div className="flex items-center rounded-[10px] border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
-                  <span className="mr-[6px] text-[14px] text-pd-faint">£</span>
+                  <span className="mr-[6px] text-[14px] text-pd-faint">{currencySymbol}</span>
                   <input
                     value={cpa}
                     onChange={(e) => setCpa(e.target.value.replace(/[^\d]/g, ""))}
@@ -1229,7 +1437,7 @@ export default function OnboardingPage() {
                     className="flex-1 border-0 py-3 text-[15px] text-pd-ink outline-none placeholder:text-pd-faint"
                   />
                 </div>
-                <div className="mt-[5px] text-[11px] text-[#B4B4C0]">Most agencies in your niche target £30–60.</div>
+                <div className="mt-[5px] text-[11px] text-[#B4B4C0]">Most agencies in your niche target {currencySymbol}30–60.</div>
               </div>
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Monthly wins target</div>
@@ -1293,12 +1501,40 @@ export default function OnboardingPage() {
               {renderConnectStates({
                 status: slackStatus,
                 onConnect: () => startOAuth("/api/connect/slack", setSlackStatus),
+                // Connecting Slack un-does an earlier "I don't use Slack" —
+                // otherwise someone who opted out, went back and connected
+                // anyway would still have the channel and brief steps hidden,
+                // and would finish onboarding with a workspace Birdy never
+                // asked them where to post in.
+                onContinue: () => {
+                  if (slackOptOut) {
+                    setSlackOptOut(false)
+                    next({ slack_opt_out: false })
+                  } else {
+                    next()
+                  }
+                },
                 connectLabel: "Connect Slack",
                 connectingLabel: "Connecting to Slack…",
                 successLabel: "Slack connected",
                 errorTitle: "Connection failed",
                 errorBody: "Slack didn't authorize the request — this usually means the popup was closed early. Let's try again.",
               })}
+              {/* The one genuine opt-out in the wizard. Slack is the only
+                  integration Birdy works fully without, and plenty of agencies
+                  don't run one — with "Skip for now" gone, this step would
+                  otherwise be a wall they cannot get past. Stated as a real
+                  answer, so the product knows the difference between "not set
+                  up yet" and "doesn't use Slack". */}
+              {(slackStatus === "idle" || slackStatus === "error") && (
+                <button
+                  type="button"
+                  onClick={declineSlack}
+                  className="mt-5 cursor-pointer border-0 bg-transparent text-[13px] font-semibold text-pd-subtle underline transition-colors hover:text-pd-body"
+                >
+                  I don&apos;t use Slack
+                </button>
+              )}
             </div>
           )}
 
@@ -1331,8 +1567,8 @@ export default function OnboardingPage() {
                 <div className="w-full flex-1">
                   <div className="mb-[9px] text-[11px] font-bold tracking-[0.05em] text-pd-faint">PREVIEW</div>
                   <SlackPreviewCard time="9:02 AM">
-                    CPA for {clientDisplayName} is £{cpa || "45"} — right on target. Yesterday&apos;s
-                    spend was £142 across 3 ad sets.
+                    CPA for {clientDisplayName} is {currencySymbol}{cpa || "45"} — right on target. Yesterday&apos;s
+                    spend was {currencySymbol}142 across 3 ad sets.
                   </SlackPreviewCard>
                   <div className="mt-5 text-center">
                     <PrimaryButton disabled={!selectedChannel} onClick={saveChannel}>Continue</PrimaryButton>
@@ -1453,7 +1689,7 @@ export default function OnboardingPage() {
                 <div className="w-full flex-1">
                   <div className="mb-[9px] text-[11px] font-bold tracking-[0.05em] text-pd-faint">PREVIEW</div>
                   <SlackPreviewCard time={notifyTime}>
-                    {briefItems.spend && <div>💰 Spend yesterday: <strong className="text-white">£142</strong> across 3 ad sets</div>}
+                    {briefItems.spend && <div>💰 Spend yesterday: <strong className="text-white">{currencySymbol}142</strong> across 3 ad sets</div>}
                     {briefItems.leads && <div>📈 New leads: <strong className="text-white">18</strong></div>}
                     {briefItems.conversion && <div>🎯 Conversion rate: <strong className="text-white">14.2%</strong></div>}
                     {briefItems.top && <div>🏆 Top performer: <strong className="text-white">{clientDisplayName}</strong></div>}
@@ -1498,9 +1734,46 @@ export default function OnboardingPage() {
                 Here&apos;s everything Birdy just connected{agency ? ` for ${agency}` : ""}. We&apos;ll
                 keep importing the rest in the background.
               </div>
-              <PrimaryButton onClick={finish} disabled={completing}>
-                {completing ? "Opening Birdy…" : "Take a look at Birdy"}
-              </PrimaryButton>
+
+              {/* Last chance to notice that the background creation failed.
+                  Everything after client_currency ran without needing the
+                  group, so this is the first point where "you have no first
+                  client" actually costs the user something — they'd land on an
+                  empty Clients page with no idea why. Offered as a retry, not
+                  a wall: if GHL is down, trapping them in the wizard helps
+                  nobody, so they can still go in without it. */}
+              {creationState === "error" && (
+                <div className="mb-5 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[18px] py-4 text-left">
+                  <div className="mb-[6px] flex items-center gap-2">
+                    <AlertCircle className="h-[15px] w-[15px] text-pd-danger" strokeWidth={2.2} />
+                    <span className="font-pd-display text-[13.5px] font-semibold text-pd-danger">
+                      {clientDisplayName} wasn&apos;t added
+                    </span>
+                  </div>
+                  <div className="mb-[14px] text-[12.5px] leading-normal text-pd-body">
+                    {creationError || "Something went wrong setting up your first client."}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <PrimaryButton onClick={() => startFirstClientCreation()} arrow={false}>
+                      Try again
+                      <RotateCcw className="h-[15px] w-[15px]" strokeWidth={2} />
+                    </PrimaryButton>
+                    <SecondaryButton onClick={finish}>Continue without it</SecondaryButton>
+                  </div>
+                </div>
+              )}
+
+              {creationState === "creating" && (
+                <div className="mb-5">
+                  <FakeProgressBar expectedMs={18000} caption={`Still adding ${clientDisplayName} — you can go on in.`} />
+                </div>
+              )}
+
+              {creationState !== "error" && (
+                <PrimaryButton onClick={finish} disabled={completing}>
+                  {completing ? "Opening Birdy…" : "Take a look at Birdy"}
+                </PrimaryButton>
+              )}
             </div>
           )}
 

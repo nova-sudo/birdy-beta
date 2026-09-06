@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
 import { PLANS } from "@/components/billing/plans"
-import { SpinnerRing, StepHeading, SuccessRow } from "./parts"
+import { FakeProgressBar, SpinnerRing, StepHeading, SuccessRow } from "./parts"
 
 const WHOP_ENVIRONMENT =
   (process.env.NEXT_PUBLIC_WHOP_ENVIRONMENT ?? "production") === "sandbox"
@@ -105,7 +105,16 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
       <div className="w-full max-w-[440px] text-center">
         <SuccessRow>Payment received</SuccessRow>
         <div className="mb-3"><StepHeading small>Activating your subscription…</StepHeading></div>
-        <div className="mb-[26px] flex justify-center"><SpinnerRing size={22} /></div>
+        {/* Two different waits wearing one screen. Whop's activation is
+            seconds; the import inserts a client group per sub-account and can
+            run well past a minute on a full 25. Both are long enough that a
+            lone spinner reads as a hang, and this is the one screen nobody can
+            afford to reload — they have already paid. */}
+        <div className="mb-[22px] flex justify-center"><SpinnerRing size={22} /></div>
+        <FakeProgressBar
+          className="mb-[14px]"
+          expectedMs={importing ? Math.max(8000, accountCount * 1200) : 4000}
+        />
         <div className="text-[13px] text-pd-faint">
           {importing
             ? `Bringing in your ${accountCount} sub-account${accountCount === 1 ? "" : "s"}…`

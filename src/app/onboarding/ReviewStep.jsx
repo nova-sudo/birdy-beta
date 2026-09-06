@@ -7,7 +7,7 @@
 
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { PrimaryButton, SpinnerRing, StepHeading } from "./parts"
+import { FakeProgressBar, PrimaryButton, ProgressBar, SpinnerRing, StepHeading } from "./parts"
 
 const NO_MATCH = "No matching ad account found"
 
@@ -89,14 +89,30 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
   if (review === null || !settled) {
     const prep = review?.prep
+    // The longest wait in the whole wizard: the prep job mints a location
+    // token per sub-account and pulls each one's most recent lead, so a large
+    // agency sits here for a minute or more. Once the job reports a total we
+    // have real progress to show; before that — while the job is still being
+    // scheduled — a bar that visibly moves is the difference between "working"
+    // and "frozen", which is what people reload out of.
+    const hasRealProgress = prep?.status === "running" && prep?.total > 0
     return (
-      <div className="flex flex-col items-center gap-3 py-16">
+      <div className="flex w-full max-w-[420px] flex-col items-center gap-4 py-16">
         <SpinnerRing size={22} />
-        <div className="text-[13px] text-pd-faint">
-          {prep?.status === "running" && prep?.total
-            ? `Analysing your sub-accounts… ${prep.done} of ${prep.total} checked`
-            : "Reviewing your GHL account…"}
-        </div>
+        {hasRealProgress ? (
+          <div className="w-full">
+            <ProgressBar value={(prep.done / prep.total) * 100} />
+            <div className="mt-[9px] text-center text-[13px] text-pd-faint">
+              Analysing your sub-accounts… {prep.done} of {prep.total} checked
+            </div>
+          </div>
+        ) : (
+          <FakeProgressBar
+            className="w-full"
+            expectedMs={15000}
+            caption="Reviewing your GHL account…"
+          />
+        )}
       </div>
     )
   }
