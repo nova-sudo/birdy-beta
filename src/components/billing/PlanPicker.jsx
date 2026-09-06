@@ -225,11 +225,54 @@ export function PlanPicker({ billingStatus, onManage, loadingManage }) {
         </div>
       )}
 
+      {/* Cancelling is the thing people come to this page to find, and until
+          this line existed the page never said the word — the only route to it
+          was guessing that "Manage billing" opens a portal that offers it.
+
+          Whop's API *can* cancel a membership (whop-sdk memberships.cancel,
+          which billing.cancel_membership wraps for account deletion), so a
+          real in-app cancel button is buildable and this is signposting by
+          choice, not by necessity. The portal is still the better default for
+          a customer doing it themselves: it shows what they lose and when,
+          handles proration and win-back, and leaves Whop as the single source
+          of truth for the membership's state — which matters while
+          /api/billing/status is a webhook-fed mirror with no reconciliation. */}
+      {subscribed && !billingStatus?.cancel_at_period_end && (
+        <p className="mt-[10px] text-[12px] leading-[1.45] text-pd-faint">
+          Need to change plan, update your payment details, or cancel your subscription?
+          All three are handled in the Whop billing portal —{" "}
+          <button
+            type="button"
+            onClick={onManage}
+            disabled={loadingManage}
+            className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline disabled:opacity-60"
+          >
+            open it here
+          </button>
+          .
+        </p>
+      )}
+
       {/* Problem surface: #FEF6F6 on a #F8DEDE border, 12px radius, 14px 16px. */}
       {billingStatus?.cancel_at_period_end && (
         <div className="mt-[14px] flex items-center gap-[11px] rounded-xl border border-pd-danger-border bg-pd-danger-surface px-4 py-[14px] text-[12px] leading-[1.45] text-pd-body">
           <AlertCircle className="size-[15px] shrink-0 text-pd-danger" />
-          Your subscription will cancel at the end of this billing period.
+          <span>
+            Your subscription will cancel at the end of this billing period.{" "}
+            {/* The mirror image of the problem above: this told people their
+                subscription was ending and then offered no way to change their
+                mind. Undoing a scheduled cancellation is the same portal trip
+                as making one. */}
+            <button
+              type="button"
+              onClick={onManage}
+              disabled={loadingManage}
+              className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline disabled:opacity-60"
+            >
+              Reactivate it in the billing portal
+            </button>
+            .
+          </span>
         </div>
       )}
     </section>
