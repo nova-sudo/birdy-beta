@@ -425,26 +425,45 @@
    Portfolio Dashboard chart motion
    ═══════════════════════════════════════════════════════════════ */
 
-/* The line draws itself by walking a dash offset the length of the path, and
-   the gradient area fades in behind it. Both replay whenever the metric or
+/* The line is revealed by wiping a cover off it left to right, and the
+   gradient area fades in behind it. Both replay whenever the metric or
    timeframe changes — the chart element is keyed on that pair, so React
    remounts it and the animations restart from the top.
 
-   The dash is expressed as a FRACTION of the path, not a length in user
-   units: the line carries pathLength="1" (see TrendChart), which tells the
-   browser to treat the path as one unit long however long it really is, so
-   one dash of 1 always covers exactly the whole line.
+   The reveal deliberately contains no length. It used to draw the line by
+   laying a dash over the path and retracting it, which only works while the
+   dash is at least as long as the line, and that turned out to be
+   unmeasurable here — twice.
 
-   It used to be a hardcoded 2400, which is only long enough for a short,
-   smooth series. Past that the dash pattern repeats — 2400 on, 2400 off — so
-   the line drew normally and then simply stopped, with the area fill
-   carrying on underneath it. A 30-day series measures ~2100 units typically
-   and over 5000 when it is jagged, and 90 days averages ~5400, so the longer
-   the range the earlier the line gave up: at 4000 units it vanished 60% of
-   the way across. */
-@keyframes pd-chart-draw {
-  from { stroke-dashoffset: 1; }
-  to   { stroke-dashoffset: 0; }
+   First it was a hardcoded 2400 viewBox units, which only covers a short,
+   smooth series; past that the pattern repeats — 2400 on, 2400 off — so the
+   line drew and then simply stopped with the area fill carrying on
+   underneath it. pathLength="1" was meant to end that by letting the browser
+   normalise the dash to the path's own length whatever it was.
+
+   It didn't, because of vector-effect: non-scaling-stroke. pathLength
+   normalises against the path's length in USER units, but non-scaling-stroke
+   makes the browser stroke — and therefore dash — the path after the CTM, in
+   screen pixels. The viewBox is 1000x200 with preserveAspectRatio="none", so
+   the two disagree by roughly the card's width over 1000, and the line is
+   drawn for exactly 1/that fraction of itself. Measured in Chrome against
+   the real geometry: a card 1400px wide draws a 7-day series to 75% and a
+   30-day one to 72%, and stops dead there — the fill-mode holds the dash, so
+   the tail never arrives. Under 1000px wide the ratio drops below 1 and
+   nothing is missing, which is why it looks fine on a laptop and broken on a
+   desktop, and why only the flatter series break: a jagged one is mostly
+   vertical, and vertically the viewBox squashes rather than stretches.
+
+   A wipe has no such second space to disagree with. It clips the line to a
+   box that grows across it, and clip geometry is resolved in the same user
+   space the path lives in, so nothing has to be measured against the stroke.
+   The horizontal inset is a percentage of the line's own bounding box, so it
+   is the same sweep for any series; the vertical insets must stay absolute,
+   because a flat series (every value equal) has a zero-height box and a
+   percentage of that is zero, which would clip the line away entirely. */
+@keyframes pd-chart-wipe {
+  from { clip-path: inset(-10px 100% -10px -10px); }
+  to   { clip-path: inset(-10px -2% -10px -10px); }
 }
 
 @keyframes pd-chart-fade {
@@ -458,8 +477,7 @@
 }
 
 .pd-chart-line {
-  stroke-dasharray: 1;
-  animation: pd-chart-draw 800ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: pd-chart-wipe 800ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .pd-chart-area {
@@ -474,7 +492,8 @@
    reduced-motion users are asking us to skip — show the finished line. */
 @media (prefers-reduced-motion: reduce) {
   .pd-chart-line {
-    stroke-dasharray: none;
+    /* The clip only ever exists as part of the wipe, so dropping the
+       animation leaves the finished line with nothing covering it. */
     animation: none;
   }
 

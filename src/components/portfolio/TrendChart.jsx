@@ -141,15 +141,18 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
-            // Normalises the path to one unit long for dash purposes, so the
-            // draw animation's stroke-dasharray covers all of it whatever the
-            // series does. Without it the dash was a fixed length in viewBox
-            // units, and any line longer than that — a wide date range, or a
-            // jagged one — was drawn only as far as the dash reached and then
-            // silently cut off. See .pd-chart-line in globals.css.
-            pathLength="1"
             // Without this the non-uniform viewBox scaling would squash the
             // stroke horizontally along with everything else.
+            //
+            // It also rules out revealing the line with a stroke dash, which
+            // is what .pd-chart-line used to do: non-scaling-stroke moves the
+            // stroke — dashes included — into screen space, while any length
+            // this end can offer (a viewBox constant, getTotalLength, or a
+            // pathLength normalisation) is in user space, and the two differ
+            // by the card's width over the viewBox's 1000. A dash short of
+            // the screen-space length leaves the rest of the line as gap, so
+            // it drew part way across and stopped. The reveal is a clip wipe
+            // now, which needs no length at all — see globals.css.
             vectorEffect="non-scaling-stroke"
           />
         </svg>
