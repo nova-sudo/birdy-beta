@@ -2,18 +2,19 @@
 
 import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { UserRoundCog, MessagesSquare, Loader2 } from "lucide-react"
+import { UserRoundCog, MessagesSquare, Loader2, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { startImpersonation, fetchMe } from "@/lib/admin-api"
+import { startImpersonation, fetchMe, deleteUserAccount } from "@/lib/admin-api"
 
 function initials(name = "") {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"
@@ -35,9 +36,16 @@ const PLAN_STYLES = {
   Free: "bg-gray-50 text-gray-600 border-gray-200",
 }
 
-export default function AgenciesTable({ agencies, loading, onViewChats }) {
+export default function AgenciesTable({ agencies, loading, onViewChats, onDeleted }) {
   const [target, setTarget] = useState(null) // agency pending impersonation confirm
   const [busy, setBusy] = useState(false)
+
+  // Deletion is the only way an account leaves Birdy now that Settings no
+  // longer offers it, so this table is the whole process: the row being
+  // deleted, the typed-email confirmation, and the in-flight flag.
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [confirmEmail, setConfirmEmail] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   const confirmImpersonate = async () => {
     if (!target) return
@@ -60,6 +68,25 @@ export default function AgenciesTable({ agencies, loading, onViewChats }) {
       toast.error("Couldn't start impersonation", { description: e.message })
       setBusy(false)
       setTarget(null)
+    }
+  }
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await deleteUserAccount(deleteTarget.email)
+      toast.success(`Deleted ${deleteTarget.email}`)
+      setDeleteTarget(null)
+      // The row is gone server-side; refetch rather than splice it out locally
+      // so the stat strip's counts move with the table.
+      onDeleted?.()
+    } catch (e) {
+      // The refusals (live subscription, admin account) are all actionable, so
+      // keep the dialog open with the message rather than dismissing it.
+      toast.error("Couldn't delete the account", { description: e.message })
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -136,6 +163,18 @@ export default function AgenciesTable({ agencies, loading, onViewChats }) {
                     >
                       <UserRoundCog className="h-3.5 w-3.5" /> Impersonate
                     </button>
+                    {/* Disabled on admin rows for the same reason Impersonate
+                        is — and the server refuses them outright, including
+                        the acting admin's own row, so this is purely a hint
+                        that the click would bounce. */}
+                    <button
+                      onClick={() => { setConfirmEmail(""); setDeleteTarget(a) }}
+                      disabled={a.role === "admin"}
+                      aria-label={`Delete ${a.email}`}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Delete
+                    </button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -162,6 +201,58 @@ export default function AgenciesTable({ agencies, loading, onViewChats }) {
               className="bg-purple-600 text-white hover:bg-purple-700"
             >
               {busy ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Starting…</> : "Impersonate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Nothing about this is recoverable and there is no soft-delete behind
+          it, so a confirm click on its own is not enough: the admin has to
+          type the account's own email, which forces them to read the row they
+          are about to destroy. Same bar the Settings flow used before account
+          deletion moved in here. */}
+      <AlertDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => { if (!o && !deleting) { setDeleteTarget(null); setConfirmEmail("") } }}
+      >
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {deleteTarget?.owner}'s account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <span className="font-medium">{deleteTarget?.email}</span> and
+              everything Birdy stored for them — {deleteTarget?.sub_accounts ?? 0} client group(s),
+              {" "}{(deleteTarget?.leads ?? 0).toLocaleString()} lead(s), all connected integrations,
+              call logs, alerts and chat history. There is no backup and no undo. Type the account's
+              email below to confirm.
+            </AlertDialogDescription>
+            {/* Cancellation is now part of the delete, not a chore the admin
+                does first in Whop. Saying so matters: an admin who assumes it
+                is still manual will go and cancel by hand, and one who assumes
+                nothing happens will leave a live subscription behind. */}
+            {deleteTarget?.plan && deleteTarget.plan !== "Free" && (
+              <AlertDialogDescription className="mt-2 font-medium text-pd-ink">
+                Their {deleteTarget.plan} subscription will be cancelled in Whop immediately as part
+                of this. If Whop refuses the cancellation, nothing is deleted.
+              </AlertDialogDescription>
+            )}
+          </AlertDialogHeader>
+          <Input
+            value={confirmEmail}
+            onChange={(e) => setConfirmEmail(e.target.value)}
+            placeholder={deleteTarget?.email}
+            aria-label="Type the account email to confirm deletion"
+            autoComplete="off"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDelete() }}
+              disabled={deleting || confirmEmail.trim().toLowerCase() !== (deleteTarget?.email || "")}
+              className="bg-red-600 text-white hover:bg-red-700"
+            >
+              {deleting
+                ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Deleting…</>
+                : "Delete this account"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

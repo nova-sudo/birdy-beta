@@ -18,7 +18,11 @@ export default function AdminAgenciesPage() {
     return () => clearTimeout(t);
   }, [searchInput]);
 
-  const { data: agenciesData, isLoading: agenciesLoading } = useAgencies(search);
+  const {
+    data: agenciesData,
+    isLoading: agenciesLoading,
+    mutate: refetchAgencies,
+  } = useAgencies(search);
   const { data: statsData, isLoading: statsLoading } = usePlatformStats();
 
   // Conversation review dialogs
@@ -53,6 +57,7 @@ export default function AdminAgenciesPage() {
         agencies={agenciesData?.agencies}
         loading={agenciesLoading}
         onViewChats={setChatsAgency}
+        onDeleted={refetchAgencies}
       />
 
       <UserConversationsDialog

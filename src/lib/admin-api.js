@@ -115,6 +115,24 @@ export async function deletePromoCode(id) {
   return res.json()
 }
 
+// Permanently deletes an account and every collection Birdy keyed to it. This
+// is the only deletion path in the product — users can no longer delete
+// themselves from Settings — so the errors surfaced here are the ones support
+// actually hits: 409 while a Whop subscription is still live (it has to be
+// cancelled in Whop first), 400 for your own or a colleague's admin account.
+export async function deleteUserAccount(email) {
+  const res = await apiRequest(`/api/admin/users/${encodeURIComponent(email)}`, {
+    method: "DELETE",
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(
+      typeof data.detail === "string" ? data.detail : "Failed to delete account",
+    )
+  }
+  return res.json()
+}
+
 export async function grantCredits({ email, amount, note }) {
   const res = await apiRequest("/api/admin/credits/grant", {
     method: "POST",
