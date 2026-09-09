@@ -44,3 +44,12 @@ export function isAwaitingFirstData(group) {
 
   return false
 }
+
+/**
+ * What a syncing row says while it waits. One sentence for every client rather
+ * than one per set of connected integrations: naming the sources tells the
+ * reader work is happening somewhere specific and roughly how long it might
+ * take, where an empty row told them only that nothing had arrived.
+ */
+export const SYNCING_MESSAGE =
+  "Connecting to Meta, GoHighLevel and your Salesforce CRM. This can take some time…"

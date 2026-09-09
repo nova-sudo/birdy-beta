@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Spinner } from "@/components/ui/spinner"
+import { SYNCING_MESSAGE } from "@/lib/client-loading"
 
 import {
   loadCustomMetrics,
@@ -580,6 +582,7 @@ const StyledTable = ({
       <style jsx>{`
         .fixed-column-even,
         .fixed-column-odd,
+        .fixed-column-syncing,
         .fixed-header {
           text-align: left;
           min-width: 200px;
@@ -592,6 +595,15 @@ const StyledTable = ({
         }
         .fixed-column-odd {
           background: var(--pd-row-zebra);
+        }
+        /* A syncing row sits in the hover tint whether or not it is hovered —
+           it is the row the reader is waiting on, and the tint lifts it off the
+           zebra without introducing a colour the table doesn't already use. It
+           ignores the zebra so that a run of imported clients reads as one
+           block rather than a striped one. */
+        .fixed-column-syncing,
+        .cell-syncing {
+          background: color-mix(in srgb, var(--pd-divider) 60%, var(--pd-surface));
         }
         .fixed-header {
           background: var(--pd-table-head);
@@ -863,7 +875,20 @@ const StyledTable = ({
                 // Alternating white and a hair off it. The stripe is there to
                 // help the eye track one row across a wide table, not to band
                 // the table — anything heavier competes with the figures.
-                const rowBg = globalIdx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface";
+                // A syncing row steps out of the zebra and takes the hover tint
+                // permanently, so a run of freshly imported clients reads as
+                // one block of work in progress rather than striped rows that
+                // happen to be empty. 60% divider over the container's surface
+                // is the same colour the sticky cell mixes for :hover — the two
+                // have to agree or the business name stays a different shade
+                // from the rest of its row.
+                const rowBg = row._isSyncing
+                  ? "bg-pd-divider/60"
+                  : globalIdx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface";
+                // The sticky cells need that same colour flattened: they scroll
+                // over their neighbours, and a 60%-alpha tint would let the
+                // columns sliding underneath show through.
+                const stickyRowBg = row._isSyncing ? "cell-syncing" : rowBg;
                 const isToggling = showToggleCol && togglingRows.has(row.id);
                 const isActive = String(row.status).toLowerCase() === "active";
 
@@ -885,7 +910,7 @@ const StyledTable = ({
                     {/* Checkbox cell */}
                     {enableSelection && (
                       <td
-                        className={`w-10 px-2 pr-0 min-w-0 ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
+                        className={`w-10 px-2 pr-0 min-w-0 ${stickyRowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                         style={{ position: 'sticky', left: 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -906,7 +931,7 @@ const StyledTable = ({
                     {/* ── Toggle switch cell — ONLY when NOT isClientMode ── */}
                     {showToggleCol && (
                       <td
-                        className={`w-[70px] min-w-[70px] px-1 ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
+                        className={`w-[70px] min-w-[70px] px-1 ${stickyRowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                         style={{ position: 'sticky', left: enableSelection ? 40 : 0, zIndex: 30 }}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -935,14 +960,53 @@ const StyledTable = ({
                       </td>
                     )}
 
-                    {visibleColumns.map((col, colIdx) => (
+                    {visibleColumns.map((col, colIdx) => {
+                      // ── A syncing row keeps its name, badges the second
+                      // column and gives the rest over to one sentence. ───────
+                      //
+                      // Per-cell shimmer sat here before, and a table of it
+                      // read as a page that had failed to paint: fourteen
+                      // columns of grey bars say "loading" without saying what
+                      // is loading, or that it is normal, or that it will take
+                      // minutes. The sentence says all three in the space the
+                      // placeholders were wasting.
+                      //
+                      // The badge takes the second column on purpose rather
+                      // than by name: that is where the design puts health, and
+                      // a health verdict on a client we have no data on yet is
+                      // not a claim we can make. The sentence starts in the
+                      // column after it, so both stay on the grid the headers
+                      // set rather than floating between them.
+                      if (row._isSyncing && colIdx > 2) return null;
+                      if (row._isSyncing && (colIdx === 1 || colIdx === 2)) {
+                        const isBadgeCell = colIdx === 1;
+                        return (
+                          <td
+                            key={`${row.id || idx}-syncing-${colIdx}`}
+                            colSpan={isBadgeCell ? 1 : visibleColumns.length - 2}
+                            className="h-11 text-[13.5px] text-pd-faint"
+                          >
+                            <div className="flex min-w-0 items-center px-[22px]">
+                              {isBadgeCell ? (
+                                <span className="inline-flex shrink-0 items-center rounded-[6px] bg-pd-primary-tint px-[9px] py-[3px] text-[11px] font-semibold text-pd-primary">
+                                  Syncing
+                                </span>
+                              ) : (
+                                <span className="min-w-0 truncate">{SYNCING_MESSAGE}</span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      }
+
+                      return (
                       <Fragment key={`${row.id || idx}-${col.id}`}>
                         <td
                           className={`truncate ${
                             colIdx === 0
                               ? // The name carries the row: heavier, in ink,
                                 // against numerics that sit back in body grey.
-                                `${globalIdx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11 text-[14px] font-semibold text-pd-ink`
+                                `${row._isSyncing ? "fixed-column-syncing" : globalIdx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11 text-[14px] font-semibold text-pd-ink`
                               : "text-[13.5px] text-pd-body"
                           } ${isSelected && colIdx === 0 ? "!bg-pd-primary-tint" : ""}`}
                         >
@@ -966,20 +1030,21 @@ const StyledTable = ({
                               />
                             )}
                             {/* A client whose first sync has not landed takes a
-                                pulsing dot in place of the status one. It reads
-                                as "working" at a glance, in the same 8px the
-                                status dot spends, and it is the only thing on
-                                the row that distinguishes "no data yet" from
-                                "no data". */}
+                                turning spinner in place of the status dot. A
+                                pulsing dot sat here first and read as frozen —
+                                it holds still for half of every cycle, and a
+                                screenful of them breathing in unison looked
+                                like a stalled page rather than work in
+                                progress. A wheel only ever turns. */}
                             {colIdx === 0 && isClientMode && row._isSyncing && (
-                              <span
-                                title="Syncing — first data still loading"
+                              <Spinner
+                                // Heavier than the icon's default hairline: at
+                                // 14px a 2px stroke is the difference between a
+                                // wheel you can see turning and a smudge.
+                                strokeWidth={3}
+                                className="size-3.5 shrink-0 text-pd-primary"
                                 aria-label="Syncing, first data still loading"
-                                className="relative flex size-2 shrink-0"
-                              >
-                                <span className="absolute inline-flex size-full animate-ping rounded-full bg-pd-primary opacity-70" />
-                                <span className="relative inline-flex size-2 rounded-full bg-pd-primary" />
-                              </span>
+                              />
                             )}
                             <TooltipProvider>
                               <Tooltip>
@@ -996,20 +1061,6 @@ const StyledTable = ({
                                       >
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                       </button>
-                                    ) : row._isSyncing && colIdx !== 0 ? (
-                                      // Every figure on a syncing row is a
-                                      // placeholder, so it is drawn as one. A
-                                      // shimmer says "not in yet"; the 0 that
-                                      // used to sit here said "measured, and
-                                      // the answer is none", which was a claim
-                                      // we had no basis for. Widths vary by
-                                      // column index rather than randomly, so
-                                      // they stay put across re-renders instead
-                                      // of twitching on every poll.
-                                      <Skeleton
-                                        className="h-[10px] rounded-full"
-                                        style={{ width: `${38 + ((colIdx * 17) % 34)}%` }}
-                                      />
                                     ) : (
                                       <span className="truncate min-w-0 block">
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
@@ -1028,7 +1079,8 @@ const StyledTable = ({
                         </td>
 
                       </Fragment>
-                    ))}
+                      );
+                    })}
                   </tr>
                 );
               })
