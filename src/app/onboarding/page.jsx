@@ -194,6 +194,10 @@ export default function OnboardingPage() {
   const [review, setReview] = useState(null)
   const [reviewSettled, setReviewSettled] = useState(false)
   const [importing, setImporting] = useState(false)
+  // How many sub-accounts the running import is for. Held separately from
+  // pendingImportRef because that ref is deliberately emptied the moment the
+  // import starts — see handleBillingSubscribed.
+  const [importingCount, setImportingCount] = useState(0)
   const [completing, setCompleting] = useState(false)
 
   const pendingTargetsRef = useRef(null)
@@ -740,6 +744,13 @@ export default function OnboardingPage() {
   // the import that was waiting on it.
   const handleBillingSubscribed = useCallback(() => {
     const accounts = pendingImportRef.current || []
+    // Record how many before the ref is emptied. Clearing it is what stops a
+    // second import firing, but it is also what the billing step was counting,
+    // and runImport's own re-render arrived after the clear — so the line that
+    // is supposed to read "Bringing in your 25 sub-accounts…" said 0, for the
+    // whole import, on the one screen where that number is the only evidence
+    // anything is happening at all.
+    setImportingCount(accounts.length)
     pendingImportRef.current = null
     persistState({ data: { pending_import: [] } })
     runImport(accounts)
@@ -1781,7 +1792,7 @@ export default function OnboardingPage() {
 
           {currentKey === "billing" && (
             <BillingStep
-              accountCount={(pendingImportRef.current || []).length}
+              accountCount={importing ? importingCount : (pendingImportRef.current || []).length}
               onSubscribed={handleBillingSubscribed}
               importing={importing}
             />

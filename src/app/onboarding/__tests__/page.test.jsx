@@ -22,7 +22,19 @@ vi.mock("@/lib/api", () => ({
 // An animated SVG mascot, and a Whop checkout embed that wants a live iframe —
 // neither has anything to do with the step machinery under test.
 vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
-vi.mock("../BillingStep", () => ({ default: () => <div>billing step</div> }))
+// The real step wants a live Whop checkout iframe. The stand-in surfaces the
+// props the wizard feeds it, so the count it is told to display can be
+// asserted, and offers a way to report a subscription back.
+vi.mock("../BillingStep", () => ({
+  default: ({ accountCount, onSubscribed, importing }) => (
+    <div>
+      billing step
+      <span data-testid="account-count">{accountCount}</span>
+      <span data-testid="importing">{String(importing)}</span>
+      <button onClick={onSubscribed}>subscribe</button>
+    </div>
+  ),
+}))
 // next/font runs at build time and throws when called outside the Next
 // compiler; the wizard only wants the class name off it.
 vi.mock("@/lib/pd-fonts", () => ({
@@ -338,5 +350,40 @@ describe("onboarding wizard", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /connect ghl/i })).toBeTruthy()
     )
+  })
+
+  // ── Billing → import hand-over ─────────────────────────────────────────
+
+  // Index of `billing` in visibleSteps for a non-HotProspector user who has
+  // not opted out of Slack: STEPS minus hp_key.
+  const BILLING_STEP = 18
+
+  const PENDING_IMPORT = [
+    { location_id: "loc_a", name: "Aura" },
+    { location_id: "loc_b", name: "Blade & Blossom" },
+    { location_id: "loc_c", name: "Clinic Six" },
+  ]
+
+  it("keeps counting the sub-accounts once the import has started", async () => {
+    // The selection is held in a ref that is emptied the moment the import
+    // fires, to stop a second one going out. The count on screen was reading
+    // that same ref, so the render the import itself triggered found nothing
+    // in it — and the progress line spent the entire import claiming to be
+    // bringing in 0 sub-accounts.
+    const user = userEvent.setup()
+    bootAt(BILLING_STEP, {
+      data: { ...PICKED_CLIENT, pending_import: PENDING_IMPORT },
+      // Hold the import open, so the importing state is still on screen to
+      // look at rather than having already moved on to the completion step.
+      overrides: { "/api/onboarding/import-subaccounts": never },
+    })
+
+    await screen.findByText("billing step")
+    expect(screen.getByTestId("account-count").textContent).toBe("3")
+
+    await user.click(screen.getByRole("button", { name: "subscribe" }))
+
+    await waitFor(() => expect(screen.getByTestId("importing").textContent).toBe("true"))
+    expect(screen.getByTestId("account-count").textContent).toBe("3")
   })
 })
