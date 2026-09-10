@@ -87,16 +87,48 @@ export function bucketSeries(rows, getDate, granularity, weight = () => 1) {
   const bucket = BUCKET[granularity] ?? BUCKET.Daily;
   const totals = new Map();
 
+  // Distinct date strings, not rows. The portfolio hands this every client's
+  // history at once — 67 groups times ~250 days is ~16,750 rows covering
+  // ~250 distinct dates — and it used to parse a Date and run date-fns
+  // `format` for every one of them. `format` is not cheap: it re-reads the
+  // pattern and does a locale lookup per call, which measured 44ms per series
+  // and made this ~99% of the dashboard's aggregation cost. At Daily
+  // granularity it was also pure ceremony, since the key it produces is the
+  // yyyy-mm-dd string that went in.
+  //
+  // Caching by the raw value collapses that to one parse and one format per
+  // distinct date. Nothing about the result changes: same keys, same dates,
+  // same first-row-wins choice of which date represents a bucket.
+  const resolved = new Map();
+
+  const resolve = (raw) => {
+    const date = raw instanceof Date ? raw : parseDayLocal(raw);
+    if (Number.isNaN(date.getTime())) return null;
+    return { key: bucket.key(date), date };
+  };
+
   for (const row of rows ?? []) {
     const raw = getDate(row);
     if (!raw) continue;
-    const date = raw instanceof Date ? raw : parseDayLocal(raw);
-    if (Number.isNaN(date.getTime())) continue;
 
-    const key = bucket.key(date);
-    const existing = totals.get(key);
+    // Only strings are cacheable — a Date is a fresh object each time and
+    // would never hit. They are also the rare case here; the series arrive
+    // from Mongo as yyyy-mm-dd.
+    let entry;
+    if (typeof raw === "string") {
+      entry = resolved.get(raw);
+      if (entry === undefined) {
+        entry = resolve(raw);
+        resolved.set(raw, entry);
+      }
+    } else {
+      entry = resolve(raw);
+    }
+    if (!entry) continue;
+
+    const existing = totals.get(entry.key);
     if (existing) existing.value += weight(row);
-    else totals.set(key, { key, date, value: weight(row) });
+    else totals.set(entry.key, { key: entry.key, date: entry.date, value: weight(row) });
   }
 
   const ordered = [...totals.values()].sort((a, b) => a.date - b.date);
