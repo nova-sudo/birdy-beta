@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, Suspense } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -62,6 +62,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
+  Loader2,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import Image from "next/image"
@@ -655,7 +656,12 @@ const EXTENDED_EMPTY_FORM = {
   tracking_mode: "total",
 }
 
-export default function AlertsPage() {
+// useSearchParams opts a route out of static rendering unless what reads it
+// sits behind a Suspense boundary — Next needs something to render while the
+// params resolve. This page went years without one because nothing here ever
+// rendered on the server: ProtectedLayout returned null until it had hydrated,
+// so the requirement never came up. Same shape as /settings and /login.
+function AlertsPageContent() {
   const [alerts, setAlerts] = useState({ active: [], triggered: [], paused: [], counts: {} })
   const [clientGroups, setClientGroups] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -1484,5 +1490,19 @@ export default function AlertsPage() {
         </DialogContent>
       </Dialog>
     </main>
+  )
+}
+
+export default function AlertsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <AlertsPageContent />
+    </Suspense>
   )
 }

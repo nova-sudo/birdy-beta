@@ -1,4 +1,5 @@
 import { setBusy, flash } from "@/components/birdy/birdy-store"
+import { clearSession } from "@/lib/session"
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "https://birdy-backend.vercel.app"
@@ -81,7 +82,7 @@ export async function apiRequest(endpoint, options = {}) {
     localStorage.removeItem("refresh_token")
     localStorage.removeItem("user")
     localStorage.removeItem("user_authenticated")
-    document.cookie = "client_auth_token=; path=/; max-age=0"
+    clearSession()
     window.location.href = "/login"
     throw new Error("Unauthorized")
   }

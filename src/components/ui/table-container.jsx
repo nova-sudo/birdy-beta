@@ -52,7 +52,13 @@ export const TableContainer = ({ children, title, description }) => (
   </Card>
 )
 
-const userCurrency = localStorage.getItem("user_default_currency");
+// Read on use, not at import. At module scope this ran the moment the file was
+// loaded, which on the server is before there is a localStorage at all — the
+// whole page failed to prerender with "localStorage is not defined". It was
+// also stale on the client: the symbol was fixed at import, so changing your
+// currency in settings left every table showing the old one until a reload.
+const getUserCurrency = () =>
+  typeof window === "undefined" ? null : localStorage.getItem("user_default_currency");
 
 // ── Compute the total left offset for the sticky name column ────────────────
 const getNameStickyLeft = (enableSelection, showToggleCol) =>
@@ -487,7 +493,7 @@ const StyledTable = ({
   const formatCurrency = (v) => {
     const num = typeof v === "number" ? v : parseFloat(v) || 0;
     if (!isFinite(num)) return "-";
-    return `${getSymbolFromCurrency(userCurrency)}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    return `${getSymbolFromCurrency(getUserCurrency())}${num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
   const formatPercentage = (v) => {
@@ -533,7 +539,7 @@ const StyledTable = ({
     // rules below — "roas" matches none of them and would print a bare 15.
     const defaultFormat = defaultMetricFormat(columnId);
     if (defaultFormat) {
-      return formatMetric(value, defaultFormat, getSymbolFromCurrency(userCurrency));
+      return formatMetric(value, defaultFormat, getSymbolFromCurrency(getUserCurrency()));
     }
 
     const customMatch = customMetrics?.find((m) => m.id === columnId);

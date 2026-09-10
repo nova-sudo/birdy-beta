@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useSidebar } from "@/components/ui/sidebar"
 import { apiRequest } from "@/lib/api"
+import { clearSession } from "@/lib/session"
 import { APP_VERSION } from "@/lib/changelog"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
@@ -77,6 +78,10 @@ export function AppSidebar() {
     } finally {
       localStorage.clear()
       sessionStorage.clear()
+      // localStorage.clear() doesn't touch cookies, and a session hint left
+      // behind would have middleware routing the next visitor as though they
+      // were still signed in.
+      clearSession()
       setIsLoggingOut(false)
       window.location.href = "/"
     }
