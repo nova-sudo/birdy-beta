@@ -9,9 +9,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { publicRequest } from "@/lib/api"
-import Silk from "@/components/Silk"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
+import dynamic from "next/dynamic"
+// Silk is the WebGL wallpaper in the right-hand panel — decoration, and 877kB
+// of three.js to draw it. Loaded eagerly it was the single heaviest thing on
+// the page people see before they can do anything at all, and it blocked the
+// form behind it.
+//
+// ssr:false because it needs a GL context, and no placeholder: the panel keeps
+// its brand background underneath, so the wallpaper fades in a moment later
+// and nothing shifts.
+const Silk = dynamic(() => import("@/components/Silk"), { ssr: false })
+
 
 export default function RegisterPage() {
   // Email + password only. Name and currency used to live on this form, but

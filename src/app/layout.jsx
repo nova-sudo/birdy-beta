@@ -9,12 +9,25 @@ import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Search, Sparkles, Tag } from 'lucide-react';
 import { APP_VERSION } from "@/lib/changelog";
 import { ASK_BIRDY_EVENT } from "@/lib/ask-birdy";
-import BirdyChatModal from "@/components/chat/BirdyChatModal";
+// The assistant drags in the two heaviest libraries in the app — recharts for
+// its inline charts and react-markdown for its replies. Imported eagerly, they
+// landed in the shared layout chunk, so every route paid 615kB for them: the
+// dashboard, the settings page, and the login screen, which has no assistant
+// on it at all.
+//
+// Dynamic alone wouldn't have been enough. The modal is always in the tree,
+// closed, so an ssr:false import would still fetch the chunk on every page
+// once hydrated — just later. It is mounted only while open below, so the
+// chunk is fetched the first time someone actually asks Birdy something.
+const BirdyChatModal = dynamic(() => import("@/components/chat/BirdyChatModal"), {
+  ssr: false,
+});
 import BirdyDefs from "@/components/birdy/BirdyDefs";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
@@ -211,16 +224,22 @@ export default function RootLayout({ children }) {
                     </div>
                   </SidebarInset>
 
-                  {/* Birdy Chat Modal */}
-                  <BirdyChatModal
-                    open={chatOpen}
-                    onOpenChange={(v) => {
-                      setChatOpen(v);
-                      if (!v) setChatInitialMsg("");
-                    }}
-                    initialMessage={chatInitialMsg}
-                    pathname={pathname}
-                  />
+                  {/* Birdy Chat Modal — mounted only while open, so its chunk
+                      is fetched on first use rather than on every page load.
+                      Nothing is lost on unmount: the transcript lives in
+                      chat-store, which is why closing and reopening already
+                      showed a reply that finished while it was shut. */}
+                  {chatOpen && (
+                    <BirdyChatModal
+                      open={chatOpen}
+                      onOpenChange={(v) => {
+                        setChatOpen(v);
+                        if (!v) setChatInitialMsg("");
+                      }}
+                      initialMessage={chatInitialMsg}
+                      pathname={pathname}
+                    />
+                  )}
                 </div>
               </div>
               </PageHeaderProvider>
