@@ -71,4 +71,19 @@ describe("coverageNote", () => {
     expect(note).toContain("1 Aug");
     expect(note).not.toContain("full period");
   });
+
+  it("carries the year when the range crosses one", () => {
+    // BBL Body Confidence: 400 days of rows, 6 Aug 2025 to 10 Sep 2026. Without
+    // the year this read "chart covers 6 Aug–10 Sep" — a five-week window under
+    // an all-time figure, which made the note look like the bug it explains.
+    const note = coverageNote(days("2025-08-06", "2026-09-10"), 3998.99, 7814.9);
+    expect(note).toContain("6 Aug 2025");
+    expect(note).toContain("10 Sep 2026");
+  });
+
+  it("leaves the year off a range inside one year", () => {
+    const note = coverageNote(days("2026-08-01", "2026-08-22"), 900, 1000);
+    expect(note).toContain("1 Aug–22 Aug");
+    expect(note).not.toContain("2026");
+  });
 });

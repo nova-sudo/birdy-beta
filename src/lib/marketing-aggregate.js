@@ -120,9 +120,20 @@ export function scopeGroups(groups, groupId) {
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-function shortDay(iso) {
+/**
+ * "6 Aug", or "6 Aug 2025" when the range it belongs to crosses a year.
+ *
+ * The year is not decoration. A 400-day cache reads "chart covers 6 Aug–10
+ * Sep", which looks like a five-week window sitting under an all-time figure —
+ * the note meant to explain the gap instead made the card look broken. Both
+ * ends carry the year whenever the two differ, so the reader can see at a
+ * glance that the line runs thirteen months rather than five weeks.
+ */
+function shortDay(iso, withYear = false) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso ?? ""));
-  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}` : String(iso ?? "");
+  if (!m) return String(iso ?? "");
+  const day = `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}`;
+  return withYear ? `${day} ${m[1]}` : day;
 }
 
 /**
@@ -159,9 +170,12 @@ export function coverageNote(days, plotted, total) {
     if (d.date > last) last = d.date;
   }
 
+  const spansYears = String(first).slice(0, 4) !== String(last).slice(0, 4);
+  const range = `${shortDay(first, spansYears)}–${shortDay(last, spansYears)}`;
+
   return plotted < total
-    ? `chart covers ${shortDay(first)}–${shortDay(last)}; the figure above is the full period`
-    : `chart covers ${shortDay(first)}–${shortDay(last)}`;
+    ? `chart covers ${range}; the figure above is the full period`
+    : `chart covers ${range}`;
 }
 
 /**

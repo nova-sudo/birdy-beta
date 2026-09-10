@@ -172,6 +172,27 @@ export function useMarketingHubData({
     };
   }, [rows, clientGroups, selectedClientGroup]);
 
+  /**
+   * Spend the account reports that no row in the table can account for.
+   *
+   * `/{account}/campaigns` omits deleted and archived campaigns, so the table
+   * legitimately sums to less than the headline above it — on BBL Body
+   * Confidence at All Time, two rows totalling £6,397.55 under a £7,814.90
+   * tile. Both figures are right; nothing on screen said why they differ, so
+   * the table read as though it had lost £1,417.
+   *
+   * Null when the rows do account for the total, which is the normal case —
+   * and null rather than zero, so the note simply isn't rendered.
+   */
+  const unlistedSpend = useMemo(() => {
+    if (!(current.spend > 0)) return null;
+    const gap = current.spend - aggregateCampaignRows(rows).spend;
+    // Same 2% tolerance the coverage note uses: rounding and same-day
+    // restatement are not a missing campaign.
+    if (gap <= 0 || gap / current.spend <= 0.02) return null;
+    return { amount: gap, formatted: formatMoney(gap, 2) };
+  }, [current, rows, formatMoney]);
+
   const previous = useMemo(() => {
     if (!previousGroups) return null;
     // Must come from the same level as `current`, or the delta pills compare
@@ -358,6 +379,7 @@ export function useMarketingHubData({
     insight,
     chartMetrics,
     seriesLoading,
+    unlistedSpend,
     hasComparison: previous != null,
   };
 }
