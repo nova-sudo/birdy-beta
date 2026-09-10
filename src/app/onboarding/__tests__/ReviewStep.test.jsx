@@ -121,3 +121,43 @@ describe("sub-accounts review search", () => {
     expect(onImport.mock.calls[0][0].map((a) => a.location_id)).toEqual(["loc_2"])
   })
 })
+
+describe("sub-accounts review ordering", () => {
+  // The editable Birdy-name fields, in the order the table renders them. The
+  // search box is the only other text input and it is empty until typed into,
+  // so a "has any value at all" match picks out the rows and nothing else.
+  const rowNames = () => screen.getAllByDisplayValue(/./).map((el) => el.value)
+
+  // The checkbox is a click-handling span, not an <input>, so it is reached
+  // through the row rather than by role.
+  const tickBoxFor = (name) =>
+    screen.getByDisplayValue(name).parentElement.querySelector("span")
+
+  it("puts the pre-selected sub-accounts on top and sorts the rest alphabetically", () => {
+    renderStep()
+    // Plush is the only one pre-selected (a lead in the last 7 days). Aura and
+    // Lucy follow it in alphabetical order — not the order the fixture lists
+    // them in, which is what the table used to show.
+    expect(rowNames()).toEqual(["Plush Aesthetics", "Aura", "Lucy Jones PMU"])
+  })
+
+  it("drops an unticked sub-account back into the alphabetical pile", async () => {
+    const user = userEvent.setup()
+    renderStep()
+
+    await user.click(tickBoxFor("Plush Aesthetics"))
+
+    expect(rowNames()).toEqual(["Aura", "Lucy Jones PMU", "Plush Aesthetics"])
+  })
+
+  it("floats a newly ticked sub-account up into the selection", async () => {
+    const user = userEvent.setup()
+    renderStep()
+
+    await user.click(tickBoxFor("Lucy Jones PMU"))
+
+    // Both ticked rows lead, alphabetically between themselves; Aura is left
+    // behind in the pile.
+    expect(rowNames()).toEqual(["Lucy Jones PMU", "Plush Aesthetics", "Aura"])
+  })
+})
