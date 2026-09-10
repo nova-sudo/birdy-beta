@@ -19,6 +19,13 @@ export const queryKeys = {
   clientGroups: (preset, includeDaily = true) =>
     `/api/client-groups?date_preset=${preset}` + (includeDaily ? "" : "&include_daily=false"),
 
+  // No preset in this key, deliberately. The per-day series are stored and
+  // served whole — each row is a day, and which days you want is decided in
+  // the browser — so the answer is identical for every window. One key means
+  // moving the date picker doesn't refetch a few hundred kilobytes of history
+  // that cannot have changed.
+  clientGroupsDaily: () => "/api/client-groups/daily",
+
   alerts: () => "/api/alerts",
 
   dashboardSummary: () => "/api/dashboard/summary",

@@ -3,11 +3,11 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }))
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }))
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
-import { useClientGroups } from "@/lib/useClientGroups"
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import {
   PageHeaderControls,
   PageHeaderProvider,
@@ -43,7 +43,7 @@ beforeEach(() => {
     ok: true,
     json: async () => ({ data: [], meta: { total: 0 } }),
   })
-  vi.mocked(useClientGroups).mockReturnValue({
+  vi.mocked(useClientGroupsWithSeries).mockReturnValue({
     clientGroups: [
       { id: "g1", name: "Aura", ghl_location_id: "loc1" },
       { id: "g2", name: "Tylaesthetics", ghl_location_id: "loc2" },

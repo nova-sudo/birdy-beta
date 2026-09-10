@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { apiRequest } from "@/lib/api";
-import { useClientGroups } from "@/lib/useClientGroups";
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 import { useCurrency } from "@/hooks/useCurrency";
 import { presetToDateRange } from "@/lib/date-utils";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
@@ -74,7 +74,7 @@ export function usePortfolioData({
     error: groupsError,
     datePreset,
     setDatePreset,
-  } = useClientGroups(preset);
+  } = useClientGroupsWithSeries(preset);
 
   useEffect(() => {
     if (datePreset !== preset) setDatePreset(preset);

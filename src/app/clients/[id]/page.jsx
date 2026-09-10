@@ -10,7 +10,7 @@ import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
 import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem"
-import { useClientGroups } from "@/lib/useClientGroups"
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
@@ -159,7 +159,7 @@ export default function ClientDetailsPage() {
     datePreset,
     setDatePreset,
     invalidate,
-  } = useClientGroups(DEFAULT_DATE_PRESET)
+  } = useClientGroupsWithSeries(DEFAULT_DATE_PRESET)
 
   // Find this specific group from the cached list
   const matchingGroup = useMemo(

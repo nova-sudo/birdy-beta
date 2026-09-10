@@ -7,15 +7,15 @@ import { STORAGE_KEYS } from "@/lib/constants"
 vi.mock("@/lib/api", () => ({
   apiRequest: vi.fn(),
 }))
-vi.mock("@/lib/useClientGroups", () => ({
-  useClientGroups: vi.fn(),
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({
+  useClientGroupsWithSeries: vi.fn(),
 }))
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the shell uses.
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
-import { useClientGroups } from "@/lib/useClientGroups"
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 
 // 8 leads, one call each, at increasing timestamps (Lead08 is the most recent).
 const mockLeads = Array.from({ length: 8 }, (_, i) => {
@@ -61,7 +61,7 @@ function mockApiRequest(url) {
 beforeEach(() => {
   localStorage.clear()
   vi.mocked(apiRequest).mockImplementation(mockApiRequest)
-  vi.mocked(useClientGroups).mockReturnValue({
+  vi.mocked(useClientGroupsWithSeries).mockReturnValue({
     clientGroups: [],
     loading: false,
     datePreset: "last_7d",
