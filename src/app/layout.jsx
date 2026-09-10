@@ -88,6 +88,11 @@ export default function RootLayout({ children }) {
   const pathname = usePathname();
   // /admin runs as a separate app-shell (its own dark rail + topbar via
   // src/app/admin/layout.jsx), so it opts out of the main sidebar/header here.
+  //
+  // An OAuth callback on its way back to the wizard is deliberately NOT
+  // handled here. This shell is prerendered into the static /settings
+  // document, so it has already painted by the time any of this runs — the
+  // hand-off is caught in proxy.js instead, before the page is served at all.
   const hideSidebar =
     pathname === "/login" ||
     pathname === "/register" ||

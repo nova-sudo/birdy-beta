@@ -47,8 +47,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Suspense } from "react"
-import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { apiRequest } from "@/lib/api"
+import { isPassingThrough, peekOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 
 function SettingsPageContent() {
   const router = useRouter()
@@ -107,6 +107,20 @@ function SettingsPageContent() {
     []
   )
   usePageHeader(header)
+
+  // This load is an integration callback that already knows it is leaving —
+  // the wizard parked a return path before the OAuth hop. Everything below
+  // still runs (the callback has tokens to bank before it goes), but none of
+  // it gets rendered: the early return further down replaces the whole page
+  // with a neutral hand-off screen.
+  //
+  // Read during the first render rather than in an effect, because an effect
+  // fires after React has painted — which is precisely the flash of a settings
+  // page the user never asked for that this is here to remove. It is safe to
+  // read storage this early for the same reason the caches below are: nothing
+  // on this route is server-rendered, so there is no hydration pass to
+  // disagree with. RootLayout drops the sidebar and top bar on the same flag.
+  const [passingThrough, setPassingThrough] = useState(() => isPassingThrough())
 
   // Separate state variables with clear naming — no ambiguity about which level of nesting.
   //
@@ -285,23 +299,32 @@ function SettingsPageContent() {
         // An OAuth hop started elsewhere (e.g. the onboarding wizard) stashes
         // its return path here; honour it for every callback shape, not just
         // the GHL/Meta tokens one below.
-        const storedRedirect = sessionStorage.getItem("post_integration_redirect")
+        //
+        // `replace`, not `push`, on every one of these: the URL being left
+        // behind carries the callback's tokens and status, so leaving it in
+        // history means a back button re-runs a spent OAuth callback — and,
+        // from the wizard, walks the user into the settings page they were
+        // just spared.
+        const storedRedirect = peekOAuthHandoff()
 
         if (errorMsg && status === "error") {
           const msg = `${errorMsg}${errorDescription ? `: ${errorDescription}` : ""}`
           setError(msg)
+          // The toast is the only account of the failure that survives the
+          // redirect — the wizard re-probes /api/status and would otherwise
+          // just show an un-explained "not connected".
           toast.error("Connection Failed", { description: msg })
           if (storedRedirect) {
-            sessionStorage.removeItem("post_integration_redirect")
-            router.push(storedRedirect)
+            takeOAuthHandoff()
+            router.replace(storedRedirect)
           }
           return
         }
 
         // Slack's callback returns status=success with no tokens payload.
         if (status === "success" && !tokenData && storedRedirect) {
-          sessionStorage.removeItem("post_integration_redirect")
-          router.push(storedRedirect)
+          takeOAuthHandoff()
+          router.replace(storedRedirect)
           return
         }
 
@@ -327,23 +350,51 @@ function SettingsPageContent() {
               setFacebookStatus(newStatus)
             }
 
-            toast.success("Connection Successful", {
-              description: `${integrationType === "gohighlevel" ? "GoHighLevel" : "Meta"} connected successfully.`,
-            })
+            const handoff = takeOAuthHandoff()
 
-            const storedRedirect = sessionStorage.getItem("post_integration_redirect")
-            if (storedRedirect) {
-              sessionStorage.removeItem("post_integration_redirect")
-              const nextPath = await checkAndRefreshExpiredTokens(storedRedirect)
-              if (nextPath !== null) router.push(nextPath)
+            // Only announce it to someone who is staying to read it. The
+            // wizard confirms the connection in its own words on the step
+            // itself, so a toast on the way out is a second, redundant one
+            // that lands over the top of it.
+            if (!handoff) {
+              toast.success("Connection Successful", {
+                description: `${integrationType === "gohighlevel" ? "GoHighLevel" : "Meta"} connected successfully.`,
+              })
+            } else {
+              // Straight back to whoever started the hop. Deliberately not via
+              // checkAndRefreshExpiredTokens: that re-inspects /api/status and
+              // can launch a second OAuth redirect off its own bat — which,
+              // mid-wizard, is a decision that belongs to the wizard, and
+              // which it will make itself when it probes the integrations on
+              // boot. Its round-trip was also most of the delay the user saw
+              // here, spent on a screen they had already left.
+              router.replace(handoff)
             }
             return
           } catch (e) {
             console.error("Error parsing OAuth callback tokens:", e)
+            // Nothing to hand back — the callback is unreadable, so drop the
+            // return path and stay here to say so. Staying means rendering the
+            // real page, so the hand-off screen has to come down with it or
+            // the error would have nowhere to show.
+            takeOAuthHandoff()
+            setPassingThrough(false)
             setError("Invalid token data received")
             toast.error("Connection Failed", { description: "Invalid token data received" })
             return
           }
+        }
+
+        // A callback shape none of the branches above claimed — a bare
+        // ?status=error with no error text, say — while a return path is still
+        // pending. Honour it anyway: recognising the shape was never what made
+        // the redirect correct, and falling through to the normal load would
+        // leave the user on the hand-off screen with nothing left to move them
+        // off it.
+        if (storedRedirect && (tokenData || status || errorMsg)) {
+          takeOAuthHandoff()
+          router.replace(storedRedirect)
+          return
         }
 
         // Normal load — backend is the source of truth
@@ -672,6 +723,25 @@ function SettingsPageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    )
+  }
+
+  // Passing through on the way back to the wizard. The settings page is not
+  // this user's destination and showing it — even for the half-second the
+  // redirect takes — reads as the app losing its place. A plain spinner on the
+  // wizard's own white ground carries straight into the wizard's boot spinner,
+  // so the whole hand-off looks like one continuous wait.
+  //
+  // This is the last render before the redirect lands, not a state anyone sits
+  // in: init() has already read the URL and called router.replace by the time
+  // its awaits settle. If the redirect somehow never fires, the effect is a
+  // spinner rather than a wrong page, and a reload (no callback params in the
+  // URL by then) comes back to the real settings page.
+  if (passingThrough) {
+    return (
+      <div className={`${pdFontClass} flex min-h-dvh items-center justify-center bg-white`}>
+        <Loader2 className="h-7 w-7 animate-spin text-pd-primary" aria-label="Finishing up" />
+      </div>
     )
   }
 
