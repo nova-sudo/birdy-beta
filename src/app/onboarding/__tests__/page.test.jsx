@@ -352,6 +352,105 @@ describe("onboarding wizard", () => {
     )
   })
 
+  // ── KPI targets ────────────────────────────────────────────────────────
+
+  // Index of `kpi_default` in visibleSteps for a non-HotProspector user who
+  // has not opted out of Slack: STEPS minus hp_key.
+  const KPI_DEFAULT_STEP = 12
+  const CLIENT_CURRENCY_STEP = 9
+
+  const WITH_GROUP = {
+    ...PICKED_CLIENT,
+    first_client: { ...PICKED_CLIENT.first_client, group_id: "g1" },
+  }
+
+  /** The body of the last PUT to a client group's targets endpoint. */
+  function lastTargetsBody() {
+    const calls = apiRequest.mock.calls.filter(
+      ([url, opts]) => url === "/api/client-groups/g1/targets" && opts?.method === "PUT"
+    )
+    return calls.length ? JSON.parse(calls[calls.length - 1][1].body) : null
+  }
+
+  it("saves the targets under the names a client group actually stores", async () => {
+    // The wizard was sending `cpa`, which is not a field on a client group, so
+    // the whole PUT was rejected — taking monthly_wins, the one name that was
+    // right, down with it. The client then reported no targets set at all.
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "45", wins: "20", conv_rate: "15" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      // Held as a fraction: what it is measured against is closes ÷ leads.
+      conversion_rate: 0.15,
+      save_as_default: false,
+    }))
+  })
+
+  it("carries the save-as-default answer through to the request", async () => {
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "45", wins: "20", conv_rate: "15" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /set as default/i }))
+
+    await waitFor(() => expect(lastTargetsBody()?.save_as_default).toBe(true))
+  })
+
+  it("leaves an unanswered target out rather than blanking it", async () => {
+    // The endpoint merges, so an omitted field keeps what is stored.
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "", wins: "20", conv_rate: "" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      monthly_wins: 20,
+      save_as_default: false,
+    }))
+  })
+
+  it("applies targets answered before the client group existed", async () => {
+    // Answered while client creation was still running, then the page went
+    // away — an OAuth hop, a refresh. The answers were persisted server-side
+    // but the instruction to apply them lived in memory only, so nothing ever
+    // put them on the group. Resuming on the currency step (which is what
+    // kicks creation off) has to re-park them.
+    const user = userEvent.setup()
+    bootAt(CLIENT_CURRENCY_STEP, {
+      data: {
+        // No group_id: creation had not finished before the reload.
+        ...PICKED_CLIENT,
+        kpi: { cpa: "45", wins: "20", conv_rate: "15", save_default: true },
+      },
+      overrides: {
+        "/api/client-groups": () => json({ client_group: { id: "g1" } }),
+      },
+    })
+
+    await screen.findByText(/what currency does/i)
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    // Creation resolves with the id, and the parked targets go out against it.
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: true,
+    }))
+  })
+
   // ── Billing → import hand-over ─────────────────────────────────────────
 
   // Index of `billing` in visibleSteps for a non-HotProspector user who has

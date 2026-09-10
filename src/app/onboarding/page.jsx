@@ -119,6 +119,46 @@ const DEFAULT_BRIEF_ITEMS = {
 
 const CONFETTI_COLORS = ["#6B4EE6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#A98BF5"]
 
+/**
+ * The three answers from the KPI step, as PUT /api/client-groups/{id}/targets
+ * actually stores them. Returns null when nothing was filled in, so the caller
+ * can skip the request rather than send an empty one.
+ *
+ * Two of the three names the wizard was sending do not exist on a client group,
+ * which is why targets set here never turned up on the client:
+ *
+ *   · the cost box went out as `cpa`. There is no `cpa` target — the stored
+ *     field is `cpl` (see client-goals.js, and the Targets tab in
+ *     components/clients/ClientTargetsForm.jsx, which is the same endpoint's
+ *     other writer). The unknown field took the whole PUT down with it, so
+ *     `monthly_wins` — the one name that was right, and the one the weekly
+ *     health pass measures against — was lost along with it.
+ *   · `conversion_rate` is held as a fraction, because what it is compared
+ *     against is closes ÷ leads. Typed under a "%" suffix, 15 means 0.15.
+ *
+ * Empty boxes are omitted rather than sent as null: the endpoint merges, so an
+ * omitted field keeps whatever is already stored instead of blanking it.
+ */
+function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
+  const num = (raw) => {
+    const trimmed = String(raw ?? "").trim()
+    if (trimmed === "") return null
+    const n = Number(trimmed)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const targets = {}
+  const cpl = num(cpa)
+  const monthlyWins = num(wins)
+  const rate = num(convRate)
+  if (cpl !== null) targets.cpl = cpl
+  if (monthlyWins !== null) targets.monthly_wins = monthlyWins
+  if (rate !== null) targets.conversion_rate = rate / 100
+
+  if (Object.keys(targets).length === 0) return null
+  return { ...targets, save_as_default: saveAsDefault }
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
 
@@ -305,6 +345,21 @@ export default function OnboardingPage() {
           setCpa(data.kpi.cpa || "")
           setWins(data.kpi.wins || "")
           setConvRate(data.kpi.conv_rate || "")
+          // The other way targets went missing. Answering the KPI step before
+          // the first client group exists parks them in pendingTargetsRef for
+          // createFirstClient to apply once it has an id — but that ref is
+          // memory only, and client creation is the slowest thing in the
+          // wizard, so an OAuth hop or a refresh in between dropped them with
+          // nothing left to notice. The answers themselves were persisted; it
+          // was only the instruction to apply them that wasn't.
+          if (!data.first_client?.group_id) {
+            pendingTargetsRef.current = buildTargetsPayload({
+              cpa: data.kpi.cpa,
+              wins: data.kpi.wins,
+              convRate: data.kpi.conv_rate,
+              saveAsDefault: Boolean(data.kpi.save_default),
+            })
+          }
         }
         if (data.slack) {
           if (data.slack.channel_id) {
@@ -488,10 +543,18 @@ export default function OnboardingPage() {
   const applyTargets = useCallback(
     async (groupId, targets) => {
       try {
-        await apiRequest(`/api/client-groups/${groupId}/targets`, {
+        const res = await apiRequest(`/api/client-groups/${groupId}/targets`, {
           method: "PUT",
           body: JSON.stringify(targets),
         })
+        // A rejected PUT used to be indistinguishable from a saved one here:
+        // nothing read the status, so a payload the server would not accept
+        // failed in complete silence and the user reached a client that said
+        // it had no targets, having just been told "Targets applied".
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}))
+          console.error("Failed to apply targets:", res.status, detail)
+        }
       } catch (e) {
         console.error("Failed to apply targets:", e)
       }
@@ -655,14 +718,11 @@ export default function OnboardingPage() {
 
   const applyKpiTargets = useCallback(
     (saveAsDefault) => {
-      const targets = {
-        cpa: cpa ? Number(cpa) : null,
-        monthly_wins: wins ? Number(wins) : null,
-        conversion_rate: convRate ? Number(convRate) : null,
-        save_as_default: saveAsDefault,
+      const targets = buildTargetsPayload({ cpa, wins, convRate, saveAsDefault })
+      if (targets) {
+        if (firstGroupId) applyTargets(firstGroupId, targets)
+        else pendingTargetsRef.current = targets
       }
-      if (firstGroupId) applyTargets(firstGroupId, targets)
-      else pendingTargetsRef.current = targets
       next({ kpi: { cpa, wins, conv_rate: convRate, save_default: saveAsDefault } })
     },
     [cpa, wins, convRate, firstGroupId, applyTargets, next]
