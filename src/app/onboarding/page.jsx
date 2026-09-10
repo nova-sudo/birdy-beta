@@ -11,8 +11,9 @@
 //
 // OAuth steps (GHL / Meta / Slack) leave the page; wizard progress is
 // persisted server-side before the hop (PUT /api/onboarding/state) and the
-// settings page bounces the callback back here via the existing
-// sessionStorage.post_integration_redirect convention.
+// settings page — which is where every provider's callback lands — bounces it
+// back here via the handoff in lib/oauth-handoff. That module is also what
+// keeps the settings page and the app shell from painting on the way through.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -30,6 +31,7 @@ import {
 } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
+import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 import { pdFontClass } from "@/lib/pd-fonts"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
@@ -46,6 +48,8 @@ import {
   SlackGlyph,
   SlackPreviewCard,
   SpinnerRing,
+  STEP_COL,
+  STEP_COL_WIDE,
   StepHeading,
   SuccessRow,
   UnderlineInput,
@@ -253,6 +257,12 @@ export default function OnboardingPage() {
   useEffect(() => {
     let cancelled = false
     const boot = async () => {
+      // Arriving here is what "the hop is over" means, so the return path is
+      // spent — whether it was proxy.js that acted on it or the settings page.
+      // Only the cookie half is self-clearing; left behind, the sessionStorage
+      // half would still be sitting there weeks later, and would hijack the
+      // next callback the user started from the settings page on purpose.
+      takeOAuthHandoff()
       try {
         const res = await apiRequest("/api/onboarding/status")
         if (!res.ok) throw new Error(`status ${res.status}`)
@@ -436,7 +446,7 @@ export default function OnboardingPage() {
     async (endpoint, setStatus) => {
       setStatus("connecting")
       try {
-        sessionStorage.setItem("post_integration_redirect", "/onboarding")
+        setOAuthHandoff("/onboarding")
         const res = await apiRequest(endpoint)
         const d = await res.json()
         if (!res.ok || !d.auth_url) throw new Error(d?.detail || "No auth URL")
@@ -1038,7 +1048,7 @@ export default function OnboardingPage() {
         <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
 
           {currentKey === "welcome" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mx-auto mb-[26px] flex h-20 w-20 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
                 <Birdy state={birdyState} size={65} />
               </div>
@@ -1051,7 +1061,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "welcome_name" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-3"><StepHeading>What should we call you?</StepHeading></div>
               <UnderlineInput
                 value={name}
@@ -1066,7 +1076,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "agency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>What&apos;s your agency called?</StepHeading></div>
               <div className="mb-[26px] text-[14px] text-pd-faint">
                 This is how it&apos;ll show up across Birdy, {name || "friend"}.
@@ -1083,7 +1093,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "connect_ghl" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#F1EEFC" color="#6B4EE6"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
               <div className="mb-[10px]">
                 <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
@@ -1105,7 +1115,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_picker" && (
-            <div className="w-full max-w-[620px] text-left">
+            <div className={`${STEP_COL_WIDE} text-left`}>
               <div className="mb-4 text-center">
                 <StepHeading small>Let&apos;s choose your first client to onboard!</StepHeading>
               </div>
@@ -1160,7 +1170,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "connect_meta" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#EAF1FD" color="#3B7DD6"><FacebookGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Next up, let&apos;s connect Meta.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
@@ -1181,7 +1191,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "meta_ad_picker" && (
-            <div className="w-full max-w-[620px] text-left">
+            <div className={`${STEP_COL_WIDE} text-left`}>
               <div className="mb-4 text-center">
                 <StepHeading small>Which Meta ad account is {clientDisplayName}?</StepHeading>
               </div>
@@ -1233,7 +1243,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "sales_tool" && (
-            <div className="w-full max-w-[620px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-2"><StepHeading>What do you use for sales?</StepHeading></div>
               <div className="mb-7 text-[14px] text-pd-faint">
                 This decides where Birdy pulls call and close data from.
@@ -1289,7 +1299,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "hp_key" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>Connect your Hot Prospector account.</StepHeading></div>
               <div className="mb-[22px] text-[14px] leading-normal text-pd-body">
                 Paste your API UID and key below — both are in your Hot Prospector settings.
@@ -1362,7 +1372,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_confirm" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>Want to change the client name?</StepHeading></div>
               <div className="mb-[22px] text-[13.5px] text-pd-faint">
                 Pulled from their GHL sub-account. Edit it if you&apos;d like something different.
@@ -1396,7 +1406,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_currency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2">
                 <StepHeading small>What currency does {clientDisplayName} report in?</StepHeading>
               </div>
@@ -1457,7 +1467,7 @@ export default function OnboardingPage() {
                   />
                 ))}
               </div>
-              <div className="w-full max-w-[440px]">
+              <div className={STEP_COL}>
                 <SuccessRow>{clientDisplayName} connected</SuccessRow>
                 <div className="mb-3"><StepHeading>Congratulations! You connected your first client.</StepHeading></div>
                 <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
@@ -1470,7 +1480,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "kpi_targets" && (
-            <div className="w-full max-w-[440px] text-left">
+            <div className={`${STEP_COL} text-left`}>
               <div className="mb-[10px] text-center">
                 <StepHeading small>Now, let&apos;s set some targets for {clientDisplayName}.</StepHeading>
               </div>
@@ -1527,7 +1537,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "kpi_default" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <SuccessRow>Targets applied</SuccessRow>
               <div className="mb-3"><StepHeading>Save these as your defaults?</StepHeading></div>
               <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
@@ -1544,7 +1554,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_connect" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#FDF6EC" color="#E0920A"><SlackGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Let&apos;s connect Birdy to your Slack for notifications.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
@@ -1592,7 +1602,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_channel" && (
-            <div className="w-full max-w-[620px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-[22px] text-center">
                 <StepHeading small>Where should Birdy briefs go on Slack?</StepHeading>
               </div>
@@ -1632,7 +1642,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_frequency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-[26px]"><StepHeading>How often should Birdy send you a brief?</StepHeading></div>
               <div className="mb-5 flex gap-[14px]">
                 {[
@@ -1699,7 +1709,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "brief_content" && (
-            <div className="w-full max-w-[640px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-2 text-center">
                 <StepHeading small>What information do you want in your morning brief?</StepHeading>
               </div>
@@ -1778,7 +1788,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "completion" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mx-auto mb-[22px] flex h-[136px] w-[136px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
                 <Birdy state={birdyState} size={114} />
               </div>
