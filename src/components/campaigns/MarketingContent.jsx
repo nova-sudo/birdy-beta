@@ -15,6 +15,7 @@ import {
   TrendingUp,
   DollarSign,
   Target,
+  Info,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -78,7 +79,11 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   campaigns: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
   adsets: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
   ads: ["name", "spend", "results", "cpl", "impressions", "reach", "clicks", "ctr"],
-  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
+  // lead_source takes platform's slot by default: now that a lead can come from
+  // GoHighLevel's own attribution rather than a Meta form, where it came from
+  // matters more than whether it was Facebook or Instagram. platform is still
+  // one click away in the Columns menu.
+  leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "lead_source", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -805,7 +810,7 @@ export function MarketingContent({
 
   const getAvailableColumns = () =>
     activeTab === "leads"
-      ? ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "created_time", "group_name",
+      ? ["full_name", "email", "phone_number", "ad_name", "campaign_name", "platform", "lead_source", "created_time", "group_name",
          "ghl_matched", "ghl_opportunity_status", "ghl_opportunity_value", "ghl_tags"]
       : ["name", "clientGroup", ...baseColumns, ...tagColumnIds, ...activeTabMetrics.map(m => m.id)]
 
@@ -889,6 +894,14 @@ export function MarketingContent({
       if (!value) return "–"
       const colors = { won: "text-green-600 bg-green-50", lost: "text-red-600 bg-red-50", open: "text-blue-600 bg-blue-50", abandoned: "text-gray-600 bg-gray-50" }
       return <span className={`${colors[value] || ""} px-2 py-0.5 rounded-full text-xs font-medium capitalize`}>{value}</span>
+    }
+    if (col === "lead_source") {
+      const label = { instant_form: "Meta form", ghl_attribution: "GHL attribution" }[value]
+      if (!label) return "–"
+      const tone = value === "instant_form"
+        ? "text-pd-info bg-pd-info-bg"
+        : "text-pd-primary bg-pd-primary-tint"
+      return <span className={`${tone} px-2 py-0.5 rounded-full text-xs font-medium`}>{label}</span>
     }
     if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"
     if (col === "ghl_tags") {
@@ -1141,6 +1154,58 @@ export function MarketingContent({
               >
                 Reconnect Meta
               </a>
+            </div>
+          )
+        })()}
+
+        {/* No lead source at all — spend with nothing to show for it.
+            Gated the same way as the reconnect banner above: one selected
+            client, active only, never on "All Groups".
+
+            This exists because a zero in the leads column is ambiguous. It can
+            mean the ads genuinely produced nothing, or it can mean the client
+            runs their own landing page and nothing on it reports a lead back —
+            which is a setup gap, not a performance one. Those two need
+            opposite reactions from a media buyer, so the number alone is worse
+            than useless. */}
+        {(() => {
+          if (!selectedClientGroup || selectedClientGroup === "all") return null
+
+          const group = clientGroups.find(g => g.id === selectedClientGroup)
+          if (!group) return null
+          if (String(group.client_status || "").toLowerCase() !== "active") return null
+          // A reconnect banner is already showing, and it is the more urgent
+          // of the two — don't stack them.
+          if (group.meta_token_error) return null
+
+          const spend = Number(group.facebook?.metrics?.insights?.spend || 0)
+          if (spend <= 0) return null
+
+          const leadSource = group.facebook?.lead_source || "none"
+          if (leadSource !== "none" && leadSource !== "pixel") return null
+
+          // Two different situations, and they need opposite reactions.
+          const message = leadSource === "pixel" ? (
+            <>
+              <span className="font-medium text-pd-ink">These lead counts come from this client&apos;s Meta pixel.</span>{" "}
+              Meta reports how many conversions each ad produced, but never who they were —
+              so the counts and CPL above are real, and the Leads tab has no rows behind them.
+              Contact details would need the lead to reach GoHighLevel.
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-pd-ink">No leads are reaching Birdy for this client.</span>{" "}
+              Their ads are spending, but nothing is reporting a lead back — not a Meta
+              instant form, not GoHighLevel&apos;s own ad attribution, not even a pixel
+              conversion. If their ads point at a landing page, that page needs to pass the
+              ad through before leads and CPL can be counted here.
+            </>
+          )
+
+          return (
+            <div className="flex items-start gap-2 rounded-[12px] border border-pd-border bg-pd-canvas px-4 py-3">
+              <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
+              <p className="text-[12.5px] leading-[1.5] text-pd-body">{message}</p>
             </div>
           )
         })()}
