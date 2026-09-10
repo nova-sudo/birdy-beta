@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
+import useSWR from "swr"
 import { Bell, BellRing, X, User } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { apiRequest } from "@/lib/api"
+import { optionalFetcher } from "@/lib/fetcher"
+import { queryKeys } from "@/lib/query-keys"
 import { formatRelative } from "@/lib/alert-helpers"
 import { flash as flashBirdy } from "@/components/birdy/birdy-store"
 
@@ -68,8 +70,15 @@ function TriggerMeta({ dateStr }) {
 
 export default function NotificationsDropdown() {
   const [open, setOpen] = useState(false)
-  const [alerts, setAlerts] = useState([])
-  const [loading, setLoading] = useState(false)
+  // One request for the bell, shared with whatever else on the page wants
+  // alerts. This used to be two useEffects — one for the badge, one for when
+  // the dropdown opened — and the dashboard fetched /api/alerts a third time
+  // for its own tab. Same key, so SWR now serves all three from one response.
+  const { data, isLoading: loading } = useSWR(queryKeys.alerts(), optionalFetcher)
+  const alerts = useMemo(
+    () => (Array.isArray(data?.triggered) ? data.triggered : []),
+    [data]
+  )
   // Alerts dismissed by closing the dropdown — hides them from the bell
   // badge/list only. The Alerts page fetches independently, so they still
   // show up there; this is purely a "seen in the dropdown" marker that
@@ -91,9 +100,12 @@ export default function NotificationsDropdown() {
   // Total count = sub-alerts for parent groups + 1 per simple alert
   const totalCount = groups.reduce((sum, { children }) => sum + (children.length > 0 ? children.length : 1), 0)
 
-  const applyFetchedAlerts = (triggeredList) => {
-    setAlerts(triggeredList)
-    const count = groupTriggeredRows(triggeredList).reduce(
+  // Nudge the mascot when a refresh turns up more than last time. Counted off
+  // the raw list rather than the visible one, so dismissing in the dropdown
+  // doesn't read as alerts disappearing and then arriving again.
+  useEffect(() => {
+    if (!data) return
+    const count = groupTriggeredRows(alerts).reduce(
       (sum, { children }) => sum + (children.length > 0 ? children.length : 1),
       0
     )
@@ -101,31 +113,7 @@ export default function NotificationsDropdown() {
       flashBirdy("alert")
     }
     lastSeenCountRef.current = count
-  }
-
-  useEffect(() => {
-    if (!open) return
-    setLoading(true)
-    apiRequest("/api/alerts")
-      .then((res) => (res.ok ? res.json() : {}))
-      .then((data) => {
-        const triggeredList = Array.isArray(data.triggered) ? data.triggered : []
-        applyFetchedAlerts(triggeredList)
-      })
-      .catch(() => setAlerts([]))
-      .finally(() => setLoading(false))
-  }, [open])
-
-  // Also fetch count when closed (for the badge)
-  useEffect(() => {
-    apiRequest("/api/alerts")
-      .then((res) => (res.ok ? res.json() : {}))
-      .then((data) => {
-        const triggeredList = Array.isArray(data.triggered) ? data.triggered : []
-        applyFetchedAlerts(triggeredList)
-      })
-      .catch(() => {})
-  }, [])
+  }, [data, alerts])
 
   // Close on outside click
   useEffect(() => {

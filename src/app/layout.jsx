@@ -6,6 +6,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { Badge } from "@/components/ui/badge";
 import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
+import SWRProvider from "@/components/swr-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
@@ -138,6 +139,7 @@ export default function RootLayout({ children }) {
       <head />
       <body suppressHydrationWarning className={`${outfit.className} antialiased`}>
         <BirdyDefs />
+        <SWRProvider>
         <ProtectedLayout>
           <SidebarProvider open={false}>
             {!hideSidebar && (
@@ -233,6 +235,7 @@ export default function RootLayout({ children }) {
             )}
           </SidebarProvider>
         </ProtectedLayout>
+        </SWRProvider>
         <Toaster />
       </body>
     </html>
