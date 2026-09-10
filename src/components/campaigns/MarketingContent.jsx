@@ -575,6 +575,7 @@ export function MarketingContent({
     insight,
     chartMetrics,
     seriesLoading,
+    unlistedSpend,
   } = useMarketingHubData({
     clientGroups,
     rows: heroRows,
@@ -1472,6 +1473,20 @@ export function MarketingContent({
                 initialColumnOrder={visibleColumns[activeTab] || []}
                 onColumnOrderChange={handleColumnOrderChange}
               />
+            )}
+
+            {/* The campaigns tab is the only one whose rows are meant to
+                reconcile against the spend tile, and Meta's campaigns edge
+                drops deleted and archived campaigns — so the rows can sum to
+                less than the account did without either being wrong. Say so
+                once, under the rows, rather than leaving the two figures to
+                look like a lost total. */}
+            {activeTab === "campaigns" && unlistedSpend && !isLoading && (
+              <p className="mt-3 text-[11.5px] text-pd-faint">
+                {unlistedSpend.formatted} of this period&apos;s spend sits on campaigns Meta
+                no longer lists — deleted or archived — so it counts towards the
+                total above but has no row here.
+              </p>
             )}
           </PageTabPanel>
         </div>
