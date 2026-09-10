@@ -75,6 +75,23 @@ describe("useClientGroupsWithSeries", () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
   })
 
+  it("shows nothing rather than zeros when the series request fails", async () => {
+    // The way this actually happens: this bundle ships before the backend
+    // that serves /api/client-groups/daily, and the answer is a 404. Loading
+    // ends without the series ever arriving, so unless the groups are
+    // withheld here, every aggregator's `?? []` renders a confident 0.
+    apiRequest.mockImplementation((url) =>
+      url.includes("/daily")
+        ? Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ detail: "Not Found" }) })
+        : Promise.resolve(ok({ client_groups: [GROUP], meta: null }))
+    )
+
+    const { result } = renderHook(() => useClientGroupsWithSeries("last_30d"), { wrapper })
+
+    await waitFor(() => expect(result.current.error).toBeTruthy())
+    expect(result.current.clientGroups).toEqual([])
+  })
+
   it("puts the series back exactly where the aggregators read them", async () => {
     const { result } = renderHook(() => useClientGroupsWithSeries("last_30d"), { wrapper })
     await waitFor(() => expect(result.current.groupsLoading).toBe(false))
