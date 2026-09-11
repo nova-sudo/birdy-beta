@@ -358,6 +358,7 @@ describe("onboarding wizard", () => {
   // has not opted out of Slack: STEPS minus hp_key.
   const KPI_DEFAULT_STEP = 12
   const CLIENT_CURRENCY_STEP = 9
+  const COMPLETION_STEP = 19
 
   const WITH_GROUP = {
     ...PICKED_CLIENT,
@@ -421,6 +422,37 @@ describe("onboarding wizard", () => {
     }))
   })
 
+  it("finds the group and saves when the wizard was resumed", async () => {
+    // The case that made this look cosmetic. On a resumed wizard the client
+    // already exists, so createFirstClient returns early — and it was the only
+    // thing that drained the parked targets. Nothing was ever sent: no request
+    // in the network tab, no error in the console, and a client whose Targets
+    // tab stayed empty under a step that had just said "Targets applied".
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: {
+        // Picked, but with no group_id on it — the shape a resumed wizard has.
+        ...PICKED_CLIENT,
+        kpi: { cpa: "45", wins: "20", conv_rate: "15" },
+      },
+      overrides: {
+        // The id is recoverable by matching the GHL location.
+        "/api/client-groups?date_preset=today&include_daily=false": () =>
+          json({ client_groups: [{ id: "g1", ghl_location_id: "loc_1" }] }),
+      },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: false,
+    }))
+  })
+
   it("applies targets answered before the client group existed", async () => {
     // Answered while client creation was still running, then the page went
     // away — an OAuth hop, a refresh. The answers were persisted server-side
@@ -462,6 +494,76 @@ describe("onboarding wizard", () => {
     { location_id: "loc_b", name: "Blade & Blossom" },
     { location_id: "loc_c", name: "Clinic Six" },
   ]
+
+  /** Every client group that had targets PUT to it, as { id: body }. */
+  function targetsPutsById() {
+    return Object.fromEntries(
+      apiRequest.mock.calls
+        .filter(([url, opts]) => /\/api\/client-groups\/[^/]+\/targets$/.test(url) && opts?.method === "PUT")
+        .map(([url, opts]) => [url.split("/")[3], JSON.parse(opts.body)])
+    )
+  }
+
+  /**
+   * Every client on the account by the time the wizard finishes: the one it
+   * created, this run's imports, and a client from an earlier run.
+   */
+  const ALL_GROUPS = {
+    client_groups: [
+      { id: "grp_1", ghl_location_id: "loc_1" },
+      { id: "grp_a", ghl_location_id: "loc_a" },
+      // Nulls are what an untouched client's targets look like, not an absence.
+      { id: "grp_b", ghl_location_id: "loc_b", targets: { cpl: null, monthly_wins: null } },
+      { id: "grp_earlier", ghl_location_id: "loc_earlier" },
+      // Someone set this one by hand. Defaults must not overwrite it.
+      { id: "grp_customised", ghl_location_id: "loc_cust", targets: { cpl: 10 } },
+    ],
+  }
+
+  const finishingWith = (saveDefault) => ({
+    data: {
+      ...WITH_GROUP,
+      kpi: { cpa: "45", wins: "20", conv_rate: "15", save_default: saveDefault },
+    },
+    overrides: {
+      "/api/client-groups?date_preset=today&include_daily=false": () => json(ALL_GROUPS),
+    },
+  })
+
+  it("sets the targets on every client that has none, when set as default", async () => {
+    // Including grp_earlier, imported on a previous run — "all clients" has to
+    // mean all of them, or it just moves the same complaint to another set.
+    // grp_customised is left out: someone gave it a number by hand, and a
+    // default that overwrites a deliberate answer is not a default.
+    const user = userEvent.setup()
+    bootAt(COMPLETION_STEP, finishingWith(true))
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(Object.keys(targetsPutsById()).sort()).toEqual([
+      "grp_1", "grp_a", "grp_b", "grp_earlier",
+    ]))
+    // The same three fields the client settings Targets tab reads, and the
+    // account-level default left alone — the first client's PUT wrote it.
+    expect(targetsPutsById().grp_b).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: false,
+    })
+  })
+
+  it("touches only the one client when the targets were for it alone", async () => {
+    const user = userEvent.setup()
+    bootAt(COMPLETION_STEP, finishingWith(false))
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(targetsPutsById()).toEqual({})
+  })
 
   it("keeps counting the sub-accounts once the import has started", async () => {
     // The selection is held in a ref that is emptied the moment the import

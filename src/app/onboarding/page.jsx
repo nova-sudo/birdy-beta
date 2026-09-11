@@ -159,6 +159,23 @@ function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
   return { ...targets, save_as_default: saveAsDefault }
 }
 
+// The six monthly targets a client group stores, as named by the Targets tab
+// in components/clients/ClientTargetsForm.jsx. Listed rather than read off the
+// object so an unrelated field arriving on `targets` one day cannot be
+// mistaken for someone having set a goal.
+const TARGET_FIELDS = [
+  "cpl", "monthly_wins", "monthly_revenue", "conversion_rate", "monthly_spend", "aov",
+]
+
+/** Has anyone given this client a target yet? */
+function hasAnyTarget(targets) {
+  if (!targets) return false
+  return TARGET_FIELDS.some((field) => {
+    const value = targets[field]
+    return value !== null && value !== undefined && value !== ""
+  })
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
 
@@ -218,6 +235,9 @@ export default function OnboardingPage() {
   const [cpa, setCpa] = useState("")
   const [wins, setWins] = useState("")
   const [convRate, setConvRate] = useState("")
+  // "Yes, set as default" rather than "Just this client" — which is what
+  // decides whether the sub-accounts imported later get these targets too.
+  const [kpiSaveDefault, setKpiSaveDefault] = useState(false)
 
   const [channels, setChannels] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
@@ -345,6 +365,10 @@ export default function OnboardingPage() {
           setCpa(data.kpi.cpa || "")
           setWins(data.kpi.wins || "")
           setConvRate(data.kpi.conv_rate || "")
+          // Restored because the import — where this decides whether every
+          // client gets the targets — happens after billing, and a Whop
+          // checkout can leave the page in between.
+          setKpiSaveDefault(Boolean(data.kpi.save_default))
           // The other way targets went missing. Answering the KPI step before
           // the first client group exists parks them in pendingTargetsRef for
           // createFirstClient to apply once it has an id — but that ref is
@@ -716,16 +740,85 @@ export default function OnboardingPage() {
     goToKey("kpi_targets", { wants_sync: true })
   }, [goToKey])
 
+  // The first client's group id, found wherever it actually is. This is also
+  // where "Take a look at Birdy" gets its destination — the point of the
+  // wizard is the client they just set up, not the hub.
+  //
+  // firstGroupId is the in-memory answer, but it is not a reliable one on its
+  // own: it is set when the background creation resolves, and the OAuth hops,
+  // a Whop checkout redirect and a plain refresh all wipe React state between
+  // then and here. boot() restores it, so usually it is there — but "usually"
+  // is how someone ends up on the hub wondering where their client went. So
+  // the server-side copy is the fallback, and the group list after that.
+  const resolveFirstGroupId = useCallback(async () => {
+    if (firstGroupId) return firstGroupId
+
+    try {
+      const res = await apiRequest("/api/onboarding/status")
+      if (res.ok) {
+        const state = await res.json()
+        const saved = state?.data?.first_client?.group_id
+        if (saved) return saved
+      }
+    } catch { /* fall through to the list */ }
+
+    // Last resort: the group exists, we just never learned its id — creation
+    // succeeded while the tab was away, or the persist that followed it failed.
+    // Matching on the GHL location is exact, so this is a lookup, not a guess.
+    if (selectedClient?.id) {
+      try {
+        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+        if (res.ok) {
+          const list = await res.json()
+          const match = (list?.client_groups || []).find(
+            (g) => g.ghl_location_id === selectedClient.id
+          )
+          if (match?.id) return match.id
+        }
+      } catch { /* no id to be had */ }
+    }
+
+    return null
+  }, [firstGroupId, selectedClient])
+
+  /**
+   * Send any targets still waiting on a client group, and report which group
+   * they went to. Safe to call twice: the payload is taken out of the ref
+   * before the request, so a second caller finds nothing left to send.
+   */
+  const flushPendingTargets = useCallback(async () => {
+    const groupId = await resolveFirstGroupId()
+    if (!groupId) return null
+    setFirstGroupId(groupId)
+    const payload = pendingTargetsRef.current
+    if (payload) {
+      pendingTargetsRef.current = null
+      await applyTargets(groupId, payload)
+    }
+    return groupId
+  }, [resolveFirstGroupId, applyTargets])
+
   const applyKpiTargets = useCallback(
     (saveAsDefault) => {
       const targets = buildTargetsPayload({ cpa, wins, convRate, saveAsDefault })
       if (targets) {
-        if (firstGroupId) applyTargets(firstGroupId, targets)
-        else pendingTargetsRef.current = targets
+        if (firstGroupId) {
+          applyTargets(firstGroupId, targets)
+        } else {
+          // Park them, then go looking for the group anyway. Parking alone was
+          // the bug: the ref is only drained by createFirstClient, which
+          // returns early when the client already exists — so anyone answering
+          // this step on a resumed wizard was told "Targets applied" while no
+          // request was ever made. Nothing in the console, nothing in the
+          // network tab, and a client whose Targets tab stayed empty.
+          pendingTargetsRef.current = targets
+          flushPendingTargets()
+        }
       }
+      setKpiSaveDefault(saveAsDefault)
       next({ kpi: { cpa, wins, conv_rate: convRate, save_default: saveAsDefault } })
     },
-    [cpa, wins, convRate, firstGroupId, applyTargets, next]
+    [cpa, wins, convRate, firstGroupId, applyTargets, flushPendingTargets, next]
   )
 
   const saveChannel = useCallback(() => {
@@ -756,6 +849,45 @@ export default function OnboardingPage() {
       frequency, time: notifyTime, day: notifyDay, brief_items: briefItems,
     } })
   }, [slackStatus, frequency, notifyTime, notifyDay, briefItems, selectedChannel, next])
+
+  // "Yes, set as default" is a promise about every client, and only the first
+  // one was ever getting targets — import-subaccounts carries a name, an ad
+  // account, a currency and a status, and nothing else. So a user who set
+  // targets for everyone still arrived at a hub full of clients each reporting
+  // "no monthly targets set for this client yet".
+  //
+  // Every client the account has, not only the ones this run imported: a
+  // second pass through the wizard is exactly when someone notices the earlier
+  // batch has no targets on it, and "all clients" has to mean all of them or
+  // it just moves the same complaint to a different set.
+  //
+  // Called from finish(), where the first client and the freshly imported ones
+  // both already exist, so one sweep covers the lot.
+  const applyTargetsToAllClients = useCallback(
+    async (targets) => {
+      try {
+        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+        if (!res.ok) return
+        const list = await res.json()
+        // Only the ones with nothing set. A client someone has already given a
+        // number to has been thought about, and these are defaults — a default
+        // that overwrites a deliberate answer is not a default. The endpoint
+        // merges per field, so without this a wizard run would replace exactly
+        // the fields it has an opinion on and leave the rest, which is the
+        // most confusing half of both worlds.
+        const ids = (list?.client_groups || [])
+          .filter((g) => g.id && !hasAnyTarget(g.targets))
+          .map((g) => g.id)
+        // save_as_default stays off here: the account-level default was already
+        // written by the first client's PUT, and re-sending it once per client
+        // would just store the same thing again for every one of them.
+        await Promise.all(ids.map((id) => applyTargets(id, targets)))
+      } catch (e) {
+        console.error("Failed to apply targets to all clients:", e)
+      }
+    },
+    [applyTargets]
+  )
 
   const runImport = useCallback(
     async (accounts) => {
@@ -826,46 +958,25 @@ export default function OnboardingPage() {
   // then and here. boot() restores it, so usually it is there — but "usually"
   // is how someone ends up on the hub wondering where their client went. So
   // the server-side copy is the fallback, and the group list after that.
-  const resolveFirstClientPath = useCallback(async () => {
-    if (firstGroupId) return `/clients/${firstGroupId}`
-
-    try {
-      const res = await apiRequest("/api/onboarding/status")
-      if (res.ok) {
-        const state = await res.json()
-        const saved = state?.data?.first_client?.group_id
-        if (saved) return `/clients/${saved}`
-      }
-    } catch { /* fall through to the list */ }
-
-    // Last resort: the group exists, we just never learned its id — creation
-    // succeeded while the tab was away, or the persist that followed it failed.
-    // Matching on the GHL location is exact, so this is a lookup, not a guess.
-    if (selectedClient?.id) {
-      try {
-        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-        if (res.ok) {
-          const list = await res.json()
-          const match = (list?.client_groups || []).find(
-            (g) => g.ghl_location_id === selectedClient.id
-          )
-          if (match?.id) return `/clients/${match.id}`
-        }
-      } catch { /* fall through to the hub */ }
-    }
-
-    return "/clients"
-  }, [firstGroupId, selectedClient])
-
   const finish = useCallback(async () => {
     setCompleting(true)
+    // Last chance for targets that never found a group — answered before the
+    // client existed, or on a wizard someone resumed. By here the group is as
+    // findable as it is ever going to be.
+    const groupId = await flushPendingTargets()
+    // Then the rest of them, if the targets were meant for everyone. Awaited
+    // rather than fired off: the next thing this does is navigate, and a page
+    // that has moved on cancels its own in-flight requests.
+    if (kpiSaveDefault) {
+      const targets = buildTargetsPayload({ cpa, wins, convRate, saveAsDefault: false })
+      if (targets) await applyTargetsToAllClients(targets)
+    }
     try {
       await apiRequest("/api/onboarding/complete", { method: "POST" })
     } catch { /* flag stays server-side incomplete; still let them in */ }
-    const destination = await resolveFirstClientPath()
     localStorage.removeItem("onboarding_incomplete")
-    router.push(destination)
-  }, [router, resolveFirstClientPath])
+    router.push(groupId ? `/clients/${groupId}` : "/clients")
+  }, [router, flushPendingTargets, kpiSaveDefault, cpa, wins, convRate, applyTargetsToAllClients])
 
   // "I don't use Slack". Marking the opt-out drops SLACK_CONFIG_STEPS from
   // visibleSteps, so the plain next() lands on sub_accounts_review — the same
