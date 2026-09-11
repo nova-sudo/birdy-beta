@@ -7,7 +7,34 @@
 // headings, Inter for body (lib/pd-fonts).
 
 import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Check, Search } from "lucide-react"
+import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"
+
+/**
+ * The two content column widths the wizard's steps use. Every step is either a
+ * narrow prose column (heading, a line of copy, one control) or a wide one (a
+ * table, a scrollable list, a row of tiles). They live here rather than being
+ * repeated per step so the column can be tuned in one place.
+ *
+ * 600 rather than the original 440 because at 440 two thirds of the step
+ * headings wrapped, and they wrapped mid-phrase — "Want to change the client /
+ * name?" — which reads as the box being too small rather than as a deliberate
+ * break. Measured against the real Poppins Bold at 28px/23px, the narrow
+ * headings cluster below 560px and then jump to 673px, so 600 clears the whole
+ * lower cluster with room to spare while staying a readable prose measure.
+ * Going wider only pays off past 680, which is far too wide for a centred
+ * column of copy — so the three longest headings ("Congratulations! You
+ * connected your first client", the GHL and Slack intros) still take two
+ * lines, which is fine: they are sentences, and they break at a clause.
+ */
+export const STEP_COL = "w-full max-w-[600px]"
+
+/**
+ * The wide tier moves 620/640 -> 720 to stay visibly a tier above STEP_COL —
+ * at 620 it would read as an accident next to a 600px narrow column — and to
+ * give the sub-account table and the tile rows the headroom that was the other
+ * half of the squeeze.
+ */
+export const STEP_COL_WIDE = "w-full max-w-[720px]"
 
 export function PrimaryButton({ children, onClick, disabled, arrow = true, className = "" }) {
   return (

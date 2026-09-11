@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { SESSION_COOKIE, parseSession, isExpired } from "@/lib/session"
 import { PUBLIC_ROUTES, PROTECTED_ROUTES } from "@/lib/constants"
+import { HANDOFF_COOKIE, isIntegrationCallback, isSafeHandoffPath } from "@/lib/oauth-handoff"
 
 /**
  * Next 16 calls this file `proxy`; it is the same request interceptor the
@@ -34,6 +35,40 @@ import { PUBLIC_ROUTES, PROTECTED_ROUTES } from "@/lib/constants"
  */
 export function proxy(request) {
   const { pathname } = request.nextUrl
+
+  // ── An integration callback that is only passing through ──────────────────
+  //
+  // Every provider's OAuth callback lands on /settings, because that is the
+  // redirect URI registered with them — including the hops the onboarding
+  // wizard starts, which want to come straight back to the wizard. That return
+  // trip used to be made by the settings page once it had rendered, and the
+  // rendering is the problem: /settings is prerendered with the sidebar and
+  // top bar in it, so the user watched an app shell and an integrations panel
+  // paint and then vanish, mid-wizard, every time they connected something.
+  //
+  // Answering it here means /settings is never served, so there is nothing to
+  // flash. It runs ahead of the session checks below because it needs to hold
+  // for sessions that predate the session cookie too — those fall through to
+  // `NextResponse.next()` and would have gone on rendering the page.
+  //
+  // Deliberately not gated on the callback being successful: an error comes
+  // back to the same place and belongs to the same wizard step, which knows
+  // how to ask again. The settings page still banks the tokens on the hops
+  // that end there, and the wizard re-probes /api/status on arrival, so
+  // nothing here is the only writer of anything.
+  const handoff = request.cookies.get(HANDOFF_COOKIE)?.value
+  if (handoff && isIntegrationCallback(request.nextUrl.search)) {
+    const destination = decodeURIComponent(handoff)
+    if (isSafeHandoffPath(destination)) {
+      const response = redirectTo(request, destination)
+      // Consume it on the way past: a return path that outlived its hop would
+      // bounce the next callback — one started from the settings page, by
+      // someone who means to stay there — off to the wizard.
+      response.cookies.set(HANDOFF_COOKIE, "", { path: "/", maxAge: 0 })
+      return response
+    }
+  }
+
   const session = parseSession(request.cookies.get(SESSION_COOKIE)?.value)
 
   // No hint — this is a session older than the cookie, or a genuine visitor.

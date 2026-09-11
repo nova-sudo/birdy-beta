@@ -16,6 +16,10 @@ const NO_MATCH = "No matching ad account found"
 // check_client_limit during the actual import, so it's capped here instead.
 const MAX_IMPORT_SELECTION = 25
 
+// Module scope: one collator for every row comparison, rather than rebuilding
+// it per sort. Undefined locale so it follows the reader's own alphabet.
+const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true })
+
 export default function ReviewStep({ review, settled, importing, onImport }) {
   // Per-row edits, sparse — row defaults come from the server payload.
   const [rows, setRows] = useState({})
@@ -62,18 +66,40 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
     }
   })
 
+  // Ticked rows first, then everyone else, each block A–Z.
+  //
+  // The pre-selection is the answer to "which of your 174 sub-accounts is this
+  // step actually about", and it was landing scattered through an unordered
+  // list — so the one thing the user came here to check was the one thing they
+  // had to hunt for. Ticked at the top makes the selection reviewable at a
+  // glance, and unticking drops that row straight back into the alphabetical
+  // pile below, where it can be found again by name.
+  //
+  // Sorted on the GHL name, not the editable Birdy one. They are the same value
+  // until someone edits it, and sorting on the edited one would re-sort the
+  // table on every keystroke — pulling the text field the user is typing into
+  // out from under the cursor. `numeric` so "Clinic 9" precedes "Clinic 10",
+  // and `base` sensitivity so case and accents don't split the alphabet.
+  const ordered = resolved
+    .slice()
+    .sort((a, b) =>
+      a.importChecked !== b.importChecked
+        ? a.importChecked ? -1 : 1
+        : collator.compare(a.name || "", b.name || "")
+    )
+
   // Filtering is a view concern and deliberately nothing more. Counts, the
   // auto-check cap and what actually gets imported all read `resolved`, not
   // this — searching must never silently drop a sub-account someone already
   // ticked, which is exactly what filtering the source list would do.
   const query = search.trim().toLowerCase()
   const visible = query
-    ? resolved.filter((row) =>
+    ? ordered.filter((row) =>
         [row.birdyName, row.name, row.fb?.name].some(
           (field) => (field || "").toLowerCase().includes(query)
         )
       )
-    : resolved
+    : ordered
   const hiddenChecked = resolved.filter(
     (row) => row.importChecked && !visible.includes(row)
   ).length
