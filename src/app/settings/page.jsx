@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
+import TrackingOverview from "@/components/attribution/TrackingOverview"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { PageTabs } from "@/components/portfolio"
@@ -61,7 +62,9 @@ function SettingsPageContent() {
   const requestedTab = searchParams.get("tab")
   const urlTab =
     TAB_ALIASES[requestedTab] ??
-    (["general", "integrations", "billing"].includes(requestedTab)
+    // Kept in step with SETTINGS_TABS below — they are two separate lists, and a
+    // tab missing from this one silently falls back to integrations.
+    (["general", "integrations", "tracking", "billing"].includes(requestedTab)
       ? requestedTab
       : "integrations")
 
@@ -79,6 +82,7 @@ function SettingsPageContent() {
   const SETTINGS_TABS = [
     { key: "general", label: "General" },
     { key: "integrations", label: "Integrations" },
+    { key: "tracking", label: "Tracking" },
     { key: "billing", label: "Billing" },
   ]
 
@@ -1080,6 +1084,10 @@ function SettingsPageContent() {
 
           {/* Poppins/Inter, same as the Integrations tab — the pd- headings
               below are Poppins only inside this wrapper. */}
+          <TabsContent value="tracking" className="space-y-6">
+            <TrackingOverview />
+          </TabsContent>
+
           <TabsContent value="billing" className={`${pdFontClass} space-y-6`}>
             {/* Credits, packs and the 30-day usage chart the design asks for.
                 The same panel the standalone /credits page renders, so the two

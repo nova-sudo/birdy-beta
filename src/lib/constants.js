@@ -60,7 +60,14 @@ export const STORAGE_KEYS = {
   SALES_HUB_CALLS_LIMIT: "sales_hub_calls_limit",
 }
 
+// Matched with .includes(pathname) in ProtectedLayout, so these are exact paths.
+// /install/<siteId> is handled separately there by prefix: it is a page an
+// agency forwards to their client's web person, who has no account at all, and
+// it must not bounce a signed-in mid-onboarding user into the wizard either.
 export const PUBLIC_ROUTES = ["/", "/login", "/register"]
+
+// Prefix-matched public areas, for routes with an id in the path.
+export const PUBLIC_ROUTE_PREFIXES = ["/install"]
 
 export const PROTECTED_ROUTES = [
   "/onboarding",

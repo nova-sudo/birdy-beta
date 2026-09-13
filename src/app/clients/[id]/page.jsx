@@ -588,6 +588,7 @@ export default function ClientDetailsPage() {
                   { key: "details", label: "Details" },
                   { key: "targets", label: "Targets" },
                   { key: "integrations", label: "Integrations" },
+                  { key: "tracking", label: "Tracking" },
                 ]}
                 value={settingsTab}
                 onChange={setSettingsTab}
@@ -703,6 +704,14 @@ export default function ClientDetailsPage() {
                 onRefreshComplete={invalidate}
               />
             </TabsContent>
+
+            {/* A pointer, not the thing itself. Setting tracking up is a guided
+                flow with five steps and three strings to copy, which does not
+                belong in a dialog — and its URL gets forwarded to colleagues,
+                which a dialog cannot be. */}
+            <TabsContent value="tracking" className="mt-4">
+              <TrackingSummaryCard clientId={clientId} />
+            </TabsContent>
           </Tabs>
         </DialogContent>
       </Dialog>
@@ -766,6 +775,62 @@ export default function ClientDetailsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+// Where a client's lead tracking stands, and the way through to set it up.
+function TrackingSummaryCard({ clientId }) {
+  const router = useRouter()
+  const [state, setState] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    apiRequest(`/attribution/diagnostics/${clientId}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled) setState(data)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [clientId])
+
+  const METHOD_LABELS = {
+    instant_form: "Meta Instant Forms",
+    landing_page: "Their own landing page",
+    external_form: "A form tool on their page",
+    unknown: "Not set",
+  }
+
+  return (
+    <div className="rounded-[14px] border border-pd-border bg-pd-surface p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[13px] font-semibold text-pd-ink">Lead tracking</p>
+          <p className="mt-1 text-[12.5px] leading-[1.5] text-pd-body">
+            {state === null
+              ? "Checking…"
+              : !state.applicable
+                ? "This client's leads come from Meta Instant Forms, so there is nothing to install."
+                : state.complete
+                  ? "Working — landing-page leads are being counted against the ads that produced them."
+                  : "Not finished. Leads from this client's landing pages aren't being tied to ads yet."}
+          </p>
+          {state?.method && (
+            <p className="mt-1.5 text-[11.5px] text-pd-faint">
+              Leads from: {METHOD_LABELS[state.method] || state.method}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => router.push(`/clients/${clientId}/tracking`)}
+          className="shrink-0 rounded-[10px] bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+        >
+          {state && state.applicable && !state.complete ? "Finish setup" : "Open setup"}
+        </button>
+      </div>
     </div>
   )
 }

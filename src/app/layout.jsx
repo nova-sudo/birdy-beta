@@ -93,6 +93,9 @@ export default function RootLayout({ children }) {
     pathname === "/register" ||
     pathname === "/" ||
     pathname === "/onboarding" ||
+    // The forwardable install page is opened by people outside the account —
+    // a sidebar and an account header would be meaningless to them.
+    pathname.startsWith("/install") ||
     pathname.startsWith("/admin");
 
   const [chatOpen, setChatOpen] = useState(false);

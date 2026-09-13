@@ -11,6 +11,25 @@ import { FakeProgressBar, PrimaryButton, ProgressBar, SearchInput, SpinnerRing, 
 
 const NO_MATCH = "No matching ad account found"
 
+// How each client collects leads. Asked here because this is the one screen that
+// already lists every client — and left as "Ask later" by default on purpose: a
+// guessed default silently mis-configures every client nobody looked at, and the
+// consequence (a setup screen demanding a snippet for a client using Meta
+// Instant Forms, or worse, silence for one that needs one) is invisible until
+// somebody wonders why a client reports no leads.
+const LEAD_SOURCES = [
+  { key: "unknown", short: "Ask later", label: "Ask later", tone: "muted" },
+  { key: "instant_form", short: "Meta forms", label: "Meta Instant Forms", tone: "meta" },
+  { key: "landing_page", short: "Landing page", label: "Their own landing page", tone: "primary" },
+  { key: "external_form", short: "Form tool", label: "A form tool on their page", tone: "primary" },
+]
+
+const LEAD_SOURCE_STYLE = {
+  muted: { color: "#9A9AAB", background: "#F1F1F5", borderColor: "#E7E7ED" },
+  meta: { color: "#2C6BED", background: "#EAF1FD", borderColor: "#CFE0FA" },
+  primary: { color: "#6B4EE6", background: "#F1EEFC", borderColor: "#DCD3F8" },
+}
+
 // The largest plan (Scale) supports 25 client groups — pre-selecting or
 // allowing more than that would just get silently truncated later by
 // check_client_limit during the actual import, so it's capped here instead.
@@ -22,6 +41,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const [search, setSearch] = useState("")
   const [fbMenuOpen, setFbMenuOpen] = useState(null)
   const [statusMenuOpen, setStatusMenuOpen] = useState(null)
+  const [leadMenuOpen, setLeadMenuOpen] = useState(null)
   const [fbSearch, setFbSearch] = useState("")
 
   const unimported = useMemo(
@@ -59,6 +79,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       birdyName: edit.birdyName !== undefined ? edit.birdyName : account.name,
       fb,
       status: edit.status || account.status_default || "active",
+      leadSource: edit.leadSource || "unknown",
     }
   })
 
@@ -90,6 +111,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const closeMenus = () => {
     setFbMenuOpen(null)
     setStatusMenuOpen(null)
+    setLeadMenuOpen(null)
     setFbSearch("")
   }
 
@@ -177,6 +199,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           <span className="hidden flex-1 sm:block">GHL SUB-ACCOUNT</span>
           <span className="flex-[1.5]">FACEBOOK AD ACCOUNT</span>
           <span className="w-[118px] shrink-0 text-right">STATUS</span>
+          <span className="w-[132px] shrink-0 text-right">LEADS FROM</span>
         </div>
         <div className="pd-scrolly max-h-[360px] overflow-y-auto">
           {resolved.length === 0 && (
@@ -316,13 +339,51 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   </div>
                 )}
               </div>
+
+              {/* lead source dropdown */}
+              <div className="relative w-[132px] shrink-0">
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setFbMenuOpen(null)
+                    setStatusMenuOpen(null)
+                    setLeadMenuOpen(leadMenuOpen === row.location_id ? null : row.location_id)
+                  }}
+                  className="flex cursor-pointer items-center justify-between gap-[5px] rounded-lg border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold"
+                  style={
+                    LEAD_SOURCE_STYLE[
+                      (LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).tone
+                    ]
+                  }
+                >
+                  {(LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).short}
+                  <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
+                </div>
+                {leadMenuOpen === row.location_id && (
+                  <div className="absolute right-0 top-9 z-20 w-[210px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                    {LEAD_SOURCES.map((option) => (
+                      <div
+                        key={option.key}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          patch(row.location_id, { leadSource: option.key })
+                          closeMenus()
+                        }}
+                        className="cursor-pointer border-b border-pd-row-border px-[11px] py-2 text-[11.5px] text-pd-ink last:border-b-0 hover:bg-[#F7F5FE]"
+                      >
+                        {option.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
         </div>
       </div>
 
       {/* click-catcher for open dropdowns */}
-      {(fbMenuOpen || statusMenuOpen) && (
+      {(fbMenuOpen || statusMenuOpen || leadMenuOpen) && (
         <div className="fixed inset-0 z-[5]" onClick={closeMenus} />
       )}
 
@@ -357,6 +418,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   meta_ad_account_id: r.fb?.id || null,
                   ad_account_currency: r.fb?.currency || null,
                   client_status: r.status === "active" ? "Active" : "Inactive",
+                  lead_collection_method: r.leadSource,
                 }))
             )
           }

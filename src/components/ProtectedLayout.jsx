@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
-import { PUBLIC_ROUTES, PROTECTED_ROUTES } from '@/lib/constants';
+import { PUBLIC_ROUTES, PUBLIC_ROUTE_PREFIXES, PROTECTED_ROUTES } from '@/lib/constants';
 import { writeSession, clearSession } from '@/lib/session';
 
 /**
@@ -29,7 +29,9 @@ export default function ProtectedLayout({ children }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPublicRoute =
+      PUBLIC_ROUTES.includes(pathname) ||
+      PUBLIC_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix));
     const isProtectedRoute = PROTECTED_ROUTES.includes(pathname);
 
     let isAuthenticated = false;
