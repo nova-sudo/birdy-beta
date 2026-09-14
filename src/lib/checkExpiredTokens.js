@@ -9,11 +9,16 @@
  *  2. Persist { queue, intendedRedirect } in sessionStorage, then redirect to
  *     the first integration's OAuth URL. Return null so the caller does nothing.
  *  3. After each OAuth round-trip the browser lands back on /settings with
- *     ?status=success. The settings page calls checkAndRefreshExpiredTokens
- *     again (with the stored intendedRedirect).
+ *     ?status=success, and whoever calls this next resumes the queue.
  *  4. We pop the first item off the persisted queue. If items remain, redirect
  *     to the next one. If the queue is empty, return intendedRedirect so the
- *     caller can router.push() the user to their destination.
+ *     caller can navigate the user to their destination.
+ *
+ * Only LoginForm calls this now. The settings page used to as well, on the
+ * onboarding hand-off, but a queue built at login is not the wizard's to
+ * resume: mid-wizard this would re-read /api/status and could fire an OAuth
+ * redirect of its own, over the top of the connection the user had just made
+ * and the one the wizard was about to ask for next.
  *
  * Returns:
  *  null   → a full-page OAuth redirect has been initiated; caller does nothing
