@@ -11,8 +11,9 @@
 //
 // OAuth steps (GHL / Meta / Slack) leave the page; wizard progress is
 // persisted server-side before the hop (PUT /api/onboarding/state) and the
-// settings page bounces the callback back here via the existing
-// sessionStorage.post_integration_redirect convention.
+// settings page — which is where every provider's callback lands — bounces it
+// back here via the handoff in lib/oauth-handoff. That module is also what
+// keeps the settings page and the app shell from painting on the way through.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -30,6 +31,7 @@ import {
 } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
+import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 import { pdFontClass } from "@/lib/pd-fonts"
 import Birdy from "@/components/birdy/Birdy"
 import { useBirdy } from "@/components/birdy/use-birdy"
@@ -46,6 +48,8 @@ import {
   SlackGlyph,
   SlackPreviewCard,
   SpinnerRing,
+  STEP_COL,
+  STEP_COL_WIDE,
   StepHeading,
   SuccessRow,
   UnderlineInput,
@@ -115,6 +119,63 @@ const DEFAULT_BRIEF_ITEMS = {
 
 const CONFETTI_COLORS = ["#6B4EE6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#A98BF5"]
 
+/**
+ * The three answers from the KPI step, as PUT /api/client-groups/{id}/targets
+ * actually stores them. Returns null when nothing was filled in, so the caller
+ * can skip the request rather than send an empty one.
+ *
+ * Two of the three names the wizard was sending do not exist on a client group,
+ * which is why targets set here never turned up on the client:
+ *
+ *   · the cost box went out as `cpa`. There is no `cpa` target — the stored
+ *     field is `cpl` (see client-goals.js, and the Targets tab in
+ *     components/clients/ClientTargetsForm.jsx, which is the same endpoint's
+ *     other writer). The unknown field took the whole PUT down with it, so
+ *     `monthly_wins` — the one name that was right, and the one the weekly
+ *     health pass measures against — was lost along with it.
+ *   · `conversion_rate` is held as a fraction, because what it is compared
+ *     against is closes ÷ leads. Typed under a "%" suffix, 15 means 0.15.
+ *
+ * Empty boxes are omitted rather than sent as null: the endpoint merges, so an
+ * omitted field keeps whatever is already stored instead of blanking it.
+ */
+function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
+  const num = (raw) => {
+    const trimmed = String(raw ?? "").trim()
+    if (trimmed === "") return null
+    const n = Number(trimmed)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const targets = {}
+  const cpl = num(cpa)
+  const monthlyWins = num(wins)
+  const rate = num(convRate)
+  if (cpl !== null) targets.cpl = cpl
+  if (monthlyWins !== null) targets.monthly_wins = monthlyWins
+  if (rate !== null) targets.conversion_rate = rate / 100
+
+  if (Object.keys(targets).length === 0) return null
+  return { ...targets, save_as_default: saveAsDefault }
+}
+
+// The six monthly targets a client group stores, as named by the Targets tab
+// in components/clients/ClientTargetsForm.jsx. Listed rather than read off the
+// object so an unrelated field arriving on `targets` one day cannot be
+// mistaken for someone having set a goal.
+const TARGET_FIELDS = [
+  "cpl", "monthly_wins", "monthly_revenue", "conversion_rate", "monthly_spend", "aov",
+]
+
+/** Has anyone given this client a target yet? */
+function hasAnyTarget(targets) {
+  if (!targets) return false
+  return TARGET_FIELDS.some((field) => {
+    const value = targets[field]
+    return value !== null && value !== undefined && value !== ""
+  })
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
 
@@ -174,6 +235,9 @@ export default function OnboardingPage() {
   const [cpa, setCpa] = useState("")
   const [wins, setWins] = useState("")
   const [convRate, setConvRate] = useState("")
+  // "Yes, set as default" rather than "Just this client" — which is what
+  // decides whether the sub-accounts imported later get these targets too.
+  const [kpiSaveDefault, setKpiSaveDefault] = useState(false)
 
   const [channels, setChannels] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
@@ -190,6 +254,10 @@ export default function OnboardingPage() {
   const [review, setReview] = useState(null)
   const [reviewSettled, setReviewSettled] = useState(false)
   const [importing, setImporting] = useState(false)
+  // How many sub-accounts the running import is for. Held separately from
+  // pendingImportRef because that ref is deliberately emptied the moment the
+  // import starts — see handleBillingSubscribed.
+  const [importingCount, setImportingCount] = useState(0)
   const [completing, setCompleting] = useState(false)
 
   const pendingTargetsRef = useRef(null)
@@ -253,6 +321,12 @@ export default function OnboardingPage() {
   useEffect(() => {
     let cancelled = false
     const boot = async () => {
+      // Arriving here is what "the hop is over" means, so the return path is
+      // spent — whether it was proxy.js that acted on it or the settings page.
+      // Only the cookie half is self-clearing; left behind, the sessionStorage
+      // half would still be sitting there weeks later, and would hijack the
+      // next callback the user started from the settings page on purpose.
+      takeOAuthHandoff()
       try {
         const res = await apiRequest("/api/onboarding/status")
         if (!res.ok) throw new Error(`status ${res.status}`)
@@ -291,6 +365,25 @@ export default function OnboardingPage() {
           setCpa(data.kpi.cpa || "")
           setWins(data.kpi.wins || "")
           setConvRate(data.kpi.conv_rate || "")
+          // Restored because the import — where this decides whether every
+          // client gets the targets — happens after billing, and a Whop
+          // checkout can leave the page in between.
+          setKpiSaveDefault(Boolean(data.kpi.save_default))
+          // The other way targets went missing. Answering the KPI step before
+          // the first client group exists parks them in pendingTargetsRef for
+          // createFirstClient to apply once it has an id — but that ref is
+          // memory only, and client creation is the slowest thing in the
+          // wizard, so an OAuth hop or a refresh in between dropped them with
+          // nothing left to notice. The answers themselves were persisted; it
+          // was only the instruction to apply them that wasn't.
+          if (!data.first_client?.group_id) {
+            pendingTargetsRef.current = buildTargetsPayload({
+              cpa: data.kpi.cpa,
+              wins: data.kpi.wins,
+              convRate: data.kpi.conv_rate,
+              saveAsDefault: Boolean(data.kpi.save_default),
+            })
+          }
         }
         if (data.slack) {
           if (data.slack.channel_id) {
@@ -436,7 +529,7 @@ export default function OnboardingPage() {
     async (endpoint, setStatus) => {
       setStatus("connecting")
       try {
-        sessionStorage.setItem("post_integration_redirect", "/onboarding")
+        setOAuthHandoff("/onboarding")
         const res = await apiRequest(endpoint)
         const d = await res.json()
         if (!res.ok || !d.auth_url) throw new Error(d?.detail || "No auth URL")
@@ -474,10 +567,18 @@ export default function OnboardingPage() {
   const applyTargets = useCallback(
     async (groupId, targets) => {
       try {
-        await apiRequest(`/api/client-groups/${groupId}/targets`, {
+        const res = await apiRequest(`/api/client-groups/${groupId}/targets`, {
           method: "PUT",
           body: JSON.stringify(targets),
         })
+        // A rejected PUT used to be indistinguishable from a saved one here:
+        // nothing read the status, so a payload the server would not accept
+        // failed in complete silence and the user reached a client that said
+        // it had no targets, having just been told "Targets applied".
+        if (!res.ok) {
+          const detail = await res.json().catch(() => ({}))
+          console.error("Failed to apply targets:", res.status, detail)
+        }
       } catch (e) {
         console.error("Failed to apply targets:", e)
       }
@@ -639,19 +740,85 @@ export default function OnboardingPage() {
     goToKey("kpi_targets", { wants_sync: true })
   }, [goToKey])
 
+  // The first client's group id, found wherever it actually is. This is also
+  // where "Take a look at Birdy" gets its destination — the point of the
+  // wizard is the client they just set up, not the hub.
+  //
+  // firstGroupId is the in-memory answer, but it is not a reliable one on its
+  // own: it is set when the background creation resolves, and the OAuth hops,
+  // a Whop checkout redirect and a plain refresh all wipe React state between
+  // then and here. boot() restores it, so usually it is there — but "usually"
+  // is how someone ends up on the hub wondering where their client went. So
+  // the server-side copy is the fallback, and the group list after that.
+  const resolveFirstGroupId = useCallback(async () => {
+    if (firstGroupId) return firstGroupId
+
+    try {
+      const res = await apiRequest("/api/onboarding/status")
+      if (res.ok) {
+        const state = await res.json()
+        const saved = state?.data?.first_client?.group_id
+        if (saved) return saved
+      }
+    } catch { /* fall through to the list */ }
+
+    // Last resort: the group exists, we just never learned its id — creation
+    // succeeded while the tab was away, or the persist that followed it failed.
+    // Matching on the GHL location is exact, so this is a lookup, not a guess.
+    if (selectedClient?.id) {
+      try {
+        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+        if (res.ok) {
+          const list = await res.json()
+          const match = (list?.client_groups || []).find(
+            (g) => g.ghl_location_id === selectedClient.id
+          )
+          if (match?.id) return match.id
+        }
+      } catch { /* no id to be had */ }
+    }
+
+    return null
+  }, [firstGroupId, selectedClient])
+
+  /**
+   * Send any targets still waiting on a client group, and report which group
+   * they went to. Safe to call twice: the payload is taken out of the ref
+   * before the request, so a second caller finds nothing left to send.
+   */
+  const flushPendingTargets = useCallback(async () => {
+    const groupId = await resolveFirstGroupId()
+    if (!groupId) return null
+    setFirstGroupId(groupId)
+    const payload = pendingTargetsRef.current
+    if (payload) {
+      pendingTargetsRef.current = null
+      await applyTargets(groupId, payload)
+    }
+    return groupId
+  }, [resolveFirstGroupId, applyTargets])
+
   const applyKpiTargets = useCallback(
     (saveAsDefault) => {
-      const targets = {
-        cpa: cpa ? Number(cpa) : null,
-        monthly_wins: wins ? Number(wins) : null,
-        conversion_rate: convRate ? Number(convRate) : null,
-        save_as_default: saveAsDefault,
+      const targets = buildTargetsPayload({ cpa, wins, convRate, saveAsDefault })
+      if (targets) {
+        if (firstGroupId) {
+          applyTargets(firstGroupId, targets)
+        } else {
+          // Park them, then go looking for the group anyway. Parking alone was
+          // the bug: the ref is only drained by createFirstClient, which
+          // returns early when the client already exists — so anyone answering
+          // this step on a resumed wizard was told "Targets applied" while no
+          // request was ever made. Nothing in the console, nothing in the
+          // network tab, and a client whose Targets tab stayed empty.
+          pendingTargetsRef.current = targets
+          flushPendingTargets()
+        }
       }
-      if (firstGroupId) applyTargets(firstGroupId, targets)
-      else pendingTargetsRef.current = targets
+      setKpiSaveDefault(saveAsDefault)
       next({ kpi: { cpa, wins, conv_rate: convRate, save_default: saveAsDefault } })
     },
-    [cpa, wins, convRate, firstGroupId, applyTargets, next]
+    [cpa, wins, convRate, firstGroupId, applyTargets, flushPendingTargets, next]
   )
 
   const saveChannel = useCallback(() => {
@@ -682,6 +849,45 @@ export default function OnboardingPage() {
       frequency, time: notifyTime, day: notifyDay, brief_items: briefItems,
     } })
   }, [slackStatus, frequency, notifyTime, notifyDay, briefItems, selectedChannel, next])
+
+  // "Yes, set as default" is a promise about every client, and only the first
+  // one was ever getting targets — import-subaccounts carries a name, an ad
+  // account, a currency and a status, and nothing else. So a user who set
+  // targets for everyone still arrived at a hub full of clients each reporting
+  // "no monthly targets set for this client yet".
+  //
+  // Every client the account has, not only the ones this run imported: a
+  // second pass through the wizard is exactly when someone notices the earlier
+  // batch has no targets on it, and "all clients" has to mean all of them or
+  // it just moves the same complaint to a different set.
+  //
+  // Called from finish(), where the first client and the freshly imported ones
+  // both already exist, so one sweep covers the lot.
+  const applyTargetsToAllClients = useCallback(
+    async (targets) => {
+      try {
+        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
+        if (!res.ok) return
+        const list = await res.json()
+        // Only the ones with nothing set. A client someone has already given a
+        // number to has been thought about, and these are defaults — a default
+        // that overwrites a deliberate answer is not a default. The endpoint
+        // merges per field, so without this a wizard run would replace exactly
+        // the fields it has an opinion on and leave the rest, which is the
+        // most confusing half of both worlds.
+        const ids = (list?.client_groups || [])
+          .filter((g) => g.id && !hasAnyTarget(g.targets))
+          .map((g) => g.id)
+        // save_as_default stays off here: the account-level default was already
+        // written by the first client's PUT, and re-sending it once per client
+        // would just store the same thing again for every one of them.
+        await Promise.all(ids.map((id) => applyTargets(id, targets)))
+      } catch (e) {
+        console.error("Failed to apply targets to all clients:", e)
+      }
+    },
+    [applyTargets]
+  )
 
   const runImport = useCallback(
     async (accounts) => {
@@ -730,6 +936,13 @@ export default function OnboardingPage() {
   // the import that was waiting on it.
   const handleBillingSubscribed = useCallback(() => {
     const accounts = pendingImportRef.current || []
+    // Record how many before the ref is emptied. Clearing it is what stops a
+    // second import firing, but it is also what the billing step was counting,
+    // and runImport's own re-render arrived after the clear — so the line that
+    // is supposed to read "Bringing in your 25 sub-accounts…" said 0, for the
+    // whole import, on the one screen where that number is the only evidence
+    // anything is happening at all.
+    setImportingCount(accounts.length)
     pendingImportRef.current = null
     persistState({ data: { pending_import: [] } })
     runImport(accounts)
@@ -745,46 +958,25 @@ export default function OnboardingPage() {
   // then and here. boot() restores it, so usually it is there — but "usually"
   // is how someone ends up on the hub wondering where their client went. So
   // the server-side copy is the fallback, and the group list after that.
-  const resolveFirstClientPath = useCallback(async () => {
-    if (firstGroupId) return `/clients/${firstGroupId}`
-
-    try {
-      const res = await apiRequest("/api/onboarding/status")
-      if (res.ok) {
-        const state = await res.json()
-        const saved = state?.data?.first_client?.group_id
-        if (saved) return `/clients/${saved}`
-      }
-    } catch { /* fall through to the list */ }
-
-    // Last resort: the group exists, we just never learned its id — creation
-    // succeeded while the tab was away, or the persist that followed it failed.
-    // Matching on the GHL location is exact, so this is a lookup, not a guess.
-    if (selectedClient?.id) {
-      try {
-        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-        if (res.ok) {
-          const list = await res.json()
-          const match = (list?.client_groups || []).find(
-            (g) => g.ghl_location_id === selectedClient.id
-          )
-          if (match?.id) return `/clients/${match.id}`
-        }
-      } catch { /* fall through to the hub */ }
-    }
-
-    return "/clients"
-  }, [firstGroupId, selectedClient])
-
   const finish = useCallback(async () => {
     setCompleting(true)
+    // Last chance for targets that never found a group — answered before the
+    // client existed, or on a wizard someone resumed. By here the group is as
+    // findable as it is ever going to be.
+    const groupId = await flushPendingTargets()
+    // Then the rest of them, if the targets were meant for everyone. Awaited
+    // rather than fired off: the next thing this does is navigate, and a page
+    // that has moved on cancels its own in-flight requests.
+    if (kpiSaveDefault) {
+      const targets = buildTargetsPayload({ cpa, wins, convRate, saveAsDefault: false })
+      if (targets) await applyTargetsToAllClients(targets)
+    }
     try {
       await apiRequest("/api/onboarding/complete", { method: "POST" })
     } catch { /* flag stays server-side incomplete; still let them in */ }
-    const destination = await resolveFirstClientPath()
     localStorage.removeItem("onboarding_incomplete")
-    router.push(destination)
-  }, [router, resolveFirstClientPath])
+    router.push(groupId ? `/clients/${groupId}` : "/clients")
+  }, [router, flushPendingTargets, kpiSaveDefault, cpa, wins, convRate, applyTargetsToAllClients])
 
   // "I don't use Slack". Marking the opt-out drops SLACK_CONFIG_STEPS from
   // visibleSteps, so the plain next() lands on sub_accounts_review — the same
@@ -1038,7 +1230,7 @@ export default function OnboardingPage() {
         <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
 
           {currentKey === "welcome" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mx-auto mb-[26px] flex h-20 w-20 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
                 <Birdy state={birdyState} size={65} />
               </div>
@@ -1051,7 +1243,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "welcome_name" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-3"><StepHeading>What should we call you?</StepHeading></div>
               <UnderlineInput
                 value={name}
@@ -1066,7 +1258,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "agency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>What&apos;s your agency called?</StepHeading></div>
               <div className="mb-[26px] text-[14px] text-pd-faint">
                 This is how it&apos;ll show up across Birdy, {name || "friend"}.
@@ -1083,7 +1275,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "connect_ghl" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#F1EEFC" color="#6B4EE6"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
               <div className="mb-[10px]">
                 <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
@@ -1105,7 +1297,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_picker" && (
-            <div className="w-full max-w-[620px] text-left">
+            <div className={`${STEP_COL_WIDE} text-left`}>
               <div className="mb-4 text-center">
                 <StepHeading small>Let&apos;s choose your first client to onboard!</StepHeading>
               </div>
@@ -1160,7 +1352,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "connect_meta" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#EAF1FD" color="#3B7DD6"><FacebookGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Next up, let&apos;s connect Meta.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
@@ -1181,7 +1373,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "meta_ad_picker" && (
-            <div className="w-full max-w-[620px] text-left">
+            <div className={`${STEP_COL_WIDE} text-left`}>
               <div className="mb-4 text-center">
                 <StepHeading small>Which Meta ad account is {clientDisplayName}?</StepHeading>
               </div>
@@ -1233,7 +1425,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "sales_tool" && (
-            <div className="w-full max-w-[620px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-2"><StepHeading>What do you use for sales?</StepHeading></div>
               <div className="mb-7 text-[14px] text-pd-faint">
                 This decides where Birdy pulls call and close data from.
@@ -1289,7 +1481,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "hp_key" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>Connect your Hot Prospector account.</StepHeading></div>
               <div className="mb-[22px] text-[14px] leading-normal text-pd-body">
                 Paste your API UID and key below — both are in your Hot Prospector settings.
@@ -1362,7 +1554,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_confirm" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2"><StepHeading>Want to change the client name?</StepHeading></div>
               <div className="mb-[22px] text-[13.5px] text-pd-faint">
                 Pulled from their GHL sub-account. Edit it if you&apos;d like something different.
@@ -1396,7 +1588,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "client_currency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-2">
                 <StepHeading small>What currency does {clientDisplayName} report in?</StepHeading>
               </div>
@@ -1457,7 +1649,7 @@ export default function OnboardingPage() {
                   />
                 ))}
               </div>
-              <div className="w-full max-w-[440px]">
+              <div className={STEP_COL}>
                 <SuccessRow>{clientDisplayName} connected</SuccessRow>
                 <div className="mb-3"><StepHeading>Congratulations! You connected your first client.</StepHeading></div>
                 <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
@@ -1470,7 +1662,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "kpi_targets" && (
-            <div className="w-full max-w-[440px] text-left">
+            <div className={`${STEP_COL} text-left`}>
               <div className="mb-[10px] text-center">
                 <StepHeading small>Now, let&apos;s set some targets for {clientDisplayName}.</StepHeading>
               </div>
@@ -1527,7 +1719,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "kpi_default" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <SuccessRow>Targets applied</SuccessRow>
               <div className="mb-3"><StepHeading>Save these as your defaults?</StepHeading></div>
               <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
@@ -1544,7 +1736,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_connect" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <IconChip bg="#FDF6EC" color="#E0920A"><SlackGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Let&apos;s connect Birdy to your Slack for notifications.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
@@ -1592,7 +1784,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_channel" && (
-            <div className="w-full max-w-[620px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-[22px] text-center">
                 <StepHeading small>Where should Birdy briefs go on Slack?</StepHeading>
               </div>
@@ -1632,7 +1824,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "slack_frequency" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mb-[26px]"><StepHeading>How often should Birdy send you a brief?</StepHeading></div>
               <div className="mb-5 flex gap-[14px]">
                 {[
@@ -1699,7 +1891,7 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "brief_content" && (
-            <div className="w-full max-w-[640px]">
+            <div className={STEP_COL_WIDE}>
               <div className="mb-2 text-center">
                 <StepHeading small>What information do you want in your morning brief?</StepHeading>
               </div>
@@ -1771,14 +1963,14 @@ export default function OnboardingPage() {
 
           {currentKey === "billing" && (
             <BillingStep
-              accountCount={(pendingImportRef.current || []).length}
+              accountCount={importing ? importingCount : (pendingImportRef.current || []).length}
               onSubscribed={handleBillingSubscribed}
               importing={importing}
             />
           )}
 
           {currentKey === "completion" && (
-            <div className="w-full max-w-[440px]">
+            <div className={STEP_COL}>
               <div className="mx-auto mb-[22px] flex h-[136px] w-[136px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
                 <Birdy state={birdyState} size={114} />
               </div>

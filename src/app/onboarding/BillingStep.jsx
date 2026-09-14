@@ -12,7 +12,7 @@ import { Loader2 } from "lucide-react"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
 import { PLANS } from "@/components/billing/plans"
-import { FakeProgressBar, SpinnerRing, StepHeading, SuccessRow } from "./parts"
+import { FakeProgressBar, SpinnerRing, STEP_COL, StepHeading, SuccessRow } from "./parts"
 
 const WHOP_ENVIRONMENT =
   (process.env.NEXT_PUBLIC_WHOP_ENVIRONMENT ?? "production") === "sandbox"
@@ -102,7 +102,7 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
 
   if (phase === "activating" || importing) {
     return (
-      <div className="w-full max-w-[440px] text-center">
+      <div className={`${STEP_COL} text-center`}>
         <SuccessRow>Payment received</SuccessRow>
         <div className="mb-3"><StepHeading small>Activating your subscription…</StepHeading></div>
         {/* Two different waits wearing one screen. Whop's activation is

@@ -22,7 +22,19 @@ vi.mock("@/lib/api", () => ({
 // An animated SVG mascot, and a Whop checkout embed that wants a live iframe —
 // neither has anything to do with the step machinery under test.
 vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
-vi.mock("../BillingStep", () => ({ default: () => <div>billing step</div> }))
+// The real step wants a live Whop checkout iframe. The stand-in surfaces the
+// props the wizard feeds it, so the count it is told to display can be
+// asserted, and offers a way to report a subscription back.
+vi.mock("../BillingStep", () => ({
+  default: ({ accountCount, onSubscribed, importing }) => (
+    <div>
+      billing step
+      <span data-testid="account-count">{accountCount}</span>
+      <span data-testid="importing">{String(importing)}</span>
+      <button onClick={onSubscribed}>subscribe</button>
+    </div>
+  ),
+}))
 // next/font runs at build time and throws when called outside the Next
 // compiler; the wizard only wants the class name off it.
 vi.mock("@/lib/pd-fonts", () => ({
@@ -338,5 +350,241 @@ describe("onboarding wizard", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /connect ghl/i })).toBeTruthy()
     )
+  })
+
+  // ── KPI targets ────────────────────────────────────────────────────────
+
+  // Index of `kpi_default` in visibleSteps for a non-HotProspector user who
+  // has not opted out of Slack: STEPS minus hp_key.
+  const KPI_DEFAULT_STEP = 12
+  const CLIENT_CURRENCY_STEP = 9
+  const COMPLETION_STEP = 19
+
+  const WITH_GROUP = {
+    ...PICKED_CLIENT,
+    first_client: { ...PICKED_CLIENT.first_client, group_id: "g1" },
+  }
+
+  /** The body of the last PUT to a client group's targets endpoint. */
+  function lastTargetsBody() {
+    const calls = apiRequest.mock.calls.filter(
+      ([url, opts]) => url === "/api/client-groups/g1/targets" && opts?.method === "PUT"
+    )
+    return calls.length ? JSON.parse(calls[calls.length - 1][1].body) : null
+  }
+
+  it("saves the targets under the names a client group actually stores", async () => {
+    // The wizard was sending `cpa`, which is not a field on a client group, so
+    // the whole PUT was rejected — taking monthly_wins, the one name that was
+    // right, down with it. The client then reported no targets set at all.
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "45", wins: "20", conv_rate: "15" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      // Held as a fraction: what it is measured against is closes ÷ leads.
+      conversion_rate: 0.15,
+      save_as_default: false,
+    }))
+  })
+
+  it("carries the save-as-default answer through to the request", async () => {
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "45", wins: "20", conv_rate: "15" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /set as default/i }))
+
+    await waitFor(() => expect(lastTargetsBody()?.save_as_default).toBe(true))
+  })
+
+  it("leaves an unanswered target out rather than blanking it", async () => {
+    // The endpoint merges, so an omitted field keeps what is stored.
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: { ...WITH_GROUP, kpi: { cpa: "", wins: "20", conv_rate: "" } },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      monthly_wins: 20,
+      save_as_default: false,
+    }))
+  })
+
+  it("finds the group and saves when the wizard was resumed", async () => {
+    // The case that made this look cosmetic. On a resumed wizard the client
+    // already exists, so createFirstClient returns early — and it was the only
+    // thing that drained the parked targets. Nothing was ever sent: no request
+    // in the network tab, no error in the console, and a client whose Targets
+    // tab stayed empty under a step that had just said "Targets applied".
+    const user = userEvent.setup()
+    bootAt(KPI_DEFAULT_STEP, {
+      data: {
+        // Picked, but with no group_id on it — the shape a resumed wizard has.
+        ...PICKED_CLIENT,
+        kpi: { cpa: "45", wins: "20", conv_rate: "15" },
+      },
+      overrides: {
+        // The id is recoverable by matching the GHL location.
+        "/api/client-groups?date_preset=today&include_daily=false": () =>
+          json({ client_groups: [{ id: "g1", ghl_location_id: "loc_1" }] }),
+      },
+    })
+
+    await screen.findByText(/save these as your defaults/i)
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
+
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: false,
+    }))
+  })
+
+  it("applies targets answered before the client group existed", async () => {
+    // Answered while client creation was still running, then the page went
+    // away — an OAuth hop, a refresh. The answers were persisted server-side
+    // but the instruction to apply them lived in memory only, so nothing ever
+    // put them on the group. Resuming on the currency step (which is what
+    // kicks creation off) has to re-park them.
+    const user = userEvent.setup()
+    bootAt(CLIENT_CURRENCY_STEP, {
+      data: {
+        // No group_id: creation had not finished before the reload.
+        ...PICKED_CLIENT,
+        kpi: { cpa: "45", wins: "20", conv_rate: "15", save_default: true },
+      },
+      overrides: {
+        "/api/client-groups": () => json({ client_group: { id: "g1" } }),
+      },
+    })
+
+    await screen.findByText(/what currency does/i)
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    // Creation resolves with the id, and the parked targets go out against it.
+    await waitFor(() => expect(lastTargetsBody()).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: true,
+    }))
+  })
+
+  // ── Billing → import hand-over ─────────────────────────────────────────
+
+  // Index of `billing` in visibleSteps for a non-HotProspector user who has
+  // not opted out of Slack: STEPS minus hp_key.
+  const BILLING_STEP = 18
+
+  const PENDING_IMPORT = [
+    { location_id: "loc_a", name: "Aura" },
+    { location_id: "loc_b", name: "Blade & Blossom" },
+    { location_id: "loc_c", name: "Clinic Six" },
+  ]
+
+  /** Every client group that had targets PUT to it, as { id: body }. */
+  function targetsPutsById() {
+    return Object.fromEntries(
+      apiRequest.mock.calls
+        .filter(([url, opts]) => /\/api\/client-groups\/[^/]+\/targets$/.test(url) && opts?.method === "PUT")
+        .map(([url, opts]) => [url.split("/")[3], JSON.parse(opts.body)])
+    )
+  }
+
+  /**
+   * Every client on the account by the time the wizard finishes: the one it
+   * created, this run's imports, and a client from an earlier run.
+   */
+  const ALL_GROUPS = {
+    client_groups: [
+      { id: "grp_1", ghl_location_id: "loc_1" },
+      { id: "grp_a", ghl_location_id: "loc_a" },
+      // Nulls are what an untouched client's targets look like, not an absence.
+      { id: "grp_b", ghl_location_id: "loc_b", targets: { cpl: null, monthly_wins: null } },
+      { id: "grp_earlier", ghl_location_id: "loc_earlier" },
+      // Someone set this one by hand. Defaults must not overwrite it.
+      { id: "grp_customised", ghl_location_id: "loc_cust", targets: { cpl: 10 } },
+    ],
+  }
+
+  const finishingWith = (saveDefault) => ({
+    data: {
+      ...WITH_GROUP,
+      kpi: { cpa: "45", wins: "20", conv_rate: "15", save_default: saveDefault },
+    },
+    overrides: {
+      "/api/client-groups?date_preset=today&include_daily=false": () => json(ALL_GROUPS),
+    },
+  })
+
+  it("sets the targets on every client that has none, when set as default", async () => {
+    // Including grp_earlier, imported on a previous run — "all clients" has to
+    // mean all of them, or it just moves the same complaint to another set.
+    // grp_customised is left out: someone gave it a number by hand, and a
+    // default that overwrites a deliberate answer is not a default.
+    const user = userEvent.setup()
+    bootAt(COMPLETION_STEP, finishingWith(true))
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(Object.keys(targetsPutsById()).sort()).toEqual([
+      "grp_1", "grp_a", "grp_b", "grp_earlier",
+    ]))
+    // The same three fields the client settings Targets tab reads, and the
+    // account-level default left alone — the first client's PUT wrote it.
+    expect(targetsPutsById().grp_b).toEqual({
+      cpl: 45,
+      monthly_wins: 20,
+      conversion_rate: 0.15,
+      save_as_default: false,
+    })
+  })
+
+  it("touches only the one client when the targets were for it alone", async () => {
+    const user = userEvent.setup()
+    bootAt(COMPLETION_STEP, finishingWith(false))
+    await screen.findByText(/you're all set/i)
+
+    await user.click(screen.getByRole("button", { name: /take a look at birdy/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalled())
+    expect(targetsPutsById()).toEqual({})
+  })
+
+  it("keeps counting the sub-accounts once the import has started", async () => {
+    // The selection is held in a ref that is emptied the moment the import
+    // fires, to stop a second one going out. The count on screen was reading
+    // that same ref, so the render the import itself triggered found nothing
+    // in it — and the progress line spent the entire import claiming to be
+    // bringing in 0 sub-accounts.
+    const user = userEvent.setup()
+    bootAt(BILLING_STEP, {
+      data: { ...PICKED_CLIENT, pending_import: PENDING_IMPORT },
+      // Hold the import open, so the importing state is still on screen to
+      // look at rather than having already moved on to the completion step.
+      overrides: { "/api/onboarding/import-subaccounts": never },
+    })
+
+    await screen.findByText("billing step")
+    expect(screen.getByTestId("account-count").textContent).toBe("3")
+
+    await user.click(screen.getByRole("button", { name: "subscribe" }))
+
+    await waitFor(() => expect(screen.getByTestId("importing").textContent).toBe("true"))
+    expect(screen.getByTestId("account-count").textContent).toBe("3")
   })
 })
