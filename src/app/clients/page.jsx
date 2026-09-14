@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Search } from "lucide-react"
+import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Search, Download } from "lucide-react"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { useColumnViews } from "@/lib/useColumnViews"
@@ -79,11 +79,39 @@ import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { isAwaitingFirstData } from "@/lib/client-loading"
+import BulkImportDialog from "@/components/clients/BulkImportDialog"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
 // Ties the status tabs to the table they filter, for anyone navigating by role.
 const CLIENTS_PANEL_ID = "clients-table-panel"
+
+// The same question the bulk-import review step asks per row, kept in the same
+// order and wording so the two paths don't describe the same choice
+// differently. "unknown" leads deliberately: it is the default, and picking it
+// leaves the client behaving exactly as an unconfigured client always has.
+const LEAD_SOURCES = [
+  {
+    key: "unknown",
+    label: "Ask later",
+    hint: "Nothing changes for this client until you choose.",
+  },
+  {
+    key: "instant_form",
+    label: "Meta Instant Forms",
+    hint: "Leads are filled in on Facebook or Instagram and arrive automatically.",
+  },
+  {
+    key: "landing_page",
+    label: "Their own landing page",
+    hint: "A form on a page the client owns. Needs our snippet on that page.",
+  },
+  {
+    key: "external_form",
+    label: "A form tool on their page",
+    hint: "Typeform, ROASForm, Jotform and the like. Posts to us by webhook.",
+  },
+]
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -101,7 +129,12 @@ export default function ClientsPage() {
   const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [wizardStep, setWizardStep] = useState(1)
+  // Defaults to "unknown" rather than guessing. A wrong guess here silently
+  // mis-configures the client's tracking, and "Ask later" costs nothing —
+  // it behaves exactly as a client with no answer always has.
+  const [leadSource, setLeadSource] = useState("unknown")
   const [clientGroupName, setClientGroupName] = useState("")
   const [ghlLocations, setGhlLocations] = useState([])
   const [metaAdAccounts, setMetaAdAccounts] = useState([])
@@ -469,7 +502,7 @@ export default function ClientsPage() {
       return
     }
 
-    if (wizardStep < 4) {
+    if (wizardStep < 5) {
       setWizardStep(wizardStep + 1)
       return
     }
@@ -504,6 +537,8 @@ export default function ClientsPage() {
     setMetaSearchQuery("")
     setHotProspectorSearchQuery("")
     setCallLogProvider(null)
+    const creatingLeadSource = leadSource
+    setLeadSource("unknown")
 
     toast.info(`Creating "${creatingGroupName}"...`)
 
@@ -523,6 +558,7 @@ export default function ClientsPage() {
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
           ad_account_currency: selectedMetaAdAccount?.currency || null,
           call_log_provider: callLogProvider || "ghl",
+          lead_collection_method: creatingLeadSource,
           notes: "",
         }),
       });
@@ -639,6 +675,7 @@ export default function ClientsPage() {
           if (!open) {
             setWizardStep(1)
             setClientGroupName("")
+            setLeadSource("unknown")
             setSelectedGhlLocation(null)
             setNewGhlLocationId("")
             setSelectedMetaAdAccount(null)
@@ -670,6 +707,7 @@ export default function ClientsPage() {
                     { num: 2, short: "GHL", full: "GHL" },
                     { num: 3, short: "Meta", full: "Meta" },
                     { num: 4, short: "Calls", full: "Sales Calls" },
+                    { num: 5, short: "Leads", full: "Lead Source" },
                   ].map((s, i, arr) => (
                     <Fragment key={s.num}>
                       <div className="flex flex-col items-center flex-shrink-0">
@@ -998,6 +1036,42 @@ export default function ClientsPage() {
                 )}
               </div>
             )}
+
+            {wizardStep === 5 && (
+              <div className="max-w-md mx-auto space-y-6">
+                <div className="text-center space-y-2">
+                  <h2 className="text-2xl font-bold text-foreground">How does this client get leads?</h2>
+                  <p className="text-muted-foreground">
+                    Meta Instant Forms arrive on their own. Anything else needs a tracking
+                    snippet on the client&apos;s page — we&apos;ll walk you through it after.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  {LEAD_SOURCES.map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setLeadSource(option.key)}
+                      className={`w-full p-4 rounded-xl border-2 transition-colors text-left ${
+                        leadSource === option.key
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary hover:bg-primary/5"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="font-semibold text-foreground mb-1">{option.label}</div>
+                          <div className="text-xs text-muted-foreground">{option.hint}</div>
+                        </div>
+                        {leadSource === option.key && (
+                          <Check className="w-5 h-5 text-primary shrink-0" />
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
                 </div>
               </div>
 
@@ -1027,7 +1101,7 @@ export default function ClientsPage() {
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Creating...
                     </>
-                  ) : wizardStep < 4 ? (
+                  ) : wizardStep < 5 ? (
                     <>Next <ArrowRight className="w-4 h-4" /></>
                   ) : (
                     <><Plus className="w-4 h-4" /> Create Client Group</>
@@ -1132,6 +1206,20 @@ export default function ClientsPage() {
             sources={COLUMN_MENU_SOURCES}
           />
 
+          {/* Bulk import stays available after onboarding. Agencies win
+              clients continuously, and adding five of them one at a time
+              through the five-step wizard means re-picking the same GHL and
+              Meta accounts by hand five times. */}
+          <Button
+            variant="outline"
+            onClick={() => setBulkImportOpen(true)}
+            aria-label="Import clients from GoHighLevel"
+            title="Import clients from GoHighLevel"
+            className="size-[38px] shrink-0 rounded-[10px] p-0"
+          >
+            <Download className="size-4" />
+          </Button>
+
           <Button
             onClick={() => setWizardOpen(true)}
             aria-label="Add client"
@@ -1141,6 +1229,18 @@ export default function ClientsPage() {
           </Button>
         </div>
       </div>
+
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        onImported={() => {
+          // Freshly imported clients have no figures yet; invalidate so the
+          // table picks them up as loading rows rather than leaving the user
+          // on a list that doesn't show what they just imported.
+          invalidateClientGroups?.()
+          refreshClientGroups?.()
+        }}
+      />
 
         {/* StyledTable — receives filtered data */}
         <PageTabPanel id={CLIENTS_PANEL_ID} label="Clients" className="mt-4">
