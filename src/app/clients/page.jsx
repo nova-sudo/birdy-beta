@@ -774,6 +774,32 @@ export default function ClientsPage() {
                           autoFocus
                         />
                       </div>
+
+                      {/* The way out of this wizard, offered at the point
+                          someone realises they have more than one client to
+                          add. Adding five here means walking five steps five
+                          times and re-picking the same GHL and Meta accounts
+                          by hand; the import table does all five at once. */}
+                      <div className="pt-2 border-t border-border">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setWizardOpen(false)
+                            setBulkImportOpen(true)
+                          }}
+                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                        >
+                          <Download className="w-4 h-4 text-primary shrink-0" />
+                          <span>
+                            <span className="block text-sm font-medium text-foreground">
+                              Adding more than one?
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              Import them together from GoHighLevel.
+                            </span>
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   )}
             {wizardStep === 2 && (
@@ -1209,15 +1235,20 @@ export default function ClientsPage() {
           {/* Bulk import stays available after onboarding. Agencies win
               clients continuously, and adding five of them one at a time
               through the five-step wizard means re-picking the same GHL and
-              Meta accounts by hand five times. */}
+              Meta accounts by hand five times.
+
+              Carries its label rather than sitting as a bare icon: a download
+              arrow beside the "+" reads as nothing in particular, and the
+              first person to look for this feature looked inside the Add
+              Client wizard instead — where there is now a link to it too. */}
           <Button
             variant="outline"
             onClick={() => setBulkImportOpen(true)}
             aria-label="Import clients from GoHighLevel"
-            title="Import clients from GoHighLevel"
-            className="size-[38px] shrink-0 rounded-[10px] p-0"
+            className="h-[38px] shrink-0 gap-2 rounded-[10px] px-3 text-[13px]"
           >
             <Download className="size-4" />
+            <span className="hidden sm:inline">Import</span>
           </Button>
 
           <Button
