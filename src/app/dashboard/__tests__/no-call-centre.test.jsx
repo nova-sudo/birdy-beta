@@ -10,12 +10,12 @@ import {
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
-vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }));
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }));
 
 import { apiRequest } from "@/lib/api";
-import { useClientGroups } from "@/lib/useClientGroups";
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 
 // ─── The portfolio nobody dials ─────────────────────────────────────────────
 // Every call figure on this screen is a sum over `hotprospector.call_stats`,
@@ -106,7 +106,7 @@ function fakeUseClientGroups(groupsByPreset) {
 }
 
 async function renderWith(groups) {
-  useClientGroups.mockImplementation(fakeUseClientGroups({ last_7d: groups }));
+  useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({ last_7d: groups }));
   render(
     <DashboardControlsProvider>
       <DashboardHeaderTitle />

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { UserRound, Shield, Settings, LogOut } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { apiRequest } from "@/lib/api";
+import { clearSession } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,6 +45,10 @@ export default function UserMenu() {
     } finally {
       localStorage.clear();
       sessionStorage.clear();
+      // localStorage.clear() doesn't touch cookies, and a session hint left
+      // behind would have middleware routing the next visitor as though they
+      // were still signed in.
+      clearSession();
       setIsLoggingOut(false);
       window.location.href = "/";
     }

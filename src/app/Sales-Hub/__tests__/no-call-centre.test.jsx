@@ -3,11 +3,11 @@ import { render, screen, waitFor, within } from "@testing-library/react"
 import SalesHubPage from "../page"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }))
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }))
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
-import { useClientGroups } from "@/lib/useClientGroups"
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 
 // ─── The Sales Hub for a client who doesn't call anyone ─────────────────────
 // Hadley's ask, in her words: "on the sales page, internally within the tool,
@@ -35,7 +35,7 @@ function group({ id, name, provider }) {
 }
 
 function mockGroups(groups) {
-  vi.mocked(useClientGroups).mockReturnValue({
+  vi.mocked(useClientGroupsWithSeries).mockReturnValue({
     clientGroups: groups,
     loading: false,
     error: null,

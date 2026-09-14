@@ -150,6 +150,7 @@ const METRIC_DISPLAY_NAMES = {
   clientGroup: "Client Group",
   account_currency: "Currency",
   conversion_rate_ranking: "Conv. Rate Ranking",
+  lead_source: "Lead Source",
   ghl_matched: "GHL Match",
   ghl_opportunity_status: "Opp. Status",
   ghl_opportunity_value: "Opp. Value",

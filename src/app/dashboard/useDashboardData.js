@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import useSWR from "swr";
 import { apiRequest } from "@/lib/api";
+import { optionalFetcher } from "@/lib/fetcher";
+import { queryKeys } from "@/lib/query-keys";
 import { METRIC_OPTIONS, conditionSummary } from "@/lib/alert-helpers";
 
 // ─── Backend contract ──────────────────────────────────────────────────────
@@ -54,65 +57,41 @@ export function expandTriggeredAlerts(rows) {
 }
 
 export function useDashboardData() {
-  const [suggestions, setSuggestions] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [wins, setWins] = useState([]);
-  const [activity, setActivity] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [alertsLoading, setAlertsLoading] = useState(true);
+  // Both endpoints go through optionalFetcher: this page was written to
+  // survive its own backend being incomplete, showing empty tabs rather than
+  // an error when a route isn't live yet. It never falls back to placeholder
+  // data — an empty tab is honest, invented figures are not.
+  //
+  // They stay two requests rather than one because a slow or failing summary
+  // must not hide the alerts, or the other way round. The alerts key is the
+  // same one the notifications bell uses, so on this page the two share a
+  // single response instead of asking twice.
+  const { data: summary, isLoading: loading } = useSWR(
+    queryKeys.dashboardSummary(),
+    optionalFetcher
+  );
+  const { data: alertData, isLoading: alertsLoading } = useSWR(
+    queryKeys.alerts(),
+    optionalFetcher
+  );
 
-  useEffect(() => {
-    let cancelled = false;
+  // Local overlays. Applying, undoing or dismissing a suggestion updates the
+  // screen straight away rather than waiting for a refetch, so what the user
+  // did to a row lives here on top of what the server last said.
+  const [suggestionOverride, setSuggestions] = useState(null);
+  const [winsOverride, setWins] = useState(null);
+  const [alertsOverride, setAlerts] = useState(null);
+  const [activityOverride, setActivity] = useState(null);
 
-    (async () => {
-      try {
-        const res = await apiRequest("/api/dashboard/summary");
-        if (!res.ok) throw new Error(`GET /api/dashboard/summary → ${res.status}`);
-        const data = await res.json();
-        if (cancelled) return;
+  const suggestions = suggestionOverride ?? summary?.suggestions ?? [];
+  const wins = winsOverride ?? summary?.wins ?? [];
+  const activity = activityOverride ?? summary?.activity ?? [];
 
-        setSuggestions(data.suggestions ?? []);
-        setWins(data.wins ?? []);
-        setActivity(data.activity ?? []);
-      } catch {
-        // Endpoint not live yet — the tabs show their empty states.
-        if (!cancelled) {
-          setSuggestions([]);
-          setWins([]);
-          setActivity([]);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
-
-  // Alerts tab — the real triggered sub-alerts, one per breaching client. Runs
-  // independently of the summary call so a slow/failing summary doesn't hide
-  // them, and vice versa. On failure the tab stays empty; it never falls back
-  // to placeholder alerts.
-  useEffect(() => {
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const res = await apiRequest("/api/alerts");
-        if (!res.ok) throw new Error(`GET /api/alerts → ${res.status}`);
-        const data = await res.json();
-        if (cancelled) return;
-
-        setAlerts(expandTriggeredAlerts(data.triggered));
-      } catch {
-        if (!cancelled) setAlerts([]);
-      } finally {
-        if (!cancelled) setAlertsLoading(false);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, []);
+  const fetchedAlerts = useMemo(
+    () => expandTriggeredAlerts(alertData?.triggered),
+    [alertData]
+  );
+  const alerts = alertsOverride ?? fetchedAlerts;
 
   return {
     suggestions, setSuggestions,

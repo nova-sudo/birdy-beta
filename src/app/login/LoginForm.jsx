@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
+import { writeSession } from "@/lib/session"
 import { apiRequest, publicRequest } from "@/lib/api"
 import BirdyLogo from "@/components/BirdyLogo"
 
@@ -64,6 +65,15 @@ export default function LoginForm() {
         "user_authenticated",
         JSON.stringify({ value: true, expires_at: expiresAt.toISOString() })
       )
+      // Same fact, in a place the server can read it, so middleware can route
+      // the next request without waiting for the app to hydrate. Onboarding is
+      // still unknown at this point — the check is a few lines below — so it
+      // starts false and gets rewritten there.
+      writeSession({
+        expiresAt: expiresAt.toISOString(),
+        role: data.user?.role ?? null,
+        onboardingIncomplete: false,
+      })
 
       // ✅ Save currency so useUserCurrency hook reads it instantly on first render
       if (data.user?.default_currency) {
@@ -83,6 +93,11 @@ export default function LoginForm() {
           const ob = await obRes.json()
           if (!ob.completed) {
             localStorage.setItem("onboarding_incomplete", "1")
+            writeSession({
+              expiresAt: expiresAt.toISOString(),
+              role: data.user?.role ?? null,
+              onboardingIncomplete: true,
+            })
             router.push("/onboarding")
             return
           }

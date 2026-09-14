@@ -12,12 +12,15 @@
 import { useMemo, useState } from "react"
 import { CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
 import { presetToDateRange } from "@/lib/date-utils"
+import { coverageNote } from "@/lib/marketing-aggregate"
 import {
   buildClientSeries,
   granularityForRange,
   hasData,
   CLIENT_CHART_METRICS,
 } from "@/lib/client-series"
+
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
 
 // A series with gaps still has to draw a continuous line. Holding the last
 // known value across a gap is honest here because the tooltip for that bucket
@@ -77,21 +80,52 @@ export function ClientTrendChart({
 
     const series = buildClientSeries(windowed, granularityForRange(start_date, end_date))
 
+    // Meta's account-level figures for the selected preset — the same numbers
+    // the goals strip above this chart and the Marketing Hub both read.
+    //
+    // The spend headline used to be the sum of the line beneath it, and the
+    // two are not the same number: `meta_daily_spend` is a rolling 400-day
+    // cache, while the account insight is the whole period. On BBL Body
+    // Confidence at All Time the chart summed £3,999 of cached days directly
+    // under a goals strip reading £7,814.90 — a page contradicting itself by
+    // nearly half. The account figure is the accurate one, so it becomes the
+    // headline and the shortfall is stated rather than silently absorbed.
+    const insights = group.facebook?.metrics?.insights ?? {}
+    const accountSpend = num(insights.spend)
+    const accountLeads = num(insights.results) || num(insights.total_leads)
+
     return CLIENT_CHART_METRICS.reduce((acc, metric) => {
       const s = series[metric.key]
       const plotted = s.values.filter((v) => v != null)
+      const plottedTotal = plotted.reduce((sum, v) => sum + v, 0)
 
-      // CPL is a rate, so its headline is the blended figure over the window,
-      // not the sum of per-bucket rates — adding costs per lead together would
-      // produce a number that means nothing.
-      const headline =
-        metric.key === "cpl"
-          ? (() => {
-              const spend = series.spend.values.reduce((sum, v) => sum + (v ?? 0), 0)
-              const leads = series.leads.values.reduce((sum, v) => sum + (v ?? 0), 0)
-              return leads > 0 ? spend / leads : null
-            })()
-          : plotted.reduce((sum, v) => sum + v, 0)
+      let headline = plottedTotal
+      let coverage = null
+
+      if (metric.key === "spend" && accountSpend > 0) {
+        headline = accountSpend
+        // Only says anything when the line really does cover less than the
+        // headline; a preset whose cache spans the whole window renders no
+        // note at all.
+        coverage = coverageNote(windowed.facebook.daily_spend, plottedTotal, accountSpend)
+      } else if (metric.key === "cpl") {
+        // CPL is a rate, so its headline is the blended figure over the
+        // window, not the sum of per-bucket rates — adding costs per lead
+        // together would produce a number that means nothing.
+        //
+        // Blended from Meta's own spend and results where both exist, which is
+        // what makes it agree with the CPL cell in the goals strip. Deriving
+        // it from the series instead mixed Meta spend with GHL lead rows and
+        // printed £2.01 under a tile reading £2.81.
+        headline =
+          accountSpend > 0 && accountLeads > 0
+            ? accountSpend / accountLeads
+            : (() => {
+                const spend = series.spend.values.reduce((sum, v) => sum + (v ?? 0), 0)
+                const leads = series.leads.values.reduce((sum, v) => sum + (v ?? 0), 0)
+                return leads > 0 ? spend / leads : null
+              })()
+      }
 
       acc[metric.key] = {
         ...metric,
@@ -107,7 +141,7 @@ export function ClientTrendChart({
         pointValues: s.values.map((v) =>
           v == null ? "—" : formatValue(metric.key, v, currencySymbol)
         ),
-        coverage: null,
+        coverage,
         // Rising cost is bad news; TrendChart colours by meaning.
         polarity: metric.key === "cpl" ? "lower" : "higher",
       }

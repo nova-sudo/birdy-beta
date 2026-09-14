@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 
-import { useClientGroups } from "@/lib/useClientGroups"
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
@@ -33,7 +33,7 @@ export default function ContactPage() {
   const {
     clientGroups, loading: groupsLoading, error: groupsError, refresh,
     datePreset, setDatePreset,
-  } = useClientGroups(DEFAULT_DATE_PRESET)
+  } = useClientGroupsWithSeries(DEFAULT_DATE_PRESET)
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const { granularity, setGranularity } = useGranularity(datePreset)
 

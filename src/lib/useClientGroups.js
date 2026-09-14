@@ -1,20 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from "react"
-import { apiRequest } from "./api"
-import { getCachedData, setCachedData, clearCache } from "./cache"
-import { CACHE_KEYS, DEFAULT_DATE_PRESET } from "./constants"
+import { useCallback, useState } from "react"
+import useSWR, { useSWRConfig } from "swr"
+import { queryKeys } from "./query-keys"
+import { DEFAULT_DATE_PRESET } from "./constants"
 
-// The variant is part of the key, not just the preset.
-//
-// /clients asks for include_daily=false, everyone else asks for the full
-// payload. Sharing one key meant the two overwrote each other: open the
-// Client Hub, then the Lead or Sales Hub, and the hub read back a cached
-// payload with no ghl_daily_leads / meta_daily_spend / hp_daily_calls. Those
-// series are exactly what its KPI tiles and trend chart sum, so it painted
-// zeroes — and with `loading` already false, they read as finished figures.
-// Changing the date preset was the only way out, because that was the only
-// thing that moved the key.
-function cacheKey(preset, includeDaily) {
-  return `${CACHE_KEYS.CLIENT_GROUPS}_${preset}_${includeDaily ? "full" : "lite"}`
+const CLIENT_GROUPS_PREFIX = "/api/client-groups"
+
+// How often to re-ask while a group is still being imported. Groups arrive
+// from the integrations over a minute or two, and until they land the row
+// shows a loading state rather than zeros.
+const CREATING_POLL_MS = 10_000
+
+function hasCreatingGroups(groups) {
+  return (groups || []).some((g) => g.status === "creating" || g.status === "pending")
 }
 
 /**
@@ -37,127 +34,73 @@ function cacheKey(preset, includeDaily) {
  * option silently lost its data. The Lead Hub rendered 0 leads while its own
  * table, served by a different endpoint, showed 1,459. A missing option should
  * cost a caller a bigger payload, never a wrong number.
+ *
+ * ── On the cache ──────────────────────────────────────────────────────────
+ *
+ * Six pages call this hook, and each used to fetch on mount, so moving
+ * between them re-downloaded and re-parsed the whole payload every time. The
+ * defence was localStorage with a one-hour TTL, and for the full variant it
+ * never once worked: 6.38 MB does not fit a ~5 MB quota, so every write threw
+ * QuotaExceededError into a bare `catch {}` and every read missed.
+ *
+ * SWR holds it in memory instead, keyed by preset *and* variant, shared across
+ * every component asking for the same one. Remounting inside the freshness
+ * window (see swr-provider) paints immediately and makes no request; past it,
+ * the cached figures stay on screen while it revalidates behind them.
  */
 export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) {
   const { includeDaily = true } = opts
   const [datePreset, setDatePreset] = useState(initialPreset)
-  const [clientGroups, setClientGroups] = useState([])
-  const [meta, setMeta] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [hasIncompleteGroups, setHasIncompleteGroups] = useState(false)
-  const abortRef = useRef(null)
-  const pollingRef = useRef(null)
 
-  const fetchGroups = useCallback(async (preset, forceRefresh = false) => {
-    // Stale-while-revalidate. The cache used to be a hard short-circuit: it
-    // painted and returned, so an entry written while HotProspector was
-    // mid-sync served zeroes — with `loading` already false, so they read as
-    // finished figures — for the full hour of its TTL. Clearing localStorage
-    // was the only way out. Now the cache still paints immediately, but the
-    // request goes out behind it and corrects the numbers when it lands.
-    let servedFromCache = false
-    if (!forceRefresh) {
-      const cached = getCachedData(cacheKey(preset, includeDaily))
-      if (cached) {
-        setClientGroups(cached.groups || cached)
-        setMeta(cached.meta || null)
-        setLoading(false)
-        setError(null)
-        servedFromCache = true
-      }
-    }
+  const key = queryKeys.clientGroups(datePreset, includeDaily)
+  const { mutate: mutateAny } = useSWRConfig()
 
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
+  const { data, error, isLoading, mutate } = useSWR(key, {
+    // While groups are still importing, keep asking. SWR clears the interval
+    // for us when the hook unmounts or the key changes.
+    refreshInterval: (latest) => (hasCreatingGroups(latest?.client_groups) ? CREATING_POLL_MS : 0),
 
-    // Only show the loading state when there is nothing on screen yet;
-    // revalidating behind cached figures must not blank them.
-    if (!servedFromCache) setLoading(true)
-    setError(null)
+    // Deliberately no keepPreviousData. On a preset change the key changes
+    // too, and carrying the old data across would put last month's figures
+    // under this month's label — the one wrong state worse than a spinner.
+    // Within a single key SWR already keeps the last good response through a
+    // failed revalidation, so "stale, not wrong" survives without it.
+  })
 
-    try {
-      const res = await apiRequest(
-        `/api/client-groups?date_preset=${preset}`
-          + (includeDaily ? "" : "&include_daily=false"),
-        { signal: controller.signal }
-      )
-      if (!res.ok) {
-        // Try to extract a meaningful error message from the response
-        let detail = `HTTP ${res.status}`
-        try {
-          const body = await res.json()
-          detail = body.detail || body.error || detail
-        } catch {}
-        const err = new Error(detail)
-        err.status = res.status
-        throw err
-      }
+  const clientGroups = data?.client_groups ?? []
+  const meta = data?.meta ?? null
 
-      const data = await res.json()
-      const groups = data.client_groups || []
-      const responseMeta = data.meta || null
+  /**
+   * Drop every cached preset and variant, then refetch this one.
+   *
+   * Callers reach for this after changing what the groups *are* — adding one,
+   * renaming one, reconnecting an integration. That invalidates every window,
+   * not just the one on screen, so this matches on the path rather than the
+   * current key.
+   */
+  const invalidate = useCallback(
+    () =>
+      mutateAny(
+        (k) => typeof k === "string" && k.startsWith(CLIENT_GROUPS_PREFIX),
+        undefined,
+        { revalidate: true }
+      ),
+    [mutateAny]
+  )
 
-      // Only cache when all groups are fully loaded
-      const hasIncomplete = groups.some(g => g.status === "creating" || g.status === "pending")
-      if (!hasIncomplete) {
-        setCachedData(cacheKey(preset, includeDaily), { groups, meta: responseMeta })
-      }
-      setHasIncompleteGroups(hasIncomplete)
-
-      setClientGroups(groups)
-      setMeta(responseMeta)
-    } catch (err) {
-      // A failed revalidation leaves the cached figures on screen rather than
-      // replacing them with an error — they are stale, not wrong.
-      if (err.name !== "AbortError" && !servedFromCache) {
-        setError(err.message)
-      }
-    } finally {
-      if (!controller.signal.aborted) {
-        setLoading(false)
-      }
-    }
-    // includeDaily is fixed per call site today, but leaving it out of the
-    // deps would capture the first render's value — a stale closure waiting
-    // for the first caller that toggles it.
-  }, [includeDaily])
-
-  useEffect(() => {
-    fetchGroups(datePreset)
-    return () => abortRef.current?.abort()
-  }, [datePreset, fetchGroups])
-
-  // Poll every 10s while any group is still creating/pending
-  useEffect(() => {
-    if (hasIncompleteGroups) {
-      pollingRef.current = setInterval(() => {
-        fetchGroups(datePreset, true)
-      }, 10000)
-    }
-    return () => {
-      if (pollingRef.current) {
-        clearInterval(pollingRef.current)
-        pollingRef.current = null
-      }
-    }
-  }, [hasIncompleteGroups, datePreset, fetchGroups])
-
-  const invalidate = useCallback(() => {
-    clearCache(CACHE_KEYS.CLIENT_GROUPS)
-    fetchGroups(datePreset, true)
-  }, [datePreset, fetchGroups])
-
-  const refresh = useCallback(() => {
-    fetchGroups(datePreset, true)
-  }, [datePreset, fetchGroups])
+  /** Refetch this preset now, keeping what's on screen until it lands. */
+  const refresh = useCallback(() => mutate(), [mutate])
 
   return {
     clientGroups,
     meta,
-    loading,
-    error,
+    // Loading means "nothing to show yet", not "a request is in flight".
+    // SWR's own isLoading is the latter: it stays true through a background
+    // revalidation of data we already hold, including data the login prefetch
+    // put there, which would spin at the user while the figures sit ready
+    // underneath. Revalidating behind cached figures must not blank them.
+    loading: isLoading && data === undefined,
+    error: error ? error.message : null,
     datePreset,
     setDatePreset,
     invalidate,

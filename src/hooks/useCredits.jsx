@@ -1,43 +1,39 @@
 "use client";
 
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-  useCallback,
-} from "react";
-import { apiRequest } from "@/lib/api";
+import { createContext, useContext, useMemo } from "react";
+import useSWR from "swr";
+import { optionalFetcher } from "@/lib/fetcher";
+import { queryKeys } from "@/lib/query-keys";
 
 // ── Context ─────────────────────────────────────────────────────────────────
-// Mirrors the billing provider pattern, but uses apiRequest (bearer + 401
-// handling) since /api/credits/* is authenticated. Mounted only inside the
-// authed app shell (see layout.jsx), so it never fires on public pages.
+// Mounted only inside the authed app shell (see layout.jsx), so it never fires
+// on public pages. The context is kept even though SWR would already share one
+// request across every consumer: it is what guarantees the *provider* is the
+// only thing that decides whether credits are being fetched at all.
 
 const CreditsContext = createContext(null);
 
 export function CreditsProvider({ children }) {
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    try {
-      const res = await apiRequest("/api/credits/status");
-      if (res.ok) setStatus(await res.json());
-    } catch {
-      // Credits must never break the app.
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { void refresh(); }, [refresh]);
-
-  return (
-    <CreditsContext.Provider value={{ status, loading, refresh }}>
-      {children}
-    </CreditsContext.Provider>
+  // optionalFetcher, not fetcher: credits must never break the app, which is
+  // what the old bare `catch {}` was for. A failure leaves status null and
+  // every derived figure falls back to its zero below.
+  const { data: status, isLoading, mutate } = useSWR(
+    queryKeys.creditsStatus(),
+    optionalFetcher
   );
+
+  // Loading only while there is nothing to show — see useClientGroups for why
+  // SWR's isLoading alone is the wrong question.
+  const value = useMemo(
+    () => ({
+      status: status ?? null,
+      loading: isLoading && status === undefined,
+      refresh: mutate,
+    }),
+    [status, isLoading, mutate]
+  );
+
+  return <CreditsContext.Provider value={value}>{children}</CreditsContext.Provider>;
 }
 
 // ── Hook ────────────────────────────────────────────────────────────────────

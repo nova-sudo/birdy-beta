@@ -12,7 +12,7 @@ import {
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
 // The header controls only render on the dashboard route.
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
-vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }));
+vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the page uses.
@@ -21,7 +21,7 @@ vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }));
 import { format, subDays } from "date-fns";
 
 import { apiRequest } from "@/lib/api";
-import { useClientGroups } from "@/lib/useClientGroups";
+import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 
 /** N days ago, in the two shapes this file needs. */
 const dayISO = (n) => format(subDays(new Date(), n), "yyyy-MM-dd");
@@ -175,7 +175,7 @@ function fakeUseClientGroups(groupsByPreset, { loading = false, error = null } =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useClientGroups.mockImplementation(fakeUseClientGroups({ last_7d: GROUPS }));
+  useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({ last_7d: GROUPS }));
   mockEndpoints();
 });
 
@@ -245,7 +245,7 @@ describe("Portfolio Dashboard", () => {
     const user = userEvent.setup();
     // A different window has to yield different numbers, or the assertion
     // below would pass on stale data.
-    useClientGroups.mockImplementation(
+    useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({
         last_7d: GROUPS,
         last_30d: [
@@ -272,7 +272,7 @@ describe("Portfolio Dashboard", () => {
 
   it("re-ranks the leaderboard off the new window's clients", async () => {
     const user = userEvent.setup();
-    useClientGroups.mockImplementation(
+    useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({
         last_7d: GROUPS,
         this_month: [
@@ -297,7 +297,7 @@ describe("Portfolio Dashboard", () => {
 
   it("never shows one window's figures under another window's label", async () => {
     const user = userEvent.setup();
-    useClientGroups.mockImplementation(
+    useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({ last_7d: GROUPS, last_30d: [] })
     );
 
@@ -313,7 +313,7 @@ describe("Portfolio Dashboard", () => {
   it("drops the delta pills entirely on a preset with no comparable period", async () => {
     const user = userEvent.setup();
     // Same clients either side — this is about the comparison, not the window.
-    useClientGroups.mockImplementation(
+    useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
     );
     await renderPage();
@@ -569,7 +569,7 @@ describe("Portfolio Dashboard", () => {
   });
 
   it("says so when there are no active clients rather than showing zeroes", async () => {
-    useClientGroups.mockImplementation(fakeUseClientGroups({}));
+    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}));
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
@@ -577,7 +577,7 @@ describe("Portfolio Dashboard", () => {
   });
 
   it("distinguishes a failed load from an empty portfolio", async () => {
-    useClientGroups.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
+    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
     renderDashboard();
 
     await waitFor(() =>
