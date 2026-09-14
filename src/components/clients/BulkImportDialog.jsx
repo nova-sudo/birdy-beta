@@ -15,6 +15,17 @@
  * already imported, so re-opening this after a partial import shows only
  * what's left rather than offering duplicates.
  *
+ * Being a thin shell means letting ReviewStep do its own job. It already
+ * renders its own loading state — a SpinnerRing over a real or estimated
+ * progress bar, because the prep job can take a minute on a large agency — and
+ * the first version of this dialog put a second, older loader in front of it
+ * and never let that state show. It is handed `review` in both states now and
+ * decides for itself.
+ *
+ * ReviewStep is a fixed-width column (`max-w-[860px]`) that expects its parent
+ * to centre it and to supply pd-* fonts on an ancestor, exactly as the
+ * onboarding shell does. Both are this component's responsibility.
+ *
  * Two things the wizard does that this deliberately doesn't: it never routes
  * through billing (an existing customer already has a plan, and the import
  * endpoint enforces the client limit itself, reporting what it skipped), and
@@ -24,9 +35,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Loading } from "@/components/ui/loader"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
+import { pdFontClass } from "@/lib/pd-fonts"
 import ReviewStep from "@/app/onboarding/ReviewStep"
 
 const POLL_MS = 2500
@@ -35,7 +46,6 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
   const [review, setReview] = useState(null)
   const [settled, setSettled] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [error, setError] = useState(null)
   const cancelled = useRef(false)
 
   // Poll while the prep job runs. Same shape as the wizard's review poll: the
@@ -46,7 +56,6 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
     cancelled.current = false
     setReview(null)
     setSettled(false)
-    setError(null)
 
     let timer
     const poll = async () => {
@@ -62,9 +71,9 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
         }
       } catch {
         if (cancelled.current) return
-        // Keep whatever the last good poll returned rather than blanking the
-        // table someone may already be working through.
-        setError("Couldn't reach GoHighLevel just now — still trying.")
+        // Keep whatever the last good poll returned rather than blanking a
+        // table someone may already be working through, and keep polling —
+        // ReviewStep goes on showing its progress state meanwhile.
       }
       timer = setTimeout(poll, POLL_MS)
     }
@@ -128,30 +137,27 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-5xl max-h-[92vh] overflow-y-auto p-4 md:p-6">
-        <DialogHeader>
+      <DialogContent
+        className={`${pdFontClass} max-h-[92vh] overflow-y-auto overflow-x-hidden border-pd-border bg-white p-5 sm:max-w-[920px] md:p-7`}
+      >
+        {/* sr-only so Radix has its accessible label without printing a second
+            heading above ReviewStep's own — which already says what this is,
+            and says it in the right typeface. Same pattern as the Add Client
+            wizard in the page that opens this. */}
+        <DialogHeader className="sr-only">
           <DialogTitle>Import clients from GoHighLevel</DialogTitle>
         </DialogHeader>
 
-        {error && !review && (
-          <p className="text-[12.5px] text-pd-faint">{error}</p>
-        )}
-
-        {!review ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <Loading />
-            <p className="text-[12.5px] text-pd-faint">
-              Reading your GoHighLevel sub-accounts…
-            </p>
-          </div>
-        ) : (
+        {/* ReviewStep is a fixed-width column and centres nothing itself —
+            the onboarding shell does that for it, and so does this. */}
+        <div className="flex w-full justify-center">
           <ReviewStep
             review={review}
             settled={settled}
             importing={importing}
             onImport={runImport}
           />
-        )}
+        </div>
       </DialogContent>
     </Dialog>
   )
