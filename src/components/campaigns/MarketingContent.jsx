@@ -46,6 +46,8 @@ import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PageTabPanel, PageTabs, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
+import { LandingFunnel } from "@/components/attribution/LandingFunnel"
+import { useLandingFunnel } from "@/lib/useLandingFunnel"
 import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
 import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
@@ -1037,6 +1039,25 @@ export function MarketingContent({
     ...clientGroups.slice(0, 49),
   ], [clientGroups])
 
+  // ── Landing-page funnel ───────────────────────────────────────────────────
+  // Only ever for one client. The funnel's stages are a single page's visits,
+  // starts and opt-ins; summing them across an agency's whole portfolio would
+  // average a client whose page converts at 14% with one who has no page at
+  // all, and the result describes neither. Null means the card draws nothing.
+  const funnelGroupId = useMemo(() => {
+    if (selectedClientGroup && selectedClientGroup !== "all") return selectedClientGroup
+    // The embedded case — the client workspace's Marketing tab passes one
+    // group and hides the picker, so there is nothing to select.
+    if (clientGroups?.length === 1) return clientGroups[0]?.id ?? null
+    return null
+  }, [selectedClientGroup, clientGroups])
+
+  const {
+    funnel: landingFunnel,
+    loading: landingFunnelLoading,
+    error: landingFunnelError,
+  } = useLandingFunnel(funnelGroupId, datePreset)
+
   const selectedGroupLabel = useMemo(() => {
     if (!selectedClientGroup || selectedClientGroup === "all") return "All Groups"
     return clientGroups.find(g => g.id === selectedClientGroup)?.name ?? "All Groups"
@@ -1301,6 +1322,20 @@ export function MarketingContent({
             </div>
           </div>
         </div>
+
+        {/* ── Landing page funnel ──────────────────────────────────────────
+            Between the hero and the tables on purpose: it is the step the
+            tables cannot show. Spend, clicks and CPL above describe getting
+            people to the page; the campaign rows below describe what each ad
+            produced. What happened on the page in between has never been on
+            this screen, and for a client running their own landing page it is
+            usually where the money goes. */}
+        <LandingFunnel
+          funnel={landingFunnel}
+          loading={landingFunnelLoading}
+          error={landingFunnelError}
+          groupId={funnelGroupId}
+        />
 
         {/* Tabs */}
         <div className="flex w-full flex-col">

@@ -30,6 +30,7 @@ import { pdFontClass } from "@/lib/pd-fonts"
 import { GoalsStrip } from "@/components/clients/GoalsStrip"
 import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
+import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
 import { InsightCard, PageTabs, SidePanel, UnderlineTabs } from "@/components/portfolio"
@@ -38,6 +39,7 @@ import { buildFunnelStages, buildPreviousFunnel } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
 import { diagnoseFunnel } from "@/lib/portfolio-metrics"
 import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
+import { useLandingFunnel } from "@/lib/useLandingFunnel"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -267,6 +269,13 @@ export default function ClientDetailsPage() {
   // The verdict under the funnel — the same rule the Portfolio Dashboard reads.
   const diagnosis = useMemo(() => diagnoseFunnel(funnelStages ?? []), [funnelStages])
 
+  // The step above all four of those, for clients whose ads point at a landing
+  // page of their own: how many of the people the ads sent ever opted in. The
+  // hook answers `applicable: false` for everyone else — a client on Meta
+  // Instant Forms has no page of ours to measure — and the card draws nothing.
+  const { funnel: landingFunnel, loading: landingLoading, error: landingError } =
+    useLandingFunnel(clientId, datePreset)
+
   // ── Fetch client details ────────────────────────────────────────────────────
   useEffect(() => {
     if (!clientId) return
@@ -438,6 +447,19 @@ export default function ClientDetailsPage() {
             goals={goals}
             currencySymbol={currencySymbol}
             loading={groupsLoading}
+          />
+
+          {/* Above the diagnostics funnel rather than inside it, because it is
+              a different cohort: the four stages below start at leads, and
+              this one counts everyone who reached the page and never became
+              one. Drawing them as eight stages of a single funnel would put a
+              CRM-sync percentage next to a page-visit percentage and imply the
+              two are comparable. */}
+          <LandingFunnel
+            funnel={landingFunnel}
+            loading={landingLoading}
+            error={landingError}
+            groupId={clientId}
           />
 
           {/* 1d: the chart and, beneath it, the history book beside

@@ -10,10 +10,12 @@ import { toneClass } from "./tones";
  * a chevron between steps that sits level with the chips rather than the row
  * centre.
  *
- * @param {{key, stage, count, share?, tone, icon, direction?, delta?}[]} stages
+ * @param {{key, stage, count, share?, hint?, tone, icon, direction?, delta?}[]} stages
  *        in funnel order; `share` is the stage as a percentage of the cohort
+ * @param {string} shareOf names that cohort, since it is not always leads —
+ *        the landing-page funnel's stages are shares of landing views
  */
-export function FunnelStepper({ stages }) {
+export function FunnelStepper({ stages, shareOf = "leads" }) {
   if (!stages?.length) return null;
 
   return (
@@ -33,7 +35,13 @@ export function FunnelStepper({ stages }) {
               >
                 <Icon className="size-[19px]" aria-hidden="true" />
               </span>
-              <div className="text-[12px] text-pd-faint">{stage.stage}</div>
+              {/* The hint is the stage's own caveat — what an "ad click" is
+                  counted from, why an embedded form's starts are a floor. It
+                  belongs on the label rather than in the card, where four of
+                  them would bury the figures they annotate. */}
+              <div className="text-[12px] text-pd-faint" title={stage.hint || undefined}>
+                {stage.stage}
+              </div>
               <div
                 className="mt-[3px] font-pd-display text-[22px] font-bold text-pd-ink"
                 // An estimate says so rather than wearing the same exactness as
@@ -52,7 +60,7 @@ export function FunnelStepper({ stages }) {
                 // The point of the card: what fraction of the cohort reached
                 // this stage. On Closes this is the close rate.
                 <div className="mt-[2px] text-[12px] text-pd-faint">
-                  {stage.share} of leads
+                  {stage.share} of {shareOf}
                 </div>
               )}
               {tone && (
