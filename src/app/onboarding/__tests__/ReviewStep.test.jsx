@@ -161,3 +161,83 @@ describe("sub-accounts review ordering", () => {
     expect(rowNames()).toEqual(["Lucy Jones PMU", "Plush Aesthetics", "Aura"])
   })
 })
+
+describe("low-confidence pairing suggestions", () => {
+  // A pairing the server scored but would not stand behind. It must be
+  // reachable in one click and must never be the row's answer until someone
+  // makes it one — a pre-filled wrong ad account reads as reviewed, so the
+  // row goes unread and the client is imported against another client's spend.
+  const SUGGESTED = {
+    ...REVIEW,
+    accounts: [
+      account("loc_3", "Lucy Jones PMU", {
+        fb_suggestion: { id: "act_2", name: "Plush - Ad Account", score: 0.71 },
+      }),
+    ],
+  }
+
+  const renderSuggested = () =>
+    render(<ReviewStep review={SUGGESTED} settled importing={false} onImport={onImport} />)
+
+  it("leaves the ad account unset and offers the suggestion instead", () => {
+    renderSuggested()
+    expect(screen.getByText(/no matching ad account found/i)).toBeTruthy()
+    expect(screen.getByRole("button", { name: /did you mean plush - ad account/i })).toBeTruthy()
+  })
+
+  it("accepts the suggestion on click", async () => {
+    const user = userEvent.setup()
+    renderSuggested()
+
+    await user.click(screen.getByRole("button", { name: /did you mean/i }))
+
+    expect(screen.getByText("Plush - Ad Account")).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /did you mean/i })).toBeNull()
+  })
+
+  it("finds a row by the name of its suggested ad account", async () => {
+    const user = userEvent.setup()
+    renderSuggested()
+
+    await user.type(screen.getByPlaceholderText(/search 1 sub-account/i), "plush")
+
+    expect(screen.getByDisplayValue("Lucy Jones PMU")).toBeTruthy()
+  })
+})
+
+describe("new leads in the last 30 days", () => {
+  // Read off the row itself, not the page: the stat banner above the table
+  // renders bare numbers too, and "0" would match both.
+  const leadCell = () =>
+    screen.getByDisplayValue("Aura").closest("div").querySelector(".tabular-nums").textContent
+
+  const withLeads = (extra) =>
+    render(
+      <ReviewStep
+        review={{ ...REVIEW, accounts: [account("loc_1", "Aura", extra)] }}
+        settled
+        importing={false}
+        onImport={onImport}
+      />
+    )
+
+  it("shows the count for a live sub-account", () => {
+    withLeads({ leads_30d: 12, leads_30d_capped: false })
+    expect(leadCell()).toBe("12")
+  })
+
+  it("marks a saturated count so a busy client does not read as an exact number", () => {
+    withLeads({ leads_30d: 50, leads_30d_capped: true })
+    expect(leadCell()).toBe("50+")
+  })
+
+  it("distinguishes a real zero from a row the prep job has not reached", () => {
+    withLeads({ leads_30d: 0, leads_30d_capped: false })
+    expect(leadCell()).toBe("0")
+  })
+
+  it("shows a dash rather than a zero it has not earned", () => {
+    withLeads({})
+    expect(leadCell()).toBe("—")
+  })
+})

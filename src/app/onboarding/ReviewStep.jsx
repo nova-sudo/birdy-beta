@@ -76,12 +76,20 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
   const resolved = accounts.map((account) => {
     const edit = rows[account.location_id] || {}
+    // Only a confident pairing arrives as fb_match, so this is the box's
+    // value. fb_suggestion is the server's near-miss and deliberately does
+    // not feed it — see the "Did you mean" affordance below.
     const fb = edit.fb !== undefined ? edit.fb : account.fb_match
     return {
       ...account,
       importChecked: edit.import !== undefined ? edit.import : autoCheckedIds.has(account.location_id),
       birdyName: edit.birdyName !== undefined ? edit.birdyName : account.name,
       fb,
+      suggestion: account.fb_suggestion || null,
+      // The prep job writes 0 for a sub-account it read and found nothing in,
+      // and leaves the field off entirely for one it has not reached. Those
+      // are different answers and the column shows them differently.
+      leads30dKnown: typeof account.leads_30d === "number",
       status: edit.status || account.status_default || "active",
       leadSource: edit.leadSource || "unknown",
     }
@@ -116,7 +124,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const query = search.trim().toLowerCase()
   const visible = query
     ? ordered.filter((row) =>
-        [row.birdyName, row.name, row.fb?.name].some(
+        [row.birdyName, row.name, row.fb?.name, row.suggestion?.name].some(
           (field) => (field || "").toLowerCase().includes(query)
         )
       )
@@ -183,7 +191,13 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   }
 
   return (
-    <div className="w-full max-w-[860px]">
+    // Widest step in the wizard, and the only one that is a table rather than
+    // a column of prose. 860px had it pairing two account names, a status and
+    // a lead source inside six truncating columns; the activity count added
+    // here needs room that was not there. Capped at the same 1080px as the
+    // progress bar in the top bar so the two line up on a wide monitor
+    // instead of the table sitting visibly narrower than the chrome above it.
+    <div className="w-full max-w-[1080px]">
       <div className="mb-2 text-center">
         <StepHeading small>Here&apos;s what we found in your GHL account</StepHeading>
       </div>
@@ -223,6 +237,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           <span className="w-[19px] shrink-0" />
           <span className="flex-[1.2]">NAME IN BIRDY</span>
           <span className="hidden flex-1 sm:block">GHL SUB-ACCOUNT</span>
+          <span className="w-[76px] shrink-0 text-right">NEW (30D)</span>
           <span className="flex-[1.5]">FACEBOOK AD ACCOUNT</span>
           <span className="w-[118px] shrink-0 text-right">STATUS</span>
           <span className="w-[132px] shrink-0 text-right">LEADS FROM</span>
@@ -272,6 +287,19 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
               {/* read-only ghl name */}
               <span className="hidden flex-1 truncate text-[12.5px] text-pd-faint sm:block">{row.name}</span>
 
+              {/* New leads in the last 30 days. The fastest way to tell a live
+                  client from a dormant one — which is the question this whole
+                  screen is really asking, and the one the Active/Inactive chip
+                  only answers yes/no. Dashes while the prep job has not
+                  reached this row yet; never a 0 it has not earned. */}
+              <span
+                className="w-[76px] shrink-0 text-right text-[12.5px] tabular-nums"
+                style={{ color: row.leads30dKnown ? (row.leads_30d > 0 ? "#25A55F" : "#B4B4C0") : "#D4D4DC" }}
+                title={row.leads_30d_capped ? `More than ${row.leads_30d} new leads in the last 30 days` : undefined}
+              >
+                {row.leads30dKnown ? `${row.leads_30d}${row.leads_30d_capped ? "+" : ""}` : "—"}
+              </span>
+
               {/* facebook dropdown */}
               <div className="relative min-w-0 flex-[1.5]">
                 <div
@@ -287,6 +315,26 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   <span className="truncate">{row.fb ? row.fb.name : NO_MATCH}</span>
                   <ChevronDown className="h-[11px] w-[11px] shrink-0 text-pd-faint" strokeWidth={2.4} />
                 </div>
+
+                {/* A pairing the server was not confident enough to fill in.
+                    It is offered here rather than pre-selected: a wrong ad
+                    account in the box reads as answered, so nobody checks it,
+                    and the client is imported reporting another client's
+                    spend. An empty box is visibly unanswered and costs one
+                    click — this is that click, without the false confidence.
+                    Hidden once the row has an ad account either way. */}
+                {!row.fb && row.suggestion && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      patch(row.location_id, { fb: row.suggestion })
+                    }}
+                    className="mt-[3px] block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-[11px] text-pd-primary underline"
+                  >
+                    Did you mean {row.suggestion.name}?
+                  </button>
+                )}
                 {fbMenuOpen === row.location_id && (
                   <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
                     <div className="p-2">
