@@ -1,4 +1,4 @@
-// The five goals on the Client Detail overview.
+// The goals on the Client Detail overview.
 //
 // The comparison inverts for cost goals — being UNDER a cost-per-lead target
 // is winning — so a single ratio would report every well-performing client as
@@ -68,10 +68,10 @@ describe("goalState — no target", () => {
 })
 
 describe("buildClientGoals", () => {
-  it("returns the five goals in the design's order", () => {
+  it("returns the goals in the design's order", () => {
     const goals = buildClientGoals(group())
     expect(goals.map((g) => g.id)).toEqual([
-      "revenue", "closes", "cpl", "closeRate", "leads",
+      "revenue", "closes", "cpl", "cpa", "closeRate", "leads",
     ])
   })
 
@@ -139,7 +139,7 @@ describe("buildClientGoals", () => {
   })
 
   it("survives a null group", () => {
-    expect(buildClientGoals(null)).toHaveLength(5)
+    expect(buildClientGoals(null)).toHaveLength(6)
   })
 })
 
@@ -221,5 +221,77 @@ describe("formatGoal", () => {
   it("renders an em dash for an unknown value", () => {
     expect(formatGoal(null, "number")).toBe("—")
     expect(formatGoal(NaN, "currency")).toBe("—")
+  })
+})
+
+describe("cost per acquisition", () => {
+  // Distinct from cost per lead by the width of the funnel: the same spend
+  // over the clients actually won rather than the leads generated. The two
+  // were one field once, and an agency's CPA answer was reported back to it
+  // as a CPL — a target it never set, several times smaller than the one it
+  // did.
+  it("divides spend by closes, not by leads", () => {
+    const goals = byId(
+      buildClientGoals(
+        group({ spend: 1000, metaLeads: 100, funnel: { leads: 100, closes: 5 } })
+      )
+    )
+
+    expect(goals.cpa.value).toBe(200)
+    expect(goals.cpl.value).toBe(10)
+  })
+
+  it("reads its target from cpa and leaves cpl's alone", () => {
+    const goals = byId(
+      buildClientGoals(
+        group({
+          targets: { cpa: 250, cpl: 12 },
+          spend: 1000,
+          metaLeads: 100,
+          funnel: { leads: 100, closes: 5 },
+        })
+      )
+    )
+
+    expect(goals.cpa.target).toBe(250)
+    expect(goals.cpl.target).toBe(12)
+  })
+
+  it("is a cost goal, so coming in under target is on track", () => {
+    const goals = byId(
+      buildClientGoals(
+        group({
+          targets: { cpa: 300 },
+          spend: 1000,
+          metaLeads: 100,
+          funnel: { leads: 100, closes: 5 },
+        })
+      )
+    )
+
+    expect(goals.cpa.state).toBe(ON_TRACK)
+  })
+
+  it("has no value before anything is won, rather than reading as free", () => {
+    // Spend with no closes is not a cost per acquisition of zero — it is a
+    // cost per acquisition that does not exist yet. Zero would render as the
+    // best possible result.
+    const goals = byId(
+      buildClientGoals(
+        group({ targets: { cpa: 300 }, spend: 1000, metaLeads: 100, funnel: { leads: 100, closes: 0 } })
+      )
+    )
+
+    expect(goals.cpa.value).toBeNull()
+    expect(goals.cpa.state).toBeNull()
+  })
+
+  it("renders as a plain figure when the agency set no target", () => {
+    const goals = byId(
+      buildClientGoals(group({ spend: 1000, metaLeads: 100, funnel: { leads: 100, closes: 5 } }))
+    )
+
+    expect(goals.cpa.target).toBeNull()
+    expect(goals.cpa.state).toBeNull()
   })
 })

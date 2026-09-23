@@ -374,9 +374,13 @@ describe("onboarding wizard", () => {
   }
 
   it("saves the targets under the names a client group actually stores", async () => {
-    // The wizard was sending `cpa`, which is not a field on a client group, so
-    // the whole PUT was rejected — taking monthly_wins, the one name that was
-    // right, down with it. The client then reported no targets set at all.
+    // Twice wrong here. The wizard first sent `cpa` when no such field existed,
+    // so the whole PUT was rejected — taking monthly_wins, the one name that
+    // was right, down with it, and the client reported no targets at all. The
+    // fix then sent the answer as `cpl`, which stored successfully and stored
+    // the wrong thing: the step asks for a cost per acquisition and the
+    // dashboard reported it as a cost per lead. `cpa` is a real field now, so
+    // the answer goes out under its own name.
     const user = userEvent.setup()
     bootAt(KPI_DEFAULT_STEP, {
       data: { ...WITH_GROUP, kpi: { cpa: "45", wins: "20", conv_rate: "15" } },
@@ -386,7 +390,7 @@ describe("onboarding wizard", () => {
     await user.click(screen.getByRole("button", { name: /just this client/i }))
 
     await waitFor(() => expect(lastTargetsBody()).toEqual({
-      cpl: 45,
+      cpa: 45,
       monthly_wins: 20,
       // Held as a fraction: what it is measured against is closes ÷ leads.
       conversion_rate: 0.15,
@@ -446,7 +450,7 @@ describe("onboarding wizard", () => {
     await user.click(screen.getByRole("button", { name: /just this client/i }))
 
     await waitFor(() => expect(lastTargetsBody()).toEqual({
-      cpl: 45,
+      cpa: 45,
       monthly_wins: 20,
       conversion_rate: 0.15,
       save_as_default: false,
@@ -476,7 +480,7 @@ describe("onboarding wizard", () => {
 
     // Creation resolves with the id, and the parked targets go out against it.
     await waitFor(() => expect(lastTargetsBody()).toEqual({
-      cpl: 45,
+      cpa: 45,
       monthly_wins: 20,
       conversion_rate: 0.15,
       save_as_default: true,
@@ -513,10 +517,10 @@ describe("onboarding wizard", () => {
       { id: "grp_1", ghl_location_id: "loc_1" },
       { id: "grp_a", ghl_location_id: "loc_a" },
       // Nulls are what an untouched client's targets look like, not an absence.
-      { id: "grp_b", ghl_location_id: "loc_b", targets: { cpl: null, monthly_wins: null } },
+      { id: "grp_b", ghl_location_id: "loc_b", targets: { cpa: null, cpl: null, monthly_wins: null } },
       { id: "grp_earlier", ghl_location_id: "loc_earlier" },
       // Someone set this one by hand. Defaults must not overwrite it.
-      { id: "grp_customised", ghl_location_id: "loc_cust", targets: { cpl: 10 } },
+      { id: "grp_customised", ghl_location_id: "loc_cust", targets: { cpa: 10 } },
     ],
   }
 
@@ -547,7 +551,7 @@ describe("onboarding wizard", () => {
     // The same three fields the client settings Targets tab reads, and the
     // account-level default left alone — the first client's PUT wrote it.
     expect(targetsPutsById().grp_b).toEqual({
-      cpl: 45,
+      cpa: 45,
       monthly_wins: 20,
       conversion_rate: 0.15,
       save_as_default: false,

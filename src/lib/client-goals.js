@@ -1,5 +1,5 @@
 /**
- * The five goals on the Client Detail overview, each as {value, target, state}.
+ * The goals on the Client Detail overview, each as {value, target, state}.
  *
  * Two things are worth knowing before reading the numbers:
  *
@@ -9,10 +9,9 @@
  *    is the only way closes/leads is a real close rate. See
  *    integrations/gohighlevel.compute_cohort_funnel.
  *
- * 2. "Number of leads" has no target of its own. The design's Targets tab
- *    defines six goals and this is not one of them, so it is implied from two
- *    that are: monthly spend ÷ cost per lead is how many leads that budget is
- *    meant to buy.
+ * 2. "Number of leads" has no target of its own. The Targets tab does not
+ *    define one, so it is implied from two that it does: monthly spend ÷ cost
+ *    per lead is how many leads that budget is meant to buy.
  *
  * A goal with no target is returned with `target: null` and no state — it
  * renders as a plain figure rather than pretending to be on track.
@@ -80,6 +79,17 @@ export function buildClientGoals(group) {
   const closeRate = cohortLeads > 0 ? closes / cohortLeads : null
   const cpl = metaLeads > 0 ? spend / metaLeads : null
 
+  // Cost per acquisition: the same spend, divided by the clients actually won
+  // rather than the leads generated. Closes come from the CRM cohort — the
+  // people who arrived in this window and have since been won — so the spend
+  // and the wins describe the same period and the same population.
+  //
+  // "Acquisition" here means a close, because a close is the only acquisition
+  // every client has. Appointments exist in Birdy solely as a HotProspector
+  // agent metric (hp_agent_appts), so a cost-per-appointment would be blank
+  // for every client on a GHL dialler or none at all.
+  const cpa = closes > 0 ? spend / closes : null
+
   // Implied from the two targets that do exist — see the note above.
   const spendTarget = orNull(targets.monthly_spend)
   const cplTarget = orNull(targets.cpl)
@@ -116,6 +126,16 @@ export function buildClientGoals(group) {
       note: "Meta ad spend divided by Meta leads. Matches the Marketing Hub.",
       value: cpl,
       target: cplTarget,
+      format: "currency",
+      polarity: "lower",
+    },
+    {
+      id: "cpa",
+      label: "Cost per acquisition",
+      source: "Meta + GoHighLevel",
+      note: "Meta ad spend divided by the leads from this window that have since been won. Blank until a client is won — spend with nothing closed yet has no cost per acquisition, only a running total.",
+      value: cpa,
+      target: orNull(targets.cpa),
       format: "currency",
       polarity: "lower",
     },

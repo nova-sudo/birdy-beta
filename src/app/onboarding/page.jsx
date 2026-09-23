@@ -124,15 +124,19 @@ const CONFETTI_COLORS = ["#6B4EE6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", 
  * actually stores them. Returns null when nothing was filled in, so the caller
  * can skip the request rather than send an empty one.
  *
- * Two of the three names the wizard was sending do not exist on a client group,
- * which is why targets set here never turned up on the client:
+ * The names the wizard sends have to be the stored ones, and twice they were
+ * not:
  *
- *   · the cost box went out as `cpa`. There is no `cpa` target — the stored
- *     field is `cpl` (see client-goals.js, and the Targets tab in
- *     components/clients/ClientTargetsForm.jsx, which is the same endpoint's
- *     other writer). The unknown field took the whole PUT down with it, so
- *     `monthly_wins` — the one name that was right, and the one the weekly
- *     health pass measures against — was lost along with it.
+ *   · the cost box went out as `cpa` when no `cpa` target existed, and the
+ *     unknown field took the whole PUT down with it — so `monthly_wins`, the
+ *     one name that was right and the one the weekly health pass measures
+ *     against, was lost along with it. The fix at the time was to send the
+ *     answer as `cpl`, which made the request succeed and stored the wrong
+ *     thing: the step asks for a cost per *acquisition* and the client then
+ *     reported it on the dashboard as its cost per *lead*, a number the
+ *     agency never gave and which is smaller by the width of the funnel.
+ *     `cpa` is a real stored target now (see ClientTargetsForm's FIELDS and
+ *     client-goals.js), so the box goes out under its own name.
  *   · `conversion_rate` is held as a fraction, because what it is compared
  *     against is closes ÷ leads. Typed under a "%" suffix, 15 means 0.15.
  *
@@ -148,10 +152,10 @@ function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
   }
 
   const targets = {}
-  const cpl = num(cpa)
+  const costPerAcquisition = num(cpa)
   const monthlyWins = num(wins)
   const rate = num(convRate)
-  if (cpl !== null) targets.cpl = cpl
+  if (costPerAcquisition !== null) targets.cpa = costPerAcquisition
   if (monthlyWins !== null) targets.monthly_wins = monthlyWins
   if (rate !== null) targets.conversion_rate = rate / 100
 
@@ -159,12 +163,14 @@ function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
   return { ...targets, save_as_default: saveAsDefault }
 }
 
-// The six monthly targets a client group stores, as named by the Targets tab
-// in components/clients/ClientTargetsForm.jsx. Listed rather than read off the
+// The monthly targets a client group stores, as named by the Targets tab in
+// components/clients/ClientTargetsForm.jsx. Listed rather than read off the
 // object so an unrelated field arriving on `targets` one day cannot be
-// mistaken for someone having set a goal.
+// mistaken for someone having set a goal — which also means this list has to
+// gain a field whenever that form does, or a client whose only target is the
+// new one reads here as having none.
 const TARGET_FIELDS = [
-  "cpl", "monthly_wins", "monthly_revenue", "conversion_rate", "monthly_spend", "aov",
+  "cpa", "cpl", "monthly_wins", "monthly_revenue", "conversion_rate", "monthly_spend", "aov",
 ]
 
 /** Has anyone given this client a target yet? */

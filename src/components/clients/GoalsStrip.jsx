@@ -1,15 +1,15 @@
 "use client"
 
 // components/clients/GoalsStrip.jsx
-// The Client Detail overview's goals card — five equal cells in one card,
-// divided by hairlines, each showing a live value against its target and a
-// state pill.
+// The Client Detail overview's goals card — one equal cell per goal in a
+// single card, divided by hairlines, each showing a live value against its
+// target and a state pill.
 //
 // The design deliberately has no progress bar: a bar doesn't read sensibly for
 // ratio-style metrics like cost per lead or close rate, where lower or
 // bounded-at-100% breaks the metaphor.
 
-import { Banknote, Target, Coins, Percent, Users, Info } from "lucide-react"
+import { Banknote, Target, Coins, HandCoins, Percent, Users, Info } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -23,6 +23,7 @@ const ICONS = {
   revenue: Banknote,
   closes: Target,
   cpl: Coins,
+  cpa: HandCoins,
   closeRate: Percent,
   leads: Users,
 }
@@ -143,7 +144,7 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
     <TooltipProvider delayDuration={200}>
     <div className="mb-[14px] rounded-2xl border border-pd-border bg-pd-surface">
       {/* Horizontal on wide screens as the design draws it; wrapping to two
-          rows below that, since five cells at 18px padding do not fit. */}
+          rows below that, since the cells at 18px padding do not all fit. */}
       <div className="flex flex-wrap items-stretch lg:flex-nowrap">
         {goals.map((goal, i) => (
           <GoalCell

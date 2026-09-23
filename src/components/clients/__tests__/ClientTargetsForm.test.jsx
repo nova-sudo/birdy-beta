@@ -40,12 +40,12 @@ beforeEach(() => {
   apiRequest.mockResolvedValue(ok({ targets: {} }))
 })
 
-describe("the six fields", () => {
+describe("the fields", () => {
   it("renders each one with its help line", () => {
     setup()
     for (const label of [
-      "Cost per lead", "Monthly closes", "Monthly revenue",
-      "Close rate", "Monthly spend", "Average order value",
+      "Cost per lead", "Cost per acquisition", "Monthly closes",
+      "Monthly revenue", "Close rate", "Monthly spend", "Average order value",
     ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }
@@ -214,5 +214,33 @@ describe("agency default", () => {
 
     await waitFor(() => expect(apiRequest).toHaveBeenCalled())
     expect(sentBody().save_as_default).toBe(true)
+  })
+})
+
+describe("cost per acquisition", () => {
+  // Distinct from cost per lead, and stored separately. The onboarding wizard
+  // asks for this one and used to write the answer into `cpl` — so the tab
+  // showed the agency a cost-per-lead target it had never set, and had
+  // nowhere to put the one it had.
+  it("offers a field of its own alongside cost per lead", () => {
+    setup()
+    expect(screen.getByLabelText("Cost per acquisition")).toBeInTheDocument()
+    expect(screen.getByLabelText("Cost per lead")).toBeInTheDocument()
+  })
+
+  it("seeds from the stored cpa, not from cpl", () => {
+    setup({ targets: { cpa: 250, cpl: 12 } })
+    expect(screen.getByLabelText("Cost per acquisition")).toHaveValue(250)
+    expect(screen.getByLabelText("Cost per lead")).toHaveValue(12)
+  })
+
+  it("saves the two costs as separate fields", async () => {
+    const { user } = setup()
+
+    await user.type(screen.getByLabelText("Cost per acquisition"), "250")
+    await user.type(screen.getByLabelText("Cost per lead"), "12")
+    await save(user)
+
+    await waitFor(() => expect(sentBody()).toMatchObject({ cpa: 250, cpl: 12 }))
   })
 })
