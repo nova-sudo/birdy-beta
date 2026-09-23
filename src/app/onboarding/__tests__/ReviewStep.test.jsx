@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "", poppins: { variable: "" }, inter: { variable: "" } }))
@@ -239,5 +239,72 @@ describe("new leads in the last 30 days", () => {
   it("shows a dash rather than a zero it has not earned", () => {
     withLeads({})
     expect(leadCell()).toBe("—")
+  })
+})
+
+describe("the analysing screen", () => {
+  // The longest wait in onboarding, and it used to be a bare spinner over an
+  // untitled bar — so the one genuinely slow stage gave no account of itself.
+  // A wait nobody can explain is a wait people assume has broken.
+  const renderLoading = (prep) =>
+    render(
+      <ReviewStep
+        review={prep ? { ...REVIEW, prep } : null}
+        settled={false}
+        importing={false}
+        onImport={onImport}
+      />
+    )
+
+  it("says what it is doing and why it takes a while", () => {
+    renderLoading()
+    expect(screen.getByText(/analysing your sub-accounts/i)).toBeTruthy()
+    expect(screen.getByText(/can take a minute or two/i)).toBeTruthy()
+  })
+
+  it("counts real sub-accounts once the job reports a total", () => {
+    renderLoading({ status: "running", done: 12, total: 40 })
+    expect(screen.getByText(/12 of 40 sub-accounts checked/i)).toBeTruthy()
+  })
+
+  it("falls back to a moving bar before the job has a total to report", () => {
+    // While the job is still being scheduled there is nothing to count, and a
+    // bar that does not move is what people reload out of.
+    renderLoading({ status: "not_started", done: 0, total: 0 })
+    expect(screen.queryByText(/sub-accounts checked/i)).toBeNull()
+  })
+
+  it("cycles the messages so the screen does not read as frozen", () => {
+    vi.useFakeTimers()
+    try {
+      renderLoading({ status: "running", done: 1, total: 40 })
+      // Anchored: the intro paragraph above reuses some of the same wording,
+      // and only the caption starts with these phrases.
+      expect(screen.getByText(/^Reading your GoHighLevel/i)).toBeTruthy()
+
+      act(() => vi.advanceTimersByTime(3300))
+      expect(screen.getByText(/^Checking which sub-accounts/i)).toBeTruthy()
+
+      act(() => vi.advanceTimersByTime(3300))
+      expect(screen.getByText(/^Counting new leads/i)).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("settles on the last message rather than looping back to the first", () => {
+    // Seeing line one come back is the tell that the messages are decorative;
+    // people stop reading them, and the honest signal that this is taking
+    // longer than usual is the line that stays put.
+    vi.useFakeTimers()
+    try {
+      renderLoading({ status: "running", done: 1, total: 40 })
+      act(() => vi.advanceTimersByTime(3300 * 12))
+
+      expect(screen.getByText(/^Almost there/i)).toBeTruthy()
+      expect(screen.queryByText(/^Reading your GoHighLevel/i)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

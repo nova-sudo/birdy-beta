@@ -152,6 +152,47 @@ export function FakeProgressBar({ active = true, done = false, expectedMs, capti
   )
 }
 
+/**
+ * One line at a time from `messages`, swapped every `everyMs`.
+ *
+ * A progress bar answers "is this moving"; it does not answer "what is it
+ * doing", and on the longest wait in the wizard that second question is the
+ * one people actually have. A screen that says the same sentence for ninety
+ * seconds reads as frozen even while the bar creeps, so the copy moves too.
+ *
+ * It stops on the last line rather than looping back to the first. Cycling
+ * round is a tell that the messages are decorative — once someone sees line
+ * one come back they stop reading all of them, and the honest signal that
+ * this is taking longer than usual is the line that stays put.
+ */
+export function CyclingCaption({ messages = [], everyMs = 3200, className = "" }) {
+  const [index, setIndex] = useState(0)
+
+  useEffect(() => {
+    setIndex(0)
+    if (messages.length <= 1) return
+    const timer = setInterval(
+      () => setIndex((i) => (i < messages.length - 1 ? i + 1 : i)),
+      everyMs
+    )
+    return () => clearInterval(timer)
+    // Joined rather than passed by reference: an inline array literal is a new
+    // object on every render and would restart the cycle on each one.
+  }, [messages.join("|"), everyMs])
+
+  if (!messages.length) return null
+  return (
+    <div
+      // Keyed so each line fades in as its own element rather than the text
+      // changing under a static node.
+      key={index}
+      className={`animate-in fade-in duration-500 text-center text-[12.5px] text-pd-faint ${className}`}
+    >
+      {messages[index]}
+    </div>
+  )
+}
+
 /** Green check circle + label ("GHL connected", "Targets applied"…). */
 export function SuccessRow({ children }) {
   return (

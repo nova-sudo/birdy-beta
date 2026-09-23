@@ -7,9 +7,35 @@
 
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { FakeProgressBar, PrimaryButton, ProgressBar, SearchInput, SpinnerRing, StepHeading } from "./parts"
+import {
+  CyclingCaption,
+  FakeProgressBar,
+  PrimaryButton,
+  ProgressBar,
+  SearchInput,
+  SpinnerRing,
+  StepHeading,
+} from "./parts"
 
 const NO_MATCH = "No matching ad account found"
+
+// What the prep job is actually doing, in the order it does it: mint a
+// location token, read each sub-account's recent contacts, then pair the ones
+// that are live against the Meta ad accounts.
+//
+// They describe real work rather than filling time. Someone who reads "pairing
+// them with your Meta ad accounts" and then lands on a table of pairings knows
+// the wait bought something; a generic "hang tight" teaches them the screen is
+// decorative. The tone here is deliberately plain — Birdy's voice is a
+// separate, un-signed-off decision, and swapping this array is the whole
+// change when it lands.
+const PREP_MESSAGES = [
+  "Reading your GoHighLevel agency…",
+  "Checking which sub-accounts are still bringing in leads…",
+  "Counting new leads from the last 30 days…",
+  "Pairing your clients with their Meta ad accounts…",
+  "Almost there — larger agencies take a little longer…",
+]
 
 // How each client collects leads. Asked here because this is the one screen that
 // already lists every client — and left as "Ask later" by default on purpose: a
@@ -162,30 +188,43 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
   if (review === null || !settled) {
     const prep = review?.prep
-    // The longest wait in the whole wizard: the prep job mints a location
-    // token per sub-account and pulls each one's most recent lead, so a large
-    // agency sits here for a minute or more. Once the job reports a total we
-    // have real progress to show; before that — while the job is still being
-    // scheduled — a bar that visibly moves is the difference between "working"
-    // and "frozen", which is what people reload out of.
+    // The longest wait in the whole wizard: the prep job reads every
+    // sub-account's recent leads and pairs it against a Meta ad account, so a
+    // large agency sits here for a minute or more. Once the job reports a
+    // total we have real progress to show; before that — while the job is
+    // still being scheduled — a bar that visibly moves is the difference
+    // between "working" and "frozen", which is what people reload out of.
     const hasRealProgress = prep?.status === "running" && prep?.total > 0
     return (
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-4 py-16">
+      <div className="flex w-full max-w-[460px] flex-col items-center py-14">
+        {/* Saying what this is and why it takes a while. The step used to
+            open on a spinner and a bar with no title at all, so the one
+            genuinely slow stage in onboarding gave no account of itself — and
+            a wait you cannot explain is a wait people assume has broken. */}
+        <div className="mb-[10px] text-center">
+          <StepHeading small>Analysing your sub-accounts</StepHeading>
+        </div>
+        <div className="mb-[26px] text-center text-[13.5px] leading-normal text-pd-body">
+          We&apos;re going through every sub-account in your GoHighLevel agency, checking
+          which ones are still bringing in leads and matching them to your Meta ad
+          accounts. Agencies with a lot of clients can take a minute or two — you only
+          have to do this once.
+        </div>
+
         <SpinnerRing size={22} />
-        {hasRealProgress ? (
-          <div className="w-full">
-            <ProgressBar value={(prep.done / prep.total) * 100} />
-            <div className="mt-[9px] text-center text-[13px] text-pd-faint">
-              Analysing your sub-accounts… {prep.done} of {prep.total} checked
-            </div>
-          </div>
-        ) : (
-          <FakeProgressBar
-            className="w-full"
-            expectedMs={15000}
-            caption="Reviewing your GHL account…"
-          />
-        )}
+        <div className="mt-4 w-full">
+          {hasRealProgress ? (
+            <>
+              <ProgressBar value={(prep.done / prep.total) * 100} />
+              <div className="mt-[9px] text-center text-[13px] text-pd-faint">
+                {prep.done} of {prep.total} sub-accounts checked
+              </div>
+            </>
+          ) : (
+            <FakeProgressBar className="w-full" expectedMs={15000} />
+          )}
+          <CyclingCaption className="mt-[9px]" messages={PREP_MESSAGES} />
+        </div>
       </div>
     )
   }
