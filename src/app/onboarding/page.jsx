@@ -80,9 +80,6 @@ const PHASE_LABEL = {
   5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Billing", 9: "Finished",
 }
 
-// Dropped wholesale when the user says they have no Slack workspace.
-const SLACK_CONFIG_STEPS = ["slack_channel", "slack_frequency", "brief_content"]
-
 // The twelve the sign-up form used to offer, before currency moved in here.
 // Mirrored server-side by SUPPORTED_CURRENCIES in routers/onboarding.py, which
 // is what actually guards users.default_currency.
@@ -248,10 +245,6 @@ export default function OnboardingPage() {
   const [channels, setChannels] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
   const [selectedChannel, setSelectedChannel] = useState(null)
-  // "I don't use Slack" — drops the channel/frequency/brief steps rather than
-  // stranding a user with no workspace on a step they cannot complete. Slack
-  // is the one connection Birdy genuinely works without.
-  const [slackOptOut, setSlackOptOut] = useState(false)
   const [frequency, setFrequency] = useState(null)
   const [notifyTime, setNotifyTime] = useState("9:00 AM")
   const [notifyDay, setNotifyDay] = useState("Monday")
@@ -274,19 +267,18 @@ export default function OnboardingPage() {
 
   // ── Step machinery ──────────────────────────────────────────────────────
 
-  // Two steps are conditional. hp_key only exists for a Hot Prospector user,
-  // and the three Slack configuration steps only exist for someone who has a
-  // Slack workspace to configure. Filtering them out (rather than jumping over
-  // them) keeps stepIndex meaningful: "Step 12 of 17" counts what this
-  // particular user will actually be asked.
+  // One step is conditional: hp_key only exists for a Hot Prospector user.
+  // Filtering it out (rather than jumping over it) keeps stepIndex meaningful
+  // — "Step 12 of 17" counts what this particular user will actually be asked.
+  //
+  // The three Slack configuration steps used to be conditional too, on an "I
+  // don't use Slack" answer. Slack is now required, so they always show; a
+  // stored opt-out from before that change is ignored rather than honoured,
+  // since honouring it would finish an account with notifications silently
+  // switched off and nothing on screen saying so.
   const visibleSteps = useMemo(
-    () =>
-      STEPS.filter((s) => {
-        if (s === "hp_key") return salesTool === "hp"
-        if (SLACK_CONFIG_STEPS.includes(s)) return !slackOptOut
-        return true
-      }),
-    [salesTool, slackOptOut]
+    () => STEPS.filter((s) => (s === "hp_key" ? salesTool === "hp" : true)),
+    [salesTool]
   )
   const currentKey = visibleSteps[Math.min(stepIndex, visibleSteps.length - 1)]
   const phase = PHASE_OF[currentKey]
@@ -353,7 +345,6 @@ export default function OnboardingPage() {
         if (data.sales_tool) setSalesTool(data.sales_tool)
         if (data.currency) setCurrency(data.currency)
         else if (state.default_currency) setCurrency(state.default_currency)
-        if (data.slack_opt_out) setSlackOptOut(true)
         if (data.first_client) {
           if (data.first_client.ghl_location_id) {
             setSelectedClient({ id: data.first_client.ghl_location_id, name: data.first_client.name })
@@ -407,11 +398,7 @@ export default function OnboardingPage() {
         // in-memory ref alone doesn't survive that.
         if (Array.isArray(data.pending_import)) pendingImportRef.current = data.pending_import
 
-        const visible = STEPS.filter((s) => {
-          if (s === "hp_key") return data.sales_tool === "hp"
-          if (SLACK_CONFIG_STEPS.includes(s)) return !data.slack_opt_out
-          return true
-        })
+        const visible = STEPS.filter((s) => (s === "hp_key" ? data.sales_tool === "hp" : true))
         if (!cancelled) setStepIndex(Math.min(state.step || 0, visible.length - 1))
 
         // Probe live connection status in the background so a returning OAuth
@@ -983,17 +970,6 @@ export default function OnboardingPage() {
     localStorage.removeItem("onboarding_incomplete")
     router.push(groupId ? `/clients/${groupId}` : "/clients")
   }, [router, flushPendingTargets, kpiSaveDefault, cpa, wins, convRate, applyTargetsToAllClients])
-
-  // "I don't use Slack". Marking the opt-out drops SLACK_CONFIG_STEPS from
-  // visibleSteps, so the plain next() lands on sub_accounts_review — the same
-  // mechanism that hides hp_key for a non-HotProspector user. Deliberately not
-  // a jump: a jump would have to know what comes after Slack, and the last
-  // thing that did (the old "Skip for now") sent people straight past the
-  // mandatory billing gate.
-  const declineSlack = useCallback(() => {
-    setSlackOptOut(true)
-    next({ slack_opt_out: true })
-  }, [next])
 
   // ── Derived lists ───────────────────────────────────────────────────────
 
@@ -1752,40 +1728,13 @@ export default function OnboardingPage() {
               {renderConnectStates({
                 status: slackStatus,
                 onConnect: () => startOAuth("/api/connect/slack", setSlackStatus),
-                // Connecting Slack un-does an earlier "I don't use Slack" —
-                // otherwise someone who opted out, went back and connected
-                // anyway would still have the channel and brief steps hidden,
-                // and would finish onboarding with a workspace Birdy never
-                // asked them where to post in.
-                onContinue: () => {
-                  if (slackOptOut) {
-                    setSlackOptOut(false)
-                    next({ slack_opt_out: false })
-                  } else {
-                    next()
-                  }
-                },
+                onContinue: () => next(),
                 connectLabel: "Connect Slack",
                 connectingLabel: "Connecting to Slack…",
                 successLabel: "Slack connected",
                 errorTitle: "Connection failed",
                 errorBody: "Slack didn't authorize the request — this usually means the popup was closed early. Let's try again.",
               })}
-              {/* The one genuine opt-out in the wizard. Slack is the only
-                  integration Birdy works fully without, and plenty of agencies
-                  don't run one — with "Skip for now" gone, this step would
-                  otherwise be a wall they cannot get past. Stated as a real
-                  answer, so the product knows the difference between "not set
-                  up yet" and "doesn't use Slack". */}
-              {(slackStatus === "idle" || slackStatus === "error") && (
-                <button
-                  type="button"
-                  onClick={declineSlack}
-                  className="mt-5 cursor-pointer border-0 bg-transparent text-[13px] font-semibold text-pd-subtle underline transition-colors hover:text-pd-body"
-                >
-                  I don&apos;t use Slack
-                </button>
-              )}
             </div>
           )}
 

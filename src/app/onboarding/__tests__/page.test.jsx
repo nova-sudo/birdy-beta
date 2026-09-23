@@ -116,27 +116,36 @@ describe("onboarding wizard", () => {
     expect(screen.queryByRole("button", { name: /skip for now/i })).toBeNull()
   })
 
-  // ── Slack opt-out replaces the generic skip ────────────────────────────
+  // ── Slack is required ─────────────────────────────────────────────────
 
-  it("lets a user with no Slack workspace past the Slack step", async () => {
-    const user = userEvent.setup()
+  it("offers no way past the Slack step without connecting", async () => {
+    // There used to be an "I don't use Slack" answer here, which dropped the
+    // channel, frequency and brief steps wholesale. Slack is required now, so
+    // the only way on is to connect it.
     bootAt(13)
     await screen.findByText(/connect birdy to your slack/i)
 
-    await user.click(screen.getByRole("button", { name: /i don't use slack/i }))
-
-    // Answering "no Slack" drops the three configuration steps, so the very
-    // next step is the sub-accounts review — not the channel picker.
-    await screen.findByText(/reviewing your ghl account|what we found in your ghl account/i)
-    expect(screen.queryByText(/where should birdy briefs go/i)).toBeNull()
-    expect(lastPersistedData()).toMatchObject({ slack_opt_out: true })
+    expect(screen.queryByRole("button", { name: /i don't use slack/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /skip/i })).toBeNull()
   })
 
-  it("brings the Slack steps back if an opted-out user connects after all", async () => {
+  it("goes to the channel picker once Slack is connected", async () => {
     const user = userEvent.setup()
-    // Opted out earlier, went back, and has now connected a workspace. The
-    // channel step has to reappear — otherwise they finish with a Slack
-    // install Birdy was never told where to post in.
+    bootAt(13, {
+      overrides: { "/api/integrations/slack/status": () => json({ installed: true }) },
+    })
+    await screen.findByText(/slack connected/i)
+
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    await screen.findByText(/where should birdy briefs go/i)
+  })
+
+  it("still asks an already opted-out user where briefs should go", async () => {
+    // Someone mid-wizard from before Slack was required. Honouring the stored
+    // answer would finish their account with notifications silently off and
+    // nothing on screen saying so, so it is ignored rather than obeyed.
+    const user = userEvent.setup()
     bootAt(13, {
       data: { slack_opt_out: true },
       overrides: { "/api/integrations/slack/status": () => json({ installed: true }) },
@@ -146,18 +155,6 @@ describe("onboarding wizard", () => {
     await user.click(screen.getByRole("button", { name: /continue/i }))
 
     await screen.findByText(/where should birdy briefs go/i)
-    expect(lastPersistedData()).toMatchObject({ slack_opt_out: false })
-  })
-
-  it("does not offer the Slack opt-out to someone already connected", async () => {
-    bootAt(13, {
-      overrides: {
-        "/api/integrations/slack/status": () => json({ installed: true }),
-      },
-    })
-    await screen.findByText(/connect birdy to your slack/i)
-    await screen.findByText(/slack connected/i)
-    expect(screen.queryByRole("button", { name: /i don't use slack/i })).toBeNull()
   })
 
   // ── "I don't currently call my leads" ──────────────────────────────────
