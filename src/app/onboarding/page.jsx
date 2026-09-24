@@ -247,6 +247,9 @@ export default function OnboardingPage() {
   // workspace's. Null means "no failure" — an empty list is then genuinely an
   // empty list.
   const [channelsError, setChannelsError] = useState(null)
+  // What the server said when an OAuth hop could not even be started, which
+  // the step's own error copy would otherwise talk over.
+  const [oauthError, setOAuthError] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
   const [selectedChannel, setSelectedChannel] = useState(null)
   const [frequency, setFrequency] = useState(null)
@@ -552,6 +555,7 @@ export default function OnboardingPage() {
   const startOAuth = useCallback(
     async (endpoint, setStatus) => {
       setStatus("connecting")
+      setOAuthError(null)
       try {
         setOAuthHandoff("/onboarding")
         const res = await apiRequest(endpoint)
@@ -560,6 +564,12 @@ export default function OnboardingPage() {
         window.location.href = d.auth_url
       } catch (e) {
         console.error(`OAuth start failed for ${endpoint}:`, e)
+        // The step's own copy assumes the user got as far as the provider and
+        // closed the window. When the request never left Birdy — the server
+        // saying the integration is not configured, say — that copy blames
+        // them for something they did not do and names a cause they cannot
+        // act on. What the server said is more use than what we guessed.
+        setOAuthError(String(e.message || e))
         setStatus("error")
       }
     },
@@ -1101,7 +1111,7 @@ export default function OnboardingPage() {
               <AlertCircle className="h-[15px] w-[15px] text-pd-danger" strokeWidth={2.2} />
               <span className="font-pd-display text-[13.5px] font-semibold text-pd-danger">{errorTitle}</span>
             </div>
-            <div className="text-[12.5px] leading-normal text-pd-body">{errorBody}</div>
+            <div className="text-[12.5px] leading-normal text-pd-body">{oauthError || errorBody}</div>
           </div>
           <PrimaryButton onClick={onRetry || onConnect} arrow={false}>
             Try again

@@ -286,6 +286,31 @@ describe("onboarding wizard", () => {
     expect(screen.queryByRole("button", { name: /reconnect slack/i })).toBeNull()
   })
 
+  it("says what the server said when an OAuth hop cannot start", async () => {
+    // The step's own copy assumes the user reached the provider and closed
+    // the window. A local backend with no Slack credentials answers 503
+    // "Slack integration not configured" — nothing to do with a popup, and
+    // nothing the user can act on from that sentence.
+    const user = userEvent.setup()
+    bootAt(13, {
+      overrides: {
+        "/api/integrations/slack/status": () => json({ installed: false }),
+        "/api/connect/slack": () =>
+          Promise.resolve({
+            ok: false,
+            status: 503,
+            json: async () => ({ detail: "Slack integration not configured" }),
+          }),
+      },
+    })
+    await screen.findByRole("button", { name: /connect slack/i })
+
+    await user.click(screen.getByRole("button", { name: /connect slack/i }))
+
+    await screen.findByText(/slack integration not configured/i)
+    expect(screen.queryByText(/popup was closed early/i)).toBeNull()
+  })
+
   // ── "I don't currently call my leads" ──────────────────────────────────
 
   it("offers a third sales answer for agencies that don't call leads", async () => {
