@@ -73,6 +73,9 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const [statusMenuOpen, setStatusMenuOpen] = useState(null)
   const [leadMenuOpen, setLeadMenuOpen] = useState(null)
   const [fbSearch, setFbSearch] = useState("")
+  // Defaults to hiding them: the ticket asking for this is about noise during
+  // pairing, and on a real agency two in five sub-accounts are dormant.
+  const [hideInactive, setHideInactive] = useState(true)
 
   const unimported = useMemo(
     () => (review?.accounts || []).filter((a) => !a.already_imported),
@@ -148,16 +151,32 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   // this — searching must never silently drop a sub-account someone already
   // ticked, which is exactly what filtering the source list would do.
   const query = search.trim().toLowerCase()
-  const visible = query
-    ? ordered.filter((row) =>
-        [row.birdyName, row.name, row.fb?.name, row.suggestion?.name].some(
-          (field) => (field || "").toLowerCase().includes(query)
-        )
-      )
-    : ordered
+  const matchesQuery = (row) =>
+    !query ||
+    [row.birdyName, row.name, row.fb?.name, row.suggestion?.name].some(
+      (field) => (field || "").toLowerCase().includes(query)
+    )
+
+  // Dormant sub-accounts are the noise this screen is trying to see past: an
+  // agency with 177 of them is really being asked about the 109 still bringing
+  // in leads. They are folded away rather than dropped — "not live right now"
+  // is a judgement made from one lead date, and an agency having a quiet month
+  // must still be able to find its own client. A ticked row is never folded
+  // away: the count beneath the table is the promise that nothing selected can
+  // vanish, and hiding one silently would break it.
+  const visible = ordered.filter(
+    (row) =>
+      matchesQuery(row) &&
+      (!hideInactive || row.status !== "inactive" || row.importChecked)
+  )
   const hiddenChecked = resolved.filter(
     (row) => row.importChecked && !visible.includes(row)
   ).length
+  const hiddenInactive = hideInactive
+    ? ordered.filter(
+        (row) => matchesQuery(row) && row.status === "inactive" && !row.importChecked
+      ).length
+    : 0
 
   const patch = (id, changes) =>
     setRows((prev) => ({ ...prev, [id]: { ...prev[id], ...changes } }))
@@ -165,6 +184,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   const importCount = resolved.filter((r) => r.importChecked).length
   const atSelectionCap = importCount >= MAX_IMPORT_SELECTION
   const activeCount = resolved.filter((r) => r.status === "active").length
+  const inactiveCount = resolved.length - activeCount
   const fbQuery = fbSearch.toLowerCase()
   const fbOptions = fbAccounts.filter((a) => (a.name || "").toLowerCase().includes(fbQuery))
 
@@ -183,7 +203,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       color: "text-pd-ink",
     },
     { label: "Active", value: activeCount, color: "text-pd-success" },
-    { label: "Inactive", value: resolved.length - activeCount, color: "text-pd-faint" },
+    { label: "Inactive", value: inactiveCount, color: "text-pd-faint" },
   ]
 
   if (review === null || !settled) {
@@ -264,11 +284,38 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           one you care about meant scrolling for it. Matches either side of the
           pairing, GHL name or ad-account name, because the job on this step is
           checking that the two line up. */}
-      <SearchInput
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder={`Search ${resolved.length} sub-account${resolved.length === 1 ? "" : "s"} or ad accounts…`}
-      />
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <SearchInput
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={`Search ${resolved.length} sub-account${resolved.length === 1 ? "" : "s"} or ad accounts…`}
+          />
+        </div>
+        {/* The escape hatch for the default above. Stated as a count rather
+            than a bare label so the number it is keeping off screen is on
+            screen — "Hide inactive" alone tells you a rule is in force but not
+            what it costs. */}
+        <button
+          type="button"
+          onClick={() => setHideInactive((v) => !v)}
+          className="flex shrink-0 cursor-pointer items-center gap-[7px] rounded-lg border-[1.5px] border-pd-border bg-white px-[11px] py-[9px] text-[12.5px] text-pd-body transition-colors hover:border-[#D8D3F5]"
+        >
+          <span
+            className="flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border-[1.5px] text-[10px] text-white"
+            style={{
+              borderColor: hideInactive ? "#6B4EE6" : "#DFDFE8",
+              background: hideInactive ? "#6B4EE6" : "#fff",
+            }}
+          >
+            {hideInactive ? "✓" : ""}
+          </span>
+          Hide inactive
+          {inactiveCount > 0 && (
+            <span className="text-pd-faint">({inactiveCount})</span>
+          )}
+        </button>
+      </div>
 
       {/* table */}
       <div className="overflow-hidden rounded-xl border border-pd-border text-left">
@@ -500,14 +547,26 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         <div className="fixed inset-0 z-[5]" onClick={closeMenus} />
       )}
 
-      {query && visible.length > 0 && (
+      {(query || hiddenInactive > 0) && visible.length > 0 && (
         <div className="mt-[14px] text-center text-[12.5px] text-pd-faint">
-          Showing {visible.length} of {resolved.length}
+          {query && <>Showing {visible.length} of {resolved.length}</>}
           {/* Said out loud because the Import button counts every ticked row,
               including the ones this search is hiding — without this the count
               looks wrong. */}
           {hiddenChecked > 0 && (
             <> · {hiddenChecked} selected {hiddenChecked === 1 ? "row is" : "rows are"} hidden by this search</>
+          )}
+          {hiddenInactive > 0 && (
+            <>
+              {query ? " · " : ""}{hiddenInactive} inactive hidden ·{" "}
+              <button
+                type="button"
+                onClick={() => setHideInactive(false)}
+                className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] font-semibold text-pd-primary underline"
+              >
+                show them
+              </button>
+            </>
           )}
         </div>
       )}

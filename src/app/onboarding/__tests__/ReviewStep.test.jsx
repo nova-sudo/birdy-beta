@@ -308,3 +308,84 @@ describe("the analysing screen", () => {
     }
   })
 })
+
+describe("hiding inactive sub-accounts", () => {
+  // The noise this screen exists to see past: on a real agency, 68 of 177
+  // sub-accounts had no lead in 30 days. They are folded away, never dropped —
+  // "not live right now" is a judgement made from a single lead date, and an
+  // agency having a quiet month still has to be able to find its own client.
+  const MIXED = {
+    ...REVIEW,
+    accounts: [
+      account("loc_live", "Live Clinic", { status_default: "active", leads_30d: 9 }),
+      account("loc_dead", "Dormant Clinic", { status_default: "inactive", leads_30d: 0 }),
+    ],
+  }
+
+  const renderMixed = () =>
+    render(<ReviewStep review={MIXED} settled importing={false} onImport={onImport} />)
+
+  it("hides them by default and says how many", () => {
+    renderMixed()
+    expect(screen.getByDisplayValue("Live Clinic")).toBeTruthy()
+    expect(screen.queryByDisplayValue("Dormant Clinic")).toBeNull()
+    expect(screen.getByText(/1 inactive hidden/i)).toBeTruthy()
+  })
+
+  it("brings them back on request", async () => {
+    const user = userEvent.setup()
+    renderMixed()
+
+    await user.click(screen.getByRole("button", { name: /show them/i }))
+
+    expect(screen.getByDisplayValue("Dormant Clinic")).toBeTruthy()
+  })
+
+  it("toggles back and forth from the control", async () => {
+    const user = userEvent.setup()
+    renderMixed()
+
+    await user.click(screen.getByRole("button", { name: /hide inactive/i }))
+    expect(screen.getByDisplayValue("Dormant Clinic")).toBeTruthy()
+
+    await user.click(screen.getByRole("button", { name: /hide inactive/i }))
+    expect(screen.queryByDisplayValue("Dormant Clinic")).toBeNull()
+  })
+
+  it("never folds away a sub-account someone has ticked", async () => {
+    // The Import button counts every ticked row. A ticked row vanishing behind
+    // a filter would mean importing a client that is not on screen.
+    const user = userEvent.setup()
+    renderMixed()
+
+    await user.click(screen.getByRole("button", { name: /show them/i }))
+    const tick = screen.getByDisplayValue("Dormant Clinic").parentElement.querySelector("span")
+    await user.click(tick)
+    await user.click(screen.getByRole("button", { name: /hide inactive/i }))
+
+    expect(screen.getByDisplayValue("Dormant Clinic")).toBeTruthy()
+  })
+
+  it("keeps counting the hidden ones in the stats", () => {
+    // Folding them off screen must not make them disappear from the tally —
+    // the banner is what tells you the filter is a view and not a deletion.
+    renderMixed()
+    const inactiveStat = screen.getByText("Inactive").previousSibling
+    expect(inactiveStat.textContent).toBe("1")
+  })
+
+  it("imports only what was ticked, whatever is on screen", async () => {
+    // Neither row is pre-ticked here (no lead in the last 7 days), so the
+    // live one is ticked by hand first — otherwise the button has nothing to
+    // send and the assertion proves nothing.
+    const user = userEvent.setup()
+    renderMixed()
+
+    const tick = screen.getByDisplayValue("Live Clinic").parentElement.querySelector("span")
+    await user.click(tick)
+    await user.click(screen.getByRole("button", { name: /import 1 sub-account/i }))
+
+    const sent = onImport.mock.calls.at(-1)[0]
+    expect(sent.map((r) => r.location_id)).toEqual(["loc_live"])
+  })
+})
