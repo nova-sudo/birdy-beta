@@ -431,7 +431,13 @@ export default function OnboardingPage() {
           .then(async (res) => {
             if (cancelled) return
             const s = res.ok ? await res.json() : null
-            setSlackStatus(s?.installed ? "success" : "idle")
+            // An install Slack has since refused is not a connection. Treated
+            // as one, the step said "Slack connected", waved the user on, and
+            // left them at the channel picker — the first screen that
+            // actually tries the token — with nothing to pick and no idea
+            // why. It reads as idle so the step offers the one thing that
+            // fixes it: connecting again.
+            setSlackStatus(s?.installed && !s?.needs_reconnect ? "success" : "idle")
           })
           .catch(() => { if (!cancelled) setSlackStatus("idle") })
         apiRequest("/api/hotprospector/status")
@@ -486,11 +492,21 @@ export default function OnboardingPage() {
       apiRequest("/api/integrations/slack/channels")
         .then(async (res) => {
           const d = await res.json().catch(() => ({}))
-          if (!res.ok) throw new Error(d.detail || "Couldn't load your Slack channels.")
+          if (!res.ok) {
+            // 409 is the server saying Slack refused the token or withheld a
+            // scope: retrying cannot fix either, so the step offers the hop
+            // that can instead of a button that will fail again.
+            const err = new Error(d.detail || "Couldn't load your Slack channels.")
+            err.needsReconnect = res.status === 409
+            throw err
+          }
           setChannels(d.channels || [])
         })
         .catch((e) => {
-          setChannelsError(String(e.message || e))
+          setChannelsError({
+            message: String(e.message || e),
+            needsReconnect: Boolean(e.needsReconnect),
+          })
           setChannels([])
         })
     }
@@ -1781,14 +1797,26 @@ export default function OnboardingPage() {
                           Couldn&apos;t load your channels
                         </span>
                       </div>
-                      <div className="mb-[9px] text-[12px] leading-normal text-pd-body">{channelsError}</div>
-                      <button
-                        type="button"
-                        onClick={() => setChannels(null)}
-                        className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
-                      >
-                        Try again
-                      </button>
+                      <div className="mb-[9px] text-[12px] leading-normal text-pd-body">
+                        {channelsError.message}
+                      </div>
+                      {channelsError.needsReconnect ? (
+                        <button
+                          type="button"
+                          onClick={() => startOAuth("/api/connect/slack", setSlackStatus)}
+                          className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
+                        >
+                          Reconnect Slack
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setChannels(null)}
+                          className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
+                        >
+                          Try again
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <>

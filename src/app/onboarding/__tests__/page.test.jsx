@@ -227,6 +227,65 @@ describe("onboarding wizard", () => {
     expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled()
   })
 
+  // ── A Slack install Slack itself has refused ──────────────────────────
+
+  // `installed: true` only ever meant a row existed. The wizard read it as a
+  // working connection, said "Slack connected", and walked the user on to the
+  // channel picker — the first screen that actually tries the token.
+
+  const REFUSED = {
+    "/api/integrations/slack/status": () =>
+      json({ installed: true, needs_reconnect: true, reconnect_reason: "invalid_auth" }),
+  }
+
+  it("does not call a refused install connected", async () => {
+    bootAt(13, { overrides: REFUSED })
+
+    await screen.findByText(/connect birdy to your slack/i)
+    expect(screen.queryByText(/slack connected/i)).toBeNull()
+    expect(screen.getByRole("button", { name: /connect slack/i })).toBeTruthy()
+  })
+
+  it("offers reconnecting, not retrying, when retrying cannot help", async () => {
+    // 409 is the server saying the token was refused or a scope withheld.
+    // A "Try again" button would fail in exactly the same way.
+    bootAt(14, {
+      overrides: {
+        "/api/integrations/slack/status": () => json({ installed: true }),
+        "/api/integrations/slack/channels": () =>
+          Promise.resolve({
+            ok: false,
+            status: 409,
+            json: async () => ({
+              detail: "Slack has disconnected Birdy from your workspace. Reconnect Slack to continue.",
+            }),
+          }),
+      },
+    })
+
+    await screen.findByText(/slack has disconnected birdy/i)
+    expect(screen.getByRole("button", { name: /reconnect slack/i })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /try again/i })).toBeNull()
+  })
+
+  it("offers a retry when the failure really is transient", async () => {
+    bootAt(14, {
+      overrides: {
+        "/api/integrations/slack/status": () => json({ installed: true }),
+        "/api/integrations/slack/channels": () =>
+          Promise.resolve({
+            ok: false,
+            status: 502,
+            json: async () => ({ detail: "Couldn't reach Slack just now. Try again in a moment." }),
+          }),
+      },
+    })
+
+    await screen.findByText(/couldn't reach slack just now/i)
+    expect(screen.getByRole("button", { name: /try again/i })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /reconnect slack/i })).toBeNull()
+  })
+
   // ── "I don't currently call my leads" ──────────────────────────────────
 
   it("offers a third sales answer for agencies that don't call leads", async () => {
