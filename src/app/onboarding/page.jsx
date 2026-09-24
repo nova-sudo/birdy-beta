@@ -243,6 +243,10 @@ export default function OnboardingPage() {
   const [kpiSaveDefault, setKpiSaveDefault] = useState(false)
 
   const [channels, setChannels] = useState(null)
+  // Why the channel list is empty, when the reason was ours rather than the
+  // workspace's. Null means "no failure" — an empty list is then genuinely an
+  // empty list.
+  const [channelsError, setChannelsError] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
   const [selectedChannel, setSelectedChannel] = useState(null)
   const [frequency, setFrequency] = useState(null)
@@ -471,13 +475,24 @@ export default function OnboardingPage() {
         .catch((e) => setAdError(String(e.message || e)))
     }
     if (currentKey === "slack_channel" && channels === null && slackStatus === "success") {
+      // A failed lookup and a workspace with no channels are different
+      // answers and used to arrive here as the same one — the catch turned
+      // any error into an empty list, so the step told people to "invite the
+      // Birdy app to a channel" when what the server actually said was that
+      // it could not list channels at all and Slack needed reconnecting.
+      // They would go and do the thing it suggested, and it would still be
+      // empty.
+      setChannelsError(null)
       apiRequest("/api/integrations/slack/channels")
         .then(async (res) => {
-          if (!res.ok) throw new Error("channels")
-          const d = await res.json()
+          const d = await res.json().catch(() => ({}))
+          if (!res.ok) throw new Error(d.detail || "Couldn't load your Slack channels.")
           setChannels(d.channels || [])
         })
-        .catch(() => setChannels([]))
+        .catch((e) => {
+          setChannelsError(String(e.message || e))
+          setChannels([])
+        })
     }
   }, [booting, currentKey, locations, adAccounts, channels, ghlStatus, metaStatus, slackStatus])
 
@@ -815,13 +830,20 @@ export default function OnboardingPage() {
   )
 
   const saveChannel = useCallback(() => {
-    if (selectedChannel) {
-      apiRequest("/api/integrations/slack/channel", {
-        method: "PUT",
-        body: JSON.stringify({ channel_id: selectedChannel.id, channel_name: selectedChannel.name }),
-      }).catch(() => {})
+    if (!selectedChannel) {
+      // Reachable only when the channel list failed to load. Persisting a
+      // `slack` object here would write an empty one over whatever channel
+      // the account already has configured — which, on the account that
+      // exposed this path, was a working brief channel it had been using
+      // for weeks. Moving on without writing leaves it as it is.
+      next()
+      return
     }
-    next({ slack: { channel_id: selectedChannel?.id, channel_name: selectedChannel?.name } })
+    apiRequest("/api/integrations/slack/channel", {
+      method: "PUT",
+      body: JSON.stringify({ channel_id: selectedChannel.id, channel_name: selectedChannel.name }),
+    }).catch(() => {})
+    next({ slack: { channel_id: selectedChannel.id, channel_name: selectedChannel.name } })
   }, [selectedChannel, next])
 
   const saveBrief = useCallback(() => {
@@ -1747,6 +1769,27 @@ export default function OnboardingPage() {
                 <div className="w-full flex-1">
                   {channels === null ? (
                     <div className="flex justify-center py-10"><SpinnerRing size={22} /></div>
+                  ) : channelsError ? (
+                    // Our failure, not their setup. Say what actually went
+                    // wrong, offer the retry that used to require reloading
+                    // the wizard, and let them past — see the Continue button
+                    // below for why this cannot be a wall.
+                    <div className="rounded-[11px] border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
+                      <div className="mb-[6px] flex items-center gap-[7px]">
+                        <AlertCircle className="h-[14px] w-[14px] shrink-0 text-pd-danger" strokeWidth={2.4} />
+                        <span className="text-[12.5px] font-semibold text-pd-danger">
+                          Couldn&apos;t load your channels
+                        </span>
+                      </div>
+                      <div className="mb-[9px] text-[12px] leading-normal text-pd-body">{channelsError}</div>
+                      <button
+                        type="button"
+                        onClick={() => setChannels(null)}
+                        className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
+                      >
+                        Try again
+                      </button>
+                    </div>
                   ) : (
                     <>
                       <SearchInput
@@ -1770,8 +1813,26 @@ export default function OnboardingPage() {
                     CPA for {clientDisplayName} is {currencySymbol}{cpa || "45"} — right on target. Yesterday&apos;s
                     spend was {currencySymbol}142 across 3 ad sets.
                   </SlackPreviewCard>
+                  {/* Requiring Slack means requiring the connection, not
+                      holding someone hostage to a call of ours that failed.
+                      With the "I don't use Slack" escape gone, gating this on
+                      a channel the list could not even load is a dead end
+                      with no way out but abandoning setup — and it caught
+                      exactly the accounts least deserving of it: one with
+                      Slack installed and a brief channel already configured
+                      was locked out of its own onboarding, because the
+                      endpoint that lists channels wanted a scope the install
+                      predated. So a failed lookup lets them through with
+                      whatever channel is already set, and the brief step
+                      after this can be revisited from Settings. A workspace
+                      that genuinely has no channels still has to pick one. */}
                   <div className="mt-5 text-center">
-                    <PrimaryButton disabled={!selectedChannel} onClick={saveChannel}>Continue</PrimaryButton>
+                    <PrimaryButton
+                      disabled={!selectedChannel && !channelsError}
+                      onClick={saveChannel}
+                    >
+                      Continue
+                    </PrimaryButton>
                   </div>
                 </div>
               </div>

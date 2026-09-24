@@ -157,6 +157,76 @@ describe("onboarding wizard", () => {
     await screen.findByText(/where should birdy briefs go/i)
   })
 
+  // ── The channel step cannot be a dead end ─────────────────────────────
+
+  // Removing "I don't use Slack" turned every way of not picking a channel
+  // into a wall. On a real account it caught the worst possible case: Slack
+  // installed, a brief channel already configured and in use for weeks, and
+  // the endpoint that lists channels failing because the install predated the
+  // scope it wants. Continue was disabled, the step said "invite the Birdy
+  // app to a channel" — which was not the problem and would not have fixed it
+  // — and there was no way on but abandoning setup.
+
+  const CHANNELS_FAIL = {
+    "/api/integrations/slack/status": () => json({ installed: true }),
+    "/api/integrations/slack/channels": () =>
+      Promise.resolve({
+        ok: false,
+        status: 502,
+        json: async () => ({
+          detail: "Couldn't list Slack channels — reconnect Slack to grant channel access.",
+        }),
+      }),
+  }
+
+  it("reports why the channels could not be loaded, in the server's words", async () => {
+    bootAt(14, { overrides: CHANNELS_FAIL })
+
+    await screen.findByText(/couldn't load your channels/i)
+    expect(screen.getByText(/reconnect slack to grant channel access/i)).toBeTruthy()
+    // The guess it used to show instead, which sent people to do the wrong thing.
+    expect(screen.queryByText(/invite the birdy app to a channel/i)).toBeNull()
+  })
+
+  it("lets the user past when the failure was ours, not their workspace", async () => {
+    const user = userEvent.setup()
+    bootAt(14, { overrides: CHANNELS_FAIL })
+    await screen.findByText(/couldn't load your channels/i)
+
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    await screen.findByText(/how often should birdy send you a brief/i)
+  })
+
+  it("does not blank an already-configured channel on the way past", async () => {
+    // next() with no payload, rather than a slack object full of undefineds —
+    // which serialises to {} and overwrites the stored channel.
+    const user = userEvent.setup()
+    bootAt(14, { overrides: CHANNELS_FAIL })
+    await screen.findByText(/couldn't load your channels/i)
+
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    await screen.findByText(/how often should birdy send you a brief/i)
+    // Either nothing was persisted at all, or what was carries no `slack`.
+    // Both are the point; an empty `slack: {}` is what must not appear.
+    expect(lastPersistedData()?.slack).toBeUndefined()
+  })
+
+  it("still requires a choice when the workspace genuinely has no channels", async () => {
+    // An empty list is the user's setup to fix, and the step says so. Only a
+    // failed lookup opens the gate.
+    bootAt(14, {
+      overrides: {
+        "/api/integrations/slack/status": () => json({ installed: true }),
+        "/api/integrations/slack/channels": () => json({ channels: [] }),
+      },
+    })
+
+    await screen.findByText(/invite the birdy app to a channel/i)
+    expect(screen.getByRole("button", { name: /continue/i })).toBeDisabled()
+  })
+
   // ── "I don't currently call my leads" ──────────────────────────────────
 
   it("offers a third sales answer for agencies that don't call leads", async () => {
