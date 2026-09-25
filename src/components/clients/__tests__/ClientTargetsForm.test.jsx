@@ -44,8 +44,9 @@ describe("the fields", () => {
   it("renders each one with its help line", () => {
     setup()
     for (const label of [
-      "Cost per lead", "Cost per acquisition", "Monthly closes",
-      "Monthly revenue", "Close rate", "Monthly spend", "Average order value",
+      "Cost per lead", "Cost per acquisition", "Cost per appointment",
+      "Monthly closes", "Monthly revenue", "Close rate", "Monthly spend",
+      "Average order value",
     ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }
@@ -242,5 +243,24 @@ describe("cost per acquisition", () => {
     await save(user)
 
     await waitFor(() => expect(sentBody()).toMatchObject({ cpa: 250, cpl: 12 }))
+  })
+})
+
+describe("cost per appointment", () => {
+  // A third cost target, distinct from both cost per lead and the
+  // close-based cost per acquisition above.
+  it("offers a field of its own", () => {
+    setup()
+    expect(screen.getByLabelText("Cost per appointment")).toBeInTheDocument()
+  })
+
+  it("seeds from the stored value and saves under its own key", async () => {
+    const { user } = setup({ targets: { cost_per_appointment: 40 } })
+    expect(screen.getByLabelText("Cost per appointment")).toHaveValue(40)
+
+    await save(user)
+    await waitFor(() =>
+      expect(sentBody()).toMatchObject({ cost_per_appointment: 40 })
+    )
   })
 })
