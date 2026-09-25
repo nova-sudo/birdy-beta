@@ -33,6 +33,10 @@ const FIELDS = [
     help: "What you aim to pay for each client won. Costs more than a lead — only a share of leads close.",
   },
   {
+    id: "cost_per_appointment", label: "Cost per appointment", prefix: "currency",
+    help: "What you aim to pay for each appointment set. Only meaningful for clients on a HotProspector dialler.",
+  },
+  {
     id: "monthly_wins", label: "Monthly closes",
     help: "Closes expected per month. This is what the health band is measured against.",
   },

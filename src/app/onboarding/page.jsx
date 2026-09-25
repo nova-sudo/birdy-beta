@@ -167,7 +167,8 @@ function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
 // gain a field whenever that form does, or a client whose only target is the
 // new one reads here as having none.
 const TARGET_FIELDS = [
-  "cpa", "cpl", "monthly_wins", "monthly_revenue", "conversion_rate", "monthly_spend", "aov",
+  "cpa", "cpl", "cost_per_appointment", "monthly_wins", "monthly_revenue",
+  "conversion_rate", "monthly_spend", "aov",
 ]
 
 /** Has anyone given this client a target yet? */
