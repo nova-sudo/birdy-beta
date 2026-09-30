@@ -19,6 +19,11 @@ import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 // every one of those renders correctly and says nothing true: six zeroes and
 // four empty tables that look like a bad week rather than an absent source.
 
+// Inside every date window the page offers. A fixed date here aged out of
+// "last 7 days" a week after it was written, and the connected-dialler test
+// started failing on the calendar rather than on the code.
+const YESTERDAY = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
 function group({ id, name, provider }) {
   return {
     id,
@@ -29,7 +34,7 @@ function group({ id, name, provider }) {
       // Deliberately populated. If the screen goes grey it has to be because
       // of the provider, not because there was nothing to add up.
       call_stats: { total_calls: 120, leads_with_calls: 40, transfers: 3, total_leads: 90 },
-      daily_calls: [{ date: "2026-09-01", calls: 120, inbound: 40, talk_min: 60, called: 40 }],
+      daily_calls: [{ date: YESTERDAY, calls: 120, inbound: 40, talk_min: 60, called: 40 }],
     },
   }
 }
