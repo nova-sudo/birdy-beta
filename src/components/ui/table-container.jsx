@@ -21,6 +21,7 @@ import {
 import { applyDefaultMetrics, defaultMetricFormat } from "@/lib/default-metrics";
 import { formatMetric } from "@/lib/format-metric";
 import { groupHasCallCentre } from "@/lib/call-centre-availability";
+import { normalizeHealth, CRITICAL, HEALTHY } from "@/lib/client-status";
 import {
   Pagination,
   PaginationContent,
@@ -258,6 +259,10 @@ const StyledTable = ({
         id: group.id,
         name: group.name || "Unnamed Group",
         status: group.client_status ?? "Active",
+        // Without this every row fell back to the pill's default, so a Critical
+        // client read "Healthy" inside the Critical tab. Only Critical is
+        // surfaced here; Warning deliberately still reads as Healthy.
+        health: normalizeHealth(group.health) === CRITICAL ? CRITICAL : HEALTHY,
         ghl_contacts: ghlContacts,
         ghl_revenue: ghlRevenue,
         ghl_won_opps: ghlWonOpps,
