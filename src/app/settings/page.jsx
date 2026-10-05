@@ -51,6 +51,28 @@ import { Suspense } from "react"
 import { apiRequest } from "@/lib/api"
 import { isPassingThrough, peekOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 
+// How readily Birdy flags an ad as worth pausing in its weekly and monthly
+// suggestions. The thresholds are the backend's STRICTNESS_PROFILES
+// (ai/suggestions/agents/useless_ad_purger.py), in the account's currency,
+// weekly figures — keep the two in step.
+const STRICTNESS_OPTIONS = [
+  {
+    value: "lenient",
+    label: "Lenient",
+    detail: "Only the clearest waste: 100+ spent in a week with no leads, or a cost per lead over 2.25× the client's median, from 60 of spend. At most 2 ads per client.",
+  },
+  {
+    value: "balanced",
+    label: "Balanced (default)",
+    detail: "50+ spent in a week with no leads, or a cost per lead over 1.75× the client's median, from 30 of spend. At most 3 ads per client.",
+  },
+  {
+    value: "strict",
+    label: "Strict",
+    detail: "Flags sooner: 25+ spent with no leads, or a cost per lead over 1.35× the client's median, from 15 of spend. At most 6 ads per client.",
+  },
+]
+
 function SettingsPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -192,6 +214,11 @@ function SettingsPageContent() {
   const [capabilities, setCapabilities] = useState({ media_buying: false })
   const [capsLoaded, setCapsLoaded] = useState(false)
   const [savingCapability, setSavingCapability] = useState(null) // capability key mid-save
+  // Suggestion strictness, shown under the Media Buying Analyst switch.
+  // Stored per account by /api/dashboard/settings; "balanced" when unset.
+  const [strictness, setStrictness] = useState("balanced")
+  const [strictnessLoaded, setStrictnessLoaded] = useState(false)
+  const [savingStrictness, setSavingStrictness] = useState(false)
   const [user] = useState(() => {
     try { return JSON.parse(localStorage.getItem("user")) } catch { return null }
   })
@@ -220,6 +247,36 @@ function SettingsPageContent() {
       .catch(() => {})
       .finally(() => setCapsLoaded(true))
   }, [])
+
+  useEffect(() => {
+    apiRequest("/api/dashboard/settings")
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data?.strictness) setStrictness(data.strictness) })
+      .catch(() => {})
+      .finally(() => setStrictnessLoaded(true))
+  }, [])
+
+  const changeStrictness = async (next) => {
+    const previous = strictness
+    setStrictness(next)
+    setSavingStrictness(true)
+    try {
+      const res = await apiRequest("/api/dashboard/settings", {
+        method: "PUT",
+        body: JSON.stringify({ strictness: next }),
+      })
+      if (!res.ok) throw new Error("Failed to save strictness")
+      const label = STRICTNESS_OPTIONS.find(o => o.value === next)?.label ?? next
+      toast.success(`Suggestions set to ${label.replace(" (default)", "")}`, {
+        description: "Birdy's next suggestion pass will use it.",
+      })
+    } catch {
+      setStrictness(previous)
+      toast.error("Couldn't update strictness", { description: "Please try again." })
+    } finally {
+      setSavingStrictness(false)
+    }
+  }
 
   // Toggle a capability with optimistic UI + revert on failure. The backend
   // returns the full resolved set, so we reconcile against its response.
@@ -822,6 +879,38 @@ function SettingsPageContent() {
                     </div>
                   </div>
                 </CardHeader>
+                {capsLoaded && capabilities.media_buying && (
+                  <CardContent className="pt-0 sm:pl-[88px]">
+                    <div className="rounded-lg border border-border/60 p-4 space-y-2">
+                      <div className="flex items-center justify-between gap-3">
+                        <Label htmlFor="suggestion-strictness" className="text-sm font-medium">
+                          How strict should Birdy be when flagging ads?
+                        </Label>
+                        {savingStrictness && (
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                      <Select
+                        value={strictness}
+                        onValueChange={changeStrictness}
+                        disabled={!strictnessLoaded || savingStrictness}
+                      >
+                        <SelectTrigger id="suggestion-strictness" className="w-full sm:w-[260px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STRICTNESS_OPTIONS.map(o => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        {STRICTNESS_OPTIONS.find(o => o.value === strictness)?.detail}{" "}
+                        Applies to the weekly and monthly ad suggestions on your dashboard and in Slack. Amounts are in your account currency.
+                      </p>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
 
               <p className="text-xs text-muted-foreground flex items-center gap-1.5">
