@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
+import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 import {
   CyclingCaption,
   FakeProgressBar,
@@ -43,12 +44,11 @@ const PREP_MESSAGES = [
 // consequence (a setup screen demanding a snippet for a client using Meta
 // Instant Forms, or worse, silence for one that needs one) is invisible until
 // somebody wonders why a client reports no leads.
-const LEAD_SOURCES = [
-  { key: "unknown", short: "Ask later", label: "Ask later", tone: "muted" },
-  { key: "instant_form", short: "Meta forms", label: "Meta Instant Forms", tone: "meta" },
-  { key: "landing_page", short: "Landing page", label: "Their own landing page", tone: "primary" },
-  { key: "external_form", short: "Form tool", label: "A form tool on their page", tone: "primary" },
-]
+const LEAD_SOURCE_TONE = { unknown: "muted", instant_form: "meta", form_to_ghl: "primary", landing_page: "primary" }
+const LEAD_SOURCES = [{ ...LEAD_SOURCE_UNKNOWN, short: "Ask later" }, ...LEAD_SOURCE_OPTIONS].map((o) => ({
+  ...o,
+  tone: LEAD_SOURCE_TONE[o.key],
+}))
 
 const LEAD_SOURCE_STYLE = {
   muted: { color: "#9A9AAB", background: "#F1F1F5", borderColor: "#E7E7ED" },
@@ -520,7 +520,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
                 </div>
                 {leadMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[210px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
                     {LEAD_SOURCES.map((option) => (
                       <div
                         key={option.key}
@@ -531,7 +531,8 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                         }}
                         className="cursor-pointer border-b border-pd-row-border px-[11px] py-2 text-[11.5px] text-pd-ink last:border-b-0 hover:bg-[#F7F5FE]"
                       >
-                        {option.label}
+                        <div className="font-semibold">{option.label}</div>
+                        <div className="mt-0.5 text-[10.5px] text-pd-faint">{option.brief}</div>
                       </div>
                     ))}
                   </div>

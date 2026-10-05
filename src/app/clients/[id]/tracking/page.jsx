@@ -24,66 +24,35 @@ import { PdCard } from "@/components/portfolio"
 import { apiRequest } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { cn } from "@/lib/utils"
+import { LEAD_SOURCE_OPTIONS, normalizeLeadSource } from "@/lib/lead-sources"
 
-const METHODS = [
-  {
-    key: "instant_form",
-    label: "Meta Instant Forms",
-    blurb: "The form opens inside Facebook or Instagram. Meta sends us the leads — nothing to install.",
-  },
-  {
-    key: "landing_page",
-    label: "Their own landing page",
-    blurb: "The ad points at a page they control, with the form on that page. Needs our snippet.",
-  },
-  {
-    key: "external_form",
-    label: "A form tool on their page",
-    blurb: "Typeform, ROASForm, Jotform or similar, embedded from another domain. Needs the snippet and a webhook.",
-  },
-]
+// The three ways a client can collect leads — shared with every other screen
+// that asks, so the choice reads the same everywhere. See lib/lead-sources.js.
+const METHODS = LEAD_SOURCE_OPTIONS
 
-const PROVIDERS = [
-  { key: "typeform", label: "Typeform" },
-  { key: "roasform", label: "ROASForm" },
-  { key: "jotform", label: "Jotform" },
-  { key: "ghl", label: "GoHighLevel form" },
-  { key: "custom", label: "Custom / in-house" },
+// Which form tool, for a client whose form sends its leads to GoHighLevel. Each
+// guide is read by someone who did not build the form, so it says what has to
+// be true rather than describing a screen we can't see.
+const GHL_FORM_TOOLS = [
+  { key: "roasform", label: "ROAS Forms" },
+  { key: "ghl", label: "GoHighLevel form or funnel" },
   { key: "other", label: "Something else" },
 ]
 
-// What to tell someone for the provider they picked. Every one of these ends up
-// being read by a person who did not build the form, so they name the screen
-// rather than describing it.
-const PROVIDER_GUIDES = {
-  typeform: [
-    "In Typeform, open Settings → Hidden fields and add a field named birdy_visitor_id.",
-    "Under Connect → Webhooks, add the webhook URL below and paste the secret into the header Authorization as: Bearer <secret>.",
-    "Map the form's email and phone questions to fields called email and phone in the payload.",
-  ],
-  roasform: [
-    "Add birdy_visitor_id as a URL parameter the form accepts and carries through to submission.",
-    "Point the form's webhook at the URL below, with the secret in the Authorization header as: Bearer <secret>.",
-  ],
-  jotform: [
-    "In Jotform, add a hidden field named birdy_visitor_id.",
-    "Under Settings → Integrations → Webhooks, add the URL below. If Jotform cannot send an Authorization header, put the secret in a header via a Zap or Make scenario instead.",
-  ],
-  ghl: [
-    "GoHighLevel records the ad itself on forms it hosts, so those leads already reach Birdy without a webhook.",
-    "Install the snippet anyway if the page has content before the form — it is what ties the visit to the click.",
-  ],
-  custom: [
-    "POST the submission to the URL below with the header Authorization: Bearer <secret>.",
-    'Body: {"email": "...", "phone": "...", "name": "...", "birdy_visitor_id": "..."} — the visitor id is optional but makes the match exact.',
-  ],
-  other: [
-    "Anything that can send a webhook will work: point it at the URL below with the secret in the Authorization header.",
-    "If it cannot send webhooks at all, the snippet still matches leads by email and phone once they reach the CRM.",
-  ],
+const GHL_FORM_GUIDES = {
+  roasform:
+    "In ROAS Forms, connect the form to this client's GoHighLevel sub-account and switch on sending attribution, " +
+    "so each contact arrives with the UTM parameters and the ad id. It works the same on ROAS's own landing pages " +
+    "and on a ROAS form embedded in the client's website.",
+  ghl:
+    "GoHighLevel records the ad on its own forms and funnels by itself. There is nothing to switch on.",
+  other:
+    "Make sure the tool sends each lead to this client's GoHighLevel sub-account with the UTM parameters, " +
+    "including the ad id. If it can't, choose \"Their own landing page and records\" and install the pixel instead.",
 }
 
-const STEP_LABELS = ["Lead source", "Install", "Tag ads", "Connect form", "Verify"]
+const STEP_LABELS = ["Lead source", "Install the pixel", "Tag ads", "Verify"]
+const VERIFY_STEP = 3
 
 export default function TrackingPortalPage() {
   const { id: clientId } = useParams()
@@ -116,7 +85,7 @@ export default function TrackingPortalPage() {
   // by itself — but polling a finished checklist forever is just load.
   useEffect(() => {
     const incomplete = portal?.diagnostics?.applicable && !portal?.diagnostics?.complete
-    if (step !== 4 || !incomplete) {
+    if (step !== VERIFY_STEP || !incomplete) {
       setPolling(false)
       return undefined
     }
@@ -148,8 +117,8 @@ export default function TrackingPortalPage() {
         body: JSON.stringify(body),
       })
       if (!res.ok) throw new Error("Couldn't save")
-      // Re-read rather than patching locally: choosing "external form" mints a
-      // webhook secret server-side, and the portal has to show it.
+      // Re-read rather than patching locally: the checklist depends on the
+      // method, and the server builds it.
       await load()
     } catch (e) {
       toast.error(e.message || "Couldn't save")
@@ -178,14 +147,18 @@ export default function TrackingPortalPage() {
   }
 
   const config = portal.lead_collection || {}
-  const method = config.method
+  const method = normalizeLeadSource(config.method)
   const isInstantForm = method === "instant_form"
-  const needsWebhook = config.needs_webhook
-  const guide = PROVIDER_GUIDES[config.form_provider] || null
+  const isFormToGhl = method === "form_to_ghl"
+  const isLandingPage = method === "landing_page"
+  const ghlGuide = GHL_FORM_GUIDES[config.form_provider] || null
 
-  // An instant-form client has no steps to walk; the rail would be five greyed
-  // circles implying work they don't have to do.
-  const visibleSteps = isInstantForm ? [0] : [0, 1, 2, 3, 4]
+  // Only a client's own landing page has steps to walk. For the other two the
+  // rail would be greyed circles implying work they don't have to do.
+  const visibleSteps = isLandingPage ? [0, 1, 2, 3] : [0]
+  // Switching a client away from a landing page mid-walk must not leave it on
+  // a pixel step it no longer has.
+  const shownStep = isLandingPage ? step : 0
 
   const mailto =
     `mailto:?subject=${encodeURIComponent(`Tracking setup for ${portal.group_name}`)}` +
@@ -252,7 +225,7 @@ export default function TrackingPortalPage() {
       )}
 
       {/* 1 — how they collect leads */}
-      {step === 0 && (
+      {shownStep === 0 && (
         <PdCard title="How does this client collect leads?">
           <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
             This decides what has to be set up. Get it wrong and the rest of these
@@ -273,38 +246,104 @@ export default function TrackingPortalPage() {
               >
                 <span className="text-[13px] font-medium text-pd-ink">{option.label}</span>
                 <p className="mt-0.5 text-[12px] leading-[1.45] text-pd-body">
-                  {option.blurb}
+                  {option.hint}
                 </p>
               </button>
             ))}
           </div>
 
-          {isInstantForm ? (
+          {isInstantForm && (
             <div className="mt-4">
               <SetupChecklist diagnostics={portal.diagnostics} />
             </div>
-          ) : (
-            method && (
-              <button
-                onClick={() => setStep(1)}
-                className="mt-4 rounded-[10px] bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
-              >
-                Next: install the snippet
-              </button>
-            )
+          )}
+
+          {isFormToGhl && (
+            <div className="mt-4 flex flex-col gap-4">
+              <div className="rounded-[12px] border border-pd-border bg-pd-canvas p-3.5">
+                <p className="text-[12.5px] font-medium text-pd-ink">Nothing to install in Birdy</p>
+                <p className="mt-1 text-[12px] leading-[1.5] text-pd-body">
+                  The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
+                  attributes it from GoHighLevel. This setting changes nothing on its own — it tells
+                  Birdy where to look. Two things on the client&apos;s side make it work:
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[12.5px] font-medium text-pd-ink">
+                  1. Send attribution to GoHighLevel from the form tool
+                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {GHL_FORM_TOOLS.map((tool) => (
+                    <button
+                      key={tool.key}
+                      disabled={saving}
+                      onClick={() => saveMethod(method, { form_provider: tool.key })}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[12px] transition-colors",
+                        config.form_provider === tool.key
+                          ? "border-pd-primary bg-pd-primary-tint text-pd-primary"
+                          : "border-pd-border text-pd-body hover:border-pd-border-strong",
+                      )}
+                    >
+                      {tool.label}
+                    </button>
+                  ))}
+                </div>
+                {ghlGuide && (
+                  <p className="mt-2 text-[12px] leading-[1.5] text-pd-body">{ghlGuide}</p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-[12.5px] font-medium text-pd-ink">
+                  2. Tag the Meta ads, if they aren&apos;t already
+                </p>
+                <p className="mb-2 mt-1 text-[12px] leading-[1.5] text-pd-body">
+                  In Ads Manager, at the ad level, paste this into the{" "}
+                  <span className="font-medium text-pd-ink">URL parameters</span> field. It is what
+                  gives the form tool an ad id to pass on.
+                </p>
+                <CodeSnippet value={portal.meta_url_parameters} label="URL parameters" />
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-[12.5px] font-medium text-pd-ink">Is it working?</p>
+                  <button
+                    onClick={load}
+                    className="flex items-center gap-1.5 text-[12px] text-pd-primary hover:underline"
+                  >
+                    <RefreshCw className="size-3.5" />
+                    Refresh
+                  </button>
+                </div>
+                <SetupChecklist diagnostics={portal.diagnostics} />
+              </div>
+            </div>
+          )}
+
+          {isLandingPage && (
+            <button
+              onClick={() => setStep(1)}
+              className="mt-4 rounded-[10px] bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+            >
+              Next: install the pixel
+            </button>
           )}
         </PdCard>
       )}
 
       {/* 2 — the snippet */}
-      {step === 1 && (
-        <PdCard title="Install the tracking snippet">
+      {shownStep === 1 && (
+        <PdCard title="Install the Birdy pixel">
           <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
             One line, on every page the ads point at, just before the closing{" "}
             <code className="rounded bg-pd-divider px-1 font-mono text-[11px]">
               &lt;/head&gt;
             </code>{" "}
-            tag. It is the same shape as a Meta pixel and does not slow the page down.
+            tag. It works like a Meta pixel, does not slow the page down, and is how Birdy
+            sees leads that go to the client&apos;s own records instead of GoHighLevel.
           </p>
 
           <CodeSnippet value={portal.snippet} label="Snippet" />
@@ -344,7 +383,7 @@ export default function TrackingPortalPage() {
       )}
 
       {/* 3 — Meta URL parameters */}
-      {step === 2 && (
+      {shownStep === 2 && (
         <PdCard title="Add tracking parameters to the Meta ads">
           <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
             In Ads Manager, at the ad level, paste this into the{" "}
@@ -359,86 +398,12 @@ export default function TrackingPortalPage() {
             hint="Meta fills in the campaign, ad set and ad values itself. Only ad_id is used for reporting — the names are for readability."
           />
 
-          <StepNav
-            onBack={() => setStep(1)}
-            onNext={() => setStep(3)}
-            nextLabel={needsWebhook ? "Next: connect the form" : "Next: verify"}
-          />
+          <StepNav onBack={() => setStep(1)} onNext={() => setStep(VERIFY_STEP)} nextLabel="Next: verify" />
         </PdCard>
       )}
 
-      {/* 4 — the form */}
-      {step === 3 && (
-        <PdCard title="Connect the form">
-          {needsWebhook ? (
-            <>
-              <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
-                A form embedded from another domain is invisible to our script — the
-                browser will not let one page read inside another site&apos;s iframe.
-                So the form tool posts each submission to us directly instead.
-              </p>
-
-              <div className="mb-3">
-                <span className="text-[12px] font-medium text-pd-body">Which form tool?</span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.key}
-                      disabled={saving}
-                      onClick={() => saveMethod(method, { form_provider: provider.key })}
-                      className={cn(
-                        "rounded-full border px-3 py-1.5 text-[12px] transition-colors",
-                        config.form_provider === provider.key
-                          ? "border-pd-primary bg-pd-primary-tint text-pd-primary"
-                          : "border-pd-border text-pd-body hover:border-pd-border-strong",
-                      )}
-                    >
-                      {provider.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {guide && (
-                <ol className="mb-3 flex flex-col gap-1.5 pl-4 text-[12px] leading-[1.5] text-pd-body">
-                  {guide.map((line) => (
-                    <li key={line} className="list-decimal">{line}</li>
-                  ))}
-                </ol>
-              )}
-
-              <div className="flex flex-col gap-3">
-                <CodeSnippet value={portal.webhook_url} label="Webhook URL" />
-                {config.webhook_secret ? (
-                  <CodeSnippet
-                    value={config.webhook_secret}
-                    label="Webhook secret"
-                    secret
-                    hint="Send it as the header: Authorization: Bearer <secret>. Anyone with this can add leads to this client, so treat it like a password."
-                  />
-                ) : (
-                  <p className="text-[12px] text-pd-faint">
-                    Pick a form tool above and a secret will be generated.
-                  </p>
-                )}
-              </div>
-            </>
-          ) : (
-            <p className="text-[12.5px] leading-[1.5] text-pd-body">
-              The form is on the same page as the snippet, so there is nothing to
-              connect — our script reads the submission directly. If the form is
-              actually embedded from another site, go back a step and pick{" "}
-              <span className="font-medium text-pd-ink">a form tool on their page</span>{" "}
-              instead.
-            </p>
-          )}
-
-          <StepNav onBack={() => setStep(2)} onNext={() => setStep(4)} nextLabel="Next: verify" />
-        </PdCard>
-      )}
-
-      {/* 5 — verify */}
-      {step === 4 && (
+      {/* 4 — verify */}
+      {shownStep === VERIFY_STEP && (
         <PdCard
           title="Check it's working"
           action={
@@ -456,7 +421,7 @@ export default function TrackingPortalPage() {
             client&apos;s live ads yourself and submit the form.
           </p>
           <SetupChecklist diagnostics={portal.diagnostics} polling={polling} />
-          <StepNav onBack={() => setStep(3)} />
+          <StepNav onBack={() => setStep(2)} />
         </PdCard>
       )}
     </div>
