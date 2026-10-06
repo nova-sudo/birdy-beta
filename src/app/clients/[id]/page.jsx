@@ -560,6 +560,7 @@ export default function ClientDetailsPage() {
             datePreset={datePreset}
             showGroupFilter={false}
             showStatCards={false}
+            onCallCentreChanged={refresh}
           />
         </TabsContent>
 
