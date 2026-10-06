@@ -33,8 +33,24 @@ import { HANDOFF_COOKIE, isIntegrationCallback, isSafeHandoffPath } from "@/lib/
  * decides what to *render*; the API decides what anyone actually gets, by
  * checking the real JWT on every request. See lib/session.js.
  */
+// Addresses people type that aren't the route's real spelling. Next routes are
+// case-sensitive, and /Sales-Hub is the only capitalised one, so "/sales-hub"
+// fell through to a bare 404 inside the app shell. Matched case-insensitively
+// here, redirecting only when the spelling differs, so the real route never
+// redirects to itself.
+const ROUTE_ALIASES = {
+  "/sales-hub": "/Sales-Hub",
+  "/saleshub": "/Sales-Hub",
+  "/sales": "/Sales-Hub",
+}
+
 export function proxy(request) {
   const { pathname } = request.nextUrl
+
+  const canonical = ROUTE_ALIASES[pathname.toLowerCase().replace(/\/+$/, "")]
+  if (canonical && canonical !== pathname) {
+    return redirectTo(request, canonical + (request.nextUrl.search || ""))
+  }
 
   // ── An integration callback that is only passing through ──────────────────
   //

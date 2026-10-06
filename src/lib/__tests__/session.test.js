@@ -154,3 +154,20 @@ describe("rewriteSessionRole", () => {
     expect(Math.abs(s.exp - exp)).toBeLessThan(1000)
   })
 })
+
+describe("addresses typed with the wrong spelling", () => {
+  it("sends /sales-hub and its variants to /Sales-Hub, keeping the query", () => {
+    expect(destinationOf(proxy(requestWith("/sales-hub", undefined)))).toBe("/Sales-Hub")
+    expect(destinationOf(proxy(requestWith("/SALES-HUB", signedIn())))).toBe("/Sales-Hub")
+    expect(destinationOf(proxy(requestWith("/sales-hub/", undefined)))).toBe("/Sales-Hub")
+    expect(destinationOf(proxy(requestWith("/saleshub", undefined)))).toBe("/Sales-Hub")
+    const withQuery = { ...requestWith("/sales-hub", undefined) }
+    withQuery.nextUrl = { pathname: "/sales-hub", search: "?tab=members" }
+    expect(destinationOf(proxy(withQuery))).toBe("/Sales-Hub?tab=members")
+  })
+
+  it("never redirects the real route to itself", () => {
+    expect(destinationOf(proxy(requestWith("/Sales-Hub", signedIn())))).toBeNull()
+    expect(destinationOf(proxy(requestWith("/Sales-Hub", undefined)))).toBeNull()
+  })
+})
