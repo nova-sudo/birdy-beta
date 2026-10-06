@@ -50,12 +50,24 @@ describe("isAwaitingFirstData", () => {
     }))).toBe(false)
   })
 
-  it("waits on HotProspector only when that is the client's dialler", () => {
+  it("waits on HotProspector only when that is the client's dialler and all it has", () => {
     const noHpRefresh = { last_hp_refresh: null }
-    expect(isAwaitingFirstData(settled({ ...noHpRefresh, call_log_provider: "hotprospector" }))).toBe(true)
+    const fresh = { last_ghl_refresh: null, last_meta_refresh: null }
+    // A brand-new client whose only data so far would be HotProspector's.
+    expect(isAwaitingFirstData(settled({ ...noHpRefresh, ...fresh, call_log_provider: "hotprospector" }))).toBe(true)
     expect(isAwaitingFirstData(settled({ ...noHpRefresh, call_log_provider: "ghl" }))).toBe(false)
     // "I don't call my leads" — there is no dialler and never will be.
     expect(isAwaitingFirstData(settled({ ...noHpRefresh, call_log_provider: "none" }))).toBe(false)
+  })
+
+  it("does not hide an established client while its HotProspector history syncs", () => {
+    // Switching a client with months of GHL and Meta data to HotProspector put
+    // the whole row back into the new-client placeholder for the hours the
+    // rate-limited call history took to arrive.
+    expect(isAwaitingFirstData(settled({ call_log_provider: "hotprospector", last_hp_refresh: null }))).toBe(false)
+    expect(isAwaitingFirstData(settled({
+      call_log_provider: "hotprospector", last_hp_refresh: null, meta_ad_account_id: null, last_meta_refresh: null,
+    }))).toBe(false)
   })
 
   it("is still waiting if only one of two integrations has landed", () => {
