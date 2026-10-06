@@ -114,7 +114,11 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.title}>
                       <Tooltip>
-                        <TooltipTrigger>
+                        {/* asChild: without it the trigger renders its own <button>
+                            around the menu button — a button inside a button,
+                            which the browser re-nests, so hydration fails and
+                            React rebuilds the shell on the client. */}
+                        <TooltipTrigger asChild>
                           <SidebarMenuButton asChild>
                             <Link
                               href={item.url}
@@ -144,7 +148,7 @@ export function AppSidebar() {
           <SidebarMenu>
             <SidebarMenuItem>
               <Tooltip>
-                <TooltipTrigger>
+                <TooltipTrigger asChild>
                   <SidebarMenuButton
                     onClick={() => setShowLogoutDialog(true)}
                     className="font-semibold text-[14px] text-red-600 hover:text-red-700 hover:bg-red-50"
