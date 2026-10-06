@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { SESSION_COOKIE, parseSession, isExpired } from "@/lib/session"
+import { SESSION_COOKIE, ADMIN_HOME, parseSession, isExpired } from "@/lib/session"
 import { PUBLIC_ROUTES, PROTECTED_ROUTES } from "@/lib/constants"
 import { HANDOFF_COOKIE, isIntegrationCallback, isSafeHandoffPath } from "@/lib/oauth-handoff"
 
@@ -87,6 +87,13 @@ export function proxy(request) {
   }
 
   // Signed in from here down.
+
+  // An admin's whole app is the admin console — no onboarding, no agency
+  // screens. While they impersonate an agency the session carries that
+  // agency's role, so this never catches them mid-impersonation.
+  if (session.role === "admin") {
+    return isAdminRoute ? NextResponse.next() : redirectTo(request, ADMIN_HOME)
+  }
 
   if (session.ob && pathname !== "/onboarding" && !isPublicRoute) {
     return redirectTo(request, "/onboarding")

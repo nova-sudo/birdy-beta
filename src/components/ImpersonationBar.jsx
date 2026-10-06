@@ -5,6 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { UserRoundCog, LogOut, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { fetchMe, stopImpersonation } from "@/lib/admin-api"
+import { rewriteSessionRole } from "@/lib/session"
 
 /**
  * Persistent banner shown across the whole app while an admin is impersonating
@@ -63,6 +64,9 @@ export default function ImpersonationBar() {
           default_currency: admin.default_currency,
         }))
         window.dispatchEvent(new Event("userUpdated"))
+        // Back to "admin" before the navigation, or the proxy would turn the
+        // admin away from their own console as a non-admin.
+        rewriteSessionRole(admin.role)
       }
       window.location.href = "/admin"
     } catch (e) {

@@ -108,3 +108,49 @@ describe("proxy (the request interceptor Next 16 renamed from middleware)", () =
     expect(destinationOf(proxy(requestWith("/admin/users", admin)))).toBeNull()
   })
 })
+
+describe("an admin's only place is the admin console", () => {
+  const admin = (extra = {}) => cookieFor({ exp: Date.now() + HOUR, role: "admin", ...extra })
+
+  it("sends a signed-in admin from any app screen to /admin", () => {
+    for (const path of ["/dashboard", "/clients", "/campaigns", "/settings", "/ask-birdy"]) {
+      expect(destinationOf(proxy(requestWith(path, admin())))).toBe("/admin")
+    }
+  })
+
+  it("never puts an admin in onboarding, even with a stale onboarding flag", () => {
+    expect(destinationOf(proxy(requestWith("/onboarding", admin({ ob: true }))))).toBe("/admin")
+    expect(destinationOf(proxy(requestWith("/clients", admin({ ob: true }))))).toBe("/admin")
+  })
+
+  it("sends an admin from login and sign-up to the console", () => {
+    expect(destinationOf(proxy(requestWith("/login", admin())))).toBe("/admin")
+    expect(destinationOf(proxy(requestWith("/register", admin())))).toBe("/admin")
+  })
+
+  it("lets an admin use every console page", () => {
+    expect(destinationOf(proxy(requestWith("/admin", admin())))).toBeNull()
+    expect(destinationOf(proxy(requestWith("/admin/agencies", admin())))).toBeNull()
+  })
+
+  it("lets an impersonating admin into the agency's app, whose role is not admin", () => {
+    const impersonating = cookieFor({ exp: Date.now() + HOUR, role: "user" })
+    expect(destinationOf(proxy(requestWith("/dashboard", impersonating)))).toBeNull()
+    expect(destinationOf(proxy(requestWith("/admin", impersonating)))).toBe("/dashboard")
+  })
+})
+
+describe("rewriteSessionRole", () => {
+  it("changes the role and keeps the expiry, clearing the onboarding flag", async () => {
+    const { rewriteSessionRole, readSession, writeSession } = await import("@/lib/session")
+    const exp = Date.now() + HOUR
+    writeSession({ expiresAt: new Date(exp).toISOString(), role: "admin", onboardingIncomplete: true })
+
+    rewriteSessionRole("user")
+
+    const s = readSession()
+    expect(s.role).toBe("user")
+    expect(s.ob).toBe(false)
+    expect(Math.abs(s.exp - exp)).toBeLessThan(1000)
+  })
+})
