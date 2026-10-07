@@ -39,10 +39,10 @@ export default function MetricCard({ payload }) {
     : null
 
   // Accent color based on variant or delta
-  const accentClass = variant === "success" ? "text-emerald-600"
-    : variant === "warning" ? "text-amber-600"
-    : variant === "error" ? "text-rose-600"
-    : "text-purple-600"
+  const accentClass = variant === "success" ? "text-pd-success"
+    : variant === "warning" ? "text-pd-warning"
+    : variant === "error" ? "text-pd-danger"
+    : "text-pd-primary"
 
   return (
     <div className="my-3 rounded-xl border border-pd-border bg-pd-surface p-4 shadow-sm">
@@ -91,11 +91,11 @@ function DeltaChip({ info }) {
   const Icon = variant === "positive" ? TrendingUp
     : variant === "negative" ? TrendingDown
     : Minus
-  const classes = variant === "positive" ? "bg-emerald-50 text-emerald-700"
-    : variant === "negative" ? "bg-rose-50 text-rose-700"
-    : "bg-slate-100 text-slate-600"
+  const classes = variant === "positive" ? "bg-pd-success text-white"
+    : variant === "negative" ? "bg-pd-danger text-white"
+    : "bg-gray-600 text-white"
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium tabular-nums ${classes}`}>
+    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold tabular-nums ${classes}`}>
       <Icon className="h-3 w-3" />
       {label}
     </span>

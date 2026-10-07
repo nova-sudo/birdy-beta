@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
 import { writeSession, ADMIN_HOME } from "@/lib/session"
@@ -205,7 +205,7 @@ export default function LoginForm() {
               >
                 {isLoading ? (
                   <div className="flex items-center space-x-2">
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Signing in...</span>
                   </div>
                 ) : (

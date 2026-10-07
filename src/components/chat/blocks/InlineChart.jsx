@@ -18,7 +18,7 @@ class ChartErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="my-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
+        <div className="my-3 rounded-2xl bg-pd-warning-bg p-3 text-xs text-pd-amber">
           <div className="font-medium mb-1">Chart failed to render</div>
           <div className="opacity-75">{String(this.state.error?.message || this.state.error)}</div>
         </div>
@@ -28,7 +28,8 @@ class ChartErrorBoundary extends Component {
   }
 }
 
-const PALETTE = ["#8b5cf6", "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#14b8a6", "#a855f7", "#f97316"]
+// Violet first, then the semantic hues, then violet's own tints.
+const PALETTE = ["#5B3FD6", "#3B7DD6", "#16794C", "#E0920A", "#E5484D", "#9F8BEA", "#B4530A", "#C3B7F2"]
 
 /**
  * Renders an inline chart from a :::chart block.
@@ -68,7 +69,7 @@ function InlineChartInner({ payload }) {
     type = "bar",
     title,
     data,
-    color = "#8b5cf6",
+    color = "#5B3FD6",
     currency,
     orientation = "auto",
     sort = true,
@@ -138,12 +139,12 @@ function InlineChartInner({ payload }) {
         <ResponsiveContainer width="100%" height="100%">
           {isMultiSeries ? (
             <ComposedChart data={normalized} margin={{ top: 16, right: hasRightAxis ? 44 : 12, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#94a3b8" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" />
               <YAxis
                 yAxisId="left"
                 tick={{ fontSize: 10 }}
-                stroke={seriesList.find(s => s.axis === "left")?.color || "#94a3b8"}
+                stroke={seriesList.find(s => s.axis === "left")?.color || "#98989E"}
                 tickFormatter={formatCompact}
                 width={48}
               />
@@ -152,7 +153,7 @@ function InlineChartInner({ payload }) {
                   yAxisId="right"
                   orientation="right"
                   tick={{ fontSize: 10 }}
-                  stroke={seriesList.find(s => s.axis === "right")?.color || "#94a3b8"}
+                  stroke={seriesList.find(s => s.axis === "right")?.color || "#98989E"}
                   tickFormatter={formatCompact}
                   width={44}
                 />
@@ -196,9 +197,9 @@ function InlineChartInner({ payload }) {
             </ComposedChart>
           ) : type === "line" ? (
             <LineChart data={normalized} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={formatCompact} width={44} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" />
+              <YAxis tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} width={44} />
               <Tooltip
                 contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
@@ -231,13 +232,13 @@ function InlineChartInner({ payload }) {
               data={normalized}
               margin={{ top: 4, right: 56, bottom: 4, left: 4 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={formatCompact} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} />
               <YAxis
                 dataKey="label"
                 type="category"
                 tick={{ fontSize: 11 }}
-                stroke="#64748b"
+                stroke="#63636B"
                 width={140}
                 interval={0}
                 tickFormatter={(v) => v.length > 18 ? v.slice(0, 17) + "…" : v}
@@ -252,15 +253,15 @@ function InlineChartInner({ payload }) {
                   dataKey="value"
                   position="right"
                   formatter={singleValueFormatter}
-                  style={{ fontSize: 10, fill: "#475569", fontWeight: 500 }}
+                  style={{ fontSize: 10, fill: "#52525B", fontWeight: 500 }}
                 />
               </Bar>
             </BarChart>
           ) : (
             <BarChart data={normalized} margin={{ top: 20, right: 8, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#94a3b8" interval={0} angle={-15} textAnchor="end" height={44} />
-              <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={formatCompact} width={44} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
+              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" interval={0} angle={-15} textAnchor="end" height={44} />
+              <YAxis tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} width={44} />
               <Tooltip
                 cursor={{ fill: "rgba(139,92,246,0.06)" }}
                 contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
@@ -271,7 +272,7 @@ function InlineChartInner({ payload }) {
                   dataKey="value"
                   position="top"
                   formatter={singleValueFormatter}
-                  style={{ fontSize: 10, fill: "#475569", fontWeight: 500 }}
+                  style={{ fontSize: 10, fill: "#52525B", fontWeight: 500 }}
                 />
               </Bar>
             </BarChart>
@@ -282,7 +283,7 @@ function InlineChartInner({ payload }) {
         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-1">
           {normalized.map((d, i) => (
             <div key={i} className="flex items-center gap-1.5 text-[11px]">
-              <span className="h-2 w-2 rounded-sm" style={{ background: PALETTE[i % PALETTE.length] }} />
+              <span className="h-2 w-2 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
               <span className="text-muted-foreground truncate max-w-[100px]">{d.label}</span>
               <span className="font-medium tabular-nums">{singleValueFormatter(d.value)}</span>
             </div>

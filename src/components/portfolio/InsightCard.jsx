@@ -22,19 +22,19 @@ export function InsightCard({ segments, onAsk, className }) {
   return (
     <Pop
       className={cn(
-        "rounded-2xl border border-purple-700 bg-[linear-gradient(135deg,#5B3FD6,#7A61E0)] px-[18px] py-4",
+        "rounded-xl bg-pd-primary px-[18px] py-4",
         "shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
         className
       )}
     >
       <div className="mb-[9px] flex items-center gap-2">
-        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-lg bg-white/20 text-white">
+        <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-white/20 text-white">
           <Sparkles className="size-[14px]" aria-hidden="true" />
         </span>
         <span className="font-pd-display text-[13.5px] font-semibold text-white">
           Birdy Insights
         </span>
-        <span className="ml-auto rounded-[5px] bg-white/[.22] px-2 py-0.5 text-[10.5px] font-bold text-white">
+        <span className="ml-auto rounded-full bg-white/[.22] px-2 py-0.5 text-[10.5px] font-bold text-white">
           AI
         </span>
       </div>

@@ -35,7 +35,7 @@ export function LoadError({ error, onRetry, className }) {
           <button
             type="button"
             onClick={onRetry}
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[12px] border border-pd-border px-3 py-2 text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-full border border-pd-border px-3.5 py-2 text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider active:scale-[.97]"
           >
             <RefreshCw className="size-[14px]" />
             Try again

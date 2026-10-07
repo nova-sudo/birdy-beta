@@ -96,7 +96,7 @@ describe("Sales Hub without a call centre", () => {
     await waitFor(() => expect(screen.getByText("Total calls")).toBeInTheDocument())
 
     const tile = screen.getByText("Total calls").closest("div.flex")
-    expect(tile.querySelector(".bg-pd-neutral-badge")).not.toBeNull()
+    expect(tile.querySelector(".bg-gray-300")).not.toBeNull()
     expect(tile.querySelector(".bg-pd-info-bg")).toBeNull()
   })
 

@@ -138,7 +138,7 @@ export function statusBadge(status, snoozedUntil) {
       </div>
     )
   }
-  return <Badge variant="outline">{status}</Badge>
+  return <Badge variant="secondary" className="text-xs capitalize">{status}</Badge>
 }
 
 export function ProgressToTrigger({ alert }) {

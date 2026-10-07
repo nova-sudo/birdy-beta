@@ -18,7 +18,7 @@ const SECTIONS = [
 
 function LegalHeader() {
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-10 bg-pd-surface border-b border-pd-border">
       <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
         <Link href="/" className="font-pd-display text-xl font-semibold text-gray-900">
           Birdy<span className="text-pd-primary">.</span>
@@ -36,11 +36,11 @@ function LegalFooter() {
     <footer className="text-center py-12 border-t border-gray-200 text-sm text-gray-400">
       <p>
         © 2025 Birdy AI Ltd.&nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/terms-of-service" className="hover:text-gray-600">Terms</Link>
+        <Link href="/billing/terms-of-service" className="hover:text-gray-600">Terms</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/privacy-policy" className="hover:text-gray-600">Privacy</Link>
+        <Link href="/billing/privacy-policy" className="hover:text-gray-600">Privacy</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/refund-policy" className="hover:text-gray-600">Refunds</Link>
+        <Link href="/billing/refund-policy" className="hover:text-gray-600">Refunds</Link>
       </p>
     </footer>
   );
@@ -57,7 +57,7 @@ function SectionHeading({ num, children }) {
 
 function Callout({ children }) {
   return (
-    <div className="bg-pd-primary-tint border-l-4 border-pd-primary rounded-r-lg px-5 py-4 my-6 text-[15px] text-gray-700">
+    <div className="bg-pd-primary-tint border-l-4 border-pd-primary rounded-r-2xl px-5 py-4 my-6 text-[15px] text-gray-700">
       {children}
     </div>
   );
@@ -178,7 +178,7 @@ export default function TermsOfService() {
 
           <section id="data" className="mb-14 scroll-mt-24">
             <SectionHeading num="06">Data & Privacy</SectionHeading>
-            <p className="text-gray-700 mb-4">Your use of the Service is also governed by our <Link href="/privacy-policy" className="text-pd-primary underline underline-offset-2">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
+            <p className="text-gray-700 mb-4">Your use of the Service is also governed by our <Link href="/billing/privacy-policy" className="text-pd-primary underline underline-offset-2">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
             <p className="text-gray-700 mb-4">You retain ownership of all data you input into or generate through the Service. By using Birdy, you grant us a limited license to process your data solely for the purpose of providing the Service.</p>
             <p className="text-gray-700">You are responsible for ensuring you have the right to share any third-party client data you input into the platform, including compliance with applicable data protection laws (e.g., GDPR, CCPA).</p>
           </section>

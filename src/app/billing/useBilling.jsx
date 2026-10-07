@@ -8,7 +8,9 @@ import {
   useCallback,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Lock, ArrowRight, Loader2, Plus } from "lucide-react";
+import { Lock, ArrowRight, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const API_BASE   = process.env.NEXT_PUBLIC_API_BASE ?? "";
 const PLAN_ORDER = ["starter", "growth", "scale"];
@@ -82,8 +84,10 @@ export function SubscriptionGate({ children, fallback, requirePlan }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+      <div className="space-y-3 p-6">
+        <Skeleton className="h-6 w-48" />
+        <Skeleton className="h-4 w-80" />
+        <Skeleton className="h-40 w-full rounded-xl" />
       </div>
     );
   }
@@ -101,25 +105,21 @@ export function SubscriptionGate({ children, fallback, requirePlan }) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center">
-      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-        <Lock className="w-7 h-7 text-gray-400" />
+      <div className="w-16 h-16 bg-pd-primary-tint text-pd-primary rounded-full flex items-center justify-center mb-4">
+        <Lock className="w-7 h-7" />
       </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2">
+      <h3 className="font-pd-display text-[22px] font-bold tracking-[-0.02em] text-pd-ink mb-2">
         {planLabel ? `${planLabel} plan required` : "Subscription required"}
       </h3>
-      <p className="text-gray-500 max-w-sm mb-6">
+      <p className="text-pd-subtle max-w-sm mb-6">
         {planLabel
           ? `This feature requires the ${planLabel} plan or higher.`
           : "Subscribe to access this feature and connect your clients."}
       </p>
-      <button
-        type="button"
-        onClick={() => router.push("/billing")}
-        className="inline-flex items-center gap-2 bg-gray-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-gray-700 transition-colors"
-      >
-        View Plans
+      <Button onClick={() => router.push("/billing")} className="gap-2">
+        View plans
         <ArrowRight className="w-4 h-4" />
-      </button>
+      </Button>
     </div>
   );
 }
@@ -135,14 +135,14 @@ export function ClientLimitWarning() {
   // Scale users at limit → prompt to add extra slots
   if (atLimit && canAddExtraSlots) {
     return (
-      <div className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm mb-4 bg-emerald-50 border border-emerald-200 text-emerald-700">
+      <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium mb-4 bg-pd-success text-white">
         <Plus className="w-4 h-4 flex-shrink-0" />
         <p>
           You&apos;ve reached your {plan.name} plan limit of {clientLimit} clients.{" "}
           <button
             type="button"
             onClick={() => router.push("/billing")}
-            className="underline font-medium hover:no-underline"
+            className="underline font-semibold underline-offset-2 hover:no-underline"
           >
             Add extra client slots ($10/mo each)
           </button>
@@ -153,10 +153,8 @@ export function ClientLimitWarning() {
 
   // Starter / Growth users at limit → prompt to upgrade
   return (
-    <div className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm mb-4 ${
-      atLimit
-        ? "bg-red-50 border border-red-200 text-red-700"
-        : "bg-amber-50 border border-amber-200 text-amber-700"
+    <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium mb-4 text-white ${
+      atLimit ? "bg-pd-danger" : "bg-pd-warning"
     }`}>
       <Lock className="w-4 h-4 flex-shrink-0" />
       <p>
@@ -166,7 +164,7 @@ export function ClientLimitWarning() {
         <button
           type="button"
           onClick={() => router.push("/billing")}
-          className="underline font-medium hover:no-underline"
+          className="underline font-semibold underline-offset-2 hover:no-underline"
         >
           {atLimit ? "Upgrade to add more" : "Upgrade your plan"}
         </button>

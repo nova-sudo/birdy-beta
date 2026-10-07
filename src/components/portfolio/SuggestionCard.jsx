@@ -19,7 +19,7 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
   const severity = SEVERITY[suggestion.severity] ?? SEVERITY.MEDIUM;
 
   return (
-    <article className="mb-2 rounded-sm border border-pd-border px-3 py-[11px]">
+    <article className="mb-2 rounded-xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-sm">
       <div className="flex items-center gap-[7px]">
         <span className={cn("size-[7px] shrink-0 rounded-full", severity.dot)} aria-hidden="true" />
         <span className={cn("shrink-0 text-[10.5px] font-bold", severity.text)}>
@@ -43,7 +43,7 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
             title="Do it for me"
             aria-label={`Do it for me: ${suggestion.title} for ${suggestion.client}`}
             onClick={() => onApply(suggestion)}
-            className="flex cursor-pointer items-center gap-[5px] rounded-[12px] bg-pd-primary px-2.5 py-1.5 text-[11.5px] font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="flex cursor-pointer items-center gap-[5px] rounded-full bg-pd-primary px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-pd-segment transition-[transform,background-color] duration-200 hover:bg-purple-700 active:scale-[.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
           >
             <Zap className="size-3 shrink-0" aria-hidden="true" />
             {applyLabel}
@@ -53,7 +53,7 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
             title="Dismiss"
             aria-label={`Dismiss: ${suggestion.title} for ${suggestion.client}`}
             onClick={() => onDismiss(suggestion)}
-            className="flex size-7 cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="flex size-7 cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-faint transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
           >
             <Trash2 className="size-[13px]" aria-hidden="true" />
           </button>

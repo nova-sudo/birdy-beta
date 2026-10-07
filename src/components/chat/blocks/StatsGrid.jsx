@@ -33,18 +33,18 @@ function Stat({ stat }) {
     currency = "$",
   } = stat || {}
 
-  const accent = variant === "success" ? "text-emerald-600"
-    : variant === "warning" ? "text-amber-600"
-    : variant === "error" ? "text-rose-600"
-    : "text-foreground"
+  const accent = variant === "success" ? "text-pd-success"
+    : variant === "warning" ? "text-pd-warning"
+    : variant === "error" ? "text-pd-danger"
+    : "text-pd-ink"
 
   const deltaNum = typeof delta === "number" ? delta : null
   const DeltaIcon = deltaNum != null
     ? (deltaNum > 0 ? TrendingUp : deltaNum < 0 ? TrendingDown : null)
     : null
-  const deltaColor = deltaNum > 0 ? "text-emerald-600"
-    : deltaNum < 0 ? "text-rose-600"
-    : "text-muted-foreground"
+  const deltaColor = deltaNum > 0 ? "text-pd-success"
+    : deltaNum < 0 ? "text-pd-danger"
+    : "text-pd-subtle"
 
   return (
     <div className="rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-sm">

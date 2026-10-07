@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
+import { motion } from "framer-motion";
+import { EASE_SPRING } from "@/components/motion";
 import { cn } from "@/lib/utils";
 
 // The chart metric tabs and the right rail's Suggestions/Activity toggle are
@@ -26,6 +28,9 @@ export function PdSegmented({
 }) {
   const itemsRef = useRef([]);
   const isTablist = role === "tablist";
+  // One white pill slides between the options (a shared layoutId), so each
+  // control needs its own id or two strips on one page would trade pills.
+  const pillId = useId();
 
   const onKeyDown = (event, index) => {
     const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
@@ -46,13 +51,8 @@ export function PdSegmented({
       role={role}
       aria-label={label}
       className={cn(
-        // Concentric with the chip inside it: the track's radius is the chip's
-        // plus the padding between them (5px + p-1, which is ~3.9px at this
-        // app's 15.5px root). Get that wrong and the corners stop running
-        // parallel — the border curves away from the selected chip and the
-        // control reads over-rounded, which is what 10px around an 8px chip
-        // did. Change either radius and move the other by the same amount.
-        "flex gap-[5px] rounded-[12px] border border-pd-border bg-pd-divider p-1",
+        // A pill track with pill chips: concentric by construction.
+        "flex gap-[5px] rounded-full bg-pd-divider p-1",
         className
       )}
     >
@@ -75,12 +75,20 @@ export function PdSegmented({
             onClick={() => onChange(option.key)}
             onKeyDown={(e) => onKeyDown(e, i)}
             className={cn(
-              "flex min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-[5px] font-pd-display text-[12.5px] font-semibold",
+              "relative flex min-w-0 cursor-pointer items-center justify-center gap-[7px] rounded-full font-pd-display text-[12.5px] font-semibold transition-colors duration-200",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
-              selected ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "bg-transparent text-pd-muted",
+              selected ? "text-pd-ink" : "bg-transparent text-pd-muted hover:text-pd-ink",
               itemClassName
             )}
           >
+            {selected && (
+              <motion.span
+                layoutId={pillId}
+                aria-hidden="true"
+                className="absolute inset-0 -z-10 rounded-full bg-pd-surface shadow-pd-segment"
+                transition={{ duration: 0.5, ease: EASE_SPRING }}
+              />
+            )}
             {/* Section tabs carry a 14px leading glyph; metric tabs don't. */}
             {option.icon && <option.icon className="size-[14px] shrink-0" aria-hidden="true" />}
             {/* A third panel makes these tight in a 340px rail; the label gives
@@ -89,7 +97,7 @@ export function PdSegmented({
             {option.badge != null && (
               <span
                 className={cn(
-                  "shrink-0 rounded-[5px] px-1.5 py-px text-[10.5px] font-bold",
+                  "shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-bold",
                   option.badgeClassName
                 )}
               >

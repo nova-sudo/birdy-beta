@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 const TONES = {
   // The sidebar's frame: violet tint with a hairline violet border.
-  tint: "border-purple-100 bg-purple-50",
+  tint: "border-purple-200 bg-purple-100",
   // For surfaces that are already tinted (onboarding, coloured panels).
   white: "border-pd-border bg-white",
 };

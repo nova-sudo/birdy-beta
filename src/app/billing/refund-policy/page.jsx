@@ -3,7 +3,7 @@ import Link from "next/link";
 
 function LegalHeader() {
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-10 bg-pd-surface border-b border-pd-border">
       <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
         <Link href="/" className="font-pd-display text-xl font-semibold text-gray-900">
           Birdy<span className="text-pd-primary">.</span>
@@ -21,11 +21,11 @@ function LegalFooter() {
     <footer className="text-center py-12 border-t border-gray-200 text-sm text-gray-400">
       <p>
         © 2025 Birdy AI Ltd.&nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/terms-of-service" className="hover:text-gray-600">Terms</Link>
+        <Link href="/billing/terms-of-service" className="hover:text-gray-600">Terms</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/privacy-policy" className="hover:text-gray-600">Privacy</Link>
+        <Link href="/billing/privacy-policy" className="hover:text-gray-600">Privacy</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/refund-policy" className="hover:text-gray-600">Refunds</Link>
+        <Link href="/billing/refund-policy" className="hover:text-gray-600">Refunds</Link>
       </p>
     </footer>
   );
@@ -43,11 +43,11 @@ function SectionHeading({ num, children }) {
 function Callout({ children, color = "blue" }) {
   const styles = {
     blue:   "bg-pd-primary-tint   border-pd-primary",
-    green:  "bg-green-50  border-green-500",
-    amber:  "bg-amber-50  border-amber-500",
+    green:  "bg-pd-success-bg  border-pd-success",
+    amber:  "bg-pd-warning-bg  border-pd-warning",
   };
   return (
-    <div className={`border-l-4 rounded-r-lg px-5 py-4 my-6 text-[15px] text-gray-700 ${styles[color]}`}>
+    <div className={`border-l-4 rounded-r-2xl px-5 py-4 my-6 text-[15px] text-gray-700 ${styles[color]}`}>
       {children}
     </div>
   );
@@ -67,12 +67,12 @@ function BulletList({ items }) {
 }
 
 const SCENARIOS = [
-  { tag: "Not eligible",  tagColor: "bg-red-100 text-red-700",     title: "Forgot to cancel",    desc: "Renewals that occur because you forgot to cancel before the billing date are not eligible for refunds." },
-  { tag: "Not eligible",  tagColor: "bg-red-100 text-red-700",     title: "Unused subscription", desc: "Not using the Service during a billing period does not entitle you to a refund." },
-  { tag: "Not eligible",  tagColor: "bg-red-100 text-red-700",     title: "Plan downgrade",       desc: "Downgrades take effect at the end of the billing period. The current period charge is not refunded." },
-  { tag: "Not eligible",  tagColor: "bg-red-100 text-red-700",     title: "Third-party issues",   desc: "Disruptions caused by Meta, GoHighLevel, or HotProspector API outages are outside our control." },
-  { tag: "Case by case",  tagColor: "bg-indigo-100 text-indigo-700", title: "Extended outage",   desc: "If Birdy experiences a significant outage (4+ hours) preventing use of the Service, we may offer a prorated credit." },
-  { tag: "May be eligible", tagColor: "bg-green-100 text-green-700", title: "Billing error",     desc: "If you were charged incorrectly due to a technical error on our end, we will issue a full refund of the erroneous charge." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Forgot to cancel",    desc: "Renewals that occur because you forgot to cancel before the billing date are not eligible for refunds." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Unused subscription", desc: "Not using the Service during a billing period does not entitle you to a refund." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Plan downgrade",       desc: "Downgrades take effect at the end of the billing period. The current period charge is not refunded." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Third-party issues",   desc: "Disruptions caused by Meta, GoHighLevel, or HotProspector API outages are outside our control." },
+  { tag: "Case by case",  tagColor: "bg-pd-primary text-white", title: "Extended outage",   desc: "If Birdy experiences a significant outage (4+ hours) preventing use of the Service, we may offer a prorated credit." },
+  { tag: "May be eligible", tagColor: "bg-pd-success text-white", title: "Billing error",     desc: "If you were charged incorrectly due to a technical error on our end, we will issue a full refund of the erroneous charge." },
 ];
 
 const STEPS = [
@@ -133,10 +133,10 @@ export default function RefundPolicy() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
               {SCENARIOS.map((s) => (
                 <div key={s.title} className="bg-white border border-gray-200 rounded-xl p-5">
-                  <span className={`text-xs font-medium tracking-wide uppercase px-2.5 py-1 rounded-full inline-block mb-3 ${s.tagColor}`}>
+                  <span className={`text-[11px] font-bold tracking-[.04em] uppercase px-2.5 py-1 rounded-full inline-block mb-3 ${s.tagColor}`}>
                     {s.tag}
                   </span>
-                  <h3 className="font-medium text-gray-900 mb-2">{s.title}</h3>
+                  <h3 className="font-pd-display text-[16px] font-semibold text-gray-900 mb-2">{s.title}</h3>
                   <p className="text-sm text-gray-500">{s.desc}</p>
                 </div>
               ))}
@@ -154,7 +154,7 @@ export default function RefundPolicy() {
               "Your data is retained for 30 days after expiry, then deleted",
             ]} />
             <Callout color="green">
-              <strong className="text-green-700">How to cancel:</strong> Go to the{" "}
+              <strong className="text-pd-success">How to cancel:</strong> Go to the{" "}
               <Link href="/billing" className="text-pd-primary underline underline-offset-2">Billing page</Link>{" "}
               and click &quot;Manage Billing&quot; to access the Whop customer portal, where you can cancel at any time.
             </Callout>
@@ -171,14 +171,14 @@ export default function RefundPolicy() {
                     {i + 1}
                   </div>
                   <div>
-                    <h3 className="font-medium text-gray-900 mb-1">{step.title}</h3>
+                    <h3 className="font-pd-display text-[16px] font-semibold text-gray-900 mb-1">{step.title}</h3>
                     <p className="text-sm text-gray-500">{step.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
             <Callout color="amber">
-              <strong className="text-amber-700">Note:</strong> Refunds are issued at the sole discretion of Birdy AI Ltd. Submitting a request does not guarantee a refund.
+              <strong className="text-pd-amber">Note:</strong> Refunds are issued at the sole discretion of Birdy AI Ltd. Submitting a request does not guarantee a refund.
             </Callout>
           </section>
 

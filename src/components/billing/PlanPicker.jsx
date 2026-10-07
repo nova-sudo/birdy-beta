@@ -1,149 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { ExternalLink, Loader2, AlertCircle } from "lucide-react";
-import { PLANS, PLAN_ORDER, STATUS_STYLES, STATUS_LABELS } from "./plans";
+import { Button } from "@/components/ui/button";
+import { Stagger, StaggerItem } from "@/components/motion";
+import { PlanCard } from "./PlanCard";
+import { PLANS, STATUS_STYLES, STATUS_LABELS } from "./plans";
 
-// Settings is a redesigned surface, so the tiers wear Birdy tokens rather
-// than the raw Tailwind hues /billing still uses: purple is the brand primary
-// #6B4EE6, and the other two reuse Info and Success rather than inventing an
-// accent — the style guide allows no new hues.
-const TONES = {
-  purple: { text: "text-pd-primary", tint: "bg-pd-primary-tint", solid: "bg-pd-primary hover:bg-purple-700", border: "border-pd-primary" },
-  blue: { text: "text-pd-info", tint: "bg-pd-info-bg", solid: "bg-pd-info hover:brightness-95", border: "border-pd-info" },
-  emerald: { text: "text-pd-success", tint: "bg-pd-success-bg", solid: "bg-pd-success hover:brightness-95", border: "border-pd-success" },
-};
-
-/**
- * One tier, as the Settings Billing tab draws it.
- *
- * The same three plans /billing sells, without the feature checklist — in
- * Settings the reader has already bought; what they came for is which tier
- * they're on and what moving costs, so the card is the header, the price and
- * the one action.
- */
-function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
-  const Icon = plan.icon;
-  const c = TONES[plan.color];
-  const subscribed = !!billingStatus?.subscribed;
-  const isCurrent = subscribed && billingStatus?.plan?.id === plan.id;
-  const isDowngrade =
-    subscribed && PLAN_ORDER.indexOf(plan.id) < PLAN_ORDER.indexOf(billingStatus.plan?.id);
-
-  // Sentence case throughout, like "Current plan" — Title Case would be the
-  // odd one out in the row.
-  const label = isCurrent
-    ? "Current plan"
-    : !subscribed
-      ? "Get started"
-      : isDowngrade
-        ? "Downgrade"
-        : "Upgrade";
-
-  // Moving up is the outlined button: white surface, the tier's colour as its
-  // text. It sits beside a filled "Current plan", and two solid blocks side by
-  // side would read as two equally-live choices.
-  const outlined = !isCurrent && subscribed && !isDowngrade;
-  // A plan CTA is the card's whole point, so it takes the 10px "controls,
-  // buttons" radius and a roomier 11px/14px over the 9px/13px the guide gives
-  // an inline toolbar button. Secondary keeps the #DFDFE8 input border and
-  // carries the tier's colour as its text — moving up sits beside a filled
-  // "Current plan", and two solid blocks side by side would read as two
-  // equally-live choices.
-  const buttonClass = [
-    "w-full rounded-sm px-4 py-[11px] text-[14px] font-semibold transition-colors",
-    "flex items-center justify-center gap-2",
-    outlined
-      ? `border border-[#DCDBD7] bg-pd-surface ${c.text} hover:bg-pd-divider`
-      : `text-white ${c.solid}`,
-  ].join(" ");
-
-  const body = (
-    <>
-      <div className="flex items-center gap-[10px]">
-        {/* KPI-chip metrics: 34px square, 10px radius, 17px icon. */}
-        <div className={`flex size-[34px] shrink-0 items-center justify-center rounded-sm ${c.tint}`}>
-          <Icon className={`size-[17px] ${c.text}`} />
-        </div>
-        <div className="min-w-0">
-          <h3 className="font-pd-display text-[15px] font-semibold text-pd-ink">{plan.name}</h3>
-          <p className="mt-0.5 text-[12px] text-pd-faint">Up to {plan.maxClients} clients</p>
-        </div>
-      </div>
-
-      <div className="mt-[18px] mb-[18px] flex items-baseline gap-1.5">
-        <span className="font-pd-display text-[28px] font-bold leading-none text-pd-ink">
-          ${plan.price}
-        </span>
-        <span className="text-[12px] text-pd-faint">/mo</span>
-      </div>
-
-      <div className="mt-auto">
-        {/* Changing tier is Whop's job — the portal handles proration, so
-            Settings sends the reader there rather than running a second
-            checkout of its own. Nobody subscribed yet goes to /billing,
-            which is where the checkout embed lives.
-
-            The current tier is a plate, not a button: it stays at full
-            strength rather than greying out the way a disabled button
-            would, because it's stating a fact, not offering an action. */}
-        {isCurrent ? (
-          <div className={buttonClass}>{label}</div>
-        ) : subscribed ? (
-          <button
-            type="button"
-            onClick={onManage}
-            disabled={loadingManage}
-            className={`${buttonClass} disabled:opacity-60 disabled:cursor-not-allowed`}
-          >
-            {loadingManage
-              ? <><Loader2 className="w-4 h-4 animate-spin" />Opening…</>
-              : label}
-          </button>
-        ) : (
-          <Link href="/billing" className={buttonClass}>
-            {label}
-          </Link>
-        )}
-      </div>
-    </>
-  );
-
-  // The popular tier is framed rather than bordered: the ribbon is the frame's
-  // own top edge, with the white body inset inside it. Scaling it up is what
-  // makes it break the row's top and bottom line. Its shadow is the guide's
-  // "selected" one — the only shadow allowed on a card, and only because this
-  // card is selected rather than decorated.
-  if (plan.popular) {
-    return (
-      <div className={`relative z-10 rounded-2xl p-[3px] shadow-pd-segment md:scale-105 ${c.solid.split(" ")[0]}`}>
-        <div className="pb-[5px] text-center text-[11px] font-bold tracking-[.03em] text-white">
-          MOST POPULAR
-        </div>
-        <div className="flex flex-col rounded-xl bg-pd-surface px-[22px] py-5">
-          {body}
-        </div>
-      </div>
-    );
-  }
-
-  // Ordinary cards are flat: 1px #ECECF2, radius 16px, padding 20px 22px.
-  return (
-    <div
-      className={[
-        "flex flex-col rounded-2xl bg-pd-surface px-[22px] py-5 border",
-        isCurrent ? c.border : "border-pd-border",
-      ].join(" ")}
-    >
-      {body}
-    </div>
-  );
-}
+const dateLabel = (iso) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 
 /**
  * The "Your plan" block on Settings → Billing: which tier you're on, how much
- * of its client-group allowance you've spent, and the three tiers as cards.
+ * of its client-group allowance you've spent, the three tiers as the same
+ * cards /billing draws, and the cancel / keep controls.
  *
  * Plans come from the shared module /billing sells from, so prices and limits
  * can't drift between the two pages.
@@ -167,15 +37,14 @@ export function PlanPicker({
         <h2 className="font-pd-display text-[19px] font-bold tracking-[-0.02em] text-pd-ink">
           Your plan
         </h2>
-        {/* Status pill: Inter 600 11px, padding 3px 9px, radius 6px. */}
         {subscribed && status && (
-          <span className={`inline-flex items-center rounded-md px-[9px] py-[3px] text-[11px] font-semibold ${STATUS_STYLES[status] ?? STATUS_STYLES.inactive}`}>
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-bold ${STATUS_STYLES[status] ?? STATUS_STYLES.inactive}`}>
             {STATUS_LABELS[status] ?? status}
           </span>
         )}
       </div>
 
-      <p className="mt-1 text-[12px] text-pd-faint">
+      <p className="mt-1 text-[12.5px] text-pd-subtle">
         {subscribed && current ? (
           <>
             You&apos;re currently on the{" "}
@@ -192,66 +61,48 @@ export function PlanPicker({
         )}
       </p>
 
-      {/* 18px between cards in a row, per the spacing scale. items-center so
-          the scaled-up popular card breaks the row's line top and bottom; the
-          gap absorbs the width it gains. */}
-      <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-[18px] items-center">
+      <Stagger className="mt-4 grid grid-cols-1 items-stretch gap-4 md:grid-cols-3">
         {PLANS.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            billingStatus={billingStatus}
-            onManage={onManage}
-            loadingManage={loadingManage}
-          />
+          <StaggerItem key={plan.id}>
+            <PlanCard
+              plan={plan}
+              billingStatus={billingStatus}
+              onManage={onManage}
+              loadingManage={loadingManage}
+            />
+          </StaggerItem>
         ))}
-      </div>
+      </Stagger>
 
       {subscribed && (
-        <div className="mt-[14px] flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-pd-faint">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12.5px] text-pd-subtle">
           {billingStatus.current_period_end && (
             <span>
               {billingStatus.cancel_at_period_end ? "Cancels" : "Renews"}{" "}
-              <span className="font-semibold text-pd-body">
-                {new Date(billingStatus.current_period_end).toLocaleDateString("en-GB", {
-                  day: "numeric", month: "short", year: "numeric",
-                })}
-              </span>
+              <span className="font-semibold text-pd-ink">{dateLabel(billingStatus.current_period_end)}</span>
             </span>
           )}
-          {/* Secondary button: #5A5A6E on #fff, 1px #DCDBD7, 9px 16px, radius 9px. */}
-          <button
-            type="button"
-            onClick={onManage}
-            disabled={loadingManage}
-            className="ml-auto flex items-center gap-[7px] rounded-[12px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
-          >
-            {loadingManage
-              ? <Loader2 className="size-[14px] animate-spin" />
-              : <ExternalLink className="size-[14px]" />}
+          <Button variant="outline" onClick={onManage} disabled={loadingManage} className="ml-auto gap-1.5">
+            {loadingManage ? <Loader2 className="size-4 animate-spin" /> : <ExternalLink className="size-4" />}
             Manage billing
-          </button>
+          </Button>
         </div>
       )}
 
-      {/* Cancelling happens here, not in Whop's portal. The page used to not
-          even say the word "cancel" — the only route to it was guessing that
-          a button labelled "Manage billing" opened a portal that offered it.
-          Whop's API cancels a membership directly (memberships.cancel, via
-          POST /api/billing/cancel), so the portal is now only for the things
-          that genuinely need it: changing plan and updating a card.
+      {/* Cancelling happens here, not in Whop's portal. Whop's API cancels a
+          membership directly (memberships.cancel, via POST /api/billing/cancel),
+          so the portal is only for changing plan and updating a card.
 
           At period end, never immediately: the customer has paid for the
-          period they are in, and taking access back the moment they click is
-          taking back something they own. */}
+          period they are in. */}
       {subscribed && !billingStatus?.cancel_at_period_end && (
-        <p className="mt-[10px] text-[12px] leading-[1.45] text-pd-faint">
+        <p className="mt-3 text-[12.5px] leading-[1.45] text-pd-subtle">
           Changing plan or updating your card happens in the Whop portal.{" "}
           <button
             type="button"
             onClick={() => setConfirmingCancel(true)}
             disabled={busySubscription}
-            className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-body underline disabled:opacity-60"
+            className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] font-semibold text-pd-body underline underline-offset-2 hover:text-pd-ink disabled:opacity-60"
           >
             Cancel your subscription
           </button>
@@ -260,57 +111,45 @@ export function PlanPicker({
       )}
 
       {confirmingCancel && (
-        <div className="mt-[14px] rounded-xl border border-pd-border bg-pd-canvas px-4 py-[14px] text-[12px] leading-[1.45] text-pd-body">
-          <p className="font-semibold text-pd-ink">Cancel your subscription?</p>
+        <div className="mt-4 rounded-xl border border-pd-border bg-pd-canvas px-5 py-4 text-[13px] leading-[1.5] text-pd-body">
+          <p className="font-pd-display text-[15px] font-semibold text-pd-ink">Cancel your subscription?</p>
           <p className="mt-1">
             You keep {current?.name ? `${current.name} ` : ""}access until{" "}
             <span className="font-semibold text-pd-ink">
               {billingStatus?.current_period_end
-                ? new Date(billingStatus.current_period_end).toLocaleDateString("en-GB", {
-                    day: "numeric", month: "short", year: "numeric",
-                  })
+                ? dateLabel(billingStatus.current_period_end)
                 : "the end of the current period"}
             </span>
             , and you&apos;re not charged again. After that your client groups stop refreshing.
             You can undo this any time before then.
           </p>
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
+            <Button
+              variant="destructive"
               onClick={async () => { await onCancel?.(); setConfirmingCancel(false) }}
               disabled={busySubscription}
-              className="flex items-center gap-[7px] rounded-[12px] border border-pd-danger-border bg-pd-danger-surface px-4 py-[9px] text-[13px] font-semibold text-pd-danger transition-colors disabled:opacity-60"
+              className="gap-1.5"
             >
-              {busySubscription && <Loader2 className="size-[14px] animate-spin" />}
+              {busySubscription && <Loader2 className="size-4 animate-spin" />}
               Yes, cancel it
-            </button>
-            <button
-              type="button"
-              onClick={() => setConfirmingCancel(false)}
-              disabled={busySubscription}
-              className="rounded-[12px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
-            >
+            </Button>
+            <Button variant="outline" onClick={() => setConfirmingCancel(false)} disabled={busySubscription}>
               Keep my subscription
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
-      {/* Problem surface: #FEF6F6 on a #F8DEDE border, 12px radius, 14px 16px. */}
       {billingStatus?.cancel_at_period_end && (
-        <div className="mt-[14px] flex items-center gap-[11px] rounded-xl border border-pd-danger-border bg-pd-danger-surface px-4 py-[14px] text-[12px] leading-[1.45] text-pd-body">
-          <AlertCircle className="size-[15px] shrink-0 text-pd-danger" />
+        <div className="mt-4 flex items-center gap-3 rounded-2xl bg-pd-warning-bg px-4 py-3 text-[13px] leading-[1.45] text-pd-amber">
+          <AlertCircle className="size-4 shrink-0" />
           <span>
             Your subscription will cancel at the end of this billing period.{" "}
-            {/* The mirror image of the problem above: this told people their
-                subscription was ending and then offered no way to change their
-                mind. Undoing a scheduled cancellation is the same portal trip
-                as making one. */}
             <button
               type="button"
               onClick={onReactivate}
               disabled={busySubscription}
-              className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline disabled:opacity-60"
+              className="cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-pd-primary underline underline-offset-2 disabled:opacity-60"
             >
               Keep my subscription
             </button>

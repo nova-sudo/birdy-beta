@@ -48,26 +48,26 @@ export default function LoginPage() {
           <div className="pointer-events-none absolute inset-0 text-white">
             {/* Top-left: wordmark */}
             <div className="absolute left-8 top-8">
-              <span className="font-pd-display text-xl font-extrabold text-white drop-shadow">Birdy</span>
+              <span className="font-pd-display text-xl font-extrabold text-white">Birdy</span>
             </div>
 
             {/* Centered hero */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] drop-shadow-lg">
+              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] ">
                 Every client.<br />One brain.
               </h2>
-              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 drop-shadow-md">
+              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 ">
                 Manage your clients, campaigns, and conversations — all in one place.
               </p>
             </div>
 
             {/* Bottom-left */}
-            <span className="absolute bottom-10 left-8 max-w-xs text-sm leading-relaxed text-white/75 drop-shadow">
+            <span className="absolute bottom-10 left-8 max-w-xs text-sm leading-relaxed text-white/75">
               Built for teams that move fast and close faster.
             </span>
 
             {/* Bottom-right */}
-            <span className="absolute bottom-10 right-10 text-sm font-medium tracking-wider text-white/80 drop-shadow">
+            <span className="absolute bottom-10 right-10 text-sm font-medium tracking-wider text-white/80">
               © Birdy 2026
             </span>
           </div>

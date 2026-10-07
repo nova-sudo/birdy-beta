@@ -42,7 +42,7 @@ import {
 import { toast } from "sonner"
 import {
   Bell,
-  Bird,
+  Sparkles,
   CirclePlus,
   Ellipsis,
   Pencil,
@@ -1114,7 +1114,7 @@ function AlertsPageContent() {
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-white" : "text-muted-foreground"}`} />
+                    <Sparkles className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-white" : "text-muted-foreground"}`} />
                     Ask Birdy
                   </button>
                   <button
@@ -1331,7 +1331,7 @@ function AlertsPageContent() {
                             <Target className="h-4 w-4" />
                             <span>Scope</span>
                           </div>
-                          <Badge variant="outline" className="capitalize">client</Badge>
+                          <Badge variant="secondary" className="capitalize">client</Badge>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -1464,7 +1464,7 @@ function AlertsPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-pd-danger text-white hover:bg-pd-danger/90">Delete</AlertDialogAction>
+            <AlertDialogAction variant="destructive" onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1480,7 +1480,7 @@ function AlertsPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSubConfirm} className="bg-pd-danger text-white hover:bg-pd-danger/90">Remove</AlertDialogAction>
+            <AlertDialogAction variant="destructive" onClick={handleDeleteSubConfirm}>Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1527,9 +1527,7 @@ export default function AlertsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
+        <div className="mt-[62px]"><AlertTableSkeleton /></div>
       }
     >
       <AlertsPageContent />

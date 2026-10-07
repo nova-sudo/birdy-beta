@@ -25,7 +25,7 @@ export function Leaderboard({ rows, emptyMessage = "Nothing to rank yet" }) {
 
         return (
           <li key={row.id ?? row.name} className="mb-[14px] flex items-center gap-3">
-            <span className="flex size-[30px] shrink-0 items-center justify-center rounded-[12px] bg-pd-primary-tint text-[11px] font-bold text-pd-primary">
+            <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-[11px] font-bold text-pd-primary">
               {i + 1}
             </span>
 

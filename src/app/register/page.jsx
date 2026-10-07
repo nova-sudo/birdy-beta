@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Lock, Mail } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react"
 import { publicRequest } from "@/lib/api"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { useBirdy } from "@/components/birdy/use-birdy"
@@ -155,7 +155,7 @@ export default function RegisterPage() {
                   >
                     {isLoading ? (
                       <div className="flex items-center space-x-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <Loader2 className="w-4 h-4 animate-spin" />
                         <span>Creating account...</span>
                       </div>
                     ) : (
@@ -184,9 +184,9 @@ export default function RegisterPage() {
 
             <p className="text-center text-xs text-pd-subtle mt-6">
               By creating an account, you agree to our{" "}
-              <a href="/terms" className="text-pd-primary hover:text-purple-700">Terms of Service</a>{" "}
+              <a href="/billing/terms-of-service" className="text-pd-primary hover:text-purple-700">Terms of Service</a>{" "}
               and{" "}
-              <a href="/privacy" className="text-pd-primary hover:text-purple-700">Privacy Policy</a>
+              <a href="/billing/privacy-policy" className="text-pd-primary hover:text-purple-700">Privacy Policy</a>
             </p>
           </div>
         </div>
@@ -205,26 +205,26 @@ export default function RegisterPage() {
           <div className="pointer-events-none absolute inset-0 text-white">
             {/* Top-left: Birdy lockup */}
             <div className="absolute left-8 top-8">
-              <span className="font-pd-display text-xl font-extrabold text-white drop-shadow">Birdy</span>
+              <span className="font-pd-display text-xl font-extrabold text-white ">Birdy</span>
             </div>
 
             {/* Centered hero */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] drop-shadow-lg">
+              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] ">
                 Join Birdy
               </h2>
-              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 drop-shadow-md">
+              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 ">
                 Start growing smarter campaigns, conversations, and conversions in minutes.
               </p>
             </div>
 
             {/* Bottom-left */}
-            <span className="absolute bottom-10 left-8 max-w-xs text-sm leading-relaxed text-white/75 drop-shadow">
+            <span className="absolute bottom-10 left-8 max-w-xs text-sm leading-relaxed text-white/75 ">
               Built for teams that move fast and close faster.
             </span>
 
             {/* Bottom-right */}
-            <span className="absolute bottom-10 right-10 text-sm font-medium tracking-wider text-white/80 drop-shadow">
+            <span className="absolute bottom-10 right-10 text-sm font-medium tracking-wider text-white/80 ">
               © Birdy 2026
             </span>
           </div>

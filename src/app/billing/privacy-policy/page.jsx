@@ -18,7 +18,7 @@ const SECTIONS = [
 
 function LegalHeader() {
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
+    <header className="sticky top-0 z-10 bg-pd-surface border-b border-pd-border">
       <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
         <Link href="/" className="font-pd-display text-xl font-semibold text-gray-900">
           Birdy<span className="text-pd-primary">.</span>
@@ -36,11 +36,11 @@ function LegalFooter() {
     <footer className="text-center py-12 border-t border-gray-200 text-sm text-gray-400">
       <p>
         © 2025 Birdy AI Ltd.&nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/terms-of-service" className="hover:text-gray-600">Terms</Link>
+        <Link href="/billing/terms-of-service" className="hover:text-gray-600">Terms</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/privacy-policy" className="hover:text-gray-600">Privacy</Link>
+        <Link href="/billing/privacy-policy" className="hover:text-gray-600">Privacy</Link>
         &nbsp;&nbsp;·&nbsp;&nbsp;
-        <Link href="/refund-policy" className="hover:text-gray-600">Refunds</Link>
+        <Link href="/billing/refund-policy" className="hover:text-gray-600">Refunds</Link>
       </p>
     </footer>
   );
@@ -58,10 +58,10 @@ function SectionHeading({ num, children }) {
 function Callout({ children, color = "blue" }) {
   const styles = {
     blue:  "bg-pd-primary-tint border-pd-primary text-gray-700",
-    green: "bg-green-50 border-green-500 text-gray-700",
+    green: "bg-pd-success-bg border-pd-success text-gray-700",
   };
   return (
-    <div className={`border-l-4 rounded-r-lg px-5 py-4 my-6 text-[15px] ${styles[color]}`}>
+    <div className={`border-l-4 rounded-r-2xl px-5 py-4 my-6 text-[15px] ${styles[color]}`}>
       {children}
     </div>
   );
@@ -183,7 +183,7 @@ export default function PrivacyPolicy() {
             ]} />
             <p className="text-gray-700 mb-4">When you connect these services, you authorize Birdy to access and store data from those platforms. The data pulled is used solely to populate your Birdy dashboard.</p>
             <Callout color="green">
-              <strong className="text-green-700">Your control:</strong> You can disconnect any integration at any time from the Settings page. Upon disconnection, we stop pulling new data from that platform.
+              <strong className="text-pd-success">Your control:</strong> You can disconnect any integration at any time from the Settings page. Upon disconnection, we stop pulling new data from that platform.
             </Callout>
             <p className="text-gray-700">
               Billing is processed by <strong className="font-medium">Whop</strong>. We do not store payment card details. Please review{" "}

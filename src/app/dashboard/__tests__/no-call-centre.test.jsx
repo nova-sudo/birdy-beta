@@ -200,29 +200,29 @@ describe("Portfolio Dashboard without a call centre", () => {
     await renderWith(NO_CALL_CENTRE);
 
     const totalCalls = within(card("Call insights")).getByText("Total calls").parentElement;
-    expect(totalCalls.querySelector(".bg-pd-neutral-badge")).not.toBeNull();
+    expect(totalCalls.querySelector(".bg-gray-300")).not.toBeNull();
 
     const called = within(card("Performance funnel"))
       .getAllByRole("listitem")[2];
-    expect(called.querySelector(".bg-pd-neutral-badge")).not.toBeNull();
+    expect(called.querySelector(".bg-gray-300")).not.toBeNull();
   });
 
   it("leaves the chips their own colour where the figure is real", async () => {
     await renderWith(WITH_CALL_CENTRE);
 
     const totalCalls = within(card("Call insights")).getByText("Total calls").parentElement;
-    expect(totalCalls.querySelector(".bg-pd-neutral-badge")).toBeNull();
+    expect(totalCalls.querySelector(".bg-gray-300")).toBeNull();
 
     // Conversion rate is closes over leads and never dims, even here.
     const conversion = within(card("Call insights")).getByText("Conversion rate").parentElement;
-    expect(conversion.querySelector(".bg-pd-neutral-badge")).toBeNull();
+    expect(conversion.querySelector(".bg-gray-300")).toBeNull();
   });
 
   it("keeps the conversion chip lit while the rest of the card goes grey", async () => {
     await renderWith(NO_CALL_CENTRE);
 
     const conversion = within(card("Call insights")).getByText("Conversion rate").parentElement;
-    expect(conversion.querySelector(".bg-pd-neutral-badge")).toBeNull();
+    expect(conversion.querySelector(".bg-gray-300")).toBeNull();
   });
 
   it("computes the real figures when a call centre is connected", async () => {

@@ -1,6 +1,10 @@
 "use client"
 import { useState, useEffect, useCallback, useMemo } from "react"
-import { Globe, MessageSquarePlus, Trash2, Loader2, UserRound, Bird } from "lucide-react"
+import { Globe, MessageSquarePlus, Trash2, Loader2, UserRound } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import ChatConversation from "@/components/chat/ChatConversation"
@@ -155,14 +159,10 @@ export default function AskBirdyPage() {
       {/* ── Conversation sidebar (fixed 280px) ─────────────────────────── */}
       <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
         <div className="flex flex-col gap-3 border-b border-pd-border p-3">
-          <button
-            type="button"
-            onClick={() => startNewConversation()}
-            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-sm bg-pd-primary font-pd-display text-[13px] font-semibold text-white transition-colors hover:bg-pd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
-          >
+          <Button onClick={() => startNewConversation()} className="w-full gap-2">
             <MessageSquarePlus className="size-4" aria-hidden="true" />
             New Chat
-          </button>
+          </Button>
           <PdSegmented
             label="Conversation scope"
             options={SCOPE_TABS}
@@ -174,10 +174,15 @@ export default function AskBirdyPage() {
 
         <div className="min-h-0 flex-1 overflow-y-auto p-2">
           {loadingList ? (
-            <p className="flex items-center justify-center gap-2 py-8 text-[12px] text-pd-faint">
-              <Loader2 className="size-3 animate-spin" />
-              Loading history…
-            </p>
+            <div className="space-y-1 p-1">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="rounded-xl p-2">
+                  <Skeleton className="h-4 w-16 rounded-full" />
+                  <Skeleton className="mt-2 h-3.5 w-11/12" />
+                  <Skeleton className="mt-1.5 h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
           ) : filteredConversations.length === 0 ? (
             <p className="px-4 py-8 text-center text-[12px] text-pd-faint">
               {conversations.length === 0
@@ -185,7 +190,7 @@ export default function AskBirdyPage() {
                 : "Nothing in this scope yet."}
             </p>
           ) : (
-            <div className="space-y-1">
+            <Stagger className="space-y-1" gap={0.04}>
               {filteredConversations.map(c => {
                 const selected = active.sessionId === c.session_id
                 const clientScoped = c.scope === "client" && c.client_name
@@ -193,9 +198,9 @@ export default function AskBirdyPage() {
                   // Row, not a button: the delete control is a button of its
                   // own, and a button inside a button is invalid markup that
                   // keyboard users cannot reach.
-                  <div
+                  <StaggerItem
                     key={c.session_id}
-                    className={`group flex items-center gap-1 overflow-hidden rounded-sm transition-colors ${
+                    className={`group flex items-center gap-1 overflow-hidden rounded-xl transition-colors ${
                       selected ? "bg-pd-primary-tint" : "hover:bg-pd-divider"
                     }`}
                   >
@@ -210,8 +215,8 @@ export default function AskBirdyPage() {
                       <span
                         className={`mb-1 flex w-fit max-w-full items-center gap-1 overflow-hidden rounded-full px-2 py-px text-[10px] font-semibold ${
                           clientScoped
-                            ? "bg-pd-primary-tint text-pd-primary"
-                            : "bg-pd-info-bg text-pd-info"
+                            ? "bg-pd-primary text-white"
+                            : "bg-pd-info text-white"
                         }`}
                       >
                         {clientScoped
@@ -220,7 +225,7 @@ export default function AskBirdyPage() {
                         <span className="truncate">{clientScoped ? c.client_name : "Global"}</span>
                       </span>
                       <p className={`truncate text-[12.5px] ${
-                        selected ? "font-semibold text-[#4A3AA0]" : "font-medium text-pd-ink"
+                        selected ? "font-semibold text-pd-primary" : "font-medium text-pd-ink"
                       }`}>
                         {c.title}
                       </p>
@@ -232,17 +237,17 @@ export default function AskBirdyPage() {
                     <button
                       onClick={(e) => deleteConversation(c.session_id, e)}
                       disabled={pendingDelete === c.session_id}
-                      className="mr-1 shrink-0 rounded p-1 text-pd-danger opacity-0 transition hover:bg-pd-danger-bg focus-visible:opacity-100 group-hover:opacity-100"
+                      className="mr-1 flex size-7 shrink-0 items-center justify-center rounded-full text-pd-danger opacity-0 transition hover:bg-pd-danger-bg focus-visible:opacity-100 group-hover:opacity-100"
                       aria-label={`Delete conversation: ${c.title}`}
                     >
                       {pendingDelete === c.session_id
                         ? <Loader2 className="size-3 animate-spin" />
                         : <Trash2 className="size-3" />}
                     </button>
-                  </div>
+                  </StaggerItem>
                 )
               })}
-            </div>
+            </Stagger>
           )}
         </div>
       </aside>
@@ -251,9 +256,7 @@ export default function AskBirdyPage() {
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-pd-border px-5 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-pd-primary text-white">
-              <Bird className="size-4" aria-hidden="true" />
-            </div>
+            <BirdyAvatar size={36} paused />
             <div className="min-w-0">
               <h2 className="truncate font-pd-display text-[14.5px] font-semibold leading-tight text-pd-ink">
                 {activeConvo ? "Chat with Birdy" : "New conversation"}
@@ -271,17 +274,17 @@ export default function AskBirdyPage() {
           {/* The second half of the global/client indicator: a scope badge
               pinned to the right, neutral until a new chat is saved. */}
           {isClientScoped ? (
-            <span className="flex max-w-[40%] items-center gap-1.5 overflow-hidden rounded-full border border-[#DDD6F8] bg-pd-primary-tint px-2.5 py-1 text-[11px] font-semibold text-pd-primary">
+            <span className="flex max-w-[40%] items-center gap-1.5 overflow-hidden rounded-full bg-pd-primary px-2.5 py-1 text-[11px] font-bold text-white">
               <UserRound className="size-3 shrink-0" aria-hidden="true" />
               <span className="truncate">{activeConvo.client_name} · client conversation</span>
             </span>
           ) : activeConvo ? (
-            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#D6E6FA] bg-pd-info-bg px-2.5 py-1 text-[11px] font-semibold text-pd-info">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-pd-info px-2.5 py-1 text-[11px] font-bold text-white">
               <Globe className="size-3" aria-hidden="true" />
               Global conversation
             </span>
           ) : (
-            <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-pd-border bg-[#F4F4F8] px-2.5 py-1 text-[11px] font-semibold text-pd-subtle">
+            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-gray-600 px-2.5 py-1 text-[11px] font-bold text-white">
               <Globe className="size-3" aria-hidden="true" />
               Global · not saved yet
             </span>

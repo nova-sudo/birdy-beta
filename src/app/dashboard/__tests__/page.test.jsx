@@ -238,7 +238,7 @@ describe("Portfolio Dashboard", () => {
     // last_14d spend of £680 minus this week's £400 leaves £280 for the week
     // before, so spend is up.
     const spendPill = within(kpiCell("Total ad spend")).getByText(/%$/);
-    expect(spendPill.className).toContain("text-pd-success");
+    expect(spendPill.className).toContain("bg-pd-success");
   });
 
   it("refetches every figure when the date range changes", async () => {

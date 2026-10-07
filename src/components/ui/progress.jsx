@@ -11,9 +11,9 @@ const sizeClasses = {
 }
 
 const colorClasses = {
-  primary: "bg-purple-600",
-  secondary: "bg-purple-600/50",
-  destructive: "bg-gray",
+  primary: "bg-primary",
+  secondary: "bg-primary/50",
+  destructive: "bg-destructive",
   accent: "bg-purple-300",
   muted: "bg-muted-foreground",
 }
@@ -27,7 +27,7 @@ const Progress = React.forwardRef(
         <ProgressPrimitive.Root
           ref={ref}
           data-slot="progress"
-          className={cn("relative w-full overflow-hidden rounded-full bg-secondary", sizeClasses[size], className)}
+          className={cn("relative w-full overflow-hidden rounded-full bg-pd-divider", sizeClasses[size], className)}
           value={displayValue}
           {...props}
         >
@@ -41,7 +41,7 @@ const Progress = React.forwardRef(
             style={{ transform: `translateX(-${100 - displayValue}%)` }}
           />
         </ProgressPrimitive.Root>
-        {showLabel && <p className="text-xs font-medium text-purple-900 text-right">{displayValue}%</p>}
+        {showLabel && <p className="text-xs font-medium text-pd-ink text-right tabular-nums">{displayValue}%</p>}
       </div>
     )
   },

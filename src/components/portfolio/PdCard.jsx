@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
  */
 export function PdCard({ title, action, children, className, headerClassName }) {
   return (
-    <section className={cn("rounded-xl border border-pd-border bg-pd-surface px-[22px] py-5", className)}>
+    <section className={cn("rounded-xl border border-pd-border bg-pd-surface px-[22px] py-5 shadow-sm", className)}>
       {(title || action) && (
         <div className={cn("flex items-center justify-between gap-3", headerClassName ?? "mb-4")}>
           {title && (

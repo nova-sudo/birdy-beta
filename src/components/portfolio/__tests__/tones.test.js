@@ -18,8 +18,8 @@ describe("toneClass", () => {
   it("gives the unavailable tone the neutral pair, not a metric colour", () => {
     // A figure with no source has nothing to colour-code, and a lit chip
     // beside a grey dash reads as a live number that happens to be missing.
-    // Both tokens already exist in globals.css — no new one was invented.
-    expect(toneClass("neutral")).toBe("bg-pd-neutral-badge text-pd-subtle");
+    // A mid grey on a light grey: nothing a metric tone would use.
+    expect(toneClass("neutral")).toBe("bg-gray-300 text-gray-700");
   });
 
   it("still renders something for a tone nobody defined", () => {

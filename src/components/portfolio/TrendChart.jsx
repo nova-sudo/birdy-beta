@@ -183,7 +183,7 @@ export function TrendChart({ chart, metrics, activeMetric, onMetricChange, redra
             <span className="absolute -inset-2" aria-hidden="true" />
 
             {hoveredIndex === i && (
-              <div className="pd-tooltip pointer-events-none absolute bottom-[15px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg bg-pd-ink px-[10px] py-1.5 text-white shadow-pd-tooltip">
+              <div className="pd-tooltip pointer-events-none absolute bottom-[15px] left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-xl bg-pd-ink px-[10px] py-1.5 text-white shadow-pd-tooltip">
                 <div className="font-pd-display text-[12.5px] font-bold leading-none">
                   {chart.pointValues[i]}
                 </div>

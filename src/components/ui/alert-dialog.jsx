@@ -88,7 +88,7 @@ function AlertDialogTitle({
   return (
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
-      className={cn("text-lg font-semibold", className)}
+      className={cn("font-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink", className)}
       {...props} />
   );
 }
@@ -107,9 +107,10 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
+  variant = "default",
   ...props
 }) {
-  return (<AlertDialogPrimitive.Action className={cn(buttonVariants(), className)} {...props} />);
+  return (<AlertDialogPrimitive.Action className={cn(buttonVariants({ variant }), className)} {...props} />);
 }
 
 function AlertDialogCancel({
