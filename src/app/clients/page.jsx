@@ -657,10 +657,6 @@ export default function ClientsPage() {
             setMetaSearchQuery("")
             setHotProspectorSearchQuery("")
             setCallLogProvider(null)
-            setHpApiUid("")
-            setHpApiKey("")
-            setHpTestStatus("idle")
-            setHpTestError("")
           }
         }}
       >

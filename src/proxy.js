@@ -119,7 +119,8 @@ export function proxy(request) {
     return redirectTo(request, "/dashboard")
   }
 
-  if (isPublicRoute && pathname !== "/") {
+  // Signed in, the landing page and the auth screens have nothing to offer.
+  if (isPublicRoute) {
     return redirectTo(request, session.ob ? "/onboarding" : "/clients")
   }
 

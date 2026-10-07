@@ -1,18 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // The marketing/landing page now lives on Askbirdy.ai — this app has no
-  // homepage of its own, so "/" always sends straight to the login page.
-  // Temporary (302) redirect, not permanent: keeps this easy to change later
-  // without browsers/CDNs aggressively caching a 301.
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/login",
-        permanent: false,
-      },
-    ];
-  },
+  // "/" is the landing page for visitors; signed-in users are sent on to the
+  // app by proxy.js, so there is no redirect here.
   async rewrites() {
     return [
       {

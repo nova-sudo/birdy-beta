@@ -97,8 +97,8 @@ export default function ProtectedLayout({ children }) {
     } else if (isAdminRoute && isAuthenticated && !isAdmin) {
       // Authenticated but not an admin — bounce out of the admin console.
       router.push('/dashboard');
-    } else if (isAuthenticated && isPublicRoute && pathname !== '/') {
-      // Redirect authenticated users from /login or /register to /clients
+    } else if (isAuthenticated && isPublicRoute) {
+      // Redirect authenticated users from /, /login or /register to /clients
       router.push(onboardingIncomplete ? '/onboarding' : '/clients');
     }
   }, [router, pathname]);
