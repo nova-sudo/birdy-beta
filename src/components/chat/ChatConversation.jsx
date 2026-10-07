@@ -280,7 +280,7 @@ export default function ChatConversation({
           {outOfCredits && (
             <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
               <span>You&apos;re out of Birdy Credits.</span>
-              <Link href="/credits" className="font-semibold underline underline-offset-2 hover:no-underline">
+              <Link href="/billing" className="font-semibold underline underline-offset-2 hover:no-underline">
                 Buy credits
               </Link>
             </div>

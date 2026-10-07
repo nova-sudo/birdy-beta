@@ -22,7 +22,7 @@ export default function OutOfCreditsEmptyState({ className = "" }) {
       </EmptyHeader>
       <EmptyContent>
         <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
-          <Link href="/credits">Buy credits</Link>
+          <Link href="/billing">Buy credits</Link>
         </Button>
       </EmptyContent>
     </Empty>

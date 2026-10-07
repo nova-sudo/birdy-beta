@@ -20,8 +20,8 @@ function LegalHeader() {
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
       <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
-        <Link href="/" className="font-serif text-xl font-semibold text-gray-900">
-          Birdy<span className="text-blue-600">.</span>
+        <Link href="/" className="font-pd-display text-xl font-semibold text-gray-900">
+          Birdy<span className="text-pd-primary">.</span>
         </Link>
         <span className="ml-auto text-xs font-medium text-gray-400 border border-gray-200 rounded-full px-3 py-1">
           Legal
@@ -48,7 +48,7 @@ function LegalFooter() {
 
 function SectionHeading({ num, children }) {
   return (
-    <h2 className="font-serif text-2xl font-semibold mb-5 pb-4 border-b border-gray-200 flex items-baseline gap-3">
+    <h2 className="font-pd-display text-2xl font-semibold mb-5 pb-4 border-b border-gray-200 flex items-baseline gap-3">
       <span className="font-sans text-sm font-normal text-gray-400">{num}</span>
       {children}
     </h2>
@@ -57,7 +57,7 @@ function SectionHeading({ num, children }) {
 
 function Callout({ children }) {
   return (
-    <div className="bg-blue-50 border-l-4 border-blue-500 rounded-r-lg px-5 py-4 my-6 text-[15px] text-gray-700">
+    <div className="bg-pd-primary-tint border-l-4 border-pd-primary rounded-r-lg px-5 py-4 my-6 text-[15px] text-gray-700">
       {children}
     </div>
   );
@@ -84,15 +84,15 @@ export default function TermsOfService() {
         <meta name="description" content="Birdy AI Terms of Service" />
       </Head>
 
-      <div className="min-h-screen bg-[#fafaf8] font-sans">
+      <div className="min-h-screen bg-pd-canvas font-sans">
         <LegalHeader />
 
         <main className="max-w-4xl mx-auto px-8 py-16 pb-28">
 
           {/* Hero */}
           <div className="mb-14 pb-12 border-b border-gray-200">
-            <p className="text-xs font-medium tracking-widest uppercase text-blue-600 mb-4">Legal Agreement</p>
-            <h1 className="font-serif text-5xl font-semibold leading-tight tracking-tight mb-5">Terms of Service</h1>
+            <p className="text-xs font-medium tracking-widest uppercase text-pd-primary mb-4">Legal Agreement</p>
+            <h1 className="font-pd-display text-5xl font-semibold leading-tight tracking-tight mb-5">Terms of Service</h1>
             <div className="flex gap-6 flex-wrap text-sm text-gray-400">
               {["Effective: January 1, 2025", "Last updated: January 1, 2025", "Birdy AI Ltd."].map((t) => (
                 <span key={t} className="before:content-['—'] before:mr-2 before:text-gray-200">{t}</span>
@@ -106,7 +106,7 @@ export default function TermsOfService() {
             <ol className="grid grid-cols-2 gap-2 list-none">
               {SECTIONS.map((s) => (
                 <li key={s.id} className="text-sm">
-                  <a href={`#${s.id}`} className="flex items-center gap-2 text-gray-800 hover:text-blue-600 no-underline group">
+                  <a href={`#${s.id}`} className="flex items-center gap-2 text-gray-800 hover:text-pd-primary no-underline group">
                     <span className="text-xs text-gray-400 w-5">{s.num}</span>
                     {s.title}
                   </a>
@@ -157,7 +157,7 @@ export default function TermsOfService() {
               "Refunds: Payments are generally non-refundable. Please see our Refund Policy for details.",
             ]} />
             <Callout>
-              <strong className="text-blue-600">Note:</strong> All billing is handled by Whop. By subscribing, you also agree to Whop&apos;s terms of service. Birdy does not store your payment card details.
+              <strong className="text-pd-primary">Note:</strong> All billing is handled by Whop. By subscribing, you also agree to Whop&apos;s terms of service. Birdy does not store your payment card details.
             </Callout>
           </section>
 
@@ -178,7 +178,7 @@ export default function TermsOfService() {
 
           <section id="data" className="mb-14 scroll-mt-24">
             <SectionHeading num="06">Data & Privacy</SectionHeading>
-            <p className="text-gray-700 mb-4">Your use of the Service is also governed by our <Link href="/privacy-policy" className="text-blue-600 underline underline-offset-2">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
+            <p className="text-gray-700 mb-4">Your use of the Service is also governed by our <Link href="/privacy-policy" className="text-pd-primary underline underline-offset-2">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
             <p className="text-gray-700 mb-4">You retain ownership of all data you input into or generate through the Service. By using Birdy, you grant us a limited license to process your data solely for the purpose of providing the Service.</p>
             <p className="text-gray-700">You are responsible for ensuring you have the right to share any third-party client data you input into the platform, including compliance with applicable data protection laws (e.g., GDPR, CCPA).</p>
           </section>
@@ -222,8 +222,8 @@ export default function TermsOfService() {
             <SectionHeading num="12">Contact</SectionHeading>
             <p className="text-gray-700 mb-4">If you have questions about these Terms, please contact us:</p>
             <BulletList items={[
-              <span key="email"><strong className="font-medium">Email:</strong> <a href="mailto:legal@birdy.ai" className="text-blue-600 underline underline-offset-2">legal@birdy.ai</a></span>,
-              <span key="web"><strong className="font-medium">Website:</strong> <a href="https://birdy-beta.vercel.app" className="text-blue-600 underline underline-offset-2">birdy-beta.vercel.app</a></span>,
+              <span key="email"><strong className="font-medium">Email:</strong> <a href="mailto:legal@birdy.ai" className="text-pd-primary underline underline-offset-2">legal@birdy.ai</a></span>,
+              <span key="web"><strong className="font-medium">Website:</strong> <a href="https://birdy-beta.vercel.app" className="text-pd-primary underline underline-offset-2">birdy-beta.vercel.app</a></span>,
             ]} />
           </section>
         </main>

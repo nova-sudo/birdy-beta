@@ -20,8 +20,8 @@ function LegalHeader() {
   return (
     <header className="sticky top-0 z-10 bg-white border-b border-gray-200">
       <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
-        <Link href="/" className="font-serif text-xl font-semibold text-gray-900">
-          Birdy<span className="text-blue-600">.</span>
+        <Link href="/" className="font-pd-display text-xl font-semibold text-gray-900">
+          Birdy<span className="text-pd-primary">.</span>
         </Link>
         <span className="ml-auto text-xs font-medium text-gray-400 border border-gray-200 rounded-full px-3 py-1">
           Legal
@@ -48,7 +48,7 @@ function LegalFooter() {
 
 function SectionHeading({ num, children }) {
   return (
-    <h2 className="font-serif text-2xl font-semibold mb-5 pb-4 border-b border-gray-200 flex items-baseline gap-3">
+    <h2 className="font-pd-display text-2xl font-semibold mb-5 pb-4 border-b border-gray-200 flex items-baseline gap-3">
       <span className="font-sans text-sm font-normal text-gray-400">{num}</span>
       {children}
     </h2>
@@ -57,7 +57,7 @@ function SectionHeading({ num, children }) {
 
 function Callout({ children, color = "blue" }) {
   const styles = {
-    blue:  "bg-blue-50 border-blue-500 text-gray-700",
+    blue:  "bg-pd-primary-tint border-pd-primary text-gray-700",
     green: "bg-green-50 border-green-500 text-gray-700",
   };
   return (
@@ -97,15 +97,15 @@ export default function PrivacyPolicy() {
         <meta name="description" content="Birdy AI Privacy Policy" />
       </Head>
 
-      <div className="min-h-screen bg-[#fafaf8] font-sans">
+      <div className="min-h-screen bg-pd-canvas font-sans">
         <LegalHeader />
 
         <main className="max-w-4xl mx-auto px-8 py-16 pb-28">
 
           {/* Hero */}
           <div className="mb-14 pb-12 border-b border-gray-200">
-            <p className="text-xs font-medium tracking-widest uppercase text-blue-600 mb-4">Privacy</p>
-            <h1 className="font-serif text-5xl font-semibold leading-tight tracking-tight mb-5">Privacy Policy</h1>
+            <p className="text-xs font-medium tracking-widest uppercase text-pd-primary mb-4">Privacy</p>
+            <h1 className="font-pd-display text-5xl font-semibold leading-tight tracking-tight mb-5">Privacy Policy</h1>
             <div className="flex gap-6 flex-wrap text-sm text-gray-400">
               {["Effective: January 1, 2025", "Last updated: January 1, 2025", "Birdy AI Ltd."].map((t) => (
                 <span key={t} className="before:content-['—'] before:mr-2 before:text-gray-200">{t}</span>
@@ -119,7 +119,7 @@ export default function PrivacyPolicy() {
             <ol className="grid grid-cols-2 gap-2 list-none">
               {SECTIONS.map((s) => (
                 <li key={s.id} className="text-sm">
-                  <a href={`#${s.id}`} className="flex items-center gap-2 text-gray-800 hover:text-blue-600 no-underline">
+                  <a href={`#${s.id}`} className="flex items-center gap-2 text-gray-800 hover:text-pd-primary no-underline">
                     <span className="text-xs text-gray-400 w-5">{s.num}</span>
                     {s.title}
                   </a>
@@ -187,7 +187,7 @@ export default function PrivacyPolicy() {
             </Callout>
             <p className="text-gray-700">
               Billing is processed by <strong className="font-medium">Whop</strong>. We do not store payment card details. Please review{" "}
-              <a href="https://whop.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-blue-600 underline underline-offset-2">
+              <a href="https://whop.com/privacy/" target="_blank" rel="noopener noreferrer" className="text-pd-primary underline underline-offset-2">
                 Whop&apos;s Privacy Policy
               </a>{" "}
               for how they handle payment data.
@@ -227,7 +227,7 @@ export default function PrivacyPolicy() {
             ]} />
             <p className="text-gray-700">
               No system is 100% secure. If you believe your account has been compromised, contact us immediately at{" "}
-              <a href="mailto:security@birdy.ai" className="text-blue-600 underline underline-offset-2">security@birdy.ai</a>.
+              <a href="mailto:security@birdy.ai" className="text-pd-primary underline underline-offset-2">security@birdy.ai</a>.
             </p>
           </section>
 
@@ -243,7 +243,7 @@ export default function PrivacyPolicy() {
             ]} />
             <p className="text-gray-700">
               To exercise any of these rights, email{" "}
-              <a href="mailto:privacy@birdy.ai" className="text-blue-600 underline underline-offset-2">privacy@birdy.ai</a>.
+              <a href="mailto:privacy@birdy.ai" className="text-pd-primary underline underline-offset-2">privacy@birdy.ai</a>.
               We will respond within 30 days.
             </p>
           </section>
@@ -273,8 +273,8 @@ export default function PrivacyPolicy() {
             <SectionHeading num="12">Contact Us</SectionHeading>
             <p className="text-gray-700 mb-4">For privacy-related questions or to exercise your data rights:</p>
             <BulletList items={[
-              <span key="email"><strong className="font-medium">Email:</strong> <a href="mailto:privacy@birdy.ai" className="text-blue-600 underline underline-offset-2">privacy@birdy.ai</a></span>,
-              <span key="web"><strong className="font-medium">Website:</strong> <a href="https://birdy-beta.vercel.app" className="text-blue-600 underline underline-offset-2">birdy-beta.vercel.app</a></span>,
+              <span key="email"><strong className="font-medium">Email:</strong> <a href="mailto:privacy@birdy.ai" className="text-pd-primary underline underline-offset-2">privacy@birdy.ai</a></span>,
+              <span key="web"><strong className="font-medium">Website:</strong> <a href="https://birdy-beta.vercel.app" className="text-pd-primary underline underline-offset-2">birdy-beta.vercel.app</a></span>,
             ]} />
           </section>
         </main>
