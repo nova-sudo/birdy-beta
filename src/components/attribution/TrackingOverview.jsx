@@ -17,13 +17,16 @@ import { toast } from "sonner"
 
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { leadSourceOption, needsPixel, normalizeLeadSource } from "@/lib/lead-sources"
 
 const METHOD_TONE = {
-  instant_form: "bg-pd-info-bg text-pd-info",
-  form_to_ghl: "bg-pd-info-bg text-pd-info",
-  landing_page: "bg-pd-primary-tint text-pd-primary",
-  unknown: "bg-pd-divider text-pd-faint",
+  instant_form: "bg-pd-info text-white",
+  form_to_ghl: "bg-pd-info text-white",
+  landing_page: "bg-pd-primary text-white",
+  unknown: "bg-gray-600 text-white",
 }
 
 function relative(iso) {
@@ -73,17 +76,23 @@ export default function TrackingOverview() {
     return (
       <div className="rounded-xl border border-pd-border bg-pd-surface p-5">
         <p className="text-[13px] text-pd-danger">{error}</p>
-        <button onClick={load} className="mt-2 text-[12.5px] text-pd-primary">
+        <Button variant="outline" size="sm" onClick={load} className="mt-2 text-[12.5px]">
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
 
   if (clients === null) {
     return (
-      <div className="rounded-xl border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
-        Loading tracking status…
+      <div className="space-y-3" aria-busy="true" aria-label="Loading tracking status">
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-3 w-80" />
+        <div className="space-y-2 rounded-xl border border-pd-border bg-pd-surface p-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </div>
       </div>
     )
   }
@@ -101,7 +110,7 @@ export default function TrackingOverview() {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <p className="text-[13px] font-semibold text-pd-ink">Lead tracking by client</p>
+        <p className="font-pd-display text-[13px] font-semibold text-pd-ink">Lead tracking by client</p>
         <p className="mt-0.5 text-[12.5px] leading-[1.5] text-pd-body">
           Where each client&apos;s leads come from, and whether the tracking behind it
           is live.
@@ -130,12 +139,13 @@ export default function TrackingOverview() {
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
-          <tbody>
+          <Stagger as="tbody" gap={0.04}>
             {clients.map((row, index) => {
               const method = normalizeLeadSource(row.method)
               const needsScript = needsPixel(method)
               return (
-                <tr
+                <StaggerItem
+                  as="tr"
                   key={row.group_id}
                   className={cn(
                     "border-b border-pd-row-border last:border-b-0 text-[12.5px]",
@@ -146,7 +156,7 @@ export default function TrackingOverview() {
                   <td className="px-3 py-2.5">
                     <span
                       className={cn(
-                        "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                        "rounded-full px-2 py-0.5 text-[11px] font-bold",
                         METHOD_TONE[method] || METHOD_TONE.unknown,
                       )}
                     >
@@ -190,10 +200,10 @@ export default function TrackingOverview() {
                       </button>
                     </div>
                   </td>
-                </tr>
+                </StaggerItem>
               )
             })}
-          </tbody>
+          </Stagger>
         </table>
       </div>
     </div>

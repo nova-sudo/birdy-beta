@@ -10,11 +10,11 @@
 export const CLIENT_HEALTH = ["Healthy", "Warning", "Critical"]
 export const DEFAULT_CLIENT_HEALTH = "Healthy"
 
-// Straight from the handoff's Design Tokens table.
+// Solid semantic badges: coloured fill, white text.
 const STYLES = {
-  Healthy:  { color: "#25A55F", bg: "#EDF8F1" },
-  Warning:  { color: "#E0920A", bg: "#FDF6EC" },
-  Critical: { color: "#E5484D", bg: "#FEF1F1" },
+  Healthy:  "bg-pd-success text-white",
+  Warning:  "bg-pd-warning text-white",
+  Critical: "bg-pd-danger text-white",
 }
 
 export function healthStyle(health) {
@@ -29,17 +29,15 @@ export function healthStyle(health) {
  */
 export function HealthPill({ health, withDot = true, className = "" }) {
   const value = CLIENT_HEALTH.includes(health) ? health : DEFAULT_CLIENT_HEALTH
-  const { color, bg } = healthStyle(value)
+  const tone = healthStyle(value)
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-[6px] px-[9px] py-[3px] text-[11px] font-semibold ${className}`}
-      style={{ color, background: bg }}
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-[9px] py-[3px] text-[11px] font-bold ${tone} ${className}`}
     >
       {withDot && (
         <span
-          className="size-1.5 rounded-full"
-          style={{ background: color }}
+          className="size-1.5 rounded-full bg-white/80"
           aria-hidden="true"
         />
       )}

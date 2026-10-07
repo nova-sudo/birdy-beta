@@ -24,7 +24,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
   // wall of crosses would be telling them to fix a setup they don't have.
   if (!diagnostics.applicable) {
     return (
-      <div className="flex items-start gap-2 rounded-sm border border-pd-border bg-pd-canvas px-4 py-3">
+      <div className="flex items-start gap-2 rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
         <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
         <p className="text-[12.5px] leading-[1.5] text-pd-body">
           This client&apos;s leads come straight from Meta Instant Forms, so there is
@@ -44,7 +44,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
           <div
             key={stage.key}
             className={cn(
-              "rounded-sm border px-3.5 py-3",
+              "rounded-xl border px-3.5 py-3",
               isBlocker
                 ? "border-pd-border-strong bg-pd-surface"
                 : "border-pd-border bg-pd-surface",
@@ -55,7 +55,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
                 className={cn(
                   "flex size-5 shrink-0 items-center justify-center rounded-full",
                   stage.done
-                    ? "bg-pd-success-bg text-pd-success"
+                    ? "bg-pd-success text-white"
                     : "bg-pd-divider text-pd-faint",
                 )}
               >
@@ -76,7 +76,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
               </span>
 
               {stage.optional && !stage.done && (
-                <span className="rounded-full bg-pd-divider px-2 py-0.5 text-[10.5px] text-pd-faint">
+                <span className="rounded-full bg-gray-600 px-2 py-0.5 text-[10.5px] font-bold text-white">
                   optional
                 </span>
               )}
@@ -97,7 +97,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
       })}
 
       {diagnostics.complete && (
-        <div className="flex items-center gap-2 rounded-sm border border-pd-healthy-border bg-pd-healthy-surface px-3.5 py-3">
+        <div className="flex items-center gap-2 rounded-xl border border-pd-healthy-border bg-pd-healthy-surface px-3.5 py-3">
           <Check className="size-4 shrink-0 text-pd-success" aria-hidden="true" />
           <p className="text-[12.5px] text-pd-body">
             Tracking is working. Leads from this client&apos;s landing pages are being

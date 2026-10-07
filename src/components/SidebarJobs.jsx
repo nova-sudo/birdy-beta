@@ -51,12 +51,12 @@ export default function SidebarJobs() {
               <PopoverTrigger asChild>
                 <SidebarMenuButton className="relative" aria-label="Background tasks">
                   {running.length > 0 ? (
-                    <Loader2 className="animate-spin text-purple-600" />
+                    <Loader2 className="animate-spin text-pd-primary" />
                   ) : (
-                    <CheckCircle2 className="text-emerald-600" />
+                    <CheckCircle2 className="text-pd-success" />
                   )}
                   {running.length > 0 && (
-                    <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-purple-600 text-[9px] font-semibold text-white">
+                    <span className="absolute -right-0.5 -top-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-pd-primary text-[9px] font-semibold text-white">
                       {running.length}
                     </span>
                   )}
@@ -66,23 +66,23 @@ export default function SidebarJobs() {
             <TooltipContent>{summary}</TooltipContent>
           </Tooltip>
           <PopoverContent side="right" align="end" className="w-72 p-2">
-            <p className="px-2 pb-1.5 pt-1 text-xs font-semibold text-gray-500">
+            <p className="px-2 pb-1.5 pt-1 text-xs font-semibold text-pd-subtle">
               Background tasks
             </p>
             <ul className="space-y-1">
               {jobs.map((job) => (
-                <li key={job.id} className="flex items-start gap-2 rounded-md px-2 py-1.5 hover:bg-gray-50">
-                  {job.status === "running" && <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-purple-600" />}
-                  {job.status === "done" && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600" />}
-                  {job.status === "error" && <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />}
+                <li key={job.id} className="flex items-start gap-2 rounded-xl px-2 py-1.5 hover:bg-pd-divider">
+                  {job.status === "running" && <Loader2 className="mt-0.5 h-3.5 w-3.5 shrink-0 animate-spin text-pd-primary" />}
+                  {job.status === "done" && <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pd-success" />}
+                  {job.status === "error" && <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pd-danger" />}
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium text-gray-800">{job.label}</span>
+                    <span className="block truncate text-xs font-medium text-pd-ink">{job.label}</span>
                     {job.detail && (
-                      <span className="block text-[11px] leading-snug text-gray-500">{job.detail}</span>
+                      <span className="block text-[11px] leading-snug text-pd-subtle">{job.detail}</span>
                     )}
                   </span>
                   {job.status === "running" && (
-                    <span className="shrink-0 text-[10px] tabular-nums text-gray-400">
+                    <span className="shrink-0 text-[10px] tabular-nums text-pd-faint">
                       {elapsedLabel(job.startedAt)}
                     </span>
                   )}

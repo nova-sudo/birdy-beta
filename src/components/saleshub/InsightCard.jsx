@@ -8,8 +8,9 @@ import { askBirdy } from "@/lib/ask-birdy";
 // ─── Birdy Insights ─────────────────────────────────────────────────────────
 // The one saturated surface on the screen. The style guide is firm about that:
 // "max one saturated purple surface per screen — reserved for the Birdy AI
-// card. Everything else is white on #F7F7FB." It marks Birdy's own voice, and
-// it stops being a signal the moment a second gradient appears beside it.
+// card. Everything else is white on the canvas." It marks Birdy's own voice,
+// and it stops being a signal the moment a second purple surface appears
+// beside it.
 //
 // The copy is generated per period (see lib/saleshub-insight.js), not written
 // here — this component only knows how to draw it.
@@ -23,7 +24,7 @@ export function InsightCard({ parts, prompt, className }) {
     <Pop
       as="section"
       className={cn(
-        "rounded-xl border border-purple-700 bg-gradient-to-br from-pd-primary to-[#7A61E0] px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
+        "rounded-xl border border-purple-700 bg-pd-primary px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
         className
       )}
     >
@@ -32,7 +33,7 @@ export function InsightCard({ parts, prompt, className }) {
           <Sparkles className="size-[14px]" aria-hidden="true" />
         </span>
         <h2 className="font-pd-display text-[13.5px] font-semibold text-white">Birdy Insights</h2>
-        <span className="ml-auto rounded-[5px] bg-white/[.22] px-2 py-0.5 text-[10.5px] font-bold text-white">
+        <span className="ml-auto rounded-full bg-white/[.22] px-2 py-0.5 text-[10.5px] font-bold text-white">
           AI
         </span>
       </div>

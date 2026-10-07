@@ -8,7 +8,7 @@
 // that page's Tailwind-gray cards.
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Loader2 } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
 import { PLANS } from "@/components/billing/plans"
@@ -94,8 +94,12 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
 
   if (phase === "checking") {
     return (
-      <div className="flex flex-col items-center gap-3 py-16">
-        <SpinnerRing size={22} />
+      <div className="flex w-full max-w-[780px] flex-col items-center gap-3 py-16">
+        <Skeleton className="h-6 w-2/3" />
+        <Skeleton className="mb-3 h-4 w-1/2" />
+        <div className="grid w-full grid-cols-1 gap-[14px] sm:grid-cols-3">
+          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[150px] w-full" />)}
+        </div>
       </div>
     )
   }
@@ -147,18 +151,14 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
                   onClick={() => plan.planId && setSelectedPlan(plan)}
                   className={`relative cursor-pointer rounded-xl border-2 px-5 py-[22px] text-center transition-colors ${
                     plan.planId ? "" : "cursor-not-allowed opacity-50"
-                  }`}
-                  style={{
-                    borderColor: isRecommended ? "#5B3FD6" : "#E7E6E3",
-                    background: isRecommended ? "#F7F5FE" : "#fff",
-                  }}
+                  } ${isRecommended ? "border-pd-primary bg-pd-primary-tint/50" : "border-pd-border bg-white"}`}
                 >
                   {isRecommended && (
                     <span className="absolute -top-[11px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-pd-primary px-[10px] py-[3px] text-[10px] font-bold text-white">
                       RECOMMENDED FOR YOU
                     </span>
                   )}
-                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-sm bg-pd-primary-tint text-pd-primary">
+                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-pd-primary-tint text-pd-primary">
                     <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
                   </div>
                   <div className="mb-1 font-pd-display text-[15px] font-semibold text-pd-ink">{plan.name}</div>
@@ -197,8 +197,10 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
               prefill={email ? { email } : undefined}
               onComplete={pollUntilSubscribed}
               fallback={
-                <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-pd-faint" />
+                <div className="flex flex-col gap-3 py-6">
+                  <Skeleton className="h-10 w-full rounded-full" />
+                  <Skeleton className="h-10 w-full rounded-full" />
+                  <Skeleton className="h-11 w-full rounded-full" />
                 </div>
               }
             />

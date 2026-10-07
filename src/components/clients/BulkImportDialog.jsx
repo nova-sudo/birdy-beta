@@ -138,7 +138,7 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${pdFontClass} max-h-[92vh] overflow-y-auto overflow-x-hidden border-pd-border bg-white p-5 sm:max-w-[920px] md:p-7`}
+        className={`${pdFontClass} max-h-[92vh] overflow-y-auto overflow-x-hidden border-pd-border bg-pd-surface p-5 sm:max-w-[920px] md:p-7`}
       >
         {/* sr-only so Radix has its accessible label without printing a second
             heading above ReviewStep's own — which already says what this is,

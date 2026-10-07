@@ -18,6 +18,7 @@ import { Separator } from "@/components/ui/separator"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 
@@ -174,12 +175,14 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
     : TIMEZONES
 
   return (
-    <div className="space-y-6">
-      {/* Account and password sit side by side, as the design draws them. */}
+    <Stagger className="space-y-6">
+      {/* Account and password sit side by side, as the design draws them. The
+          StaggerItems are flex so each card still stretches to the row. */}
       <div className="grid gap-[18px] lg:grid-cols-2">
-        <Card>
+        <StaggerItem className="flex">
+        <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-base">General settings</CardTitle>
+            <CardTitle className="font-pd-display text-base">General settings</CardTitle>
             <CardDescription>
               Manage your general application and account settings
             </CardDescription>
@@ -208,7 +211,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               />
               {/* Not an oversight: the account id IS the email, so changing it
                   would rekey every document that references the account. */}
-              <p className="mt-1 text-[11px] text-muted-foreground">
+              <p className="mt-1 text-[11px] text-pd-subtle">
                 Your email is your account identifier and cannot be changed here.
               </p>
             </div>
@@ -246,16 +249,18 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
             <Button
               onClick={saveProfile}
               disabled={!dirty || savingProfile}
-              className="w-fit bg-pd-primary text-white hover:bg-purple-700"
+              className="w-fit"
             >
               {savingProfile ? "Saving…" : "Save changes"}
             </Button>
           </CardContent>
         </Card>
+        </StaggerItem>
 
-        <Card>
+        <StaggerItem className="flex">
+        <Card className="w-full">
           <CardHeader>
-            <CardTitle className="text-base">Password</CardTitle>
+            <CardTitle className="font-pd-display text-base">Password</CardTitle>
             <CardDescription>Change your account password</CardDescription>
           </CardHeader>
           <Separator />
@@ -305,33 +310,35 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               </div>
 
               {passwordError && (
-                <p className="text-[11px] text-destructive">{passwordError}</p>
+                <p className="text-[11px] text-pd-danger">{passwordError}</p>
               )}
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[11px] text-pd-subtle">
                 At least 8 characters, and different from your current one.
               </p>
 
               <Button
                 type="submit"
                 disabled={!current || !next || !confirm || savingPassword}
-                className="w-fit bg-pd-primary text-white hover:bg-purple-700"
+                className="w-fit"
               >
                 {savingPassword ? "Updating…" : "Update password"}
               </Button>
             </form>
           </CardContent>
         </Card>
+        </StaggerItem>
       </div>
 
+      <StaggerItem>
       <Card className="max-w-[900px]">
         <CardHeader>
-          <CardTitle className="text-base">Notification preferences</CardTitle>
+          <CardTitle className="font-pd-display text-base">Notification preferences</CardTitle>
           <CardDescription>How often Birdy sends your Slack brief</CardDescription>
         </CardHeader>
         <Separator />
         <CardContent className="pt-4">
           {!slackConnected ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-pd-subtle">
               Connect the Slack bot under Integrations to schedule a brief.
             </p>
           ) : (
@@ -348,14 +355,14 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
                       type="button"
                       onClick={() => setFrequency(option.key)}
                       aria-pressed={active}
-                      className={`rounded-sm border-2 p-4 text-left transition ${
+                      className={`rounded-xl border-2 p-4 text-left transition ${
                         active
                           ? "border-pd-primary bg-pd-primary-tint"
-                          : "border-border hover:border-[#CFCFDA]"
+                          : "border-pd-border hover:border-pd-border-strong"
                       }`}
                     >
-                      <p className="text-sm font-semibold text-foreground">{option.title}</p>
-                      <p className="text-xs text-muted-foreground">{option.desc}</p>
+                      <p className="text-sm font-semibold text-pd-ink">{option.title}</p>
+                      <p className="text-xs text-pd-subtle">{option.desc}</p>
                     </button>
                   )
                 })}
@@ -394,7 +401,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               <Button
                 onClick={saveBrief}
                 disabled={savingBrief}
-                className="mt-4 w-fit bg-pd-primary text-white hover:bg-purple-700"
+                className="mt-4 w-fit"
               >
                 {savingBrief ? "Saving…" : "Save schedule"}
               </Button>
@@ -402,6 +409,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
           )}
         </CardContent>
       </Card>
-    </div>
+      </StaggerItem>
+    </Stagger>
   )
 }

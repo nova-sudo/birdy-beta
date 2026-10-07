@@ -11,10 +11,11 @@
 // so do not appear here — they are still on /ask-birdy.
 
 import { useCallback, useEffect, useState } from "react"
-import { MessageSquarePlus, Loader2 } from "lucide-react"
+import { MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import BirdyChat from "@/components/chat/BirdyChat"
 
 export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
@@ -88,10 +89,10 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
     // grows. Stacked below lg, where a fixed height would trap the chat.
     <div className="flex flex-col gap-[18px] lg:h-[660px] lg:flex-row">
       {/* ── Thread rail ────────────────────────────────────────────── */}
-      <aside className="flex shrink-0 flex-col rounded-2xl border border-pd-border bg-pd-surface p-4 lg:w-[260px]">
+      <aside className="flex shrink-0 flex-col rounded-xl border border-pd-border bg-pd-surface p-4 lg:w-[260px]">
         <Button
           onClick={startNew}
-          className="w-full gap-2 rounded-[12px] bg-pd-primary text-[12.5px] font-semibold text-white hover:bg-purple-700"
+          className="w-full gap-2 text-[12.5px]"
           size="sm"
         >
           <MessageSquarePlus className="size-3.5" />
@@ -104,12 +105,16 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
 
         <div className="min-h-0 flex-1 space-y-1 overflow-y-auto max-lg:max-h-[320px]">
           {loadingThreads ? (
-            <p className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground">
-              <Loader2 className="size-3 animate-spin" />
-              Loading…
-            </p>
+            <div className="space-y-1" aria-busy="true">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="space-y-2 px-3 py-[11px]">
+                  <Skeleton className="h-3.5 w-4/5" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              ))}
+            </div>
           ) : threads.length === 0 ? (
-            <p className="px-1 py-4 text-xs text-muted-foreground">
+            <p className="px-1 py-4 text-xs text-pd-subtle">
               No conversations about {clientName || "this client"} yet.
             </p>
           ) : (
@@ -121,7 +126,7 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
                 onClick={() => openThread(thread)}
                 disabled={opening}
                 aria-current={activeSessionId === thread.session_id ? "true" : undefined}
-                className={`w-full rounded-sm px-3 py-[11px] text-left transition disabled:opacity-60 ${
+                className={`w-full rounded-xl px-3 py-[11px] text-left transition disabled:opacity-60 ${
                   activeSessionId === thread.session_id
                     ? "bg-pd-primary-tint"
                     : "hover:bg-pd-divider"
@@ -129,14 +134,14 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
               >
                 <p
                   className={`truncate text-[12.5px] font-semibold leading-[1.35] ${
-                    activeSessionId === thread.session_id ? "text-[#4A3AA0]" : "text-[#5A5A6E]"
+                    activeSessionId === thread.session_id ? "text-pd-primary" : "text-pd-body"
                   }`}
                 >
                   {thread.title}
                 </p>
                 <p
                   className={`mt-1 text-[11px] ${
-                    activeSessionId === thread.session_id ? "text-[#8A7BC0]" : "text-pd-faint"
+                    activeSessionId === thread.session_id ? "text-pd-primary-light" : "text-pd-faint"
                   }`}
                 >
                   {thread.updated_at

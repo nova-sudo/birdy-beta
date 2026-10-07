@@ -28,19 +28,20 @@ const ICONS = {
   leads: Users,
 }
 
-// Icon chip tints, from the handoff's token table.
+// Icon chip tints, on the shared semantic scale.
 const CHIP = {
-  revenue: { color: "#25A55F", bg: "#EDF8F1" },
-  closes: { color: "#5B3FD6", bg: "#EFECFB" },
-  cpl: { color: "#E0920A", bg: "#FDF6EC" },
-  closeRate: { color: "#3B7DD6", bg: "#EAF1FD" },
-  leads: { color: "#5B3FD6", bg: "#EFECFB" },
+  revenue: "bg-pd-success-bg text-pd-success",
+  closes: "bg-pd-primary-tint text-pd-primary",
+  cpl: "bg-pd-warning-bg text-pd-warning",
+  closeRate: "bg-pd-info-bg text-pd-info",
+  leads: "bg-pd-primary-tint text-pd-primary",
 }
 
+// Solid state badges: coloured fill, white text.
 const PILL = {
-  [ON_TRACK]: { color: "#25A55F", bg: "#EDF8F1" },
-  [AT_RISK]: { color: "#E0920A", bg: "#FDF6EC" },
-  [BEHIND]: { color: "#E5484D", bg: "#FEF1F1" },
+  [ON_TRACK]: "bg-pd-success text-white",
+  [AT_RISK]: "bg-pd-warning text-white",
+  [BEHIND]: "bg-pd-danger text-white",
 }
 
 function GoalCell({ goal, currencySymbol, last }) {
@@ -55,8 +56,7 @@ function GoalCell({ goal, currencySymbol, last }) {
       }`}
     >
       <span
-        className="flex size-8 shrink-0 items-center justify-center rounded-[12px]"
-        style={{ background: chip.bg, color: chip.color }}
+        className={`flex size-8 shrink-0 items-center justify-center rounded-xl ${chip}`}
       >
         <Icon className="size-4" aria-hidden="true" />
       </span>
@@ -84,7 +84,7 @@ function GoalCell({ goal, currencySymbol, last }) {
                 className="flex min-w-0 flex-1 items-center gap-1 text-left"
                 aria-label={`${goal.label}: ${goal.note}`}
               >
-                <span className="min-w-0 truncate text-[11px] text-[#8A8A9A]">
+                <span className="min-w-0 truncate text-[11px] text-pd-subtle">
                   {goal.label}
                 </span>
                 <Info className="size-3 shrink-0 text-pd-faint/70" aria-hidden="true" />
@@ -104,8 +104,7 @@ function GoalCell({ goal, currencySymbol, last }) {
           </Tooltip>
           {pill && (
             <span
-              className="shrink-0 rounded-[5px] px-[7px] py-[2px] text-[10px] font-bold"
-              style={{ color: pill.color, background: pill.bg }}
+              className={`shrink-0 rounded-full px-[7px] py-[2px] text-[10px] font-bold ${pill}`}
             >
               {goal.state}
             </span>
@@ -119,7 +118,7 @@ function GoalCell({ goal, currencySymbol, last }) {
 export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }) {
   if (loading) {
     return (
-      <div className="mb-[14px] flex rounded-2xl border border-pd-border bg-pd-surface">
+      <div className="mb-[14px] flex rounded-xl border border-pd-border bg-pd-surface">
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}
@@ -127,7 +126,7 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
               i === 4 ? "" : "border-r border-pd-border"
             }`}
           >
-            <Skeleton className="size-8 shrink-0 rounded-[12px]" />
+            <Skeleton className="size-8 shrink-0 rounded-xl" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-3 w-24" />
@@ -142,7 +141,7 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
 
   return (
     <TooltipProvider delayDuration={200}>
-    <div className="mb-[14px] rounded-2xl border border-pd-border bg-pd-surface">
+    <div className="mb-[14px] rounded-xl border border-pd-border bg-pd-surface">
       {/* Horizontal on wide screens as the design draws it; wrapping to two
           rows below that, since the cells at 18px padding do not all fit. */}
       <div className="flex flex-wrap items-stretch lg:flex-nowrap">

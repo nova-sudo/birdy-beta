@@ -2,12 +2,16 @@
 
 import { useState, useEffect, useMemo, useRef } from "react"
 import useSWR from "swr"
-import { Bell, BellRing, X, User } from "lucide-react"
+import { Bell, BellRing, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { optionalFetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
 import { formatRelative } from "@/lib/alert-helpers"
 import { flash as flashBirdy } from "@/components/birdy/birdy-store"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Stagger, StaggerItem } from "@/components/motion"
 
 function formatTriggerDate(dateStr) {
   if (!dateStr) return null
@@ -58,12 +62,12 @@ function groupTriggeredRows(rows) {
 
 function TriggerMeta({ dateStr }) {
   const trigger = formatTriggerDate(dateStr)
-  if (!trigger) return <p className="text-xs text-gray-400 mt-0.5">Trigger date unknown</p>
+  if (!trigger) return <p className="text-xs text-pd-faint mt-0.5">Trigger date unknown</p>
   return (
     <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-      <span className="text-xs text-red-500 font-medium">{trigger.relative}</span>
-      <span className="text-xs text-gray-400">·</span>
-      <span className="text-xs text-gray-400">{trigger.absolute}</span>
+      <span className="text-xs text-pd-danger font-medium">{trigger.relative}</span>
+      <span className="text-xs text-pd-faint">·</span>
+      <span className="text-xs text-pd-faint">{trigger.absolute}</span>
     </div>
   )
 }
@@ -85,7 +89,6 @@ export default function NotificationsDropdown() {
   // resets on page reload.
   const [dismissedIds, setDismissedIds] = useState(() => new Set())
   const wasOpenRef = useRef(false)
-  const ref = useRef(null)
   const router = useRouter()
   // Raw triggered count from the last successful fetch (pre-dismissal), so a
   // later fetch that turns up more alerts than before can nudge the mascot —
@@ -115,15 +118,9 @@ export default function NotificationsDropdown() {
     lastSeenCountRef.current = count
   }, [data, alerts])
 
-  // Close on outside click
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [open])
+  // Outside clicks and Escape are the popover's own business now — Radix
+  // closes it through onOpenChange, so the open → closed effect below still
+  // sees every way of shutting it.
 
   // On every open -> closed transition (X button, outside click, bell
   // toggle, or clicking a notification), dismiss whatever was shown so the
@@ -145,104 +142,107 @@ export default function NotificationsDropdown() {
   }
 
   return (
-    <div className="relative" ref={ref}>
+    <Popover open={open} onOpenChange={setOpen}>
       {/* Outer bell button with total count badge */}
-      <button
-        className="relative flex items-center justify-center size-10 rounded-md bg-muted hover:bg-gray-200 transition"
-        onClick={() => setOpen((v) => !v)}
-        aria-label="Notifications"
-      >
-        <Bell className="w-5 h-5 text-black" />
-        {totalCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
-            {totalCount > 99 ? "99+" : totalCount}
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div
-          className="absolute right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden"
-          style={{ width: 340 }}
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon-lg"
+          className="relative size-10"
+          aria-label="Notifications"
         >
-          {/* Header — no bell icon, just text */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">Notifications</span>
-              {totalCount > 0 && (
-                <span className="bg-red-100 text-red-600 text-xs font-semibold px-1.5 py-0.5 rounded-full">
-                  {totalCount}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="p-1 rounded-md hover:bg-gray-100 transition"
-              aria-label="Close"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
+          <Bell className="w-5 h-5" />
+          {totalCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-pd-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+              {totalCount > 99 ? "99+" : totalCount}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
 
-          {/* Body */}
-          <div className="max-h-80 overflow-y-auto">
-            {loading ? (
-              <div className="flex flex-col gap-2 p-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
-                ))}
-              </div>
-            ) : groups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-                <Bell className="w-8 h-8 text-gray-300 mb-2" />
-                <p className="text-sm text-muted-foreground">No triggered alerts</p>
-              </div>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {groups.map(({ parentAlert, children }) => {
-                  const hasChildren = children.length > 0
-
-                  // ── Parent with sub-alerts: show sub-alerts directly, no parent label ──
-                  if (hasChildren) {
-                    return children.map((child) => (
-                      <li key={child._virtual_id ?? `${child.id}_${child._client_id}`}>
-                        <button
-                          onClick={goToAlerts}
-                          className="w-full text-left px-4 py-3 hover:bg-red-50/60 transition-colors flex items-start gap-2.5"
-                        >
-                          <BellRing className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">
-                              {child._client_name}
-                            </p>
-                            <TriggerMeta dateStr={child.last_triggered_at} />
-                          </div>
-                        </button>
-                      </li>
-                    ))
-                  }
-
-                  // ── Simple alert (no sub-alerts) ──
-                  return (
-                    <li key={`real_${parentAlert.id}`}>
-                      <button
-                        onClick={goToAlerts}
-                        className="w-full text-left px-4 py-3 hover:bg-red-50/50 transition-colors flex items-start gap-2.5"
-                      >
-                        <BellRing className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-gray-900 truncate">{parentAlert.name}</p>
-                          <TriggerMeta dateStr={parentAlert.last_triggered_at} />
-                        </div>
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
+      <PopoverContent
+        align="end"
+        sideOffset={8}
+        className="w-[340px] overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0"
+      >
+        {/* Header — no bell icon, just text */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-pd-divider">
+          <div className="flex items-center gap-2">
+            <span className="font-pd-display font-semibold text-sm text-pd-ink">Notifications</span>
+            {totalCount > 0 && (
+              <span className="bg-pd-danger text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+                {totalCount}
+              </span>
             )}
           </div>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => setOpen(false)}
+            aria-label="Close"
+          >
+            <X className="text-pd-faint" />
+          </Button>
         </div>
-      )}
-    </div>
+
+        {/* Body */}
+        <div className="max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="flex flex-col gap-2 p-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-12 rounded-xl" />
+              ))}
+            </div>
+          ) : groups.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+              <Bell className="w-8 h-8 text-pd-faint mb-2" />
+              <p className="text-sm text-pd-subtle">No triggered alerts</p>
+            </div>
+          ) : (
+            <Stagger as="ul" gap={0.05} className="divide-y divide-pd-divider">
+              {groups.map(({ parentAlert, children }) => {
+                const hasChildren = children.length > 0
+
+                // ── Parent with sub-alerts: show sub-alerts directly, no parent label ──
+                if (hasChildren) {
+                  return children.map((child) => (
+                    <StaggerItem as="li" key={child._virtual_id ?? `${child.id}_${child._client_id}`}>
+                      <button
+                        onClick={goToAlerts}
+                        className="w-full text-left px-4 py-3 hover:bg-pd-danger-bg/60 transition-colors flex items-start gap-2.5"
+                      >
+                        <BellRing className="w-4 h-4 text-pd-danger mt-0.5 shrink-0" />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-pd-ink truncate">
+                            {child._client_name}
+                          </p>
+                          <TriggerMeta dateStr={child.last_triggered_at} />
+                        </div>
+                      </button>
+                    </StaggerItem>
+                  ))
+                }
+
+                // ── Simple alert (no sub-alerts) ──
+                return (
+                  <StaggerItem as="li" key={`real_${parentAlert.id}`}>
+                    <button
+                      onClick={goToAlerts}
+                      className="w-full text-left px-4 py-3 hover:bg-pd-danger-bg/50 transition-colors flex items-start gap-2.5"
+                    >
+                      <BellRing className="w-4 h-4 text-pd-danger mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-pd-ink truncate">{parentAlert.name}</p>
+                        <TriggerMeta dateStr={parentAlert.last_triggered_at} />
+                      </div>
+                    </button>
+                  </StaggerItem>
+                )
+              })}
+            </Stagger>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
   )
 }

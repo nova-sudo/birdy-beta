@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 // Catches a crash in any page, so the sidebar and header stay usable and the
 // person gets a way back, instead of Next's bare "Application error" screen.
@@ -19,19 +20,12 @@ export default function PageError({ error, reset }) {
         {error?.digest ? <> and quote this reference: <code className="font-mono text-[12px]">{error.digest}</code></> : null}.
       </p>
       <div className="mt-2 flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="rounded-sm bg-pd-primary px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
-        >
+        <Button type="button" onClick={() => reset()}>
           Try again
-        </button>
-        <Link
-          href="/dashboard"
-          className="rounded-sm border border-pd-border px-4 py-2 text-[13px] text-pd-body hover:border-pd-border-strong"
-        >
-          Go to the dashboard
-        </Link>
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">Go to the dashboard</Link>
+        </Button>
       </div>
     </div>
   )

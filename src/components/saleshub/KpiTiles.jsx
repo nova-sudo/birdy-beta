@@ -1,5 +1,8 @@
+"use client";
+
 import { StatTile } from "@/components/portfolio";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { cn } from "@/lib/utils";
 import { UnavailableValue } from "@/components/callcenter/CallCentreUnavailable";
 
@@ -42,32 +45,34 @@ export function KpiTiles({ tiles, totals, loading, format, deltas, unavailable, 
   }
 
   return (
-    <div className={cn(GRID, className)}>
+    <Stagger gap={0.05} className={cn(GRID, className)}>
       {tiles.map((tile) => (
-        <StatTile
-          key={tile.key}
-          layout="tile"
-          icon={tile.icon}
-          // The icon chip dims with the figure. A metric's tone is what says
-          // "this is the calls one, this is the talk-time one"; keeping it lit
-          // beside a grey dash makes the tile read as a live figure that has
-          // gone momentarily missing, which is the opposite of the truth.
-          tone={unavailable ? "neutral" : tile.tone}
-          label={tile.label}
-          value={
-            unavailable ? (
-              <UnavailableValue />
-            ) : (
-              format(tile.key, totals[tile.key] ?? 0)
-            )
-          }
-          // A comparison against a period that was also unmeasured is not a
-          // comparison; the pills go with the numbers.
-          direction={unavailable ? undefined : deltas?.[tile.key]?.direction}
-          delta={deltas?.[tile.key]?.delta}
-          polarity={tile.polarity}
-        />
+        <StaggerItem key={tile.key} className="min-w-0">
+          <StatTile
+            className="h-full"
+            layout="tile"
+            icon={tile.icon}
+            // The icon chip dims with the figure. A metric's tone is what says
+            // "this is the calls one, this is the talk-time one"; keeping it lit
+            // beside a grey dash makes the tile read as a live figure that has
+            // gone momentarily missing, which is the opposite of the truth.
+            tone={unavailable ? "neutral" : tile.tone}
+            label={tile.label}
+            value={
+              unavailable ? (
+                <UnavailableValue />
+              ) : (
+                format(tile.key, totals[tile.key] ?? 0)
+              )
+            }
+            // A comparison against a period that was also unmeasured is not a
+            // comparison; the pills go with the numbers.
+            direction={unavailable ? undefined : deltas?.[tile.key]?.direction}
+            delta={deltas?.[tile.key]?.delta}
+            polarity={tile.polarity}
+          />
+        </StaggerItem>
       ))}
-    </div>
+    </Stagger>
   );
 }

@@ -18,6 +18,7 @@ import { Check, Copy, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export default function CodeSnippet({
   value,
@@ -69,7 +70,7 @@ export default function CodeSnippet({
       <div className="flex items-stretch gap-2">
         <code
           className={cn(
-            "min-w-0 flex-1 rounded-sm border border-pd-border bg-pd-canvas px-3 py-2.5",
+            "min-w-0 flex-1 rounded-xl border border-pd-border bg-pd-canvas px-3 py-2.5",
             "font-mono text-[11.5px] leading-[1.5] text-pd-ink",
             // Wrap, never truncate. A half-copied script tag is worse than an
             // ugly box.
@@ -79,21 +80,17 @@ export default function CodeSnippet({
           {masked ? "•".repeat(Math.min(value?.length || 0, 44)) : value}
         </code>
 
-        <button
+        <Button
           type="button"
+          size="sm"
+          variant={copied ? "outline" : "default"}
           onClick={copy}
           aria-label={label ? `Copy ${label}` : "Copy"}
-          className={cn(
-            "flex h-auto shrink-0 items-center gap-1.5 self-stretch rounded-sm px-3",
-            "text-[12px] font-medium transition-colors",
-            copied
-              ? "bg-pd-success-bg text-pd-success"
-              : "bg-pd-primary text-white hover:opacity-90",
-          )}
+          className={cn("shrink-0 self-center text-[12px]", copied && "text-pd-success")}
         >
           {copied ? <Check className="size-[14px]" /> : <Copy className="size-[14px]" />}
           {copied ? "Copied" : "Copy"}
-        </button>
+        </Button>
       </div>
 
       {hint && <p className="text-[11.5px] leading-[1.45] text-pd-faint">{hint}</p>}

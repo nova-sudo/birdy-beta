@@ -21,6 +21,9 @@ import { toast } from "sonner"
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import SetupChecklist from "@/components/attribution/SetupChecklist"
 import { PdCard } from "@/components/portfolio"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { apiRequest } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { cn } from "@/lib/utils"
@@ -131,17 +134,34 @@ export default function TrackingPortalPage() {
     return (
       <div className={cn(pdFontClass, "p-8")}>
         <p className="text-[13px] text-pd-danger">{error}</p>
-        <button onClick={load} className="mt-3 text-[12.5px] text-pd-primary">
+        <Button variant="outline" size="sm" onClick={load} className="mt-3 text-[12.5px]">
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
 
   if (!portal) {
     return (
-      <div className={cn(pdFontClass, "p-8 text-[13px] text-pd-faint")}>
-        Loading tracking setup…
+      <div
+        className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}
+        aria-busy="true"
+        aria-label="Loading tracking setup"
+      >
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-8 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-36" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        </div>
+        <div className="space-y-3 rounded-xl border border-pd-border bg-pd-surface p-5">
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+          <Skeleton className="h-14 w-full" />
+        </div>
       </div>
     )
   }
@@ -169,26 +189,28 @@ export default function TrackingPortalPage() {
     )}`
 
   return (
-    <div className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}>
-      <div className="flex items-center gap-3">
-        <button
+    <Stagger className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}>
+      <StaggerItem className="flex items-center gap-3">
+        <Button
+          variant="outline"
+          size="icon-sm"
           onClick={() => router.push(`/clients/${clientId}`)}
-          className="flex size-8 items-center justify-center rounded-lg border border-pd-border text-pd-subtle hover:text-pd-ink"
+          className="text-pd-subtle hover:text-pd-ink"
           aria-label="Back to client"
         >
           <ArrowLeft className="size-4" />
-        </button>
+        </Button>
         <div>
           <h1 className="font-pd-display text-[19px] font-semibold text-pd-ink">
             Tracking setup
           </h1>
           <p className="text-[12.5px] text-pd-faint">{portal.group_name}</p>
         </div>
-      </div>
+      </StaggerItem>
 
       {/* Step rail */}
       {visibleSteps.length > 1 && (
-        <div className="flex items-center gap-1">
+        <StaggerItem className="flex items-center gap-1">
           {STEP_LABELS.map((label, index) => (
             <div key={label} className="flex flex-1 items-center gap-1">
               <button
@@ -221,9 +243,10 @@ export default function TrackingPortalPage() {
               )}
             </div>
           ))}
-        </div>
+        </StaggerItem>
       )}
 
+      <StaggerItem>
       {/* 1 — how they collect leads */}
       {shownStep === 0 && (
         <PdCard title="How does this client collect leads?">
@@ -238,7 +261,7 @@ export default function TrackingPortalPage() {
                 disabled={saving}
                 onClick={() => saveMethod(option.key)}
                 className={cn(
-                  "rounded-sm border px-3.5 py-3 text-left transition-colors",
+                  "rounded-xl border px-3.5 py-3 text-left transition-colors",
                   method === option.key
                     ? "border-pd-primary bg-pd-primary-tint"
                     : "border-pd-border bg-pd-surface hover:border-pd-border-strong",
@@ -260,7 +283,7 @@ export default function TrackingPortalPage() {
 
           {isFormToGhl && (
             <div className="mt-4 flex flex-col gap-4">
-              <div className="rounded-sm border border-pd-border bg-pd-canvas p-3.5">
+              <div className="rounded-xl border border-pd-border bg-pd-canvas p-3.5">
                 <p className="text-[12.5px] font-medium text-pd-ink">Nothing to install in Birdy</p>
                 <p className="mt-1 text-[12px] leading-[1.5] text-pd-body">
                   The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
@@ -324,12 +347,9 @@ export default function TrackingPortalPage() {
           )}
 
           {isLandingPage && (
-            <button
-              onClick={() => setStep(1)}
-              className="mt-4 rounded-sm bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
-            >
+            <Button size="sm" onClick={() => setStep(1)} className="mt-4 text-[12.5px]">
               Next: install the pixel
-            </button>
+            </Button>
           )}
         </PdCard>
       )}
@@ -339,7 +359,7 @@ export default function TrackingPortalPage() {
         <PdCard title="Install the Birdy pixel">
           <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
             One line, on every page the ads point at, just before the closing{" "}
-            <code className="rounded bg-pd-divider px-1 font-mono text-[11px]">
+            <code className="rounded-full bg-pd-divider px-1.5 font-mono text-[11px]">
               &lt;/head&gt;
             </code>{" "}
             tag. It works like a Meta pixel, does not slow the page down, and is how Birdy
@@ -348,7 +368,7 @@ export default function TrackingPortalPage() {
 
           <CodeSnippet value={portal.snippet} label="Snippet" />
 
-          <div className="mt-4 rounded-sm border border-pd-border bg-pd-canvas p-3.5">
+          <div className="mt-4 rounded-xl border border-pd-border bg-pd-canvas p-3.5">
             <p className="text-[12.5px] font-medium text-pd-ink">
               Not your website?
             </p>
@@ -424,7 +444,8 @@ export default function TrackingPortalPage() {
           <StepNav onBack={() => setStep(2)} />
         </PdCard>
       )}
-    </div>
+      </StaggerItem>
+    </Stagger>
   )
 }
 
@@ -432,20 +453,14 @@ function StepNav({ onBack, onNext, nextLabel }) {
   return (
     <div className="mt-4 flex items-center gap-2">
       {onBack && (
-        <button
-          onClick={onBack}
-          className="rounded-sm border border-pd-border px-3.5 py-2 text-[12.5px] text-pd-body hover:border-pd-border-strong"
-        >
+        <Button variant="outline" size="sm" onClick={onBack} className="text-[12.5px] text-pd-body">
           Back
-        </button>
+        </Button>
       )}
       {onNext && (
-        <button
-          onClick={onNext}
-          className="rounded-sm bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
-        >
+        <Button size="sm" onClick={onNext} className="text-[12.5px]">
           {nextLabel}
-        </button>
+        </Button>
       )}
     </div>
   )

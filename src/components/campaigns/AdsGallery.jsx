@@ -1,7 +1,8 @@
 "use client"
 import { useEffect, useMemo, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LayoutGrid, Loader2, Play, Table } from "lucide-react"
+import { Stagger, StaggerItem } from "@/components/motion"
+import { LayoutGrid, Play, Table } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { apiRequest } from "@/lib/api"
 
@@ -82,11 +83,11 @@ function VideoPreviewDialog({ adId, title, onClose }) {
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
       <DialogContent className="sm:max-w-2xl overflow-hidden p-0 gap-0">
         <DialogHeader className="border-b border-pd-divider px-4 py-3 text-left">
-          <DialogTitle className="truncate">{title || "Ad preview"}</DialogTitle>
+          <DialogTitle className="truncate font-pd-display">{title || "Ad preview"}</DialogTitle>
         </DialogHeader>
         <div className="flex min-h-[240px] items-center justify-center overflow-auto bg-pd-divider p-4">
           {state.status === "loading" && (
-            <Loader2 className="size-8 animate-spin text-pd-faint" aria-hidden="true" />
+            <Skeleton className="h-[420px] w-full max-w-[500px]" aria-hidden="true" />
           )}
           {state.status === "error" && (
             <p className="px-6 py-10 text-center text-[13.5px] text-pd-faint">{state.error}</p>
@@ -183,7 +184,7 @@ export default function AdsGallery({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <Stagger gap={0.04} className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {sortedRows.map((row, cardIdx) => {
         const isActive = String(row.status).toLowerCase() === "active"
         const isToggling = togglingRows.has(row.id)
@@ -193,7 +194,7 @@ export default function AdsGallery({
         const isVideo = Boolean(row.creative_video_id)
 
         return (
-          <div key={row.id ?? cardIdx} className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
+          <StaggerItem key={row.id ?? cardIdx} className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
             {/* Creative thumbnail, or the handoff's grey placeholder with a
                 centred play badge when there is none (or the URL expired).
                 A video creative's badge doubles as the play button — click to
@@ -295,7 +296,7 @@ export default function AdsGallery({
                 )
               })}
             </div>
-          </div>
+          </StaggerItem>
         )
       })}
 
@@ -306,6 +307,6 @@ export default function AdsGallery({
           onClose={() => setPreviewRow(null)}
         />
       )}
-    </div>
+    </Stagger>
   )
 }

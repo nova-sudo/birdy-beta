@@ -1,26 +1,28 @@
 "use client"
 
+import "./globals.css"
+import { fontVariables } from "@/lib/pd-fonts"
+import { Button } from "@/components/ui/button"
+
 // Last resort for a crash in the root layout itself (the shell, sidebar or
 // header), which app/error.jsx cannot catch because it renders inside them.
-// It replaces the whole document, so it carries its own html and body.
+// It replaces the whole document, so it carries its own html and body — and
+// its own stylesheet and fonts, since the root layout that normally loads
+// them is the thing that just failed.
 export default function GlobalError({ error, reset }) {
   if (typeof console !== "undefined") console.error("[Birdy] app error:", error)
   return (
-    <html lang="en">
-      <body style={{ margin: 0, fontFamily: "system-ui, sans-serif", background: "#F6F6F4", color: "#18181B" }}>
-        <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: 16, textAlign: "center" }}>
-          <h1 style={{ fontSize: 22, margin: 0 }}>Birdy hit a problem</h1>
-          <p style={{ fontSize: 14, color: "#6B6480", maxWidth: 420, margin: 0 }}>
+    <html lang="en" className={fontVariables}>
+      <body className="antialiased bg-pd-canvas text-pd-ink">
+        <div className="flex min-h-screen flex-col items-center justify-center gap-3 p-4 text-center">
+          <h1 className="font-pd-display text-[22px] font-semibold text-pd-ink">Birdy hit a problem</h1>
+          <p className="max-w-[420px] text-[14px] text-pd-muted">
             Reload to try again. If it keeps happening, tell us what you were doing
             {error?.digest ? ` and quote this reference: ${error.digest}` : ""}.
           </p>
-          <button
-            type="button"
-            onClick={() => reset()}
-            style={{ marginTop: 8, padding: "8px 16px", borderRadius: 10, border: 0, background: "#5B3FD6", color: "#fff", fontSize: 13, cursor: "pointer" }}
-          >
+          <Button type="button" onClick={() => reset()} className="mt-2">
             Try again
-          </button>
+          </Button>
         </div>
       </body>
     </html>

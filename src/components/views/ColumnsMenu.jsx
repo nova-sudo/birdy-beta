@@ -27,6 +27,8 @@
 
 import { useState, useRef, useEffect, useMemo } from "react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 export const DEFAULT_VIEW_ID = "__default__"
 
@@ -40,35 +42,34 @@ export const DEFAULT_SOURCES = [
   { id: "custom", label: "Custom" },
 ]
 
-// Badge palette, straight from the handoff's Design Tokens table.
+// Badge palette — solid semantic fills from the shared scale, one per source.
 const SOURCE_STYLE = {
-  meta:          { color: "#3B7DD6", bg: "#EAF1FD", border: "#D7E4F9", label: "Meta" },
-  ghl:           { color: "#25A55F", bg: "#EDF8F1", border: "#D5EEDF", label: "GHL" },
-  tags:          { color: "#25A55F", bg: "#EDF8F1", border: "#D5EEDF", label: "Tags" },
+  meta:          { className: "bg-pd-info text-white", label: "Meta" },
+  ghl:           { className: "bg-pd-success text-white", label: "GHL" },
+  tags:          { className: "bg-pd-success text-white", label: "Tags" },
   // Birdy's own derived metrics. Shares the Metrics Hub's purple with Custom —
   // both are ours rather than a platform's — and the label is what tells a
   // built-in ratio apart from a formula the user wrote.
-  birdy:         { color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8", label: "Birdy" },
-  custom:        { color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8", label: "Custom" },
-  hotprospector: { color: "#D9722B", bg: "#FDF1E8", border: "#F7DFC9", label: "HP" },
+  birdy:         { className: "bg-pd-primary text-white", label: "Birdy" },
+  custom:        { className: "bg-pd-primary text-white", label: "Custom" },
+  hotprospector: { className: "bg-pd-amber text-white", label: "HP" },
 }
 
 // Anything outside the palette still gets a readable, neutral badge rather
 // than disappearing.
-const NEUTRAL_BADGE = { color: "#5A5A6E", bg: "#F4F4F8", border: "#E7E6E3" }
+const NEUTRAL_BADGE = { className: "bg-gray-600 text-white" }
 
 function Tick({ on }) {
   return (
     <span
-      className="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[4px]"
-      style={{
-        background: on ? "#5B3FD6" : "transparent",
-        border: on ? "none" : "2px solid #DCDBD7",
-      }}
+      className={cn(
+        "flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[4px]",
+        on ? "bg-pd-primary" : "border-2 border-pd-border-strong bg-transparent"
+      )}
     >
       {on && (
-        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff"
-             strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
           <path d="M20 6L9 17l-5-5" />
         </svg>
       )}
@@ -81,8 +82,10 @@ function SourceBadge({ source, label }) {
   const s = SOURCE_STYLE[source] ?? { ...NEUTRAL_BADGE, label: label ?? source }
   return (
     <span
-      className="flex shrink-0 items-center gap-1 rounded-full border px-[7px] py-[2px] text-[10px] font-semibold"
-      style={{ color: s.color, background: s.bg, borderColor: s.border }}
+      className={cn(
+        "flex shrink-0 items-center gap-1 rounded-full px-[7px] py-[2px] text-[11px] font-bold",
+        s.className
+      )}
     >
       {s.label}
     </span>
@@ -90,7 +93,21 @@ function SourceBadge({ source, label }) {
 }
 
 const RAIL_LABEL =
-  "text-[10px] font-bold uppercase tracking-[.04em] text-[#9A9AAB]"
+  "text-[10px] font-bold uppercase tracking-[.04em] text-pd-faint"
+
+// Rail rows (saved views and the source filter) share one treatment: the
+// selected row keeps its own highlight and never takes the grey hover.
+const railRowClass = (on, hovered) =>
+  cn(
+    "border-l-[3px]",
+    on
+      ? "border-l-pd-primary bg-pd-primary-tint"
+      : hovered
+        ? "border-l-transparent bg-pd-divider"
+        : "border-l-transparent bg-transparent"
+  )
+const railTextClass = (on) =>
+  on ? "font-bold text-pd-primary" : "font-medium text-pd-ink"
 
 export default function ColumnsMenu({
   columns = [],              // [{ id, label, source }]
@@ -206,7 +223,7 @@ export default function ColumnsMenu({
     if (updated) setEditTarget(null)
   }
 
-  // Saves in place with a brief green "Saved ✓" flash — no dialog, per spec.
+  // Saves in place with a brief "Saved ✓" flash — no dialog, per spec.
   // On a stored view that overwrites the view; on Default it writes the page's
   // own layout, so the columns you chose are the ones you come back to.
   const [saveError, setSaveError] = useState(null)
@@ -237,10 +254,11 @@ export default function ColumnsMenu({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="outline"
           aria-haspopup="dialog"
-          className={`flex h-[38px] items-center gap-2 rounded-sm border border-[#E7E6E3] bg-white px-[13px] text-[13px] font-semibold text-[#5A5A6E] ${buttonClassName}`}
+          className={cn("h-[38px] gap-2 px-[13px] text-[13px]", buttonClassName)}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -255,7 +273,7 @@ export default function ColumnsMenu({
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M6 9l6 6 6-6" />
           </svg>
-        </button>
+        </Button>
       </PopoverTrigger>
 
       {/* Portalled, so a toolbar with overflow-x-auto (the Clients page has
@@ -265,12 +283,11 @@ export default function ColumnsMenu({
         align="end"
         sideOffset={6}
         aria-label="Columns and saved views"
-        className="flex h-[560px] w-[480px] overflow-hidden rounded-xl border-[#E7E6E3] bg-white p-0"
-        style={{ boxShadow: "0 14px 34px -12px rgba(30,25,60,.28)" }}
+        className="flex h-[560px] w-[480px] overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0 shadow-pd-popover"
       >
           {/* ── Left rail ─────────────────────────────────────────────── */}
-          <div className="flex w-[160px] flex-col border-r border-[#E7E6E3] bg-[#FAFAFC]">
-            <div className={`${RAIL_LABEL} border-b border-[#E7E6E3] px-[14px] pb-[10px] pt-[12px]`}>
+          <div className="flex w-[160px] flex-col border-r border-pd-border bg-pd-table-head">
+            <div className={`${RAIL_LABEL} border-b border-pd-border px-[14px] pb-[10px] pt-[12px]`}>
               Saved views
             </div>
 
@@ -294,11 +311,11 @@ export default function ColumnsMenu({
                         }}
                         autoFocus
                         aria-label="View name"
-                        className="h-[26px] min-w-0 flex-1 rounded-[6px] border border-pd-primary bg-white px-[7px] text-[12px] text-pd-ink outline-none"
+                        className="h-[26px] min-w-0 flex-1 rounded-full border border-primary bg-background px-[9px] text-[12px] text-pd-ink outline-none ring-4 ring-primary/15"
                       />
                       <button
                         type="button" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-pd-primary text-white"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pd-primary text-white hover:bg-purple-700 disabled:opacity-60"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
@@ -307,7 +324,7 @@ export default function ColumnsMenu({
                       </button>
                       <button
                         type="button" onClick={() => setEditTarget(null)} aria-label="Cancel rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border border-[#E7E6E3] text-[#5A5A6E]"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-pd-border text-pd-body hover:bg-pd-divider"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -320,23 +337,25 @@ export default function ColumnsMenu({
 
                 if (deleteTarget?.id === view.id) {
                   return (
-                    <div key={view.id} className="flex flex-col gap-[6px] bg-[#FEF6F6] px-[14px] py-[8px]">
-                      <span className="text-[11.5px] font-semibold text-[#5A5A6E]">
+                    <div key={view.id} className="flex flex-col gap-[6px] bg-pd-danger-surface px-[14px] py-[8px]">
+                      <span className="text-[11.5px] font-semibold text-pd-body">
                         Delete &ldquo;{view.name}&rdquo;?
                       </span>
                       <div className="flex gap-[6px]">
-                        <button
-                          type="button" onClick={confirmDelete} disabled={busy}
-                          className="flex-1 rounded-[12px] bg-[#E5484D] py-[6px] text-center text-[11.5px] font-semibold text-white disabled:opacity-60"
+                        <Button
+                          type="button" variant="destructive" size="xs"
+                          onClick={confirmDelete} disabled={busy}
+                          className="flex-1"
                         >
                           Delete
-                        </button>
-                        <button
-                          type="button" onClick={() => setDeleteTarget(null)}
-                          className="flex-1 rounded-[12px] border border-[#E7E6E3] bg-white py-[6px] text-center text-[11.5px] font-semibold text-[#5A5A6E]"
+                        </Button>
+                        <Button
+                          type="button" variant="outline" size="xs"
+                          onClick={() => setDeleteTarget(null)}
+                          className="flex-1"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )
@@ -347,20 +366,16 @@ export default function ColumnsMenu({
                     key={view.id}
                     onMouseEnter={() => setHoverView(view.id)}
                     onMouseLeave={() => setHoverView(null)}
-                    className="flex items-center gap-[6px] border-l-[3px] px-[14px] py-[8px]"
-                    style={{
-                      // The selected row keeps its own highlight and never
-                      // takes the grey hover treatment.
-                      background: on ? "#EFECFB" : hovered ? "#EFEEEB" : "transparent",
-                      borderLeftColor: on ? "#5B3FD6" : "transparent",
-                    }}
+                    className={cn(
+                      "flex items-center gap-[6px] px-[14px] py-[8px]",
+                      railRowClass(on, hovered)
+                    )}
                   >
                     <button
                       type="button"
                       onClick={() => pickView(view)}
                       aria-current={on ? "true" : undefined}
-                      className="min-w-0 flex-1 truncate text-left text-[12.5px]"
-                      style={{ color: on ? "#5B3FD6" : "#18181B", fontWeight: on ? 700 : 500 }}
+                      className={cn("min-w-0 flex-1 truncate text-left text-[12.5px]", railTextClass(on))}
                     >
                       {view.name}
                     </button>
@@ -375,7 +390,7 @@ export default function ColumnsMenu({
                           type="button"
                           onClick={() => { setEditTarget(view); setEditValue(view.name) }}
                           aria-label={`Rename ${view.name}`}
-                          className="shrink-0 text-[#9A9AAB] animate-in fade-in duration-150"
+                          className="shrink-0 text-pd-faint hover:text-pd-body animate-in fade-in duration-150"
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -386,7 +401,7 @@ export default function ColumnsMenu({
                           type="button"
                           onClick={() => setDeleteTarget(view)}
                           aria-label={`Delete ${view.name}`}
-                          className="shrink-0 text-[#E5484D] animate-in fade-in duration-150"
+                          className="shrink-0 text-pd-danger animate-in fade-in duration-150"
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -414,13 +429,11 @@ export default function ColumnsMenu({
                   onMouseEnter={() => setHoverSource(s.id)}
                   onMouseLeave={() => setHoverSource(null)}
                   aria-pressed={on}
-                  className="border-l-[3px] px-[14px] py-[8px] text-left text-[12.5px]"
-                  style={{
-                    background: on ? "#EFECFB" : hovered ? "#EFEEEB" : "transparent",
-                    borderLeftColor: on ? "#5B3FD6" : "transparent",
-                    color: on ? "#5B3FD6" : "#18181B",
-                    fontWeight: on ? 700 : 500,
-                  }}
+                  className={cn(
+                    "px-[14px] py-[8px] text-left text-[12.5px]",
+                    railRowClass(on, hovered),
+                    railTextClass(on)
+                  )}
                 >
                   {s.label}
                 </button>
@@ -440,37 +453,39 @@ export default function ColumnsMenu({
                     placeholder="View name…"
                     autoFocus
                     aria-label="New view name"
-                    className="h-8 w-full rounded-[12px] border border-[#E7E6E3] bg-white px-[10px] text-[12px] text-pd-ink outline-none"
+                    className="h-8 w-full rounded-full border border-gray-300 bg-background px-[12px] text-[12px] text-pd-ink outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15"
                   />
                   <div className="flex gap-[6px]">
-                    <button
+                    <Button
                       type="button"
+                      size="md"
                       onClick={confirmSave}
                       disabled={!newName.trim() || busy}
-                      className="flex-1 rounded-[12px] py-[7px] text-center text-[12px] font-semibold text-white disabled:opacity-60"
-                      style={{ background: newName.trim() ? "#5B3FD6" : "#C3B7F2" }}
+                      className="flex-1"
                     >
                       Save
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="outline"
+                      size="md"
                       onClick={() => { setComposing(false); setNewName("") }}
-                      className="flex-1 rounded-[12px] border border-[#E7E6E3] bg-white py-[7px] text-center text-[12px] font-semibold text-[#5A5A6E]"
+                      className="flex-1"
                     >
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col gap-[6px]">
                   {/* Above Save New View: the common case is refining the view
                       you are already on, not starting another. */}
-                  <button
+                  <Button
                     type="button"
+                    size="md"
                     onClick={saveToExisting}
                     disabled={busy}
-                    className="flex h-8 items-center justify-center gap-[6px] rounded-[12px] text-[12px] font-semibold text-white disabled:opacity-60"
-                    style={{ background: justUpdated ? "#25A55F" : "#5B3FD6" }}
+                    className="w-full"
                   >
                     {justUpdated ? (
                       <>
@@ -491,18 +506,20 @@ export default function ColumnsMenu({
                         Save to existing
                       </>
                     )}
-                  </button>
+                  </Button>
 
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="md"
                     onClick={() => { setComposing(true); setNewName("") }}
-                    className="flex h-8 items-center justify-center rounded-[12px] border border-[#E7E6E3] bg-white text-[12px] font-semibold text-[#5A5A6E]"
+                    className="w-full"
                   >
                     Save New View
-                  </button>
+                  </Button>
 
                   {saveError && (
-                    <p className="text-[10.5px] text-[#E5484D]">{saveError}</p>
+                    <p className="text-[10.5px] text-pd-danger">{saveError}</p>
                   )}
                 </div>
               )}
@@ -514,16 +531,16 @@ export default function ColumnsMenu({
             <button
               type="button"
               onClick={toggleAll}
-              className="flex items-center gap-[10px] border-b border-[#E7E6E3] pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
+              className="flex items-center gap-[10px] border-b border-pd-border pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
             >
               <Tick on={allOn} />
               <span className={`${RAIL_LABEL} flex-1`}>Metric name</span>
               <span className={RAIL_LABEL}>Source</span>
             </button>
 
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-1">
               {shown.length === 0 ? (
-                <p className="px-[14px] py-6 text-[12px] text-[#9A9AAB]">
+                <p className="px-[14px] py-6 text-[12px] text-pd-faint">
                   No metrics match that search.
                 </p>
               ) : (
@@ -533,7 +550,7 @@ export default function ColumnsMenu({
                     type="button"
                     onClick={() => toggleColumn(col.id)}
                     aria-pressed={visibleColumns.includes(col.id)}
-                    className="flex w-full items-center gap-[10px] px-[14px] py-[8px] text-left hover:bg-[#EFEEEB]"
+                    className="flex w-full items-center gap-[10px] rounded-xl px-[10px] py-[8px] text-left hover:bg-pd-divider"
                   >
                     <Tick on={visibleColumns.includes(col.id)} />
                     <span className="flex-1 truncate text-[12.5px] font-semibold text-pd-ink">
@@ -546,8 +563,8 @@ export default function ColumnsMenu({
             </div>
 
             {/* Search sits at the bottom of this pane by design, not the top. */}
-            <div className="border-t border-[#E7E6E3] px-[14px] py-[10px]">
-              <div className="flex h-8 items-center gap-[7px] rounded-[12px] border border-[#E7E6E3] bg-[#F4F4F8] px-[10px] text-[#9A9AAB]">
+            <div className="border-t border-pd-border px-[14px] py-[10px]">
+              <div className="flex h-8 items-center gap-[7px] rounded-full border border-gray-300 bg-background px-[12px] text-pd-faint transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -558,7 +575,7 @@ export default function ColumnsMenu({
                   onChange={e => setSearch(e.target.value)}
                   placeholder={`Search in ${sources.find(s => s.id === source)?.label ?? "All"}…`}
                   aria-label="Search metrics"
-                  className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-pd-ink outline-none"
+                  className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-pd-ink outline-none placeholder:text-pd-faint"
                 />
               </div>
             </div>

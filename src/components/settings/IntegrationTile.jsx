@@ -14,14 +14,17 @@
 // across the row, and footer actions pinned with mt-auto for the same reason.
 
 import { ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-/** The badge in the top-right of a tile. Keyed by the tile's `status`. */
+/** The badge in the top-right of a tile. Keyed by the tile's `status`.
+    Solid fills, as every status badge in the app: the tint-on-tint pair is
+    kept for banners and soft surfaces. */
 const STATUS_BADGES = {
-  connected: { label: "Connected", className: "bg-pd-success-bg text-pd-success" },
-  expired: { label: "Expired", className: "bg-pd-danger-surface text-pd-danger" },
-  checking: { label: "Checking…", className: "bg-pd-divider text-pd-faint" },
-  disconnected: { label: "Not connected", className: "bg-pd-divider text-pd-faint" },
+  connected: { label: "Connected", className: "bg-pd-success text-white" },
+  expired: { label: "Expired", className: "bg-pd-danger text-white" },
+  checking: { label: "Checking…", className: "bg-gray-600 text-white" },
+  disconnected: { label: "Not connected", className: "bg-gray-600 text-white" },
 }
 
 /**
@@ -47,12 +50,12 @@ export function IntegrationTile({
   const badge = STATUS_BADGES[status] ?? STATUS_BADGES.disconnected
 
   return (
-    <section className="flex flex-col rounded-xl border border-pd-border bg-pd-surface px-[18px] py-4">
+    <section className="flex w-full flex-col rounded-xl border border-pd-border bg-pd-surface px-[18px] py-4">
       <div className="mb-3.5 flex items-center gap-[9px]">
         <span
           aria-hidden="true"
           className={cn(
-            "flex size-[30px] shrink-0 items-center justify-center rounded-[12px]",
+            "flex size-[30px] shrink-0 items-center justify-center rounded-full",
             chipClassName
           )}
         >
@@ -63,7 +66,7 @@ export function IntegrationTile({
         </h3>
         <span
           className={cn(
-            "ml-auto shrink-0 rounded-md px-2 py-[3px] text-[10.5px] font-bold",
+            "ml-auto shrink-0 rounded-full px-2 py-[3px] text-[11px] font-bold",
             badge.className
           )}
         >
@@ -97,61 +100,48 @@ export function IntegrationTile({
   )
 }
 
-// The footer controls. All three are 38px tall so a tile with a Connect button
-// and a tile with Remove + the link square end at the same height.
+// The footer controls. All three are the shared <Button> at 38px tall so a tile
+// with a Connect button and a tile with Remove + the link circle end at the
+// same height; colour and shape come from the button's own variants.
 
-const ACTION_BASE =
-  "flex h-[38px] items-center justify-center gap-1.5 rounded-[12px] text-[12.5px] font-semibold " +
-  "transition-colors disabled:cursor-not-allowed disabled:opacity-60 " +
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+const ACTION_SIZE = "h-[38px] flex-1 px-3 text-[12.5px]"
 
 /** Filled purple, for Connect and Reconnect. Fills the footer on its own. */
 export function IntegrationAction({ className, ...props }) {
   return (
-    <button
+    <Button
       type="button"
-      className={cn(
-        ACTION_BASE,
-        "flex-1 bg-pd-primary px-3 text-white hover:bg-purple-700",
-        className
-      )}
+      className={cn(ACTION_SIZE, className)}
       {...props}
     />
   )
 }
 
-/** Tinted red, for Remove. Also fills the footer, with the link square beside it. */
+/** Red, for Remove. Also fills the footer, with the link circle beside it. */
 export function IntegrationDangerAction({ className, ...props }) {
   return (
-    <button
+    <Button
       type="button"
-      className={cn(
-        ACTION_BASE,
-        "flex-1 border border-pd-danger-border bg-pd-danger-surface px-3 text-pd-danger",
-        "hover:bg-pd-danger-bg",
-        className
-      )}
+      variant="destructive"
+      className={cn(ACTION_SIZE, className)}
       {...props}
     />
   )
 }
 
-/** The square that opens the service's own site in a new tab. */
+/** The circle that opens the service's own site in a new tab. */
 export function IntegrationSiteLink({ href, label }) {
   return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      title={label}
-      className={cn(
-        "flex size-[38px] shrink-0 items-center justify-center rounded-[12px]",
-        "border border-pd-border text-pd-body transition-colors hover:bg-pd-canvas",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
-      )}
-    >
-      <ExternalLink className="size-3.5" aria-hidden="true" />
-    </a>
+    <Button asChild variant="outline" size="icon" className="size-[38px] shrink-0 text-pd-body">
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={label}
+        title={label}
+      >
+        <ExternalLink className="size-3.5" aria-hidden="true" />
+      </a>
+    </Button>
   )
 }

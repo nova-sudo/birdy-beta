@@ -8,13 +8,13 @@
 import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   CyclingCaption,
   FakeProgressBar,
   PrimaryButton,
   ProgressBar,
   SearchInput,
-  SpinnerRing,
   StepHeading,
 } from "./parts"
 
@@ -51,9 +51,9 @@ const LEAD_SOURCES = [{ ...LEAD_SOURCE_UNKNOWN, short: "Ask later" }, ...LEAD_SO
 }))
 
 const LEAD_SOURCE_STYLE = {
-  muted: { color: "#9A9AAB", background: "#EFEEEB", borderColor: "#E7E7ED" },
-  meta: { color: "#2C6BED", background: "#EAF1FD", borderColor: "#CFE0FA" },
-  primary: { color: "#5B3FD6", background: "#EFECFB", borderColor: "#DDD6F8" },
+  muted: "border-pd-border bg-pd-divider text-pd-subtle",
+  meta: "border-pd-info-bg bg-pd-info-bg text-pd-info",
+  primary: "border-pd-primary-pale bg-pd-primary-tint text-pd-primary",
 }
 
 // The largest plan (Scale) supports 25 client groups — pre-selecting or
@@ -231,7 +231,16 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           have to do this once.
         </div>
 
-        <SpinnerRing size={22} />
+        <div className="w-full overflow-hidden rounded-xl border border-pd-border">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[10px] last:border-b-0">
+              <Skeleton className="h-[19px] w-[19px] rounded-full" />
+              <Skeleton className="h-4 flex-[1.2]" />
+              <Skeleton className="hidden h-4 flex-1 sm:block" />
+              <Skeleton className="h-4 w-[76px]" />
+            </div>
+          ))}
+        </div>
         <div className="mt-4 w-full">
           {hasRealProgress ? (
             <>
@@ -271,7 +280,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-1 items-baseline gap-2 rounded-sm border border-pd-border bg-pd-table-head px-[14px] py-3"
+            className="flex flex-1 items-baseline gap-2 rounded-xl border border-pd-border bg-pd-table-head px-[14px] py-3"
           >
             <div className={`shrink-0 font-pd-display text-xl font-bold ${stat.color}`}>{stat.value}</div>
             <div className="truncate text-xs text-pd-subtle">{stat.label}</div>
@@ -299,14 +308,12 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         <button
           type="button"
           onClick={() => setHideInactive((v) => !v)}
-          className="flex shrink-0 cursor-pointer items-center gap-[7px] rounded-lg border-[1.5px] border-pd-border bg-white px-[11px] py-[9px] text-[12.5px] text-pd-body transition-colors hover:border-[#D8D3F5]"
+          className="flex shrink-0 cursor-pointer items-center gap-[7px] rounded-full border-[1.5px] border-pd-border bg-white px-[11px] py-[9px] text-[12.5px] text-pd-body transition-colors hover:border-pd-primary-pale"
         >
           <span
-            className="flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border-[1.5px] text-[10px] text-white"
-            style={{
-              borderColor: hideInactive ? "#5B3FD6" : "#DCDBD7",
-              background: hideInactive ? "#5B3FD6" : "#fff",
-            }}
+            className={`flex h-[15px] w-[15px] items-center justify-center rounded-full border-[1.5px] text-[10px] text-white ${
+              hideInactive ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"
+            }`}
           >
             {hideInactive ? "✓" : ""}
           </span>
@@ -352,13 +359,9 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   if (!row.importChecked && atSelectionCap) return
                   patch(row.location_id, { import: !row.importChecked })
                 }}
-                className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-xs text-white ${
+                className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-xs text-white ${
                   !row.importChecked && atSelectionCap ? "cursor-not-allowed" : "cursor-pointer"
-                }`}
-                style={{
-                  borderColor: row.importChecked ? "#5B3FD6" : "#DCDBD7",
-                  background: row.importChecked ? "#5B3FD6" : "#fff",
-                }}
+                } ${row.importChecked ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"}`}
               >
                 {row.importChecked ? "✓" : ""}
               </span>
@@ -367,7 +370,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
               <input
                 value={row.birdyName}
                 onChange={(e) => patch(row.location_id, { birdyName: e.target.value })}
-                className="min-w-0 flex-[1.2] rounded-lg border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[13.5px] font-semibold text-pd-ink outline-none transition-colors hover:border-[#D8D3F5] focus:border-pd-primary"
+                className="min-w-0 flex-[1.2] rounded-full border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[13.5px] font-semibold text-pd-ink outline-none transition-colors hover:border-pd-primary-pale focus:border-pd-primary"
               />
 
               {/* read-only ghl name */}
@@ -379,8 +382,9 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   only answers yes/no. Dashes while the prep job has not
                   reached this row yet; never a 0 it has not earned. */}
               <span
-                className="w-[76px] shrink-0 text-right text-[12.5px] tabular-nums"
-                style={{ color: row.leads30dKnown ? (row.leads_30d > 0 ? "#25A55F" : "#B4B4C0") : "#D4D4DC" }}
+                className={`w-[76px] shrink-0 text-right text-[12.5px] tabular-nums ${
+                  row.leads30dKnown ? (row.leads_30d > 0 ? "text-pd-success" : "text-pd-faint") : "text-pd-chevron"
+                }`}
                 title={row.leads_30d_capped ? `More than ${row.leads_30d} new leads in the last 30 days` : undefined}
               >
                 {row.leads30dKnown ? `${row.leads_30d}${row.leads_30d_capped ? "+" : ""}` : "—"}
@@ -395,8 +399,9 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                     setFbSearch("")
                     setFbMenuOpen(fbMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className="flex cursor-pointer items-center justify-between gap-[6px] rounded-lg border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[12.5px] transition-colors hover:border-[#D8D3F5]"
-                  style={{ color: row.fb ? "#5A5A6E" : "#B4530A" }}
+                  className={`flex cursor-pointer items-center justify-between gap-[6px] rounded-full border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[12.5px] transition-colors hover:border-pd-primary-pale ${
+                    row.fb ? "text-pd-body" : "text-pd-amber"
+                  }`}
                 >
                   <span className="truncate">{row.fb ? row.fb.name : NO_MATCH}</span>
                   <ChevronDown className="h-[11px] w-[11px] shrink-0 text-pd-faint" strokeWidth={2.4} />
@@ -422,7 +427,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   </button>
                 )}
                 {fbMenuOpen === row.location_id && (
-                  <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
                     <div className="p-2">
                       <input
                         value={fbSearch}
@@ -430,7 +435,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                         onClick={(e) => e.stopPropagation()}
                         autoFocus
                         placeholder="Search ad accounts…"
-                        className="w-full rounded-[12px] border-[1.5px] border-pd-border px-[9px] py-[7px] text-[12.5px] text-pd-ink outline-none focus:border-pd-primary"
+                        className="w-full rounded-full border-[1.5px] border-pd-border px-[9px] py-[7px] text-[12.5px] text-pd-ink outline-none focus:border-pd-primary"
                       />
                     </div>
                     <div className="pd-scrolly max-h-[180px] overflow-y-auto border-t border-pd-row-border">
@@ -445,7 +450,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                             patch(row.location_id, { fb: option })
                             closeMenus()
                           }}
-                          className="cursor-pointer border-b border-pd-row-border px-3 py-[9px] text-[12.5px] text-pd-ink last:border-b-0 hover:bg-[#F7F5FE]"
+                          className="cursor-pointer border-b border-pd-row-border px-3 py-[9px] text-[12.5px] text-pd-ink last:border-b-0 hover:bg-pd-primary-tint"
                         >
                           {option.name}
                           <span className="ml-[6px] text-[11px] text-pd-faint">{option.id}</span>
@@ -464,25 +469,24 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                     setFbMenuOpen(null)
                     setStatusMenuOpen(statusMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className="flex cursor-pointer items-center justify-between gap-[5px] rounded-lg border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold"
-                  style={
+                  className={`flex cursor-pointer items-center justify-between gap-[5px] rounded-full border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold ${
                     row.status === "active"
-                      ? { color: "#25A55F", background: "#EDF8F1", borderColor: "#BFE8D2" }
-                      : { color: "#9A9AAB", background: "#EFEEEB", borderColor: "#E7E7ED" }
-                  }
+                      ? "border-pd-success bg-pd-success text-white"
+                      : "border-gray-600 bg-gray-600 text-white"
+                  }`}
                 >
                   {row.status === "active" ? "Active" : "Inactive"}
                   <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
                 </div>
                 {statusMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[118px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute right-0 top-9 z-20 w-[118px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
                     <div
                       onClick={(e) => {
                         e.stopPropagation()
                         patch(row.location_id, { status: "active" })
                         closeMenus()
                       }}
-                      className="cursor-pointer px-[11px] py-2 text-[11.5px] font-semibold text-pd-success hover:bg-[#F0FBF4]"
+                      className="cursor-pointer px-[11px] py-2 text-[11.5px] font-semibold text-pd-success hover:bg-pd-success-bg"
                     >
                       Active
                     </div>
@@ -492,7 +496,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                         patch(row.location_id, { status: "inactive" })
                         closeMenus()
                       }}
-                      className="cursor-pointer border-t border-pd-row-border px-[11px] py-2 text-[11.5px] font-semibold text-pd-faint hover:bg-[#F7F7F8]"
+                      className="cursor-pointer border-t border-pd-row-border px-[11px] py-2 text-[11.5px] font-semibold text-pd-faint hover:bg-pd-canvas"
                     >
                       Inactive
                     </div>
@@ -509,18 +513,17 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                     setStatusMenuOpen(null)
                     setLeadMenuOpen(leadMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className="flex cursor-pointer items-center justify-between gap-[5px] rounded-lg border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold"
-                  style={
+                  className={`flex cursor-pointer items-center justify-between gap-[5px] rounded-full border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold ${
                     LEAD_SOURCE_STYLE[
                       (LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).tone
                     ]
-                  }
+                  }`}
                 >
                   {(LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).short}
                   <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
                 </div>
                 {leadMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
                     {LEAD_SOURCES.map((option) => (
                       <div
                         key={option.key}
@@ -529,7 +532,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                           patch(row.location_id, { leadSource: option.key })
                           closeMenus()
                         }}
-                        className="cursor-pointer border-b border-pd-row-border px-[11px] py-2 text-[11.5px] text-pd-ink last:border-b-0 hover:bg-[#F7F5FE]"
+                        className="cursor-pointer border-b border-pd-row-border px-[11px] py-2 text-[11.5px] text-pd-ink last:border-b-0 hover:bg-pd-primary-tint"
                       >
                         <div className="font-semibold">{option.label}</div>
                         <div className="mt-0.5 text-[10.5px] text-pd-faint">{option.brief}</div>

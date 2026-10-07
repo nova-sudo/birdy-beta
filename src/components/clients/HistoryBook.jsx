@@ -12,6 +12,7 @@
 import { useState } from "react"
 import { Book, Send, Loader2, Trash2, StickyNote } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActivityItem } from "@/components/activity/ActivityItem"
@@ -32,21 +33,21 @@ function relativeTime(iso) {
 
 function NoteEntry({ note, onDelete, deleting }) {
   return (
-    <div className="group flex items-start gap-3 rounded-sm border border-pd-border p-[13px]">
+    <div className="group flex items-start gap-3 rounded-xl border border-pd-border p-[13px]">
       <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
         <StickyNote className="size-3.5" aria-hidden="true" />
       </span>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-[5px] bg-pd-primary-tint px-[7px] py-[2px] text-[10px] font-bold text-pd-primary">
+          <span className="rounded-full bg-pd-primary px-[7px] py-[2px] text-[10px] font-bold text-white">
             Note
           </span>
-          <span className="truncate text-[10.5px] text-muted-foreground">
+          <span className="truncate text-[10.5px] text-pd-subtle">
             {note.author} · {relativeTime(note.created_at)}
           </span>
         </div>
-        <p className="mt-1.5 text-xs leading-snug whitespace-pre-wrap text-foreground">
+        <p className="mt-1.5 text-xs leading-snug whitespace-pre-wrap text-pd-ink">
           {note.body}
         </p>
       </div>
@@ -55,7 +56,7 @@ function NoteEntry({ note, onDelete, deleting }) {
         onClick={() => onDelete(note.id)}
         disabled={deleting}
         aria-label={`Delete note by ${note.author}`}
-        className="shrink-0 rounded p-1 text-destructive opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 disabled:opacity-50"
+        className="shrink-0 rounded-full p-1 text-pd-danger opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 disabled:opacity-50"
       >
         {deleting
           ? <Loader2 className="size-3 animate-spin" />
@@ -102,7 +103,7 @@ export function HistoryBook({
   const isEmpty = notes.length === 0 && activity.length === 0
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
       <div className="flex items-center gap-2 border-b border-pd-border px-[22px] py-4">
         <Book className="size-4 text-pd-primary" aria-hidden="true" />
         <p className="font-pd-display text-[15px] font-semibold text-pd-ink">
@@ -122,7 +123,7 @@ export function HistoryBook({
             </div>
           ))
         ) : isEmpty ? (
-          <p className="py-6 text-center text-xs text-muted-foreground">
+          <p className="py-6 text-center text-xs text-pd-subtle">
             Nothing recorded for this client yet. Add the first note below.
           </p>
         ) : (
@@ -162,18 +163,19 @@ export function HistoryBook({
           aria-label="Add a note"
           maxLength={2000}
           disabled={sending}
-          className="h-[38px] flex-1 rounded-sm border-pd-border text-[13px]"
+          className="h-[38px] flex-1 text-[13px]"
         />
-        <button
+        <Button
           type="submit"
+          size="icon"
           disabled={!draft.trim() || sending}
           aria-label="Save note"
-          className="flex size-[38px] shrink-0 items-center justify-center rounded-sm bg-pd-primary text-white transition hover:bg-purple-700 disabled:opacity-50"
+          className="size-[38px] shrink-0"
         >
           {sending
             ? <Loader2 className="size-4 animate-spin" />
             : <Send className="size-4" />}
-        </button>
+        </Button>
       </form>
     </div>
   )

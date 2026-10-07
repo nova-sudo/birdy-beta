@@ -1,93 +1,62 @@
 import React from "react";
 
 import { Progress } from "@/components/ui/progress"; // Adjust import based on your project structure
+import { Skeleton } from "@/components/ui/skeleton";
 
 /**
+ * Full-page loading state. A skeleton in the shape of the page that is about
+ * to arrive — a title row and a card of rows — with the real progress bar
+ * underneath, so the wait reads as the page filling in rather than a spinner
+ * holding it back. The title is kept for assistive tech.
+ *
  * @param {{ progress: number, title?: string }} props
  */
 export function Loading({ progress, title = "Loading your contacts" }) {
+  const pct = Math.round(progress);
+
   return (
-    <div className="min-h-dvh w-full flex items-center justify-center bg-gradient-to-br from-background to-muted/30">
-        <div className="flex flex-col items-center gap-8 w-full max-w-md px-6">
-          {/* Animated logo/icon */}
-            <div className="w-16 h-16 flex items-center justify-center">
-            <svg viewBox="0 0 100 100" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <style>{`
-              @keyframes fly {
-                0%, 100% { transform: translateY(0px); }
-                50% { transform: translateY(-8px); }
-              }
-              @keyframes wingFlap {
-                0%, 100% { transform: rotateZ(0deg); }
-                50% { transform: rotateZ(15deg); }
-              }
-              .bird-body {
-                animation: fly 2s ease-in-out infinite;
-              }
-              .bird-wing-left {
-                animation: wingFlap 0.6s ease-in-out infinite;
-                transform-origin: 35px 40px;
-              }
-              .bird-wing-right {
-                animation: wingFlap 0.6s ease-in-out infinite;
-                transform-origin: 65px 40px;
-              }
-                `}</style>
-              </defs>
-  
-              {/* Body */}
-              <g className="bird-body">
-                <circle cx="50" cy="45" r="12" fill="currentColor" className="text-purple-700" />
-                {/* Head */}
-                <circle cx="50" cy="32" r="10" fill="currentColor" className="text-purple-700" />
-                {/* Eye */}
-                <circle cx="53" cy="30" r="2" fill="white" />
-                {/* Beak */}
-                <polygon points="60,30 65,29 60,31" fill="currentColor" className="text-purple-700" />
-                {/* Tail */}
-                <polygon points="38,50 28,55 30,48" fill="currentColor" className="text-purple-700/70" />
-              </g>
-  
-              {/* Left Wing */}
-              <g className="bird-wing-left">
-                <ellipse cx="40" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
-              </g>
-  
-              {/* Right Wing */}
-              <g className="bird-wing-right">
-                <ellipse cx="60" cy="42" rx="8" ry="14" fill="currentColor" className="text-purple-700/80" />
-              </g>
-            </svg>
-              </div>
-  
-              {/* Main text */}
-          <div className="flex flex-col gap-3 text-center">
-            <h2 className="text-2xl font-bold text-foreground">{title}</h2>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Preparing your data. This should only take a moment.
-            </p>
-          </div>
-  
-          {/* Progress bar container */}
-          <div className="w-full flex flex-col gap-2">
-            <Progress value={progress} className="w-full h-2" showLabel={false} />
-            <p className="text-xs text-muted-foreground text-center font-medium">{Math.round(progress)}% complete</p>
-          </div>
-  
-          {/* Loading dots animation */}
-          <div className="flex gap-1">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/60 animate-pulse" />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/40 animate-pulse"
-              style={{ animationDelay: "0.2s" }}
-            />
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full bg-primary/20 animate-pulse"
-              style={{ animationDelay: "0.4s" }}
-            />
+    <div className="min-h-dvh w-full flex items-center justify-center bg-pd-canvas">
+      <div
+        className="flex flex-col gap-6 w-full max-w-md px-6"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
+        <span className="sr-only">{title} — {pct}% complete</span>
+
+        {/* Title row: avatar, heading, subheading */}
+        <div className="flex items-center gap-3" aria-hidden="true">
+          <Skeleton className="size-10 shrink-0 rounded-full" />
+          <div className="flex flex-1 flex-col gap-2">
+            <Skeleton className="h-4 w-1/2 rounded-full" />
+            <Skeleton className="h-3 w-1/3 rounded-full" />
           </div>
         </div>
+
+        {/* A card of rows, shaped like the table that is on its way */}
+        <div className="rounded-2xl border border-pd-border bg-pd-surface p-4" aria-hidden="true">
+          <div className="flex flex-col gap-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3">
+                <Skeleton className="size-3 shrink-0 rounded-full" />
+                <Skeleton className={`h-3.5 rounded-full ${i % 2 === 0 ? "w-2/5" : "w-1/3"}`} />
+                <Skeleton className="ml-auto h-3.5 w-16 rounded-full" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Progress bar container */}
+        <div className="w-full flex flex-col gap-2">
+          <Progress value={progress} className="w-full h-2" showLabel={false} />
+          <p className="text-xs text-pd-subtle text-center font-medium">
+            {pct}% complete
+          </p>
+          <p className="text-xs text-pd-faint text-center">
+            Preparing your data. This should only take a moment.
+          </p>
+        </div>
       </div>
+    </div>
   );
 }

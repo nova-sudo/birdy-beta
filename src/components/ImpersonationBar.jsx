@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { UserRoundCog, LogOut, Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { Button } from "@/components/ui/button"
 import { fetchMe, stopImpersonation } from "@/lib/admin-api"
 import { rewriteSessionRole } from "@/lib/session"
 
@@ -85,7 +86,7 @@ export default function ImpersonationBar() {
           animate={{ height: "auto", opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE }}
-          className="w-full bg-amber-500 text-amber-950 overflow-hidden shrink-0"
+          className="w-full bg-pd-warning-bg text-pd-amber border-b border-pd-border overflow-hidden shrink-0"
         >
           <div className="flex items-center gap-3 px-4 py-2 text-sm">
             <UserRoundCog className="h-4 w-4 shrink-0" />
@@ -94,14 +95,16 @@ export default function ImpersonationBar() {
               <span className="hidden sm:inline"> ({me.email})</span>
               {me.act && <span className="opacity-80"> · as {me.act}</span>}
             </span>
-            <button
+            <Button
+              variant="outline"
+              size="xs"
               onClick={handleExit}
               disabled={exiting}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-md bg-amber-950/10 hover:bg-amber-950/20 px-2.5 py-1 text-xs font-semibold transition-colors disabled:opacity-60"
+              className="ml-auto"
             >
-              {exiting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LogOut className="h-3.5 w-3.5" />}
+              {exiting ? <Loader2 className="animate-spin" /> : <LogOut />}
               Exit
-            </button>
+            </Button>
           </div>
         </motion.div>
       )}

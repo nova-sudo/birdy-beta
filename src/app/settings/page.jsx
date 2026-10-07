@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Reveal, Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
 import { Loader2, CheckCircle2, AlertCircle, Plug2, Phone, Target, Sparkles, Trash2 } from "lucide-react"
 import {
@@ -766,7 +768,7 @@ function SettingsPageContent() {
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove {label}?</AlertDialogTitle>
+            <AlertDialogTitle className="font-pd-display">Remove {label}?</AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete your {label} credentials from Birdy. You will need
               to reconnect if you want to use this integration again. Client groups linked to
@@ -776,7 +778,7 @@ function SettingsPageContent() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
               onClick={() => handleRemoveIntegration(integrationType)}
             >
               Yes, remove it
@@ -828,11 +830,12 @@ function SettingsPageContent() {
 
             {/* The design drops the Capabilities tab, but the Media Buying
                 Analyst toggle behind it is real functionality — removing the
-                tab must not remove the switch, so it lives here now. */}
-            <div className="space-y-3">
+                tab must not remove the switch, so it lives here now. It
+                arrives after the GeneralSettings cards above have settled. */}
+            <Reveal delay={0.3} className="space-y-3">
               <div>
-                <h2 className="text-lg font-semibold text-foreground mb-1">Agent Capabilities</h2>
-                <p className="text-sm text-muted-foreground">
+                <h2 className="font-pd-display text-lg font-semibold text-pd-ink mb-1">Agent Capabilities</h2>
+                <p className="text-sm text-pd-subtle">
                   Optional abilities for the Birdy AI agent. Turn these on to give Birdy extra expertise in chat — they take effect on your next Birdy conversation.
                 </p>
               </div>
@@ -840,19 +843,19 @@ function SettingsPageContent() {
               <Separator />
 
               {/* Media Buying Analyst — injects senior-media-buyer reasoning into Birdy chat */}
-              <Card className="border-border/50">
+              <Card>
                 <CardHeader>
                   <div className="flex items-start gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0">
+                    <div className="h-12 w-12 rounded-2xl bg-pd-primary flex items-center justify-center shrink-0">
                       <Target className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <CardTitle className="text-base">Media Buying Analyst</CardTitle>
+                            <CardTitle className="font-pd-display text-base">Media Buying Analyst</CardTitle>
                             {capsLoaded && capabilities.media_buying && (
-                              <Badge variant="default" className="text-xs">
+                              <Badge variant="default" className="text-[11px] font-bold">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />Enabled
                               </Badge>
                             )}
@@ -866,7 +869,7 @@ function SettingsPageContent() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0 pt-0.5">
                           {savingCapability === "media_buying" && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            <Loader2 className="h-4 w-4 animate-spin text-pd-subtle" />
                           )}
                           <Switch
                             checked={!!capabilities.media_buying}
@@ -881,13 +884,13 @@ function SettingsPageContent() {
                 </CardHeader>
                 {capsLoaded && capabilities.media_buying && (
                   <CardContent className="pt-0 sm:pl-[88px]">
-                    <div className="rounded-lg border border-border/60 p-4 space-y-2">
+                    <div className="rounded-xl border border-pd-border p-4 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <Label htmlFor="suggestion-strictness" className="text-sm font-medium">
                           How strict should Birdy be when flagging ads?
                         </Label>
                         {savingStrictness && (
-                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          <Loader2 className="h-4 w-4 animate-spin text-pd-subtle" />
                         )}
                       </div>
                       <Select
@@ -904,7 +907,7 @@ function SettingsPageContent() {
                           ))}
                         </SelectContent>
                       </Select>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-pd-subtle">
                         {STRICTNESS_OPTIONS.find(o => o.value === strictness)?.detail}{" "}
                         Applies to the weekly and monthly ad suggestions on your dashboard and in Slack. Amounts are in your account currency.
                       </p>
@@ -913,11 +916,11 @@ function SettingsPageContent() {
                 )}
               </Card>
 
-              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <p className="text-xs text-pd-subtle flex items-center gap-1.5">
                 <Sparkles className="h-3 w-3" />
                 More capabilities are coming. Have one in mind? Let us know.
               </p>
-            </div>
+            </Reveal>
           </TabsContent>
 
           <TabsContent value="integrations" className={`${pdFontClass} space-y-6`}>
@@ -940,8 +943,10 @@ function SettingsPageContent() {
 
               {/* Four across on a wide screen, as the handoff draws it, folding
                   to two and then one rather than shrinking a tile past the
-                  point its description and buttons still read. */}
-              <div className="grid gap-[14px] sm:grid-cols-2 xl:grid-cols-4">
+                  point its description and buttons still read. Each tile sits
+                  in a flex StaggerItem so it still stretches to the row. */}
+              <Stagger gap={0.05} className="grid gap-[14px] sm:grid-cols-2 xl:grid-cols-4">
+                <StaggerItem className="flex">
                 <IntegrationTile
                   name="Slack"
                   chipClassName="bg-pd-primary-tint text-pd-primary"
@@ -1006,7 +1011,7 @@ function SettingsPageContent() {
                         >
                           <SelectTrigger
                             aria-label="Channel Birdy posts AI suggestions to"
-                            className="h-[34px] min-w-0 flex-1 rounded-[12px] border-pd-border text-[12.5px]"
+                            className="h-[34px] min-w-0 flex-1 text-[12.5px]"
                           >
                             <SelectValue
                               placeholder={channelsLoading ? "Loading channels…" : "Select a channel…"}
@@ -1028,7 +1033,9 @@ function SettingsPageContent() {
                     )
                   )}
                 </IntegrationTile>
+                </StaggerItem>
 
+                <StaggerItem className="flex">
                 <IntegrationTile
                   name="GoHighLevel"
                   chipClassName="bg-pd-info-bg text-pd-info"
@@ -1083,7 +1090,9 @@ function SettingsPageContent() {
                     </>
                   }
                 />
+                </StaggerItem>
 
+                <StaggerItem className="flex">
                 <IntegrationTile
                   name="Meta"
                   chipClassName="bg-pd-info-bg text-pd-info"
@@ -1142,7 +1151,9 @@ function SettingsPageContent() {
                     </>
                   }
                 />
+                </StaggerItem>
 
+                <StaggerItem className="flex">
                 <IntegrationTile
                   name="Hot Prospector"
                   chipClassName="bg-pd-primary-tint text-pd-primary"
@@ -1177,7 +1188,7 @@ function SettingsPageContent() {
                           </DialogTrigger>
                           <DialogContent>
                             <DialogHeader>
-                              <DialogTitle>Connect HotProspector</DialogTitle>
+                              <DialogTitle className="font-pd-display">Connect HotProspector</DialogTitle>
                               <DialogDescription>Enter your HotProspector API credentials.</DialogDescription>
                             </DialogHeader>
                             <div className="space-y-4 py-4">
@@ -1233,7 +1244,8 @@ function SettingsPageContent() {
                     </>
                   }
                 />
-              </div>
+                </StaggerItem>
+              </Stagger>
             </section>
 
           </TabsContent>
@@ -1243,12 +1255,13 @@ function SettingsPageContent() {
             <TrackingOverview />
           </TabsContent>
 
-          <TabsContent value="billing" className={`${pdFontClass} space-y-6`}>
+          <TabsContent value="billing" className={pdFontClass}>
+            <Stagger className="space-y-6">
             {/* Credits, packs and the 30-day usage chart the design asks for.
                 The same panel the standalone /credits page renders, so the two
                 cannot drift — the heading is the tab's own because /credits
                 already carries one of its own above the panel. */}
-            <div>
+            <StaggerItem>
               <h2 className="font-pd-display text-[19px] font-bold tracking-[-0.02em] text-pd-ink">
                 Birdy Credits
               </h2>
@@ -1256,9 +1269,11 @@ function SettingsPageContent() {
                 Your AI usage this billing period. A credit is about one cent of AI work — a
                 typical Ask Birdy question costs a handful.
               </p>
-            </div>
+            </StaggerItem>
 
-            <CreditsPanel />
+            <StaggerItem>
+              <CreditsPanel />
+            </StaggerItem>
 
             <Separator />
 
@@ -1266,14 +1281,17 @@ function SettingsPageContent() {
                 The three tiers as /billing draws them, with the status, the
                 renewal date and the portal link the old current-plan bar
                 carried folded in underneath. */}
-            <PlanPicker
-              billingStatus={billingStatus}
-              onManage={handlePortal}
-              loadingManage={loadingPortal}
-              onCancel={handleCancelSubscription}
-              onReactivate={handleReactivateSubscription}
-              busySubscription={subscriptionBusy}
-            />
+            <StaggerItem>
+              <PlanPicker
+                billingStatus={billingStatus}
+                onManage={handlePortal}
+                loadingManage={loadingPortal}
+                onCancel={handleCancelSubscription}
+                onReactivate={handleReactivateSubscription}
+                busySubscription={subscriptionBusy}
+              />
+            </StaggerItem>
+            </Stagger>
           </TabsContent>
         </Tabs>
       </div>
@@ -1285,8 +1303,16 @@ export default function SettingsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        // Shaped like the page it stands in for: the tab strip, then two
+        // cards side by side and a wider one beneath, as the General tab lays
+        // them out.
+        <div className="min-h-dvh w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto space-y-6">
+          <Skeleton className="h-10 w-80 rounded-full" />
+          <div className="grid gap-[18px] lg:grid-cols-2">
+            <Skeleton className="h-72" />
+            <Skeleton className="h-72" />
+          </div>
+          <Skeleton className="h-44 max-w-[900px]" />
         </div>
       }
     >

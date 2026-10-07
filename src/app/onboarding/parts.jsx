@@ -8,6 +8,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 /**
  * The two content column widths the wizard's steps use. Every step is either a
@@ -39,27 +40,28 @@ export const STEP_COL_WIDE = "w-full max-w-[720px]"
 
 export function PrimaryButton({ children, onClick, disabled, arrow = true, className = "" }) {
   return (
-    <button
+    <Button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex cursor-pointer items-center gap-2 rounded-sm bg-pd-primary px-[26px] py-[13px] text-[14.5px] font-semibold text-white transition-opacity hover:opacity-95 disabled:pointer-events-none disabled:opacity-40 ${className}`}
+      className={`h-auto px-[26px] py-[13px] text-[14.5px] disabled:opacity-40 ${className}`}
     >
       {children}
       {arrow && <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} />}
-    </button>
+    </Button>
   )
 }
 
 export function SecondaryButton({ children, onClick, className = "" }) {
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={onClick}
-      className={`cursor-pointer rounded-sm border border-pd-border bg-white px-[22px] py-3 text-[14px] font-semibold text-pd-body transition-colors hover:border-pd-chevron ${className}`}
+      className={`h-auto px-[22px] py-3 text-[14px] text-pd-body ${className}`}
     >
       {children}
-    </button>
+    </Button>
   )
 }
 
@@ -67,7 +69,7 @@ export function SecondaryButton({ children, onClick, className = "" }) {
 export function SpinnerRing({ size = 16 }) {
   return (
     <div
-      className="animate-spin rounded-full border-2 border-[#E4DDF9] border-t-pd-primary"
+      className="animate-spin rounded-full border-2 border-pd-primary-tint border-t-pd-primary"
       style={{ width: size, height: size }}
     />
   )
@@ -206,12 +208,16 @@ export function SuccessRow({ children }) {
   )
 }
 
-/** 56px tinted icon chip above connect-step headings. */
-export function IconChip({ bg, color, children }) {
+/**
+ * 56px tinted icon chip above connect-step headings. Tone comes in as token
+ * classes ("bg-pd-info-bg text-pd-info"); `bg`/`color` remain for a caller
+ * that still has a one-off colour.
+ */
+export function IconChip({ bg, color, className = "", children }) {
   return (
     <div
-      className="mx-auto mb-[22px] flex h-14 w-14 items-center justify-center rounded-xl"
-      style={{ background: bg, color }}
+      className={`mx-auto mb-[22px] flex h-14 w-14 items-center justify-center rounded-xl ${className}`}
+      style={bg || color ? { background: bg, color } : undefined}
     >
       {children}
     </div>
@@ -245,7 +251,7 @@ export function UnderlineInput({ value, onChange, placeholder, autoFocus }) {
 
 export function SearchInput({ value, onChange, placeholder }) {
   return (
-    <div className="mb-[14px] flex h-[42px] items-center gap-[9px] rounded-sm border border-pd-border bg-pd-canvas px-[14px]">
+    <div className="mb-[14px] flex h-[42px] items-center gap-[9px] rounded-full border border-pd-border bg-pd-canvas px-[14px]">
       <Search className="h-[15px] w-[15px] shrink-0 text-pd-faint" strokeWidth={2} />
       <input
         value={value}
@@ -328,7 +334,7 @@ export function SlackGlyph({ size = 26 }) {
 /** Slack-style dark preview card used on the channel + brief-content steps. */
 export function SlackPreviewCard({ time, children }) {
   return (
-    <div className="min-h-[80px] rounded-sm bg-[#3F0E40] px-4 py-[14px]">
+    <div className="min-h-[80px] rounded-xl bg-[#3F0E40] px-4 py-[14px]">
       <div className="flex gap-[9px]">
         <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[12px] bg-pd-primary font-pd-display text-[13px] font-bold text-white">
           B
@@ -336,9 +342,9 @@ export function SlackPreviewCard({ time, children }) {
         <div className="min-w-0">
           <div className="flex items-baseline gap-[7px]">
             <span className="text-[13px] font-bold text-white">Birdy</span>
-            <span className="text-[10.5px] text-[#A9A0B0]">{time}</span>
+            <span className="text-[10.5px] text-white/60">{time}</span>
           </div>
-          <div className="mt-1 text-[12.5px] leading-relaxed text-[#E4DEE7]">{children}</div>
+          <div className="mt-1 text-[12.5px] leading-relaxed text-white/90">{children}</div>
         </div>
       </div>
     </div>

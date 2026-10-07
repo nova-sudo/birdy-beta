@@ -7,6 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 /**
  * The table toolbar's Filters control.
@@ -121,27 +123,28 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <button
+        <Button
+          variant="outline"
           className={
             triggerClassName ??
-            "inline-flex items-center gap-1 md:gap-2 px-2 md:px-4 hover:bg-purple-100 font-semibold bg-white h-10 text-sm rounded-md border border-gray-200 transition-colors duration-150 cursor-pointer"
+            "gap-1 md:gap-2 px-2 md:px-4 h-10 text-sm"
           }
         >
           <SlidersHorizontal size={14} />
           <span className="hidden lg:inline">Filters</span>
           {totalActive > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-violet-700">
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full px-1 text-[11px] font-bold text-white bg-pd-primary">
               {totalActive}
             </span>
           )}
-          <ChevronDown className="h-4 w-4 text-gray-500" />
-        </button>
+          <ChevronDown className="h-4 w-4 text-pd-subtle" />
+        </Button>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent
         align="end"
         sideOffset={8}
-        className="w-[340px] rounded-2xl border border-gray-200 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.12)] overflow-hidden p-0 flex flex-col"
+        className="w-[340px] rounded-2xl border border-pd-border bg-pd-surface shadow-pd-popover overflow-hidden p-0 flex flex-col"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         {/* Tab bar — one per filter group, wrapping once there are more than
@@ -157,7 +160,7 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
                 className={[
                   "inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full",
                   "text-[12px] font-medium cursor-pointer transition-all duration-150 whitespace-nowrap",
-                  active ? "bg-violet-700 text-white" : "bg-gray-100 text-gray-700",
+                  active ? "bg-pd-primary text-white" : "bg-pd-divider text-pd-body hover:bg-pd-border",
                 ].join(" ")}
               >
                 {g.label}
@@ -165,7 +168,7 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
                   <span className={[
                     "inline-flex items-center justify-center min-w-[16px] h-[16px] rounded-full px-1",
                     "text-[10px] font-bold text-white",
-                    active ? "bg-white/25" : "bg-violet-700",
+                    active ? "bg-white/25" : "bg-pd-primary",
                   ].join(" ")}>
                     {count}
                   </span>
@@ -177,24 +180,24 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
 
         {/* Search */}
         <div
-          className="px-3 py-1.5 border-t border-gray-200 shrink-0"
+          className="px-3 py-1.5 border-t border-pd-border shrink-0"
           onFocusCapture={(e) => e.stopPropagation()}
         >
           <div className="relative flex items-center">
-            <input
+            <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder={`Search ${group?.label ?? "filters"}…`}
               aria-label={`Search ${group?.label ?? "filters"}`}
               autoComplete="off"
-              className="flex h-8 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-8 pr-8 text-sm"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
                 aria-label="Clear search"
-                className="absolute right-2.5 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer bg-transparent border-none p-0"
+                className="absolute right-3 text-pd-faint hover:text-pd-body transition-colors cursor-pointer bg-transparent border-none p-0"
               >
                 <X size={13} />
               </button>
@@ -205,7 +208,7 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
         {/* List */}
         <div className="flex-1 min-h-0 overflow-y-auto px-3 py-1 max-h-[280px]">
           {visibleOptions.length === 0 ? (
-            <p className="text-center text-gray-400 text-[12px] py-5">No results</p>
+            <p className="text-center text-pd-faint text-[12px] py-5">No results</p>
           ) : (
             visibleOptions.map((option) => {
               const checked = isChecked(option.value)
@@ -216,7 +219,7 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
                   role={group?.mode === "single" ? "radio" : "checkbox"}
                   aria-checked={checked}
                   onClick={() => toggle(option.value)}
-                  className="flex w-full items-center gap-2.5 px-1.5 py-[7px] rounded-lg cursor-pointer hover:bg-violet-50 transition-colors duration-100 text-left"
+                  className="flex w-full items-center gap-2.5 px-1.5 py-[7px] rounded-xl cursor-pointer hover:bg-pd-primary-tint transition-colors duration-100 text-left"
                 >
                   <span
                     className={[
@@ -224,12 +227,12 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
                       // Round for single-select, square for multi — the shape
                       // is the only cue that one choice replaces the others.
                       group?.mode === "single" ? "rounded-full" : "rounded-[4px]",
-                      checked ? "bg-violet-700 border-0" : "bg-white border border-gray-300",
+                      checked ? "bg-pd-primary border-0" : "bg-background border border-gray-300",
                     ].join(" ")}
                   >
-                    {checked && <Check size={10} color="#fff" strokeWidth={3} />}
+                    {checked && <Check size={10} className="text-white" strokeWidth={3} />}
                   </span>
-                  <span className="text-[13px] text-gray-900 flex-1 select-none">
+                  <span className="text-[13px] text-pd-ink flex-1 select-none">
                     {option.label}
                   </span>
                 </button>
@@ -239,19 +242,21 @@ export function FilterPanel({ groups = [], onSave, triggerClassName }) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-100 bg-white shrink-0">
-          <button
+        <div className="flex items-center gap-2 px-3 py-2.5 border-t border-pd-divider bg-pd-surface shrink-0">
+          <Button
+            variant="outline"
+            size="md"
             onClick={handleClear}
-            className="h-8 px-3 rounded-lg border border-gray-200 bg-white text-[12px] font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
           >
             Clear
-          </button>
-          <button
+          </Button>
+          <Button
+            size="md"
             onClick={handleApply}
-            className="flex-1 h-8 rounded-lg border-0 bg-violet-700 text-white text-[12px] font-semibold hover:bg-violet-800 cursor-pointer transition-colors duration-150"
+            className="flex-1"
           >
             Apply filters
-          </button>
+          </Button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>

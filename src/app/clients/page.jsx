@@ -54,16 +54,9 @@ import {
 import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP } from "@/lib/icons"
 import { Progress } from "@/components/ui/progress"
 import { flaskIcon as Flask } from "@/lib/icons"
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
-import { Spinner } from "@/components/ui/spinner"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import Image from "next/image"
-import { Loading } from "@/components/ui/loader"
 import StyledTable from "@/components/ui/table-container"
 import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
@@ -706,10 +699,10 @@ export default function ClientsPage() {
                         <div className="mt-2 text-center px-1">
                           <div
                             className={`text-[10px] sm:text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${wizardStep > s.num
-                              ? "text-success"
+                              ? "text-pd-success"
                               : wizardStep === s.num
-                                ? "text-primary"
-                                : "text-muted-foreground"
+                                ? "text-pd-primary"
+                                : "text-pd-subtle"
                               }`}
                           >
                             <span className="sm:hidden">{s.short}</span>
@@ -720,7 +713,7 @@ export default function ClientsPage() {
                       {i < arr.length - 1 && (
                         <div className="flex-1 min-w-[8px] mt-[14px] sm:mt-5">
                           <div
-                            className={`h-0.5 rounded-full transition-all duration-500 ${wizardStep > s.num ? "bg-success" : "bg-border"
+                            className={`h-0.5 rounded-full transition-all duration-500 ${wizardStep > s.num ? "bg-pd-success" : "bg-pd-border"
                               }`}
                           />
                         </div>
@@ -733,15 +726,15 @@ export default function ClientsPage() {
               {/* ── Card-wrapped step content ──────────────────── */}
               <div
                 key={wizardStep}
-                className="rounded-lg bg-card text-card-foreground card-gradient border-0 shadow-card animate-slide-in"
+                className="rounded-xl border border-pd-border bg-pd-surface text-pd-ink animate-slide-in"
               >
                 <div className="p-6 md:p-8 space-y-6">
                   {/* === Step 1: Client name === */}
                   {wizardStep === 1 && (
                     <div className="max-w-md mx-auto space-y-4">
                       <div className="text-center space-y-2">
-                        <h2 className="text-2xl font-bold text-foreground">Name your client group</h2>
-                        <p className="text-muted-foreground">A short label you'll use to find this client later.</p>
+                        <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Name your client group</h2>
+                        <p className="text-pd-subtle">A short label you'll use to find this client later.</p>
                       </div>
                       <div className="space-y-2 text-left">
                         <label className="text-sm font-medium leading-none" htmlFor="client-group-name">Client Group Name</label>
@@ -760,21 +753,21 @@ export default function ClientsPage() {
                           add. Adding five here means walking five steps five
                           times and re-picking the same GHL and Meta accounts
                           by hand; the import table does all five at once. */}
-                      <div className="pt-2 border-t border-border">
+                      <div className="pt-2 border-t border-pd-border">
                         <button
                           type="button"
                           onClick={() => {
                             setWizardOpen(false)
                             setBulkImportOpen(true)
                           }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
                         >
-                          <Download className="w-4 h-4 text-primary shrink-0" />
+                          <Download className="w-4 h-4 text-pd-primary shrink-0" />
                           <span>
-                            <span className="block text-sm font-medium text-foreground">
+                            <span className="block text-sm font-medium text-pd-ink">
                               Adding more than one?
                             </span>
-                            <span className="block text-xs text-muted-foreground">
+                            <span className="block text-xs text-pd-subtle">
                               Import them together from GoHighLevel.
                             </span>
                           </span>
@@ -785,11 +778,11 @@ export default function ClientsPage() {
             {wizardStep === 2 && (
               <div className="space-y-4">
                 <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold text-foreground">Link a GoHighLevel subaccount</h2>
-                  <p className="text-muted-foreground">Pick the GHL location for this client&apos;s contacts &amp; opportunities.</p>
+                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Link a GoHighLevel subaccount</h2>
+                  <p className="text-pd-subtle">Pick the GHL location for this client&apos;s contacts &amp; opportunities.</p>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4  " />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                   <Input
                     type="text"
                     placeholder="Search GHL locations by name or ID..."
@@ -807,18 +800,18 @@ export default function ClientsPage() {
                           setSelectedGhlLocation(location)
                           setNewGhlLocationId("")
                         }}
-                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedGhlLocation?.locationId === location.locationId
-                          ? "border-purple-500 bg-purple-50 shadow-md"
-                          : "border-border hover:border-muted-foreground bg-card"
+                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${selectedGhlLocation?.locationId === location.locationId
+                          ? "border-pd-primary bg-pd-primary-tint"
+                          : "border-pd-border hover:border-pd-border-strong bg-pd-surface"
                           }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3
-                                className={`font-semibold truncate ${selectedGhlLocation?.locationId === location.locationId
-                                  ? "text-purple-900"
-                                  : "text-foreground"
+                                className={`font-pd-display font-semibold truncate ${selectedGhlLocation?.locationId === location.locationId
+                                  ? "text-pd-primary"
+                                  : "text-pd-ink"
                                   }`}
                               >
                                 {location.name || "Unnamed Location"}
@@ -826,8 +819,8 @@ export default function ClientsPage() {
                             </div>
                             <p
                               className={`text-xs font-mono truncate ${selectedGhlLocation?.locationId === location.locationId
-                                ? "text-purple-600"
-                                : "text-muted-foreground"
+                                ? "text-pd-primary"
+                                : "text-pd-subtle"
                                 }`}
                             >
                               ID: {location.locationId}
@@ -835,8 +828,8 @@ export default function ClientsPage() {
                           </div>
                           <div
                             className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedGhlLocation?.locationId === location.locationId
-                              ? "bg-purple-600 border-purple-600"
-                              : "border-border group-hover:border-muted-foreground"
+                              ? "bg-pd-primary border-pd-primary"
+                              : "border-pd-border group-hover:border-pd-border-strong"
                               }`}
                           >
                             {selectedGhlLocation?.locationId === location.locationId && (
@@ -847,28 +840,24 @@ export default function ClientsPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <div class="flex items-center justify-center h-fit">
-                        <Empty className="w-full">
-                          <EmptyHeader>
-                            <EmptyMedia variant="icon">
-                              <Spinner />
-                            </EmptyMedia>
-                            <EmptyTitle>Loading GHL Locations</EmptyTitle>
-                            <EmptyDescription>
-                              Please wait while we process your request. Do not refresh the page.
-                            </EmptyDescription>
-                          </EmptyHeader>
-                        </Empty>
-                      </div>
+                    <div className="space-y-2" aria-busy="true" aria-label="Loading GHL Locations">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex items-start justify-between rounded-xl border-2 border-pd-border p-4">
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-1/2" />
+                            <Skeleton className="h-3 w-1/3" />
+                          </div>
+                          <Skeleton className="ml-3 size-5 rounded-full" />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
                 {(selectedGhlLocation || newGhlLocationId) && (
-                  <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="mt-4 p-3 bg-pd-primary-tint rounded-xl border border-pd-primary-pale">
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-purple-900">
+                      <Check className="w-4 h-4 text-pd-primary" />
+                      <span className="text-sm font-medium text-pd-primary">
                         Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
                       </span>
                     </div>
@@ -879,11 +868,11 @@ export default function ClientsPage() {
             {wizardStep === 3 && (
               <div className="space-y-4">
                 <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold text-foreground">Link a Meta ad account</h2>
-                  <p className="text-muted-foreground">Pick the ad account for this client&apos;s campaigns &amp; spend.</p>
+                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Link a Meta ad account</h2>
+                  <p className="text-pd-subtle">Pick the ad account for this client&apos;s campaigns &amp; spend.</p>
                 </div>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                   <Input
                     type="text"
                     placeholder="Search Meta ad accounts by name or ID..."
@@ -898,18 +887,18 @@ export default function ClientsPage() {
                       <div
                         key={account.id}
                         onClick={() => setSelectedMetaAdAccount(account)}
-                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 hover:shadow-md group ${selectedMetaAdAccount?.id === account.id
-                          ? "border-purple-500 bg-purple-50 shadow-md"
-                          : "border-border hover:border-muted-foreground bg-card"
+                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${selectedMetaAdAccount?.id === account.id
+                          ? "border-pd-primary bg-pd-primary-tint"
+                          : "border-pd-border hover:border-pd-border-strong bg-pd-surface"
                           }`}
                       >
                         <div className="flex items-start justify-between">
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2">
                               <h3
-                                className={`font-semibold truncate ${selectedMetaAdAccount?.id === account.id
-                                  ? "text-purple-900"
-                                  : "text-foreground"
+                                className={`font-pd-display font-semibold truncate ${selectedMetaAdAccount?.id === account.id
+                                  ? "text-pd-primary"
+                                  : "text-pd-ink"
                                   }`}
                               >
                                 {account.name || "Unnamed Ad Account"}
@@ -917,8 +906,8 @@ export default function ClientsPage() {
                             </div>
                             <p
                               className={`text-xs font-mono truncate ${selectedMetaAdAccount?.id === account.id
-                                ? "text-purple-600"
-                                : "text-muted-foreground"
+                                ? "text-pd-primary"
+                                : "text-pd-subtle"
                                 }`}
                             >
                               ID: {account.id}
@@ -926,8 +915,8 @@ export default function ClientsPage() {
                           </div>
                           <div
                             className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedMetaAdAccount?.id === account.id
-                              ? "bg-purple-600 border-purple-600"
-                              : "border-border group-hover:border-muted-foreground"
+                              ? "bg-pd-primary border-pd-primary"
+                              : "border-pd-border group-hover:border-pd-border-strong"
                               }`}
                           >
                             {selectedMetaAdAccount?.id === account.id && (
@@ -938,28 +927,24 @@ export default function ClientsPage() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <div class="flex items-center justify-center h-fit">
-                        <Empty className="w-full">
-                          <EmptyHeader>
-                            <EmptyMedia variant="icon">
-                              <Spinner />
-                            </EmptyMedia>
-                            <EmptyTitle>Loading Meta Adaccounts</EmptyTitle>
-                            <EmptyDescription>
-                              Please wait while we process your request. Do not refresh the page.
-                            </EmptyDescription>
-                          </EmptyHeader>
-                        </Empty>
-                      </div>
+                    <div className="space-y-2" aria-busy="true" aria-label="Loading Meta Adaccounts">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <div key={i} className="flex items-start justify-between rounded-xl border-2 border-pd-border p-4">
+                          <div className="flex-1 space-y-2">
+                            <Skeleton className="h-4 w-1/2" />
+                            <Skeleton className="h-3 w-1/3" />
+                          </div>
+                          <Skeleton className="ml-3 size-5 rounded-full" />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
                 {selectedMetaAdAccount && (
-                  <div className="mt-4 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                  <div className="mt-4 p-3 bg-pd-primary-tint rounded-xl border border-pd-primary-pale">
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-medium text-purple-900">
+                      <Check className="w-4 h-4 text-pd-primary" />
+                      <span className="text-sm font-medium text-pd-primary">
                         Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
                       </span>
                     </div>
@@ -973,25 +958,25 @@ export default function ClientsPage() {
                 {!callLogProvider && (
                   <>
                     <div className="text-center space-y-2">
-                      <h2 className="text-2xl font-bold text-foreground">Where do calls come from?</h2>
-                      <p className="text-muted-foreground">Pick which provider feeds this client&apos;s Sales Hub call logs.</p>
+                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Where do calls come from?</h2>
+                      <p className="text-pd-subtle">Pick which provider feeds this client&apos;s Sales Hub call logs.</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <button
                         type="button"
                         onClick={() => setCallLogProvider("ghl")}
-                        className="p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                        className="p-5 rounded-xl border-2 border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
                       >
-                        <div className="font-semibold text-foreground mb-1">GoHighLevel</div>
-                        <div className="text-xs text-muted-foreground">Uses your GHL workflow webhook.</div>
+                        <div className="font-semibold text-pd-ink mb-1">GoHighLevel</div>
+                        <div className="text-xs text-pd-subtle">Uses your GHL workflow webhook.</div>
                       </button>
                       <button
                         type="button"
                         onClick={() => setCallLogProvider("hotprospector")}
-                        className="p-5 rounded-xl border-2 border-border hover:border-primary hover:bg-primary/5 transition-colors text-left"
+                        className="p-5 rounded-xl border-2 border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
                       >
-                        <div className="font-semibold text-foreground mb-1">Hot Prospector</div>
-                        <div className="text-xs text-muted-foreground">Calls sync from your account&apos;s Hot Prospector connection.</div>
+                        <div className="font-semibold text-pd-ink mb-1">Hot Prospector</div>
+                        <div className="text-xs text-pd-subtle">Calls sync from your account&apos;s Hot Prospector connection.</div>
                       </button>
                     </div>
                   </>
@@ -1000,18 +985,18 @@ export default function ClientsPage() {
                 {callLogProvider === "ghl" && (
                   <>
                     <div className="text-center space-y-2">
-                      <h2 className="text-2xl font-bold text-foreground">Using GoHighLevel</h2>
-                      <p className="text-muted-foreground">Calls will arrive via your GHL workflow webhook on the linked subaccount.</p>
+                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Using GoHighLevel</h2>
+                      <p className="text-pd-subtle">Calls will arrive via your GHL workflow webhook on the linked subaccount.</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
-                      <Check className="w-5 h-5 text-success shrink-0" />
-                      <span className="text-sm text-foreground">Ready &mdash; no extra setup needed at this step.</span>
+                    <div className="p-4 rounded-xl bg-pd-success-bg border border-pd-healthy-border flex items-center gap-3">
+                      <Check className="w-5 h-5 text-pd-success shrink-0" />
+                      <span className="text-sm text-pd-ink">Ready &mdash; no extra setup needed at this step.</span>
                     </div>
                     <div className="text-center">
                       <button
                         type="button"
                         onClick={() => setCallLogProvider(null)}
-                        className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                        className="text-sm text-pd-subtle hover:text-pd-ink underline-offset-4 hover:underline"
                       >
                         Change provider
                       </button>
@@ -1022,18 +1007,18 @@ export default function ClientsPage() {
                 {callLogProvider === "hotprospector" && (
                   <>
                     <div className="text-center space-y-2">
-                      <h2 className="text-2xl font-bold text-foreground">Using Hot Prospector</h2>
-                      <p className="text-muted-foreground">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
+                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Using Hot Prospector</h2>
+                      <p className="text-pd-subtle">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
                     </div>
-                    <div className="p-4 rounded-xl bg-success/10 border border-success/20 flex items-center gap-3">
-                      <Check className="w-5 h-5 text-success shrink-0" />
-                      <span className="text-sm text-foreground">Account-wide credentials power every client — nothing to enter here.</span>
+                    <div className="p-4 rounded-xl bg-pd-success-bg border border-pd-healthy-border flex items-center gap-3">
+                      <Check className="w-5 h-5 text-pd-success shrink-0" />
+                      <span className="text-sm text-pd-ink">Account-wide credentials power every client — nothing to enter here.</span>
                     </div>
                     <div className="text-center">
                       <button
                         type="button"
                         onClick={() => setCallLogProvider(null)}
-                        className="text-sm text-muted-foreground hover:text-foreground underline-offset-4 hover:underline"
+                        className="text-sm text-pd-subtle hover:text-pd-ink underline-offset-4 hover:underline"
                       >
                         Change provider
                       </button>
@@ -1046,8 +1031,8 @@ export default function ClientsPage() {
             {wizardStep === 5 && (
               <div className="max-w-md mx-auto space-y-6">
                 <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold text-foreground">How does this client get leads?</h2>
-                  <p className="text-muted-foreground">
+                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">How does this client get leads?</h2>
+                  <p className="text-pd-subtle">
                     Meta Instant Forms and form tools that send to GoHighLevel need nothing
                     set up. Only a client&apos;s own landing page needs the Birdy pixel —
                     we&apos;ll walk you through it after.
@@ -1061,17 +1046,17 @@ export default function ClientsPage() {
                       onClick={() => setLeadSource(option.key)}
                       className={`w-full p-4 rounded-xl border-2 transition-colors text-left ${
                         leadSource === option.key
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary hover:bg-primary/5"
+                          ? "border-pd-primary bg-pd-primary-tint"
+                          : "border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <div>
-                          <div className="font-semibold text-foreground mb-1">{option.label}</div>
-                          <div className="text-xs text-muted-foreground">{option.hint}</div>
+                          <div className="font-semibold text-pd-ink mb-1">{option.label}</div>
+                          <div className="text-xs text-pd-subtle">{option.hint}</div>
                         </div>
                         {leadSource === option.key && (
-                          <Check className="w-5 h-5 text-primary shrink-0" />
+                          <Check className="w-5 h-5 text-pd-primary shrink-0" />
                         )}
                       </div>
                     </button>
@@ -1101,7 +1086,7 @@ export default function ClientsPage() {
                     || (wizardStep === 1 && !clientGroupName)
                     || (wizardStep === 4 && !callLogProvider)
                   }
-                  className="btn-gradient gap-2 h-10 px-4 rounded-md min-w-[160px] justify-center"
+                  className="gap-2 min-w-[160px] justify-center"
                 >
                   {addingClientGroup ? (
                     <>
@@ -1133,7 +1118,6 @@ export default function ClientsPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-purple-600 hover:bg-purple-700 text-white"
               onClick={() => { setClientLimitDialogOpen(false); router.push("/billing") }}
             >
               Go to Billing
@@ -1149,7 +1133,7 @@ export default function ClientsPage() {
             <AlertDialogTitle>Integration Already in Use</AlertDialogTitle>
             <AlertDialogDescription>
               The selected GHL location or Meta ad account is already linked to{" "}
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-pd-ink">
                 &ldquo;{duplicateGroupName}&rdquo;
               </span>
               . Each integration can only be connected to one client group at a time.
@@ -1158,7 +1142,6 @@ export default function ClientsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction
-              className="bg-purple-600 hover:bg-purple-700 text-white"
               onClick={() => setDuplicateDialogOpen(false)}
             >
               Got it
@@ -1171,12 +1154,12 @@ export default function ClientsPage() {
       <div className="flex flex-col gap-6">
       <ErrorBanner error={error} />
 
-      <div>
+      <Stagger>
 
       {/* Status tabs left, table controls right. PageTabs carries the sizing,
           so this strip stays identical to the Leads, Marketing and Call Centre
           ones without any page repeating the measurements. */}
-      <div className="mb-[14px] flex flex-col gap-3 md:flex-row md:items-center">
+      <StaggerItem className="mb-[14px] flex flex-col gap-3 md:flex-row md:items-center">
         <PageTabs
           label="Filter clients by status"
           panelId={CLIENTS_PANEL_ID}
@@ -1200,7 +1183,7 @@ export default function ClientsPage() {
               aria-label="Search clients"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] w-full rounded-sm border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+              className="h-[38px] w-full pl-9 text-[13px] md:w-[200px]"
             />
           </div>
 
@@ -1226,21 +1209,22 @@ export default function ClientsPage() {
             variant="outline"
             onClick={() => setBulkImportOpen(true)}
             aria-label="Import clients from GoHighLevel"
-            className="h-[38px] shrink-0 gap-2 rounded-sm px-3 text-[13px]"
+            className="h-[38px] shrink-0 gap-2 px-3 text-[13px]"
           >
             <Download className="size-4" />
             <span className="hidden sm:inline">Import</span>
           </Button>
 
           <Button
+            size="icon"
             onClick={() => setWizardOpen(true)}
             aria-label="Add client"
-            className="size-[38px] shrink-0 rounded-sm bg-pd-primary p-0 text-white hover:bg-pd-primary/90"
+            className="size-[38px] shrink-0"
           >
             <Plus className="size-4" />
           </Button>
         </div>
-      </div>
+      </StaggerItem>
 
       <BulkImportDialog
         open={bulkImportOpen}
@@ -1255,6 +1239,7 @@ export default function ClientsPage() {
       />
 
         {/* StyledTable — receives filtered data */}
+        <StaggerItem>
         <PageTabPanel id={CLIENTS_PANEL_ID} label="Clients" className="mt-4">
         <StyledTable
           data={filteredByStatus}
@@ -1284,7 +1269,8 @@ export default function ClientsPage() {
           initialPageSize={20}
         />
         </PageTabPanel>
-      </div>
+        </StaggerItem>
+      </Stagger>
       </div>
       </div>
     </SalesHubShell>

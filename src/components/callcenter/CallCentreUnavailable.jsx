@@ -6,6 +6,7 @@ import { Loader2, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { LINK_SALES_TOOL_HREF } from "@/lib/call-centre-availability";
 import { apiRequest } from "@/lib/api";
 import { useHotProspectorConnected } from "@/lib/useHotProspectorConnected";
@@ -157,18 +158,16 @@ export function UseHotProspectorButton({ groupIds, onSwitched, className }) {
   };
 
   return (
-    <button
+    <Button
       type="button"
+      size="sm"
       onClick={switchOver}
       disabled={saving}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-sm bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-60",
-        className
-      )}
+      className={cn("text-[12.5px]", className)}
     >
       {saving && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
       {label}
-    </button>
+    </Button>
   );
 }
 

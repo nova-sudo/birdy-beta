@@ -58,7 +58,7 @@ export default function UserMenu() {
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button size="icon" className="rounded-md" aria-label="Account menu">
+          <Button variant="outline" size="icon-lg" className="size-10" aria-label="Account menu">
             <UserRound className="h-5 w-5" />
           </Button>
         </DropdownMenuTrigger>
@@ -67,7 +67,7 @@ export default function UserMenu() {
           <DropdownMenuSeparator />
 
           {isAdmin && (
-            <DropdownMenuItem asChild>
+            <DropdownMenuItem asChild className="rounded-xl">
               <Link href="/admin" className="cursor-pointer">
                 <Shield className="mr-2 h-4 w-4" />
                 Admin console
@@ -75,7 +75,7 @@ export default function UserMenu() {
             </DropdownMenuItem>
           )}
 
-          <DropdownMenuItem asChild>
+          <DropdownMenuItem asChild className="rounded-xl">
             <Link href="/settings" className="cursor-pointer">
               <Settings className="mr-2 h-4 w-4" />
               Settings
@@ -89,7 +89,7 @@ export default function UserMenu() {
               e.preventDefault();
               setShowLogoutDialog(true);
             }}
-            className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700"
+            className="cursor-pointer rounded-xl text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Log out
@@ -110,7 +110,7 @@ export default function UserMenu() {
             <AlertDialogAction
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="bg-red-600 text-white hover:bg-red-700"
+              variant="destructive"
             >
               {isLoggingOut ? "Logging out..." : "Logout"}
             </AlertDialogAction>

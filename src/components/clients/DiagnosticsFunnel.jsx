@@ -26,15 +26,15 @@ const ICONS = {
 }
 
 const TINTS = {
-  leads: "#5B3FD6",
-  in_crm: "#3B7DD6",
-  called: "#E0920A",
-  closes: "#25A55F",
+  leads: "text-pd-primary",
+  in_crm: "text-pd-info",
+  called: "text-pd-warning",
+  closes: "text-pd-success",
 }
 
 function Shell({ children, footer }) {
   return (
-    <div className="flex flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
       <div className="flex flex-1 flex-col px-[22px] py-5">
         <div className="mb-3.5 flex items-center gap-[9px]">
           <Activity className="size-4 shrink-0 text-pd-primary" aria-hidden="true" />
@@ -81,7 +81,7 @@ export function DiagnosticsFunnel({
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
-              <Skeleton className="size-[30px] shrink-0 rounded-[12px]" />
+              <Skeleton className="size-[30px] shrink-0 rounded-xl" />
               <Skeleton className="h-4 flex-1" />
               <Skeleton className="h-4 w-10" />
             </div>
@@ -132,7 +132,7 @@ export function DiagnosticsFunnel({
               <Button
                 size="sm"
                 onClick={onViewCalls}
-                className="h-auto rounded-[12px] bg-pd-primary px-[13px] py-2 text-[12.5px] font-semibold text-white hover:bg-purple-700"
+                className="text-[12.5px]"
               >
                 View calls
               </Button>
@@ -141,7 +141,7 @@ export function DiagnosticsFunnel({
               size="sm"
               variant="outline"
               onClick={() => setDismissed(true)}
-              className="h-auto rounded-[12px] border-[#F0DADA] bg-white px-[13px] py-2 text-[12.5px] font-semibold text-pd-body hover:bg-white"
+              className="text-[12.5px] text-pd-body"
             >
               Dismiss
             </Button>
@@ -167,11 +167,12 @@ export function DiagnosticsFunnel({
             return (
               <li key={stage.id} className="flex flex-1 items-center gap-[10px] px-0.5 py-2.5">
                 {/* White chip on the spine rather than a tinted one — the design
-                    lifts it off the line with a shadow so the line reads as
+                    lifts it off the line with a hairline so the line reads as
                     passing behind it. */}
                 <span
-                  className="relative z-10 flex size-[30px] shrink-0 items-center justify-center rounded-[12px] bg-white shadow-[0_1px_3px_rgba(30,25,60,.12)]"
-                  style={{ color: TINTS[stage.id] ?? TINTS.leads }}
+                  className={`relative z-10 flex size-[30px] shrink-0 items-center justify-center rounded-xl border border-pd-border bg-pd-surface shadow-xs ${
+                    TINTS[stage.id] ?? TINTS.leads
+                  }`}
                 >
                   <Icon className="size-[15px]" aria-hidden="true" />
                 </span>

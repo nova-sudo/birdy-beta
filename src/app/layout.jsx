@@ -5,6 +5,7 @@ import { fontVariables } from "@/lib/pd-fonts";
 import { MotionConfig } from "framer-motion";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
@@ -61,18 +62,18 @@ function BirdyWordmark() {
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-lg font-bold leading-none text-foreground">Birdy</span>
+      <span className="font-pd-display text-[20px] font-extrabold leading-none tracking-[-0.02em] text-pd-ink">Birdy</span>
       <Link
         href="/changelog"
         aria-label={`What's new in Birdy — version ${APP_VERSION}`}
         title={`What's new — ${APP_VERSION}`}
-        className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+        className="rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
       >
         <Badge
           variant="secondary"
-          className="cursor-pointer gap-1 font-semibold transition-colors hover:bg-secondary/70"
+          className="cursor-pointer gap-1 font-semibold transition-colors"
         >
-          <Tag className="h-3 w-3 text-purple-500" aria-hidden="true" />
+          <Tag className="h-3 w-3" aria-hidden="true" />
           {APP_VERSION}
         </Badge>
       </Link>
@@ -170,7 +171,7 @@ export default function RootLayout({ children }) {
                   {/* Impersonation banner (shows only while an admin is impersonating) */}
                   <ImpersonationBar />
                   {/* Top Header */}
-                  <header className="bg-background border-b border-gray-200 w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
+                  <header className="bg-background border-b border-pd-border w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
                     <div className="flex items-center gap-2">
                       <SidebarTrigger className="md:hidden" />
                       {/* The dashboard puts its own title here instead of the
@@ -183,32 +184,33 @@ export default function RootLayout({ children }) {
                     {/* Center Ask-Birdy search bar */}
                     <div className="mx-auto flex-1 flex justify-center max-w-2xl px-4">
                       <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md group">
-                        <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-purple-500 pointer-events-none" />
+                        <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-pd-primary pointer-events-none" />
                         <input
                           ref={headerInputRef}
                           value={headerInput}
                           onChange={(e) => setHeaderInput(e.target.value)}
-                          className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-white border border-input placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent transition"
+                          className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-background border border-gray-300 hover:border-gray-400 placeholder:text-muted-foreground outline-none focus:border-primary focus:hover:border-primary focus:ring-4 focus:ring-primary/15 transition-[color,box-shadow,border-color] duration-200"
                           placeholder="Ask Birdy about your marketing data..."
                           aria-label="Ask Birdy"
                         />
                         {!headerInput && (
-                          <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded border border-border/60 bg-muted/40 text-[10px] font-medium text-muted-foreground font-sans pointer-events-none">
+                          <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-pd-divider text-[10px] font-medium text-pd-body font-sans pointer-events-none">
                             {isMac ? "⌘" : "Ctrl"}K
                           </kbd>
                         )}
-                        <button
+                        <Button
                           type="submit"
+                          size="icon-sm"
+                          variant={headerInput.trim() ? "default" : "secondary"}
                           disabled={!headerInput.trim()}
-                          className={`absolute top-1/2 -translate-y-1/2 right-1.5 h-8 w-8 flex items-center justify-center rounded-full transition ${
-                            headerInput.trim()
-                              ? "bg-purple-600 text-white hover:bg-purple-700"
-                              : "bg-muted/60 text-muted-foreground"
-                          }`}
+                          // Centred with a negative margin rather than a
+                          // translate: the Button's own hover lift is a
+                          // translate too, and the two would fight.
+                          className="absolute top-1/2 right-1.5 -mt-4"
                           aria-label="Ask Birdy"
                         >
                           <Search className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </form>
                     </div>
 

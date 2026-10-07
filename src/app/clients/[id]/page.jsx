@@ -23,6 +23,8 @@ import { ClientAskBirdy } from "@/components/clients/ClientAskBirdy"
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPill"
 import { usePageHeader } from "@/components/page-header"
@@ -46,11 +48,11 @@ import { leadSourceOption, normalizeLeadSource } from "@/lib/lead-sources"
 function ComingSoon({ title }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mb-4">
-        <Clock className="h-8 w-8 text-purple-500" />
+      <div className="h-16 w-16 bg-pd-primary-tint rounded-full flex items-center justify-center mb-4">
+        <Clock className="h-8 w-8 text-pd-primary" />
       </div>
-      <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-      <p className="text-sm text-muted-foreground mt-1">This feature is coming soon.</p>
+      <h3 className="font-pd-display text-lg font-semibold text-pd-ink">{title}</h3>
+      <p className="text-sm text-pd-subtle mt-1">This feature is coming soon.</p>
     </div>
   )
 }
@@ -201,7 +203,7 @@ export default function ClientDetailsPage() {
       key: "suggestions",
       label: "Suggestions",
       badge: 0,
-      badgeClassName: "bg-pd-primary-tint text-pd-primary",
+      badgeClassName: "bg-pd-primary text-white",
       isEmpty: true,
       // Suggestions are generated per user, not per client, and nothing scopes
       // them to one group yet — so this says so rather than showing another
@@ -213,7 +215,7 @@ export default function ClientDetailsPage() {
       key: "activity",
       label: "Activity",
       badge: clientActivity.length,
-      badgeClassName: "bg-pd-divider text-pd-muted",
+      badgeClassName: "bg-gray-600 text-white",
       isEmpty: clientActivity.length === 0,
       emptyMessage: "No activity for this client yet",
       render: () => (
@@ -365,13 +367,15 @@ export default function ClientDetailsPage() {
     () => ({
       title: (
         <div className={`${pdFontClass} flex min-w-0 items-center gap-2.5`}>
-          <button
+          <Button
+            variant="secondary"
+            size="icon-sm"
             onClick={() => router.push("/clients")}
             aria-label="Back to Client Hub"
-            className="flex size-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-divider text-pd-body hover:bg-pd-border"
+            className="shrink-0 text-pd-body"
           >
             <ArrowLeft className="size-4" />
-          </button>
+          </Button>
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
@@ -411,7 +415,7 @@ export default function ClientDetailsPage() {
     return (
       <div className="min-h-screen w-full flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Client Not Found</h2>
+          <h2 className="font-pd-display text-2xl font-bold mb-2 text-pd-ink">Client Not Found</h2>
           <Button onClick={() => router.push("/clients")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients
           </Button>
@@ -438,14 +442,17 @@ export default function ClientDetailsPage() {
         />
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="mt-5 space-y-[18px]">
+        <TabsContent value="overview" className="mt-5">
+          <Stagger className="space-y-[18px]">
           {/* Goals — each metric against the target set in Settings. The same
               monthly-closes target drives the health pill in the header. */}
-          <GoalsStrip
-            goals={goals}
-            currencySymbol={currencySymbol}
-            loading={groupsLoading}
-          />
+          <StaggerItem>
+            <GoalsStrip
+              goals={goals}
+              currencySymbol={currencySymbol}
+              loading={groupsLoading}
+            />
+          </StaggerItem>
 
           {/* Above the diagnostics funnel rather than inside it, because it is
               a different cohort: the four stages below start at leads, and
@@ -465,16 +472,18 @@ export default function ClientDetailsPage() {
               full height of both rows. */}
           <div className="flex flex-col items-stretch gap-[18px] lg:flex-row">
             <div className="flex min-w-0 flex-1 flex-col gap-[18px]">
-              <ClientTrendChart
-                group={matchingGroup}
-                datePreset={datePreset}
-                currencySymbol={currencySymbol}
-                loading={groupsLoading}
-              />
+              <StaggerItem>
+                <ClientTrendChart
+                  group={matchingGroup}
+                  datePreset={datePreset}
+                  currencySymbol={currencySymbol}
+                  loading={groupsLoading}
+                />
+              </StaggerItem>
 
               {/* The design's 1.35 / 0.65 split, stretched so both cards end
                   level with the rail beside them. */}
-              <div className="grid gap-[18px] md:grid-cols-[1.35fr_0.65fr] md:items-stretch">
+              <StaggerItem className="grid gap-[18px] md:grid-cols-[1.35fr_0.65fr] md:items-stretch">
                 <HistoryBook
                   clientName={groupName}
                   notes={notes}
@@ -491,10 +500,10 @@ export default function ClientDetailsPage() {
                   hasComparison={previousFunnel != null}
                   onViewCalls={() => setActiveTab("call-centre")}
                 />
-              </div>
+              </StaggerItem>
             </div>
 
-            <div className="flex min-w-0 flex-col gap-[14px] lg:w-[340px] lg:shrink-0">
+            <StaggerItem className="flex min-w-0 flex-col gap-[14px] lg:w-[340px] lg:shrink-0">
               <InsightCard
                 segments={insight}
                 onAsk={() => {
@@ -508,10 +517,11 @@ export default function ClientDetailsPage() {
                 onChange={setRailPanel}
                 label="Client panel"
                 id="client-side-panel"
-                className="min-h-[280px] w-full flex-1 rounded-2xl border border-pd-border"
+                className="min-h-[280px] w-full flex-1 rounded-xl border border-pd-border"
               />
-            </div>
+            </StaggerItem>
           </div>
+          </Stagger>
         </TabsContent>
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
@@ -622,15 +632,15 @@ export default function ClientDetailsPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
-                      clientStatus === "Active" ? "bg-[#DCFCE7]" : "bg-[#FEF9C3]"
+                      clientStatus === "Active" ? "bg-pd-success-bg" : "bg-pd-amber-bg"
                     }`}>
                       <span className={`h-2.5 w-2.5 rounded-full ${
-                        clientStatus === "Active" ? "bg-[#15803D]" : "bg-[#A16207]"
+                        clientStatus === "Active" ? "bg-pd-success" : "bg-pd-amber"
                       }`} />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">Client Status</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-sm font-semibold text-pd-ink">Client Status</p>
+                      <p className="text-xs text-pd-subtle">
                         {clientStatus === "Active"
                           ? "This client is currently active and receiving data"
                           : "This client is paused — data refresh is suspended"}
@@ -640,8 +650,8 @@ export default function ClientDetailsPage() {
                   <button
                     onClick={handleToggleStatus}
                     disabled={statusLoading || clientLoading}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      clientStatus === "Active" ? "bg-pd-primary" : "bg-gray-300"
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-pd-primary/25 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      clientStatus === "Active" ? "bg-pd-primary" : "bg-pd-border-strong"
                     }`}
                   >
                     <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
@@ -660,8 +670,8 @@ export default function ClientDetailsPage() {
               <CardContent>
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-foreground">Client Health</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-semibold text-pd-ink">Client Health</p>
+                    <p className="text-xs text-pd-subtle">
                       {healthDetail?.reason
                         ? `${healthDetail.reason}${
                             healthDetail.pace != null
@@ -670,7 +680,7 @@ export default function ClientDetailsPage() {
                           }`
                         : "Set a monthly closes target to track health."}
                     </p>
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[11px] text-pd-subtle">
                       Recalculated every Monday from the monthly closes goal.
                     </p>
                   </div>
@@ -680,15 +690,15 @@ export default function ClientDetailsPage() {
             </Card>
 
             {/* ── Danger Zone ───────────────────────────────────────────────────── */}
-            <Card className="border-red-200 bg-red-50/40">
+            <Card className="border-pd-danger-border bg-pd-danger-surface">
               <CardHeader>
-                <CardTitle className="text-base text-red-700">Danger Zone</CardTitle>
+                <CardTitle className="text-base text-pd-danger">Danger Zone</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-foreground">Remove Client Group</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <p className="text-sm font-medium text-pd-ink">Remove Client Group</p>
+                    <p className="text-xs text-pd-subtle mt-0.5">
                       Permanently delete this client group and all associated GHL contacts. This cannot be undone.
                     </p>
                   </div>
@@ -742,38 +752,38 @@ export default function ClientDetailsPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="h-10 w-10 rounded-full bg-pd-danger-bg flex items-center justify-center shrink-0">
+                <AlertTriangle className="h-5 w-5 text-pd-danger" />
               </div>
               <DialogTitle className="text-xl">Delete Client Group</DialogTitle>
             </div>
             <DialogDescription className="text-sm leading-relaxed">
-              This action is <span className="font-semibold text-foreground">permanent and irreversible</span>. It will delete:
+              This action is <span className="font-semibold text-pd-ink">permanent and irreversible</span>. It will delete:
             </DialogDescription>
           </DialogHeader>
 
-          <ul className="text-sm text-muted-foreground space-y-1.5 pl-4 list-disc">
-            <li>All <span className="text-foreground font-medium">GHL contacts</span> linked to this group</li>
-            <li>The <span className="text-foreground font-medium">client group</span> and all its configuration</li>
+          <ul className="text-sm text-pd-subtle space-y-1.5 pl-4 list-disc">
+            <li>All <span className="text-pd-ink font-medium">GHL contacts</span> linked to this group</li>
+            <li>The <span className="text-pd-ink font-medium">client group</span> and all its configuration</li>
           </ul>
 
           <div className="space-y-2 pt-1">
             <p className="text-sm">
               Type{" "}
-              <span className="font-mono text-xs font-semibold bg-muted px-1 py-0.5 rounded">{groupName}</span>
+              <span className="font-mono text-xs font-semibold bg-pd-divider px-1.5 py-0.5 rounded-full">{groupName}</span>
               {" "}to confirm:
             </p>
             <Input
               value={deleteInput}
               onChange={(e) => { setDeleteInput(e.target.value); setDeleteError("") }}
               placeholder={groupName}
-              className={`font-mono text-sm ${deleteError ? "border-red-400" : ""}`}
+              className={`font-mono text-sm ${deleteError ? "border-pd-danger" : ""}`}
               disabled={deleteLoading}
               onKeyDown={(e) => { if (e.key === "Enter") handleDeleteGroup() }}
               autoComplete="off"
             />
             {deleteError && (
-              <p className="text-xs text-red-500 flex items-center gap-1">
+              <p className="text-xs text-pd-danger flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" /> {deleteError}
               </p>
             )}
@@ -824,11 +834,15 @@ function TrackingSummaryCard({ clientId }) {
     <div className="rounded-xl border border-pd-border bg-pd-surface p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-[13px] font-semibold text-pd-ink">Lead tracking</p>
+          <p className="font-pd-display text-[13px] font-semibold text-pd-ink">Lead tracking</p>
+          {state === null ? (
+            <div className="mt-1.5 space-y-1.5" aria-busy="true" aria-label="Checking lead tracking">
+              <Skeleton className="h-3 w-72 max-w-full" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          ) : (
           <p className="mt-1 text-[12.5px] leading-[1.5] text-pd-body">
-            {state === null
-              ? "Checking…"
-              : !state.applicable
+            {!state.applicable
                 ? "This client's leads come from Meta Instant Forms, so there is nothing to install."
                 : isFormToGhl
                   ? state.complete
@@ -838,18 +852,20 @@ function TrackingSummaryCard({ clientId }) {
                     ? "Working — landing-page leads are being counted against the ads that produced them."
                     : "Not finished. Leads from this client's landing pages aren't being tied to ads yet."}
           </p>
+          )}
           {state?.method && (
             <p className="mt-1.5 text-[11.5px] text-pd-faint">
               Leads from: {leadSourceOption(state.method).label}
             </p>
           )}
         </div>
-        <button
+        <Button
+          size="sm"
           onClick={() => router.push(`/clients/${clientId}/tracking`)}
-          className="shrink-0 rounded-sm bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+          className="shrink-0 text-[12.5px]"
         >
           {state && state.applicable && !state.complete ? "Finish setup" : "Open setup"}
-        </button>
+        </Button>
       </div>
     </div>
   )

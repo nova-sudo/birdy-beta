@@ -43,11 +43,11 @@ import getSymbolFromCurrency from "currency-symbol-map";
  * Reusable container for dashboard tables with glassmorphism styling
  */
 export const TableContainer = ({ children, title, description }) => (
-  <Card className="border border-border/40 shadow-sm hover:shadow-md transition-shadow bg-white/50 backdrop-blur-sm">
-    <CardHeader className="pb-3 border-b border-border/30">
+  <Card className="border border-pd-border shadow-sm hover:shadow-md transition-shadow bg-pd-surface rounded-2xl">
+    <CardHeader className="pb-3 border-b border-pd-divider">
       <div>
-        <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
-        {description && <CardDescription className="text-xs text-muted-foreground mt-1">{description}</CardDescription>}
+        <CardTitle className="font-pd-display text-base font-semibold text-pd-ink">{title}</CardTitle>
+        {description && <CardDescription className="text-xs text-pd-subtle mt-1">{description}</CardDescription>}
       </div>
     </CardHeader>
     <CardContent className="p-0 overflow-x-auto">{children}</CardContent>
@@ -799,7 +799,7 @@ const StyledTable = ({
                       className={`w-10 min-w-0 px-2 pr-0 ${idx % 2 === 0 ? "bg-pd-row-zebra" : "bg-pd-surface"}`}
                       style={{ position: 'sticky', left: 0, zIndex: 30 }}
                     >
-                      <Skeleton className="size-4 rounded" />
+                      <Skeleton className="size-4 rounded-md" />
                     </td>
                   )}
 
@@ -833,7 +833,7 @@ const StyledTable = ({
                               : "flex h-11 items-center px-[22px]"
                           }
                         >
-                          <Skeleton className={`h-4 rounded ${colIdx === 0 ? "w-36" : "w-20"}`} />
+                          <Skeleton className={`h-4 rounded-full ${colIdx === 0 ? "w-36" : "w-20"}`} />
                         </div>
                       </td>
 
@@ -943,7 +943,7 @@ const StyledTable = ({
                       >
                         {togglingRows.has(row.id) ? (
                           <div className="flex items-center justify-center">
-                            <div className="h-4 w-4 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                            <Spinner className="size-4 text-pd-primary" />
                           </div>
                         ) : (
                           // 34 × 19 pill around a 15px knob, per the handoff.
@@ -994,7 +994,7 @@ const StyledTable = ({
                           >
                             <div className="flex min-w-0 items-center px-[22px]">
                               {isBadgeCell ? (
-                                <span className="inline-flex shrink-0 items-center rounded-[6px] bg-pd-primary-tint px-[9px] py-[3px] text-[11px] font-semibold text-pd-primary">
+                                <span className="inline-flex shrink-0 items-center rounded-full bg-pd-primary px-[9px] py-[3px] text-[11px] font-bold text-white">
                                   Syncing
                                 </span>
                               ) : (
@@ -1031,7 +1031,7 @@ const StyledTable = ({
                                 title={row.status}
                                 aria-label={row.status}
                                 className={`size-2 shrink-0 rounded-full ${
-                                  isActive ? "bg-[#15803D]" : "bg-pd-faint"
+                                  isActive ? "bg-pd-success" : "bg-pd-faint"
                                 }`}
                               />
                             )}
@@ -1057,13 +1057,13 @@ const StyledTable = ({
                                 <TooltipTrigger asChild>
                                   <span
                                     className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
-                                      row._isCreating || row._isPending ? "text-muted-foreground" : ""
+                                      row._isCreating || row._isPending ? "text-pd-subtle" : ""
                                     }`}
                                   >
                                     {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                                       <button
                                         onClick={() => onFirstColumnClick?.(row)}
-                                        className="text-left font-semibold text-primary hover:underline cursor-pointer truncate min-w-0"
+                                        className="text-left font-semibold text-pd-primary hover:underline cursor-pointer truncate min-w-0"
                                       >
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                       </button>

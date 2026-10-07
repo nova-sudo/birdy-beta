@@ -16,9 +16,9 @@ import {
 import { useCredits } from "@/hooks/useCredits";
 
 const TONES = {
-  emerald: { text: "text-emerald-600", bar: "bg-emerald-500", dot: "bg-emerald-500" },
-  amber:   { text: "text-amber-600",   bar: "bg-amber-500",   dot: "bg-amber-500" },
-  red:     { text: "text-red-600",     bar: "bg-red-500",     dot: "bg-red-500" },
+  emerald: { text: "text-pd-success", bar: "bg-pd-success", dot: "bg-pd-success" },
+  amber:   { text: "text-pd-amber",   bar: "bg-pd-amber",   dot: "bg-pd-amber" },
+  red:     { text: "text-pd-danger",  bar: "bg-pd-danger",  dot: "bg-pd-danger" },
 };
 
 /**
@@ -80,21 +80,21 @@ export default function SidebarCredits() {
     <div className="px-2 pb-1">
       <Link
         href={BILLING_HREF}
-        className="block rounded-lg border border-gray-100 bg-gray-50/70 px-2.5 py-2 transition hover:bg-gray-100"
+        className="block rounded-xl border border-pd-border bg-pd-canvas px-2.5 py-2 transition hover:bg-pd-divider"
       >
         <div className="flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-pd-subtle">
             <Coins className={`h-3.5 w-3.5 ${c.text}`} />
             Credits
           </span>
-          <span className={`text-[11px] font-semibold ${c.text}`}>{label}</span>
+          <span className={`font-pd-display text-[11px] font-semibold ${c.text}`}>{label}</span>
         </div>
 
-        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-pd-border">
           <div className={`h-full rounded-full ${c.bar} transition-all`} style={{ width: barWidth }} />
         </div>
 
-        <p className={`mt-1 text-[10px] font-medium ${isOut ? "text-red-500" : low ? "text-amber-600" : "text-gray-400"}`}>
+        <p className={`mt-1 text-[10px] font-medium ${isOut ? "text-pd-danger" : low ? "text-pd-amber" : "text-pd-faint"}`}>
           {isOut
             ? "Out — top up"
             : low

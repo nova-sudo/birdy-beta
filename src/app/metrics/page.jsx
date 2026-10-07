@@ -18,8 +18,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Plus, Trash2, Copy, X, Bird, Eye, EyeOff, Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
+import { Plus, Trash2, Copy, X, Eye, EyeOff, Search, Pencil, ChevronLeft, ChevronRight } from "lucide-react"
 import ChatConversation from "@/components/chat/ChatConversation"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Check, ChevronDown } from "lucide-react"
@@ -97,7 +99,7 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-fit bg-white">
+      <PopoverContent className="p-0 w-fit bg-pd-surface">
         <Tabs defaultValue="all" className="w-fit" onValueChange={handleTabChange}>
           <TabsList className="w-fit">
             <TabsTrigger value="all">
@@ -415,7 +417,7 @@ const MetricsHub = () => {
               type="search"
               placeholder="Search metrics&hellip;"
               aria-label="Search metrics"
-              className="h-[38px] w-[220px] rounded-sm border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
+              className="h-[38px] w-[220px] pl-[36px] text-[13px] placeholder:text-pd-faint"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -423,7 +425,8 @@ const MetricsHub = () => {
           <Button
             aria-label="Create a custom metric"
             onClick={openCreateDialog}
-            className="size-[38px] rounded-sm bg-pd-primary p-0 hover:bg-purple-700"
+            size="icon"
+            className="size-[38px] p-0"
           >
             <Plus className="size-[17px] text-white" />
           </Button>
@@ -648,10 +651,10 @@ const MetricsHub = () => {
     // Same shell as the Lead and Sales hubs: the design's canvas, its 22/24
     // scroll region, and the pd typefaces the segmented control needs.
     <SalesHubShell>
-      <div className="flex flex-col gap-[16px]">
+      <Stagger className="flex flex-col gap-[16px]">
         {/* Search and create moved up to the global bar with the title, so the
             toolbar is the tab strip alone. */}
-        <div className="flex flex-wrap items-center gap-[12px]">
+        <StaggerItem className="flex flex-wrap items-center gap-[12px]">
           {/* The app's page tab bar. This page had been re-typing its own
               sizing onto PdSegmented — 20/9 padding against everyone else's
               15/7 — which is the drift PageTabs exists to stop. */}
@@ -662,8 +665,9 @@ const MetricsHub = () => {
             value={activeTab}
             onChange={setActiveTab}
           />
-        </div>
+        </StaggerItem>
 
+        <StaggerItem>
         <PageTabPanel id="metrics-table" label="Metrics" className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
           <div className="flex items-center border-b border-pd-border bg-pd-table-head px-[22px] py-[13px] text-[11.5px] font-bold tracking-[0.03em] text-pd-faint">
             <div className="flex-1">METRIC NAME</div>
@@ -682,7 +686,7 @@ const MetricsHub = () => {
                 <div className="flex-1 pr-[12px]"><Skeleton className="h-4 w-40" /></div>
                 <div className="hidden flex-[1.4] pr-[12px] md:block"><Skeleton className="h-3 w-56" /></div>
                 <div className="flex flex-[0_0_200px] justify-center"><Skeleton className="h-6 w-28 rounded-full" /></div>
-                <div className="flex flex-[0_0_160px] justify-center gap-[8px]"><Skeleton className="size-[26px] rounded-[12px]" /></div>
+                <div className="flex flex-[0_0_160px] justify-center gap-[8px]"><Skeleton className="size-[26px] rounded-full" /></div>
               </div>
             ))
           ) : filteredMetrics.length === 0 ? (
@@ -702,12 +706,13 @@ const MetricsHub = () => {
               </p>
             </div>
           ) : (
-            currentMetrics.map((metric) => {
+            <Stagger gap={0.03}>
+            {currentMetrics.map((metric) => {
               const isCustom = metric.source === "custom"
               const isHidden = hiddenMetrics.has(metric.id)
 
               return (
-                <div key={metric.id} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px] last:border-b-0 hover:bg-pd-row-zebra">
+                <StaggerItem key={metric.id} className="flex items-center border-b border-pd-row-border px-[22px] py-[12px] last:border-b-0 hover:bg-pd-row-zebra">
                   <div className="min-w-0 flex-1 pr-[12px]">
                     <div className={`truncate text-[13.5px] font-semibold ${isHidden ? "text-pd-faint line-through" : "text-pd-ink"}`}>
                       {metric.name}
@@ -735,7 +740,7 @@ const MetricsHub = () => {
                           title="Edit metric"
                           aria-label={`Edit ${metric.name}`}
                           onClick={() => handleEditMetric(metric)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-primary hover:bg-pd-primary-tint"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-primary hover:bg-pd-primary-tint"
                         >
                           <Pencil className="size-[14px]" />
                         </button>
@@ -744,7 +749,7 @@ const MetricsHub = () => {
                           title="Duplicate metric"
                           aria-label={`Duplicate ${metric.name}`}
                           onClick={() => handleDuplicateMetric(metric)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-body hover:bg-pd-divider"
                         >
                           <Copy className="size-[14px]" />
                         </button>
@@ -753,7 +758,7 @@ const MetricsHub = () => {
                           title="Delete metric"
                           aria-label={`Delete ${metric.name}`}
                           onClick={() => handleDeleteMetric(metric.id)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-danger hover:bg-pd-danger-surface"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-danger hover:bg-pd-danger-surface"
                         >
                           <Trash2 className="size-[14px]" />
                         </button>
@@ -765,17 +770,19 @@ const MetricsHub = () => {
                         title={isHidden ? "Show in the formula builder" : "Hide from the formula builder"}
                         aria-label={`${isHidden ? "Show" : "Hide"} ${metric.name}`}
                         onClick={() => toggleMetricVisibility(metric)}
-                        className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                        className="flex size-[26px] cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-body hover:bg-pd-divider"
                       >
                         {isHidden ? <EyeOff className="size-[14px]" /> : <Eye className="size-[14px]" />}
                       </button>
                     )}
                   </div>
-                </div>
+                </StaggerItem>
               )
-            })
+            })}
+            </Stagger>
           )}
         </PageTabPanel>
+        </StaggerItem>
 
         {!isLoading && totalPages > 1 && (
           <nav aria-label="Metrics pages" className="flex items-center justify-center gap-[6px]">
@@ -783,7 +790,7 @@ const MetricsHub = () => {
               type="button"
               disabled={currentPage === 1}
               onClick={() => handlePageChange(currentPage - 1)}
-              className="flex cursor-pointer items-center gap-[5px] rounded-[12px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-[5px] rounded-full px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
             >
               <ChevronLeft className="size-[14px]" />
               Previous
@@ -800,7 +807,7 @@ const MetricsHub = () => {
                   type="button"
                   aria-current={n === currentPage ? "page" : undefined}
                   onClick={() => handlePageChange(n)}
-                  className={`flex h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[12px] px-[6px] text-[13.5px] font-semibold ${
+                  className={`flex h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-full px-[6px] text-[13.5px] font-semibold ${
                     n === currentPage ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "text-pd-body"
                   }`}
                 >
@@ -813,7 +820,7 @@ const MetricsHub = () => {
               type="button"
               disabled={currentPage === totalPages}
               onClick={() => handlePageChange(currentPage + 1)}
-              className="flex cursor-pointer items-center gap-[5px] rounded-[12px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-[5px] rounded-full px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
             >
               Next
               <ChevronRight className="size-[14px]" />
@@ -828,10 +835,10 @@ const MetricsHub = () => {
             showCloseButton={false}
           >
             {/* Header */}
-            <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg shrink-0">
+            <div className="bg-pd-surface dark:bg-card px-6 py-4 border-b border-border rounded-t-xl shrink-0">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold leading-none tracking-tight">
+                  <h2 className="font-pd-display text-lg font-semibold leading-none tracking-tight">
                     {editingMetric ? "Edit Metric" : duplicatingFrom ? "Duplicate Metric" : "Create Metric"}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">
@@ -849,21 +856,21 @@ const MetricsHub = () => {
                     <button
                       type="button"
                       onClick={() => setDialogMode("birdy")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                         dialogMode === "birdy"
-                          ? "bg-white text-purple-700 shadow-sm border border-purple-200/60"
+                          ? "bg-pd-surface text-pd-primary shadow-pd-segment border border-pd-primary-pale/60"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-purple-500" : "text-muted-foreground"}`} />
+                      <BirdyAvatar size={18} />
                       Ask Birdy
                     </button>
                     <button
                       type="button"
                       onClick={() => setDialogMode("manual")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                         dialogMode === "manual"
-                          ? "bg-white text-foreground shadow-sm border border-border/60"
+                          ? "bg-pd-surface text-foreground shadow-pd-segment border border-border/60"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -876,7 +883,7 @@ const MetricsHub = () => {
 
             {/* Body — Birdy AI mode */}
             {dialogMode === "birdy" && !editingMetric && !duplicatingFrom && (
-              <div className="flex-1 min-h-0 flex flex-col bg-[#FAFAFA] overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col bg-pd-canvas overflow-hidden">
                 <div className="flex-1 min-h-0 h-full overflow-hidden">
                   <ChatConversation
                     key={birdyChatKey}
@@ -921,7 +928,7 @@ const MetricsHub = () => {
                     }}
                   />
                 </div>
-                <div className="shrink-0 px-6 py-3 border-t border-border bg-white flex justify-end">
+                <div className="shrink-0 px-6 py-3 border-t border-border bg-pd-surface flex justify-end">
                   <Button variant="outline" size="sm" onClick={resetForm}>
                     Close
                   </Button>
@@ -938,7 +945,7 @@ const MetricsHub = () => {
                   {/* Left column */}
                   <div className="w-full lg:w-2/3 flex-1 space-y-4">
                     {/* Name + Description */}
-                    <div className="rounded-lg border border-border bg-card p-6 grid grid-cols-2 gap-4">
+                    <div className="rounded-xl border border-border bg-card p-6 grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="metric-name" className="block text-base font-semibold mb-1">Metric Name</Label>
                         <Input
@@ -966,8 +973,8 @@ const MetricsHub = () => {
                     </div>
 
                     {/* Dashboard selector */}
-                    <div className="rounded-lg border border-border bg-card p-6">
-                      <h4 className="text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
+                    <div className="rounded-xl border border-border bg-card p-6">
+                      <h4 className="font-pd-display text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
                       {(() => {
                         const LEVEL_MAP = {
                           meta_spend: "group", meta_impressions: "group", meta_clicks: "group",
@@ -1008,7 +1015,7 @@ const MetricsHub = () => {
                         return (
                           <div className="space-y-2">
                             {mixedLevels && (
-                              <p className="text-xs text-red-500 font-medium">Cannot mix group-level and campaign-level metrics in the same formula.</p>
+                              <p className="text-xs text-pd-danger font-medium">Cannot mix group-level and campaign-level metrics in the same formula.</p>
                             )}
                             <div className="flex flex-wrap gap-2">
                               {DASHBOARD_OPTIONS.map(d => {
@@ -1018,12 +1025,12 @@ const MetricsHub = () => {
                                 return (
                                   <label
                                     key={d.value}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm transition-colors ${
                                       disabled
                                         ? "opacity-40 cursor-not-allowed bg-muted border-border"
                                         : checked
-                                          ? "bg-purple-50 border-purple-300 text-purple-700 cursor-pointer"
-                                          : "bg-white border-border hover:border-purple-200 cursor-pointer"
+                                          ? "bg-pd-primary-tint border-pd-primary-pale text-pd-primary cursor-pointer"
+                                          : "bg-pd-surface border-border hover:border-pd-primary-pale cursor-pointer"
                                     }`}
                                   >
                                     <Checkbox
@@ -1050,8 +1057,8 @@ const MetricsHub = () => {
                     </div>
 
                     {/* Calculation Logic */}
-                    <div className="rounded-lg border border-border bg-card p-6 flex-1">
-                      <h4 className="text-base font-semibold text-foreground mb-3">Calculation Logic</h4>
+                    <div className="rounded-xl border border-border bg-card p-6 flex-1">
+                      <h4 className="font-pd-display text-base font-semibold text-foreground mb-3">Calculation Logic</h4>
                       <div className="min-h-[80px] rounded-xl border border-dashed border-border/60 bg-muted/30 p-4 flex flex-wrap gap-2 items-center">
                         {metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value) ? (
                           <span className="text-sm text-muted-foreground">Click &quot;Add Metric&quot; to start building your formula</span>
@@ -1059,19 +1066,19 @@ const MetricsHub = () => {
                           metricForm.formulaParts.map((part, index) => {
                             if (part.type === "operator") {
                               return (
-                                <span key={index} className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-sm font-semibold">
+                                <span key={index} className="w-8 h-8 rounded-full bg-pd-primary-tint text-pd-primary flex items-center justify-center text-sm font-semibold">
                                   {part.value === "*" ? "×" : part.value === "/" ? "÷" : part.value}
                                 </span>
                               )
                             }
                             if (part.type === "number") {
                               return (
-                                <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-sm font-medium shadow-sm text-amber-700">
+                                <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pd-amber-bg border border-pd-amber/30 text-sm font-medium shadow-sm text-pd-amber">
                                   {part.label ?? part.value}
                                   <button
                                     type="button"
                                     onClick={() => removeFormulaPart(index)}
-                                    className="text-amber-400 hover:text-red-500 transition-colors"
+                                    className="text-pd-amber/60 hover:text-pd-danger transition-colors"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
@@ -1083,12 +1090,12 @@ const MetricsHub = () => {
                               || customMetrics.find(cm => cm.id === part.value)?.name
                               || part.value
                             return (
-                              <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white border border-border text-sm font-medium shadow-sm">
+                              <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pd-surface border border-border text-sm font-medium shadow-sm">
                                 {metricLabel}
                                 <button
                                   type="button"
                                   onClick={() => removeFormulaPart(index)}
-                                  className="text-muted-foreground hover:text-red-500 transition-colors"
+                                  className="text-muted-foreground hover:text-pd-danger transition-colors"
                                   disabled={metricForm.formulaParts.length === 1}
                                 >
                                   <X className="h-3 w-3" />
@@ -1167,7 +1174,7 @@ const MetricsHub = () => {
                                   + Add Number
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-48 p-3 bg-white">
+                              <PopoverContent className="w-48 p-3 bg-pd-surface">
                                 <Input
                                   type="number"
                                   placeholder="e.g. 100"
@@ -1202,10 +1209,10 @@ const MetricsHub = () => {
 
                   {/* Right column — Preview */}
                   <div className="w-full lg:w-1/3 flex-shrink-0 self-stretch">
-                    <div className="rounded-lg border text-card-foreground shadow-sm bg-card h-full flex flex-col">
+                    <div className="rounded-xl border text-card-foreground shadow-sm bg-card h-full flex flex-col">
                       <div className="p-6 pt-6 flex-1 flex flex-col justify-between">
                         <div className="text-center p-4 flex-1 flex flex-col justify-center">
-                          <div className="text-4xl font-bold">
+                          <div className="font-pd-display text-4xl font-bold">
                             {(() => {
                               const parts = metricForm.formulaParts
                               if (!parts.length || !parts[0].value) return "–"
@@ -1276,7 +1283,7 @@ const MetricsHub = () => {
                               <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-white">
+                              <SelectContent className="bg-pd-surface">
                                 <SelectItem value="integer">Integer</SelectItem>
                                 <SelectItem value="currency">Currency</SelectItem>
                                 <SelectItem value="percentage">Percentage</SelectItem>
@@ -1290,7 +1297,7 @@ const MetricsHub = () => {
                               <SelectTrigger className="h-10">
                                 <SelectValue />
                               </SelectTrigger>
-                              <SelectContent className="bg-white">
+                              <SelectContent className="bg-pd-surface">
                                 <SelectItem value="total">Total</SelectItem>
                                 <SelectItem value="average">Average</SelectItem>
                               </SelectContent>
@@ -1307,13 +1314,12 @@ const MetricsHub = () => {
 
             {/* Footer — only shown in manual/edit/duplicate mode */}
             {(dialogMode === "manual" || editingMetric || duplicatingFrom) && (
-            <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg flex-shrink-0">
+            <div className="bg-pd-surface dark:bg-card px-6 py-4 border-t border-border rounded-b-xl flex-shrink-0">
               <div className="flex flex-row justify-end gap-2">
                 <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
                 <Button
                   onClick={handleCreateMetric}
                   disabled={saving || isNameDuplicate || !_trimmedFormName}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   {saving
                     ? "Saving..."
@@ -1328,7 +1334,7 @@ const MetricsHub = () => {
             )}
           </DialogContent>
         </Dialog>
-      </div>
+      </Stagger>
     </SalesHubShell>
   )
 }

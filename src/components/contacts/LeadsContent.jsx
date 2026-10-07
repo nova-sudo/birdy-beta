@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import StyledTable from "@/components/ui/table-container"
 import { PageTabPanel, PageTabs } from "@/components/portfolio"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
 import { buildContactColumns } from "@/lib/contact-columns"
@@ -31,10 +32,10 @@ import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 const baseContactColumns = buildContactColumns()
 
 // Every control in the toolbar row wears the design's dropdown trigger: 38px
-// tall, white, hairline border, 10px radius, Inter 600 13px — matches
+// tall, white, hairline border, pill radius, Inter 600 13px — matches
 // Sales-Hub's CallCentreContent.
 const TOOLBAR_CHIP =
-  "flex h-[38px] cursor-pointer items-center gap-2 rounded-sm border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+  "flex h-[38px] cursor-pointer items-center gap-2 rounded-full border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
 
 // Ties the pipeline tabs to the table they filter, for anyone navigating by role.
 const LEADS_PANEL_ID = "lead-hub-table-panel"
@@ -393,12 +394,16 @@ export function LeadsContent({
 
   return (
     <div className="min-w-0">
-      <div className="flex flex-col gap-6">
+      <Stagger className="flex flex-col gap-6">
         <ErrorBanner error={error} />
 
-        {showStatCards && <ContactStats metaStats={metaData?.stats} loading={loading} />}
+        {showStatCards && (
+          <StaggerItem>
+            <ContactStats metaStats={metaData?.stats} loading={loading} />
+          </StaggerItem>
+        )}
 
-        <div>
+        <StaggerItem>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <PageTabs
               label="Pipeline stage"
@@ -419,7 +424,7 @@ export function LeadsContent({
                   aria-label="Search leads"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full rounded-sm border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+                  className="h-[38px] w-full pl-9 text-[13px] md:w-[200px]"
                 />
               </div>
 
@@ -462,20 +467,20 @@ export function LeadsContent({
               }}
             />
           </PageTabPanel>
-        </div>
+        </StaggerItem>
 
         <div className="flex justify-center gap-4">
           <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
             <ChevronLeft className="h-4 w-4" />Previous
           </Button>
-          <span className="text-sm font-medium py-2">
+          <span className="text-sm font-medium text-pd-body py-2">
             Page {currentPage} of {metaData?.total_pages || 1}
           </span>
           <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>
             Next<ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-      </div>
+      </Stagger>
     </div>
   )
 }

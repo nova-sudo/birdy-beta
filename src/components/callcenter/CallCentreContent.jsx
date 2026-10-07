@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
@@ -59,23 +61,23 @@ function CallLogsDialog({ lead }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 bg-transparent hover:bg-muted/50 transition-colors">
+        <Button variant="outline" size="sm" className="gap-2">
           <Phone className="h-4 w-4" />
           {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto bg-white">
-        <div className="pb-6 border-b">
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        <div className="pb-6 border-b border-pd-divider">
           <DialogHeader className="space-y-3">
-            <DialogTitle className="text-2xl font-bold text-foreground">{lead.name}</DialogTitle>
+            <DialogTitle className="font-pd-display text-2xl font-bold text-pd-ink">{lead.name}</DialogTitle>
             <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Mail className="h-4 w-4 text-purple-500" />
+              <div className="flex items-center gap-1.5 text-sm text-pd-subtle">
+                <Mail className="h-4 w-4 text-pd-primary" />
                 <span>{lead.email}</span>
               </div>
-              <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <Phone className="h-4 w-4 text-purple-500" />
+              <div className="w-1 h-1 rounded-full bg-pd-chevron" />
+              <div className="flex items-center gap-1.5 text-sm text-pd-subtle">
+                <Phone className="h-4 w-4 text-pd-primary" />
                 <span>{lead.phone}</span>
               </div>
             </div>
@@ -84,11 +86,11 @@ function CallLogsDialog({ lead }) {
 
         {lead.call_logs.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-              <Phone className="h-8 w-8 text-muted-foreground/50" />
+            <div className="w-16 h-16 rounded-full bg-pd-divider flex items-center justify-center mb-4">
+              <Phone className="h-8 w-8 text-pd-faint" />
             </div>
-            <h3 className="text-lg font-semibold text-foreground mb-2">No Call Logs</h3>
-            <p className="text-sm text-muted-foreground max-w-xs">
+            <h3 className="font-pd-display text-lg font-semibold text-pd-ink mb-2">No Call Logs</h3>
+            <p className="text-sm text-pd-subtle max-w-xs">
               No recorded calls for this lead in the selected period.
             </p>
           </div>
@@ -97,16 +99,16 @@ function CallLogsDialog({ lead }) {
             {lead.call_logs.map((callLog, index) => (
               <div
                 key={index}
-                className="group relative p-5 rounded-lg border border-border bg-card hover:border-purple-200 hover:shadow-md transition-all duration-200"
+                className="group relative p-5 rounded-xl border border-pd-border bg-pd-surface hover:border-pd-primary-pale transition-colors duration-200"
               >
                 <div className="flex items-start justify-between gap-4 mb-4">
                   <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-purple-100/80 flex items-center justify-center">
-                      <User className="h-5 w-5 text-purple-600" />
+                    <div className="w-10 h-10 rounded-full bg-pd-primary-tint flex items-center justify-center">
+                      <User className="h-5 w-5 text-pd-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-foreground text-sm">{callLog.caller_name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
+                      <p className="font-semibold text-pd-ink text-sm">{callLog.caller_name}</p>
+                      <p className="text-xs text-pd-subtle mt-0.5">
                         <Clock className="h-3 w-3 inline mr-1" />
                         {callLog.call_time}
                       </p>
@@ -115,17 +117,16 @@ function CallLogsDialog({ lead }) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge
                       className={`${callLog.call_status === "outbound"
-                        ? "bg-blue-100/80 text-blue-700 border-blue-200"
-                        : "bg-green-100/80 text-green-700 border-green-200"
-                        } border text-xs font-medium`}
-                      variant="outline"
+                        ? "bg-pd-info text-white"
+                        : "bg-pd-success text-white"
+                        } text-[11px] font-bold`}
                     >
                       {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
                     </Badge>
                     {callLog.transfer && (
                       <Badge
-                        variant="outline"
-                        className="bg-amber-100/80 text-amber-700 border-amber-200 text-xs font-medium"
+                        variant="warning"
+                        className="text-[11px] font-bold"
                       >
                         ↗ Transferred
                       </Badge>
@@ -133,42 +134,42 @@ function CallLogsDialog({ lead }) {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-lg bg-muted/30">
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-xl bg-pd-divider/60">
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Duration</p>
-                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.duration)}</p>
+                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Duration</p>
+                    <p className="text-sm font-semibold text-pd-ink">{formatDuration(callLog.duration)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Speed to Lead</p>
-                    <p className="text-sm font-semibold text-foreground">{formatDuration(callLog.speed_to_lead)}</p>
+                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Speed to Lead</p>
+                    <p className="text-sm font-semibold text-pd-ink">{formatDuration(callLog.speed_to_lead)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Group</p>
-                    <p className="text-sm font-semibold text-foreground">{callLog.group || "—"}</p>
+                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Group</p>
+                    <p className="text-sm font-semibold text-pd-ink">{callLog.group || "—"}</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-lg bg-muted/40 border border-border/50">
+                <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl bg-pd-divider/60 border border-pd-border">
                   <div className="flex-1">
-                    <p className="text-xs text-muted-foreground mb-1">From</p>
-                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.from_number || "—"}</p>
+                    <p className="text-xs text-pd-subtle mb-1">From</p>
+                    <p className="font-mono text-sm font-semibold text-pd-ink">{callLog.from_number || "—"}</p>
                   </div>
-                  <div className="text-muted-foreground/30">→</div>
+                  <div className="text-pd-chevron">→</div>
                   <div className="flex-1">
-                    <p className="text-xs text-muted-foreground mb-1">To</p>
-                    <p className="font-mono text-sm font-semibold text-foreground">{callLog.to_number || "—"}</p>
+                    <p className="text-xs text-pd-subtle mb-1">To</p>
+                    <p className="font-mono text-sm font-semibold text-pd-ink">{callLog.to_number || "—"}</p>
                   </div>
                 </div>
 
                 {callLog.recording_url && (
                   <div className="flex gap-2 pt-3">
-                    <Button variant="outline" size="sm" asChild className="flex-1 bg-transparent hover:bg-purple-50">
+                    <Button variant="outline" size="sm" asChild className="flex-1">
                       <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
                         <Play className="h-4 w-4 mr-2" />
                         Play
                       </a>
                     </Button>
-                    <Button variant="outline" size="sm" asChild className="flex-1 bg-transparent hover:bg-purple-50">
+                    <Button variant="outline" size="sm" asChild className="flex-1">
                       <a href={callLog.recording_url} download>
                         <Download className="h-4 w-4 mr-2" />
                         Download
@@ -242,14 +243,14 @@ async function startMemberAnalysis(name, total) {
 }
 
 const OUTCOME_STYLES = {
-  connected: "bg-green-100/80 text-green-700 border-green-200",
-  appointment_set: "bg-emerald-100/80 text-emerald-700 border-emerald-200",
-  callback_promised: "bg-blue-100/80 text-blue-700 border-blue-200",
-  voicemail: "bg-amber-100/80 text-amber-700 border-amber-200",
-  no_answer: "bg-gray-100/80 text-gray-600 border-gray-200",
-  not_interested: "bg-red-100/80 text-red-700 border-red-200",
-  wrong_number: "bg-red-100/80 text-red-700 border-red-200",
-  other: "bg-gray-100/80 text-gray-600 border-gray-200",
+  connected: "bg-pd-success text-white",
+  appointment_set: "bg-pd-success text-white",
+  callback_promised: "bg-pd-info text-white",
+  voicemail: "bg-pd-warning text-white",
+  no_answer: "bg-gray-600 text-white",
+  not_interested: "bg-pd-danger text-white",
+  wrong_number: "bg-pd-danger text-white",
+  other: "bg-gray-600 text-white",
 }
 
 const parseOutcome = (summary) => {
@@ -300,7 +301,7 @@ function MemberAnalyzeDialog({ member }) {
     }
   }, [open, name, count])
 
-  if (!name) return <span className="text-sm text-muted-foreground">—</span>
+  if (!name) return <span className="text-sm text-pd-subtle">—</span>
 
   const running = run?.status === "running"
   const analyzed = (run?.calls || []).filter((c) => c.summary)
@@ -313,19 +314,19 @@ function MemberAnalyzeDialog({ member }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5 bg-transparent hover:bg-purple-50 transition-colors">
+        <Button variant="outline" size="sm" className="gap-1.5">
           {running ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-500" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-pd-primary" />
           ) : (
-            <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+            <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
           )}
           {running ? `${run.done}/${run.total}` : "Analyze"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto bg-white">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-500" />
+          <DialogTitle className="font-pd-display text-xl font-bold text-pd-ink flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-pd-primary" />
             AI Call Analysis — {name}
           </DialogTitle>
         </DialogHeader>
@@ -335,7 +336,7 @@ function MemberAnalyzeDialog({ member }) {
           <div className="space-y-4 pt-2">
             <div className="flex items-end gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <label className="text-xs font-medium text-pd-subtle uppercase tracking-wider">
                   Last how many calls? (1–{MEMBER_ANALYSIS_MAX})
                 </label>
                 <Input
@@ -350,28 +351,28 @@ function MemberAnalyzeDialog({ member }) {
               <Button
                 onClick={() => startMemberAnalysis(name, Math.min(count, estimate?.calls_found ?? count))}
                 disabled={estimating || !estimate || estimate.calls_found === 0}
-                className="bg-purple-600 hover:bg-purple-700 text-white gap-2"
+                className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
                 Analyze
               </Button>
             </div>
 
-            <div className="rounded-lg border border-purple-100 bg-purple-50/50 px-4 py-3 text-sm">
+            <div className="rounded-xl border border-pd-primary-pale bg-pd-primary-tint/60 px-4 py-3 text-sm">
               {estimating ? (
-                <span className="flex items-center gap-2 text-muted-foreground">
+                <span className="flex items-center gap-2 text-pd-subtle">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" /> Estimating cost…
                 </span>
               ) : estimate ? (
                 estimate.calls_found === 0 ? (
-                  <span className="text-muted-foreground">No recorded calls found for this member.</span>
+                  <span className="text-pd-subtle">No recorded calls found for this member.</span>
                 ) : (
                   <div className="space-y-1">
-                    <p className="font-semibold text-foreground">
+                    <p className="font-semibold text-pd-ink">
                       ~{estimate.estimated_credits} credits
-                      <span className="ml-2 font-normal text-muted-foreground">estimated</span>
+                      <span className="ml-2 font-normal text-pd-subtle">estimated</span>
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-pd-subtle">
                       {estimate.calls_found} recorded {estimate.calls_found === 1 ? "call" : "calls"}
                       {estimate.calls_found < estimate.requested && ` (only ${estimate.calls_found} of ${estimate.requested} requested exist)`}
                       {" · "}{estimate.total_minutes} min of audio
@@ -380,10 +381,10 @@ function MemberAnalyzeDialog({ member }) {
                   </div>
                 )
               ) : (
-                <span className="text-muted-foreground">Couldn&apos;t fetch a cost estimate.</span>
+                <span className="text-pd-subtle">Couldn&apos;t fetch a cost estimate.</span>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-pd-subtle">
               Recordings are transcribed and reviewed by AI. You can close this window while it runs — you&apos;ll be
               notified when the analysis is done.
             </p>
@@ -393,11 +394,15 @@ function MemberAnalyzeDialog({ member }) {
         {/* Progress */}
         {running && (
           <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
-            <p className="text-sm font-semibold text-foreground">
+            <div className="flex w-full max-w-xs flex-col gap-2" aria-hidden="true">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+            <p className="text-sm font-semibold text-pd-ink">
               Analyzing calls… {run.done}/{run.total}
             </p>
-            <p className="text-xs text-muted-foreground max-w-xs">
+            <p className="text-xs text-pd-subtle max-w-xs">
               Transcribing and reviewing {name}&apos;s recordings. Feel free to close this window — you&apos;ll be
               notified when it&apos;s done.
             </p>
@@ -407,7 +412,7 @@ function MemberAnalyzeDialog({ member }) {
         {/* Error */}
         {run?.status === "error" && (
           <div className="space-y-3 py-4">
-            <p className="text-sm text-red-600">{run.error}</p>
+            <p className="text-sm text-pd-danger">{run.error}</p>
             <Button variant="outline" size="sm" onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}>
               Try again
             </Button>
@@ -419,12 +424,12 @@ function MemberAnalyzeDialog({ member }) {
           <div className="space-y-4 pt-2">
             <div className="flex flex-wrap items-center gap-2">
               {Object.entries(outcomes).map(([o, n]) => (
-                <Badge key={o} variant="outline" className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} border text-xs font-medium`}>
+                <Badge key={o} className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
                   {o.replace(/_/g, " ")}: {n}
                 </Badge>
               ))}
               {run.failed > 0 && (
-                <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200 text-xs font-medium">
+                <Badge variant="destructive" className="text-[11px] font-bold">
                   {run.failed} failed to transcribe
                 </Badge>
               )}
@@ -432,25 +437,24 @@ function MemberAnalyzeDialog({ member }) {
 
             <div className="space-y-3">
               {run.calls.map((c) => (
-                <div key={c.call_id} className="rounded-lg border border-border bg-card p-4">
+                <div key={c.call_id} className="rounded-xl border border-pd-border bg-pd-surface p-4">
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-pd-subtle">
                       {c.started_at ? new Date(c.started_at).toLocaleString() : "—"}
                       {c.lead_name && ` · ${c.lead_name}`}
                       {c.duration_seconds != null && ` · ${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s`}
                     </p>
                     {c.summary && parseOutcome(c.summary) && (
                       <Badge
-                        variant="outline"
-                        className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} border text-xs font-medium shrink-0`}
+                        className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} text-[11px] font-bold shrink-0`}
                       >
                         {parseOutcome(c.summary).replace(/_/g, " ")}
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-foreground whitespace-pre-line">
+                  <p className="text-sm text-pd-body whitespace-pre-line">
                     {c.summary ? c.summary.replace(/\n?OUTCOME:.*$/i, "").trim() : (
-                      <span className="text-red-600">{c.error}</span>
+                      <span className="text-pd-danger">{c.error}</span>
                     )}
                   </p>
                 </div>
@@ -463,7 +467,7 @@ function MemberAnalyzeDialog({ member }) {
               onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}
               className="gap-1.5"
             >
-              <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+              <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
               New analysis
             </Button>
           </div>
@@ -489,8 +493,8 @@ const OVERVIEW_COLUMNS = [
 
 const STATUS_CELL = (_v, row) => (
   <Badge
-    variant="outline"
-    className={`border-0 rounded-full font-semibold ${row.status === "Inactive" ? "bg-[#FEE2E2] text-[#991B1B]" : "bg-[#DCFCE7] text-[#166534]"}`}
+    variant={row.status === "Inactive" ? "destructive" : "success"}
+    className="text-[11px] font-bold"
   >
     {row.status || "Active"}
   </Badge>
@@ -500,7 +504,7 @@ const CALLS_CELL = (_v, row) =>
   row.call_logs_count > 0 ? (
     <CallLogsDialog lead={row} />
   ) : (
-    <span className="text-sm text-muted-foreground">No calls</span>
+    <span className="text-sm text-pd-subtle">No calls</span>
   )
 
 const DATE_CELL = (v) => (v ? new Date(v).toLocaleDateString() : "—")
@@ -535,11 +539,10 @@ const MEMBER_COLUMNS = [
 
 const DIRECTION_CELL = (_v, row) => (
   <Badge
-    variant="outline"
     className={`${row.direction === "outbound"
-      ? "bg-blue-100/80 text-blue-700 border-blue-200"
-      : "bg-green-100/80 text-green-700 border-green-200"
-      } border text-xs font-medium`}
+      ? "bg-pd-info text-white"
+      : "bg-pd-success text-white"
+      } text-[11px] font-bold`}
   >
     {row.direction === "outbound" ? "Outbound" : "Inbound"}
   </Badge>
@@ -556,19 +559,19 @@ const CALL_TIME_CELL = (v) => (v ? new Date(v).toLocaleString() : "—")
 const RECORDING_CELL = (_v, row) =>
   row.recording_url ? (
     <div className="flex items-center gap-1">
-      <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" asChild>
+      <Button variant="outline" size="icon-sm" asChild>
         <a href={row.recording_url} target="_blank" rel="noopener noreferrer" title="Play recording">
           <Play className="h-3.5 w-3.5" />
         </a>
       </Button>
-      <Button variant="outline" size="icon" className="h-8 w-8 bg-transparent" asChild>
+      <Button variant="outline" size="icon-sm" asChild>
         <a href={row.recording_url} download title="Download recording">
           <Download className="h-3.5 w-3.5" />
         </a>
       </Button>
     </div>
   ) : (
-    <span className="text-sm text-muted-foreground">—</span>
+    <span className="text-sm text-pd-subtle">—</span>
   )
 
 // ── Per-call AI analysis (Calls tab: sparkle button next to play/download) ──
@@ -599,7 +602,7 @@ function AnalyzeCell({ row }) {
   const [result, setResult] = useState(null)
   const [open, setOpen] = useState(false)
 
-  if (!row.recording_url) return <span className="text-sm text-muted-foreground">—</span>
+  if (!row.recording_url) return <span className="text-sm text-pd-subtle">—</span>
 
   const analyze = async () => {
     if (status === "loading") return
@@ -647,35 +650,34 @@ function AnalyzeCell({ row }) {
     <>
       <Button
         variant="outline"
-        size="icon"
-        className="h-8 w-8 bg-transparent"
+        size="icon-sm"
         onClick={analyze}
         disabled={status === "loading"}
         title={result ? "View AI analysis" : "AI analyze this call"}
       >
         {status === "loading" ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-purple-600" />
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-pd-primary" />
         ) : (
-          <Sparkles className={`h-3.5 w-3.5 ${result ? "text-purple-600" : ""}`} />
+          <Sparkles className={`h-3.5 w-3.5 ${result ? "text-pd-primary" : ""}`} />
         )}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg bg-white">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-purple-600" />
+            <DialogTitle className="font-pd-display flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-pd-primary" />
               Call analysis — {row.caller_name || row.to_number}
             </DialogTitle>
           </DialogHeader>
           {result && (
             <div className="space-y-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {row.agent_name && <span>Agent: <span className="font-medium text-foreground">{row.agent_name}</span></span>}
+              <div className="flex flex-wrap items-center gap-2 text-xs text-pd-subtle">
+                {row.agent_name && <span>Agent: <span className="font-medium text-pd-ink">{row.agent_name}</span></span>}
                 <span>{DURATION_CELL(row.duration)}</span>
                 {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
                 {sections?.outcome && (
-                  <Badge variant="outline" className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} border text-xs font-medium`}>
+                  <Badge className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
                     {sections.outcome.replace(/_/g, " ")}
                   </Badge>
                 )}
@@ -687,7 +689,7 @@ function AnalyzeCell({ row }) {
                   <AnalysisSection label="Coaching" text={sections.coaching} />
                 </>
               ) : (
-                <p className="whitespace-pre-wrap text-gray-700">{result.analysis}</p>
+                <p className="whitespace-pre-wrap text-pd-body">{result.analysis}</p>
               )}
             </div>
           )}
@@ -701,8 +703,8 @@ function AnalysisSection({ label, text }) {
   if (!text) return null
   return (
     <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>
-      <p className="mt-0.5 text-gray-700">{text}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-pd-faint">{label}</p>
+      <p className="mt-0.5 text-pd-body">{text}</p>
     </div>
   )
 }
@@ -738,9 +740,9 @@ const SECTION_TABS = [
 const TABLE_PANEL_ID = "sales-hub-table-panel"
 
 // Every control in the toolbar row wears the design's dropdown trigger: 38px
-// tall, white, hairline border, 10px radius, Inter 600 13px.
+// tall, white, hairline border, pill radius, Inter 600 13px.
 const TOOLBAR_CHIP =
-  "flex h-[38px] cursor-pointer items-center gap-2 rounded-sm border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider" 
+  "flex h-[38px] cursor-pointer items-center gap-2 rounded-full border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider" 
 
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
 
@@ -790,11 +792,11 @@ function CallsFilterDropdown({
 
       <DropdownMenuContent
         align="end"
-        className="bg-white p-4 w-[340px] space-y-4"
+        className="bg-pd-surface p-4 w-[340px] space-y-4"
         onCloseAutoFocus={(e) => e.preventDefault()}
       >
         <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
-          <label htmlFor="recent-calls-limit" className="text-xs font-medium text-muted-foreground">
+          <label htmlFor="recent-calls-limit" className="text-xs font-medium text-pd-subtle">
             Show last
           </label>
           <div className="flex items-center gap-2">
@@ -812,12 +814,12 @@ function CallsFilterDropdown({
               }}
               className="h-9 w-20 text-sm"
             />
-            <span className="text-sm text-muted-foreground">calls</span>
+            <span className="text-sm text-pd-subtle">calls</span>
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <span className="text-xs font-medium text-muted-foreground">Direction</span>
+          <span className="text-xs font-medium text-pd-subtle">Direction</span>
           <div className="flex gap-1">
             {[
               ["all", "All"],
@@ -828,10 +830,10 @@ function CallsFilterDropdown({
                 key={id}
                 type="button"
                 onClick={() => setDirection(id)}
-                className={`flex-1 h-8 rounded-md text-xs font-medium border transition-colors ${
+                className={`flex-1 h-8 rounded-full text-xs font-medium border transition-colors ${
                   direction === id
-                    ? "bg-purple-600 text-white border-purple-600"
-                    : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
+                    ? "bg-pd-primary text-white border-pd-primary"
+                    : "bg-pd-surface text-pd-body border-pd-border hover:bg-pd-divider"
                 }`}
               >
                 {label}
@@ -841,7 +843,7 @@ function CallsFilterDropdown({
         </div>
 
         <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
-          <span className="text-xs font-medium text-muted-foreground">Duration</span>
+          <span className="text-xs font-medium text-pd-subtle">Duration</span>
           <div className="flex items-center gap-1.5">
             <Input
               type="number"
@@ -852,7 +854,7 @@ function CallsFilterDropdown({
               onKeyDown={(e) => e.stopPropagation()}
               className="h-9 text-sm w-14"
             />
-            <span className="text-xs text-muted-foreground">m</span>
+            <span className="text-xs text-pd-subtle">m</span>
             <Input
               type="number"
               min={0}
@@ -863,8 +865,8 @@ function CallsFilterDropdown({
               onKeyDown={(e) => e.stopPropagation()}
               className="h-9 text-sm w-14"
             />
-            <span className="text-xs text-muted-foreground">s</span>
-            <span className="text-xs text-muted-foreground">to</span>
+            <span className="text-xs text-pd-subtle">s</span>
+            <span className="text-xs text-pd-subtle">to</span>
             <Input
               type="number"
               min={0}
@@ -874,7 +876,7 @@ function CallsFilterDropdown({
               onKeyDown={(e) => e.stopPropagation()}
               className="h-9 text-sm w-14"
             />
-            <span className="text-xs text-muted-foreground">m</span>
+            <span className="text-xs text-pd-subtle">m</span>
             <Input
               type="number"
               min={0}
@@ -885,19 +887,19 @@ function CallsFilterDropdown({
               onKeyDown={(e) => e.stopPropagation()}
               className="h-9 text-sm w-14"
             />
-            <span className="text-xs text-muted-foreground">s</span>
+            <span className="text-xs text-pd-subtle">s</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 pt-3 border-t">
-          <Button variant="ghost" size="sm" onClick={onClear} className="border border-gray-300 rounded-md">
+        <div className="flex items-center gap-2 pt-3 border-t border-pd-divider">
+          <Button variant="outline" size="sm" onClick={onClear}>
             Clear
           </Button>
           <Button
             variant="default"
             size="sm"
             onClick={() => setOpen(false)}
-            className="flex-1 rounded-md bg-purple-600 text-white font-semibold"
+            className="flex-1"
           >
             Done
           </Button>
@@ -926,7 +928,7 @@ function LeadsFilterDropdown({ open, setOpen, hideNoDialerActivity, setHideNoDia
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="bg-white p-4 w-[300px] space-y-3">
+      <DropdownMenuContent align="end" className="bg-pd-surface p-4 w-[300px] space-y-3">
         <label className="flex items-start gap-2.5 cursor-pointer">
           <Checkbox
             checked={hideNoDialerActivity}
@@ -934,8 +936,8 @@ function LeadsFilterDropdown({ open, setOpen, hideNoDialerActivity, setHideNoDia
             className="mt-0.5"
           />
           <span className="text-sm">
-            <span className="block font-medium text-foreground">Hide No-Dialer-Activity Leads</span>
-            <span className="block text-xs text-muted-foreground mt-0.5">
+            <span className="block font-medium text-pd-ink">Hide No-Dialer-Activity Leads</span>
+            <span className="block text-xs text-pd-subtle mt-0.5">
               Only show leads the dialer has called in the selected period.
             </span>
           </span>
@@ -1447,16 +1449,16 @@ export function CallCentreContent({
   const defaultColumnIds = activeColumns.map((c) => c.id)
 
   const StatCard = ({ label, value, desc, Icon }) => (
-    <Card className="border rounded-lg shadow-sm">
+    <Card className="border border-pd-border rounded-xl shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-sm text-pd-muted font-medium">{label}</CardTitle>
-        <div className="h-7 w-7 bg-pd-primary/10 rounded-md text-center flex items-center justify-center">
-          <Icon className="h-5 w-5 text-purple-500" />
+        <div className="h-7 w-7 bg-pd-primary-tint rounded-xl text-center flex items-center justify-center">
+          <Icon className="h-5 w-5 text-pd-primary" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{groupsLoading ? "—" : value.toLocaleString()}</div>
-        <p className="text-xs text-pd-muted text-muted-foreground mt-1">{desc}</p>
+        <div className="font-pd-display text-2xl font-bold text-pd-ink">{groupsLoading ? "—" : value.toLocaleString()}</div>
+        <p className="text-xs text-pd-muted mt-1">{desc}</p>
       </CardContent>
     </Card>
   )
@@ -1485,23 +1487,23 @@ export function CallCentreContent({
     // that goes wrong the moment anything else changes width — and did, inside
     // the Sales Hub's own scroll region.
     <div className="min-w-0">
-      <div className="flex flex-col gap-6">
+      <Stagger className="flex flex-col gap-6">
         {/* Stat cards (windowed). The Sales Hub draws its own six-tile KPI grid
             from the same figures and turns these off; /clients/[id] has no call
             KPIs of its own on this tab, so they stay its default. */}
         {showStatCards && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} />
-            <StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} />
-            <StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} />
-            <StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} />
-          </div>
+          <Stagger gap={0.05} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StaggerItem><StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} /></StaggerItem>
+            <StaggerItem><StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} /></StaggerItem>
+            <StaggerItem><StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} /></StaggerItem>
+            <StaggerItem><StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} /></StaggerItem>
+          </Stagger>
         )}
 
         {/* Section tabs, and the controls that act on whichever table is under
             them. The design puts view switches above the content they filter
             and the window filter up in the header — see the shell. */}
-        <div>
+        <StaggerItem>
           <div className="flex flex-col gap-3 md:flex-row md:items-center">
             <PageTabs
               label="Sales Hub section"
@@ -1522,7 +1524,7 @@ export function CallCentreContent({
                   aria-label="Search the table"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full rounded-sm border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[220px]"
+                  className="h-[38px] w-full pl-9 text-[13px] md:w-[220px]"
                 />
               </div>
               <ColumnsMenu
@@ -1586,7 +1588,7 @@ export function CallCentreContent({
               <>
                 {selectedClientGroup !== "all" && (
                   <div className="mb-3 flex items-center gap-2">
-                    <span className="flex items-center gap-2 rounded-md bg-pd-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-pd-primary">
+                    <span className="flex items-center gap-2 rounded-full bg-pd-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-pd-primary">
                       Client: {selectedClientLabel}
                       <button
                         type="button"
@@ -1643,8 +1645,8 @@ export function CallCentreContent({
               />
             )}
           </PageTabPanel>
-        </div>
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   )
 }

@@ -146,7 +146,7 @@ function ChartTooltipContent({
   return (
     <div
       className={cn(
-        "border-border/50 bg-white  grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl",
+        "border-pd-border bg-pd-surface grid min-w-[8rem] items-start gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs shadow-pd-tooltip",
         className
       )}>
       {!nestLabel ? tooltipLabel : null}
@@ -201,7 +201,7 @@ function ChartTooltipContent({
                         </span>
                       </div>
                       {item.value && (
-                        <span className="text-foreground font-mono font-medium tabular-nums">
+                        <span className="text-pd-ink font-pd-display font-semibold tabular-nums">
                           {item.value.toLocaleString()}
                         </span>
                       )}

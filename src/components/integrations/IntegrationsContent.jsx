@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { Progress } from "@/components/ui/progress"
 import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
@@ -32,12 +33,12 @@ function RefreshProgress({ progress }) {
   return (
     <div className="space-y-2 mt-2">
       <Progress value={current_step === "leads" ? 85 : current_step === "lead_counts" ? 95 : pct} className="h-1.5" />
-      <p className="text-[11px] text-muted-foreground">{stepLabel}</p>
+      <p className="text-[11px] text-pd-subtle">{stepLabel}</p>
       {presets_failed > 0 && (
-        <p className="text-[11px] text-amber-600">{presets_failed} preset(s) will retry</p>
+        <p className="text-[11px] text-pd-amber">{presets_failed} preset(s) will retry</p>
       )}
       {progress.status === "partial" && next_retry_at && (
-        <p className="text-[11px] text-blue-600">
+        <p className="text-[11px] text-pd-info">
           Retrying automatically (attempt {attempt}/{max_attempts})
         </p>
       )}
@@ -49,14 +50,14 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
   const isRefreshing = refreshStatus === "running"
 
   return (
-    <Card className="bg-white">
+    <Card className="bg-pd-surface">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image src={icon} alt={name} width={32} height={32} className="rounded" />
-            <CardTitle className="text-lg">{name}</CardTitle>
+            <Image src={icon} alt={name} width={32} height={32} className="rounded-xl" />
+            <CardTitle className="font-pd-display text-lg">{name}</CardTitle>
           </div>
-          <Badge variant={connected ? "default" : "secondary"} className={connected ? "bg-green-100 text-green-800 hover:bg-green-100" : ""}>
+          <Badge variant={connected ? "success" : "secondary"} className="text-[11px] font-bold">
             {connected ? "Connected" : "Not Connected"}
           </Badge>
         </div>
@@ -67,12 +68,12 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
             <div className="space-y-1.5 text-sm">
               {details.map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
-                  <span className="text-muted-foreground">{label}</span>
+                  <span className="text-pd-subtle">{label}</span>
                   <span className="font-medium text-right max-w-[60%] truncate">{value}</span>
                 </div>
               ))}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Refresh</span>
+                <span className="text-pd-subtle">Last Refresh</span>
                 <span className="font-medium flex items-center gap-1">
                   <Clock className="h-3 w-3" />
                   {formatDate(lastRefresh)}
@@ -105,17 +106,17 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
             )}
 
             {refreshStatus === "complete" && (
-              <p className="text-xs text-green-600 flex items-center gap-1 justify-center">
+              <p className="text-xs text-pd-success flex items-center gap-1 justify-center">
                 <CheckCircle className="h-3 w-3" /> Refresh completed
               </p>
             )}
             {refreshStatus === "error" && (
               <div className="text-center">
-                <p className="text-xs text-red-600 flex items-center gap-1 justify-center">
+                <p className="text-xs text-pd-danger flex items-center gap-1 justify-center">
                   <XCircle className="h-3 w-3" /> Refresh failed
                 </p>
                 {refreshError && (
-                  <p className="text-[10px] text-muted-foreground mt-1 truncate max-w-full" title={refreshError}>
+                  <p className="text-[10px] text-pd-subtle mt-1 truncate max-w-full" title={refreshError}>
                     {refreshError}
                   </p>
                 )}
@@ -123,7 +124,7 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
             )}
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-pd-subtle">
             This integration is not connected for this client group.
           </p>
         )}
@@ -231,52 +232,58 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
   const hpConnected = !!(group.hotprospector && Object.keys(group.hotprospector).length > 0)
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      <IntegrationCard
-        name="GoHighLevel"
-        icon={ghlIcon}
-        connected={ghlConnected}
-        details={[
-          { label: "Location", value: group.gohighlevel?.name || "—" },
-          { label: "Location ID", value: group.ghl_location_id || "—" },
-        ]}
-        lastRefresh={group.last_ghl_refresh}
-        refreshStatus={refreshStatus.ghl}
-        onRefresh={() => handleRefresh("ghl")}
-      />
+    <Stagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <StaggerItem>
+        <IntegrationCard
+          name="GoHighLevel"
+          icon={ghlIcon}
+          connected={ghlConnected}
+          details={[
+            { label: "Location", value: group.gohighlevel?.name || "—" },
+            { label: "Location ID", value: group.ghl_location_id || "—" },
+          ]}
+          lastRefresh={group.last_ghl_refresh}
+          refreshStatus={refreshStatus.ghl}
+          onRefresh={() => handleRefresh("ghl")}
+        />
+      </StaggerItem>
 
-      <IntegrationCard
-        name="Meta Ads"
-        icon={metaIcon}
-        connected={metaConnected}
-        details={[
-          { 
-            label: "Account", 
-            value: (group.facebook?.name && group.facebook.name !== "Unknown Ad Account")
-              ? group.facebook.name 
-              : group.name
-          },
-          { label: "Account ID", value: group.facebook?.ad_account_id || group.meta_ad_account_id || "—" },
-          { label: "Currency", value: group.facebook?.currency || group.ad_account_currency || "—" },
-        ]}
-        lastRefresh={group.last_meta_refresh}
-        refreshStatus={refreshStatus.meta}
-        refreshProgress={metaProgress}
-        refreshError={metaError}
-        onRefresh={() => handleRefresh("meta")}
-      />
+      <StaggerItem>
+        <IntegrationCard
+          name="Meta Ads"
+          icon={metaIcon}
+          connected={metaConnected}
+          details={[
+            { 
+              label: "Account", 
+              value: (group.facebook?.name && group.facebook.name !== "Unknown Ad Account")
+                ? group.facebook.name 
+                : group.name
+            },
+            { label: "Account ID", value: group.facebook?.ad_account_id || group.meta_ad_account_id || "—" },
+            { label: "Currency", value: group.facebook?.currency || group.ad_account_currency || "—" },
+          ]}
+          lastRefresh={group.last_meta_refresh}
+          refreshStatus={refreshStatus.meta}
+          refreshProgress={metaProgress}
+          refreshError={metaError}
+          onRefresh={() => handleRefresh("meta")}
+        />
+      </StaggerItem>
 
-      <IntegrationCard
-        name="HotProspector"
-        icon={hpIcon}
-        connected={hpConnected}
-        details={[
-          { label: "Group ID", value: group.hotprospector_group_id || "—" },
-        ]}
-        lastRefresh={group.last_hp_refresh}
-        refreshStatus="idle"
-        onRefresh={() => toast.info("HotProspector refresh coming soon")}
-      />
-    </div>
+      <StaggerItem>
+        <IntegrationCard
+          name="HotProspector"
+          icon={hpIcon}
+          connected={hpConnected}
+          details={[
+            { label: "Group ID", value: group.hotprospector_group_id || "—" },
+          ]}
+          lastRefresh={group.last_hp_refresh}
+          refreshStatus="idle"
+          onRefresh={() => toast.info("HotProspector refresh coming soon")}
+        />
+      </StaggerItem>
+    </Stagger>
   )
 }

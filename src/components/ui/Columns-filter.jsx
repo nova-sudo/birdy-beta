@@ -11,6 +11,7 @@ import {
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 
 export default function ColumnVisibilityDropdown({
   isOpen,
@@ -65,7 +66,7 @@ export default function ColumnVisibilityDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className={triggerClassName ?? "flex items-center gap-1 md:gap-2 px-2 hover:bg-purple-200 font-semibold md:px-4 bg-white h-10 text-sm "}
+          className={triggerClassName ?? "flex items-center gap-1 md:gap-2 px-2 md:px-4 h-10 text-sm"}
         >
           <SlidersHorizontal className="h-4 w-4" />
           <span className="hidden lg:inline">Columns</span>
@@ -73,9 +74,9 @@ export default function ColumnVisibilityDropdown({
         </Button>
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" className="bg-white p-0 w-screen sm:w-fit md:w-fit">
+      <DropdownMenuContent align="end" className="bg-pd-surface p-0 w-screen sm:w-fit md:w-fit">
         {/* Categories */}
-        <div className="flex flex-nowrap justify-between gap-1 p-2 border-b overflow-x-auto md:overflow-x-visible">
+        <div className="flex flex-nowrap justify-between gap-1 p-2 border-b border-pd-divider overflow-x-auto md:overflow-x-visible">
           {categories.map(({ id, label }) => (
             <Button
               key={id}
@@ -92,9 +93,9 @@ export default function ColumnVisibilityDropdown({
 
         {/* Search — fully local, no parent re-render */}
         <div className="px-2 mt-2 mb-2" onFocusCapture={(e) => e.stopPropagation()}>
-          <input
+          <Input
             ref={inputRef}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-9 text-sm"
             placeholder={`Search in ${
               categories.find(c => c.id === selectedCategory)?.label ||
               "All Metrics"
@@ -107,7 +108,7 @@ export default function ColumnVisibilityDropdown({
         </div>
 
         {/* Columns */}
-        <div className="max-h-80 overflow-y-auto px-2 pb-2 border-t">
+        <div className="max-h-80 overflow-y-auto px-2 pb-2 border-t border-pd-divider">
           {displayColumns.map((col) => {
             const Icon = getIcon?.(col)
 
@@ -135,21 +136,21 @@ export default function ColumnVisibilityDropdown({
         </div>
 
         {/* Actions */}
-        <div className="flex p-2 border-t">
+        <div className="flex p-2 border-t border-pd-divider">
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={selectAll}
-            className="border border-gray-300 rounded-md mr-2"
+            className="mr-2"
           >
             Select All
           </Button>
 
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             onClick={clearAll}
-            className="border border-gray-300 rounded-md mr-2"
+            className="mr-2"
           >
             Clear
           </Button>
@@ -158,7 +159,6 @@ export default function ColumnVisibilityDropdown({
             variant="default"
             size="sm"
             onClick={save}
-            className="rounded-md bg-purple-600 text-white font-semibold"
           >
             Save view
           </Button>

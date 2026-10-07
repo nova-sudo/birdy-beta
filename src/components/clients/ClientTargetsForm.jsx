@@ -148,8 +148,8 @@ export function ClientTargetsForm({
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-sm font-semibold text-foreground">Monthly targets</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="font-pd-display text-sm font-semibold text-pd-ink">Monthly targets</p>
+        <p className="text-xs text-pd-subtle">
           What this client should be achieving each month. The closes target
           drives the health band, recalculated every Monday.
         </p>
@@ -163,7 +163,7 @@ export function ClientTargetsForm({
             </Label>
             <div className="relative mt-1.5">
               {field.prefix === "currency" && (
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-pd-subtle">
                   {currencySymbol}
                 </span>
               )}
@@ -181,11 +181,11 @@ export function ClientTargetsForm({
                 className={`h-[38px] text-[13px] ${
                   field.prefix === "currency" ? "pl-7" : ""
                 } ${field.suffix ? "pr-8" : ""} ${
-                  errors[field.id] ? "border-destructive" : ""
+                  errors[field.id] ? "border-pd-danger" : ""
                 }`}
               />
               {field.suffix && (
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[13px] text-pd-subtle">
                   {field.suffix}
                 </span>
               )}
@@ -193,7 +193,7 @@ export function ClientTargetsForm({
             <p
               id={`help-${field.id}`}
               className={`mt-1 text-[11px] ${
-                errors[field.id] ? "text-destructive" : "text-muted-foreground"
+                errors[field.id] ? "text-pd-danger" : "text-pd-subtle"
               }`}
             >
               {errors[field.id] ?? field.help}
@@ -202,8 +202,8 @@ export function ClientTargetsForm({
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-pd-border pt-4">
+        <label className="flex cursor-pointer items-center gap-2 text-xs text-pd-subtle">
           <Checkbox
             checked={saveAsDefault}
             onCheckedChange={(v) => setSaveAsDefault(v === true)}

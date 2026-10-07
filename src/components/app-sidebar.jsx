@@ -2,11 +2,12 @@ import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List,
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
+import { motion } from "framer-motion"
 import { useSidebar } from "@/components/ui/sidebar"
 import { apiRequest } from "@/lib/api"
 import { clearSession } from "@/lib/session"
 import { APP_VERSION } from "@/lib/changelog"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import {
   Sidebar,
@@ -100,9 +101,7 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarMenuButton size="lg" asChild className="rounded-none h-16 overflow-visible">
               <Link href="/clients">
-                <span className="flex h-10 w-10 shrink-0 items-end justify-center overflow-hidden rounded-full border border-purple-100 bg-purple-50">
-                  <Birdy state={birdyState} size={33} speedK={1.15} />
-                </span>
+                <BirdyAvatar state={birdyState} size={40} speedK={1.15} />
               </Link>
             </SidebarMenuButton>
 
@@ -113,17 +112,31 @@ export function AppSidebar() {
                   const isActive = pathname === item.url;
                   return (
                     <SidebarMenuItem key={item.title}>
+                      {/* The active bar sits on the item rather than inside the
+                          button: the button clips to a pill, which would trim
+                          a bar on its edge to a sliver. One layoutId across
+                          every item, so it slides between them on navigation.
+                          Centred with a margin — framer owns the transform. */}
+                      {isActive && (
+                        <motion.span
+                          layoutId="sidebar-active"
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -left-2 top-1/2 -mt-2.5 h-5 w-[3px] rounded-full bg-pd-primary"
+                          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                        />
+                      )}
                       <Tooltip>
                         {/* asChild: without it the trigger renders its own <button>
                             around the menu button — a button inside a button,
                             which the browser re-nests, so hydration fails and
                             React rebuilds the shell on the client. */}
                         <TooltipTrigger asChild>
-                          <SidebarMenuButton asChild>
-                            <Link
-                              href={item.url}
-                              className={`font-semibold text-[14px] ${isActive ? 'text-purple-600' : 'text-black'}`}
-                            >
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="font-semibold text-[14px] text-pd-ink data-[active=true]:bg-pd-primary-tint data-[active=true]:text-pd-primary data-[active=true]:hover:bg-pd-primary-tint data-[active=true]:hover:text-pd-primary"
+                          >
+                            <Link href={item.url}>
                               <item.icon />
                               <span>{item.title}</span>
                             </Link>
@@ -151,7 +164,7 @@ export function AppSidebar() {
                 <TooltipTrigger asChild>
                   <SidebarMenuButton
                     onClick={() => setShowLogoutDialog(true)}
-                    className="font-semibold text-[14px] text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="font-semibold text-[14px] text-pd-danger hover:text-pd-danger hover:bg-pd-danger-bg"
                   >
                     <LogOut />
                     <span>Logout</span>
@@ -177,7 +190,7 @@ export function AppSidebar() {
             <AlertDialogAction
               onClick={handleLogout}
               disabled={isLoggingOut}
-              className="bg-red-600 text-white hover:bg-red-700"
+              variant="destructive"
             >
               {isLoggingOut ? "Logging out..." : "Logout"}
             </AlertDialogAction>

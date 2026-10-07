@@ -120,7 +120,7 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
             {exits.rows.map((row) => (
               <li
                 key={row.key}
-                className="rounded-sm border border-pd-border bg-pd-canvas px-[14px] py-3"
+                className="rounded-xl border border-pd-border bg-pd-canvas px-[14px] py-3"
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-[12.5px] text-pd-body">{row.label}</span>

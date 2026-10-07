@@ -3,27 +3,27 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 export function StatsCard({ title, value, icon: Icon, subtitle, loading }) {
   return (
-    <Card className="border shadow-sm rounded-lg">
+    <Card className="border border-pd-border bg-pd-surface shadow-sm rounded-2xl">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-normal text-pd-muted text-muted-foreground">
+        <CardTitle className="text-sm font-medium text-pd-subtle">
           {title}
         </CardTitle>
         {Icon && (
-          <div className="w-8 h-7 bg-pd-primary/10 rounded-md text-center flex items-center justify-center">
-            <Icon className="h-4 w-5 text-purple-600" />
+          <div className="size-8 bg-pd-primary-tint rounded-full text-center flex items-center justify-center">
+            <Icon className="size-4 text-pd-primary" />
           </div>
         )}
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="w-full py-4">
-            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-6 w-1/2 rounded-full" />
           </div>
         ) : (
-          <div className="text-2xl font-bold">{value}</div>
+          <div className="font-pd-display text-2xl font-bold text-pd-ink">{value}</div>
         )}
         {subtitle && (
-          <p className="text-xs text-pd-muted text-muted-foreground">{subtitle}</p>
+          <p className="text-xs text-pd-subtle">{subtitle}</p>
         )}
       </CardContent>
     </Card>

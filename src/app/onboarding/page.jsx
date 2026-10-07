@@ -33,7 +33,8 @@ import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 import { pdFontClass } from "@/lib/pd-fonts"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import {
   FacebookGlyph,
@@ -1134,7 +1135,12 @@ export default function OnboardingPage() {
   if (booting) {
     return (
       <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white`}>
-        <SpinnerRing size={26} />
+        <div className="flex w-full max-w-[600px] flex-col items-center px-5">
+          <Skeleton className="mb-[26px] h-20 w-20 rounded-full" />
+          <Skeleton className="mb-3 h-7 w-3/5" />
+          <Skeleton className="mb-[30px] h-4 w-4/5" />
+          <Skeleton className="h-12 w-40 rounded-full" />
+        </div>
       </div>
     )
   }
@@ -1174,7 +1180,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={back}
-              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body transition-colors hover:border-pd-chevron"
+              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-body transition-colors hover:border-pd-chevron"
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={2} />
             </button>
@@ -1189,10 +1195,9 @@ export default function OnboardingPage() {
                 {[1, 2, 3, 4, 5, 6, 7].map((p) => (
                   <div
                     key={p}
-                    className="h-1 flex-1 rounded-sm"
-                    style={{
-                      background: p < phase ? "#5B3FD6" : p === phase ? "#9F8BEA" : "#EFEEEB",
-                    }}
+                    className={`h-1 flex-1 rounded-full ${
+                      p < phase ? "bg-pd-primary" : p === phase ? "bg-pd-primary-light" : "bg-pd-divider"
+                    }`}
                   />
                 ))}
               </div>
@@ -1214,7 +1219,7 @@ export default function OnboardingPage() {
             it is happening — and the only place a failure surfaces before the
             completion step, so the error branch has to be actionable. */}
         {creationState === "error" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-sm border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[2px] flex items-center gap-[7px]">
               <AlertCircle className="h-[13px] w-[13px] shrink-0 text-pd-danger" strokeWidth={2.4} />
               <span className="text-[11.5px] font-semibold text-pd-danger">
@@ -1233,7 +1238,7 @@ export default function OnboardingPage() {
             </button>
           </div>
         ) : creationState === "creating" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-sm border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[7px] flex items-center gap-[9px]">
               <SpinnerRing />
               <span className="text-[11.5px] font-semibold text-pd-ink">Adding {clientDisplayName}</span>
@@ -1241,7 +1246,7 @@ export default function OnboardingPage() {
             <FakeProgressBar expectedMs={18000} />
           </div>
         ) : showSyncBadge ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-sm border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[8px] flex items-center gap-[9px]">
               <SpinnerRing />
               <span className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</span>
@@ -1262,9 +1267,7 @@ export default function OnboardingPage() {
 
           {currentKey === "welcome" && (
             <div className={STEP_COL}>
-              <div className="mx-auto mb-[26px] flex h-20 w-20 items-end justify-center overflow-hidden rounded-full border border-pd-border-strong bg-white">
-                <Birdy state={birdyState} size={65} />
-              </div>
+              <BirdyAvatar size={80} tone="white" state={birdyState} className="mx-auto mb-[26px]" />
               <div className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></div>
               <div className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
                 We&apos;ll get you set up with your first client in under 10 minutes.
@@ -1307,7 +1310,7 @@ export default function OnboardingPage() {
 
           {currentKey === "connect_ghl" && (
             <div className={STEP_COL}>
-              <IconChip bg="#EFECFB" color="#5B3FD6"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
+              <IconChip className="bg-pd-primary-tint text-pd-primary"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
               <div className="mb-[10px]">
                 <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
               </div>
@@ -1384,7 +1387,7 @@ export default function OnboardingPage() {
 
           {currentKey === "connect_meta" && (
             <div className={STEP_COL}>
-              <IconChip bg="#EAF1FD" color="#3B7DD6"><FacebookGlyph /></IconChip>
+              <IconChip className="bg-pd-info-bg text-pd-info"><FacebookGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Next up, let&apos;s connect Meta.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
                 Birdy reads ad spend, impressions and results from your ad accounts so it can
@@ -1494,13 +1497,11 @@ export default function OnboardingPage() {
                   <div
                     key={opt.id}
                     onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
-                    className="flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors"
-                    style={{
-                      borderColor: salesTool === opt.id ? "#5B3FD6" : "#E7E6E3",
-                      background: salesTool === opt.id ? "#EFECFB" : "#fff",
-                    }}
+                    className={`flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors ${
+                      salesTool === opt.id ? "border-pd-primary bg-pd-primary-tint" : "border-pd-border bg-white"
+                    }`}
                   >
-                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-sm ${opt.chip}`}>
+                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-xl ${opt.chip}`}>
                       {opt.icon}
                     </div>
                     <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
@@ -1523,7 +1524,7 @@ export default function OnboardingPage() {
                     value={hpUid}
                     onChange={(e) => setHpUid(e.target.value)}
                     placeholder="API UID"
-                    className="mb-2 w-full rounded-sm border-[1.5px] border-pd-border px-[14px] py-[13px] font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
+                    className="mb-2 w-full rounded-full border-[1.5px] border-pd-border px-[14px] py-[13px] font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
                   />
                   <div className="relative mb-[14px]">
                     <input
@@ -1531,7 +1532,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setHpKey(e.target.value)}
                       type={hpVisible ? "text" : "password"}
                       placeholder="API key"
-                      className="w-full rounded-sm border-[1.5px] border-pd-border py-[13px] pl-[14px] pr-11 font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
+                      className="w-full rounded-full border-[1.5px] border-pd-border py-[13px] pl-[14px] pr-11 font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
                     />
                     <button
                       type="button"
@@ -1632,7 +1633,7 @@ export default function OnboardingPage() {
               <select
                 value={currency || selectedAd?.currency || "GBP"}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="mb-[30px] w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
+                className="mb-[30px] w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
               >
                 {CURRENCY_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -1703,7 +1704,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Cost per acquisition target</div>
-                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <span className="mr-[6px] text-[14px] text-pd-faint">{currencySymbol}</span>
                   <input
                     value={cpa}
@@ -1713,11 +1714,11 @@ export default function OnboardingPage() {
                     className="flex-1 border-0 py-3 text-[15px] text-pd-ink outline-none placeholder:text-pd-faint"
                   />
                 </div>
-                <div className="mt-[5px] text-[11px] text-[#B4B4C0]">Most agencies in your niche target {currencySymbol}30–60.</div>
+                <div className="mt-[5px] text-[11px] text-pd-faint">Most agencies in your niche target {currencySymbol}30–60.</div>
               </div>
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Monthly wins target</div>
-                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <input
                     value={wins}
                     onChange={(e) => setWins(e.target.value.replace(/[^\d]/g, ""))}
@@ -1730,7 +1731,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mb-[26px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Conversion rate target</div>
-                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <input
                     value={convRate}
                     onChange={(e) => setConvRate(e.target.value.replace(/[^\d]/g, ""))}
@@ -1768,7 +1769,7 @@ export default function OnboardingPage() {
 
           {currentKey === "slack_connect" && (
             <div className={STEP_COL}>
-              <IconChip bg="#FDF6EC" color="#E0920A"><SlackGlyph /></IconChip>
+              <IconChip className="bg-pd-warning-bg text-pd-warning"><SlackGlyph /></IconChip>
               <div className="mb-[10px]"><StepHeading>Let&apos;s connect Birdy to your Slack for notifications.</StepHeading></div>
               <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
                 Birdy will post alerts and daily summaries to a channel you choose. It only ever
@@ -1795,13 +1796,20 @@ export default function OnboardingPage() {
               <div className="flex flex-col items-start gap-6 text-left sm:flex-row">
                 <div className="w-full flex-1">
                   {channels === null ? (
-                    <div className="flex justify-center py-10"><SpinnerRing size={22} /></div>
+                    <div className="mb-[22px] overflow-hidden rounded-xl border border-pd-border">
+                      {[0, 1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-3 last:border-b-0">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="h-3.5 w-1/2" />
+                        </div>
+                      ))}
+                    </div>
                   ) : channelsError ? (
                     // Our failure, not their setup. Say what actually went
                     // wrong, offer the retry that used to require reloading
                     // the wizard, and let them past — see the Continue button
                     // below for why this cannot be a wall.
-                    <div className="rounded-sm border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
+                    <div className="rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
                       <div className="mb-[6px] flex items-center gap-[7px]">
                         <AlertCircle className="h-[14px] w-[14px] shrink-0 text-pd-danger" strokeWidth={2.4} />
                         <span className="text-[12.5px] font-semibold text-pd-danger">
@@ -1889,11 +1897,9 @@ export default function OnboardingPage() {
                   <div
                     key={opt.id}
                     onClick={() => setFrequency(opt.id)}
-                    className="flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors"
-                    style={{
-                      borderColor: frequency === opt.id ? "#5B3FD6" : "#E7E6E3",
-                      background: frequency === opt.id ? "#EFECFB" : "#fff",
-                    }}
+                    className={`flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors ${
+                      frequency === opt.id ? "border-pd-primary bg-pd-primary-tint" : "border-pd-border bg-white"
+                    }`}
                   >
                     <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
                     <div className="text-[11.5px] text-pd-faint">{opt.desc}</div>
@@ -1906,7 +1912,7 @@ export default function OnboardingPage() {
                   <select
                     value={notifyTime}
                     onChange={(e) => setNotifyTime(e.target.value)}
-                    className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                    className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                   >
                     {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -1919,7 +1925,7 @@ export default function OnboardingPage() {
                     <select
                       value={notifyDay}
                       onChange={(e) => setNotifyDay(e.target.value)}
-                      className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                      className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                     >
                       {DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
@@ -1929,7 +1935,7 @@ export default function OnboardingPage() {
                     <select
                       value={notifyTime}
                       onChange={(e) => setNotifyTime(e.target.value)}
-                      className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                      className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                     >
                       {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>
@@ -1965,11 +1971,9 @@ export default function OnboardingPage() {
                         className="flex cursor-pointer items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[13px] last:border-b-0"
                       >
                         <span
-                          className="flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white"
-                          style={{
-                            borderColor: on ? "#5B3FD6" : "#DCDBD7",
-                            background: on ? "#5B3FD6" : "#fff",
-                          }}
+                          className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-white ${
+                            on ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"
+                          }`}
                         >
                           {on ? "✓" : ""}
                         </span>
@@ -1978,7 +1982,7 @@ export default function OnboardingPage() {
                           <div className="text-[11.5px] text-pd-faint">{def.desc}</div>
                         </div>
                         {def.rec && (
-                          <span className="shrink-0 rounded-[5px] bg-pd-primary-tint px-[7px] py-[2px] text-[10px] font-bold text-pd-primary">
+                          <span className="shrink-0 rounded-full bg-pd-primary px-[7px] py-[2px] text-[11px] font-bold text-white">
                             RECOMMENDED
                           </span>
                         )}
@@ -1996,7 +2000,7 @@ export default function OnboardingPage() {
                     {briefItems.alerts && <div>🔔 Alerts: <strong className="text-white">1 triggered</strong> — CPA over target</div>}
                     {briefItems.underperform && <div>⚠️ Underperforming: <strong className="text-white">2 ads</strong> flagged for review</div>}
                     {!Object.values(briefItems).some(Boolean) && (
-                      <div className="text-[#A9A0B0]">Tick something on the left to see it here.</div>
+                      <div className="text-white/60">Tick something on the left to see it here.</div>
                     )}
                   </SlackPreviewCard>
                 </div>
@@ -2026,9 +2030,7 @@ export default function OnboardingPage() {
 
           {currentKey === "completion" && (
             <div className={STEP_COL}>
-              <div className="mx-auto mb-[22px] flex h-[136px] w-[136px] items-end justify-center overflow-hidden rounded-full border border-pd-border bg-white">
-                <Birdy state={birdyState} size={114} />
-              </div>
+              <BirdyAvatar size={136} tone="white" state={birdyState} className="mx-auto mb-[22px]" />
               <div className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></div>
               <div className="mb-[26px] text-[14px] text-pd-faint">
                 Here&apos;s everything Birdy just connected{agency ? ` for ${agency}` : ""}. We&apos;ll

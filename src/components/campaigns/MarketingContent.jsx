@@ -26,6 +26,7 @@ import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
 
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
@@ -894,16 +895,16 @@ export function MarketingContent({
     if (col === "ghl_matched") return value ? "✅" : "–"
     if (col === "ghl_opportunity_status") {
       if (!value) return "–"
-      const colors = { won: "text-green-600 bg-green-50", lost: "text-red-600 bg-red-50", open: "text-blue-600 bg-blue-50", abandoned: "text-gray-600 bg-gray-50" }
-      return <span className={`${colors[value] || ""} px-2 py-0.5 rounded-full text-xs font-medium capitalize`}>{value}</span>
+      const colors = { won: "bg-pd-success text-white", lost: "bg-pd-danger text-white", open: "bg-pd-info text-white", abandoned: "bg-gray-600 text-white" }
+      return <span className={`${colors[value] || "bg-gray-600 text-white"} px-2 py-0.5 rounded-full text-[11px] font-bold capitalize`}>{value}</span>
     }
     if (col === "lead_source") {
       const label = { instant_form: "Meta form", ghl_attribution: "GHL attribution" }[value]
       if (!label) return "–"
       const tone = value === "instant_form"
-        ? "text-pd-info bg-pd-info-bg"
-        : "text-pd-primary bg-pd-primary-tint"
-      return <span className={`${tone} px-2 py-0.5 rounded-full text-xs font-medium`}>{label}</span>
+        ? "bg-pd-info text-white"
+        : "bg-pd-primary text-white"
+      return <span className={`${tone} px-2 py-0.5 rounded-full text-[11px] font-bold`}>{label}</span>
     }
     if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"
     if (col === "ghl_tags") {
@@ -1133,7 +1134,7 @@ export function MarketingContent({
     // wider than the neighbouring hubs'. It went wrong in the embedded case
     // too — /clients/[id]'s Marketing tab measures a viewport it doesn't own.
     <div className="min-w-0">
-      <div className="flex flex-col gap-6">
+      <Stagger className="flex flex-col gap-6">
 
         {/* The title block and the date/group filters now live in the global
             top bar beside the bell and the profile menu — published by
@@ -1160,8 +1161,8 @@ export function MarketingContent({
           if (!group.meta_token_error) return null
 
           return (
-            <div className="flex items-center justify-between gap-3 rounded-sm border border-amber-200 bg-amber-50 px-4 py-3">
-              <div className="flex items-center gap-2 text-sm text-amber-800">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-pd-amber/30 bg-pd-amber-bg px-4 py-3">
+              <div className="flex items-center gap-2 text-sm text-pd-amber">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
@@ -1169,12 +1170,11 @@ export function MarketingContent({
                   Your Meta connection has expired or lost permissions. Please reconnect to continue seeing campaign data.
                 </span>
               </div>
-              <a
-                href="/settings?tab=integrations"
-                className="shrink-0 rounded-[12px] bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
-              >
-                Reconnect Meta
-              </a>
+              <Button asChild size="xs" className="shrink-0">
+                <a href="/settings?tab=integrations">
+                  Reconnect Meta
+                </a>
+              </Button>
             </div>
           )
         })()}
@@ -1224,7 +1224,7 @@ export function MarketingContent({
           )
 
           return (
-            <div className="flex items-start gap-2 rounded-sm border border-pd-border bg-pd-canvas px-4 py-3">
+            <div className="flex items-start gap-2 rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
               <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
               <p className="text-[12.5px] leading-[1.5] text-pd-body">{message}</p>
             </div>
@@ -1238,7 +1238,7 @@ export function MarketingContent({
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <div className={`${pdFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
+        <StaggerItem className={`${pdFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
           <div className="flex min-w-0 flex-col lg:flex-[1.65]">
             {groupsLoading || seriesLoading ? (
               <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
@@ -1300,27 +1300,29 @@ export function MarketingContent({
               </PdCard>
             )}
 
-            <div className="grid grid-cols-2 gap-[10px]">
+            <Stagger gap={0.05} className="grid grid-cols-2 gap-[10px]">
               {groupsLoading
                 ? Array.from({ length: 6 }).map((_, i) => (
                     <Skeleton key={i} className="h-[52px] rounded-xl" />
                   ))
                 : kpiTiles.map(tile => (
-                    <StatTile
-                      key={tile.key}
-                      layout="compact"
-                      icon={tile.icon}
-                      tone={tile.tone}
-                      value={tile.value}
-                      label={tile.label}
-                      direction={tile.direction}
-                      delta={tile.delta}
-                      polarity={tile.polarity}
-                    />
+                    <StaggerItem key={tile.key} className="min-w-0">
+                      <StatTile
+                        className="h-full"
+                        layout="compact"
+                        icon={tile.icon}
+                        tone={tile.tone}
+                        value={tile.value}
+                        label={tile.label}
+                        direction={tile.direction}
+                        delta={tile.delta}
+                        polarity={tile.polarity}
+                      />
+                    </StaggerItem>
                   ))}
-            </div>
+            </Stagger>
           </div>
-        </div>
+        </StaggerItem>
 
         {/* ── Landing page funnel ──────────────────────────────────────────
             Between the hero and the tables on purpose: it is the step the
@@ -1329,15 +1331,17 @@ export function MarketingContent({
             produced. What happened on the page in between has never been on
             this screen, and for a client running their own landing page it is
             usually where the money goes. */}
-        <LandingFunnel
-          funnel={landingFunnel}
-          loading={landingFunnelLoading}
-          error={landingFunnelError}
-          groupId={funnelGroupId}
-        />
+        <StaggerItem>
+          <LandingFunnel
+            funnel={landingFunnel}
+            loading={landingFunnelLoading}
+            error={landingFunnelError}
+            groupId={funnelGroupId}
+          />
+        </StaggerItem>
 
         {/* Tabs */}
-        <div className="flex w-full flex-col">
+        <StaggerItem className="flex w-full flex-col">
           {/* The app's page tab bar, same component the Sales, Lead and Client
               hubs use — this page brings only its four sections. It replaced a
               hand-skinned Radix TabsList that had drifted a pixel off the
@@ -1361,7 +1365,7 @@ export function MarketingContent({
               <Input
                 type="search"
                 placeholder={`Search ${activeTab}…`}
-                className="h-[38px] w-fit rounded-sm border-pd-border bg-pd-surface text-[13px] md:w-[220px]"
+                className="h-[38px] w-fit text-[13px] md:w-[220px]"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
@@ -1391,14 +1395,14 @@ export function MarketingContent({
 
             {/* Advanced filter conditions */}
             {filterConditions.length > 0 && (
-              <div className="border rounded-lg my-3 text-left">
+              <div className="border border-pd-border rounded-xl my-3 text-left">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm px-4 mt-2 font-semibold text-foreground">Active Filters</h3>
+                  <h3 className="font-pd-display text-sm px-4 mt-2 font-semibold text-pd-ink">Active Filters</h3>
                   <Button variant="ghost" size="sm" onClick={() => setFilterConditions([])} className="h-8 px-4 mt-2 text-xs">Clear all</Button>
                 </div>
                 <div className="space-y-2">
                   {filterConditions.map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-muted/50 border-t">
+                    <div key={idx} className="flex items-center gap-2 p-3 bg-pd-divider/60 border-t border-pd-divider">
                       <Select value={c.field} onValueChange={v => updateFilterCondition(idx, "field", v)}>
                         <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -1447,7 +1451,7 @@ export function MarketingContent({
 
             <div className="flex justify-end items-center gap-3 flex-1">
               {(filterConditions.length > 0 || searchTerm) && (
-                <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2 bg-transparent">
+                <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
                   <X className="h-4 w-4" /> Clear
                 </Button>
               )}
@@ -1455,12 +1459,12 @@ export function MarketingContent({
 
             {/* Table */}
             {error ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border bg-card p-16">
-                <div className="rounded-full bg-destructive/10 p-3 mb-4">
-                  <X className="h-6 w-6 text-destructive" />
+              <div className="flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface p-16">
+                <div className="rounded-full bg-pd-danger-bg p-3 mb-4">
+                  <X className="h-6 w-6 text-pd-danger" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Error loading data</h3>
-                <p className="text-sm text-muted-foreground text-center max-w-md">{error}</p>
+                <h3 className="font-pd-display text-lg font-semibold text-pd-ink mb-2">Error loading data</h3>
+                <p className="text-sm text-pd-subtle text-center max-w-md">{error}</p>
               </div>
             ) : activeTab === "ads" && adsView === "gallery" ? (
               <AdsGallery
@@ -1523,8 +1527,8 @@ export function MarketingContent({
               </p>
             )}
           </PageTabPanel>
-        </div>
-      </div>
+        </StaggerItem>
+      </Stagger>
     </div>
   )
 }

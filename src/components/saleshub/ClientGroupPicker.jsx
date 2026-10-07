@@ -65,7 +65,7 @@ export function ClientGroupPicker({ clientGroups, value, onChange, className }) 
         onClick={() => setOpen((p) => !p)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex h-[38px] min-w-[130px] max-w-[200px] cursor-pointer items-center gap-2 rounded-sm border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+        className="flex h-[38px] min-w-[130px] max-w-[200px] cursor-pointer items-center gap-2 rounded-full border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
       >
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown
@@ -82,7 +82,7 @@ export function ClientGroupPicker({ clientGroups, value, onChange, className }) 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search clients"
-            className="mb-1.5 h-9 w-full rounded-lg border border-pd-border bg-pd-surface px-3 text-[13px] text-pd-body placeholder:text-pd-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="mb-1.5 h-9 w-full rounded-full border border-pd-border bg-pd-surface px-4 text-[13px] text-pd-body placeholder:text-pd-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
           />
           {filtered.length > 0 ? (
             <div role="listbox" className="grid max-h-72 grid-cols-2 gap-1 overflow-y-auto">
@@ -96,7 +96,7 @@ export function ClientGroupPicker({ clientGroups, value, onChange, className }) 
                     aria-selected={selected}
                     onClick={() => pick(item.id)}
                     title={item.name}
-                    className={`truncate rounded-lg px-2.5 py-2 text-left text-[12px] transition-colors ${
+                    className={`truncate rounded-xl px-2.5 py-2 text-left text-[12px] transition-colors ${
                       selected
                         ? "bg-pd-primary-tint font-semibold text-pd-primary"
                         : "text-pd-body hover:bg-pd-divider"
