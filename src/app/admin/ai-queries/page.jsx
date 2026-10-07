@@ -12,8 +12,8 @@ export default function AdminAiQueriesPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-xl font-bold text-pd-ink">AI queries</h2>
-        <p className="text-sm text-muted-foreground">
+        <h2 className="font-pd-display text-xl font-bold text-pd-ink">AI queries</h2>
+        <p className="text-sm text-pd-subtle">
           What owners ask Birdy about their data over the last 7 days.
         </p>
       </div>

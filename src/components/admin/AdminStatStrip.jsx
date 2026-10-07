@@ -17,18 +17,18 @@ function StatTile({ icon: Icon, label, value, sub, loading, index, reduce }) {
       initial={reduce ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2, ease: EASE, delay: reduce ? 0 : index * 0.04 }}
-      className="flex-1 min-w-[150px] rounded-xl border bg-white px-4 py-3"
+      className="flex-1 min-w-[150px] rounded-xl border border-pd-border bg-pd-surface px-4 py-3 shadow-sm"
     >
-      <div className="flex items-center gap-2 text-pd-muted">
-        <Icon className="h-3.5 w-3.5 text-purple-600" />
+      <div className="flex items-center gap-2 text-pd-subtle">
+        <Icon className="h-3.5 w-3.5 text-pd-primary" />
         <span className="text-xs font-medium">{label}</span>
       </div>
       {loading ? (
         <Skeleton className="mt-2 h-6 w-16" />
       ) : (
-        <div className="mt-1 text-2xl font-bold tracking-tight">{value}</div>
+        <div className="mt-1 font-pd-display text-2xl font-bold tracking-tight text-pd-ink">{value}</div>
       )}
-      {sub && !loading && <div className="text-[11px] text-pd-muted">{sub}</div>}
+      {sub && !loading && <div className="text-[11px] text-pd-subtle">{sub}</div>}
     </motion.div>
   )
 }

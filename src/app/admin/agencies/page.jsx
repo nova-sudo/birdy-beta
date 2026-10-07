@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { useAgencies, usePlatformStats } from "@/lib/admin-api";
+import { Input } from "@/components/ui/input";
 import AdminStatStrip from "@/components/admin/AdminStatStrip";
 import AgenciesTable from "@/components/admin/AgenciesTable";
 import ConversationViewer from "@/components/admin/ConversationViewer";
@@ -33,20 +34,20 @@ export default function AdminAgenciesPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-pd-ink">Agency owners</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="font-pd-display text-xl font-bold text-pd-ink">Agency owners</h2>
+          <p className="text-sm text-pd-subtle">
             Every agency on Birdy, with impersonation and conversation review.
           </p>
         </div>
 
         <div className="relative w-full sm:w-72">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <input
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pd-faint" />
+          <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search agencies or owners…"
             aria-label="Search agencies or owners"
-            className="h-9 w-full rounded-full border border-input bg-white pl-9 pr-3 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-400"
+            className="pl-9"
           />
         </div>
       </div>

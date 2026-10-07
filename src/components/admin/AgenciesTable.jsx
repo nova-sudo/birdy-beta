@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
@@ -31,11 +32,14 @@ function relative(ts) {
 }
 
 const PLAN_STYLES = {
-  Scale: "bg-purple-50 text-purple-700 border-purple-200",
-  Growth: "bg-blue-50 text-blue-700 border-blue-200",
-  Starter: "bg-amber-50 text-amber-700 border-amber-200",
-  Free: "bg-gray-50 text-gray-600 border-gray-200",
+  Scale: "bg-pd-primary-tint text-pd-primary",
+  Growth: "bg-pd-info-bg text-pd-info",
+  Starter: "bg-pd-warning-bg text-pd-amber",
+  Free: "bg-pd-divider text-pd-body",
 }
+
+const TH = "bg-pd-table-head text-[11.5px] font-bold uppercase tracking-[.04em] text-pd-faint"
+const TR = "border-b border-pd-row-border hover:bg-pd-table-head"
 
 export default function AgenciesTable({ agencies, loading, onViewChats, onDeleted }) {
   const [target, setTarget] = useState(null) // agency pending impersonation confirm
@@ -96,8 +100,23 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
 
   if (loading) {
     return (
-      <div className="space-y-2 rounded-xl border bg-white p-4">
-        {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+      <div className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface shadow-sm">
+        <Skeleton className="h-11 w-full rounded-none" />
+        <div className="divide-y divide-pd-row-border">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-4 py-3">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-5 w-16 rounded-full" />
+              <Skeleton className="h-3.5 w-12" />
+              <Skeleton className="h-3.5 w-12" />
+              <Skeleton className="h-7 w-44 rounded-full" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -106,79 +125,81 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
 
   return (
     <>
-      <div className="rounded-xl border bg-white overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface shadow-sm">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Owner / Agency</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Plan</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Sub-accounts</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Leads</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">AI queries</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Last active</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Actions</TableHead>
+            <TableRow className="border-b border-pd-border hover:bg-pd-table-head">
+              <TableHead className={TH}>Owner / Agency</TableHead>
+              <TableHead className={TH}>Plan</TableHead>
+              <TableHead className={`${TH} text-right`}>Sub-accounts</TableHead>
+              <TableHead className={`${TH} text-right`}>Leads</TableHead>
+              <TableHead className={`${TH} text-right`}>AI queries</TableHead>
+              <TableHead className={TH}>Last active</TableHead>
+              <TableHead className={`${TH} text-right`}>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+              <TableRow className={TR}>
+                <TableCell colSpan={7} className="text-center text-sm text-pd-subtle py-10">
                   No agencies found.
                 </TableCell>
               </TableRow>
             )}
             {rows.map((a) => (
-              <TableRow key={a.email} className="group">
+              <TableRow key={a.email} className={`group ${TR}`}>
                 <TableCell>
                   <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 shrink-0 rounded-full bg-purple-100 text-purple-700 text-[11px] font-bold flex items-center justify-center">
+                    <div className="h-8 w-8 shrink-0 rounded-full bg-pd-primary-tint text-pd-primary text-[11px] font-bold flex items-center justify-center">
                       {initials(a.owner)}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold text-gray-900 truncate">
+                      <div className="text-sm font-semibold text-pd-ink truncate">
                         {a.owner}
                         {a.role === "admin" && (
-                          <span className="ml-1.5 text-[10px] font-semibold text-purple-600">ADMIN</span>
+                          <span className="ml-1.5 text-[10px] font-bold text-pd-primary">ADMIN</span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground truncate">{a.email}</div>
+                      <div className="text-xs text-pd-subtle truncate">{a.email}</div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={PLAN_STYLES[a.plan] || PLAN_STYLES.Free}>{a.plan}</Badge>
+                  <Badge className={`text-[11px] font-bold ${PLAN_STYLES[a.plan] || PLAN_STYLES.Free}`}>{a.plan}</Badge>
                 </TableCell>
-                <TableCell className="text-right tabular-nums text-sm">{a.sub_accounts.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums text-sm">{a.leads.toLocaleString()}</TableCell>
-                <TableCell className="text-right tabular-nums text-sm">{a.ai_queries.toLocaleString()}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">{relative(a.last_active)}</TableCell>
+                <TableCell className="text-right tabular-nums text-sm text-pd-body">{a.sub_accounts.toLocaleString()}</TableCell>
+                <TableCell className="text-right tabular-nums text-sm text-pd-body">{a.leads.toLocaleString()}</TableCell>
+                <TableCell className="text-right tabular-nums text-sm text-pd-body">{a.ai_queries.toLocaleString()}</TableCell>
+                <TableCell className="text-xs text-pd-subtle">{relative(a.last_active)}</TableCell>
                 <TableCell>
                   <div className="flex items-center justify-end gap-1.5">
-                    <button
+                    <Button
+                      variant="outline"
+                      size="xs"
                       onClick={() => onViewChats?.(a)}
-                      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-muted transition-colors"
                     >
                       <MessagesSquare className="h-3.5 w-3.5" /> Chats
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      size="xs"
                       onClick={() => setTarget(a)}
                       disabled={a.role === "admin"}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-purple-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       <UserRoundCog className="h-3.5 w-3.5" /> Impersonate
-                    </button>
+                    </Button>
                     {/* Disabled on admin rows for the same reason Impersonate
                         is — and the server refuses them outright, including
                         the acting admin's own row, so this is purely a hint
                         that the click would bounce. */}
-                    <button
+                    <Button
+                      variant="destructive-outline"
+                      size="xs"
                       onClick={() => { setConfirmEmail(""); setDeleteTarget(a) }}
                       disabled={a.role === "admin"}
                       aria-label={`Delete ${a.email}`}
-                      className="inline-flex items-center gap-1.5 rounded-md border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" /> Delete
-                    </button>
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>
@@ -188,9 +209,9 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
       </div>
 
       <AlertDialog open={!!target} onOpenChange={(o) => !o && !busy && setTarget(null)}>
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-pd-surface rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Impersonate {target?.owner}?</AlertDialogTitle>
+            <AlertDialogTitle className="font-pd-display">Impersonate {target?.owner}?</AlertDialogTitle>
             <AlertDialogDescription>
               You'll access <span className="font-medium">{target?.email}</span>'s account with full
               read &amp; write access for up to 45 minutes. A banner will show you're impersonating,
@@ -202,7 +223,6 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
             <AlertDialogAction
               onClick={(e) => { e.preventDefault(); confirmImpersonate() }}
               disabled={busy}
-              className="bg-purple-600 text-white hover:bg-purple-700"
             >
               {busy ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Starting…</> : "Impersonate"}
             </AlertDialogAction>
@@ -219,9 +239,9 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
         open={!!deleteTarget}
         onOpenChange={(o) => { if (!o && !deleting) { setDeleteTarget(null); setConfirmEmail("") } }}
       >
-        <AlertDialogContent className="bg-white">
+        <AlertDialogContent className="bg-pd-surface rounded-xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete {deleteTarget?.owner}'s account?</AlertDialogTitle>
+            <AlertDialogTitle className="font-pd-display">Delete {deleteTarget?.owner}'s account?</AlertDialogTitle>
             <AlertDialogDescription>
               This permanently deletes <span className="font-medium">{deleteTarget?.email}</span> and
               everything Birdy stored for them — {deleteTarget?.sub_accounts ?? 0} client group(s),
@@ -250,9 +270,9 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={(e) => { e.preventDefault(); confirmDelete() }}
               disabled={deleting || confirmEmail.trim().toLowerCase() !== (deleteTarget?.email || "")}
-              className="bg-red-600 text-white hover:bg-red-700"
             >
               {deleting
                 ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Deleting…</>
