@@ -204,8 +204,7 @@ export default function RegisterPage() {
           />
           <div className="pointer-events-none absolute inset-0 text-white">
             {/* Top-left: Birdy lockup */}
-            <div className="absolute left-8 top-8 flex items-center gap-2">
-              <BirdyAvatar state={birdyState} size={40} tone="white" />
+            <div className="absolute left-8 top-8">
               <span className="font-pd-display text-xl font-extrabold text-white drop-shadow">Birdy</span>
             </div>
 

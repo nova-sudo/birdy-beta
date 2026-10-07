@@ -13,7 +13,6 @@ import dynamic from "next/dynamic"
 const Silk = dynamic(() => import("@/components/Silk"), { ssr: false })
 import LoginForm from "./LoginForm"
 import { Skeleton } from "@/components/ui/skeleton"
-import BirdyLogo from "@/components/BirdyLogo"
 
 export default function LoginPage() {
   return (
@@ -47,9 +46,9 @@ export default function LoginPage() {
             rotation={0}
           />
           <div className="pointer-events-none absolute inset-0 text-white">
-            {/* Top-left: Birdy lockup */}
+            {/* Top-left: wordmark */}
             <div className="absolute left-8 top-8">
-              <BirdyLogo variant="lockup" theme="dark" size={100} />
+              <span className="font-pd-display text-xl font-extrabold text-white drop-shadow">Birdy</span>
             </div>
 
             {/* Centered hero */}
