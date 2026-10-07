@@ -1,5 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Clock, Zap } from "lucide-react"
+import { motion } from "framer-motion"
+import { EASE_OUT } from "@/components/motion"
 import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 
 export const METRIC_OPTIONS = [
@@ -118,18 +120,18 @@ export function conditionSummary(alert) {
 
 export function statusBadge(status, snoozedUntil) {
   if (status === "active")
-    return <Badge className="bg-pd-primary text-white border-0 rounded-full text-xs font-semibold hover:bg-primary/80 px-2.5 py-0.5">Active</Badge>
+    return <Badge variant="success" className="text-xs">Active</Badge>
   if (status === "triggered")
-    return <Badge className="bg-[#EF4343] text-white border-0 rounded-full text-xs font-semibold px-2.5 py-0.5">Triggered</Badge>
+    return <Badge variant="destructive" className="text-xs">Triggered</Badge>
   if (status === "paused") {
     const snoozeLabel = snoozedUntil
       ? `Until ${formatRelative(new Date(snoozedUntil))}`
       : "Paused"
     return (
-      <div>
-        <Badge className="bg-[#FFEDD5] text-[#9A3412] border-0 rounded-full text-xs font-semibold px-2.5 py-0.5">Snoozed</Badge>
+      <div className="flex flex-col items-start gap-1">
+        <Badge variant="warning" className="text-xs">Snoozed</Badge>
         {snoozedUntil && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
+          <span className="text-xs text-pd-subtle flex items-center gap-1">
             <Clock className="h-3 w-3" />{snoozeLabel}
           </span>
         )}
@@ -147,7 +149,7 @@ export function ProgressToTrigger({ alert }) {
   const triggered = alert.status === "triggered"
 
   if (current === null || current === undefined) {
-    return <span className="text-xs text-muted-foreground italic">Not evaluated yet</span>
+    return <span className="text-xs text-pd-faint">Not evaluated yet</span>
   }
 
   const isPctOperator = ["pct_drop", "pct_rise"].includes(operator)
@@ -166,29 +168,29 @@ export function ProgressToTrigger({ alert }) {
   }
 
   const barColor = triggered
-    ? "bg-red-500"
+    ? "bg-pd-danger"
     : pct >= 80
-      ? "bg-orange-400"
-      : pct >= 50
-        ? "bg-yellow-400"
-        : "bg-pd-primary/40"
+      ? "bg-pd-warning"
+      : "bg-pd-primary"
 
   const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "neq" ? "≠" : operator === "pct_drop" ? "↓" : "↑"
 
   return (
     <div className="space-y-1 min-w-[140px] max-w-[180px]">
       <div className="flex items-center justify-between text-xs">
-        <span className="font-medium tabular-nums">{fmt(current)}</span>
+        <span className="font-semibold tabular-nums text-pd-ink">{fmt(current)}</span>
       </div>
-      <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${barColor}`}
-          style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+      <div className="h-2 w-full bg-pd-divider rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${barColor}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+          transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.15 }}
         />
       </div>
-      <div className="text-xs text-muted-foreground">
+      <div className="text-xs text-pd-subtle">
         {triggered
-          ? <span className="text-red-500 font-medium">⚡ Triggered</span>
+          ? <span className="text-pd-danger font-semibold">Triggered</span>
           : `${Math.max(0, pct).toFixed(0)}% to trigger`
         }
         <span className="text-muted-foreground"> {opLabel} {fmtThreshold(threshold)}</span>

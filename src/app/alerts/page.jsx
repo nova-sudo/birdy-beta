@@ -65,6 +65,8 @@ import {
   Loader2,
 } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
+import { motion } from "framer-motion"
+import { Stagger, StaggerItem, EASE_OUT } from "@/components/motion"
 import Image from "next/image"
 import { ghlIcon } from "@/lib/icons"
 import { apiRequest } from "@/lib/api"
@@ -82,13 +84,13 @@ import { activeGroups } from "@/lib/client-status"
 
 function TrackingModeToggle({ value, onChange }) {
   return (
-    <div className="flex items-center gap-1 p-1 rounded-lg bg-muted border border-border w-fit">
+    <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit">
       <button
         type="button"
         onClick={() => onChange("total")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
           value === "total"
-            ? "bg-white text-foreground shadow-sm border border-border/60"
+            ? "bg-white text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
@@ -98,9 +100,9 @@ function TrackingModeToggle({ value, onChange }) {
       <button
         type="button"
         onClick={() => onChange("per_client")}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-150 ${
+        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
           value === "per_client"
-            ? "bg-white text-foreground shadow-sm border border-border/60"
+            ? "bg-white text-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
         }`}
       >
@@ -116,16 +118,20 @@ function TrackingModeToggle({ value, onChange }) {
 function ClientProgressBar({ pct }) {
   const clamped = Math.min(100, Math.max(0, pct ?? 0))
   const color =
-    clamped >= 100 ? "bg-red-500" :
-    clamped >= 75  ? "bg-orange-400" :
-    clamped >= 50  ? "bg-yellow-400" :
-    "bg-emerald-400"
+    clamped >= 100 ? "bg-pd-danger" :
+    clamped >= 75  ? "bg-pd-warning" :
+    "bg-pd-primary"
   return (
     <div className="flex items-center gap-2 min-w-[100px]">
-      <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${clamped}%` }} />
+      <div className="flex-1 h-2 rounded-full bg-pd-divider overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${color}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${clamped}%` }}
+          transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.15 }}
+        />
       </div>
-      <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">{clamped.toFixed(0)}%</span>
+      <span className="text-xs tabular-nums text-pd-subtle w-8 text-right">{clamped.toFixed(0)}%</span>
     </div>
   )
 }
@@ -169,15 +175,15 @@ function groupTriggeredRows(rows) {
 function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
   const isEval = evaluating === row._virtual_id
   return (
-    <tr className="border-b bg-purple-50/40 hover:bg-purple-50/70 transition-colors h-12">
+    <StaggerItem as="tr" className="border-b border-pd-row-border bg-pd-primary-tint/40 hover:bg-pd-primary-tint/70 transition-colors h-14">
       {/* Name — indented */}
       <td className="py-3 px-4 align-middle min-w-[180px]">
         <div className="flex items-start gap-2 pl-8">
-          <div className="w-0.5 self-stretch rounded-full bg-purple-300 shrink-0" />
+          <div className="w-0.5 self-stretch rounded-full bg-pd-primary-pale shrink-0" />
           <div>
             <div className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-purple-500 shrink-0" />
-              <span className="font-semibold text-sm text-purple-900">{row._client_name}</span>
+              <User className="h-3.5 w-3.5 text-pd-primary shrink-0" />
+              <span className="font-semibold text-sm text-pd-ink">{row._client_name}</span>
             </div>
           </div>
         </div>
@@ -193,9 +199,9 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
 
       {/* Condition + actual */}
       <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm font-mono font-medium">{conditionSummary(row)}</div>
+        <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(row)}</div>
         {row._client_value != null && (
-          <div className="text-xs text-red-500 font-mono mt-0.5">actual: {row._client_value?.toFixed(2)}</div>
+          <div className="text-xs text-pd-danger tabular-nums mt-0.5">actual: {row._client_value?.toFixed(2)}</div>
         )}
       </td>
 
@@ -213,16 +219,16 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
 
       {/* Targets */}
       <td className="py-3 px-4 align-middle">
-        <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1">
+        <Badge className="text-[10.5px] px-2 py-0 gap-1">
           <User className="h-2.5 w-2.5" /> Per Client
         </Badge>
       </td>
 
       {/* Last updated */}
       <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm text-muted-foreground">{formatRelative(new Date(row.updated_at))}</div>
+        <div className="text-sm text-pd-subtle">{formatRelative(new Date(row.updated_at))}</div>
         {row.last_triggered_at && (
-          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+          <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
             <BellRing className="h-3 w-3" />
             {formatRelative(new Date(row.last_triggered_at))}
           </div>
@@ -233,11 +239,11 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       <td className="py-3 px-4 align-middle">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
+            <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
               <Ellipsis className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 bg-white">
+          <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem
               onClick={() => onEvaluate(row)}
               disabled={!!evaluating}
@@ -253,14 +259,14 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(row)}
-              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+              className="gap-2 cursor-pointer text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
             >
               <Trash2 className="h-4 w-4" /> Delete Entry
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
-    </tr>
+    </StaggerItem>
   )
 }
 
@@ -272,12 +278,13 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
   const childCount = children.length
 
   return (
-    <tr
-      className="border-b bg-white hover:bg-muted/40 transition-colors h-12 cursor-pointer"
+    <StaggerItem
+      as="tr"
+      className="border-b border-pd-row-border bg-pd-surface hover:bg-pd-table-head transition-colors h-14 cursor-pointer"
       onClick={onToggle}
     >
       {/* Name */}
-      <td className="py-3 px-4 align-middle min-w-[180px]">
+      <td className="py-3 px-4 align-middle min-w-[180px] shadow-[inset_3px_0_0_var(--pd-danger)]">
         <div className="flex items-center gap-2">
           <button
             type="button"
@@ -289,9 +296,9 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
               : <ChevronRight className="h-4 w-4" />}
           </button>
           <div>
-            <div className="font-semibold text-md flex items-center gap-2">
+            <div className="font-semibold text-pd-ink flex items-center gap-2">
               {parentAlert.name}
-              <Badge className="bg-red-100 text-red-700 border-0 text-[10px] font-semibold px-1.5 py-0 gap-1">
+              <Badge className="bg-pd-danger text-white border-0 text-[10.5px] px-2 py-0 gap-1">
                 <BellRing className="h-2.5 w-2.5" />
                 {childCount} client{childCount !== 1 ? "s" : ""}
               </Badge>
@@ -315,7 +322,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
 
       {/* Condition */}
       <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
-        <div className="text-sm font-mono font-medium">{conditionSummary(parentAlert)}</div>
+        <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(parentAlert)}</div>
         {parentAlert.condition?.period && (
           <div className="text-xs text-muted-foreground mt-0.5">
             {["pct_drop", "pct_rise"].includes(parentAlert.condition?.operator) ? "vs " : "window: "}
@@ -339,7 +346,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       {/* Targets */}
       <td className="py-3 px-4 align-middle min-w-[140px]" onClick={e => e.stopPropagation()}>
         <div className="flex flex-col gap-0.5 max-w-[180px]">
-          <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1 w-fit">
+          <Badge className="text-[10.5px] px-2 py-0 gap-1 w-fit">
             <User className="h-2.5 w-2.5" /> Per Client
           </Badge>
           {(parentAlert.target_group_names?.length ? parentAlert.target_group_names : parentAlert.target_group_ids || [])
@@ -353,9 +360,9 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
 
       {/* Last updated */}
       <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
-        <div className="text-sm text-muted-foreground">{formatRelative(new Date(parentAlert.updated_at))}</div>
+        <div className="text-sm text-pd-subtle">{formatRelative(new Date(parentAlert.updated_at))}</div>
         {parentAlert.last_triggered_at && (
-          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+          <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
             <BellRing className="h-3 w-3" />
             {formatRelative(new Date(parentAlert.last_triggered_at))}
           </div>
@@ -366,11 +373,11 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
+            <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
               <Ellipsis className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 bg-white">
+          <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => onEdit(parentAlert)} className="gap-2 cursor-pointer">
               <Pencil className="h-4 w-4" /> Edit Alert
             </DropdownMenuItem>
@@ -389,14 +396,14 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(parentAlert)}
-              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+              className="gap-2 cursor-pointer text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
             >
               <Trash2 className="h-4 w-4" /> Delete Alert
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
-    </tr>
+    </StaggerItem>
   )
 }
 
@@ -407,10 +414,10 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
   const isEval    = evaluating === (alert._virtual_id ?? alert.id)
 
   return (
-    <tr className={`border-b transition-colors hover:bg-muted/50 h-12 ${isVirtual ? "bg-purple-50/40" : "bg-white"}`}>
-      <td className="py-3 px-4 align-middle min-w-[180px]">
+    <StaggerItem as="tr" className={`border-b border-pd-row-border transition-colors hover:bg-pd-table-head h-14 ${isVirtual ? "bg-pd-primary-tint/40" : "bg-pd-surface"}`}>
+      <td className={`py-3 px-4 align-middle min-w-[180px] ${alert.status === "triggered" ? "shadow-[inset_3px_0_0_var(--pd-danger)]" : ""}`}>
         <div>
-          <div className="font-semibold text-md">{alert.name}</div>
+          <div className="font-semibold text-pd-ink">{alert.name}</div>
           {alert.description && (
             <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">{alert.description}</div>
           )}
@@ -423,7 +430,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
         </div>
       </td>
       <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm font-mono font-medium">{conditionSummary(alert)}</div>
+        <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(alert)}</div>
         {alert.condition?.period && (
           <div className="text-xs text-muted-foreground mt-0.5">
             {["pct_drop", "pct_rise"].includes(alert.condition?.operator) ? "vs " : "window: "}
@@ -438,11 +445,11 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           <div className="flex flex-col gap-0.5 max-w-[180px]">
             <div className="flex items-center gap-1.5 mb-0.5">
               {alert.tracking_mode === "per_client" ? (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-purple-700 border-purple-200 bg-purple-50 gap-1">
+                <Badge className="text-[10.5px] px-2 py-0 gap-1">
                   <User className="h-2.5 w-2.5" /> Per Client
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-blue-700 border-blue-200 bg-blue-50 gap-1">
+                <Badge variant="secondary" className="text-[10.5px] px-2 py-0 gap-1">
                   <Layers className="h-2.5 w-2.5" /> Total
                 </Badge>
               )}
@@ -455,7 +462,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
           </div>
         ) : (
           <div className="flex flex-col gap-0.5">
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-medium text-blue-700 border-blue-200 bg-blue-50 gap-1 w-fit">
+            <Badge variant="secondary" className="text-[10.5px] px-2 py-0 gap-1 w-fit">
               <Layers className="h-2.5 w-2.5" /> Total
             </Badge>
             <span className="text-sm text-muted-foreground">Global (All)</span>
@@ -463,9 +470,9 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
         )}
       </td>
       <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm text-muted-foreground">{formatRelative(new Date(alert.updated_at))}</div>
+        <div className="text-sm text-pd-subtle">{formatRelative(new Date(alert.updated_at))}</div>
         {alert.last_triggered_at && (
-          <div className="text-xs text-red-500 mt-0.5 flex items-center gap-1">
+          <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
             <BellRing className="h-3 w-3" />
             {formatRelative(new Date(alert.last_triggered_at))}
           </div>
@@ -474,9 +481,9 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
       <td className="py-3 px-4 align-middle">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2"><Ellipsis className="h-4 w-4" /></Button>
+            <Button variant="ghost" size="icon-sm" aria-label="Alert actions"><Ellipsis className="h-4 w-4" /></Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 bg-white">
+          <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuItem onClick={() => onEdit(alert)} className="gap-2 cursor-pointer">
               <Pencil className="h-4 w-4" /> Edit
             </DropdownMenuItem>
@@ -494,25 +501,79 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => onDelete(alert)}
-              className="gap-2 cursor-pointer text-red-600 focus:text-red-600"
+              className="gap-2 cursor-pointer text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
             >
               <Trash2 className="h-4 w-4" /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </td>
-    </tr>
+    </StaggerItem>
   )
+}
+
+const EMPTY_HINTS = {
+  active: "Create an alert and Birdy will keep an eye on the numbers for you.",
+  triggered: "Nothing has crossed a threshold.",
+  paused: "Alerts you snooze or pause wait here.",
 }
 
 function EmptyState({ label }) {
   return (
     <tr>
-      <td colSpan={8} className="py-16 text-center">
-        <Bell className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-        <p className="text-sm text-muted-foreground">No {label} alerts</p>
+      <td colSpan={8} className="py-16">
+        <div className="mx-auto flex max-w-xs flex-col items-center text-center">
+          <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-pd-primary-tint text-pd-primary">
+            <Bell className="size-5" />
+          </span>
+          <p className="font-pd-display text-[15px] font-semibold text-pd-ink">No {label} alerts</p>
+          <p className="mt-1 text-[12.5px] leading-relaxed text-pd-subtle">{EMPTY_HINTS[label]}</p>
+        </div>
       </td>
     </tr>
+  )
+}
+
+// ── Table chrome shared by every tab ──────────────────────────────────────────
+
+const ALERT_COLUMNS = ["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"]
+
+function AlertTableShell({ children }) {
+  return (
+    <div className="relative w-full overflow-auto rounded-xl border border-pd-border bg-pd-surface shadow-sm">
+      <table className="w-full caption-bottom text-[13.5px]">
+        <thead className="sticky top-0 z-20">
+          <tr className="h-11 border-b border-pd-divider">
+            {ALERT_COLUMNS.map(h => (
+              <th key={h} className="h-11 bg-pd-table-head px-4 text-left align-middle text-[11.5px] font-bold uppercase tracking-[.04em] text-pd-faint">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        {children}
+      </table>
+    </div>
+  )
+}
+
+/** Shown while alerts load: the table's own shape, so nothing jumps when rows land. */
+function AlertTableSkeleton() {
+  return (
+    <AlertTableShell>
+      <tbody>
+        {Array.from({ length: 6 }, (_, i) => (
+          <tr key={i} className="h-14 border-b border-pd-row-border last:border-0">
+            <td className="px-4"><Skeleton className="h-3.5 w-36" /><Skeleton className="mt-2 h-2.5 w-24" /></td>
+            <td className="px-4"><Skeleton className="h-3.5 w-20" /></td>
+            <td className="px-4"><Skeleton className="h-3.5 w-16" /></td>
+            <td className="px-4"><Skeleton className="h-2 w-32 rounded-full" /></td>
+            <td className="px-4"><Skeleton className="h-5 w-16 rounded-full" /></td>
+            <td className="px-4"><Skeleton className="h-5 w-20 rounded-full" /></td>
+            <td className="px-4"><Skeleton className="h-3 w-16" /></td>
+            <td className="px-4"><Skeleton className="size-8 rounded-full" /></td>
+          </tr>
+        ))}
+      </tbody>
+    </AlertTableShell>
   )
 }
 
@@ -520,16 +581,8 @@ function EmptyState({ label }) {
 
 function AlertTable({ rows, emptyLabel, evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete }) {
   return (
-    <div className="relative w-full overflow-auto rounded-md border border-border/60">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="bg-white sticky top-0 z-20">
-          <tr className="border-b h-11">
-            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="[&_tr:last-child]:border-0">
+    <AlertTableShell>
+        <Stagger as="tbody" gap={0.05} className="[&_tr:last-child]:border-0">
           {rows.length === 0
             ? <EmptyState label={emptyLabel} />
             : rows.map(a => (
@@ -545,9 +598,8 @@ function AlertTable({ rows, emptyLabel, evaluating, onEdit, onEvaluate, onToggle
                 />
               ))
           }
-        </tbody>
-      </table>
-    </div>
+        </Stagger>
+    </AlertTableShell>
   )
 }
 
@@ -568,32 +620,15 @@ function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, o
 
   if (rows.length === 0) {
     return (
-      <div className="relative w-full overflow-auto rounded-md border border-border/60">
-        <table className="w-full caption-bottom text-sm">
-          <thead className="bg-white sticky top-0 z-20">
-            <tr className="border-b h-11">
-              {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-                <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody><EmptyState label="triggered" /></tbody>
-        </table>
-      </div>
+      <AlertTableShell>
+        <tbody><EmptyState label="triggered" /></tbody>
+      </AlertTableShell>
     )
   }
 
   return (
-    <div className="relative w-full overflow-auto rounded-md border border-border/60">
-      <table className="w-full caption-bottom text-sm">
-        <thead className="bg-white sticky top-0 z-20">
-          <tr className="border-b h-11">
-            {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="[&_tr:last-child]:border-0">
+    <AlertTableShell>
+        <Stagger as="tbody" gap={0.05} className="[&_tr:last-child]:border-0">
           {groups.map(group => {
             const groupKey = group.children.length > 0
               ? `group_${group.parentAlert.id}`
@@ -643,9 +678,8 @@ function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, o
               ),
             ]
           })}
-        </tbody>
-      </table>
-    </div>
+        </Stagger>
+    </AlertTableShell>
   )
 }
 
@@ -968,7 +1002,7 @@ function AlertsPageContent() {
         </div>
       ),
       controls: (
-        <Button onClick={openCreate} className="gap-2 bg-pd-primary text-white hover:bg-purple-700">
+        <Button onClick={openCreate} className="gap-2">
           <CirclePlus className="h-4 w-4" />
           Create Alert
         </Button>
@@ -988,7 +1022,7 @@ function AlertsPageContent() {
   }
 
   return (
-    <main className="min-h-screen w-[calc(100dvw-70px)] md:w-[calc(100dvw-130px)] mx-auto">
+    <main className={`${pdFontClass} w-full min-w-0`}>
       <div className=" mx-auto">
 
         {/* Tabs */}
@@ -1007,13 +1041,13 @@ function AlertsPageContent() {
                   key: "triggered",
                   label: "Triggered",
                   badge: alerts.counts?.triggered || undefined,
-                  badgeClassName: "bg-red-100 text-red-600",
+                  badgeClassName: "bg-pd-danger text-white",
                 },
                 {
                   key: "paused",
                   label: "Snoozed / Paused",
                   badge: alerts.counts?.paused || undefined,
-                  badgeClassName: "bg-orange-100 text-orange-700",
+                  badgeClassName: "bg-pd-warning text-white",
                 },
               ]}
               value={activeTab}
@@ -1022,14 +1056,7 @@ function AlertsPageContent() {
           </div>
 
           {isLoading ? (
-            // <div className="flex items-center justify-center py-24">
-            //   <RefreshCw className="h-6 w-6 animate-spin text-pd-primary" />
-            // </div>
-            <div className="flex w-full mx-auto py-30 max-w-xs flex-col gap-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
-            </div>
+            <div className="mt-2"><AlertTableSkeleton /></div>
           ) : (
             <>
               <TabsContent value="active" className="mt-2">
@@ -1058,17 +1085,17 @@ function AlertsPageContent() {
       {/* ── Create / Edit Dialog ──────────────────────────────── */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent
-          className="w-[90vw] !max-w-none h-[90vh] p-0 gap-0 flex flex-col overflow-hidden bg-background sm:!max-w-none"
+          className="w-[min(1120px,94vw)] !max-w-none h-[88vh] p-0 gap-0 flex flex-col overflow-hidden bg-pd-canvas sm:!max-w-none"
           showCloseButton={false}
         >
           {/* Header */}
-          <div className="bg-white dark:bg-card px-6 py-4 border-b border-border rounded-t-lg shrink-0">
+          <div className="bg-pd-surface px-7 py-5 border-b border-pd-border shrink-0">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-lg font-semibold leading-none tracking-tight">
+                <h2 className="font-pd-display text-[22px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
                   {editingAlert ? "Edit Alert" : "Create Alert"}
                 </h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-[13px] text-pd-subtle mt-1.5">
                   {editingAlert
                     ? "Update the alert configuration."
                     : dialogMode === "birdy"
@@ -1077,25 +1104,25 @@ function AlertsPageContent() {
                 </p>
               </div>
               {!editingAlert && (
-                <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/70 border border-border/60 shrink-0">
+                <div className="flex items-center gap-1 p-1 rounded-full bg-muted shrink-0">
                   <button
                     type="button"
                     onClick={() => setDialogMode("birdy")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                       dialogMode === "birdy"
-                        ? "bg-white text-purple-700 shadow-sm border border-purple-200/60"
+                        ? "bg-pd-primary text-white shadow-pd-segment"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
-                    <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-purple-500" : "text-muted-foreground"}`} />
+                    <Bird className={`h-3.5 w-3.5 ${dialogMode === "birdy" ? "text-white" : "text-muted-foreground"}`} />
                     Ask Birdy
                   </button>
                   <button
                     type="button"
                     onClick={() => setDialogMode("manual")}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                       dialogMode === "manual"
-                        ? "bg-white text-foreground shadow-sm border border-border/60"
+                        ? "bg-white text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
                     }`}
                   >
@@ -1108,7 +1135,7 @@ function AlertsPageContent() {
 
           {/* Body — Birdy AI mode */}
           {dialogMode === "birdy" && !editingAlert && (
-            <div className="flex-1 min-h-0 flex flex-col bg-[#FAFAFA] overflow-hidden">
+            <div className="flex-1 min-h-0 flex flex-col bg-pd-canvas overflow-hidden">
               <div className="flex-1 min-h-0 h-full overflow-hidden">
                 <ChatConversation
                   key={birdyChatKey}
@@ -1132,7 +1159,7 @@ function AlertsPageContent() {
                   }}
                 />
               </div>
-              <div className="shrink-0 px-6 py-3 border-t border-border bg-white flex justify-end">
+              <div className="shrink-0 px-7 py-3 border-t border-pd-border bg-pd-surface flex justify-end">
                 <Button variant="outline" size="sm" onClick={() => setDialogOpen(false)}>
                   Close
                 </Button>
@@ -1142,17 +1169,17 @@ function AlertsPageContent() {
 
           {/* Body — Manual form mode */}
           {(dialogMode === "manual" || editingAlert) && (
-          <div className="p-6 overflow-y-auto flex-1">
+          <div className="px-7 py-6 overflow-y-auto flex-1">
             {/* Form */}
             <form id="create-alert-form" onSubmit={e => { e.preventDefault(); handleSave() }}>
               <div className="flex flex-col lg:flex-row gap-6 items-stretch">
                 {/* Left Column */}
                 <div className="w-full lg:w-2/3 flex-1 space-y-4">
                   {/* Basic Info */}
-                  <div className="rounded-lg border border-border bg-card p-6">
+                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-base font-semibold">Name</Label>
+                        <Label className="text-[12.5px] font-semibold text-pd-ink">Name</Label>
                         <Input
                           placeholder="e.g. Low ROI Alert"
                           value={form.name}
@@ -1160,7 +1187,7 @@ function AlertsPageContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-base font-semibold">Description</Label>
+                        <Label className="text-[12.5px] font-semibold text-pd-ink">Description</Label>
                         <Input
                           placeholder="Describe when this alert fires..."
                           value={form.description}
@@ -1168,12 +1195,12 @@ function AlertsPageContent() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-base font-semibold">Type</Label>
+                        <Label className="text-[12.5px] font-semibold text-pd-ink">Type</Label>
                         <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 w-full">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                          <SelectContent>
                             {TYPE_OPTIONS.map(t => (
                               <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                             ))}
@@ -1184,10 +1211,11 @@ function AlertsPageContent() {
                   </div>
 
                   {/* Condition */}
-                  <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-                    <h3 className="text-base font-semibold">Condition</h3>
-                    <div className="grid grid-cols-[2fr_1fr_80px_1fr] gap-4">
+                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
+                    <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Condition</h3>
+                    <div className="grid grid-cols-[2fr_1fr_110px_1fr] gap-4">
                       <div className="space-y-2">
+                      <Label className="text-[12.5px] font-semibold text-pd-ink">Metric</Label>
                       <MetricPicker
                         metrics={alertMetricOptions}
                         value={form.metric}
@@ -1197,11 +1225,12 @@ function AlertsPageContent() {
                       />
                       </div>
                       <div className="space-y-2">
+                      <Label className="text-[12.5px] font-semibold text-pd-ink">When it</Label>
                       <Select value={form.operator} onValueChange={v => setForm(f => ({ ...f, operator: v }))}>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 w-full">
                             <SelectValue />
                           </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent>
                             {OPERATOR_OPTIONS.map(o => (
                               <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                             ))}
@@ -1209,6 +1238,7 @@ function AlertsPageContent() {
                       </Select>
                       </div>
                       <div className="space-y-2">
+                        <Label className="text-[12.5px] font-semibold text-pd-ink">Value</Label>
                         <Input
                           type="number"
                           min="0"
@@ -1219,11 +1249,12 @@ function AlertsPageContent() {
                         />
                       </div>
                       <div className="space-y-2">
+                      <Label className="text-[12.5px] font-semibold text-pd-ink">Over</Label>
                       <Select value={form.period} onValueChange={v => setForm(f => ({ ...f, period: v }))}>
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 w-full">
                             <SelectValue />
                           </SelectTrigger>
-                        <SelectContent className="bg-white">
+                        <SelectContent>
                             {PERIOD_OPTIONS.map(p => (
                               <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
                             ))}
@@ -1234,9 +1265,9 @@ function AlertsPageContent() {
                   </div>
 
                   {/* Target Client Groups */}
-                  <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <h3 className="text-base font-semibold">Target Client Groups</h3>
+                      <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Target Client Groups</h3>
                       <div className="flex flex-col items-end gap-1">
                         <TrackingModeToggle value={form.tracking_mode} onChange={v => setForm(f => ({ ...f, tracking_mode: v }))} />
                         <p className="text-xs text-muted-foreground max-w-[280px] text-right">
@@ -1247,9 +1278,9 @@ function AlertsPageContent() {
                       </div>
                     </div>
                     <Input placeholder="Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
-                    <div className="max-h-[200px] overflow-y-auto border rounded-md divide-y">
+                    <div className="max-h-[220px] overflow-y-auto rounded-2xl border border-pd-border divide-y divide-pd-divider">
                         {/* Select All */}
-                      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors font-medium bg-muted/30">
+                      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-pd-table-head transition-colors font-medium bg-muted/30">
                         <Checkbox
                           checked={activeClientGroups.length > 0 && form.target_group_ids.length === activeClientGroups.length}
                             onCheckedChange={(checked) => {
@@ -1265,7 +1296,7 @@ function AlertsPageContent() {
                       {activeClientGroups
                         .filter(g => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
                         .map(g => (
-                          <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors">
+                          <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-pd-table-head transition-colors">
                             <Checkbox checked={form.target_group_ids.includes(g.id)} onCheckedChange={() => toggleGroup(g.id)} />
                             <span className="text-sm">{g.name}</span>
                           </label>
@@ -1277,10 +1308,10 @@ function AlertsPageContent() {
                 {/* Right Column */}
                 <div className="w-full lg:w-1/3 flex-shrink-0 self-stretch space-y-4">
                   {/* Preview Card */}
-                  <div className="rounded-lg border text-card-foreground shadow-sm bg-card flex flex-col">
+                  <div className="rounded-xl border border-pd-border bg-pd-surface shadow-sm flex flex-col">
                     <div className="p-6 pt-6 flex-1 flex flex-col">
                       <div className="text-center p-4 flex-1 flex flex-col justify-center">
-                        <div className="text-lg font-bold">{form.name || "Unnamed Alert"}</div>
+                        <div className="font-pd-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink">{form.name || "Unnamed Alert"}</div>
                         <div className="text-sm text-muted-foreground mt-2 flex items-center justify-center gap-2">
                           {(() => {
                             const sel = alertMetricOptions.find(m => m.id === form.metric)
@@ -1308,9 +1339,9 @@ function AlertsPageContent() {
                             <span>Tracking</span>
                           </div>
                           {form.tracking_mode === "per_client" ? (
-                            <Badge variant="outline" className="text-purple-700 border-purple-200 bg-purple-50 gap-1 text-xs"><User className="h-3 w-3" /> Per Client</Badge>
+                            <Badge className="gap-1 text-xs"><User className="h-3 w-3" /> Per Client</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-blue-700 border-blue-200 bg-blue-50 gap-1 text-xs"><Layers className="h-3 w-3" /> Total</Badge>
+                            <Badge variant="secondary" className="gap-1 text-xs"><Layers className="h-3 w-3" /> Total</Badge>
                           )}
                         </div>
                         <div className="flex items-center justify-between text-sm">
@@ -1323,7 +1354,7 @@ function AlertsPageContent() {
                             <SelectTrigger className="w-[120px] h-8 text-xs">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="bg-white">
+                            <SelectContent>
                               {FREQUENCY_OPTIONS.map(f => (
                                 <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
                               ))}
@@ -1344,11 +1375,11 @@ function AlertsPageContent() {
                   </div>
 
                   {/* Notification Channels */}
-                  <div className="rounded-lg border border-border bg-card p-6 space-y-4">
-                    <h3 className="text-base font-semibold">Notification Channels</h3>
+                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
+                    <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Notification Channels</h3>
                     <div className="space-y-3">
                       {/* Internal */}
-                      <div className="rounded-lg border border-border p-3 space-y-2">
+                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Bell className="h-4 w-4 text-primary" />
@@ -1371,23 +1402,23 @@ function AlertsPageContent() {
                         )}
                       </div>
                       {/* Slack — Coming Soon */}
-                      <div className="rounded-lg border border-border p-3 space-y-2 opacity-50">
+                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2 opacity-50">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Slack className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">Slack</span>
-                            <Badge className="bg-purple-100 text-purple-700 border-0 text-[10px] font-medium px-1.5 py-0">Soon</Badge>
+                            <Badge className="bg-gray-600 text-white border-0 text-[10px] px-2 py-0">Soon</Badge>
                           </div>
                           <Switch disabled checked={false} />
                         </div>
                       </div>
                       {/* Email — Coming Soon */}
-                      <div className="rounded-lg border border-border p-3 space-y-2 opacity-50">
+                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2 opacity-50">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">Email</span>
-                            <Badge className="bg-purple-100 text-purple-700 border-0 text-[10px] font-medium px-1.5 py-0">Soon</Badge>
+                            <Badge className="bg-gray-600 text-white border-0 text-[10px] px-2 py-0">Soon</Badge>
                           </div>
                           <Switch disabled checked={false} />
                         </div>
@@ -1402,7 +1433,7 @@ function AlertsPageContent() {
 
           {/* Footer — only shown in manual/edit mode */}
           {(dialogMode === "manual" || editingAlert) && (
-          <div className="bg-white dark:bg-card px-6 py-4 border-t border-border rounded-b-lg flex-shrink-0">
+          <div className="bg-pd-surface px-7 py-4 border-t border-pd-border flex-shrink-0">
             <div className="flex flex-row justify-end gap-2">
               <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
                 Cancel
@@ -1411,7 +1442,6 @@ function AlertsPageContent() {
                 type="submit"
                 form="create-alert-form"
                 disabled={saving}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
               >
                 {saving
                   ? <><RefreshCw className="h-4 w-4 animate-spin mr-2" />Saving...</>
@@ -1434,7 +1464,7 @@ function AlertsPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 text-white hover:bg-red-700">Delete</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-pd-danger text-white hover:bg-pd-danger/90">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1450,14 +1480,14 @@ function AlertsPageContent() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSubConfirm} className="bg-red-600 text-white hover:bg-red-700">Remove</AlertDialogAction>
+            <AlertDialogAction onClick={handleDeleteSubConfirm} className="bg-pd-danger text-white hover:bg-pd-danger/90">Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* ── Snooze Dialog ─────────────────────────────────────── */}
       <Dialog open={!!snoozeTarget} onOpenChange={open => !open && setSnoozeTarget(null)}>
-        <DialogContent className="bg-white sm:max-w-[360px]">
+        <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle>Snooze Alert</DialogTitle>
             <DialogDescription>
@@ -1473,7 +1503,7 @@ function AlertsPageContent() {
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-white">
+              <SelectContent>
                 {SNOOZE_OPTIONS.map(o => (
                   <SelectItem key={o.value} value={String(o.value)}>{o.label}</SelectItem>
                 ))}
@@ -1482,7 +1512,7 @@ function AlertsPageContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSnoozeTarget(null)}>Cancel</Button>
-            <Button onClick={handleSnoozeConfirm} className="bg-pd-primary hover:bg-[#5f2fc0] text-white gap-2">
+            <Button onClick={handleSnoozeConfirm} className="gap-2">
               <BellOff className="h-4 w-4" />
               {snoozeTarget?._virtual ? "Snooze Client" : "Snooze"}
             </Button>
