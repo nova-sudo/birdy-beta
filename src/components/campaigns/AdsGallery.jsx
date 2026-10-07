@@ -218,7 +218,7 @@ export default function AdsGallery({
                   />
                   {/* A video creative wears its play badge over the poster. */}
                   {isVideo && (
-                    <span className="absolute flex size-11 items-center justify-center rounded-full bg-black/45">
+                    <span className="absolute flex size-11 items-center justify-center rounded-full bg-pd-ink/60">
                       <Play className="size-4 fill-white text-white" aria-hidden="true" />
                     </span>
                   )}

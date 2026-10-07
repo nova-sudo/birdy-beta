@@ -802,8 +802,12 @@ function SettingsPageContent() {
   // URL by then) comes back to the real settings page.
   if (passingThrough) {
     return (
-      <div className={`${pdFontClass} flex min-h-dvh items-center justify-center bg-white`}>
-        <Loader2 className="h-7 w-7 animate-spin text-pd-primary" aria-label="Finishing up" />
+      <div className={`${pdFontClass} flex min-h-dvh items-center justify-center bg-white`} role="status" aria-label="Finishing up">
+        <div className="w-full max-w-[600px] space-y-4 px-6">
+          <Skeleton className="mx-auto size-20 rounded-full" />
+          <Skeleton className="mx-auto h-8 w-2/3" />
+          <Skeleton className="mx-auto h-4 w-1/2" />
+        </div>
       </div>
     )
   }

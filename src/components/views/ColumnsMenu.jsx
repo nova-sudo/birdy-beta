@@ -313,15 +313,15 @@ export default function ColumnsMenu({
                         aria-label="View name"
                         className="h-[26px] min-w-0 flex-1 rounded-full border border-primary bg-background px-[9px] text-[12px] text-pd-ink outline-none ring-4 ring-primary/15"
                       />
-                      <button
-                        type="button" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pd-primary text-white hover:bg-purple-700 disabled:opacity-60"
+                      <Button
+                        size="icon-xs" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
+                        className="size-5 shrink-0"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M20 6L9 17l-5-5" />
                         </svg>
-                      </button>
+                      </Button>
                       <button
                         type="button" onClick={() => setEditTarget(null)} aria-label="Cancel rename"
                         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-pd-border text-pd-body hover:bg-pd-divider"

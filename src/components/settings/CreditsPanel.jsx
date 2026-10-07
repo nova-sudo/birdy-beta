@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Zap, Loader2, Check, X } from "lucide-react";
+import { Zap, Check, X } from "lucide-react";
 import { motion } from "framer-motion";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
 import {
@@ -66,8 +66,10 @@ export function TopupModal({ pack, email, onClose, onComplete }) {
             onComplete={onComplete}
             onPromoCodeChanged={setAppliedPromo}
             fallback={
-              <div className="flex items-center justify-center py-16">
-                <Loader2 className="w-6 h-6 animate-spin text-pd-faint" />
+              <div className="space-y-3 py-2">
+                <Skeleton className="h-10 w-full rounded-full" />
+                <Skeleton className="h-10 w-full rounded-full" />
+                <Skeleton className="h-12 w-full rounded-full" />
               </div>
             }
           />

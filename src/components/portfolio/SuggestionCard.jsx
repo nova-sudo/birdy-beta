@@ -2,6 +2,7 @@
 
 import { Trash2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const SEVERITY = {
   HIGH: { text: "text-pd-danger", dot: "bg-pd-danger" },
@@ -38,16 +39,16 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
         <div className="flex shrink-0 items-center gap-[5px]">
           {/* "Do it" alone is ambiguous once there are four cards in the rail;
               the accessible name carries which suggestion it acts on. */}
-          <button
-            type="button"
+          <Button
+            size="xs"
             title="Do it for me"
             aria-label={`Do it for me: ${suggestion.title} for ${suggestion.client}`}
             onClick={() => onApply(suggestion)}
-            className="flex cursor-pointer items-center gap-[5px] rounded-full bg-pd-primary px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-pd-segment transition-[transform,background-color] duration-200 hover:bg-purple-700 active:scale-[.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="gap-[5px] px-3 text-[11.5px] [&_svg]:size-3"
           >
-            <Zap className="size-3 shrink-0" aria-hidden="true" />
+            <Zap className="shrink-0" aria-hidden="true" />
             {applyLabel}
-          </button>
+          </Button>
           <button
             type="button"
             title="Dismiss"

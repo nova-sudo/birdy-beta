@@ -19,6 +19,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { Check, CircleDashed } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import { publicRequest } from "@/lib/api"
@@ -69,7 +70,12 @@ export default function InstallPage() {
   if (!details) {
     return (
       <Shell>
-        <p className="text-[13px] text-pd-faint">Loading…</p>
+        <div className="space-y-3" role="status" aria-label="Loading">
+          <Skeleton className="h-6 w-2/3" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
+        </div>
       </Shell>
     )
   }
@@ -114,7 +120,7 @@ export default function InstallPage() {
         </h2>
         <div
           className={cn(
-            "flex items-center gap-2.5 rounded-sm border px-3.5 py-3",
+            "flex items-center gap-2.5 rounded-xl border px-3.5 py-3",
             details.hit_received
               ? "border-pd-healthy-border bg-pd-healthy-surface"
               : "border-pd-border bg-pd-canvas",

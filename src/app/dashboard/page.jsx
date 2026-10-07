@@ -237,7 +237,6 @@ export default function PortfolioDashboardPage() {
       key: "suggestions",
       label: "Suggestions",
       badge: visibleSuggestions.length,
-      badgeClassName: "bg-pd-primary-tint text-pd-primary",
       isEmpty: visibleSuggestions.length === 0,
       emptyMessage: "No suggestions right now",
       status: `${visibleSuggestions.length} suggestion${
@@ -257,7 +256,6 @@ export default function PortfolioDashboardPage() {
       key: "activity",
       label: "Activity",
       badge: activityCount + applied.length,
-      badgeClassName: "bg-pd-neutral-badge text-pd-subtle",
       isEmpty: visibleActivity.length === 0,
       emptyMessage: "Nothing has happened yet",
       render: () => (

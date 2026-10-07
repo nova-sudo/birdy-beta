@@ -244,7 +244,7 @@ function InlineChartInner({ payload }) {
                 tickFormatter={(v) => v.length > 18 ? v.slice(0, 17) + "…" : v}
               />
               <Tooltip
-                cursor={{ fill: "rgba(139,92,246,0.06)" }}
+                cursor={{ fill: "rgba(91,63,214,0.06)" }}
                 contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
               />
@@ -263,7 +263,7 @@ function InlineChartInner({ payload }) {
               <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" interval={0} angle={-15} textAnchor="end" height={44} />
               <YAxis tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} width={44} />
               <Tooltip
-                cursor={{ fill: "rgba(139,92,246,0.06)" }}
+                cursor={{ fill: "rgba(91,63,214,0.06)" }}
                 contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
               />
