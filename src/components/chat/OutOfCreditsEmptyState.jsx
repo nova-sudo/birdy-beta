@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Coins } from "lucide-react"
+import Birdy from "@/components/birdy/Birdy"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
 
@@ -9,11 +9,8 @@ export default function OutOfCreditsEmptyState({ className = "" }) {
   return (
     <Empty className={`h-full ${className}`}>
       <EmptyHeader>
-        <EmptyMedia
-          variant="icon"
-          className="size-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/20"
-        >
-          <Coins className="h-6 w-6" />
+        <EmptyMedia>
+          <Birdy size={72} state="no" />
         </EmptyMedia>
         <EmptyTitle>You&apos;re out of Birdy Credits</EmptyTitle>
         <EmptyDescription>
@@ -21,7 +18,7 @@ export default function OutOfCreditsEmptyState({ className = "" }) {
         </EmptyDescription>
       </EmptyHeader>
       <EmptyContent>
-        <Button asChild className="bg-purple-600 hover:bg-purple-700 text-white">
+        <Button asChild>
           <Link href="/billing">Buy credits</Link>
         </Button>
       </EmptyContent>

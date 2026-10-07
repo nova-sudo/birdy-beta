@@ -1,6 +1,6 @@
 "use client"
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Bird, Sparkles, Zap } from "lucide-react"
+import { Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { apiRequest } from "@/lib/api"
@@ -12,6 +12,8 @@ import OutOfCreditsEmptyState from "@/components/chat/OutOfCreditsEmptyState"
 import MessageBubble from "@/components/chat/MessageBubble"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
+import Birdy from "@/components/birdy/Birdy"
+import { Reveal, Stagger, StaggerItem } from "@/components/motion"
 
 /**
  * Shared chat engine used by /ask-birdy, BirdyChatModal, and inline surfaces.
@@ -225,7 +227,7 @@ export default function ChatConversation({
 
   if (!configured) {
     return (
-      <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
+      <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
         <AiCredentialsEmptyState />
       </div>
     )
@@ -233,14 +235,14 @@ export default function ChatConversation({
 
   if (outOfCredits && isEmpty) {
     return (
-      <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
+      <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
         <OutOfCreditsEmptyState />
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-gray-50/50">
+    <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
         {isEmpty && !loading ? (
@@ -252,7 +254,7 @@ export default function ChatConversation({
             onQuickStarter={sendMessage}
           />
         ) : (
-          <div className="max-w-2xl mx-auto px-5 py-5 space-y-4">
+          <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
             {messages.map((m, i) => (
               <MessageBubble
                 key={i}
@@ -265,7 +267,7 @@ export default function ChatConversation({
             ))}
             {loading && <TypingIndicator />}
             {loading && slowNotice && (
-              <p className="pl-10 text-[11px] text-gray-400">
+              <p className="pl-[34px] text-[12px] text-pd-faint">
                 This is taking a little longer — likely a call analysis. You can
                 close this window; you&apos;ll be notified when it&apos;s done.
               </p>
@@ -275,10 +277,10 @@ export default function ChatConversation({
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3">
-        <div className="max-w-2xl mx-auto">
+      <div className="shrink-0 px-4 pb-4 pt-1">
+        <div className="max-w-3xl mx-auto">
           {outOfCredits && (
-            <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-700">
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-full bg-pd-warning px-4 py-2 text-xs font-semibold text-white">
               <span>You&apos;re out of Birdy Credits.</span>
               <Link href="/billing" className="font-semibold underline underline-offset-2 hover:no-underline">
                 Buy credits
@@ -304,38 +306,36 @@ export default function ChatConversation({
 function EmptyState({ title, subtitle, showHints, quickStarters, onQuickStarter }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-6 py-16">
-      {/* Icon */}
-      <div className="relative mb-5">
-        <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25">
-          <Bird className="h-8 w-8" />
-        </div>
-        <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-emerald-400 border-2 border-white flex items-center justify-center">
-          <Zap className="h-2.5 w-2.5 text-white" />
-        </div>
-      </div>
+      {/* The mascot watches the cursor while it waits for a question. */}
+      <Reveal className="mb-4">
+        <Birdy size={84} />
+      </Reveal>
 
-      <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-      <p className="mt-1 text-sm text-gray-500 max-w-xs">{subtitle}</p>
+      <Reveal delay={0.08}>
+        <h3 className="font-pd-display text-[22px] font-bold tracking-[-0.02em] text-pd-ink">{title}</h3>
+        <p className="mt-1.5 text-[14px] text-pd-subtle max-w-sm">{subtitle}</p>
+      </Reveal>
 
       {/* Quick starters */}
       {quickStarters?.length > 0 && (
-        <div className="mt-5 flex flex-wrap gap-2 justify-center max-w-sm">
+        <Stagger className="mt-6 flex flex-wrap gap-2 justify-center max-w-md" delay={0.2} gap={0.06}>
           {quickStarters.map((s, i) => (
-            <button
+            <StaggerItem
+              as="button"
               key={i}
               onClick={() => onQuickStarter?.(s.prompt)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-purple-200 bg-white px-3.5 py-1.5 text-xs font-medium text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition shadow-sm"
+              className="inline-flex items-center gap-1.5 rounded-full border border-pd-border bg-pd-surface px-4 py-2 text-[13px] font-semibold text-pd-ink shadow-xs transition-[border-color,background-color] hover:border-pd-primary hover:bg-pd-primary-tint/50 active:scale-[.97]"
             >
-              <Sparkles className="h-3 w-3 text-purple-400" />
+              <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
               {s.label}
-            </button>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
       )}
 
       {showHints && (
-        <p className="mt-4 text-[11px] text-gray-400">
-          Type <kbd className="px-1 py-0.5 rounded bg-gray-100 font-sans text-gray-500">/</kbd> for commands
+        <p className="mt-5 text-[12px] text-pd-faint">
+          Type <kbd className="px-1.5 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">/</kbd> for commands
         </p>
       )}
     </div>

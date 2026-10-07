@@ -12,10 +12,11 @@ export default function ToolPill({ name, count }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${color.bg} ${color.text} ${color.border}`}
+      className="inline-flex items-center gap-1.5 rounded-full bg-pd-divider px-2.5 py-0.5 text-[11px] font-semibold text-pd-body"
       title={count ? `${name} (${count}×)` : name}
     >
-      <Icon className="h-3 w-3" />
+      <span className={`size-1.5 rounded-full ${color.dot}`} aria-hidden="true" />
+      <Icon className="h-3 w-3 text-pd-subtle" />
       {meta.label}
       {count && <span className="opacity-60 tabular-nums">×{count}</span>}
     </span>

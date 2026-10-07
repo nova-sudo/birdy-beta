@@ -47,11 +47,11 @@ function Stat({ stat }) {
     : "text-muted-foreground"
 
   return (
-    <div className="rounded-lg border border-border/50 bg-white px-3 py-2.5 shadow-sm">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium truncate">
+    <div className="rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-sm">
+      <div className="text-[10.5px] uppercase tracking-[.04em] text-pd-faint font-bold truncate">
         {label}
       </div>
-      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${accent}`}>
+      <div className={`mt-0.5 font-pd-display text-[19px] font-bold tabular-nums ${accent}`}>
         {formatMetric(value, format, currency)}
       </div>
       {DeltaIcon && (

@@ -663,6 +663,26 @@
   .skeleton-shimmer { animation: none; background-image: none; }
 }
 
+/* ---------- Chat "thinking" shimmer ----------
+   A violet highlight sweeping through muted text. */
+@keyframes chat-shimmer {
+  from { background-position: 100% 0; }
+  to   { background-position: -150% 0; }
+}
+
+.chat-shimmer {
+  background-image: linear-gradient(90deg, var(--pd-subtle) 0%, var(--pd-subtle) 35%, var(--pd-primary) 50%, var(--pd-subtle) 65%, var(--pd-subtle) 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: chat-shimmer 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chat-shimmer { animation: none; background: none; color: var(--pd-subtle); }
+}
+
 /* ---------- Birdy logo flap animation ---------- */
 @keyframes birdy-flap {
   0%   { transform: rotate(0deg)  scaleY(1)    translateY(0); }

@@ -104,7 +104,7 @@ function InlineChartInner({ payload }) {
 
   if (normalized.length === 0) {
     return (
-      <div className="my-3 rounded-xl border border-border/50 bg-white p-4 shadow-sm text-sm text-muted-foreground text-center">
+      <div className="my-3 rounded-xl border border-pd-border bg-pd-surface p-4 shadow-sm text-sm text-muted-foreground text-center">
         No data to display.
       </div>
     )
@@ -130,7 +130,7 @@ function InlineChartInner({ payload }) {
   const hasRightAxis = isMultiSeries && seriesList.some(s => s.axis === "right")
 
   return (
-    <div className="my-3 rounded-xl border border-border/50 bg-white p-3 shadow-sm">
+    <div className="my-3 rounded-xl border border-pd-border bg-pd-surface p-3 shadow-sm">
       {title && (
         <div className="mb-2 px-1 text-xs font-semibold text-foreground/80">{title}</div>
       )}
@@ -158,7 +158,7 @@ function InlineChartInner({ payload }) {
                 />
               )}
               <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
+                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v, name, entry) => {
                   const key = entry?.dataKey
                   const s = seriesList.find(s => s.key === key)
@@ -200,7 +200,7 @@ function InlineChartInner({ payload }) {
               <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#94a3b8" />
               <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={formatCompact} width={44} />
               <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
+                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
               />
               <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
@@ -221,7 +221,7 @@ function InlineChartInner({ payload }) {
                 ))}
               </Pie>
               <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
+                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v, n) => [singleValueFormatter(v), n]}
               />
             </PieChart>
@@ -244,7 +244,7 @@ function InlineChartInner({ payload }) {
               />
               <Tooltip
                 cursor={{ fill: "rgba(139,92,246,0.06)" }}
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
+                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
               />
               <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]} isAnimationActive={false}>
@@ -263,7 +263,7 @@ function InlineChartInner({ payload }) {
               <YAxis tick={{ fontSize: 10 }} stroke="#94a3b8" tickFormatter={formatCompact} width={44} />
               <Tooltip
                 cursor={{ fill: "rgba(139,92,246,0.06)" }}
-                contentStyle={{ fontSize: 11, borderRadius: 8, border: "1px solid #e2e8f0" }}
+                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
                 formatter={(v) => [singleValueFormatter(v), ""]}
               />
               <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} isAnimationActive={false}>

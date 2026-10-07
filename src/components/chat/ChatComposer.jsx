@@ -106,8 +106,8 @@ export default function ChatComposer({
     <div className="relative">
       {/* Slash command palette */}
       {showSlash && filteredCommands.length > 0 && (
-        <div className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-border bg-white shadow-lg overflow-hidden z-20">
-          <div className="px-3 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground font-medium border-b border-border/40">
+        <div className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-pd-border bg-pd-surface p-1 shadow-pd-popover overflow-hidden z-20 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+          <div className="px-3 py-1.5 text-[11px] uppercase tracking-[.04em] text-pd-faint font-bold">
             Commands
           </div>
           {filteredCommands.map((c) => {
@@ -116,9 +116,9 @@ export default function ChatComposer({
               <button
                 key={c.cmd}
                 onClick={() => applySlash(c)}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-purple-50 transition"
+                className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-pd-primary-tint transition-colors"
               >
-                <Icon className="h-4 w-4 text-purple-600" />
+                <Icon className="h-4 w-4 text-pd-primary" />
                 <span className="font-mono text-xs text-muted-foreground w-20">{c.cmd}</span>
                 <span className="text-foreground/80">{c.label}</span>
               </button>
@@ -134,9 +134,9 @@ export default function ChatComposer({
             <button
               key={i}
               onClick={() => onQuickAction?.(q.prompt)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white px-3 py-1.5 text-xs text-foreground/80 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition"
+              className="inline-flex items-center gap-1.5 rounded-full border border-pd-border bg-pd-surface px-3.5 py-1.5 text-xs font-semibold text-pd-ink hover:border-pd-primary hover:bg-pd-primary-tint/50 transition-colors active:scale-[.97]"
             >
-              <Sparkles className="h-3 w-3 text-purple-500" />
+              <Sparkles className="h-3 w-3 text-pd-primary" />
               {q.label}
             </button>
           ))}
@@ -144,11 +144,9 @@ export default function ChatComposer({
       )}
 
       {/* Input row */}
-      <div className={`flex items-end gap-2 rounded-xl border bg-white transition-all
-        ${compact
-          ? "border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 p-1.5"
-          : "border-border/60 shadow-sm focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 p-2"
-        }`}>
+      {/* A raised card that lights up violet while you type in it. */}
+      <div className={`flex items-end gap-2 border border-pd-border bg-pd-surface shadow-lg transition-[border-color,box-shadow] duration-200 focus-within:border-pd-primary focus-within:shadow-[0_0_0_4px_rgba(91,63,214,.12),var(--shadow-lg)]
+        ${compact ? "rounded-[22px] p-1.5 pl-2" : "rounded-[26px] p-2 pl-3"}`}>
         <textarea
           ref={textareaRef}
           value={value}
@@ -157,17 +155,15 @@ export default function ChatComposer({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className={`flex-1 resize-none bg-transparent border-0 outline-none text-sm text-gray-800 placeholder:text-gray-400 ${compact ? "px-2 py-1" : "px-3 py-2"} min-h-[28px] max-h-[160px] leading-relaxed`}
+          className={`flex-1 resize-none bg-transparent border-0 outline-none text-[14px] text-pd-ink placeholder:text-pd-faint ${compact ? "px-2 py-1.5" : "px-2 py-2"} min-h-[28px] max-h-[160px] leading-relaxed`}
         />
         <Button
           onClick={onSend}
           disabled={!canSend}
           size="icon"
-          className={`shrink-0 rounded-lg transition ${
-            canSend
-              ? "bg-pd-primary hover:bg-[#5f2fc0] text-white shadow-sm"
-              : "bg-gray-100 text-gray-400"
-          } ${compact ? "h-7 w-7" : "h-9 w-9"}`}
+          className={`shrink-0 rounded-full ${
+            canSend ? "" : "bg-pd-divider text-pd-faint shadow-none"
+          } ${compact ? "size-8" : "size-10"}`}
           aria-label="Send message"
         >
           <Send className={compact ? "h-3 w-3" : "h-4 w-4"} />
@@ -176,14 +172,14 @@ export default function ChatComposer({
 
       {/* Hint row */}
       {!compact && (
-        <div className="mt-1.5 px-1 flex items-center justify-between text-[10px] text-gray-400">
+        <div className="mt-2 px-3 flex items-center justify-between text-[11px] text-pd-faint">
           <span>
-            <kbd className="px-1 py-0.5 rounded bg-gray-100 font-sans">Enter</kbd> to send ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-gray-100 font-sans">Shift+Enter</kbd> new line ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded bg-gray-100 font-sans">/</kbd> commands
+            <kbd className="px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">Enter</kbd> to send ·
+            <kbd className="ml-1.5 px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">Shift+Enter</kbd> new line ·
+            <kbd className="ml-1.5 px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">/</kbd> commands
           </span>
           <span>
-            <kbd className="px-1 py-0.5 rounded bg-gray-100 font-sans">⌘K</kbd> focus
+            <kbd className="px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">⌘K</kbd> focus
           </span>
         </div>
       )}

@@ -2,7 +2,8 @@
 import { useState } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Bird, MessageSquarePlus, ExternalLink } from "lucide-react"
+import { MessageSquarePlus, ExternalLink } from "lucide-react"
+import Birdy from "@/components/birdy/Birdy"
 import Link from "next/link"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { resetChat } from "@/lib/chat-store"
@@ -44,14 +45,12 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 sm:max-w-4xl h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-pd-border bg-pd-surface shrink-0">
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-white">
-              <Bird className="h-3.5 w-3.5" />
-            </div>
+            <Birdy size={32} />
             <div>
-              <div className="text-sm font-semibold leading-tight">Birdy AI</div>
-              <div className="text-[10px] text-muted-foreground leading-tight">Your marketing co-pilot</div>
+              <div className="font-pd-display text-[16px] font-bold leading-tight text-pd-ink">Birdy AI</div>
+              <div className="text-[11.5px] text-pd-subtle leading-tight">Your marketing co-pilot</div>
             </div>
           </div>
           <div className="flex items-center gap-1">
@@ -71,7 +70,7 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
         </div>
 
         {/* Conversation */}
-        <div className="flex-1 min-h-0 bg-[#FAFAFA]">
+        <div className="flex-1 min-h-0 bg-pd-canvas">
           <ChatConversation
             key={resetKey}
             initialMessage={initialMessage}

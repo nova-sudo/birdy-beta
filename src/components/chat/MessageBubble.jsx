@@ -1,7 +1,11 @@
 "use client"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
-import { Bird } from "lucide-react"
+import { useState } from "react"
+import { motion } from "framer-motion"
+import { Check, Copy } from "lucide-react"
+import Birdy from "@/components/birdy/Birdy"
+import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
 import ChatUIBlock from "@/components/chat/ChatUIBlock"
@@ -24,40 +28,55 @@ export default function MessageBubble({
 
   const parsed = !isUser ? parseChatUI(message.content) : null
 
-  const hasWideBlock = !isUser && parsed?.segments?.some(s =>
-    ["chart", "stats", "metric", "ui"].includes(s.type)
-  )
-  const effectiveWidth = hasWideBlock ? "w-full max-w-2xl" : widthClass
 
+  // Your side is a soft pill on the right; Birdy's side is an unboxed,
+  // full-width answer with the mascot and name above it — it reads like a
+  // short report, which leaves room for the charts and tables it carries.
   if (isUser) {
     return (
-      <div className="flex justify-end items-end gap-2">
-        <div className={`${widthClass} bg-pd-primary text-white rounded-2xl rounded-br-sm px-4 py-2.5`}>
-          <p className="text-sm leading-relaxed">{message.content}</p>
+      <motion.div
+        className="flex justify-end"
+        initial={{ opacity: 0, y: 18, scale: 0.96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.5, ease: EASE_SPRING }}
+      >
+        <div className={`${widthClass} rounded-[22px] bg-pd-divider px-4 py-2.5 text-pd-ink`}>
+          <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
         </div>
-        <div className="h-7 w-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0 mb-0.5">
-          <span className="text-[10px] font-bold text-purple-600">You</span>
-        </div>
-      </div>
+      </motion.div>
     )
   }
 
+  // Collapse repeated tool calls into one pill with a count.
+  const tools = (() => {
+    if (!message.tools_used?.length) return []
+    const counts = new Map()
+    for (const t of message.tools_used) counts.set(t, (counts.get(t) || 0) + 1)
+    return [...counts.entries()]
+  })()
+
   return (
-    <div className="flex items-start gap-2.5">
-      {/* Birdy avatar */}
-      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 mt-0.5 shadow-sm shadow-purple-200">
-        <Bird className="h-3.5 w-3.5 text-white" />
+    <motion.div
+      className="group flex flex-col gap-2"
+      initial={{ opacity: 0, y: 22, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ duration: 0.6, ease: EASE_SPRING }}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <Birdy size={26} paused />
+        <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
+        {tools.map(([tool, n]) => (
+          <ToolPill key={tool} name={tool} count={n > 1 ? n : undefined} />
+        ))}
       </div>
 
-      <div className={`${effectiveWidth} space-y-1`}>
-        {/* Bubble */}
-        <div className="bg-white rounded-2xl rounded-tl-sm border border-gray-100 shadow-sm px-4 py-3">
-          <div className="prose prose-sm max-w-none text-gray-800
-            prose-headings:text-gray-900 prose-headings:font-semibold
-            prose-p:text-gray-700 prose-p:leading-relaxed prose-p:my-1
-            prose-strong:text-gray-900
-            prose-ul:my-1 prose-li:my-0
-            prose-code:text-purple-700 prose-code:bg-purple-50 prose-code:px-1 prose-code:rounded prose-code:text-xs">
+      <div className="w-full pl-[34px]">
+          <div className="prose prose-sm max-w-none text-pd-body
+            prose-headings:font-pd-display prose-headings:text-pd-ink prose-headings:font-semibold
+            prose-p:text-pd-body prose-p:text-[14px] prose-p:leading-[1.65] prose-p:my-1.5
+            prose-strong:text-pd-ink
+            prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-[14px]
+            prose-code:text-pd-primary prose-code:bg-pd-primary-tint prose-code:px-1 prose-code:rounded-md prose-code:text-xs">
             {parsed?.segments.map((seg, i) => {
               const key = `${messageIndex}-${i}`
               switch (seg.type) {
@@ -89,21 +108,35 @@ export default function MessageBubble({
               }
             })}
           </div>
-        </div>
-
-        {/* Tool pills */}
-        {message.tools_used?.length > 0 && (
-          <div className="flex flex-wrap gap-1 px-1">
-            {(() => {
-              const counts = new Map()
-              for (const t of message.tools_used) counts.set(t, (counts.get(t) || 0) + 1)
-              return [...counts.entries()].map(([tool, n]) => (
-                <ToolPill key={tool} name={tool} count={n > 1 ? n : undefined} />
-              ))
-            })()}
-          </div>
-        )}
       </div>
-    </div>
+
+      <div className="pl-[34px]">
+        <CopyButton text={message.content} />
+      </div>
+    </motion.div>
+  )
+}
+
+/** Copies the raw answer; sits under each reply, quiet until hovered. */
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  if (!text || typeof navigator === "undefined" || !navigator.clipboard) return null
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        } catch {
+          // Clipboard can be blocked (permissions, insecure origin) — nothing to do.
+        }
+      }}
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-pd-subtle opacity-60 transition-[opacity,background-color,color] hover:bg-foreground/5 hover:text-pd-ink group-hover:opacity-100"
+    >
+      {copied ? <Check className="size-3.5 text-pd-success" /> : <Copy className="size-3.5" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
   )
 }
