@@ -205,9 +205,8 @@ describe("starting a new chat", () => {
 // The whole point of the redesign: which conversations are about the
 // workspace and which are about one client, visible without opening them.
 // Scope is decided server-side and arrives on each row; the page only has to
-// show it consistently in the four places the handoff calls for — the row
-// badge, the header badge, the header description, and the composer
-// placeholder.
+// show it consistently in the places the handoff calls for — the row glyph
+// and label, the thread's scope pill, and the client picked in the composer.
 
 describe("conversation scope", () => {
   const globalConvo = (id, title) =>
@@ -277,7 +276,7 @@ describe("conversation scope", () => {
 
     await user.click(await screen.findByText("Aura's CPL"))
 
-    expect(await screen.findByText(/Aura · client conversation/)).toBeInTheDocument()
+    expect(await screen.findByText(/Client: Aura/)).toBeInTheDocument()
   })
 
   it("badges an open workspace conversation as global", async () => {
@@ -290,27 +289,15 @@ describe("conversation scope", () => {
 
     await user.click(await screen.findByText("Whole account"))
 
-    expect(await screen.findByText("Global conversation")).toBeInTheDocument()
-  })
-
-  it("names the client in the composer placeholder", async () => {
-    seed([clientConvo("s1", "Aura's CPL")])
-    apiRequest.mockResolvedValueOnce(ok({
-      session_id: "s1", messages: [{ role: "user", content: "Aura's CPL" }],
-    }))
-    const user = userEvent.setup()
-    render(<AskBirdyPage />)
-
-    await user.click(await screen.findByText("Aura's CPL"))
-
     await waitFor(() =>
-      expect(chatProps.current.composerPlaceholder).toMatch(/about Aura/i)
+      expect(within(screen.getByTestId("thread-scope")).getByText("Global")).toBeInTheDocument()
     )
   })
 
-  it("never pins the chat to a client, so a thread can pivot to another", async () => {
-    // Passing clientGroupId would pin every analysis tool to that client
-    // server-side. Right on a client's own page, wrong on the workspace hub.
+  it("opens a client thread with that client picked in the composer", async () => {
+    // The composer's scope picker is where a question's client is chosen; a
+    // thread that is already about one client starts with it picked, and the
+    // picker is how the next question widens to every client again.
     seed([clientConvo("s1", "Aura's CPL")])
     apiRequest.mockResolvedValueOnce(ok({
       session_id: "s1", messages: [{ role: "user", content: "Aura's CPL" }],
@@ -319,6 +306,21 @@ describe("conversation scope", () => {
     render(<AskBirdyPage />)
 
     await user.click(await screen.findByText("Aura's CPL"))
+    await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
+
+    expect(chatProps.current.clientGroupId).toBe("g1")
+    expect(chatProps.current.clientName).toBe("Aura")
+  })
+
+  it("opens a workspace thread with no client picked", async () => {
+    seed([globalConvo("s1", "Whole account")])
+    apiRequest.mockResolvedValueOnce(ok({
+      session_id: "s1", messages: [{ role: "user", content: "Whole account" }],
+    }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+
+    await user.click(await screen.findByText("Whole account"))
     await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
 
     expect(chatProps.current.clientGroupId ?? null).toBeNull()

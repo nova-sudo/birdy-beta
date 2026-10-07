@@ -12,8 +12,12 @@ import OutOfCreditsEmptyState from "@/components/chat/OutOfCreditsEmptyState"
 import MessageBubble from "@/components/chat/MessageBubble"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
+import ScopePicker, { ALL_CLIENTS } from "@/components/chat/ScopePicker"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Reveal, Stagger, StaggerItem } from "@/components/motion"
+import { useClientGroups } from "@/lib/useClientGroups"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { startersFor } from "@/lib/chat-starters"
 
 /**
  * Shared chat engine used by /ask-birdy, BirdyChatModal, and inline surfaces.
@@ -30,8 +34,10 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion"
  *   bubbleWidthClass?       Tailwind max-w class for text bubbles
  *   emptyStateTitle?
  *   emptyStateSubtitle?
- *   showQuickActions?       show chip row + /hint in empty state (default true)
- *   quickStarters?          [{label, prompt}] — context-specific starter chips
+ *   showQuickActions?       show starters + /hint in empty state (default true)
+ *   quickStarters?          [{label, prompt}] — starters; defaults to the page's own
+ *   scopeLocked?            the surface is pinned to one client: show it, don't offer a picker
+ *   composerAutoFocus?      focus the composer on mount (the side panel)
  */
 export default function ChatConversation({
   initialMessages = [],
@@ -51,6 +57,8 @@ export default function ChatConversation({
   emptyStateSubtitle = "Ask about your campaigns, leads, opportunities, or custom metrics.",
   showQuickActions = true,
   quickStarters = null,
+  scopeLocked = false,
+  composerAutoFocus = false,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -71,6 +79,21 @@ export default function ChatConversation({
   const submittedUIs = isControlled ? localSubmittedUIs : new Set(storeChat.submittedUIs)
 
   const [input, setInput] = useState("")
+
+  // Which client the question is about. Starts from what the surface was
+  // given (the client detail page pins one; an opened client-scoped thread
+  // suggests one) and follows the picker from there. Sent with every message
+  // as client_group_id, so the backend scopes the tools rather than guessing
+  // from the wording.
+  const [scope, setScope] = useState(
+    clientGroupId ? { id: clientGroupId, name: clientName } : ALL_CLIENTS
+  )
+  useEffect(() => {
+    setScope(clientGroupId ? { id: clientGroupId, name: clientName } : ALL_CLIENTS)
+  }, [clientGroupId, clientName])
+  // The picker's list. No daily series: the names are all it needs.
+  const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
+
   // Shown once a request runs long enough that "just wait" stops being fair.
   const [slowNotice, setSlowNotice] = useState(false)
   const scrollRef = useRef(null)
@@ -131,7 +154,7 @@ export default function ChatConversation({
       // Store-owned send: survives this component unmounting mid-request.
       await sendChatMessage(
         sessionKey,
-        { text, page, clientGroupId, clientName },
+        { text, page, clientGroupId: scope.id, clientName: scope.id ? scope.name : null },
         {
           persistSession: true,
           onSessionId: (id) => onSessionIdRef.current?.(id),
@@ -160,7 +183,7 @@ export default function ChatConversation({
     try {
       const res = await apiRequest("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: clientGroupId, client_name: clientName }),
+        body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: scope.id, client_name: scope.id ? scope.name : null }),
       })
       if (res.status === 412) {
         // Credentials were removed (e.g. in another tab) since this component last checked.
@@ -199,7 +222,7 @@ export default function ChatConversation({
     } finally {
       setLocalLoading(false)
     }
-  }, [loading, sessionId, sessionKey, isControlled, page, clientGroupId, clientName, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, scope, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
@@ -249,12 +272,14 @@ export default function ChatConversation({
           <EmptyState
             title={emptyStateTitle}
             subtitle={emptyStateSubtitle}
-            showHints={showQuickActions}
-            quickStarters={quickStarters}
+            // The composer's foot already says "/ commands" on the page; the
+            // compact composer in the panel doesn't, so the hint lives here.
+            showHints={showQuickActions && composerCompact}
+            quickStarters={quickStarters ?? (showQuickActions ? startersFor(page) : null)}
             onQuickStarter={sendMessage}
           />
         ) : (
-          <div className="max-w-3xl mx-auto px-5 py-6 space-y-6">
+          <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
             {messages.map((m, i) => (
               <MessageBubble
                 key={i}
@@ -277,7 +302,7 @@ export default function ChatConversation({
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 px-4 pb-4 pt-1">
+      <div className={`shrink-0 pt-1 ${composerCompact ? "px-3 pb-3" : "px-4 pb-4"}`}>
         <div className="max-w-3xl mx-auto">
           {outOfCredits && (
             <div className="mb-2 flex items-center justify-between gap-2 rounded-full bg-pd-warning px-4 py-2 text-xs font-semibold text-white">
@@ -294,8 +319,15 @@ export default function ChatConversation({
             disabled={loading || outOfCredits}
             compact={composerCompact}
             placeholder={composerPlaceholder}
-            showQuickActions={showQuickActions && isEmpty}
-            onQuickAction={sendMessage}
+            autoFocus={composerAutoFocus}
+            foot={
+              <ScopePicker
+                value={scope}
+                clients={clientGroups}
+                onChange={setScope}
+                locked={scopeLocked}
+              />
+            }
           />
         </div>
       </div>
@@ -305,10 +337,10 @@ export default function ChatConversation({
 
 function EmptyState({ title, subtitle, showHints, quickStarters, onQuickStarter }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center text-center px-6 py-16">
+    <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
       {/* The mascot watches the cursor while it waits for a question. */}
       <Reveal className="mb-4">
-        <BirdyAvatar size={96} />
+        <BirdyAvatar size={72} />
       </Reveal>
 
       <Reveal delay={0.08}>
@@ -316,18 +348,23 @@ function EmptyState({ title, subtitle, showHints, quickStarters, onQuickStarter 
         <p className="mt-1.5 text-[14px] text-pd-subtle max-w-sm">{subtitle}</p>
       </Reveal>
 
-      {/* Quick starters */}
+      {/* Starters: questions this surface can answer, one per row in the
+          side panel and two across on the page. */}
       {quickStarters?.length > 0 && (
-        <Stagger className="mt-6 flex flex-wrap gap-2 justify-center max-w-md" delay={0.2} gap={0.06}>
+        <Stagger
+          className="mt-6 grid w-full max-w-[560px] grid-cols-1 gap-2 sm:grid-cols-2"
+          delay={0.2}
+          gap={0.06}
+        >
           {quickStarters.map((s, i) => (
             <StaggerItem
               as="button"
               key={i}
               onClick={() => onQuickStarter?.(s.prompt)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-pd-border bg-pd-surface px-4 py-2 text-[13px] font-semibold text-pd-ink shadow-xs transition-[border-color,background-color] hover:border-pd-primary hover:bg-pd-primary-tint/50 active:scale-[.97]"
+              className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-2.5 text-left text-[13px] font-medium text-pd-ink shadow-xs transition-[border-color,background-color] hover:border-pd-primary hover:bg-pd-primary-tint/50 active:scale-[.98]"
             >
-              <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
-              {s.label}
+              <Sparkles className="size-3.5 shrink-0 text-pd-primary" aria-hidden="true" />
+              <span className="min-w-0">{s.label}</span>
             </StaggerItem>
           ))}
         </Stagger>

@@ -1,6 +1,6 @@
 "use client"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
-import { Send, Sparkles, BarChart3, Bell, Users, TrendingUp } from "lucide-react"
+import { Send, BarChart3, Bell, Users, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 const SLASH_COMMANDS = [
@@ -10,31 +10,26 @@ const SLASH_COMMANDS = [
   { cmd: "/alert",     label: "Create an alert",    icon: Bell, prompt: "Help me create an alert." },
 ]
 
-const QUICK_ACTIONS = [
-  { label: "Today's performance",   prompt: "How am I doing today across all client groups?" },
-  { label: "Best campaigns",        prompt: "Which are my best performing campaigns this week?" },
-  { label: "Leads to follow up",    prompt: "Which leads need follow-up right now?" },
-  { label: "Create an alert",       prompt: "Help me create an alert." },
-]
 
 /**
  * Shared chat input composer.
  *
  * Props:
  *   value, onChange, onSend, disabled
- *   showQuickActions?: boolean   — show quick-action chips above the input (when chat is empty)
- *   onQuickAction?: (prompt) => void
+ *   foot?: ReactNode             — sits under the input on the left: the scope picker
  *   placeholder?
  *   compact?: boolean            — smaller padding, used in embedded surfaces
  *   autoFocus?: boolean
+ *
+ * Starter chips used to render above the input; they live in the empty
+ * state now (ChatConversation), where they can be about the page.
  */
 export default function ChatComposer({
   value,
   onChange,
   onSend,
   disabled = false,
-  showQuickActions = false,
-  onQuickAction,
+  foot = null,
   placeholder = "Ask anything about your marketing data…",
   compact = false,
   autoFocus = false,
@@ -127,22 +122,6 @@ export default function ChatComposer({
         </div>
       )}
 
-      {/* Quick action chips (empty-state) */}
-      {showQuickActions && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {QUICK_ACTIONS.map((q, i) => (
-            <button
-              key={i}
-              onClick={() => onQuickAction?.(q.prompt)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-pd-border bg-pd-surface px-3.5 py-1.5 text-xs font-semibold text-pd-ink hover:border-pd-primary hover:bg-pd-primary-tint/50 transition-colors active:scale-[.97]"
-            >
-              <Sparkles className="h-3 w-3 text-pd-primary" />
-              {q.label}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Input row */}
       {/* A raised card that lights up violet while you type in it. */}
       <div className={`flex items-end gap-2 border border-pd-border bg-pd-surface shadow-lg transition-[border-color,box-shadow] duration-200 focus-within:border-pd-primary focus-within:shadow-[0_0_0_4px_rgba(91,63,214,.12),var(--shadow-lg)]
@@ -170,17 +149,18 @@ export default function ChatComposer({
         </Button>
       </div>
 
-      {/* Hint row */}
-      {!compact && (
-        <div className="mt-2 px-3 flex items-center justify-between text-[11px] text-pd-faint">
-          <span>
-            <kbd className="px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">Enter</kbd> to send ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">Shift+Enter</kbd> new line ·
-            <kbd className="ml-1.5 px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">/</kbd> commands
-          </span>
-          <span>
-            <kbd className="px-1 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">⌘K</kbd> focus
-          </span>
+      {/* Foot: what the question is about on the left, the two keys worth
+          knowing on the right. The old row listed every shortcut; nobody
+          reads a legend under every message. */}
+      {(foot || !compact) && (
+        <div className="mt-2 flex items-center justify-between gap-3 px-3 text-[11px] text-pd-faint">
+          <span className="min-w-0">{foot}</span>
+          {!compact && (
+            <span className="shrink-0">
+              <kbd className="rounded-md bg-pd-divider px-1 py-0.5 font-sans text-pd-body">↵</kbd> send ·
+              <kbd className="ml-1.5 rounded-md bg-pd-divider px-1 py-0.5 font-sans text-pd-body">/</kbd> commands
+            </span>
+          )}
         </div>
       )}
     </div>

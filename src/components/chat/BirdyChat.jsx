@@ -52,6 +52,7 @@ export default function BirdyChat({
           initialMessages={initialMessages}
           onMessagesChange={onMessagesChange}
           composerCompact
+          scopeLocked
           bubbleWidthClass="max-w-[90%]"
           emptyStateTitle={`Ask me about ${displayName}`}
           emptyStateSubtitle={`Campaign performance, leads, opportunities, and tags — all scoped to ${displayName}.`}
