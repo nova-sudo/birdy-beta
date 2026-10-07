@@ -53,7 +53,8 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
               <div className="text-[11.5px] text-pd-subtle leading-tight">Your marketing co-pilot</div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
+          {/* mr-8 clears the dialog's own close button in the corner. */}
+          <div className="mr-8 flex items-center gap-1">
             <Button variant="ghost" size="sm" onClick={handleNewChat} className="h-8 gap-1.5 text-xs">
               <MessageSquarePlus className="h-3.5 w-3.5" />
               New
