@@ -200,7 +200,11 @@ export default function AskBirdyPage() {
     : null
 
   const greeting = `${timeOfDay}${firstName ? `, ${firstName}` : ""}`
-  const clientCount = clientGroups.length
+  // The count comes from a cache that can already be warm on the client
+  // (the login prefetch) while the server rendered without it, so it joins
+  // the greeting after mount rather than at first paint.
+  const [clientCount, setClientCount] = useState(0)
+  useEffect(() => { setClientCount(clientGroups.length) }, [clientGroups.length])
 
   // ── Global header slot: title + subtitle, like every other hub ──────────
   const header = useMemo(() => ({
