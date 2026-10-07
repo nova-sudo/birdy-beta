@@ -19,12 +19,11 @@
 // the sibling screen's counter-example, and DeltaPill already takes a polarity
 // for exactly that reason — nothing on this screen needs to pass one.
 
-/** The six figures, in the design's order across the top of the chart. */
+/** The five figures, in order; every one has a curve to show. */
 export const KPI_PRESENTATION = [
   { key: "called", label: "Leads called", tone: "primary", chartKey: "called" },
   { key: "calls", label: "Total calls", tone: "info", chartKey: "calls" },
   { key: "inbound", label: "Inbound", tone: "success", chartKey: "inbound" },
   { key: "outbound", label: "Outbound", tone: "amber", chartKey: "outbound" },
-  { key: "transfers", label: "Transfers", tone: "info" },
   { key: "talk", label: "Talk time (min)", tone: "primary", chartKey: "talk" },
 ];

@@ -15,11 +15,10 @@ import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "@/lib/portfolio-metrics";
 // Opportunities has no series of its own (it is the sum of open, won, lost
 // and abandoned), so it stays a figure in the row without being selectable.
 
-/** The six figures, in the design's order. */
+/** The five figures, in order; every one has a curve to show. */
 export const KPI_PRESENTATION = [
   { key: "lead_count", label: "Total leads", tone: "primary", polarity: HIGHER_IS_BETTER, chartKey: "leads" },
   { key: "contact_count", label: "Total contacts", tone: "info", polarity: HIGHER_IS_BETTER, chartKey: "contacts" },
-  { key: "total_opportunities", label: "Opportunities", tone: "success", polarity: HIGHER_IS_BETTER, chartKey: null },
   { key: "open", label: "Open leads", tone: "primary", polarity: HIGHER_IS_BETTER, chartKey: "open" },
   { key: "lost", label: "Lost leads", tone: "danger", polarity: LOWER_IS_BETTER, chartKey: "lost" },
   { key: "conversion_rate", label: "Conversion rate", tone: "amber", polarity: HIGHER_IS_BETTER, chartKey: "conversion" },

@@ -14,9 +14,9 @@ import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 // it would show it as 'not available' because they don't use that and give me
 // the option to link a sales tool."
 //
-// Everything on this screen — the six tiles, the trend chart, all four tables
+// Everything on this screen — the five figures, the trend chart, all four tables
 // — is Hot Prospector data. For a client whose `call_log_provider` is "none"
-// every one of those renders correctly and says nothing true: six zeroes and
+// every one of those renders correctly and says nothing true: five zeroes and
 // four empty tables that look like a bad week rather than an absent source.
 
 // Inside every date window the page offers. A fixed date here aged out of
@@ -72,7 +72,7 @@ describe("Sales Hub without a call centre", () => {
     )
   })
 
-  it("keeps the six tile labels but replaces every figure", async () => {
+  it("keeps the five figure labels but replaces every figure", async () => {
     // The labels stay because the reader still needs to know which figures
     // Birdy would be showing them; the numbers go because there is no source.
     mockGroups([group({ id: "a", name: "Quiet Co", provider: "none" })])

@@ -1012,12 +1012,13 @@ export function MarketingContent({
   // The six figures are the chart's tabs. Only the four with a daily series
   // are selectable; active campaigns and CTR are figures in the row and
   // nothing more.
+  // Only figures with a curve sit over the chart: a tab that does nothing
+  // when clicked reads as broken. Active campaigns and CTR have no daily
+  // series, so they are left to the table and the briefing.
   const heroTabs = useMemo(
-    () => kpis.map(k => ({
-      ...k,
-      tone: MARKETING_KPI_PRESENTATION[k.key]?.tone,
-      plottable: Boolean(chartMetrics[k.key]),
-    })),
+    () => kpis
+      .filter(k => Boolean(chartMetrics[k.key]))
+      .map(k => ({ ...k, tone: MARKETING_KPI_PRESENTATION[k.key]?.tone })),
     [kpis, chartMetrics]
   )
 

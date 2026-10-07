@@ -33,11 +33,7 @@ const DOT = {
 };
 
 const TAB_BASE =
-  "relative flex min-w-0 flex-col items-start gap-[7px] px-4 pt-[14px] pb-3 text-left " +
-  // Hairlines between figures: three across below lg (every third ends a
-  // row, the last row has no rule beneath it), one row from lg up.
-  "border-b border-r border-pd-divider [&:nth-child(3n)]:border-r-0 [&:nth-last-child(-n+3)]:border-b-0 " +
-  "lg:border-b-0 lg:[&:nth-child(3n)]:border-r lg:last:border-r-0 " +
+  "relative flex min-w-0 flex-col items-start gap-[7px] bg-pd-surface px-4 pt-[14px] pb-3 text-left " +
   "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary";
 
 /**
@@ -70,6 +66,8 @@ export function MetricTabsChart({
   className,
 }) {
   const columns = tabs.length;
+  const smallColumns = columns >= 6 ? 3 : 2;
+  const fillers = (smallColumns - (columns % smallColumns)) % smallColumns;
   const panelId = useId();
 
   return (
@@ -82,9 +80,12 @@ export function MetricTabsChart({
       <div
         role={loading ? undefined : "tablist"}
         aria-label={loading ? undefined : "Chart metric"}
-        // Three across until lg, then every figure in one row.
-        className="grid grid-cols-3 border-b border-pd-border lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
-        style={{ "--cols": columns }}
+        // The hairlines between figures are the grid's own gap showing the
+        // divider through, so any number of tabs rules itself: one row from
+        // lg up, two or three across below it. A short last row is padded
+        // with blank cells so the divider never shows as a hole.
+        className="grid gap-px border-b border-pd-border bg-pd-divider [grid-template-columns:repeat(var(--cols-sm),minmax(0,1fr))] lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
+        style={{ "--cols": columns, "--cols-sm": smallColumns }}
       >
         {loading
           ? tabs.map((tab) => (
@@ -116,7 +117,7 @@ export function MetricTabsChart({
                     plottable
                       ? "cursor-pointer transition-colors hover:bg-pd-canvas"
                       : "cursor-default",
-                    active && "bg-pd-primary-tint/40"
+                    active && "bg-pd-primary-tint"
                   )}
                 >
                   <span className="flex items-center gap-[7px] text-[11.5px] font-medium text-pd-subtle">
@@ -162,6 +163,9 @@ export function MetricTabsChart({
                 </button>
               );
             })}
+        {Array.from({ length: fillers }).map((_, i) => (
+          <div key={`filler-${i}`} className="bg-pd-surface lg:hidden" aria-hidden="true" />
+        ))}
       </div>
 
       <div
