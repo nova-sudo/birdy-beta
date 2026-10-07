@@ -3,6 +3,13 @@ import useSWR from "swr"
 import { useClientGroups } from "./useClientGroups"
 import { queryKeys } from "./query-keys"
 
+// One empty list for every render, not a fresh `[]`. Pages put clientGroups in
+// the deps of the header they publish to the top bar; a new array each render
+// republished the header each render, remounting its Radix controls until
+// React gave up with "Maximum update depth exceeded" — the Sales Hub
+// "Application error" whenever the series request failed.
+const NO_GROUPS = Object.freeze([])
+
 /**
  * Client groups with their per-day series attached, for the hubs that chart
  * trends.
@@ -60,7 +67,7 @@ export function useClientGroupsWithSeries(initialPreset, opts = {}) {
   const seriesFailed = !!seriesError && series === undefined
 
   const clientGroups = useMemo(() => {
-    if (seriesFailed) return []
+    if (seriesFailed) return NO_GROUPS
 
     // Nothing to merge onto, or nothing to merge yet: hand back what we have.
     // `loading` below is what stops a caller reading this as finished.

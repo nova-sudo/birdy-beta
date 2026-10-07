@@ -40,6 +40,7 @@ import { buildClientGoals } from "@/lib/client-goals"
 import { diagnoseFunnel } from "@/lib/portfolio-metrics"
 import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
+import { leadSourceOption, normalizeLeadSource } from "@/lib/lead-sources"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -559,6 +560,7 @@ export default function ClientDetailsPage() {
             datePreset={datePreset}
             showGroupFilter={false}
             showStatCards={false}
+            onCallCentreChanged={refresh}
           />
         </TabsContent>
 
@@ -819,12 +821,7 @@ function TrackingSummaryCard({ clientId }) {
     }
   }, [clientId])
 
-  const METHOD_LABELS = {
-    instant_form: "Meta Instant Forms",
-    landing_page: "Their own landing page",
-    external_form: "A form tool on their page",
-    unknown: "Not set",
-  }
+  const isFormToGhl = normalizeLeadSource(state?.method) === "form_to_ghl"
 
   return (
     <div className="rounded-[14px] border border-pd-border bg-pd-surface p-4">
@@ -836,13 +833,17 @@ function TrackingSummaryCard({ clientId }) {
               ? "Checking…"
               : !state.applicable
                 ? "This client's leads come from Meta Instant Forms, so there is nothing to install."
-                : state.complete
-                  ? "Working — landing-page leads are being counted against the ads that produced them."
-                  : "Not finished. Leads from this client's landing pages aren't being tied to ads yet."}
+                : isFormToGhl
+                  ? state.complete
+                    ? "Working — the form tool sends each lead to GoHighLevel with the ad it came from, and Birdy attributes it from there."
+                    : "Nothing to install, but leads aren't reaching GoHighLevel with the ad they came from yet. Check the form tool sends attribution to GoHighLevel."
+                  : state.complete
+                    ? "Working — landing-page leads are being counted against the ads that produced them."
+                    : "Not finished. Leads from this client's landing pages aren't being tied to ads yet."}
           </p>
           {state?.method && (
             <p className="mt-1.5 text-[11.5px] text-pd-faint">
-              Leads from: {METHOD_LABELS[state.method] || state.method}
+              Leads from: {leadSourceOption(state.method).label}
             </p>
           )}
         </div>

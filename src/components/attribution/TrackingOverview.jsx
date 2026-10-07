@@ -17,18 +17,12 @@ import { toast } from "sonner"
 
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
-
-const METHOD_LABEL = {
-  instant_form: "Meta forms",
-  landing_page: "Landing page",
-  external_form: "Form tool",
-  unknown: "Not set",
-}
+import { leadSourceOption, needsPixel, normalizeLeadSource } from "@/lib/lead-sources"
 
 const METHOD_TONE = {
   instant_form: "bg-pd-info-bg text-pd-info",
+  form_to_ghl: "bg-pd-info-bg text-pd-info",
   landing_page: "bg-pd-primary-tint text-pd-primary",
-  external_form: "bg-pd-primary-tint text-pd-primary",
   unknown: "bg-pd-divider text-pd-faint",
 }
 
@@ -138,7 +132,8 @@ export default function TrackingOverview() {
           </thead>
           <tbody>
             {clients.map((row, index) => {
-              const needsScript = row.method === "landing_page" || row.method === "external_form"
+              const method = normalizeLeadSource(row.method)
+              const needsScript = needsPixel(method)
               return (
                 <tr
                   key={row.group_id}
@@ -152,15 +147,16 @@ export default function TrackingOverview() {
                     <span
                       className={cn(
                         "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                        METHOD_TONE[row.method] || METHOD_TONE.unknown,
+                        METHOD_TONE[method] || METHOD_TONE.unknown,
                       )}
                     >
-                      {METHOD_LABEL[row.method] || row.method}
+                      {leadSourceOption(method).short}
                     </span>
                   </td>
                   <td className="px-3 py-2.5">
-                    {/* An em dash, not a cross: a client on Meta forms is not
-                        failing to install anything. */}
+                    {/* An em dash, not a cross: a client on Meta forms, or on a
+                        form tool that sends to GoHighLevel, is not failing to
+                        install anything. */}
                     {!needsScript ? (
                       <span className="text-pd-faint">—</span>
                     ) : row.installed ? (

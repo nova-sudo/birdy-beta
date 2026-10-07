@@ -88,3 +88,18 @@ export function portfolioHasCallCentre(clientGroups) {
   const active = activeGroups(clientGroups);
   return active.length === 0 || active.some(groupHasCallCentre);
 }
+
+/**
+ * The ids of the groups in view that have no call centre — what a "use
+ * HotProspector for these" action would switch.
+ *
+ * @param {object[]} clientGroups every group on the page
+ * @param {string} selectedClientGroup a group id, or "all"
+ */
+export function groupsWithoutCallCentre(clientGroups, selectedClientGroup = "all") {
+  const groups = clientGroups ?? [];
+  const inScope = selectedClientGroup && selectedClientGroup !== "all"
+    ? groups.filter((g) => g.id === selectedClientGroup)
+    : groups;
+  return inScope.filter((g) => !groupHasCallCentre(g)).map((g) => g.id);
+}

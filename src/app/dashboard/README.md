@@ -258,9 +258,8 @@ alerts and client wins as tabs, with an activity feed beside them. Of those:
   few lines; nothing currently renders them.
 * **Triggered alerts** are not carried over — `/alerts` already lists them, and
   the old tab was a second view of the same store.
-* **Suggestion strictness** (the `PUT /api/dashboard/settings` control) has no
-  home yet. It is a preference rather than a portfolio figure, so `/settings` is
-  the natural place, but that move is not made here.
+* **Suggestion strictness** (the `PUT /api/dashboard/settings` control) moved to
+  `/settings`, under the Media Buying Analyst switch, shown while it is on.
 
 `useDashboardData.js` stays because `clients/[id]` imports it for its own
 activity feed.

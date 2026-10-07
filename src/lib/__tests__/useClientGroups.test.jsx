@@ -167,3 +167,28 @@ describe("useClientGroups", () => {
     expect(result.current.error).toBe("You're out of credits")
   })
 })
+
+describe("useClientGroups with no data yet", () => {
+  // Pages publish a header to the top bar from a useMemo over clientGroups. A
+  // fresh [] on each render while loading — or after a failed request — made
+  // that header republish forever: "Maximum update depth exceeded", the Sales
+  // Hub "Application error".
+  it("hands back the same empty list on every render while loading", () => {
+    apiRequest.mockImplementation(() => new Promise(() => {})) // never settles
+    const { result, rerender } = renderHook(() => useClientGroups(), { wrapper })
+    const first = result.current.clientGroups
+    rerender()
+    rerender()
+    expect(first).toEqual([])
+    expect(result.current.clientGroups).toBe(first)
+  })
+
+  it("hands back the same empty list on every render after a failure", async () => {
+    apiRequest.mockImplementation(() => Promise.reject(new TypeError("Failed to fetch")))
+    const { result, rerender } = renderHook(() => useClientGroups(), { wrapper })
+    await waitFor(() => expect(result.current.error).toBeTruthy())
+    const first = result.current.clientGroups
+    rerender()
+    expect(result.current.clientGroups).toBe(first)
+  })
+})

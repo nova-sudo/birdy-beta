@@ -15,6 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { startImpersonation, fetchMe, deleteUserAccount } from "@/lib/admin-api"
+import { rewriteSessionRole } from "@/lib/session"
 
 function initials(name = "") {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"
@@ -61,6 +62,9 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
           default_currency: me.default_currency,
         }))
         window.dispatchEvent(new Event("userUpdated"))
+        // The proxy routes the reload on this cookie; still saying "admin",
+        // it would send the admin straight back to the console.
+        rewriteSessionRole(me.role)
       }
       // Full reload into the app, now scoped to the impersonated account.
       window.location.href = "/dashboard"

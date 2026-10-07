@@ -85,6 +85,7 @@ export default function SalesHubPage() {
         showStatCards={false}
         selectedClientGroup={selectedClientGroup}
         onSelectClientGroup={setSelectedClientGroup}
+        onCallCentreChanged={refresh}
       />
     </SalesHubShell>
   )

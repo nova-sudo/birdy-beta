@@ -74,6 +74,21 @@ export function writeSession({ expiresAt, role = null, onboardingIncomplete = fa
   document.cookie = `${SESSION_COOKIE}=${value}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`
 }
 
+/**
+ * Re-point the hint at a different role without changing when it expires.
+ * Starting or ending an impersonation changes who the session is, and the
+ * proxy routes the very next request on this cookie — left alone it would
+ * still say "admin" and send the admin straight back to the console.
+ */
+export function rewriteSessionRole(role) {
+  const current = readSession()
+  if (!current) return
+  writeSession({ expiresAt: new Date(current.exp).toISOString(), role, onboardingIncomplete: false })
+}
+
+/** Where an admin who is not impersonating anyone belongs: the only place. */
+export const ADMIN_HOME = "/admin"
+
 export function clearSession() {
   if (typeof document === "undefined") return
   document.cookie = `${SESSION_COOKIE}=; path=/; max-age=0; SameSite=Lax`

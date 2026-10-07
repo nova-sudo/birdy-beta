@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
-import { writeSession } from "@/lib/session"
+import { writeSession, ADMIN_HOME } from "@/lib/session"
 import { apiRequest, publicRequest } from "@/lib/api"
 import BirdyLogo from "@/components/BirdyLogo"
 
@@ -78,6 +78,16 @@ export default function LoginForm() {
       // ✅ Save currency so useUserCurrency hook reads it instantly on first render
       if (data.user?.default_currency) {
         localStorage.setItem("user_default_currency", data.user.default_currency)
+      }
+
+      // ── 2.5 Admins go to the admin console, and nowhere else ────────────
+      // No onboarding, no agency prefetch, no integration token checks: an
+      // admin's account holds no clients. Agency screens are reached only by
+      // impersonating from the console.
+      if (data.user?.role === "admin") {
+        localStorage.removeItem("onboarding_incomplete")
+        router.push(ADMIN_HOME)
+        return
       }
 
       // ── 3. Prefetch client-groups + views (fire-and-forget) ─────────────

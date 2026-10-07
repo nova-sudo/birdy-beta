@@ -17,7 +17,7 @@ import { formatTotal, sumCallStats } from "@/lib/saleshub-totals"
 import { DATE_PRESETS } from "@/lib/constants"
 import { KPI_PRESENTATION } from "@/app/Sales-Hub/presentation"
 import { useSalesHubSeries } from "@/app/Sales-Hub/useSalesHubSeries"
-import { scopeHasCallCentre } from "@/lib/call-centre-availability"
+import { groupsWithoutCallCentre, scopeHasCallCentre } from "@/lib/call-centre-availability"
 import { CallCentreUnavailable } from "@/components/callcenter/CallCentreUnavailable"
 
 const presetLabel = (preset) =>
@@ -85,7 +85,11 @@ export function CallCentreOverview({
   if (!available && !groupsLoading) {
     return (
       <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
-        <CallCentreUnavailable className="min-w-0 lg:flex-[1.65]" />
+        <CallCentreUnavailable
+          className="min-w-0 lg:flex-[1.65]"
+          groupIds={groupsWithoutCallCentre(clientGroups, selectedClientGroup)}
+          onSwitched={onRetry}
+        />
         <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
           <KpiTiles
             tiles={KPI_PRESENTATION}

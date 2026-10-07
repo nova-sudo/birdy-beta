@@ -80,6 +80,7 @@ import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { isAwaitingFirstData } from "@/lib/client-loading"
 import BulkImportDialog from "@/components/clients/BulkImportDialog"
+import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
 
@@ -90,28 +91,7 @@ const CLIENTS_PANEL_ID = "clients-table-panel"
 // order and wording so the two paths don't describe the same choice
 // differently. "unknown" leads deliberately: it is the default, and picking it
 // leaves the client behaving exactly as an unconfigured client always has.
-const LEAD_SOURCES = [
-  {
-    key: "unknown",
-    label: "Ask later",
-    hint: "Nothing changes for this client until you choose.",
-  },
-  {
-    key: "instant_form",
-    label: "Meta Instant Forms",
-    hint: "Leads are filled in on Facebook or Instagram and arrive automatically.",
-  },
-  {
-    key: "landing_page",
-    label: "Their own landing page",
-    hint: "A form on a page the client owns. Needs our snippet on that page.",
-  },
-  {
-    key: "external_form",
-    label: "A form tool on their page",
-    hint: "Typeform, ROASForm, Jotform and the like. Posts to us by webhook.",
-  },
-]
+const LEAD_SOURCES = [LEAD_SOURCE_UNKNOWN, ...LEAD_SOURCE_OPTIONS]
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -1068,8 +1048,9 @@ export default function ClientsPage() {
                 <div className="text-center space-y-2">
                   <h2 className="text-2xl font-bold text-foreground">How does this client get leads?</h2>
                   <p className="text-muted-foreground">
-                    Meta Instant Forms arrive on their own. Anything else needs a tracking
-                    snippet on the client&apos;s page — we&apos;ll walk you through it after.
+                    Meta Instant Forms and form tools that send to GoHighLevel need nothing
+                    set up. Only a client&apos;s own landing page needs the Birdy pixel —
+                    we&apos;ll walk you through it after.
                   </p>
                 </div>
                 <div className="space-y-3">

@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 import { PUBLIC_ROUTES, PUBLIC_ROUTE_PREFIXES, PROTECTED_ROUTES } from '@/lib/constants';
-import { writeSession, clearSession } from '@/lib/session';
+import { writeSession, clearSession, ADMIN_HOME } from '@/lib/session';
 
 /**
  * Client-side routing rules for a signed-in session.
@@ -68,7 +68,10 @@ export default function ProtectedLayout({ children }) {
 
     // Set by LoginForm / the onboarding wizard from /api/onboarding/status.
     // While it's up, the wizard is the only place in the app the user can be.
-    const onboardingIncomplete = localStorage.getItem('onboarding_incomplete') === '1';
+    // An admin is never onboarded (see the admin branch below), so a flag left
+    // over from before that rule must not hold them in the wizard.
+    if (isAdmin) localStorage.removeItem('onboarding_incomplete');
+    const onboardingIncomplete = !isAdmin && localStorage.getItem('onboarding_incomplete') === '1';
 
     // Mirror what localStorage already knows into a cookie the server can
     // read. Doing it on every authenticated load — not only at login — is what
@@ -80,7 +83,11 @@ export default function ProtectedLayout({ children }) {
       clearSession();
     }
 
-    if ((isProtectedRoute || isAdminRoute) && !isAuthenticated) {
+    if (isAuthenticated && isAdmin && !isAdminRoute) {
+      // An admin who isn't impersonating has nothing outside the admin
+      // console. Impersonating, the stored role is the agency's, not 'admin'.
+      router.replace(ADMIN_HOME);
+    } else if ((isProtectedRoute || isAdminRoute) && !isAuthenticated) {
       // Redirect to /login for protected/admin routes if not authenticated
       // (isAdminRoute covers every /admin sub-route, not just the exact path).
       router.push(`/login?redirect=${encodeURIComponent(pathname)}`);

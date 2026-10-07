@@ -40,7 +40,16 @@ export function isAwaitingFirstData(group) {
   if (group.meta_ad_account_id && !group.last_meta_refresh) return true
   // Only when HotProspector is the client's chosen dialler. A "ghl" or "none"
   // client has no HP refresh coming and must not wait for one.
-  if (group.call_log_provider === "hotprospector" && !group.last_hp_refresh) return true
+  //
+  // And only when HotProspector is all this client has. Its sync is slow — the
+  // API rate-limits hard, so a full history takes many runs — and it covers
+  // just the call columns. Switching an established client to HotProspector
+  // used to put its whole row back into the brand-new-client placeholder,
+  // hiding leads and spend that had been there for months.
+  if (group.call_log_provider === "hotprospector" && !group.last_hp_refresh) {
+    const hasOtherData = !!(group.last_ghl_refresh || group.last_meta_refresh)
+    if (!hasOtherData) return true
+  }
 
   return false
 }

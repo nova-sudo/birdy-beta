@@ -16,7 +16,7 @@ import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { windowCallTotals } from "@/lib/saleshub-totals"
-import { scopeHasCallCentre } from "@/lib/call-centre-availability"
+import { scopeHasCallCentre, groupsWithoutCallCentre } from "@/lib/call-centre-availability"
 import { CallCentreUnavailable } from "@/components/callcenter/CallCentreUnavailable"
 import { hpIcon as HP } from "@/lib/icons"
 import {
@@ -995,6 +995,9 @@ export function CallCentreContent({
   showStatCards = true,
   selectedClientGroup: controlledClientGroup,
   onSelectClientGroup,
+  // Called after a client is switched to a call centre from the "not
+  // available" panel, so the page can refetch; reloads the page if omitted.
+  onCallCentreChanged,
 }) {
   const [activeTab, setActiveTab] = useState(showGroupFilter ? "overview" : "leads")
   const [searchQuery, setSearchQuery] = useState("")
@@ -1469,6 +1472,8 @@ export function CallCentreContent({
         <CallCentreUnavailable
           title="No call centre connected"
           body="Call logs, leads and agent activity all come from a dialler. This client doesn't use one, so there's nothing to list here."
+          groupIds={groupsWithoutCallCentre(clientGroups, selectedClientGroup)}
+          onSwitched={onCallCentreChanged}
         />
       </div>
     )

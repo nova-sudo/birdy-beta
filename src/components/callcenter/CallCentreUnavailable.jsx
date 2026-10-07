@@ -1,8 +1,14 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { PhoneOff } from "lucide-react";
+import { Loader2, PhoneOff } from "lucide-react";
+import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
 import { LINK_SALES_TOOL_HREF } from "@/lib/call-centre-availability";
+import { apiRequest } from "@/lib/api";
+import { useHotProspectorConnected } from "@/lib/useHotProspectorConnected";
 
 // ─── "Not available — no call centre" ───────────────────────────────────────
 // The one treatment for a call-centre figure that has no source behind it,
@@ -112,6 +118,61 @@ export function LinkSalesToolLink({ className }) {
 }
 
 /**
+ * With HotProspector connected, "link a sales tool" is a dead end: it is
+ * linked. What is missing is the client's own setting, chosen once when the
+ * client was created — "none" for every client imported before HotProspector
+ * was connected. This switches the clients in view over in one step; the
+ * hp-tick cron then pulls their call history within minutes.
+ */
+export function UseHotProspectorButton({ groupIds, onSwitched, className }) {
+  const [saving, setSaving] = useState(false);
+  const count = groupIds?.length ?? 0;
+  if (!count) return null;
+
+  const label = count === 1
+    ? "Use HotProspector for this client"
+    : `Use HotProspector for these ${count} clients`;
+
+  const switchOver = async () => {
+    setSaving(true);
+    try {
+      const res = await apiRequest("/api/client-groups/call-log-provider", {
+        method: "PATCH",
+        body: JSON.stringify({ group_ids: groupIds, provider: "hotprospector" }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Couldn't switch the call centre");
+      }
+      toast.success("Switched to HotProspector", {
+        description: "Call history is being pulled in now — it can take a few minutes to appear.",
+      });
+      if (onSwitched) onSwitched();
+      else window.location.reload();
+    } catch (e) {
+      toast.error("Couldn't switch to HotProspector", { description: e.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={switchOver}
+      disabled={saving}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-[10px] bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-60",
+        className
+      )}
+    >
+      {saving && <Loader2 className="size-3.5 animate-spin" aria-hidden="true" />}
+      {label}
+    </button>
+  );
+}
+
+/**
  * One grey line under a heading that is still true — "Call insights" is still
  * what the card is about, even when none of it can be filled in.
  */
@@ -139,8 +200,13 @@ export function UnavailableNote({
 export function CallCentreUnavailable({
   title = "Call centre not available",
   body = "This client doesn't currently call their leads, so there's no call data to show.",
+  groupIds,
+  onSwitched,
   className,
 }) {
+  const hpConnected = useHotProspectorConnected();
+  const canSwitch = hpConnected && (groupIds?.length ?? 0) > 0;
+
   return (
     <section
       className={cn(
@@ -152,8 +218,16 @@ export function CallCentreUnavailable({
         <PhoneOff className="size-[18px]" aria-hidden="true" />
       </span>
       <p className="font-pd-display text-[15px] font-semibold text-pd-subtle">{title}</p>
-      <p className="mt-1.5 max-w-sm text-[12px] leading-[1.45] text-pd-faint">{body}</p>
-      <LinkSalesToolLink className="mt-3 text-[12.5px]" />
+      <p className="mt-1.5 max-w-sm text-[12px] leading-[1.45] text-pd-faint">
+        {canSwitch
+          ? "HotProspector is connected, but this is still set to no call centre."
+          : body}
+      </p>
+      {canSwitch ? (
+        <UseHotProspectorButton groupIds={groupIds} onSwitched={onSwitched} className="mt-3" />
+      ) : (
+        <LinkSalesToolLink className="mt-3 text-[12.5px]" />
+      )}
     </section>
   );
 }

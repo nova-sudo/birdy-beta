@@ -3,6 +3,12 @@ import useSWR, { useSWRConfig } from "swr"
 import { queryKeys } from "./query-keys"
 import { DEFAULT_DATE_PRESET } from "./constants"
 
+// The same empty list on every render while there is no data (loading, or the
+// request failed). A fresh `[]` each time made clientGroups look changed on
+// every render, so pages that publish a header built from it republished it
+// endlessly: React's "Maximum update depth exceeded", the Sales Hub crash.
+const NO_GROUPS = Object.freeze([])
+
 const CLIENT_GROUPS_PREFIX = "/api/client-groups"
 
 // How often to re-ask while a group is still being imported. Groups arrive
@@ -67,7 +73,7 @@ export function useClientGroups(initialPreset = DEFAULT_DATE_PRESET, opts = {}) 
     // failed revalidation, so "stale, not wrong" survives without it.
   })
 
-  const clientGroups = data?.client_groups ?? []
+  const clientGroups = data?.client_groups ?? NO_GROUPS
   const meta = data?.meta ?? null
 
   /**
