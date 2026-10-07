@@ -80,13 +80,13 @@ describe("Sales Hub without a call centre", () => {
 
     await waitFor(() => expect(screen.getByText("Total calls")).toBeInTheDocument())
 
-    const tile = screen.getByText("Total calls").closest("div.flex")
+    const tile = screen.getByText("Total calls").closest("button")
     expect(within(tile).getByText(/Not available/)).toBeInTheDocument()
     // The cached 120 calls must not surface anywhere on the screen.
     expect(document.body.textContent).not.toContain("120")
   })
 
-  it("dims the tile's icon chip along with its figure", async () => {
+  it("dims the tab's dot along with its figure", async () => {
     // The tile's tone is what says "this is the calls one, this is the
     // talk-time one". Left lit beside a grey dash it reads as a live figure
     // that has gone momentarily missing — the opposite of the truth.
@@ -95,9 +95,11 @@ describe("Sales Hub without a call centre", () => {
 
     await waitFor(() => expect(screen.getByText("Total calls")).toBeInTheDocument())
 
-    const tile = screen.getByText("Total calls").closest("div.flex")
-    expect(tile.querySelector(".bg-pd-neutral-badge")).not.toBeNull()
-    expect(tile.querySelector(".bg-pd-info-bg")).toBeNull()
+    // The figure is a tab on the chart now; its colour is the dot before the
+    // label, which goes grey with the figure.
+    const tile = screen.getByText("Total calls").closest("button")
+    expect(tile.querySelector(".bg-pd-faint")).not.toBeNull()
+    expect(tile.querySelector(".bg-pd-info")).toBeNull()
   })
 
   it("draws the real figures when a dialler is connected", async () => {

@@ -33,7 +33,8 @@ function conversionRate(rows) {
 
 const totalForMetric = (key, rows) => {
   if (key === "conversion") return conversionRate(rows);
-  const field = key === "leads" ? "new_leads" : key === "contacts" ? "new_contacts" : "open";
+  const field =
+    key === "leads" ? "new_leads" : key === "contacts" ? "new_contacts" : key === "lost" ? "lost" : "open";
   return rows.reduce((sum, d) => sum + (d[field] ?? 0), 0);
 };
 
@@ -73,7 +74,7 @@ export function useLeadHubSeries({
       const plotted = totalForMetric(metric.key, windowRows);
       // A window with no comparable period before it (e.g. "maximum") renders
       // no delta at all — TrendChart already treats a missing direction as
-      // "say nothing" rather than "flat", the same rule the KPI tiles follow.
+      // "say nothing" rather than "flat", the same rule the hero figures follow.
       const delta = prevRows ? percentDelta(plotted, totalForMetric(metric.key, prevRows)) : null;
 
       acc[metric.key] = {
@@ -91,7 +92,6 @@ export function useLeadHubSeries({
 
   return {
     chartMetrics,
-    metrics: LEAD_CHART_METRICS,
     loading: groupsLoading,
     streaming: false,
     error: null,

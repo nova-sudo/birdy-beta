@@ -19,7 +19,7 @@ import { usePageHeader } from "@/components/page-header"
 // on the shell/chart/insight/tile components Sales-Hub introduced (see
 // SalesHubShell.jsx — generic despite the name, per its own file header).
 //
-// Chart, insight card and KPI tiles are all summed from the same client-side
+// Chart, briefing and hero figures are all summed from the same client-side
 // daily lead series (leadhub-totals.js/leadhub-series.js) rather than a live
 // fetch — see that file's header for why, and how that also buys real KPI
 // deltas with no second request.

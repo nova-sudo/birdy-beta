@@ -66,7 +66,6 @@ export function useSalesHubSeries({
 
   return {
     chartMetrics,
-    metrics: SALES_CHART_METRICS,
     loading: groupsLoading,
     streaming: false,
     error: null,

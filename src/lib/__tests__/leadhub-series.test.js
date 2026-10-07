@@ -4,16 +4,17 @@ import { buildLeadSeries } from "../leadhub-series";
 
 const rows = [
   { date: "2026-08-13", new_leads: 5, new_contacts: 2, open: 1, won: 1, lost: 0, abandoned: 0 },
-  { date: "2026-08-14", new_leads: 3, new_contacts: 1, open: 0, won: 0, lost: 0, abandoned: 0 },
+  { date: "2026-08-14", new_leads: 3, new_contacts: 1, open: 0, won: 0, lost: 2, abandoned: 0 },
 ];
 
 describe("buildLeadSeries", () => {
-  it("buckets leads/contacts/open straight from the daily rows", () => {
+  it("buckets leads/contacts/open/lost straight from the daily rows", () => {
     const series = buildLeadSeries(rows, "Daily");
 
     expect(series.leads.values).toEqual([5, 3]);
     expect(series.contacts.values).toEqual([2, 1]);
     expect(series.open.values).toEqual([1, 0]);
+    expect(series.lost.values).toEqual([0, 2]);
   });
 
   it("computes conversion as won / (won+open+lost+abandoned) per bucket", () => {

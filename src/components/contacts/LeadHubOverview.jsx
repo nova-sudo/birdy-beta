@@ -1,7 +1,8 @@
 "use client"
 
 // components/contacts/LeadHubOverview.jsx
-// The chart + insight + KPI row that sits above the leads table.
+// The hero above the leads table: the six figures as tabs over the trend of
+// whichever is selected, with Birdy's briefing beside it.
 //
 // Extracted from the Lead Hub page so /clients/[id]'s Leads tab can draw the
 // same thing scoped to one client. It was page-only, which is why that tab
@@ -12,7 +13,7 @@ import { useEffect, useMemo, useState } from "react"
 import { apiRequest } from "@/lib/api"
 import { DATE_PRESETS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
-import { buildLeadInsight, insightPrompt } from "@/lib/leadhub-insight"
+import { buildLeadFindings, buildLeadInsight, insightPrompt } from "@/lib/leadhub-insight"
 import {
   formatStat,
   mergeDailyLeads,
@@ -20,9 +21,7 @@ import {
   windowLeadTotals,
 } from "@/lib/leadhub-totals"
 import { percentDelta } from "@/lib/portfolio-aggregate"
-import { CHART_LOADING, LoadError, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
-import { InsightCard } from "@/components/saleshub/InsightCard"
-import { KpiTiles } from "@/components/saleshub/KpiTiles"
+import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart } from "@/components/portfolio"
 import { KPI_PRESENTATION } from "@/app/contacts/presentation"
 import { useLeadHubSeries } from "@/app/contacts/useLeadHubSeries"
 
@@ -43,7 +42,9 @@ export function LeadHubOverview({
   groupsError,
   onRetry,
 }) {
-  const [chartMetric, setChartMetric] = useState("leads")
+  // The selected tab is a figure key (KPI_PRESENTATION), not a series key —
+  // the figure is what the user clicked; which series it plots is its business.
+  const [activeKey, setActiveKey] = useState(KPI_PRESENTATION[0].key)
 
   const ghlClientGroups = useMemo(
     () => (clientGroups || []).filter((g) => g.ghl_location_id),
@@ -71,7 +72,7 @@ export function LeadHubOverview({
     }, {})
   }, [totals, previousTotals])
 
-  // The insight card's anomaly clause — the one figure the daily series can't
+  // The briefing's no-email finding — the one figure the daily series can't
   // give, so it stays a live fetch, scoped to the same window and group.
   const [anomaly, setAnomaly] = useState(null)
   useEffect(() => {
@@ -97,11 +98,15 @@ export function LeadHubOverview({
   }, [ghlClientGroups.length, selectedClientGroup, datePreset])
 
   const insight = useMemo(
-    () => buildLeadInsight(totals, previousTotals, anomaly),
-    [totals, previousTotals, anomaly]
+    () => buildLeadInsight(totals, previousTotals),
+    [totals, previousTotals]
+  )
+  const findings = useMemo(
+    () => buildLeadFindings({ clientGroups, selectedClientGroup, datePreset, anomaly }),
+    [clientGroups, selectedClientGroup, datePreset, anomaly]
   )
 
-  const { chartMetrics, metrics, loading: seriesLoading } = useLeadHubSeries({
+  const { chartMetrics, loading: seriesLoading } = useLeadHubSeries({
     clientGroups,
     groupsLoading,
     datePreset,
@@ -109,7 +114,22 @@ export function LeadHubOverview({
     granularity,
   })
 
-  const metric = chartMetrics[chartMetric]
+  const tabs = useMemo(
+    () =>
+      KPI_PRESENTATION.map((tile) => ({
+        key: tile.key,
+        label: tile.label,
+        value: formatStat(tile.key, totals[tile.key]),
+        tone: tile.tone,
+        polarity: tile.polarity,
+        plottable: Boolean(tile.chartKey),
+        ...(deltas?.[tile.key] ?? {}),
+      })),
+    [totals, deltas]
+  )
+
+  const activeTile = KPI_PRESENTATION.find((tile) => tile.key === activeKey)
+  const metric = activeTile?.chartKey ? chartMetrics[activeTile.chartKey] : null
   const chart = metric && {
     ...metric,
     subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
@@ -122,40 +142,24 @@ export function LeadHubOverview({
   }
 
   return (
-    <div className="mb-[18px] flex flex-col items-stretch gap-[18px] lg:flex-row">
-      <div className="flex min-w-0 flex-col lg:flex-[1.65]">
-        {seriesLoading || metric?.pending ? (
-          <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
-        ) : chart?.values?.length > 0 ? (
-          <TrendChart
-            className="flex-1"
-            chart={chart}
-            metrics={metrics}
-            activeMetric={chartMetric}
-            onMetricChange={setChartMetric}
-            redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup}`}
-          />
-        ) : (
-          <PdCard className="flex-1" title="Lead trend">
-            <p className="py-8 text-center text-[12px] text-pd-faint">
-              {totals.lead_count + totals.contact_count > 0
-                ? "No dated leads in this window yet."
-                : "No leads captured in this window yet."}
-            </p>
-          </PdCard>
-        )}
-      </div>
-
-      <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
-        <InsightCard parts={insight} prompt={insightPrompt(insight)} />
-        <KpiTiles
-          tiles={KPI_PRESENTATION}
-          totals={totals}
-          deltas={deltas}
-          loading={groupsLoading}
-          format={formatStat}
-        />
-      </div>
+    <div className="mb-[18px] grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]">
+      <MetricTabsChart
+        tabs={tabs}
+        activeKey={activeKey}
+        onChange={setActiveKey}
+        chart={chart}
+        loading={groupsLoading}
+        plotLoading={seriesLoading || Boolean(metric?.pending)}
+        loadingStatements={CHART_LOADING}
+        emptyMessage={
+          totals.lead_count + totals.contact_count > 0
+            ? "No dated leads in this window yet."
+            : "No leads captured in this window yet."
+        }
+        redrawKey={`${activeKey}-${datePreset}-${granularity}-${selectedClientGroup}`}
+        layoutId="lead-hub-hero"
+      />
+      <BirdyBriefing parts={insight} findings={findings} prompt={insightPrompt(insight)} />
     </div>
   )
 }

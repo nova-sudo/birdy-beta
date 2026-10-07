@@ -34,11 +34,17 @@ describe("buildSalesSeries", () => {
     expect(series.talk.values).toEqual([1, 4]);
   });
 
+  it("derives outbound as calls minus inbound, the way the tile does", () => {
+    const series = buildSalesSeries(dailyRows, "Daily");
+
+    expect(series.outbound.values).toEqual([1, 2]);
+  });
+
   it("draws every metric on one axis, so switching tabs can't move the dates", () => {
     const series = buildSalesSeries(dailyRows, "Daily");
     const axis = series.calls.tooltipLabels;
 
-    for (const key of ["called", "inbound", "talk"]) {
+    for (const key of ["called", "inbound", "outbound", "talk"]) {
       expect(series[key].tooltipLabels).toEqual(axis);
       expect(series[key].values).toHaveLength(axis.length);
     }

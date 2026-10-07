@@ -12,9 +12,6 @@ import {
   FileBarChart,
   Users,
   X,
-  TrendingUp,
-  DollarSign,
-  Target,
   Info,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,7 +22,6 @@ import StyledTable from "@/components/ui/table-container"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
 import getSymbolFromCurrency from "currency-symbol-map"
-import { Skeleton } from "@/components/ui/skeleton"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
 
@@ -44,26 +40,44 @@ import { usePageHeader } from "@/components/page-header"
 // globals.css. Fonts (Bricolage Grotesque display, Inter body) come from the
 // root layout; pdFontClass only sets Inter as the base.
 import { pdFontClass } from "@/lib/pd-fonts"
-import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PageTabPanel, PageTabs, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
+import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart, PageTabPanel, PageTabs } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
-import { isOverCplCeiling, scopeGroups } from "@/lib/marketing-aggregate"
+import { isOverCplCeiling, marketingInsightPrompt, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
-import { Banknote, Eye, Megaphone, MousePointerClick } from "lucide-react"
 
-// Which icon and colour family each KPI tile wears, from the handoff's tile
-// table — except for spend. The design draws a pound sign, but this screen
-// renders whatever currency the ad account reports, so a neutral note icon goes
-// beside a figure that might be in dollars.
+// The colour family each hero figure wears, from the handoff's tile table. It
+// is the dot before the label in the metric tab row; the same words tones.js
+// uses, so the figure keeps its colour wherever else it is drawn.
 const MARKETING_KPI_PRESENTATION = {
-  activeCampaigns: { icon: Megaphone, tone: "primary" },
-  spend: { icon: Banknote, tone: "success" },
-  leads: { icon: Users, tone: "info" },
-  cpl: { icon: Target, tone: "amber" },
-  impressions: { icon: Eye, tone: "info" },
-  ctr: { icon: MousePointerClick, tone: "primary" },
+  activeCampaigns: { tone: "primary" },
+  spend: { tone: "success" },
+  leads: { tone: "info" },
+  cpl: { tone: "amber" },
+  impressions: { tone: "info" },
+  ctr: { tone: "primary" },
 }
+
+// What the plot says when the selected metric has no series for the window.
+// Each is specific to why that metric's line can be missing while its figure
+// above is not.
+const CHART_EMPTY = {
+  spend: "No measured daily spend cached for this window yet.",
+  leads: "No dated leads in this window yet.",
+  cpl: "No day in this window has both spend and leads recorded.",
+  // Impressions falls back to the shape of daily spend, so reaching here
+  // means there is no spend curve either.
+  impressions:
+    "No measured daily spend cached for this window yet, so there is nothing to shape delivery against — the total is still in the figure above.",
+}
+
+// The card's copy before there is anything to read: no spend in the window.
+const BRIEFING_WAITING = [
+  {
+    text: "Once campaigns in this window have spend against them, Birdy reads the movement and names what to act on.",
+  },
+]
 
 // The page's sections, with the tab bar's 14px leading glyph.
 const SECTION_TABS = [
@@ -521,9 +535,9 @@ export function MarketingContent({
     })
   }, [allAds, customMetrics])
 
-  // ── Hero row: chart, insight and KPI tiles ────────────────────────────────
+  // ── Hero row: metric tabs over the chart, and Birdy's read ───────────────
   // These read the campaign rows for the selected client group — the same rows
-  // the table draws — rather than a parallel total of their own, so the tiles
+  // the table draws — rather than a parallel total of their own, so the figures
   // and the table can never disagree and the group picker filters both at once.
   // Deliberately not narrowed by the drill-down: the hero describes the account
   // for this period, while the table below is what you have drilled into.
@@ -539,6 +553,14 @@ export function MarketingContent({
     const inScope = new Set(scopeGroups(clientGroups, selectedClientGroup).map(g => g.id))
     return campaigns.filter(i => inScope.has(i._groupId))
   }, [campaigns, clientGroups, selectedClientGroup])
+
+  // Whether a table row needs to say which client it belongs to. Only when the
+  // rows span more than one group — on a single client every row would repeat
+  // the name the picker already shows.
+  const rowsSpanClients = useMemo(
+    () => scopeGroups(clientGroups, selectedClientGroup).length > 1,
+    [clientGroups, selectedClientGroup]
+  )
 
   const [chartMetric, setChartMetric] = useState("spend")
   // How finely the trend chart buckets — the window's own choice until the
@@ -575,6 +597,7 @@ export function MarketingContent({
     current: heroTotals,
     kpis,
     insight,
+    findings,
     chartMetrics,
     seriesLoading,
     unlistedSpend,
@@ -974,30 +997,41 @@ export function MarketingContent({
         icons: colIcon,
         sortable: true,
         render: (value, row) => formatCellValue(value, col, row),
+        // Under the campaign/ad set/ad name, the client it belongs to — the
+        // fact that explains a row on "All Groups" without earning a column.
+        ...(col === "name" && activeTab !== "leads"
+          ? { sub: (row) => (rowsSpanClients ? row.clientGroup || null : null) }
+          : {}),
       }
     })
     // heroTotals.cpl is in here because formatCellValue closes over it to
     // decide which CPL cells render red; without it the columns keep the
     // closure from the render where the threshold was last different.
-  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl])
+  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl, rowsSpanClients])
 
-  const kpiTiles = useMemo(
-    () => kpis.map(k => ({ ...k, ...(MARKETING_KPI_PRESENTATION[k.key] ?? {}) })),
-    [kpis]
+  // The six figures are the chart's tabs. Only the four with a daily series
+  // are selectable; active campaigns and CTR are figures in the row and
+  // nothing more.
+  const heroTabs = useMemo(
+    () => kpis.map(k => ({
+      ...k,
+      tone: MARKETING_KPI_PRESENTATION[k.key]?.tone,
+      plottable: Boolean(chartMetrics[k.key]),
+    })),
+    [kpis, chartMetrics]
   )
 
-  const chartTabs = useMemo(
-    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
-    [chartMetrics]
-  )
+  // Guards against a selection that has no series to show — spend always has
+  // one, so it is the tab the chart falls back to.
+  const activeChartMetric = chartMetrics[chartMetric] ? chartMetric : "spend"
 
   const chart = useMemo(() => {
-    const metric = chartMetrics[chartMetric] ?? chartMetrics.spend
+    const metric = chartMetrics[activeChartMetric]
     if (!metric?.values?.length) return null
 
-    // The chart's headline delta is the same period-over-period figure the tile
-    // for that metric shows — one number, computed once.
-    const kpi = kpis.find(k => k.key === chartMetric)
+    // The chart's headline delta is the same period-over-period figure the
+    // tab for that metric shows — one number, computed once.
+    const kpi = kpis.find(k => k.key === activeChartMetric)
     const decimals = metric.decimals ?? 0
 
     return {
@@ -1009,11 +1043,20 @@ export function MarketingContent({
           maximumFractionDigits: decimals,
         })}`
       ),
+      // Where the line covers less than the figure, or is shaped rather than
+      // counted, the plot header says so — the note would otherwise be lost
+      // now that the headline lives in the tab above.
+      plottedNote: metric.coverage ?? metric.estimateNote ?? undefined,
       direction: kpi?.direction,
       delta: kpi?.delta,
       polarity: kpi?.polarity,
     }
-  }, [chartMetrics, chartMetric, kpis, dateRangeLabel])
+  }, [chartMetrics, activeChartMetric, kpis, dateRangeLabel])
+
+  const briefingPrompt = useMemo(
+    () => (insight ? marketingInsightPrompt(insight.segments) : undefined),
+    [insight]
+  )
 
   // ── Filter condition helpers ──────────────────────────────────────────────
   const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
@@ -1231,97 +1274,41 @@ export function MarketingContent({
           )
         })()}
 
-        {/* ── Hero row: trend chart (1.65) · KPI tiles (0.85) ────────────────
-            The handoff's "chart + insights row". The tiles move out of a full
-            width strip and into the chart's right-hand column, six of them in
-            a 1fr 1fr grid so the column's height matches the chart's.
+        {/* ── Hero row: metric tabs over the chart · Birdy's read ───────────
+            The six figures are the chart's tabs, so each number appears once
+            and is one click from its own curve; there is no separate tile grid
+            and no separate metric picker. Beside it, Birdy's read of the period
+            in a white card like every other section.
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <StaggerItem className={`${pdFontClass} flex flex-col gap-[18px] lg:flex-row lg:items-stretch`}>
-          <div className="flex min-w-0 flex-col lg:flex-[1.65]">
-            {groupsLoading || seriesLoading ? (
-              <LoadingPulse className="h-[340px] flex-1" statements={CHART_LOADING} />
-            ) : chart ? (
-              <TrendChart
-                className="flex-1"
-                chart={chart}
-                metrics={chartTabs}
-                activeMetric={chartMetric}
-                onMetricChange={setChartMetric}
-                redrawKey={`${chartMetric}-${datePreset}-${granularity}-${selectedClientGroup ?? "all"}`}
-              />
-            ) : (
-              <PdCard
-                className="flex-1"
-                title={chartMetrics[chartMetric]?.title ?? "Trend"}
-                // The metric tabs live inside TrendChart, so without them here
-                // a metric with no series would be a dead end — you could
-                // select it and have no way back to one that plots.
-                action={
-                  <PdSegmented
-                    label="Chart metric"
-                    className="shrink-0"
-                    itemClassName="px-[13px] py-[7px]"
-                    options={chartTabs.map(m => ({ key: m.key, label: m.tab }))}
-                    value={chartMetric}
-                    onChange={setChartMetric}
-                  />
-                }
-              >
-                <p className="py-8 text-center text-[12px] text-pd-faint">
-                  {{
-                    spend: "No measured daily spend cached for this window yet.",
-                    leads: "No dated leads in this window yet.",
-                    cpl: "No day in this window has both spend and leads recorded.",
-                    // Impressions falls back to the shape of daily spend, so
-                    // reaching here means there is no spend curve either.
-                    impressions:
-                      "No measured daily spend cached for this window yet, so there is nothing to shape delivery against — the total is still in the tiles.",
-                  }[chartMetric] ?? "Nothing to plot for this window yet."}
-                </p>
-              </PdCard>
-            )}
-          </div>
+        <StaggerItem className={`${pdFontClass} grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]`}>
+          <MetricTabsChart
+            tabs={heroTabs}
+            activeKey={activeChartMetric}
+            onChange={setChartMetric}
+            chart={chart}
+            loading={groupsLoading}
+            plotLoading={groupsLoading || seriesLoading}
+            loadingStatements={CHART_LOADING}
+            emptyMessage={CHART_EMPTY[activeChartMetric]}
+            redrawKey={`${activeChartMetric}-${datePreset}-${granularity}-${selectedClientGroup ?? "all"}`}
+            layoutId="marketing-hub-hero"
+          />
 
-          <div className="flex min-w-0 flex-col gap-[14px] lg:flex-[0.85]">
-            {/* Birdy's own voice, and the only saturated surface the style
-                guide allows on a screen. Copy is generated per period from the
-                rows below it — the headline movement, then the single campaign
-                worth acting on. */}
-            {insight ? (
-              <InsightCard segments={insight.segments} />
-            ) : (
-              <PdCard title="Birdy Insights">
-                <p className="text-[12.5px] leading-[1.5] text-pd-body">
-                  Once campaigns in this window have spend against them, Birdy
-                  reads the movement and names what to act on.
-                </p>
-              </PdCard>
-            )}
-
-            <Stagger gap={0.05} className="grid grid-cols-2 gap-[10px]">
-              {groupsLoading
-                ? Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-[52px] rounded-xl" />
-                  ))
-                : kpiTiles.map(tile => (
-                    <StaggerItem key={tile.key} className="min-w-0">
-                      <StatTile
-                        className="h-full"
-                        layout="compact"
-                        icon={tile.icon}
-                        tone={tile.tone}
-                        value={tile.value}
-                        label={tile.label}
-                        direction={tile.direction}
-                        delta={tile.delta}
-                        polarity={tile.polarity}
-                      />
-                    </StaggerItem>
-                  ))}
-            </Stagger>
-          </div>
+          {/* Copy is generated per period from the rows below it — the
+              headline movement, the single campaign worth acting on, then the
+              bullets the rows support beyond that. Until there is spend in the
+              window the card says what it is waiting for, with no link. */}
+          {insight ? (
+            <BirdyBriefing
+              parts={insight.segments}
+              findings={findings}
+              prompt={briefingPrompt}
+            />
+          ) : (
+            <BirdyBriefing parts={BRIEFING_WAITING} />
+          )}
         </StaggerItem>
 
         {/* ── Landing page funnel ──────────────────────────────────────────

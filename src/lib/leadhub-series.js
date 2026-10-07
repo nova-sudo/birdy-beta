@@ -1,4 +1,4 @@
-// The Lead Hub trend chart's four series, from each client's precomputed
+// The Lead Hub trend chart's five series, from each client's precomputed
 // daily lead series (`gohighlevel.daily_leads`, written server-side by
 // birdy-backend's services/ghl_daily_leads.py). One row per day already
 // carries every metric this chart plots — see leadhub-totals.js for why the
@@ -14,7 +14,7 @@ import { bucketSeries } from "./portfolio-series";
 export { granularityForRange } from "./saleshub-series";
 
 /**
- * Build all four series for the window.
+ * Build all five series for the window.
  *
  * @param {object[]} dailyRows [{date, new_leads, new_contacts, open, won, lost, abandoned}, ...]
  * @param {string} granularity Daily | Weekly | Monthly
@@ -43,7 +43,7 @@ export function buildLeadSeries(dailyRows, granularity) {
     }),
   };
 
-  return { leads, contacts, open, conversion };
+  return { leads, contacts, open, lost, conversion };
 }
 
 /** Title, subtitle and tab label for each metric, in the design's order. */
@@ -65,6 +65,12 @@ export const LEAD_CHART_METRICS = [
     tab: "Open",
     title: "Open leads",
     subtitle: "Leads still in an open opportunity stage",
+  },
+  {
+    key: "lost",
+    tab: "Lost",
+    title: "Lost leads",
+    subtitle: "Leads that reached a lost stage",
   },
   {
     key: "conversion",

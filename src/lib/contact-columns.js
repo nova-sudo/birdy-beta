@@ -40,6 +40,17 @@ export const buildContactColumns = () => [
       ) : (
         <span className="text-muted-foreground text-sm px-2">–</span>
       ),
+    // The line under the name: where the lead came from and where its
+    // opportunity stands — the two facts a reader scans the row for, and the
+    // first of which is hidden by default as a column of its own.
+    sub: (row) => {
+      const source = row?.source
+        ? row.source.split(",").map((s) => s.trim()).filter(Boolean).map(toTitleCase).join(", ")
+        : null
+      const status = row?.opportunities?.[0]?.status
+      const bits = [source, status ? toTitleCase(status) : null].filter(Boolean)
+      return bits.length > 0 ? bits.join(" · ") : null
+    },
   },
   {
     id: "groupName",

@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "name": "ui-ux-designer",
+  "owner": "lactuphong",
+  "repo": "antigravity-awesome-skills",
+  "path": "plugins/antigravity-awesome-skills-claude/skills/ui-ux-designer",
+  "branch": "main",
+  "sha": "67c097ffeefe5a23733b87e967bc423486d814d0",
+  "source": "manual"
+}

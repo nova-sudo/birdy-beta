@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { sumCallStats, mergeDailyCalls, windowCallTotals } from "../saleshub-totals";
+import { sumCallStats, mergeDailyCalls, windowCallSeries, windowCallTotals } from "../saleshub-totals";
 
 const clientGroups = [
   {
@@ -66,6 +66,27 @@ describe("windowCallTotals", () => {
 
   it("returns zeros for a missing series rather than throwing", () => {
     expect(windowCallTotals(null, "maximum")).toEqual({ calls: 0, inbound: 0, outbound: 0, talk: 0 });
+  });
+});
+
+describe("windowCallSeries", () => {
+  it("lists the window's calls per day in date order, whatever order the rows arrived in", () => {
+    const series = windowCallSeries(
+      [
+        { date: "2026-08-20", calls: 4, inbound: 1, talk_min: 8 },
+        { date: "2026-08-13", calls: 5, inbound: 2, talk_min: 12 },
+        { date: "2026-01-01", calls: 3, inbound: 1, talk_min: 4 },
+      ],
+      "maximum"
+    );
+
+    expect(series).toEqual([3, 5, 4]);
+  });
+
+  it("applies the same window the totals do, so a sparkline never shows days its figure left out", () => {
+    // "today" excludes every fixed-date row, exactly as windowCallTotals does.
+    expect(windowCallSeries([{ date: "2026-08-13", calls: 5 }], "today")).toEqual([]);
+    expect(windowCallSeries(null, "maximum")).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor, fireEvent } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import CallCenterPage from "../page"
 import { STORAGE_KEYS } from "@/lib/constants"
@@ -69,14 +69,19 @@ beforeEach(() => {
   })
 })
 
+// The chart above the table has tabs of its own ("Leads called", "Total
+// calls"), so section tabs are looked up inside their own tablist.
+const sectionTab = (name) =>
+  within(screen.getByRole("tablist", { name: "Sales Hub section" })).getByRole("tab", { name })
+
 describe("Sales Hub — Calls tab", () => {
   it("renders all four tabs, including the new Calls tab, without breaking the existing ones", () => {
     render(<CallCenterPage />)
 
-    expect(screen.getByRole("tab", { name: /overview/i })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: /leads/i })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: /members/i })).toBeInTheDocument()
-    expect(screen.getByRole("tab", { name: /calls/i })).toBeInTheDocument()
+    expect(sectionTab(/overview/i)).toBeInTheDocument()
+    expect(sectionTab(/leads/i)).toBeInTheDocument()
+    expect(sectionTab(/members/i)).toBeInTheDocument()
+    expect(sectionTab(/calls/i)).toBeInTheDocument()
   })
 
   it("mounts only the selected section, so the other three don't fetch behind it", async () => {
@@ -93,10 +98,10 @@ describe("Sales Hub — Calls tab", () => {
 
     expect(leadsBatchFetched()).toBe(false)
 
-    await user.click(screen.getByRole("tab", { name: /leads/i }))
+    await user.click(sectionTab(/leads/i))
     await waitFor(() => expect(leadsBatchFetched()).toBe(true))
 
-    await user.click(screen.getByRole("tab", { name: /calls/i }))
+    await user.click(sectionTab(/calls/i))
     await waitFor(() => expect(screen.getByText("Lead 08")).toBeInTheDocument())
   })
 
@@ -104,7 +109,7 @@ describe("Sales Hub — Calls tab", () => {
     const user = userEvent.setup()
     render(<CallCenterPage />)
 
-    await user.click(screen.getByRole("tab", { name: /calls/i }))
+    await user.click(sectionTab(/calls/i))
 
     await waitFor(() => {
       expect(screen.getByText("Lead 08")).toBeInTheDocument()
@@ -116,7 +121,7 @@ describe("Sales Hub — Calls tab", () => {
     const user = userEvent.setup()
     render(<CallCenterPage />)
 
-    await user.click(screen.getByRole("tab", { name: /calls/i }))
+    await user.click(sectionTab(/calls/i))
     await waitFor(() => expect(screen.getByText("Lead 08")).toBeInTheDocument())
 
     // All 8 calls fit under the default limit of 20.

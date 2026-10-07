@@ -2,7 +2,7 @@
 //
 // Everything here is derived from the campaign rows the page already builds in
 // MarketingContent — the same rows the table below draws. That is deliberate:
-// the KPI tiles and the table are then guaranteed to agree, and the
+// the hero figures and the table are then guaranteed to agree, and the
 // client-group picker filters both at once because it filters the rows they
 // share.
 //
@@ -61,7 +61,7 @@ export function isOverCplCeiling(row, blendedCpl) {
 }
 
 /**
- * Sum a set of campaign/adset/ad rows into the figures the KPI tiles show.
+ * Sum a set of campaign/adset/ad rows into the figures the hero tabs show.
  *
  * Rates are blended — total clicks over total impressions — not the mean of
  * each row's own rate. Those differ, and the mean is the wrong one: it weights
@@ -181,7 +181,7 @@ export function coverageNote(days, plotted, total) {
 /**
  * Account-level totals for a set of client groups.
  *
- * The KPI tiles used to sum the campaign rows beneath them, which is not the
+ * The hero figures used to sum the campaign rows beneath them, which is not the
  * same number. `/{account}/campaigns` omits deleted and archived campaigns, so
  * spend on them is missing from the rows while the account still reports it —
  * summing the rows under-reports by however much of the account's history sits
@@ -299,7 +299,7 @@ export function abbreviate(value) {
 }
 
 /**
- * The six KPI tiles, with deltas wherever a previous period exists.
+ * The six hero figures, with deltas wherever a previous period exists.
  *
  * CTR moves in points, not percent: a rise from 3.6% to 3.9% is "▲ 0.3pts". A
  * percentage change of a percentage reads as though the rate itself were 8%.
@@ -451,4 +451,95 @@ export function buildMarketingInsight(current, previous, rows, formatMoney) {
   }
 
   return { segments };
+}
+
+/**
+ * The bullets beneath Birdy's headline on the Marketing Hub.
+ *
+ * The sentence above names one campaign — the worst offender. These are the
+ * rest of what the rows support: how many more are over the ceiling, which
+ * ones are burning spend with nothing to show, and the campaign carrying the
+ * account. Each is skipped when the rows don't bear it out, so the list is
+ * zero to three bullets long rather than three bullets with "0" in them.
+ *
+ * Same scoping as the sentence: a campaign has to clear CPL_JUDGEMENT_FLOOR
+ * before it can be called a problem, and the worst offender is left out of the
+ * count so the card doesn't say the same name twice.
+ *
+ * @returns {{tone: string, parts: {text: string, strong?: boolean}[]}[]}
+ */
+export function buildMarketingFindings(current, rows, formatMoney) {
+  const list = rows ?? [];
+  if (!list.length || !(current?.spend > 0)) return [];
+
+  const findings = [];
+  const results = (r) => Math.round(num(r.results ?? r.leads));
+  const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+  const judgeable = list.filter((r) => num(r.spend) >= CPL_JUDGEMENT_FLOOR && num(r.cpl) > 0);
+  const worst = [...judgeable].sort((a, b) => num(b.cpl) - num(a.cpl))[0];
+
+  // ── The offenders the sentence didn't name ─────────────────────────────
+  const others = judgeable.filter((r) => r !== worst && isOverCplCeiling(r, current.cpl));
+  if (others.length) {
+    const spend = others.reduce((sum, r) => sum + num(r.spend), 0);
+    findings.push({
+      tone: "warning",
+      parts: [
+        { text: `${plural(others.length, "more campaign")}`, strong: true },
+        { text: others.length === 1 ? " runs above twice the blended CPL, " : " run above twice the blended CPL, " },
+        { text: formatMoney(spend, 0), strong: true },
+        { text: others.length === 1 ? " on it." : " between them." },
+      ],
+    });
+  }
+
+  // ── Spend with nothing back ────────────────────────────────────────────
+  const barren = list.filter((r) => num(r.spend) >= CPL_JUDGEMENT_FLOOR && results(r) === 0);
+  if (barren.length) {
+    const spend = barren.reduce((sum, r) => sum + num(r.spend), 0);
+    findings.push({
+      tone: "danger",
+      parts: [
+        { text: plural(barren.length, "campaign"), strong: true },
+        { text: " spent " },
+        { text: formatMoney(spend, 0), strong: true },
+        { text: " with no results." },
+      ],
+    });
+  }
+
+  // ── The campaign carrying the account ──────────────────────────────────
+  const top = [...list].sort((a, b) => results(b) - results(a))[0];
+  if (top && results(top) > 0) {
+    // The share is of the headline figure where that is the larger: the
+    // account total can exceed the rows' sum when Meta bills campaigns it no
+    // longer lists, and the reader compares against the number on the tab.
+    const rowsTotal = list.reduce((sum, r) => sum + results(r), 0);
+    const total = Math.max(num(current.leads), rowsTotal);
+    const share = total > 0 ? Math.round((results(top) / total) * 100) : 0;
+    const cpl = num(top.cpl);
+    // "100% of the total" is only ever true of a lone campaign, and says
+    // nothing a reader with one row can't see — the share needs company.
+    const peers = list.filter((r) => r !== top && results(r) > 0).length;
+    const parts = [
+      { text: top.name, strong: true },
+      { text: " delivered " },
+      { text: plural(results(top), "result"), strong: true },
+      ...(peers > 0 ? [{ text: `, ${share}% of the total` }] : []),
+    ];
+    if (cpl > 0) {
+      parts.push({ text: ", at " }, { text: formatMoney(cpl, 2), strong: true }, { text: " CPL." });
+    } else {
+      parts.push({ text: "." });
+    }
+    findings.push({ tone: "success", parts });
+  }
+
+  return findings.slice(0, 3);
+}
+
+/** The question the card's footer link hands to the assistant. */
+export function marketingInsightPrompt(segments) {
+  return `About my Marketing Hub this period: ${(segments ?? []).map((s) => s.text).join("")} What should I do about it?`;
 }

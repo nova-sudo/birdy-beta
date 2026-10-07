@@ -18,7 +18,8 @@ import { usePageViews } from "@/lib/usePageViews"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
-import { windowCallTotals } from "@/lib/saleshub-totals"
+import { windowCallSeries, windowCallTotals } from "@/lib/saleshub-totals"
+import { Sparkline } from "@/components/ui/sparkline"
 import { scopeHasCallCentre, groupsWithoutCallCentre } from "@/lib/call-centre-availability"
 import { CallCentreUnavailable } from "@/components/callcenter/CallCentreUnavailable"
 import { hpIcon as HP } from "@/lib/icons"
@@ -612,8 +613,21 @@ function MemberAnalyzeDialog({ member }) {
 const MEMBER_AI_CELL = (_v, row) => <MemberAnalyzeDialog member={row} />
 
 // ── Column definitions per tab ───────────────────────────────────────────────
+// Under the client's name: how much of its pool the window's calls reached.
+// Both halves of that ratio already have a column, but the ratio is the fact
+// a reader actually wants, and it does not earn a column of its own.
+const REACH_SUB = (row) =>
+  row.total_leads > 0
+    ? `${row.leads.toLocaleString()} of ${row.total_leads.toLocaleString()} called · ${Math.round(row.reach_rate * 100)}% reach`
+    : null
+
+const TREND_CELL = (_v, row) => <Sparkline values={row.trend} label={`${row.name} calls`} />
+
 const OVERVIEW_COLUMNS = [
-  { id: "name", label: "Client", sortable: true },
+  { id: "name", label: "Client", sortable: true, sub: REACH_SUB },
+  // Not sortable: an array has no order, and the figures it summarises are
+  // sortable in the columns beside it.
+  { id: "trend", label: "Trend", sortable: false, align: "left", icons: HP, cell: TREND_CELL },
   { id: "total_leads", label: "Total Leads", sortable: true, icons: HP },
   { id: "leads", label: "Leads Called", sortable: true, icons: HP },
   { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
@@ -650,7 +664,7 @@ const LEAD_COLUMNS = [
   { id: "location", label: "Location", sortable: true, icons: HP },
   { id: "first_call", label: "First Call", sortable: true, icons: HP, cell: DATE_CELL },
   { id: "last_call", label: "Last Call", sortable: true, icons: HP, cell: DATE_CELL },
-  { id: "calls", label: "Call Logs", sortable: true, icons: HP, cell: CALLS_CELL },
+  { id: "calls", label: "Call Logs", sortable: true, icons: HP, align: "left", cell: CALLS_CELL },
   { id: "status", label: "Status", sortable: true, cell: STATUS_CELL },
 ]
 
@@ -1234,6 +1248,8 @@ export function CallCentreContent({
       (clientGroups || []).map((g) => {
         const cs = g.hotprospector?.call_stats || {}
         const daily = windowCallTotals(g.hotprospector?.daily_calls, datePreset)
+        const totalLeads = g.hotprospector?.metrics?.total_leads ?? 0
+        const leads = cs.leads_with_calls ?? 0
         return {
           id: g.id,
           name: g.name || "Unnamed Client",
@@ -1241,8 +1257,12 @@ export function CallCentreContent({
           // Windowed "leads" = leads contacted in the period. HP leads have no
           // creation date, so call activity is the only windowable lead metric;
           // total_leads (full pool) is the same across presets by design.
-          total_leads: g.hotprospector?.metrics?.total_leads ?? 0,
-          leads: cs.leads_with_calls ?? 0,
+          total_leads: totalLeads,
+          leads,
+          reach_rate: totalLeads > 0 ? leads / totalLeads : 0,
+          // Calls per day inside the window, for the row's sparkline — the
+          // same days total_calls sums, so the curve and the figure agree.
+          trend: windowCallSeries(g.hotprospector?.daily_calls, datePreset),
           total_calls: daily.calls,
           inbound: daily.inbound,
           outbound: daily.outbound,

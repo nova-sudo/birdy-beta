@@ -11,6 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Spinner } from "@/components/ui/spinner"
+import { ChevronRight } from "lucide-react"
 import { SYNCING_MESSAGE } from "@/lib/client-loading"
 
 import {
@@ -405,6 +406,22 @@ const StyledTable = ({
     setCurrentPage(1);
   }, [sortedData.length, pageSize]);
 
+  /* ---------- NUMERIC COLUMNS ---------- */
+  // Figures sit flush right so the eye can compare magnitudes down a column;
+  // words stay flush left. A column declares `align`, or is read off the page
+  // in view: any numeric value makes it a numeric column. The name column is
+  // never numeric, whatever it holds.
+  const numericColumns = useMemo(() => {
+    const set = new Set();
+    visibleColumns.forEach((col, colIdx) => {
+      if (colIdx === 0 || col.align === "left") return;
+      if (col.align === "right" || sortedData.some((row) => typeof row[col.id] === "number")) {
+        set.add(col.id);
+      }
+    });
+    return set;
+  }, [visibleColumns, sortedData]);
+
   const getPageNumbers = () => {
     const pages = [];
     const showEllipsisStart = currentPage > 3;
@@ -742,7 +759,11 @@ const StyledTable = ({
                         The source icon sits at the far end, away from the
                         label, so it marks where the column came from without
                         crowding the word it belongs to. */}
-                    <div className="flex h-full w-full items-center gap-2 px-[22px]">
+                    <div
+                      className={`flex h-full w-full items-center gap-2 px-[22px] ${
+                        numericColumns.has(col.id) ? "flex-row-reverse" : ""
+                      }`}
+                    >
                       <button
                         onClick={() => col.sortable && handleSort(col.id)}
                         className={`flex min-w-0 items-center gap-1 truncate text-left align-middle ${
@@ -910,7 +931,7 @@ const StyledTable = ({
                         // shimmer: dimming on top of that read as "disabled",
                         // which is the wrong idea. It is working, not inert.
                         ? "w-fit cursor-wait"
-                        : "row-hoverable w-fit cursor-pointer hover:bg-pd-divider/60"
+                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60"
                     } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
                     {/* Checkbox cell */}
@@ -1013,7 +1034,9 @@ const StyledTable = ({
                               ? // The name carries the row: heavier, in ink,
                                 // against numerics that sit back in body grey.
                                 `${row._isSyncing ? "fixed-column-syncing" : globalIdx % 2 === 0 ? "fixed-column-odd" : "fixed-column-even"} h-11 text-[14px] font-semibold text-pd-ink`
-                              : "text-[13.5px] text-pd-body"
+                              : `text-[13.5px] text-pd-body ${
+                                  numericColumns.has(col.id) ? "text-right tabular-nums" : ""
+                                }`
                           } ${isSelected && colIdx === 0 ? "!bg-pd-primary-tint" : ""}`}
                         >
                           <div
@@ -1058,7 +1081,7 @@ const StyledTable = ({
                                   <span
                                     className={`min-w-0 flex items-center gap-2 w-full overflow-hidden ${
                                       row._isCreating || row._isPending ? "text-pd-subtle" : ""
-                                    }`}
+                                    } ${numericColumns.has(col.id) ? "justify-end" : ""}`}
                                   >
                                     {colIdx === 0 && clickableFirstColumn && !onRowClick ? (
                                       <button
@@ -1068,8 +1091,22 @@ const StyledTable = ({
                                         {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
                                       </button>
                                     ) : (
-                                      <span className="truncate min-w-0 block">
-                                        {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                      <span className="min-w-0 block">
+                                        <span className="block truncate">
+                                          {col.cell ? col.cell(row[col.id], row) : getCellValue(row, col.id)}
+                                        </span>
+                                        {/* A second line under the name — a
+                                            column's `sub(row)` — for the one
+                                            or two facts that explain the row
+                                            without earning a column each. */}
+                                        {colIdx === 0 && col.sub && (() => {
+                                          const sub = col.sub(row);
+                                          return sub ? (
+                                            <span className="mt-[2px] block truncate text-[11px] font-normal leading-[1.3] text-pd-faint">
+                                              {sub}
+                                            </span>
+                                          ) : null;
+                                        })()}
                                       </span>
                                     )}
                                   </span>
@@ -1081,6 +1118,13 @@ const StyledTable = ({
                                 )}
                               </Tooltip>
                             </TooltipProvider>
+                            {/* A row that opens something says so on hover. */}
+                            {colIdx === 0 && onRowClick && !row._isSyncing && (
+                              <ChevronRight
+                                className="ml-auto size-4 shrink-0 text-pd-chevron opacity-0 transition-opacity group-hover:opacity-100"
+                                aria-hidden="true"
+                              />
+                            )}
                           </div>
                         </td>
 

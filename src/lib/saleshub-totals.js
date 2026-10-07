@@ -39,17 +39,37 @@ function scopedGroups(clientGroups, selectedClientGroup) {
  * (per-client) do against the same daily_calls series.
  */
 export function windowCallTotals(dailyRows, datePreset) {
-  const { start_date, end_date } = presetToDateRange(datePreset);
-  const rows = (dailyRows ?? []).filter(
-    (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
-  );
+  const rows = windowCallRows(dailyRows, datePreset);
   const calls = rows.reduce((sum, d) => sum + (d.calls ?? 0), 0);
   const inbound = rows.reduce((sum, d) => sum + (d.inbound ?? 0), 0);
   const talk = rows.reduce((sum, d) => sum + (d.talk_min ?? 0), 0);
   return { calls, inbound, outbound: calls - inbound, talk };
 }
 
-/** Sums the call stats across whichever clients are in scope, for the tiles and the insight card. */
+/**
+ * The daily rows that fall inside the preset's window, in date order — the
+ * one place the window is applied to a client's series, so a total and a
+ * sparkline drawn from the same client can never disagree about which days
+ * they cover.
+ */
+export function windowCallRows(dailyRows, datePreset) {
+  const { start_date, end_date } = presetToDateRange(datePreset);
+  return (dailyRows ?? [])
+    .filter((d) => d?.date && (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * One client's calls per day inside the window, for a row-sized sparkline.
+ * Days the series has no row for are simply absent: the backend writes a row
+ * for every day it counted, so a gap is a day before the client's history
+ * starts, not a day with zero calls.
+ */
+export function windowCallSeries(dailyRows, datePreset) {
+  return windowCallRows(dailyRows, datePreset).map((d) => d.calls ?? 0);
+}
+
+/** Sums the call stats across whichever clients are in scope, for the hero figures and the briefing. */
 export function sumCallStats(clientGroups, selectedClientGroup, datePreset) {
   const scoped = scopedGroups(clientGroups, selectedClientGroup);
 

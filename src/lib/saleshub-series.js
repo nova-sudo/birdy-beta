@@ -1,4 +1,4 @@
-// The Sales Hub trend chart's four series, from each client's precomputed
+// The Sales Hub trend chart's five series, from each client's precomputed
 // daily call series (`hotprospector.daily_calls`, written server-side by
 // birdy-backend's hp_service._compute_daily_call_series). One row per day
 // already carries every metric this chart plots:
@@ -9,6 +9,10 @@
 //                 that accepts: a lead first contacted before the selected
 //                 window reads as zero even if called again inside it)
 //   Inbound       the inbound subset of that day's calls
+//   Outbound      the rest of them — the rows carry no outbound field, so it
+//                 is calls minus inbound here exactly as it is in the tile
+//                 (saleshub-totals.js's windowCallTotals), which is what keeps
+//                 the two in agreement
 //   Talk time     minutes that day
 //
 // Because every metric is bucketed from the same row set, they share the same
@@ -54,7 +58,7 @@ export function granularityForRange(startDate, endDate) {
 }
 
 /**
- * Build all four series for the window.
+ * Build all five series for the window.
  *
  * @param {object[]} dailyRows [{date, calls, inbound, talk_min, called}, ...]
  * @param {string} granularity Daily | Weekly | Monthly
@@ -67,6 +71,7 @@ export function buildSalesSeries(dailyRows, granularity) {
     calls: on((d) => d.calls ?? 0),
     called: on((d) => d.called ?? 0),
     inbound: on((d) => d.inbound ?? 0),
+    outbound: on((d) => (d.calls ?? 0) - (d.inbound ?? 0)),
     talk: on((d) => d.talk_min ?? 0),
   };
 }
@@ -81,11 +86,11 @@ export const SALES_CHART_METRICS = [
   },
   {
     key: "called",
-    // Named differently from the "Leads called" KPI tile on purpose: this is
-    // a lifetime cohort (each lead counted once, on their first-ever call —
-    // see the module docstring above), not "distinct leads called in this
-    // window" the way the tile is. Sharing a label would read as the same
-    // number; it never is.
+    // Titled differently from the "Leads called" figure it sits under on
+    // purpose: this is a lifetime cohort (each lead counted once, on their
+    // first-ever call — see the module docstring above), not "distinct leads
+    // called in this window" the way the figure is. The plot header carries
+    // this title and its own sum, so the two never read as one number.
     tab: "New leads contacted",
     title: "New leads contacted",
     subtitle: "Leads reached for the first time, by the day of their first call",
@@ -95,6 +100,12 @@ export const SALES_CHART_METRICS = [
     tab: "Inbound",
     title: "Inbound calls",
     subtitle: "Calls received from leads",
+  },
+  {
+    key: "outbound",
+    tab: "Outbound",
+    title: "Outbound calls",
+    subtitle: "Calls the dialler placed to leads",
   },
   {
     key: "talk",

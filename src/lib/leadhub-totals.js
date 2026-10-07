@@ -12,7 +12,7 @@ import { presetToDateRange } from "./date-utils";
 // cached — both are summed from the same cached series here, the way
 // Sales-Hub moved calls/inbound/outbound/talk onto daily_calls once that
 // series existed. The upside this buys back: a previous-period window is
-// just a second filter over data already on the page, so the KPI tiles get
+// just a second filter over data already on the page, so the hero figures get
 // real deltas with no second API call.
 //
 // `open`/`won`/`lost`/`abandoned` count one opportunity per lead-type contact
@@ -115,7 +115,7 @@ export function previousWindow(datePreset) {
   return { start_date: fmt(prevStart), end_date: fmt(prevEnd) };
 }
 
-/** The previous window's totals, for the KPI tiles' delta pills — null when there is no previous window. */
+/** The previous window's totals, for the hero figures' delta pills — null when there is no previous window. */
 export function previousLeadTotals(dailyRows, datePreset) {
   const prev = previousWindow(datePreset);
   return prev ? sumWindow(dailyRows, prev.start_date, prev.end_date) : null;

@@ -8,6 +8,7 @@ import {
   abbreviate,
   aggregateCampaignRows,
   aggregateGroupInsights,
+  buildMarketingFindings,
   buildMarketingInsight,
   buildMarketingKpis,
   campaignRowsFromGroups,
@@ -17,7 +18,7 @@ import {
 
 // ─── Where the Marketing Hub's figures come from ────────────────────────────
 //
-// The KPI tiles run on the same campaign rows the table beneath them draws. The
+// The hero figures run on the same campaign rows the table beneath them draws. The
 // page passes those in, so the client-group picker and the date preset filter
 // every part of the screen at once, and the tiles can never disagree with the
 // table.
@@ -242,6 +243,13 @@ export function useMarketingHubData({
     [current, previous, rows, formatMoney]
   );
 
+  // The bullets under the sentence. Built from the same rows so they can't
+  // name a campaign the sentence has already covered differently.
+  const findings = useMemo(
+    () => buildMarketingFindings(current, rows, formatMoney),
+    [current, rows, formatMoney]
+  );
+
   const chartMetrics = useMemo(() => {
     const { start_date, end_date } = presetToDateRange(datePreset);
     const inRange = (d) =>
@@ -377,6 +385,7 @@ export function useMarketingHubData({
     previous,
     kpis,
     insight,
+    findings,
     chartMetrics,
     seriesLoading,
     unlistedSpend,

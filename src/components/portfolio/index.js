@@ -5,11 +5,13 @@
 // src/app/portfolio; these are the parts it assembles.
 
 export { ActivityRow } from "./ActivityRow";
+export { BirdyBriefing } from "./BirdyBriefing";
 export { DeltaPill } from "./DeltaPill";
 export { DiagnosticBanner } from "./DiagnosticBanner";
 export { FunnelStepper } from "./FunnelStepper";
 export { InsightCard } from "./InsightCard";
 export { Leaderboard } from "./Leaderboard";
+export { MetricTabsChart } from "./MetricTabsChart";
 export { LoadError } from "./LoadError";
 export { LoadingPulse, FUNNEL_LOADING, CHART_LOADING, CALL_CHART_LOADING } from "./LoadingPulse";
 export { PageTabs, PageTabPanel } from "./PageTabs";
@@ -21,6 +23,7 @@ export { StatStrip } from "./StatStrip";
 export { StatTile } from "./StatTile";
 export { SuggestionCard } from "./SuggestionCard";
 export { TrendChart } from "./TrendChart";
+export { TrendPlot } from "./TrendPlot";
 export { UnderlineTabs } from "./UnderlineTabs";
 export { WinCard } from "./WinCard";
 export { TONES, toneClass } from "./tones";

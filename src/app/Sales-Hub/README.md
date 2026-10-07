@@ -11,11 +11,9 @@ Route: `/Sales-Hub`.
 ```
 global top bar           Sales Hub · date range · client picker · bell · profile
 SalesHubShell            canvas + one scroll region
-├── chart + insights row
-│   ├── TrendChart       flex 1.65 — 4 call metrics
-│   └── right column     flex 0.85
-│       ├── InsightCard  the window's figures, stated
-│       └── KpiTiles     6 compact tiles
+├── hero row               CallCentreOverview
+│   ├── MetricTabsChart    the six figures as tabs; the selected one is plotted
+│   └── BirdyBriefing      Birdy's read: one sentence + up to three findings
 └── CallCentreContent    section tabs · search/columns · table
 ```
 
@@ -23,12 +21,12 @@ SalesHubShell            canvas + one scroll region
 |---|---|
 | `page.jsx` | Composition, and the window/scope state the controls hold |
 | `useSalesHubSeries.js` | The chart's series, counted from call logs |
-| `presentation.js` | Which icon and tone each tile wears |
-| `src/lib/saleshub-series.js` | Bucketing the four metrics (pure) |
+| `presentation.js` | Which tone each figure wears, and which series it plots |
+| `src/lib/saleshub-series.js` | Bucketing the five plottable metrics (pure) |
 | `src/lib/saleshub-totals.js` | Summing the call stats (pure) |
-| `src/lib/saleshub-insight.js` | The insight copy (pure) |
-| `src/components/saleshub/` | Shell, picker, insight card, tiles |
-| `src/components/portfolio/` | `StatTile`, `PdSegmented`, reused |
+| `src/lib/saleshub-insight.js` | The briefing sentence and findings (pure) |
+| `src/components/saleshub/` | Shell, picker, the hero row |
+| `src/components/portfolio/` | `MetricTabsChart`, `BirdyBriefing`, `TrendPlot`, reused |
 
 ## State
 
@@ -36,7 +34,7 @@ SalesHubShell            canvas + one scroll region
 |---|---|---|
 | `datePreset` | `last_7d` | The window **every** figure covers |
 | `selectedClientGroup` | `all` | Which client is in scope |
-| `chartMetric` | `calls` | Which series is plotted |
+| `activeTab` (hero) | `calls` | Which figure is selected, and so which series is plotted |
 | `activeTab` | `overview` | Which table renders |
 
 The first two live on the page rather than in the table, because the design puts
@@ -57,19 +55,19 @@ and which figures come from which is deliberate:
 
 | Reads | Feeds |
 |---|---|
-| `clientGroups[].hotprospector.call_stats` | Leads called + Transfers tiles, the Overview table's Leads/Transfers columns |
-| `clientGroups[].hotprospector.daily_calls` | Total calls / Inbound / Outbound / Talk time tiles, the insight card, the Overview table's matching columns, and the trend chart's four series |
+| `clientGroups[].hotprospector.call_stats` | Leads called + Transfers figures, the Overview table's Leads/Transfers columns |
+| `clientGroups[].hotprospector.daily_calls` | Total calls / Inbound / Outbound / Talk time figures, the briefing, the Overview table's matching columns and sparklines, and the chart's five series |
 
 **Total calls / Inbound / Outbound / Talk time used to read `call_stats` too**,
 same as Leads called and Transfers still do. Investigated 2026-08-20 after the
-tiles and the chart disagreed on Total calls for the same window: re-deriving
+figures and the chart disagreed on Total calls for the same window: re-deriving
 `daily_calls` fresh didn't close the gap, which ruled out a timing fluke.
 `call_stats` only gets recomputed by the once-a-day `hp-tick` cron pass per
 location, so it can run up to 24h stale against what's actually in storage;
 `daily_calls` reflects current storage on every refresh. `sumCallStats` and
 `CallCentreContent`'s Overview rows (`windowCallTotals`, `saleshub-totals.js`)
 now sum the same daily series the chart draws for those four figures, so the
-tiles, the table and the curve read off one cadence instead of two — and get
+figures, the table and the curve read off one cadence instead of two — and get
 the fresher number in the process. Outbound isn't tracked per day separately;
 it's `calls - inbound` off the same rows.
 
@@ -97,7 +95,7 @@ ever wanted four numbers a day.
 
 `birdy-backend`'s `hp_service._compute_daily_call_series` now derives that
 same per-day breakdown once, server-side, from the calls it already loads to
-refresh the Overview tiles — no extra API call. `/api/client-groups` serves it
+refresh the Overview figures — no extra API call. `/api/client-groups` serves it
 whole, same shape as Meta's `daily_spend` and GHL's `daily_leads`:
 `mergeDailyCalls` (`saleshub-totals.js`) sums it across whichever clients are
 in scope, and `useSalesHubSeries` slices it to the selected window and hands
@@ -106,9 +104,9 @@ Nothing is scaled onto another figure and no previous period is fetched, so
 the chart still carries no delta — and the headline figure is still the sum
 of what it drew, so curve and number always agree.
 
-**The chart's "New leads contacted" tab is a lifetime cohort, not a
-window-relative count — and is named differently from the "Leads called" tile
-for exactly that reason.** Each lead is counted once, on the day of their
+**The curve under the "Leads called" figure is a lifetime cohort ("New
+leads contacted"), not a window-relative count — and the plot header says so,
+with a "Plotted: N" note beside it, for exactly that reason.** Each lead is counted once, on the day of their
 *first-ever* call — not their first call within whatever window happens to be
 selected. A lead first contacted before the window started therefore reads as
 zero for that window even if they were called again inside it. The old
@@ -117,17 +115,18 @@ fetched calls inside that window in the first place; this trades that
 precision for not fetching per-call data at all. Same tradeoff GHL's cohort
 funnel already accepts (see `compute_cohort_funnel`'s "recent end
 under-reports" note) — worth knowing if the number looks low for a short
-window on a client with older history. The two labels used to both read
-"Leads called," which read as the same figure disagreeing with itself; they
-never were the same figure.
+window on a client with older history. The figure in the tab is the
+window's distinct leads called; the curve beneath it is titled by what it
+actually counts, and its own sum is printed, so the two never read as one
+figure disagreeing with itself.
 
 ## Deviations from the handoff
 
 These are deliberate. Everything else matches the design's tokens.
 
-1. **The chart's "New leads contacted" is a lifetime-cohort count, not a
-   scaled sample, and deliberately not labeled "Leads called."** See above
-   for the tradeoff that accepts.
+1. **The "Leads called" figure's curve is a lifetime-cohort count ("New
+   leads contacted"), not a scaled sample, and the plot header says so.** See
+   above for the tradeoff that accepts.
 2. **No delta pills, anywhere**, including the chart's total-row delta, which
    the prototype hardcodes. A period-over-period figure means fetching and
    assembling a second window; every number here belongs to the one window that
