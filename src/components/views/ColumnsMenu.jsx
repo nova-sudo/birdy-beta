@@ -240,7 +240,7 @@ export default function ColumnsMenu({
         <button
           type="button"
           aria-haspopup="dialog"
-          className={`flex h-[38px] items-center gap-2 rounded-[10px] border border-[#E7E6E3] bg-white px-[13px] text-[13px] font-semibold text-[#5A5A6E] ${buttonClassName}`}
+          className={`flex h-[38px] items-center gap-2 rounded-sm border border-[#E7E6E3] bg-white px-[13px] text-[13px] font-semibold text-[#5A5A6E] ${buttonClassName}`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -265,7 +265,7 @@ export default function ColumnsMenu({
         align="end"
         sideOffset={6}
         aria-label="Columns and saved views"
-        className="flex h-[560px] w-[480px] overflow-hidden rounded-[14px] border-[#E7E6E3] bg-white p-0"
+        className="flex h-[560px] w-[480px] overflow-hidden rounded-xl border-[#E7E6E3] bg-white p-0"
         style={{ boxShadow: "0 14px 34px -12px rgba(30,25,60,.28)" }}
       >
           {/* ── Left rail ─────────────────────────────────────────────── */}
@@ -327,13 +327,13 @@ export default function ColumnsMenu({
                       <div className="flex gap-[6px]">
                         <button
                           type="button" onClick={confirmDelete} disabled={busy}
-                          className="flex-1 rounded-[7px] bg-[#E5484D] py-[6px] text-center text-[11.5px] font-semibold text-white disabled:opacity-60"
+                          className="flex-1 rounded-[12px] bg-[#E5484D] py-[6px] text-center text-[11.5px] font-semibold text-white disabled:opacity-60"
                         >
                           Delete
                         </button>
                         <button
                           type="button" onClick={() => setDeleteTarget(null)}
-                          className="flex-1 rounded-[7px] border border-[#E7E6E3] bg-white py-[6px] text-center text-[11.5px] font-semibold text-[#5A5A6E]"
+                          className="flex-1 rounded-[12px] border border-[#E7E6E3] bg-white py-[6px] text-center text-[11.5px] font-semibold text-[#5A5A6E]"
                         >
                           Cancel
                         </button>
@@ -440,14 +440,14 @@ export default function ColumnsMenu({
                     placeholder="View name…"
                     autoFocus
                     aria-label="New view name"
-                    className="h-8 w-full rounded-[7px] border border-[#E7E6E3] bg-white px-[10px] text-[12px] text-pd-ink outline-none"
+                    className="h-8 w-full rounded-[12px] border border-[#E7E6E3] bg-white px-[10px] text-[12px] text-pd-ink outline-none"
                   />
                   <div className="flex gap-[6px]">
                     <button
                       type="button"
                       onClick={confirmSave}
                       disabled={!newName.trim() || busy}
-                      className="flex-1 rounded-[7px] py-[7px] text-center text-[12px] font-semibold text-white disabled:opacity-60"
+                      className="flex-1 rounded-[12px] py-[7px] text-center text-[12px] font-semibold text-white disabled:opacity-60"
                       style={{ background: newName.trim() ? "#5B3FD6" : "#C3B7F2" }}
                     >
                       Save
@@ -455,7 +455,7 @@ export default function ColumnsMenu({
                     <button
                       type="button"
                       onClick={() => { setComposing(false); setNewName("") }}
-                      className="flex-1 rounded-[7px] border border-[#E7E6E3] bg-white py-[7px] text-center text-[12px] font-semibold text-[#5A5A6E]"
+                      className="flex-1 rounded-[12px] border border-[#E7E6E3] bg-white py-[7px] text-center text-[12px] font-semibold text-[#5A5A6E]"
                     >
                       Cancel
                     </button>
@@ -469,7 +469,7 @@ export default function ColumnsMenu({
                     type="button"
                     onClick={saveToExisting}
                     disabled={busy}
-                    className="flex h-8 items-center justify-center gap-[6px] rounded-[8px] text-[12px] font-semibold text-white disabled:opacity-60"
+                    className="flex h-8 items-center justify-center gap-[6px] rounded-[12px] text-[12px] font-semibold text-white disabled:opacity-60"
                     style={{ background: justUpdated ? "#25A55F" : "#5B3FD6" }}
                   >
                     {justUpdated ? (
@@ -496,7 +496,7 @@ export default function ColumnsMenu({
                   <button
                     type="button"
                     onClick={() => { setComposing(true); setNewName("") }}
-                    className="flex h-8 items-center justify-center rounded-[8px] border border-[#E7E6E3] bg-white text-[12px] font-semibold text-[#5A5A6E]"
+                    className="flex h-8 items-center justify-center rounded-[12px] border border-[#E7E6E3] bg-white text-[12px] font-semibold text-[#5A5A6E]"
                   >
                     Save New View
                   </button>
@@ -547,7 +547,7 @@ export default function ColumnsMenu({
 
             {/* Search sits at the bottom of this pane by design, not the top. */}
             <div className="border-t border-[#E7E6E3] px-[14px] py-[10px]">
-              <div className="flex h-8 items-center gap-[7px] rounded-[8px] border border-[#E7E6E3] bg-[#F4F4F8] px-[10px] text-[#9A9AAB]">
+              <div className="flex h-8 items-center gap-[7px] rounded-[12px] border border-[#E7E6E3] bg-[#F4F4F8] px-[10px] text-[#9A9AAB]">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />

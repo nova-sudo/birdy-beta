@@ -46,7 +46,7 @@ export function LoadingPulse({ statements, className, interval = 2200 }) {
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center rounded-[16px] border border-pd-border bg-pd-surface px-6",
+        "flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface px-6",
         className
       )}
       role="status"

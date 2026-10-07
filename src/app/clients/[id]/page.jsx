@@ -368,7 +368,7 @@ export default function ClientDetailsPage() {
           <button
             onClick={() => router.push("/clients")}
             aria-label="Back to Client Hub"
-            className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-divider text-pd-body hover:bg-pd-border"
+            className="flex size-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-divider text-pd-body hover:bg-pd-border"
           >
             <ArrowLeft className="size-4" />
           </button>
@@ -821,7 +821,7 @@ function TrackingSummaryCard({ clientId }) {
   const isFormToGhl = normalizeLeadSource(state?.method) === "form_to_ghl"
 
   return (
-    <div className="rounded-[14px] border border-pd-border bg-pd-surface p-4">
+    <div className="rounded-xl border border-pd-border bg-pd-surface p-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[13px] font-semibold text-pd-ink">Lead tracking</p>
@@ -846,7 +846,7 @@ function TrackingSummaryCard({ clientId }) {
         </div>
         <button
           onClick={() => router.push(`/clients/${clientId}/tracking`)}
-          className="shrink-0 rounded-[10px] bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+          className="shrink-0 rounded-sm bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
         >
           {state && state.applicable && !state.complete ? "Finish setup" : "Open setup"}
         </button>

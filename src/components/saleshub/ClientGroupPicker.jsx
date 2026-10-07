@@ -65,7 +65,7 @@ export function ClientGroupPicker({ clientGroups, value, onChange, className }) 
         onClick={() => setOpen((p) => !p)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex h-[38px] min-w-[130px] max-w-[200px] cursor-pointer items-center gap-2 rounded-[10px] border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+        className="flex h-[38px] min-w-[130px] max-w-[200px] cursor-pointer items-center gap-2 rounded-sm border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
       >
         <span className="flex-1 truncate text-left">{label}</span>
         <ChevronDown

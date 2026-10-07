@@ -1049,7 +1049,7 @@ export default function OnboardingPage() {
       title: a.name || a.id,
       sub: a.id,
       leading: (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-info-bg text-pd-info">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-info-bg text-pd-info">
           <FacebookGlyph size={15} />
         </div>
       ),
@@ -1142,7 +1142,7 @@ export default function OnboardingPage() {
   if (bootError) {
     return (
       <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white px-6`}>
-        <div className="max-w-md rounded-[20px] border border-pd-border-strong bg-white p-8 text-center shadow-[0_20px_60px_-24px_rgba(30,25,60,0.3)]">
+        <div className="max-w-md rounded-xl border border-pd-border-strong bg-white p-8 text-center shadow-[0_20px_60px_-24px_rgba(30,25,60,0.3)]">
           <div className="mb-3 font-pd-display text-lg font-bold text-pd-ink">Something went wrong</div>
           <div className="mb-6 text-[13.5px] text-pd-body">{bootError}</div>
           <PrimaryButton onClick={() => window.location.reload()} arrow={false}>Reload</PrimaryButton>
@@ -1174,7 +1174,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={back}
-              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[9px] border border-pd-border text-pd-body transition-colors hover:border-pd-chevron"
+              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body transition-colors hover:border-pd-chevron"
             >
               <ChevronLeft className="h-4 w-4" strokeWidth={2} />
             </button>
@@ -1214,7 +1214,7 @@ export default function OnboardingPage() {
             it is happening — and the only place a failure surfaces before the
             completion step, so the error branch has to be actionable. */}
         {creationState === "error" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-[11px] border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-sm border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[2px] flex items-center gap-[7px]">
               <AlertCircle className="h-[13px] w-[13px] shrink-0 text-pd-danger" strokeWidth={2.4} />
               <span className="text-[11.5px] font-semibold text-pd-danger">
@@ -1233,7 +1233,7 @@ export default function OnboardingPage() {
             </button>
           </div>
         ) : creationState === "creating" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-[11px] border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-sm border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[7px] flex items-center gap-[9px]">
               <SpinnerRing />
               <span className="text-[11.5px] font-semibold text-pd-ink">Adding {clientDisplayName}</span>
@@ -1241,7 +1241,7 @@ export default function OnboardingPage() {
             <FakeProgressBar expectedMs={18000} />
           </div>
         ) : showSyncBadge ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-[11px] border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
+          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-sm border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
             <div className="mb-[8px] flex items-center gap-[9px]">
               <SpinnerRing />
               <span className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</span>
@@ -1494,13 +1494,13 @@ export default function OnboardingPage() {
                   <div
                     key={opt.id}
                     onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
-                    className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
+                    className="flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors"
                     style={{
                       borderColor: salesTool === opt.id ? "#5B3FD6" : "#E7E6E3",
                       background: salesTool === opt.id ? "#EFECFB" : "#fff",
                     }}
                   >
-                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] ${opt.chip}`}>
+                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-sm ${opt.chip}`}>
                       {opt.icon}
                     </div>
                     <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
@@ -1523,7 +1523,7 @@ export default function OnboardingPage() {
                     value={hpUid}
                     onChange={(e) => setHpUid(e.target.value)}
                     placeholder="API UID"
-                    className="mb-2 w-full rounded-[10px] border-[1.5px] border-pd-border px-[14px] py-[13px] font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
+                    className="mb-2 w-full rounded-sm border-[1.5px] border-pd-border px-[14px] py-[13px] font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
                   />
                   <div className="relative mb-[14px]">
                     <input
@@ -1531,7 +1531,7 @@ export default function OnboardingPage() {
                       onChange={(e) => setHpKey(e.target.value)}
                       type={hpVisible ? "text" : "password"}
                       placeholder="API key"
-                      className="w-full rounded-[10px] border-[1.5px] border-pd-border py-[13px] pl-[14px] pr-11 font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
+                      className="w-full rounded-sm border-[1.5px] border-pd-border py-[13px] pl-[14px] pr-11 font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
                     />
                     <button
                       type="button"
@@ -1632,7 +1632,7 @@ export default function OnboardingPage() {
               <select
                 value={currency || selectedAd?.currency || "GBP"}
                 onChange={(e) => setCurrency(e.target.value)}
-                className="mb-[30px] w-full rounded-[10px] border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
+                className="mb-[30px] w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
               >
                 {CURRENCY_OPTIONS.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -1703,7 +1703,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Cost per acquisition target</div>
-                <div className="flex items-center rounded-[10px] border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <span className="mr-[6px] text-[14px] text-pd-faint">{currencySymbol}</span>
                   <input
                     value={cpa}
@@ -1717,7 +1717,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mb-[18px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Monthly wins target</div>
-                <div className="flex items-center rounded-[10px] border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <input
                     value={wins}
                     onChange={(e) => setWins(e.target.value.replace(/[^\d]/g, ""))}
@@ -1730,7 +1730,7 @@ export default function OnboardingPage() {
               </div>
               <div className="mb-[26px]">
                 <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Conversion rate target</div>
-                <div className="flex items-center rounded-[10px] border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
+                <div className="flex items-center rounded-sm border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
                   <input
                     value={convRate}
                     onChange={(e) => setConvRate(e.target.value.replace(/[^\d]/g, ""))}
@@ -1801,7 +1801,7 @@ export default function OnboardingPage() {
                     // wrong, offer the retry that used to require reloading
                     // the wizard, and let them past — see the Continue button
                     // below for why this cannot be a wall.
-                    <div className="rounded-[11px] border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
+                    <div className="rounded-sm border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
                       <div className="mb-[6px] flex items-center gap-[7px]">
                         <AlertCircle className="h-[14px] w-[14px] shrink-0 text-pd-danger" strokeWidth={2.4} />
                         <span className="text-[12.5px] font-semibold text-pd-danger">
@@ -1889,7 +1889,7 @@ export default function OnboardingPage() {
                   <div
                     key={opt.id}
                     onClick={() => setFrequency(opt.id)}
-                    className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
+                    className="flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors"
                     style={{
                       borderColor: frequency === opt.id ? "#5B3FD6" : "#E7E6E3",
                       background: frequency === opt.id ? "#EFECFB" : "#fff",
@@ -1906,7 +1906,7 @@ export default function OnboardingPage() {
                   <select
                     value={notifyTime}
                     onChange={(e) => setNotifyTime(e.target.value)}
-                    className="w-full rounded-[10px] border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                    className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                   >
                     {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -1919,7 +1919,7 @@ export default function OnboardingPage() {
                     <select
                       value={notifyDay}
                       onChange={(e) => setNotifyDay(e.target.value)}
-                      className="w-full rounded-[10px] border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                      className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                     >
                       {DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
                     </select>
@@ -1929,7 +1929,7 @@ export default function OnboardingPage() {
                     <select
                       value={notifyTime}
                       onChange={(e) => setNotifyTime(e.target.value)}
-                      className="w-full rounded-[10px] border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+                      className="w-full rounded-sm border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
                     >
                       {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
                     </select>

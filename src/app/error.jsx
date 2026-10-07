@@ -22,13 +22,13 @@ export default function PageError({ error, reset }) {
         <button
           type="button"
           onClick={() => reset()}
-          className="rounded-[10px] bg-pd-primary px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+          className="rounded-sm bg-pd-primary px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
         >
           Try again
         </button>
         <Link
           href="/dashboard"
-          className="rounded-[10px] border border-pd-border px-4 py-2 text-[13px] text-pd-body hover:border-pd-border-strong"
+          className="rounded-sm border border-pd-border px-4 py-2 text-[13px] text-pd-body hover:border-pd-border-strong"
         >
           Go to the dashboard
         </Link>

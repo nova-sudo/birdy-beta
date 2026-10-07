@@ -23,7 +23,7 @@ export function InsightCard({ parts, prompt, className }) {
     <Pop
       as="section"
       className={cn(
-        "rounded-[16px] border border-purple-700 bg-gradient-to-br from-pd-primary to-[#7A61E0] px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
+        "rounded-xl border border-purple-700 bg-gradient-to-br from-pd-primary to-[#7A61E0] px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
         className
       )}
     >

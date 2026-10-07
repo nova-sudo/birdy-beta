@@ -22,7 +22,7 @@ export function AdsViewSwitch({ value, onChange }) {
     <div
       role="radiogroup"
       aria-label="Ads layout"
-      className="flex shrink-0 gap-1 rounded-[9px] border border-pd-border bg-pd-divider p-[3px]"
+      className="flex shrink-0 gap-1 rounded-[12px] border border-pd-border bg-pd-divider p-[3px]"
     >
       {options.map(({ key, icon: Icon, label }) => {
         const selected = key === value
@@ -35,7 +35,7 @@ export function AdsViewSwitch({ value, onChange }) {
             aria-label={label}
             title={label}
             onClick={() => onChange(key)}
-            className={`flex size-8 cursor-pointer items-center justify-center rounded-[7px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary ${
+            className={`flex size-8 cursor-pointer items-center justify-center rounded-[12px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary ${
               selected ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "bg-transparent text-pd-faint"
             }`}
           >
@@ -157,7 +157,7 @@ export default function AdsGallery({
     return (
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {Array.from({ length: CARD_SKELETON_COUNT }).map((_, i) => (
-          <div key={i} className="overflow-hidden rounded-[14px] border border-pd-border bg-pd-surface">
+          <div key={i} className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
             <Skeleton className="h-[190px] w-full rounded-none" />
             <div className="flex flex-col gap-3 px-[18px] py-[14px]">
               <Skeleton className="h-5 w-3/4" />
@@ -173,7 +173,7 @@ export default function AdsGallery({
 
   if (!sortedRows.length) {
     return (
-      <div className="rounded-[14px] border border-pd-border bg-pd-surface px-6 py-16 text-center">
+      <div className="rounded-xl border border-pd-border bg-pd-surface px-6 py-16 text-center">
         <p className="font-pd-display text-[14px] font-semibold text-pd-ink">No ads to show</p>
         <p className="mt-1 text-[12.5px] text-pd-faint">
           Ads matching the current filters will appear here as cards.
@@ -193,7 +193,7 @@ export default function AdsGallery({
         const isVideo = Boolean(row.creative_video_id)
 
         return (
-          <div key={row.id ?? cardIdx} className="overflow-hidden rounded-[14px] border border-pd-border bg-pd-surface">
+          <div key={row.id ?? cardIdx} className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
             {/* Creative thumbnail, or the handoff's grey placeholder with a
                 centred play badge when there is none (or the URL expired).
                 A video creative's badge doubles as the play button — click to

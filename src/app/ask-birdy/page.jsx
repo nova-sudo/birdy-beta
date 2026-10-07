@@ -153,12 +153,12 @@ export default function AskBirdyPage() {
   return (
     <div className={`${pdFontClass} flex h-full min-h-0 w-full gap-4`}>
       {/* ── Conversation sidebar (fixed 280px) ─────────────────────────── */}
-      <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+      <aside className="flex w-[280px] shrink-0 flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
         <div className="flex flex-col gap-3 border-b border-pd-border p-3">
           <button
             type="button"
             onClick={() => startNewConversation()}
-            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-[10px] bg-pd-primary font-pd-display text-[13px] font-semibold text-white transition-colors hover:bg-pd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-sm bg-pd-primary font-pd-display text-[13px] font-semibold text-white transition-colors hover:bg-pd-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
           >
             <MessageSquarePlus className="size-4" aria-hidden="true" />
             New Chat
@@ -195,7 +195,7 @@ export default function AskBirdyPage() {
                   // keyboard users cannot reach.
                   <div
                     key={c.session_id}
-                    className={`group flex items-center gap-1 overflow-hidden rounded-[10px] transition-colors ${
+                    className={`group flex items-center gap-1 overflow-hidden rounded-sm transition-colors ${
                       selected ? "bg-pd-primary-tint" : "hover:bg-pd-divider"
                     }`}
                   >
@@ -248,10 +248,10 @@ export default function AskBirdyPage() {
       </aside>
 
       {/* ── Chat pane ──────────────────────────────────────────────────── */}
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-pd-border px-5 py-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-pd-primary text-white">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-sm bg-pd-primary text-white">
               <Bird className="size-4" aria-hidden="true" />
             </div>
             <div className="min-w-0">

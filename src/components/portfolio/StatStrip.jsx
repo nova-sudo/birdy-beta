@@ -17,7 +17,7 @@ export function StatStrip({ stats, variant = "joined", label, className }) {
       aria-label={label}
       className={cn(
         joined
-          ? "flex rounded-[14px] border border-pd-border bg-pd-surface"
+          ? "flex rounded-xl border border-pd-border bg-pd-surface"
           : "flex gap-3",
         className
       )}

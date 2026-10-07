@@ -271,7 +271,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-1 items-baseline gap-2 rounded-[10px] border border-pd-border bg-pd-table-head px-[14px] py-3"
+            className="flex flex-1 items-baseline gap-2 rounded-sm border border-pd-border bg-pd-table-head px-[14px] py-3"
           >
             <div className={`shrink-0 font-pd-display text-xl font-bold ${stat.color}`}>{stat.value}</div>
             <div className="truncate text-xs text-pd-subtle">{stat.label}</div>
@@ -422,7 +422,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   </button>
                 )}
                 {fbMenuOpen === row.location_id && (
-                  <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
                     <div className="p-2">
                       <input
                         value={fbSearch}
@@ -430,7 +430,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                         onClick={(e) => e.stopPropagation()}
                         autoFocus
                         placeholder="Search ad accounts…"
-                        className="w-full rounded-[7px] border-[1.5px] border-pd-border px-[9px] py-[7px] text-[12.5px] text-pd-ink outline-none focus:border-pd-primary"
+                        className="w-full rounded-[12px] border-[1.5px] border-pd-border px-[9px] py-[7px] text-[12.5px] text-pd-ink outline-none focus:border-pd-primary"
                       />
                     </div>
                     <div className="pd-scrolly max-h-[180px] overflow-y-auto border-t border-pd-row-border">
@@ -475,7 +475,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
                 </div>
                 {statusMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[118px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute right-0 top-9 z-20 w-[118px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
                     <div
                       onClick={(e) => {
                         e.stopPropagation()
@@ -520,7 +520,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
                 </div>
                 {leadMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-[10px] border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
+                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-sm border border-pd-border bg-white shadow-[0_12px_28px_-8px_rgba(20,20,40,0.18)]">
                     {LEAD_SOURCES.map((option) => (
                       <div
                         key={option.key}

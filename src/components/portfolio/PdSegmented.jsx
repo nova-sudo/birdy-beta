@@ -52,7 +52,7 @@ export function PdSegmented({
         // parallel — the border curves away from the selected chip and the
         // control reads over-rounded, which is what 10px around an 8px chip
         // did. Change either radius and move the other by the same amount.
-        "flex gap-[5px] rounded-[9px] border border-pd-border bg-pd-divider p-1",
+        "flex gap-[5px] rounded-[12px] border border-pd-border bg-pd-divider p-1",
         className
       )}
     >

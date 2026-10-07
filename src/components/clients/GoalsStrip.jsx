@@ -55,7 +55,7 @@ function GoalCell({ goal, currencySymbol, last }) {
       }`}
     >
       <span
-        className="flex size-8 shrink-0 items-center justify-center rounded-[9px]"
+        className="flex size-8 shrink-0 items-center justify-center rounded-[12px]"
         style={{ background: chip.bg, color: chip.color }}
       >
         <Icon className="size-4" aria-hidden="true" />
@@ -127,7 +127,7 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false }
               i === 4 ? "" : "border-r border-pd-border"
             }`}
           >
-            <Skeleton className="size-8 shrink-0 rounded-[9px]" />
+            <Skeleton className="size-8 shrink-0 rounded-[12px]" />
             <div className="flex-1 space-y-2">
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-3 w-24" />

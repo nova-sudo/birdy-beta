@@ -32,7 +32,7 @@ function relativeTime(iso) {
 
 function NoteEntry({ note, onDelete, deleting }) {
   return (
-    <div className="group flex items-start gap-3 rounded-[10px] border border-pd-border p-[13px]">
+    <div className="group flex items-start gap-3 rounded-sm border border-pd-border p-[13px]">
       <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
         <StickyNote className="size-3.5" aria-hidden="true" />
       </span>
@@ -162,13 +162,13 @@ export function HistoryBook({
           aria-label="Add a note"
           maxLength={2000}
           disabled={sending}
-          className="h-[38px] flex-1 rounded-[10px] border-pd-border text-[13px]"
+          className="h-[38px] flex-1 rounded-sm border-pd-border text-[13px]"
         />
         <button
           type="submit"
           disabled={!draft.trim() || sending}
           aria-label="Save note"
-          className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-pd-primary text-white transition hover:bg-purple-700 disabled:opacity-50"
+          className="flex size-[38px] shrink-0 items-center justify-center rounded-sm bg-pd-primary text-white transition hover:bg-purple-700 disabled:opacity-50"
         >
           {sending
             ? <Loader2 className="size-4 animate-spin" />

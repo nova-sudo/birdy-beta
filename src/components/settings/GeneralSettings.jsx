@@ -348,7 +348,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
                       type="button"
                       onClick={() => setFrequency(option.key)}
                       aria-pressed={active}
-                      className={`rounded-[10px] border-2 p-4 text-left transition ${
+                      className={`rounded-sm border-2 p-4 text-left transition ${
                         active
                           ? "border-pd-primary bg-pd-primary-tint"
                           : "border-border hover:border-[#CFCFDA]"

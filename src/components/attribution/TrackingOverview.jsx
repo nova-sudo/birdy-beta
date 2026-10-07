@@ -71,7 +71,7 @@ export default function TrackingOverview() {
 
   if (error) {
     return (
-      <div className="rounded-[14px] border border-pd-border bg-pd-surface p-5">
+      <div className="rounded-xl border border-pd-border bg-pd-surface p-5">
         <p className="text-[13px] text-pd-danger">{error}</p>
         <button onClick={load} className="mt-2 text-[12.5px] text-pd-primary">
           Try again
@@ -82,7 +82,7 @@ export default function TrackingOverview() {
 
   if (clients === null) {
     return (
-      <div className="rounded-[14px] border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
+      <div className="rounded-xl border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
         Loading tracking status…
       </div>
     )
@@ -90,7 +90,7 @@ export default function TrackingOverview() {
 
   if (clients.length === 0) {
     return (
-      <div className="rounded-[14px] border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
+      <div className="rounded-xl border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
         No clients yet.
       </div>
     )
@@ -118,7 +118,7 @@ export default function TrackingOverview() {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-[14px] border border-pd-border bg-pd-surface">
+      <div className="overflow-x-auto rounded-xl border border-pd-border bg-pd-surface">
         <table className="w-full min-w-[680px] border-collapse text-left">
           <thead>
             <tr className="border-b border-pd-row-border bg-pd-table-head text-[10.5px] font-semibold uppercase tracking-wide text-pd-faint">

@@ -10,7 +10,7 @@ import { Check, TrendingUp } from "lucide-react";
  */
 export function WinCard({ win, onComplete }) {
   return (
-    <article className="mb-2 rounded-[10px] border border-pd-border px-3 py-[11px]">
+    <article className="mb-2 rounded-sm border border-pd-border px-3 py-[11px]">
       <div className="flex items-center gap-[7px]">
         <TrendingUp className="size-3 shrink-0 text-pd-success" aria-hidden="true" />
         <span className="shrink-0 text-[10.5px] font-bold text-pd-success">WIN</span>
@@ -28,7 +28,7 @@ export function WinCard({ win, onComplete }) {
           title="Mark done"
           aria-label={`Mark done: ${win.title} for ${win.client}`}
           onClick={() => onComplete(win)}
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-[7px] border border-pd-healthy-border bg-pd-success-bg text-pd-success focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-[12px] border border-pd-healthy-border bg-pd-success-bg text-pd-success focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
         >
           <Check className="size-[13px]" aria-hidden="true" />
         </button>

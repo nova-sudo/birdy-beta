@@ -162,7 +162,7 @@ export function UseHotProspectorButton({ groupIds, onSwitched, className }) {
       onClick={switchOver}
       disabled={saving}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[10px] bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-60",
+        "inline-flex items-center gap-1.5 rounded-sm bg-pd-primary px-3.5 py-2 text-[12.5px] font-medium text-white hover:opacity-90 disabled:opacity-60",
         className
       )}
     >
@@ -210,7 +210,7 @@ export function CallCentreUnavailable({
   return (
     <section
       className={cn(
-        "flex flex-col items-center justify-center rounded-[16px] border border-dashed border-pd-border-strong bg-pd-canvas px-6 py-10 text-center",
+        "flex flex-col items-center justify-center rounded-xl border border-dashed border-pd-border-strong bg-pd-canvas px-6 py-10 text-center",
         className
       )}
     >

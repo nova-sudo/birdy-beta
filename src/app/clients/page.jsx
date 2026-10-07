@@ -1200,7 +1200,7 @@ export default function ClientsPage() {
               aria-label="Search clients"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+              className="h-[38px] w-full rounded-sm border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
             />
           </div>
 
@@ -1226,7 +1226,7 @@ export default function ClientsPage() {
             variant="outline"
             onClick={() => setBulkImportOpen(true)}
             aria-label="Import clients from GoHighLevel"
-            className="h-[38px] shrink-0 gap-2 rounded-[10px] px-3 text-[13px]"
+            className="h-[38px] shrink-0 gap-2 rounded-sm px-3 text-[13px]"
           >
             <Download className="size-4" />
             <span className="hidden sm:inline">Import</span>
@@ -1235,7 +1235,7 @@ export default function ClientsPage() {
           <Button
             onClick={() => setWizardOpen(true)}
             aria-label="Add client"
-            className="size-[38px] shrink-0 rounded-[10px] bg-pd-primary p-0 text-white hover:bg-pd-primary/90"
+            className="size-[38px] shrink-0 rounded-sm bg-pd-primary p-0 text-white hover:bg-pd-primary/90"
           >
             <Plus className="size-4" />
           </Button>

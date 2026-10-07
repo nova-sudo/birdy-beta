@@ -43,7 +43,7 @@ export function PrimaryButton({ children, onClick, disabled, arrow = true, class
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex cursor-pointer items-center gap-2 rounded-[11px] bg-pd-primary px-[26px] py-[13px] text-[14.5px] font-semibold text-white transition-opacity hover:opacity-95 disabled:pointer-events-none disabled:opacity-40 ${className}`}
+      className={`inline-flex cursor-pointer items-center gap-2 rounded-sm bg-pd-primary px-[26px] py-[13px] text-[14.5px] font-semibold text-white transition-opacity hover:opacity-95 disabled:pointer-events-none disabled:opacity-40 ${className}`}
     >
       {children}
       {arrow && <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} />}
@@ -56,7 +56,7 @@ export function SecondaryButton({ children, onClick, className = "" }) {
     <button
       type="button"
       onClick={onClick}
-      className={`cursor-pointer rounded-[11px] border border-pd-border bg-white px-[22px] py-3 text-[14px] font-semibold text-pd-body transition-colors hover:border-pd-chevron ${className}`}
+      className={`cursor-pointer rounded-sm border border-pd-border bg-white px-[22px] py-3 text-[14px] font-semibold text-pd-body transition-colors hover:border-pd-chevron ${className}`}
     >
       {children}
     </button>
@@ -210,7 +210,7 @@ export function SuccessRow({ children }) {
 export function IconChip({ bg, color, children }) {
   return (
     <div
-      className="mx-auto mb-[22px] flex h-14 w-14 items-center justify-center rounded-[15px]"
+      className="mx-auto mb-[22px] flex h-14 w-14 items-center justify-center rounded-xl"
       style={{ background: bg, color }}
     >
       {children}
@@ -245,7 +245,7 @@ export function UnderlineInput({ value, onChange, placeholder, autoFocus }) {
 
 export function SearchInput({ value, onChange, placeholder }) {
   return (
-    <div className="mb-[14px] flex h-[42px] items-center gap-[9px] rounded-[10px] border border-pd-border bg-pd-canvas px-[14px]">
+    <div className="mb-[14px] flex h-[42px] items-center gap-[9px] rounded-sm border border-pd-border bg-pd-canvas px-[14px]">
       <Search className="h-[15px] w-[15px] shrink-0 text-pd-faint" strokeWidth={2} />
       <input
         value={value}
@@ -301,7 +301,7 @@ export function InitialsAvatar({ name }) {
     .slice(0, 2)
     .toUpperCase()
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-primary-tint font-pd-display text-[11px] font-bold text-pd-primary">
+    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-primary-tint font-pd-display text-[11px] font-bold text-pd-primary">
       {initials}
     </div>
   )
@@ -328,9 +328,9 @@ export function SlackGlyph({ size = 26 }) {
 /** Slack-style dark preview card used on the channel + brief-content steps. */
 export function SlackPreviewCard({ time, children }) {
   return (
-    <div className="min-h-[80px] rounded-[10px] bg-[#3F0E40] px-4 py-[14px]">
+    <div className="min-h-[80px] rounded-sm bg-[#3F0E40] px-4 py-[14px]">
       <div className="flex gap-[9px]">
-        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[7px] bg-pd-primary font-pd-display text-[13px] font-bold text-white">
+        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[12px] bg-pd-primary font-pd-display text-[13px] font-bold text-white">
           B
         </div>
         <div className="min-w-0">

@@ -1006,7 +1006,7 @@ function SettingsPageContent() {
                         >
                           <SelectTrigger
                             aria-label="Channel Birdy posts AI suggestions to"
-                            className="h-[34px] min-w-0 flex-1 rounded-[9px] border-pd-border text-[12.5px]"
+                            className="h-[34px] min-w-0 flex-1 rounded-[12px] border-pd-border text-[12.5px]"
                           >
                             <SelectValue
                               placeholder={channelsLoading ? "Loading channels…" : "Select a channel…"}

@@ -415,7 +415,7 @@ const MetricsHub = () => {
               type="search"
               placeholder="Search metrics&hellip;"
               aria-label="Search metrics"
-              className="h-[38px] w-[220px] rounded-[10px] border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
+              className="h-[38px] w-[220px] rounded-sm border-pd-border bg-pd-surface pl-[36px] text-[13px] placeholder:text-pd-faint"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -423,7 +423,7 @@ const MetricsHub = () => {
           <Button
             aria-label="Create a custom metric"
             onClick={openCreateDialog}
-            className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-purple-700"
+            className="size-[38px] rounded-sm bg-pd-primary p-0 hover:bg-purple-700"
           >
             <Plus className="size-[17px] text-white" />
           </Button>
@@ -664,7 +664,7 @@ const MetricsHub = () => {
           />
         </div>
 
-        <PageTabPanel id="metrics-table" label="Metrics" className="overflow-hidden rounded-[16px] border border-pd-border bg-pd-surface">
+        <PageTabPanel id="metrics-table" label="Metrics" className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
           <div className="flex items-center border-b border-pd-border bg-pd-table-head px-[22px] py-[13px] text-[11.5px] font-bold tracking-[0.03em] text-pd-faint">
             <div className="flex-1">METRIC NAME</div>
             <div className="hidden flex-[1.4] md:block">NOTES</div>
@@ -682,7 +682,7 @@ const MetricsHub = () => {
                 <div className="flex-1 pr-[12px]"><Skeleton className="h-4 w-40" /></div>
                 <div className="hidden flex-[1.4] pr-[12px] md:block"><Skeleton className="h-3 w-56" /></div>
                 <div className="flex flex-[0_0_200px] justify-center"><Skeleton className="h-6 w-28 rounded-full" /></div>
-                <div className="flex flex-[0_0_160px] justify-center gap-[8px]"><Skeleton className="size-[26px] rounded-[8px]" /></div>
+                <div className="flex flex-[0_0_160px] justify-center gap-[8px]"><Skeleton className="size-[26px] rounded-[12px]" /></div>
               </div>
             ))
           ) : filteredMetrics.length === 0 ? (
@@ -735,7 +735,7 @@ const MetricsHub = () => {
                           title="Edit metric"
                           aria-label={`Edit ${metric.name}`}
                           onClick={() => handleEditMetric(metric)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-primary hover:bg-pd-primary-tint"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-primary hover:bg-pd-primary-tint"
                         >
                           <Pencil className="size-[14px]" />
                         </button>
@@ -744,7 +744,7 @@ const MetricsHub = () => {
                           title="Duplicate metric"
                           aria-label={`Duplicate ${metric.name}`}
                           onClick={() => handleDuplicateMetric(metric)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body hover:bg-pd-divider"
                         >
                           <Copy className="size-[14px]" />
                         </button>
@@ -753,7 +753,7 @@ const MetricsHub = () => {
                           title="Delete metric"
                           aria-label={`Delete ${metric.name}`}
                           onClick={() => handleDeleteMetric(metric.id)}
-                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-danger hover:bg-pd-danger-surface"
+                          className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-danger hover:bg-pd-danger-surface"
                         >
                           <Trash2 className="size-[14px]" />
                         </button>
@@ -765,7 +765,7 @@ const MetricsHub = () => {
                         title={isHidden ? "Show in the formula builder" : "Hide from the formula builder"}
                         aria-label={`${isHidden ? "Show" : "Hide"} ${metric.name}`}
                         onClick={() => toggleMetricVisibility(metric)}
-                        className="flex size-[26px] cursor-pointer items-center justify-center rounded-[8px] border border-pd-border text-pd-body hover:bg-pd-divider"
+                        className="flex size-[26px] cursor-pointer items-center justify-center rounded-[12px] border border-pd-border text-pd-body hover:bg-pd-divider"
                       >
                         {isHidden ? <EyeOff className="size-[14px]" /> : <Eye className="size-[14px]" />}
                       </button>
@@ -783,7 +783,7 @@ const MetricsHub = () => {
               type="button"
               disabled={currentPage === 1}
               onClick={() => handlePageChange(currentPage - 1)}
-              className="flex cursor-pointer items-center gap-[5px] rounded-[9px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-[5px] rounded-[12px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
             >
               <ChevronLeft className="size-[14px]" />
               Previous
@@ -800,7 +800,7 @@ const MetricsHub = () => {
                   type="button"
                   aria-current={n === currentPage ? "page" : undefined}
                   onClick={() => handlePageChange(n)}
-                  className={`flex h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[9px] px-[6px] text-[13.5px] font-semibold ${
+                  className={`flex h-[36px] min-w-[36px] cursor-pointer items-center justify-center rounded-[12px] px-[6px] text-[13.5px] font-semibold ${
                     n === currentPage ? "bg-pd-surface text-pd-ink shadow-pd-segment" : "text-pd-body"
                   }`}
                 >
@@ -813,7 +813,7 @@ const MetricsHub = () => {
               type="button"
               disabled={currentPage === totalPages}
               onClick={() => handlePageChange(currentPage + 1)}
-              className="flex cursor-pointer items-center gap-[5px] rounded-[9px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
+              className="flex cursor-pointer items-center gap-[5px] rounded-[12px] px-[14px] py-[8px] text-[13.5px] font-semibold text-pd-body disabled:cursor-default disabled:opacity-40"
             >
               Next
               <ChevronRight className="size-[14px]" />

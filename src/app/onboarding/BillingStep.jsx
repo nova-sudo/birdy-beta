@@ -145,7 +145,7 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
                 <div
                   key={plan.id}
                   onClick={() => plan.planId && setSelectedPlan(plan)}
-                  className={`relative cursor-pointer rounded-[14px] border-2 px-5 py-[22px] text-center transition-colors ${
+                  className={`relative cursor-pointer rounded-xl border-2 px-5 py-[22px] text-center transition-colors ${
                     plan.planId ? "" : "cursor-not-allowed opacity-50"
                   }`}
                   style={{
@@ -158,7 +158,7 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
                       RECOMMENDED FOR YOU
                     </span>
                   )}
-                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-pd-primary-tint text-pd-primary">
+                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-sm bg-pd-primary-tint text-pd-primary">
                     <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
                   </div>
                   <div className="mb-1 font-pd-display text-[15px] font-semibold text-pd-ink">{plan.name}</div>

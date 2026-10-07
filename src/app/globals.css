@@ -322,6 +322,9 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* Tailwind's own 2xl/3xl are rem-based; on the round scale they sit above xl. */
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 14px);
 
   /* Animations */
   --animate-accordion-down: accordion-down 0.2s ease-out;

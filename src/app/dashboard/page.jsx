@@ -63,13 +63,13 @@ import {
 function LoadingColumn() {
   return (
     <div className="min-w-0 flex-1 px-6 py-[22px]">
-      <Skeleton className="mb-[18px] h-[74px] rounded-[14px]" />
+      <Skeleton className="mb-[18px] h-[74px] rounded-xl" />
       <LoadingPulse className="mb-[18px] h-[340px]" statements={CHART_LOADING} />
       <div className="mb-[18px] flex gap-[18px]">
-        <Skeleton className="h-[280px] flex-[0.85] rounded-[16px]" />
+        <Skeleton className="h-[280px] flex-[0.85] rounded-xl" />
         <LoadingPulse className="h-[280px] flex-[1.45]" statements={FUNNEL_LOADING} />
       </div>
-      <Skeleton className="h-[150px] rounded-[16px]" />
+      <Skeleton className="h-[150px] rounded-xl" />
     </div>
   );
 }

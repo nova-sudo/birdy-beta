@@ -1160,7 +1160,7 @@ export function MarketingContent({
           if (!group.meta_token_error) return null
 
           return (
-            <div className="flex items-center justify-between gap-3 rounded-[12px] border border-amber-200 bg-amber-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-3 rounded-sm border border-amber-200 bg-amber-50 px-4 py-3">
               <div className="flex items-center gap-2 text-sm text-amber-800">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -1171,7 +1171,7 @@ export function MarketingContent({
               </div>
               <a
                 href="/settings?tab=integrations"
-                className="shrink-0 rounded-[8px] bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
+                className="shrink-0 rounded-[12px] bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 transition-colors"
               >
                 Reconnect Meta
               </a>
@@ -1224,7 +1224,7 @@ export function MarketingContent({
           )
 
           return (
-            <div className="flex items-start gap-2 rounded-[12px] border border-pd-border bg-pd-canvas px-4 py-3">
+            <div className="flex items-start gap-2 rounded-sm border border-pd-border bg-pd-canvas px-4 py-3">
               <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
               <p className="text-[12.5px] leading-[1.5] text-pd-body">{message}</p>
             </div>
@@ -1361,7 +1361,7 @@ export function MarketingContent({
               <Input
                 type="search"
                 placeholder={`Search ${activeTab}…`}
-                className="h-[38px] w-fit rounded-[10px] border-pd-border bg-pd-surface text-[13px] md:w-[220px]"
+                className="h-[38px] w-fit rounded-sm border-pd-border bg-pd-surface text-[13px] md:w-[220px]"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />

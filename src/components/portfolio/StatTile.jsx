@@ -10,7 +10,7 @@ import { CountUp } from "@/components/motion";
 const LAYOUTS = {
   strip: {
     root: "flex flex-1 items-center gap-[13px] px-5 py-4",
-    chip: "size-9 rounded-[10px]",
+    chip: "size-9 rounded-sm",
     icon: "size-[17px]",
     value: "text-[22px]",
     label: "mt-1 text-[12px] text-pd-subtle",

@@ -19,7 +19,7 @@ export function LoadError({ error, onRetry, className }) {
   return (
     <PdCard className={className}>
       <div className="flex flex-wrap items-center gap-3">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-pd-danger-bg text-pd-danger">
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-danger-bg text-pd-danger">
           <AlertTriangle className="size-4" />
         </span>
         <div className="min-w-0 flex-1">
@@ -35,7 +35,7 @@ export function LoadError({ error, onRetry, className }) {
           <button
             type="button"
             onClick={onRetry}
-            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[9px] border border-pd-border px-3 py-2 text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+            className="flex shrink-0 cursor-pointer items-center gap-2 rounded-[12px] border border-pd-border px-3 py-2 text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
           >
             <RefreshCw className="size-[14px]" />
             Try again

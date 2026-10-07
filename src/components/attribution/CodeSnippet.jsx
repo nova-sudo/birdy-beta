@@ -69,7 +69,7 @@ export default function CodeSnippet({
       <div className="flex items-stretch gap-2">
         <code
           className={cn(
-            "min-w-0 flex-1 rounded-[10px] border border-pd-border bg-pd-canvas px-3 py-2.5",
+            "min-w-0 flex-1 rounded-sm border border-pd-border bg-pd-canvas px-3 py-2.5",
             "font-mono text-[11.5px] leading-[1.5] text-pd-ink",
             // Wrap, never truncate. A half-copied script tag is worse than an
             // ugly box.
@@ -84,7 +84,7 @@ export default function CodeSnippet({
           onClick={copy}
           aria-label={label ? `Copy ${label}` : "Copy"}
           className={cn(
-            "flex h-auto shrink-0 items-center gap-1.5 self-stretch rounded-[10px] px-3",
+            "flex h-auto shrink-0 items-center gap-1.5 self-stretch rounded-sm px-3",
             "text-[12px] font-medium transition-colors",
             copied
               ? "bg-pd-success-bg text-pd-success"

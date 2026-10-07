@@ -114,7 +114,7 @@ export default function InstallPage() {
         </h2>
         <div
           className={cn(
-            "flex items-center gap-2.5 rounded-[12px] border px-3.5 py-3",
+            "flex items-center gap-2.5 rounded-sm border px-3.5 py-3",
             details.hit_received
               ? "border-pd-healthy-border bg-pd-healthy-surface"
               : "border-pd-border bg-pd-canvas",

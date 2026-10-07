@@ -30,7 +30,7 @@ export function DiagnosticBanner({ state = "healthy", title, body, className }) 
       className={cn("flex items-center gap-[11px] rounded-xl border px-4 py-[14px]", s.banner, className)}
     >
       <span
-        className={cn("flex size-[30px] shrink-0 items-center justify-center rounded-[9px]", s.chip)}
+        className={cn("flex size-[30px] shrink-0 items-center justify-center rounded-[12px]", s.chip)}
       >
         <Icon className="size-[15px]" strokeWidth={2.2} aria-hidden="true" />
       </span>

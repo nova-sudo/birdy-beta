@@ -13,7 +13,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/dashboard"
-        className="mt-2 rounded-[10px] bg-pd-primary px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
+        className="mt-2 rounded-sm bg-pd-primary px-4 py-2 text-[13px] font-medium text-white hover:opacity-90"
       >
         Go to the dashboard
       </Link>

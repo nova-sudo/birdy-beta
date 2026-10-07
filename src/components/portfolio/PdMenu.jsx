@@ -15,14 +15,14 @@ import { cn } from "@/lib/utils";
 const SIZES = {
   // Header chip: 38px tall, 10px radius, 160px menu.
   lg: {
-    trigger: "h-[38px] gap-2 rounded-[10px] px-[13px] text-[13px]",
-    menu: "top-[44px] w-[160px] rounded-[12px] p-[6px]",
+    trigger: "h-[38px] gap-2 rounded-sm px-[13px] text-[13px]",
+    menu: "top-[44px] w-[160px] rounded-sm p-[6px]",
     option: "px-[11px] py-[9px] text-[13px]",
   },
   // In-card chip: shorter, 9px radius, 170px menu.
   sm: {
-    trigger: "gap-[7px] rounded-[9px] px-[11px] py-[7px] text-[12.5px]",
-    menu: "top-9 w-[170px] rounded-[11px] p-[5px]",
+    trigger: "gap-[7px] rounded-[12px] px-[11px] py-[7px] text-[12.5px]",
+    menu: "top-9 w-[170px] rounded-sm p-[5px]",
     option: "px-[10px] py-2 text-[12.5px]",
   },
 };

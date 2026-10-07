@@ -6,7 +6,7 @@ import { deltaTone, HIGHER_IS_BETTER } from "@/lib/portfolio-metrics";
 // the call-insights cells.
 const SIZES = {
   md: { pill: "gap-[5px] rounded-lg px-[9px] py-[5px] text-[12px]", arrow: "size-3" },
-  sm: { pill: "gap-1 rounded-[7px] px-[7px] py-1 text-[10.5px]", arrow: "size-[11px]" },
+  sm: { pill: "gap-1 rounded-[12px] px-[7px] py-1 text-[10.5px]", arrow: "size-[11px]" },
 };
 
 /**

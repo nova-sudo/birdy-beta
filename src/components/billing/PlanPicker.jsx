@@ -52,7 +52,7 @@ function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
   // "Current plan", and two solid blocks side by side would read as two
   // equally-live choices.
   const buttonClass = [
-    "w-full rounded-[10px] px-4 py-[11px] text-[14px] font-semibold transition-colors",
+    "w-full rounded-sm px-4 py-[11px] text-[14px] font-semibold transition-colors",
     "flex items-center justify-center gap-2",
     outlined
       ? `border border-[#DCDBD7] bg-pd-surface ${c.text} hover:bg-pd-divider`
@@ -63,7 +63,7 @@ function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
     <>
       <div className="flex items-center gap-[10px]">
         {/* KPI-chip metrics: 34px square, 10px radius, 17px icon. */}
-        <div className={`flex size-[34px] shrink-0 items-center justify-center rounded-[10px] ${c.tint}`}>
+        <div className={`flex size-[34px] shrink-0 items-center justify-center rounded-sm ${c.tint}`}>
           <Icon className={`size-[17px] ${c.text}`} />
         </div>
         <div className="min-w-0">
@@ -121,7 +121,7 @@ function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
         <div className="pb-[5px] text-center text-[11px] font-bold tracking-[.03em] text-white">
           MOST POPULAR
         </div>
-        <div className="flex flex-col rounded-[13px] bg-pd-surface px-[22px] py-5">
+        <div className="flex flex-col rounded-xl bg-pd-surface px-[22px] py-5">
           {body}
         </div>
       </div>
@@ -224,7 +224,7 @@ export function PlanPicker({
             type="button"
             onClick={onManage}
             disabled={loadingManage}
-            className="ml-auto flex items-center gap-[7px] rounded-[9px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
+            className="ml-auto flex items-center gap-[7px] rounded-[12px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
           >
             {loadingManage
               ? <Loader2 className="size-[14px] animate-spin" />
@@ -279,7 +279,7 @@ export function PlanPicker({
               type="button"
               onClick={async () => { await onCancel?.(); setConfirmingCancel(false) }}
               disabled={busySubscription}
-              className="flex items-center gap-[7px] rounded-[9px] border border-pd-danger-border bg-pd-danger-surface px-4 py-[9px] text-[13px] font-semibold text-pd-danger transition-colors disabled:opacity-60"
+              className="flex items-center gap-[7px] rounded-[12px] border border-pd-danger-border bg-pd-danger-surface px-4 py-[9px] text-[13px] font-semibold text-pd-danger transition-colors disabled:opacity-60"
             >
               {busySubscription && <Loader2 className="size-[14px] animate-spin" />}
               Yes, cancel it
@@ -288,7 +288,7 @@ export function PlanPicker({
               type="button"
               onClick={() => setConfirmingCancel(false)}
               disabled={busySubscription}
-              className="rounded-[9px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
+              className="rounded-[12px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
             >
               Keep my subscription
             </button>

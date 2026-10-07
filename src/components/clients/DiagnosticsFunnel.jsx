@@ -81,7 +81,7 @@ export function DiagnosticsFunnel({
         <div className="space-y-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
-              <Skeleton className="size-[30px] shrink-0 rounded-[9px]" />
+              <Skeleton className="size-[30px] shrink-0 rounded-[12px]" />
               <Skeleton className="h-4 flex-1" />
               <Skeleton className="h-4 w-10" />
             </div>
@@ -132,7 +132,7 @@ export function DiagnosticsFunnel({
               <Button
                 size="sm"
                 onClick={onViewCalls}
-                className="h-auto rounded-[9px] bg-pd-primary px-[13px] py-2 text-[12.5px] font-semibold text-white hover:bg-purple-700"
+                className="h-auto rounded-[12px] bg-pd-primary px-[13px] py-2 text-[12.5px] font-semibold text-white hover:bg-purple-700"
               >
                 View calls
               </Button>
@@ -141,7 +141,7 @@ export function DiagnosticsFunnel({
               size="sm"
               variant="outline"
               onClick={() => setDismissed(true)}
-              className="h-auto rounded-[9px] border-[#F0DADA] bg-white px-[13px] py-2 text-[12.5px] font-semibold text-pd-body hover:bg-white"
+              className="h-auto rounded-[12px] border-[#F0DADA] bg-white px-[13px] py-2 text-[12.5px] font-semibold text-pd-body hover:bg-white"
             >
               Dismiss
             </Button>
@@ -170,7 +170,7 @@ export function DiagnosticsFunnel({
                     lifts it off the line with a shadow so the line reads as
                     passing behind it. */}
                 <span
-                  className="relative z-10 flex size-[30px] shrink-0 items-center justify-center rounded-[9px] bg-white shadow-[0_1px_3px_rgba(30,25,60,.12)]"
+                  className="relative z-10 flex size-[30px] shrink-0 items-center justify-center rounded-[12px] bg-white shadow-[0_1px_3px_rgba(30,25,60,.12)]"
                   style={{ color: TINTS[stage.id] ?? TINTS.leads }}
                 >
                   <Icon className="size-[15px]" aria-hidden="true" />

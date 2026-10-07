@@ -238,7 +238,7 @@ export default function TrackingPortalPage() {
                 disabled={saving}
                 onClick={() => saveMethod(option.key)}
                 className={cn(
-                  "rounded-[12px] border px-3.5 py-3 text-left transition-colors",
+                  "rounded-sm border px-3.5 py-3 text-left transition-colors",
                   method === option.key
                     ? "border-pd-primary bg-pd-primary-tint"
                     : "border-pd-border bg-pd-surface hover:border-pd-border-strong",
@@ -260,7 +260,7 @@ export default function TrackingPortalPage() {
 
           {isFormToGhl && (
             <div className="mt-4 flex flex-col gap-4">
-              <div className="rounded-[12px] border border-pd-border bg-pd-canvas p-3.5">
+              <div className="rounded-sm border border-pd-border bg-pd-canvas p-3.5">
                 <p className="text-[12.5px] font-medium text-pd-ink">Nothing to install in Birdy</p>
                 <p className="mt-1 text-[12px] leading-[1.5] text-pd-body">
                   The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
@@ -326,7 +326,7 @@ export default function TrackingPortalPage() {
           {isLandingPage && (
             <button
               onClick={() => setStep(1)}
-              className="mt-4 rounded-[10px] bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+              className="mt-4 rounded-sm bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
             >
               Next: install the pixel
             </button>
@@ -348,7 +348,7 @@ export default function TrackingPortalPage() {
 
           <CodeSnippet value={portal.snippet} label="Snippet" />
 
-          <div className="mt-4 rounded-[12px] border border-pd-border bg-pd-canvas p-3.5">
+          <div className="mt-4 rounded-sm border border-pd-border bg-pd-canvas p-3.5">
             <p className="text-[12.5px] font-medium text-pd-ink">
               Not your website?
             </p>
@@ -434,7 +434,7 @@ function StepNav({ onBack, onNext, nextLabel }) {
       {onBack && (
         <button
           onClick={onBack}
-          className="rounded-[10px] border border-pd-border px-3.5 py-2 text-[12.5px] text-pd-body hover:border-pd-border-strong"
+          className="rounded-sm border border-pd-border px-3.5 py-2 text-[12.5px] text-pd-body hover:border-pd-border-strong"
         >
           Back
         </button>
@@ -442,7 +442,7 @@ function StepNav({ onBack, onNext, nextLabel }) {
       {onNext && (
         <button
           onClick={onNext}
-          className="rounded-[10px] bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
+          className="rounded-sm bg-pd-primary px-4 py-2 text-[12.5px] font-medium text-white hover:opacity-90"
         >
           {nextLabel}
         </button>

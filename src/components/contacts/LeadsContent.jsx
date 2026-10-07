@@ -34,7 +34,7 @@ const baseContactColumns = buildContactColumns()
 // tall, white, hairline border, 10px radius, Inter 600 13px — matches
 // Sales-Hub's CallCentreContent.
 const TOOLBAR_CHIP =
-  "flex h-[38px] cursor-pointer items-center gap-2 rounded-[10px] border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
+  "flex h-[38px] cursor-pointer items-center gap-2 rounded-sm border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
 
 // Ties the pipeline tabs to the table they filter, for anyone navigating by role.
 const LEADS_PANEL_ID = "lead-hub-table-panel"
@@ -419,7 +419,7 @@ export function LeadsContent({
                   aria-label="Search leads"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full rounded-[10px] border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
+                  className="h-[38px] w-full rounded-sm border-pd-border bg-pd-surface pl-9 text-[13px] text-pd-body placeholder:text-pd-faint md:w-[200px]"
                 />
               </div>
 

@@ -47,12 +47,12 @@ export function IntegrationTile({
   const badge = STATUS_BADGES[status] ?? STATUS_BADGES.disconnected
 
   return (
-    <section className="flex flex-col rounded-[14px] border border-pd-border bg-pd-surface px-[18px] py-4">
+    <section className="flex flex-col rounded-xl border border-pd-border bg-pd-surface px-[18px] py-4">
       <div className="mb-3.5 flex items-center gap-[9px]">
         <span
           aria-hidden="true"
           className={cn(
-            "flex size-[30px] shrink-0 items-center justify-center rounded-[9px]",
+            "flex size-[30px] shrink-0 items-center justify-center rounded-[12px]",
             chipClassName
           )}
         >
@@ -101,7 +101,7 @@ export function IntegrationTile({
 // and a tile with Remove + the link square end at the same height.
 
 const ACTION_BASE =
-  "flex h-[38px] items-center justify-center gap-1.5 rounded-[9px] text-[12.5px] font-semibold " +
+  "flex h-[38px] items-center justify-center gap-1.5 rounded-[12px] text-[12.5px] font-semibold " +
   "transition-colors disabled:cursor-not-allowed disabled:opacity-60 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
 
@@ -146,7 +146,7 @@ export function IntegrationSiteLink({ href, label }) {
       aria-label={label}
       title={label}
       className={cn(
-        "flex size-[38px] shrink-0 items-center justify-center rounded-[9px]",
+        "flex size-[38px] shrink-0 items-center justify-center rounded-[12px]",
         "border border-pd-border text-pd-body transition-colors hover:bg-pd-canvas",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
       )}
