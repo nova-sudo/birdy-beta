@@ -21,10 +21,10 @@ import { cn } from "@/lib/utils"
     Solid fills, as every status badge in the app: the tint-on-tint pair is
     kept for banners and soft surfaces. */
 const STATUS_BADGES = {
-  connected: { label: "Connected", className: "bg-pd-success text-white" },
-  expired: { label: "Expired", className: "bg-pd-danger text-white" },
-  checking: { label: "Checking…", className: "bg-gray-600 text-white" },
-  disconnected: { label: "Not connected", className: "bg-gray-600 text-white" },
+  connected: { label: "Connected", className: "bg-pd-success-bg text-pd-success" },
+  expired: { label: "Expired", className: "bg-pd-danger-bg text-pd-danger" },
+  checking: { label: "Checking…", className: "bg-pd-divider text-pd-body" },
+  disconnected: { label: "Not connected", className: "bg-pd-divider text-pd-body" },
 }
 
 /**

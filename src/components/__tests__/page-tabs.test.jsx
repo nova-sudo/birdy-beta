@@ -56,10 +56,10 @@ describe("PageTabs", () => {
     const { rerender } = render(
       <PageTabs tabs={TABS} value="active" onChange={() => {}} label="Alert state" />
     )
-    expect(badgeFor("Active Alerts")).toHaveClass("bg-pd-primary", "text-white")
+    expect(badgeFor("Active Alerts")).toHaveClass("bg-pd-primary-tint", "text-pd-primary")
 
     rerender(<PageTabs tabs={TABS} value="paused" onChange={() => {}} label="Alert state" />)
-    expect(badgeFor("Active Alerts")).toHaveClass("bg-gray-600", "text-white")
+    expect(badgeFor("Active Alerts")).toHaveClass("bg-pd-divider", "text-pd-body")
   })
 
   it("uses the one page-tab scale rather than each page's own", () => {

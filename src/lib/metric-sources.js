@@ -11,17 +11,17 @@
 
 /** Badge palette, straight from the handoff. */
 export const SOURCE_STYLES = {
-  meta: { label: "Meta Ads", className: "bg-pd-info text-white" },
-  ghl: { label: "GoHighLevel", className: "bg-pd-success text-white" },
+  meta: { label: "Meta Ads", className: "bg-pd-info-bg text-pd-info" },
+  ghl: { label: "GoHighLevel", className: "bg-pd-success-bg text-pd-success" },
   // Named for the system the numbers come out of, not the department they
   // describe — "Sales" left the row unable to answer the one question the
   // column asks. Every call-centre metric in the catalog is an `hp_*` field
   // pulled from HotProspector, the only dialler wired to Birdy; the day a
   // second one lands, this splits by metric rather than by category.
-  sales: { label: "HotProspector", className: "bg-pd-amber text-white" },
-  birdy: { label: "Birdy", className: "bg-pd-primary text-white" },
-  tag: { label: "Tags", className: "bg-gray-600 text-white" },
-  custom: { label: "Custom Formula", className: "bg-pd-primary text-white" },
+  sales: { label: "HotProspector", className: "bg-pd-amber-bg text-pd-amber" },
+  birdy: { label: "Birdy", className: "bg-pd-primary-tint text-pd-primary" },
+  tag: { label: "Tags", className: "bg-pd-divider text-pd-body" },
+  custom: { label: "Custom Formula", className: "bg-pd-primary-tint text-pd-primary" },
 }
 
 const CATEGORY_TO_SOURCE = {

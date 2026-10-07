@@ -895,15 +895,15 @@ export function MarketingContent({
     if (col === "ghl_matched") return value ? "✅" : "–"
     if (col === "ghl_opportunity_status") {
       if (!value) return "–"
-      const colors = { won: "bg-pd-success text-white", lost: "bg-pd-danger text-white", open: "bg-pd-info text-white", abandoned: "bg-gray-600 text-white" }
-      return <span className={`${colors[value] || "bg-gray-600 text-white"} px-2 py-0.5 rounded-full text-[11px] font-bold capitalize`}>{value}</span>
+      const colors = { won: "bg-pd-success-bg text-pd-success", lost: "bg-pd-danger-bg text-pd-danger", open: "bg-pd-info-bg text-pd-info", abandoned: "bg-pd-divider text-pd-body" }
+      return <span className={`${colors[value] || "bg-pd-divider text-pd-body"} px-2 py-0.5 rounded-full text-[11px] font-bold capitalize`}>{value}</span>
     }
     if (col === "lead_source") {
       const label = { instant_form: "Meta form", ghl_attribution: "GHL attribution" }[value]
       if (!label) return "–"
       const tone = value === "instant_form"
-        ? "bg-pd-info text-white"
-        : "bg-pd-primary text-white"
+        ? "bg-pd-info-bg text-pd-info"
+        : "bg-pd-primary-tint text-pd-primary"
       return <span className={`${tone} px-2 py-0.5 rounded-full text-[11px] font-bold`}>{label}</span>
     }
     if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"

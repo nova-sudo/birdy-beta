@@ -17,8 +17,8 @@ import { PdSegmented } from "./PdSegmented";
 // horizontal scrolling for strips that outgrow a narrow window, and the badge
 // tints — purple on the tab you're on, neutral on the rest.
 
-const ACTIVE_BADGE = "bg-pd-primary text-white";
-const IDLE_BADGE = "bg-gray-600 text-white";
+const ACTIVE_BADGE = "bg-pd-primary-tint text-pd-primary";
+const IDLE_BADGE = "bg-pd-divider text-pd-body";
 
 export function PageTabs({
   tabs,

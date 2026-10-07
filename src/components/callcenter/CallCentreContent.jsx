@@ -117,8 +117,8 @@ function CallLogsDialog({ lead }) {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge
                       className={`${callLog.call_status === "outbound"
-                        ? "bg-pd-info text-white"
-                        : "bg-pd-success text-white"
+                        ? "bg-pd-info-bg text-pd-info"
+                        : "bg-pd-success-bg text-pd-success"
                         } text-[11px] font-bold`}
                     >
                       {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
@@ -243,14 +243,14 @@ async function startMemberAnalysis(name, total) {
 }
 
 const OUTCOME_STYLES = {
-  connected: "bg-pd-success text-white",
-  appointment_set: "bg-pd-success text-white",
-  callback_promised: "bg-pd-info text-white",
-  voicemail: "bg-pd-warning text-white",
-  no_answer: "bg-gray-600 text-white",
-  not_interested: "bg-pd-danger text-white",
-  wrong_number: "bg-pd-danger text-white",
-  other: "bg-gray-600 text-white",
+  connected: "bg-pd-success-bg text-pd-success",
+  appointment_set: "bg-pd-success-bg text-pd-success",
+  callback_promised: "bg-pd-info-bg text-pd-info",
+  voicemail: "bg-pd-warning-bg text-pd-amber",
+  no_answer: "bg-pd-divider text-pd-body",
+  not_interested: "bg-pd-danger-bg text-pd-danger",
+  wrong_number: "bg-pd-danger-bg text-pd-danger",
+  other: "bg-pd-divider text-pd-body",
 }
 
 const parseOutcome = (summary) => {
@@ -540,8 +540,8 @@ const MEMBER_COLUMNS = [
 const DIRECTION_CELL = (_v, row) => (
   <Badge
     className={`${row.direction === "outbound"
-      ? "bg-pd-info text-white"
-      : "bg-pd-success text-white"
+      ? "bg-pd-info-bg text-pd-info"
+      : "bg-pd-success-bg text-pd-success"
       } text-[11px] font-bold`}
   >
     {row.direction === "outbound" ? "Outbound" : "Inbound"}

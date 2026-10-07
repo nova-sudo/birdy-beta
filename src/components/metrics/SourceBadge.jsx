@@ -10,7 +10,7 @@
 // always used these same files.
 //
 // Birdy is the exception: it has no third-party logo, so it keeps the drawn
-// star. The logos are knocked out to white so they sit on the solid pill.
+// star in the pill's own purple.
 
 import Image from "next/image"
 
@@ -38,7 +38,7 @@ export function SourceBadge({ source }) {
       className={`inline-flex items-center gap-[6px] rounded-full px-[11px] py-[4px] text-[11.5px] font-bold ${style.className}`}
     >
       {logo ? (
-        <Image src={logo} alt="" width={13} height={13} className="size-[13px] shrink-0 object-contain brightness-0 invert" />
+        <Image src={logo} alt="" width={13} height={13} className="size-[13px] shrink-0 object-contain" />
       ) : (
         <svg
           width="12"

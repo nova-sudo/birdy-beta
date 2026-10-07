@@ -67,12 +67,12 @@ function BulletList({ items }) {
 }
 
 const SCENARIOS = [
-  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Forgot to cancel",    desc: "Renewals that occur because you forgot to cancel before the billing date are not eligible for refunds." },
-  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Unused subscription", desc: "Not using the Service during a billing period does not entitle you to a refund." },
-  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Plan downgrade",       desc: "Downgrades take effect at the end of the billing period. The current period charge is not refunded." },
-  { tag: "Not eligible",  tagColor: "bg-pd-danger text-white",     title: "Third-party issues",   desc: "Disruptions caused by Meta, GoHighLevel, or HotProspector API outages are outside our control." },
-  { tag: "Case by case",  tagColor: "bg-pd-primary text-white", title: "Extended outage",   desc: "If Birdy experiences a significant outage (4+ hours) preventing use of the Service, we may offer a prorated credit." },
-  { tag: "May be eligible", tagColor: "bg-pd-success text-white", title: "Billing error",     desc: "If you were charged incorrectly due to a technical error on our end, we will issue a full refund of the erroneous charge." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger-bg text-pd-danger",     title: "Forgot to cancel",    desc: "Renewals that occur because you forgot to cancel before the billing date are not eligible for refunds." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger-bg text-pd-danger",     title: "Unused subscription", desc: "Not using the Service during a billing period does not entitle you to a refund." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger-bg text-pd-danger",     title: "Plan downgrade",       desc: "Downgrades take effect at the end of the billing period. The current period charge is not refunded." },
+  { tag: "Not eligible",  tagColor: "bg-pd-danger-bg text-pd-danger",     title: "Third-party issues",   desc: "Disruptions caused by Meta, GoHighLevel, or HotProspector API outages are outside our control." },
+  { tag: "Case by case",  tagColor: "bg-pd-primary-tint text-pd-primary", title: "Extended outage",   desc: "If Birdy experiences a significant outage (4+ hours) preventing use of the Service, we may offer a prorated credit." },
+  { tag: "May be eligible", tagColor: "bg-pd-success-bg text-pd-success", title: "Billing error",     desc: "If you were charged incorrectly due to a technical error on our end, we will issue a full refund of the erroneous charge." },
 ];
 
 const STEPS = [

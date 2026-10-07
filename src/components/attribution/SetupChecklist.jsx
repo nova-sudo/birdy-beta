@@ -55,7 +55,7 @@ export default function SetupChecklist({ diagnostics, polling }) {
                 className={cn(
                   "flex size-5 shrink-0 items-center justify-center rounded-full",
                   stage.done
-                    ? "bg-pd-success text-white"
+                    ? "bg-pd-success-bg text-pd-success"
                     : "bg-pd-divider text-pd-faint",
                 )}
               >

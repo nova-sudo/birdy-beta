@@ -471,8 +471,8 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   }}
                   className={`flex cursor-pointer items-center justify-between gap-[5px] rounded-full border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold ${
                     row.status === "active"
-                      ? "border-pd-success bg-pd-success text-white"
-                      : "border-gray-600 bg-gray-600 text-white"
+                      ? "border-pd-success bg-pd-success-bg text-pd-success"
+                      : "border-gray-600 bg-pd-divider text-pd-body"
                   }`}
                 >
                   {row.status === "active" ? "Active" : "Inactive"}

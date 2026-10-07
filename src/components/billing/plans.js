@@ -48,12 +48,12 @@ export const PLAN_ORDER = ["starter", "growth", "scale"];
 
 // Solid status pills: a filled colour with white text.
 export const STATUS_STYLES = {
-  active: "bg-pd-success text-white",
-  trialing: "bg-pd-info text-white",
-  past_due: "bg-pd-warning text-white",
-  canceling: "bg-pd-warning text-white",
-  canceled: "bg-pd-danger text-white",
-  inactive: "bg-gray-600 text-white",
+  active: "bg-pd-success-bg text-pd-success",
+  trialing: "bg-pd-info-bg text-pd-info",
+  past_due: "bg-pd-warning-bg text-pd-amber",
+  canceling: "bg-pd-warning-bg text-pd-amber",
+  canceled: "bg-pd-danger-bg text-pd-danger",
+  inactive: "bg-pd-divider text-pd-body",
 };
 
 export const STATUS_LABELS = {

@@ -44,20 +44,20 @@ export const DEFAULT_SOURCES = [
 
 // Badge palette — solid semantic fills from the shared scale, one per source.
 const SOURCE_STYLE = {
-  meta:          { className: "bg-pd-info text-white", label: "Meta" },
-  ghl:           { className: "bg-pd-success text-white", label: "GHL" },
-  tags:          { className: "bg-pd-success text-white", label: "Tags" },
+  meta:          { className: "bg-pd-info-bg text-pd-info", label: "Meta" },
+  ghl:           { className: "bg-pd-success-bg text-pd-success", label: "GHL" },
+  tags:          { className: "bg-pd-success-bg text-pd-success", label: "Tags" },
   // Birdy's own derived metrics. Shares the Metrics Hub's purple with Custom —
   // both are ours rather than a platform's — and the label is what tells a
   // built-in ratio apart from a formula the user wrote.
-  birdy:         { className: "bg-pd-primary text-white", label: "Birdy" },
-  custom:        { className: "bg-pd-primary text-white", label: "Custom" },
-  hotprospector: { className: "bg-pd-amber text-white", label: "HP" },
+  birdy:         { className: "bg-pd-primary-tint text-pd-primary", label: "Birdy" },
+  custom:        { className: "bg-pd-primary-tint text-pd-primary", label: "Custom" },
+  hotprospector: { className: "bg-pd-amber-bg text-pd-amber", label: "HP" },
 }
 
 // Anything outside the palette still gets a readable, neutral badge rather
 // than disappearing.
-const NEUTRAL_BADGE = { className: "bg-gray-600 text-white" }
+const NEUTRAL_BADGE = { className: "bg-pd-divider text-pd-body" }
 
 function Tick({ on }) {
   return (

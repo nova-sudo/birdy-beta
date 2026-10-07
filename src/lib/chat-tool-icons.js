@@ -9,12 +9,12 @@ import {
 
 // Category palette — matches the rest of the app
 export const CATEGORY_COLORS = {
-  meta: { bg: "bg-pd-info", text: "text-white", border: "border-transparent", dot: "bg-pd-info" },
-  ghl: { bg: "bg-pd-success", text: "text-white", border: "border-transparent", dot: "bg-pd-success" },
-  custom: { bg: "bg-pd-amber", text: "text-white", border: "border-transparent", dot: "bg-pd-amber" },
-  compare: { bg: "bg-pd-primary", text: "text-white", border: "border-transparent", dot: "bg-pd-primary" },
-  alert: { bg: "bg-pd-danger", text: "text-white", border: "border-transparent", dot: "bg-pd-danger" },
-  group: { bg: "bg-gray-600", text: "text-white", border: "border-transparent", dot: "bg-gray-400" },
+  meta: { bg: "bg-pd-info-bg", text: "text-pd-info", border: "border-transparent", dot: "bg-pd-info" },
+  ghl: { bg: "bg-pd-success-bg", text: "text-pd-success", border: "border-transparent", dot: "bg-pd-success" },
+  custom: { bg: "bg-pd-amber-bg", text: "text-pd-amber", border: "border-transparent", dot: "bg-pd-amber" },
+  compare: { bg: "bg-pd-primary-tint", text: "text-pd-primary", border: "border-transparent", dot: "bg-pd-primary" },
+  alert: { bg: "bg-pd-danger-bg", text: "text-pd-danger", border: "border-transparent", dot: "bg-pd-danger" },
+  group: { bg: "bg-pd-divider", text: "text-pd-body", border: "border-transparent", dot: "bg-gray-400" },
 }
 
 const TOOL_MAP = {

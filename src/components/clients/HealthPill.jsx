@@ -12,9 +12,9 @@ export const DEFAULT_CLIENT_HEALTH = "Healthy"
 
 // Solid semantic badges: coloured fill, white text.
 const STYLES = {
-  Healthy:  "bg-pd-success text-white",
-  Warning:  "bg-pd-warning text-white",
-  Critical: "bg-pd-danger text-white",
+  Healthy:  "bg-pd-success-bg text-pd-success",
+  Warning:  "bg-pd-warning-bg text-pd-amber",
+  Critical: "bg-pd-danger-bg text-pd-danger",
 }
 
 export function healthStyle(health) {
@@ -37,7 +37,7 @@ export function HealthPill({ health, withDot = true, className = "" }) {
     >
       {withDot && (
         <span
-          className="size-1.5 rounded-full bg-white/80"
+          className="size-1.5 rounded-full bg-current"
           aria-hidden="true"
         />
       )}

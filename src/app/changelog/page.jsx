@@ -20,21 +20,21 @@ const CATEGORIES = [
     label: "New",
     Icon: Sparkles,
     dot: "bg-pd-primary",
-    chip: "bg-pd-primary text-white",
+    chip: "bg-pd-primary-tint text-pd-primary",
   },
   {
     key: "improved",
     label: "Improved",
     Icon: Wand2,
     dot: "bg-pd-info",
-    chip: "bg-pd-info text-white",
+    chip: "bg-pd-info-bg text-pd-info",
   },
   {
     key: "fixed",
     label: "Fixed",
     Icon: Wrench,
     dot: "bg-pd-amber",
-    chip: "bg-pd-amber text-white",
+    chip: "bg-pd-amber-bg text-pd-amber",
   },
 ];
 

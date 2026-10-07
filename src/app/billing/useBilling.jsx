@@ -135,7 +135,7 @@ export function ClientLimitWarning() {
   // Scale users at limit → prompt to add extra slots
   if (atLimit && canAddExtraSlots) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium mb-4 bg-pd-success text-white">
+      <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium mb-4 bg-pd-success-bg text-pd-success">
         <Plus className="w-4 h-4 flex-shrink-0" />
         <p>
           You&apos;ve reached your {plan.name} plan limit of {clientLimit} clients.{" "}

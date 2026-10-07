@@ -298,7 +298,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
           <div>
             <div className="font-semibold text-pd-ink flex items-center gap-2">
               {parentAlert.name}
-              <Badge className="bg-pd-danger text-white border-0 text-[10.5px] px-2 py-0 gap-1">
+              <Badge className="bg-pd-danger-bg text-pd-danger border-0 text-[10.5px] px-2 py-0 gap-1">
                 <BellRing className="h-2.5 w-2.5" />
                 {childCount} client{childCount !== 1 ? "s" : ""}
               </Badge>
@@ -1041,13 +1041,13 @@ function AlertsPageContent() {
                   key: "triggered",
                   label: "Triggered",
                   badge: alerts.counts?.triggered || undefined,
-                  badgeClassName: "bg-pd-danger text-white",
+                  badgeClassName: "bg-pd-danger-bg text-pd-danger",
                 },
                 {
                   key: "paused",
                   label: "Snoozed / Paused",
                   badge: alerts.counts?.paused || undefined,
-                  badgeClassName: "bg-pd-warning text-white",
+                  badgeClassName: "bg-pd-warning-bg text-pd-amber",
                 },
               ]}
               value={activeTab}
@@ -1407,7 +1407,7 @@ function AlertsPageContent() {
                           <div className="flex items-center gap-2">
                             <Slack className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">Slack</span>
-                            <Badge className="bg-gray-600 text-white border-0 text-[10px] px-2 py-0">Soon</Badge>
+                            <Badge className="bg-pd-divider text-pd-body border-0 text-[10px] px-2 py-0">Soon</Badge>
                           </div>
                           <Switch disabled checked={false} />
                         </div>
@@ -1418,7 +1418,7 @@ function AlertsPageContent() {
                           <div className="flex items-center gap-2">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm font-medium">Email</span>
-                            <Badge className="bg-gray-600 text-white border-0 text-[10px] px-2 py-0">Soon</Badge>
+                            <Badge className="bg-pd-divider text-pd-body border-0 text-[10px] px-2 py-0">Soon</Badge>
                           </div>
                           <Switch disabled checked={false} />
                         </div>

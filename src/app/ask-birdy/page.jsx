@@ -215,8 +215,8 @@ export default function AskBirdyPage() {
                       <span
                         className={`mb-1 flex w-fit max-w-full items-center gap-1 overflow-hidden rounded-full px-2 py-px text-[10px] font-semibold ${
                           clientScoped
-                            ? "bg-pd-primary text-white"
-                            : "bg-pd-info text-white"
+                            ? "bg-pd-primary-tint text-pd-primary"
+                            : "bg-pd-info-bg text-pd-info"
                         }`}
                       >
                         {clientScoped

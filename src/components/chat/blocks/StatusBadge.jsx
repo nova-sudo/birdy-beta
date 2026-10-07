@@ -7,10 +7,10 @@ import { CheckCircle2, AlertTriangle, XCircle, Info } from "lucide-react"
  * Payload:  { label, variant?: "success"|"warning"|"error"|"info", detail? }
  */
 const VARIANTS = {
-  success: { wrap: "bg-pd-success text-white", dot: "bg-white", icon: CheckCircle2, iconClass: "text-white" },
-  warning: { wrap: "bg-pd-warning text-white", dot: "bg-white", icon: AlertTriangle, iconClass: "text-white" },
-  error: { wrap: "bg-pd-danger text-white", dot: "bg-white", icon: XCircle, iconClass: "text-white" },
-  info: { wrap: "bg-pd-info text-white", dot: "bg-white", icon: Info, iconClass: "text-white" },
+  success: { wrap: "bg-pd-success-bg text-pd-success", dot: "bg-current", icon: CheckCircle2, iconClass: "text-current" },
+  warning: { wrap: "bg-pd-warning-bg text-pd-amber", dot: "bg-current", icon: AlertTriangle, iconClass: "text-current" },
+  error: { wrap: "bg-pd-danger-bg text-pd-danger", dot: "bg-current", icon: XCircle, iconClass: "text-current" },
+  info: { wrap: "bg-pd-info-bg text-pd-info", dot: "bg-current", icon: Info, iconClass: "text-current" },
 }
 
 export default function StatusBadge({ payload }) {

@@ -39,9 +39,9 @@ const CHIP = {
 
 // Solid state badges: coloured fill, white text.
 const PILL = {
-  [ON_TRACK]: "bg-pd-success text-white",
-  [AT_RISK]: "bg-pd-warning text-white",
-  [BEHIND]: "bg-pd-danger text-white",
+  [ON_TRACK]: "bg-pd-success-bg text-pd-success",
+  [AT_RISK]: "bg-pd-warning-bg text-pd-amber",
+  [BEHIND]: "bg-pd-danger-bg text-pd-danger",
 }
 
 function GoalCell({ goal, currencySymbol, last }) {

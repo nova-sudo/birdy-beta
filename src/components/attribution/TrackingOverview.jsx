@@ -23,10 +23,10 @@ import { Stagger, StaggerItem } from "@/components/motion"
 import { leadSourceOption, needsPixel, normalizeLeadSource } from "@/lib/lead-sources"
 
 const METHOD_TONE = {
-  instant_form: "bg-pd-info text-white",
-  form_to_ghl: "bg-pd-info text-white",
-  landing_page: "bg-pd-primary text-white",
-  unknown: "bg-gray-600 text-white",
+  instant_form: "bg-pd-info-bg text-pd-info",
+  form_to_ghl: "bg-pd-info-bg text-pd-info",
+  landing_page: "bg-pd-primary-tint text-pd-primary",
+  unknown: "bg-pd-divider text-pd-body",
 }
 
 function relative(iso) {

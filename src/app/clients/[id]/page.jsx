@@ -203,7 +203,7 @@ export default function ClientDetailsPage() {
       key: "suggestions",
       label: "Suggestions",
       badge: 0,
-      badgeClassName: "bg-pd-primary text-white",
+      badgeClassName: "bg-pd-primary-tint text-pd-primary",
       isEmpty: true,
       // Suggestions are generated per user, not per client, and nothing scopes
       // them to one group yet — so this says so rather than showing another
@@ -215,7 +215,7 @@ export default function ClientDetailsPage() {
       key: "activity",
       label: "Activity",
       badge: clientActivity.length,
-      badgeClassName: "bg-gray-600 text-white",
+      badgeClassName: "bg-pd-divider text-pd-body",
       isEmpty: clientActivity.length === 0,
       emptyMessage: "No activity for this client yet",
       render: () => (

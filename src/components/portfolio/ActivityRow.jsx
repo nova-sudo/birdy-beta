@@ -4,8 +4,8 @@ import { cn } from "@/lib/utils";
 // the user signed off. The distinction is the point of the feed — an owner
 // needs to see at a glance what happened without them.
 const MODES = {
-  "Auto-run": { glyph: "⚡", className: "bg-pd-primary text-white" },
-  Approved: { glyph: "✓", className: "bg-pd-success text-white" },
+  "Auto-run": { glyph: "⚡", className: "bg-pd-primary-tint text-pd-primary" },
+  Approved: { glyph: "✓", className: "bg-pd-success-bg text-pd-success" },
 };
 
 /** @param {{action, client, mode, time}} entry */
