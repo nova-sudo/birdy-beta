@@ -3,7 +3,7 @@ import { useState } from "react"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { MessageSquarePlus, ExternalLink } from "lucide-react"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import Link from "next/link"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { resetChat } from "@/lib/chat-store"
@@ -47,7 +47,7 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-pd-border bg-pd-surface shrink-0">
           <div className="flex items-center gap-2">
-            <Birdy size={32} />
+            <BirdyAvatar size={36} />
             <div>
               <div className="font-pd-display text-[16px] font-bold leading-tight text-pd-ink">Birdy AI</div>
               <div className="text-[11.5px] text-pd-subtle leading-tight">Your marketing co-pilot</div>

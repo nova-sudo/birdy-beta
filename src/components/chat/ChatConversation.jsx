@@ -12,7 +12,7 @@ import OutOfCreditsEmptyState from "@/components/chat/OutOfCreditsEmptyState"
 import MessageBubble from "@/components/chat/MessageBubble"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Reveal, Stagger, StaggerItem } from "@/components/motion"
 
 /**
@@ -308,7 +308,7 @@ function EmptyState({ title, subtitle, showHints, quickStarters, onQuickStarter 
     <div className="h-full flex flex-col items-center justify-center text-center px-6 py-16">
       {/* The mascot watches the cursor while it waits for a question. */}
       <Reveal className="mb-4">
-        <Birdy size={84} />
+        <BirdyAvatar size={96} />
       </Reveal>
 
       <Reveal delay={0.08}>

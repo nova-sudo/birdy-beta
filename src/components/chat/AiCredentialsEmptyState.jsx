@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle, EmptyDescription, EmptyContent } from "@/components/ui/empty"
 import { Button } from "@/components/ui/button"
 
@@ -10,7 +10,7 @@ export default function AiCredentialsEmptyState({ className = "" }) {
     <Empty className={`h-full ${className}`}>
       <EmptyHeader>
         <EmptyMedia>
-          <Birdy size={72} state="peek" />
+          <BirdyAvatar size={80} state="peek" />
         </EmptyMedia>
         <EmptyTitle>Add your own AI agent to use Birdy AI</EmptyTitle>
         <EmptyDescription>

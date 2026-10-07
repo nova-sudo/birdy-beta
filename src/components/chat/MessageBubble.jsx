@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm"
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { Check, Copy } from "lucide-react"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
@@ -63,7 +63,7 @@ export default function MessageBubble({
       transition={{ duration: 0.6, ease: EASE_SPRING }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <Birdy size={26} paused />
+        <BirdyAvatar size={30} paused />
         <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
         {tools.map(([tool, n]) => (
           <ToolPill key={tool} name={tool} count={n > 1 ? n : undefined} />

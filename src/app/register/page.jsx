@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { publicRequest } from "@/lib/api"
 import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import dynamic from "next/dynamic"
 // Silk is the WebGL wallpaper in the right-hand panel — decoration, and 877kB
@@ -208,7 +209,7 @@ export default function RegisterPage() {
           <div className="pointer-events-none absolute inset-0 text-white">
             {/* Top-left: Birdy lockup */}
             <div className="absolute left-8 top-8 flex items-center gap-2">
-              <Birdy state={birdyState} size={36} />
+              <BirdyAvatar state={birdyState} size={40} tone="white" />
               <span className="text-xl font-bold text-white drop-shadow">Birdy</span>
             </div>
 

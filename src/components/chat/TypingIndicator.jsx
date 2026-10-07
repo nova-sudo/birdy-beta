@@ -1,7 +1,7 @@
 "use client"
 import { useEffect, useState } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import Birdy from "@/components/birdy/Birdy"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 
 // The backend answers in one response rather than streaming its tool calls,
@@ -33,7 +33,7 @@ export default function TypingIndicator() {
       role="status"
       aria-live="polite"
     >
-      <Birdy size={26} state="loading" />
+      <BirdyAvatar size={30} state="loading" />
       <AnimatePresence mode="wait" initial={false}>
         <motion.span
           key={step}
