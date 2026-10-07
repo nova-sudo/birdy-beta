@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { publicRequest } from "@/lib/api"
-import Birdy from "@/components/birdy/Birdy"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import dynamic from "next/dynamic"
@@ -90,38 +88,36 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
+    <div className="grid min-h-svh bg-pd-surface lg:grid-cols-2">
       {/* Left: form */}
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
-            <Card className="shadow-md border bg-white">
-              <CardHeader className="space-y-1 text-center pb-8">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-end justify-center overflow-hidden rounded-full border border-purple-100 bg-purple-50">
-                  <Birdy state={birdyState} size={52} />
-                </div>
-                <CardTitle className="text-2xl font-bold text-gray-900">Create your account</CardTitle>
-                <CardDescription className="text-gray-600">Get started with your free account</CardDescription>
-              </CardHeader>
+            <div>
+              <div className="mb-8">
+                <BirdyAvatar state={birdyState} size={52} />
+                <h1 className="mt-5 font-pd-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">Create your account</h1>
+                <p className="mt-1.5 text-[14.5px] text-pd-subtle">Get started with your free account</p>
+              </div>
 
-              <CardContent className="space-y-6">
+              <div className="space-y-6">
                 {error && (
-                  <Alert variant="destructive" className="border-red-300 bg-red-50">
-                    <AlertDescription className="text-sm text-red-600">{error}</AlertDescription>
+                  <Alert variant="destructive" className="rounded-2xl border-pd-danger-border bg-pd-danger-bg">
+                    <AlertDescription className="text-sm text-pd-danger">{error}</AlertDescription>
                   </Alert>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium text-gray-800">Email address</Label>
+                    <Label htmlFor="email" className="text-[13px] font-semibold text-pd-ink">Email address</Label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                       <Input
                         type="email"
                         id="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="pl-10 h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20"
+                        className="pl-10 h-12"
                         placeholder="Enter your email"
                         required
                       />
@@ -129,32 +125,32 @@ export default function RegisterPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="password" className="text-sm font-medium text-gray-800">Password</Label>
+                    <Label htmlFor="password" className="text-[13px] font-semibold text-pd-ink">Password</Label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                       <Input
                         type={showPassword ? "text" : "password"}
                         id="password"
                         value={formData.password}
                         onChange={handleChange}
-                        className="pl-10 pr-10 h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20"
+                        className="pl-10 pr-11 h-12"
                         placeholder="Create a strong password"
                         required
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-800 transition-colors border-0 p-0 cursor-pointer"
+                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-pd-faint hover:text-pd-ink transition-colors border-0 p-0 cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters long</p>
+                    <p className="text-xs text-pd-subtle mt-1">Must be at least 8 characters long</p>
                   </div>
 
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                    className="w-full h-12 text-[14.5px]"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -170,27 +166,27 @@ export default function RegisterPage() {
 
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-gray-200" />
+                    <span className="w-full border-t border-pd-border" />
                   </div>
                   <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-white px-2 text-gray-500">Or</span>
+                    <span className="bg-pd-surface px-2 text-pd-faint">Or</span>
                   </div>
                 </div>
 
-                <div className="text-center text-sm text-gray-600">
+                <div className="text-center text-sm text-pd-subtle">
                   {"Already have an account? "}
-                  <a href="/login" className="text-purple-600 hover:text-purple-700 font-medium transition-colors">
+                  <a href="/login" className="text-pd-primary hover:text-purple-700 font-semibold transition-colors">
                     Sign in here
                   </a>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            <p className="text-center text-xs text-gray-500 mt-6">
+            <p className="text-center text-xs text-pd-subtle mt-6">
               By creating an account, you agree to our{" "}
-              <a href="/terms" className="text-purple-600 hover:text-purple-700">Terms of Service</a>{" "}
+              <a href="/terms" className="text-pd-primary hover:text-purple-700">Terms of Service</a>{" "}
               and{" "}
-              <a href="/privacy" className="text-purple-600 hover:text-purple-700">Privacy Policy</a>
+              <a href="/privacy" className="text-pd-primary hover:text-purple-700">Privacy Policy</a>
             </p>
           </div>
         </div>
@@ -210,15 +206,15 @@ export default function RegisterPage() {
             {/* Top-left: Birdy lockup */}
             <div className="absolute left-8 top-8 flex items-center gap-2">
               <BirdyAvatar state={birdyState} size={40} tone="white" />
-              <span className="text-xl font-bold text-white drop-shadow">Birdy</span>
+              <span className="font-pd-display text-xl font-extrabold text-white drop-shadow">Birdy</span>
             </div>
 
             {/* Centered hero */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <h2 className="text-6xl font-semibold tracking-tight drop-shadow-lg">
+              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] drop-shadow-lg">
                 Join Birdy
               </h2>
-              <p className="mt-5 max-w-lg text-2xl text-white/90 drop-shadow-md">
+              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 drop-shadow-md">
                 Start growing smarter campaigns, conversations, and conversions in minutes.
               </p>
             </div>

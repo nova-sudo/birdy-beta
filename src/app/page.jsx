@@ -1,15 +1,97 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { BellRing } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import BirdyAvatar from "@/components/birdy/BirdyAvatar";
+import { CountUp, EASE_OUT, Pop, Reveal } from "@/components/motion";
 import { publicRequest } from "@/lib/api";
 
 // Remembers the joined email locally so a returning visitor sees the
 // "already on the list" state instead of re-submitting the form.
 const WAITLIST_STORAGE_KEY = "birdy_waitlist_email";
+
+const TREND = "M0,100 C40,96 60,90 100,82 S170,70 210,60 S290,44 330,30 S380,18 400,14";
+
+/**
+ * The hero's right-hand side: a small, animated picture of Birdy at work —
+ * figures land, the trend draws, an alert fires, and Birdy's recommendation
+ * arrives last. It is an illustration built from the app's own pieces, not a
+ * screenshot, and its numbers are made up, so it is hidden from assistive tech
+ * behind a plain description.
+ */
+function ProductPreview() {
+  return (
+    <figure className="relative" role="img" aria-label="Illustration of Birdy flagging a client's rising cost per lead and recommending a fix">
+      <Reveal delay={0.15} className="rounded-3xl border border-pd-border bg-pd-surface p-4 shadow-[0_30px_60px_-30px_rgba(24,24,27,.35)]" aria-hidden="true">
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            ["Ad spend", "£18,903"],
+            ["Leads", "1,284"],
+            ["Cost per lead", "£14.72"],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-pd-border px-3 py-2.5">
+              <div className="text-[11px] text-pd-subtle">{label}</div>
+              <div className="mt-1 font-pd-display text-[21px] font-extrabold text-pd-ink">
+                <CountUp value={value} />
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-2.5 rounded-2xl border border-pd-border p-2.5">
+          <div className="text-[11px] text-pd-subtle">Leads · last 30 days</div>
+          <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="mt-1 h-[120px] w-full">
+            <path d={`${TREND} L400,120 L0,120Z`} fill="var(--pd-primary)" opacity=".07" />
+            <motion.path
+              d={TREND}
+              fill="none"
+              stroke="var(--pd-primary)"
+              strokeWidth="3"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.6, ease: EASE_OUT, delay: 0.4 }}
+            />
+          </svg>
+        </div>
+
+        <div className="mt-2.5 flex items-center justify-between rounded-2xl border border-pd-border px-3 py-2.5 text-[12.5px]">
+          <span className="text-pd-body"><b className="text-pd-ink">Harbourside Dental</b> · £11.09 CPL</span>
+          <span className="font-bold text-pd-success">−8.2%</span>
+        </div>
+      </Reveal>
+
+      <Pop
+        delay={1.4}
+        aria-hidden="true"
+        className="absolute -left-4 bottom-24 flex items-center gap-2.5 rounded-2xl border border-pd-danger-border bg-pd-surface px-3.5 py-2.5 text-[12.5px] shadow-lg sm:-left-7"
+      >
+        <span className="flex size-8 items-center justify-center rounded-[12px] bg-pd-danger text-white">
+          <BellRing className="size-4" />
+        </span>
+        <span>
+          <b className="block text-pd-ink">CPL spike</b>
+          <span className="text-pd-subtle">Kestrel Roofing hit £27.43</span>
+        </span>
+      </Pop>
+
+      <Pop
+        delay={2.2}
+        aria-hidden="true"
+        className="absolute -bottom-6 right-2 w-[272px] rounded-[20px] bg-pd-primary px-3.5 py-3 text-[12.5px] leading-snug text-white shadow-[0_18px_40px_-14px_rgba(91,63,214,.6)] sm:-right-5"
+      >
+        <span className="mb-1 flex items-center gap-2 font-pd-display text-[14px] font-bold">
+          <BirdyAvatar size={24} paused />
+          Birdy recommends
+        </span>
+        Pause 2 ad sets on Kestrel Roofing: £48 CPL vs £22 target, 0 leads in 5 days.
+      </Pop>
+    </figure>
+  );
+}
 
 export default function Home() {
   const [email, setEmail] = useState("");
@@ -49,94 +131,75 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F9F8FC] text-[#180F29] flex flex-col">
+    <div className="flex min-h-screen w-full flex-col bg-pd-canvas text-pd-ink">
       {/* HEADER */}
-      <header className="flex items-center justify-between px-6 md:px-10 py-5 border-b border-[#ECE7F3]">
-        <div className="flex items-center gap-2">
-          <Image
-            src="/birdy-mascot-VmH3J7Wq.png"
-            alt="Birdy"
-            width={32}
-            height={32}
-            priority
-            className="rounded-full"
-          />
-          <span className="font-bold text-lg">AskBirdy</span>
+      <header className="flex items-center justify-between px-6 py-5 md:px-10">
+        <div className="flex items-center gap-2.5">
+          <BirdyAvatar size={34} />
+          <span className="font-pd-display text-[20px] font-extrabold tracking-[-0.02em]">Birdy</span>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-pd-muted bg-white border border-[#E6E1EF] rounded-full px-4 py-2">
-          <Sparkles className="w-3.5 h-3.5 text-purple-600" />
-          Coming Soon
-        </span>
+        <span className="rounded-full bg-pd-ink px-3.5 py-1.5 text-xs font-bold text-white">Coming soon</span>
       </header>
 
       {/* HERO */}
-      <main className="flex-1 flex flex-col items-center px-6 pt-10 md:pt-16 pb-24">
-        <div className="max-w-3xl text-center">
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05]">
-            The AI Brain That Runs &amp; Scales Your Agency
-          </h1>
-          <p className="mt-6 text-lg md:text-xl text-pd-muted max-w-2xl mx-auto">
-            AskBirdy connects your ads, CRM, bookings, and revenue data across all clients,
-            flags problems early, and guides what to fix or scale next.
-          </p>
+      <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-24 pt-8 md:px-10 lg:grid-cols-[1fr_1.05fr] lg:pt-14">
+        <div>
+          <Reveal>
+            <h1 className="font-pd-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.035em] md:text-[58px]">
+              The AI Brain That Runs &amp; <span className="text-pd-primary">Scales</span> Your Agency
+            </h1>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-pd-body">
+              Birdy connects your ads, CRM, bookings, and revenue data across all clients,
+              flags problems early, and guides what to fix or scale next.
+            </p>
+          </Reveal>
 
-          <div className="mt-8 min-h-[44px] flex items-center justify-center">
+          <Reveal delay={0.16} className="mt-7 min-h-[48px]">
             {status === "joined" || status === "already" ? (
-              <div className="text-center">
-                {status === "joined" ? (
-                  <>
-                    <p className="text-lg font-semibold">Boom... You&apos;re on the List! 🎉</p>
-                    <p className="text-sm text-pd-muted mt-1">
-                      You&apos;re one step closer to running a stress-free agency
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-lg font-semibold">Hey... You&apos;re Already on the List! 😉</p>
-                    <p className="text-sm text-pd-muted mt-1">
-                      We&apos;ll get you onboarded as quick as possible.
-                    </p>
-                  </>
-                )}
+              <div className="flex items-center gap-3">
+                <BirdyAvatar size={48} state="celebrate" />
+                <div>
+                  <p className="font-pd-display text-[18px] font-bold">
+                    {status === "joined" ? "Boom... You're on the List! 🎉" : "Hey... You're Already on the List! 😉"}
+                  </p>
+                  <p className="mt-0.5 text-sm text-pd-subtle">
+                    {status === "joined"
+                      ? "You're one step closer to running a stress-free agency"
+                      : "We'll get you onboarded as quick as possible."}
+                  </p>
+                </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3">
+              <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@agency.com"
-                  className="w-64 h-11 rounded-xl border-[#E6E1EF] bg-white"
+                  aria-label="Email address"
+                  className="h-12 px-5 text-[15px] sm:w-72"
                 />
-                <Button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="bg-pd-primary hover:bg-[#5f30ba] text-white rounded-xl h-11 px-6 font-medium"
-                >
+                <Button type="submit" disabled={status === "loading"} className="h-12 px-6 text-[14.5px]">
                   {status === "loading" ? "Joining..." : "Join the Waitlist"}
                 </Button>
               </form>
             )}
-          </div>
+          </Reveal>
         </div>
 
-        {/* DEMO PLACEHOLDER */}
-        <div className="mt-16 w-full max-w-4xl min-h-[420px] bg-white border border-[#E6E1EF] rounded-2xl shadow-xl flex flex-col items-center justify-center gap-4">
-          <div className="w-16 h-16   flex items-center justify-center overflow-hidden">
-            <Image src="/birdy-mascot-VmH3J7Wq.png" alt="Birdy" width={56} height={56} className="" />
-          </div>
-          <p className="text-pd-muted font-medium">Product Demo Coming Soon</p>
-        </div>
+        <ProductPreview />
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-[#ECE7F3] px-6 md:px-10 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
+      <footer className="flex flex-col items-center justify-between gap-3 border-t border-pd-border px-6 py-6 md:flex-row md:px-10">
         <div className="flex items-center gap-2">
-          <Image src="/birdy-mascot-VmH3J7Wq.png" alt="Birdy" width={20} height={20} className="rounded-full" />
-          <span className="font-semibold text-sm">AskBirdy</span>
+          <BirdyAvatar size={24} paused />
+          <span className="font-pd-display text-sm font-bold">Birdy</span>
         </div>
-        <p className="text-sm text-pd-muted">Built by agency owners, for agency owners.</p>
+        <p className="text-sm text-pd-subtle">Built by agency owners, for agency owners.</p>
       </footer>
     </div>
   );

@@ -5,14 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { checkAndRefreshExpiredTokens } from "@/lib/checkExpiredTokens"
 import { prefetchAfterLogin } from "@/lib/prefetch"
 import { writeSession, ADMIN_HOME } from "@/lib/session"
 import { apiRequest, publicRequest } from "@/lib/api"
-import BirdyLogo from "@/components/BirdyLogo"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 
 export default function LoginForm() {
   const [formData, setFormData] = useState({
@@ -135,38 +134,38 @@ export default function LoginForm() {
   return (
     <div className="w-full">
       <div className="w-full">
-        <Card className="shadow-md border bg-white">
-          <CardHeader className="space-y-1 text-center pb-8">
-            <div className="mx-auto mb-4 flex justify-center">
-              <BirdyLogo variant="icon" theme="light" size={56} priority />
-            </div>
-            <CardTitle className="text-2xl font-bold text-gray-800">Welcome back</CardTitle>
-            <CardDescription className="text-gray-600">
+        {/* No card: the form sits straight on the page, the Silk panel beside
+            it carries the colour. */}
+        <div>
+          <div className="mb-8">
+            <BirdyAvatar size={52} />
+            <h1 className="mt-5 font-pd-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">Welcome back</h1>
+            <p className="mt-1.5 text-[14.5px] text-pd-subtle">
               Sign in to your account to continue
-            </CardDescription>
-          </CardHeader>
+            </p>
+          </div>
 
-          <CardContent className="space-y-6">
+          <div className="space-y-6">
             {error && (
-              <Alert variant="destructive" className="border-red-300 bg-red-50">
-                <AlertDescription className="text-sm text-red-600">{error}</AlertDescription>
+              <Alert variant="destructive" className="rounded-2xl border-pd-danger-border bg-pd-danger-bg">
+                <AlertDescription className="text-sm text-pd-danger">{error}</AlertDescription>
               </Alert>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-800">
+                <Label htmlFor="email" className="text-[13px] font-semibold text-pd-ink">
                   Email address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                   <Input
                     type="email"
                     id="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className="pl-10 h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20"
+                    className="pl-10 h-12"
                     placeholder="Enter your email"
                     required
                   />
@@ -175,24 +174,24 @@ export default function LoginForm() {
 
               {/* Password */}
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-800">
+                <Label htmlFor="password" className="text-[13px] font-semibold text-pd-ink">
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 w-4 h-4" />
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
                   <Input
                     type={showPassword ? "text" : "password"}
                     id="password"
                     value={formData.password}
                     onChange={handleChange}
-                    className="pl-10 pr-10 h-11 bg-white border-gray-300 focus:border-purple-600 focus:ring-purple-600/20"
+                    className="pl-10 pr-11 h-12"
                     placeholder="Enter your password"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-800 transition-colors border-0 p-0 cursor-pointer"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-pd-faint hover:text-pd-ink transition-colors border-0 p-0 cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -201,7 +200,7 @@ export default function LoginForm() {
 
               <Button
                 type="submit"
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-medium transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full h-12 text-[14.5px]"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -215,17 +214,17 @@ export default function LoginForm() {
               </Button>
             </form>
 
-            <div className="text-center text-sm text-gray-600">
+            <div className="text-center text-sm text-pd-subtle">
               {"Don't have an account? "}
               <a
                 href="/register"
-                className="text-purple-600 hover:text-purple-700 font-medium transition-colors"
+                className="text-pd-primary hover:text-purple-700 font-semibold transition-colors"
               >
                 Create one here
               </a>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   )

@@ -12,22 +12,23 @@ import dynamic from "next/dynamic"
 // and nothing shifts.
 const Silk = dynamic(() => import("@/components/Silk"), { ssr: false })
 import LoginForm from "./LoginForm"
+import { Skeleton } from "@/components/ui/skeleton"
 import BirdyLogo from "@/components/BirdyLogo"
 
 export default function LoginPage() {
   return (
-    <div className="grid min-h-svh lg:grid-cols-2">
+    <div className="grid min-h-svh bg-pd-surface lg:grid-cols-2">
       <div className="flex flex-col gap-4 p-6 md:p-10">
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-sm">
             <Suspense
               fallback={
-                <div className="shadow-md border bg-white rounded-lg p-8">
-                  <div className="animate-pulse space-y-4">
-                    <div className="h-12 w-12 bg-gray-200 rounded-full mx-auto" />
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mx-auto" />
-                    <div className="h-4 bg-gray-200 rounded w-full" />
-                  </div>
+                <div className="space-y-4">
+                  <Skeleton className="size-[52px] rounded-full" />
+                  <Skeleton className="h-8 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="mt-6 h-12 w-full rounded-full" />
+                  <Skeleton className="h-12 w-full rounded-full" />
                 </div>
               }
             >
@@ -53,10 +54,10 @@ export default function LoginPage() {
 
             {/* Centered hero */}
             <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <h2 className="text-6xl font-semibold tracking-tight drop-shadow-lg">
-                Welcome to Birdy
+              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] drop-shadow-lg">
+                Every client.<br />One brain.
               </h2>
-              <p className="mt-5 max-w-lg text-2xl text-white/90 drop-shadow-md">
+              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 drop-shadow-md">
                 Manage your clients, campaigns, and conversations — all in one place.
               </p>
             </div>
