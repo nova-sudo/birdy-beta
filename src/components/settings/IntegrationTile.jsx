@@ -122,7 +122,7 @@ export function IntegrationDangerAction({ className, ...props }) {
   return (
     <Button
       type="button"
-      variant="destructive"
+      variant="destructive-outline"
       className={cn(ACTION_SIZE, className)}
       {...props}
     />

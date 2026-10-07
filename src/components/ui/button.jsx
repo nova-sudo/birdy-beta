@@ -13,6 +13,10 @@ const buttonVariants = cva(
           "bg-primary text-primary-foreground shadow-[0_2px_8px_-2px_rgba(91,63,214,.45),inset_0_1px_0_rgba(255,255,255,.18)] hover:bg-purple-700 hover:-translate-y-px hover:shadow-[0_6px_16px_-4px_rgba(91,63,214,.5),inset_0_1px_0_rgba(255,255,255,.18)]",
         destructive:
           "bg-destructive text-destructive-foreground shadow-[0_2px_8px_-2px_rgba(229,72,77,.4)] hover:bg-destructive/90 hover:-translate-y-px",
+        // Outlined red that fills on hover: for "remove"/"disconnect" actions
+        // that sit on a page by the dozen, where a solid red would shout.
+        "destructive-outline":
+          "border border-pd-danger-border bg-background text-pd-danger hover:bg-pd-danger hover:text-white hover:border-pd-danger",
         outline:
           "border border-border bg-background shadow-xs hover:bg-secondary hover:border-gray-300",
         secondary:
