@@ -1,17 +1,16 @@
-import { Poppins, Inter } from "next/font/google";
+import { Bricolage_Grotesque, Inter } from "next/font/google";
 
-// The Birdy design system specs Poppins for headings/numerals and Inter for
-// body/meta, against an app that otherwise runs on Outfit. Both are declared
-// here as CSS variables and applied to a screen's subtree only, so the rest of
-// Birdy keeps its own typeface and neither font is a global cost.
-//
-// Two screens draw from this now — the Portfolio Dashboard and the Sales Hub —
-// so it sits in lib rather than inside either route. next/font dedupes by
-// declaration site, so one module means one font load shared between them.
-export const poppins = Poppins({
-  variable: "--font-poppins",
+// Birdy's type: Bricolage Grotesque for headings and numerals, Inter for body
+// and meta. Both are declared as CSS variables and put on <html> by the root
+// layout, so every surface — portalled dialogs, toasts and drawers included —
+// resolves them. next/font dedupes by declaration site, so one module means
+// one load however many places import it.
+export const display = Bricolage_Grotesque({
+  variable: "--font-bricolage",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  // Variable font: the optical-size axis lets big headings tighten up and
+  // small labels open out, which is most of what gives Bricolage its shape.
+  axes: ["opsz"],
   display: "swap",
 });
 
@@ -22,5 +21,12 @@ export const inter = Inter({
   display: "swap",
 });
 
-/** Applied to a screen's root: scopes both families and sets Inter as the base. */
-export const pdFontClass = `${poppins.variable} ${inter.variable} font-pd-body`;
+/** Both font variables, for the root element. */
+export const fontVariables = `${display.variable} ${inter.variable}`;
+
+/**
+ * Once applied to a screen's subtree to scope the fonts there. The variables
+ * now live on <html>, so this only sets Inter as the base; screens still
+ * carrying it are harmless.
+ */
+export const pdFontClass = "font-pd-body";

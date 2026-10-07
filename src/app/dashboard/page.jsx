@@ -33,6 +33,7 @@ import {
   UnavailableNote,
   withUnavailable,
 } from "@/components/callcenter/CallCentreUnavailable";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { pdFontClass } from "@/lib/pd-fonts";
 import {
   applySuggestionRequest,
@@ -288,13 +289,14 @@ export default function PortfolioDashboardPage() {
             body="Once a client group is connected and has Meta or GoHighLevel data, its figures roll up here."
           />
         ) : (
-          <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-            <StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" />
+          <Stagger className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
+            <StaggerItem><StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" /></StaggerItem>
 
             {/* The Calls tab stays in the strip rather than being hidden: the
                 reader picked a metric and deserves an answer about it, and a
                 tab that quietly disappears when a client is onboarded a
                 certain way is harder to explain than one that says why. */}
+            <StaggerItem>
             {chartMetric === "calls" && !hasCallCentre ? (
               <CallCentreUnavailable
                 className="mb-[18px] h-[340px]"
@@ -327,7 +329,9 @@ export default function PortfolioDashboardPage() {
               </PdCard>
             )}
 
-            <div className="mb-[18px] flex gap-[18px]">
+            </StaggerItem>
+
+            <StaggerItem className="mb-[18px] flex gap-[18px]">
               <PdCard
                 className="min-w-0 flex-[0.85]"
                 title="Top performing clients"
@@ -366,13 +370,14 @@ export default function PortfolioDashboardPage() {
                   }
                 />
               </PdCard>
-            </div>
+            </StaggerItem>
 
             {/* The cells stay even when none of them can be filled in — the
                 reader still needs to know which six figures Birdy tracks here,
                 and an empty card answers "what am I missing out on?" with
                 nothing at all. The heading note carries the reason and the way
                 out of it. */}
+            <StaggerItem>
             <PdCard
               title="Call insights"
               action={
@@ -387,7 +392,8 @@ export default function PortfolioDashboardPage() {
               )}
               <StatStrip stats={callStats} variant="separate" label="Call insights" />
             </PdCard>
-          </div>
+            </StaggerItem>
+          </Stagger>
         )}
 
         <SidePanel

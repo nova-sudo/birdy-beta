@@ -19,7 +19,7 @@ function StatTile({ icon: Icon, label, value, sub, loading, index, reduce }) {
       transition={{ duration: 0.2, ease: EASE, delay: reduce ? 0 : index * 0.04 }}
       className="flex-1 min-w-[150px] rounded-xl border bg-white px-4 py-3"
     >
-      <div className="flex items-center gap-2 text-[#71658B]">
+      <div className="flex items-center gap-2 text-pd-muted">
         <Icon className="h-3.5 w-3.5 text-purple-600" />
         <span className="text-xs font-medium">{label}</span>
       </div>
@@ -28,7 +28,7 @@ function StatTile({ icon: Icon, label, value, sub, loading, index, reduce }) {
       ) : (
         <div className="mt-1 text-2xl font-bold tracking-tight">{value}</div>
       )}
-      {sub && !loading && <div className="text-[11px] text-[#71658B]">{sub}</div>}
+      {sub && !loading && <div className="text-[11px] text-pd-muted">{sub}</div>}
     </motion.div>
   )
 }

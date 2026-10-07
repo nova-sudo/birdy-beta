@@ -3,8 +3,8 @@
 // Shared primitives for the first-run onboarding wizard. Everything here is
 // presentational; state lives in page.jsx. Styling follows the onboarding
 // design handoff exactly — it shares the pd-* token palette with the
-// Portfolio Dashboard / Sales Hub screens (globals.css), Poppins for
-// headings, Inter for body (lib/pd-fonts).
+// Portfolio Dashboard / Sales Hub screens (globals.css), Bricolage
+// Grotesque for headings, Inter for body (lib/pd-fonts).
 
 import { useEffect, useRef, useState } from "react"
 import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"
@@ -18,7 +18,8 @@ import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"
  * 600 rather than the original 440 because at 440 two thirds of the step
  * headings wrapped, and they wrapped mid-phrase — "Want to change the client /
  * name?" — which reads as the box being too small rather than as a deliberate
- * break. Measured against the real Poppins Bold at 28px/23px, the narrow
+ * break. Measured against the original Poppins Bold at 28px/23px (Bricolage
+ * Grotesque, the display face now, sets narrower), the narrow
  * headings cluster below 560px and then jump to 673px, so 600 clears the whole
  * lower cluster with room to spare while staying a readable prose measure.
  * Going wider only pays off past 680, which is far too wide for a centred

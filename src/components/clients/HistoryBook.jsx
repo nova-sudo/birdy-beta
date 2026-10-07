@@ -33,13 +33,13 @@ function relativeTime(iso) {
 function NoteEntry({ note, onDelete, deleting }) {
   return (
     <div className="group flex items-start gap-3 rounded-[10px] border border-pd-border p-[13px]">
-      <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-[#F1EEFC] text-[#6B4EE6]">
+      <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
         <StickyNote className="size-3.5" aria-hidden="true" />
       </span>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className="rounded-[5px] bg-[#F1EEFC] px-[7px] py-[2px] text-[10px] font-bold text-[#6B4EE6]">
+          <span className="rounded-[5px] bg-pd-primary-tint px-[7px] py-[2px] text-[10px] font-bold text-pd-primary">
             Note
           </span>
           <span className="truncate text-[10.5px] text-muted-foreground">
@@ -104,7 +104,7 @@ export function HistoryBook({
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface">
       <div className="flex items-center gap-2 border-b border-pd-border px-[22px] py-4">
-        <Book className="size-4 text-[#6B4EE6]" aria-hidden="true" />
+        <Book className="size-4 text-pd-primary" aria-hidden="true" />
         <p className="font-pd-display text-[15px] font-semibold text-pd-ink">
           History book
         </p>
@@ -168,7 +168,7 @@ export function HistoryBook({
           type="submit"
           disabled={!draft.trim() || sending}
           aria-label="Save note"
-          className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-[#6B4EE6] text-white transition hover:bg-[#5B3FD6] disabled:opacity-50"
+          className="flex size-[38px] shrink-0 items-center justify-center rounded-[10px] bg-pd-primary text-white transition hover:bg-purple-700 disabled:opacity-50"
         >
           {sending
             ? <Loader2 className="size-4 animate-spin" />

@@ -10,7 +10,7 @@ import { PLANS, PLAN_ORDER, STATUS_STYLES, STATUS_LABELS } from "./plans";
 // #6B4EE6, and the other two reuse Info and Success rather than inventing an
 // accent — the style guide allows no new hues.
 const TONES = {
-  purple: { text: "text-pd-primary", tint: "bg-pd-primary-tint", solid: "bg-pd-primary hover:bg-[#5A3FD6]", border: "border-pd-primary" },
+  purple: { text: "text-pd-primary", tint: "bg-pd-primary-tint", solid: "bg-pd-primary hover:bg-purple-700", border: "border-pd-primary" },
   blue: { text: "text-pd-info", tint: "bg-pd-info-bg", solid: "bg-pd-info hover:brightness-95", border: "border-pd-info" },
   emerald: { text: "text-pd-success", tint: "bg-pd-success-bg", solid: "bg-pd-success hover:brightness-95", border: "border-pd-success" },
 };
@@ -55,7 +55,7 @@ function PlanCard({ plan, billingStatus, onManage, loadingManage }) {
     "w-full rounded-[10px] px-4 py-[11px] text-[14px] font-semibold transition-colors",
     "flex items-center justify-center gap-2",
     outlined
-      ? `border border-[#DFDFE8] bg-pd-surface ${c.text} hover:bg-pd-divider`
+      ? `border border-[#DCDBD7] bg-pd-surface ${c.text} hover:bg-pd-divider`
       : `text-white ${c.solid}`,
   ].join(" ");
 
@@ -219,12 +219,12 @@ export function PlanPicker({
               </span>
             </span>
           )}
-          {/* Secondary button: #5A5A6E on #fff, 1px #DFDFE8, 9px 16px, radius 9px. */}
+          {/* Secondary button: #5A5A6E on #fff, 1px #DCDBD7, 9px 16px, radius 9px. */}
           <button
             type="button"
             onClick={onManage}
             disabled={loadingManage}
-            className="ml-auto flex items-center gap-[7px] rounded-[9px] border border-[#DFDFE8] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
+            className="ml-auto flex items-center gap-[7px] rounded-[9px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
           >
             {loadingManage
               ? <Loader2 className="size-[14px] animate-spin" />
@@ -288,7 +288,7 @@ export function PlanPicker({
               type="button"
               onClick={() => setConfirmingCancel(false)}
               disabled={busySubscription}
-              className="rounded-[9px] border border-[#DFDFE8] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
+              className="rounded-[9px] border border-[#DCDBD7] bg-pd-surface px-4 py-[9px] text-[13px] font-semibold text-pd-body transition-colors hover:bg-pd-divider disabled:opacity-60"
             >
               Keep my subscription
             </button>

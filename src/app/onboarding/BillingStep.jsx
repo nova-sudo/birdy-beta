@@ -149,7 +149,7 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
                     plan.planId ? "" : "cursor-not-allowed opacity-50"
                   }`}
                   style={{
-                    borderColor: isRecommended ? "#6B4EE6" : "#ECECF2",
+                    borderColor: isRecommended ? "#5B3FD6" : "#E7E6E3",
                     background: isRecommended ? "#F7F5FE" : "#fff",
                   }}
                 >

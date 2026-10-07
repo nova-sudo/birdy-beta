@@ -96,7 +96,7 @@ function PricingControls({ config, mutate }) {
     <div className="rounded-xl border bg-white p-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h3 className="text-sm font-bold text-[#1F1B33]">Pricing controls</h3>
+          <h3 className="text-sm font-bold text-pd-ink">Pricing controls</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
             The markup is the profit multiplier and applies to <span className="font-medium">both</span> rates —
             Managed (real model cost) and Own-key (the 0.5/1k base). Takes effect on the next question, no redeploy.
@@ -113,7 +113,7 @@ function PricingControls({ config, mutate }) {
           so every question runs on Birdy's account and is billed at the
           managed rate. Shown, not switchable — CREDITS_RATE_MODE reverts it. */}
       <div className="mt-4">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] mb-1.5">Active rate</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted mb-1.5">Active rate</p>
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-purple-200 bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700">
           <Sparkles className="h-3.5 w-3.5" /> Managed (real model cost)
         </span>
@@ -122,7 +122,7 @@ function PricingControls({ config, mutate }) {
       {/* Enforcement (the hard stopper) */}
       <div className={`mt-4 flex items-start justify-between gap-4 rounded-lg border p-4 transition-colors ${enforce ? "border-red-200 bg-red-50/50" : "border-gray-200 bg-gray-50/60"}`}>
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 text-sm font-semibold text-[#1F1B33]">
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-pd-ink">
             <ShieldCheck className={`h-4 w-4 ${enforce ? "text-red-600" : "text-gray-400"}`} />
             Enforce credit limits
           </p>
@@ -146,7 +146,7 @@ function PricingControls({ config, mutate }) {
       {/* Markup dial — applies to both rates */}
       <div className="mt-4 rounded-lg border border-purple-100 bg-purple-50/40 p-4">
         <div className="flex items-center justify-between">
-          <label htmlFor="markup" className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">
+          <label htmlFor="markup" className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">
             Credit markup
           </label>
           <div className="flex items-center gap-1.5">
@@ -225,10 +225,10 @@ function PricingControls({ config, mutate }) {
 function TotalCard({ Icon, label, value, tint, sub }) {
   return (
     <div className="rounded-xl border bg-white p-4">
-      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-pd-muted">
         <Icon className={`h-3.5 w-3.5 ${tint}`} /> {label}
       </p>
-      <p className="mt-1 text-2xl font-extrabold text-[#1F1B33] tabular-nums">{fmt(value)}</p>
+      <p className="mt-1 text-2xl font-extrabold text-pd-ink tabular-nums">{fmt(value)}</p>
       {sub && <p className="mt-0.5 text-[11px] text-gray-400">{sub}</p>}
     </div>
   );
@@ -263,7 +263,7 @@ function GrantCreditsDialog({ account, onClose, onGranted }) {
         </DialogHeader>
         <div className="space-y-3">
           <div>
-            <Label htmlFor="grant-amount" className="text-xs font-semibold text-[#71658B]">Amount</Label>
+            <Label htmlFor="grant-amount" className="text-xs font-semibold text-pd-muted">Amount</Label>
             <Input
               id="grant-amount"
               type="number" min={1} autoFocus
@@ -273,7 +273,7 @@ function GrantCreditsDialog({ account, onClose, onGranted }) {
             />
           </div>
           <div>
-            <Label htmlFor="grant-note" className="text-xs font-semibold text-[#71658B]">Note (optional)</Label>
+            <Label htmlFor="grant-note" className="text-xs font-semibold text-pd-muted">Note (optional)</Label>
             <Input
               id="grant-note"
               placeholder="e.g. goodwill credit, support escalation"
@@ -314,15 +314,15 @@ function AccountsTable({ data, loading, onGrant }) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Account</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Plan</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Balance</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Used · period</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Used · all-time</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Bought</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Granted</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Questions</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Last used</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Account</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Plan</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Balance</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Used · period</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Used · all-time</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Bought</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Granted</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Questions</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Last used</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -422,7 +422,7 @@ export default function AdminCreditsPage() {
   return (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-xl font-bold text-[#1F1B33] flex items-center gap-2">
+        <h2 className="text-xl font-bold text-pd-ink flex items-center gap-2">
           <Coins className="h-5 w-5 text-purple-600" /> Birdy Credits
         </h2>
         <p className="text-sm text-muted-foreground">
@@ -462,7 +462,7 @@ export default function AdminCreditsPage() {
 
       {/* Accounts */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-bold text-[#1F1B33]">
+        <h3 className="text-sm font-bold text-pd-ink">
           Accounts {accounts?.total ? <span className="font-normal text-muted-foreground">({fmt(accounts.total)})</span> : null}
         </h3>
         <div className="relative w-full sm:w-72">

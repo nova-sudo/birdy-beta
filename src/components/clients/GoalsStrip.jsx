@@ -31,10 +31,10 @@ const ICONS = {
 // Icon chip tints, from the handoff's token table.
 const CHIP = {
   revenue: { color: "#25A55F", bg: "#EDF8F1" },
-  closes: { color: "#6B4EE6", bg: "#F1EEFC" },
+  closes: { color: "#5B3FD6", bg: "#EFECFB" },
   cpl: { color: "#E0920A", bg: "#FDF6EC" },
   closeRate: { color: "#3B7DD6", bg: "#EAF1FD" },
-  leads: { color: "#6B4EE6", bg: "#F1EEFC" },
+  leads: { color: "#5B3FD6", bg: "#EFECFB" },
 }
 
 const PILL = {

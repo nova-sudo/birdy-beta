@@ -10,7 +10,7 @@
 /* ── Custom Scrollbar (global) ──────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: hsl(0 0% 75%) transparent;
+  scrollbar-color: var(--gray-300) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -23,13 +23,13 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 80%);
+  background: var(--gray-300);
   border-radius: 9999px;
   transition: background 0.2s;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 0% 60%);
+  background: var(--gray-400);
 }
 
 *::-webkit-scrollbar-corner {
@@ -38,80 +38,100 @@
 
 @layer base {
   :root {
-    /* ── Core Semantic Tokens (Bytes design system) ──────────── */
-    --background: hsl(0 0% 100%);           /* white */
-    --foreground: hsl(0 0% 9%);             /* near-black */
+    /* ── Core Semantic Tokens ─────────────────────────────────
+       Palette "Ink & violet": warm off-white canvas, near-black ink, one
+       deep violet used sparingly. The pd-* scale below carries the same
+       values, so stock shadcn components and the handoff screens agree. */
+    --background: #ffffff;
+    --foreground: #18181B;
 
-    --card: hsl(0 0% 100%);
-    --card-foreground: hsl(0 0% 9%);
+    --card: #ffffff;
+    --card-foreground: #18181B;
 
-    --popover: hsl(0 0% 100%);
-    --popover-foreground: hsl(0 0% 9%);
+    --popover: #ffffff;
+    --popover-foreground: #18181B;
 
-    --primary: hsl(260 70% 55%);
-    /* #7C4DFF — Birdy purple (kept) */
-    --primary-foreground: hsl(0 0% 100%);
-    --primary-glow: hsl(280 80% 65%);
+    --primary: #5B3FD6;
+    --primary-foreground: #ffffff;
+    --primary-glow: #7A61E0;
     /* lighter companion for gradient washes (btn-gradient, headings) */
 
-    --secondary: hsl(0 0% 96%);
-    --secondary-foreground: hsl(0 0% 12%);
+    --secondary: #F4F4F2;
+    --secondary-foreground: #27272A;
 
-    --muted: hsl(0 0% 96%);
-    --muted-foreground: hsl(0 0% 40%);
+    --muted: #F4F4F2;
+    --muted-foreground: #6B6B72;
 
-    --accent: hsl(0 0% 92%);
-    --accent-foreground: hsl(0 0% 0%);
+    --accent: #EFEEEB;
+    --accent-foreground: #18181B;
 
-    --destructive: hsl(0 84% 60%);
-    --destructive-foreground: hsl(0 0% 100%);
+    --destructive: #E5484D;
+    --destructive-foreground: #ffffff;
 
-    --success: hsl(142 70% 42%);
-    --success-foreground: hsl(0 0% 100%);
+    --success: #16794C;
+    --success-foreground: #ffffff;
 
-    --border: hsl(0 0% 90%);
-    --input: hsl(0 0% 90%);
-    --ring: hsl(0 0% 55%);
+    --border: #E7E6E3;
+    --input: #E7E6E3;
+    --ring: #5B3FD6;
 
-    --radius: 1rem;
-    /* 16px base radius */
+    /* Round corners: cards land at 22px (rounded-xl), controls go pill. */
+    --radius: 18px;
 
-    /* ── Sidebar Tokens — neutral ────────────────────────────── */
+    /* ── Sidebar Tokens ──────────────────────────────────────── */
     /* Painted with the header's own surface rather than a shade off it, so the
        rail and the bar above it read as one frame around the canvas instead of
        two nearly-matching greys. Tracks --background by reference: change that
        and the two stay together. */
     --sidebar: var(--background);
-    --sidebar-foreground: hsl(0 0% 9%);
-    --sidebar-primary: hsl(260 70% 55%);
-    --sidebar-primary-foreground: hsl(0 0% 100%);
-    --sidebar-accent: hsl(0 0% 96%);
-    --sidebar-accent-foreground: hsl(0 0% 12%);
-    --sidebar-border: hsl(0 0% 90%);
-    --sidebar-ring: hsl(0 0% 55%);
+    --sidebar-foreground: #18181B;
+    --sidebar-primary: #5B3FD6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #F4F4F2;
+    --sidebar-accent-foreground: #27272A;
+    --sidebar-border: #E7E6E3;
+    --sidebar-ring: #5B3FD6;
 
-    /* ── Multi-layer shadow system ──────────────────────────── */
-    --shadow-2xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
-    --shadow-xs: 0px 1px 4px 0px hsl(0 0% 0% / 0.08);
-    --shadow-sm: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
-    --shadow: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 1px 2px -1px hsl(0 0% 0% / 0.16);
-    --shadow-md: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 2px 4px -1px hsl(0 0% 0% / 0.16);
-    --shadow-lg: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 4px 6px -1px hsl(0 0% 0% / 0.16);
-    --shadow-xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.16), 0px 8px 10px -1px hsl(0 0% 0% / 0.16);
-    --shadow-2xl: 0px 1px 4px 0px hsl(0 0% 0% / 0.4);
+    /* ── Shadows — tinted with the ink, never pure black ─────── */
+    --shadow-2xs: 0 1px 2px rgba(24, 24, 27, 0.04);
+    --shadow-xs: 0 1px 2px rgba(24, 24, 27, 0.05);
+    --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05), 0 4px 12px -6px rgba(24, 24, 27, 0.10);
+    --shadow: 0 1px 2px rgba(24, 24, 27, 0.05), 0 4px 12px -6px rgba(24, 24, 27, 0.10);
+    --shadow-md: 0 1px 2px rgba(24, 24, 27, 0.05), 0 10px 28px -14px rgba(24, 24, 27, 0.18);
+    --shadow-lg: 0 2px 4px rgba(24, 24, 27, 0.05), 0 16px 36px -16px rgba(24, 24, 27, 0.22);
+    --shadow-xl: 0 2px 6px rgba(24, 24, 27, 0.06), 0 24px 48px -20px rgba(24, 24, 27, 0.28);
+    --shadow-2xl: 0 32px 64px -24px rgba(24, 24, 27, 0.35);
 
-    /* ── Extended Purple Palette ─────────────────────────────── */
-    --purple-50: #f5f3ff;
-    --purple-100: #ede8ff;
-    --purple-200: #dcd5ff;
-    --purple-300: #c4b5fc;
-    --purple-400: #a78df8;
-    --purple-500: #9b87f5;
-    --purple-600: #7854ea;
-    --purple-700: #6e59a5;
-    --purple-800: #5b4294;
-    --purple-900: #4a347b;
-    --purple-950: #2e1f50;
+    /* ── Violet scale ────────────────────────────────────────────
+       Backs Tailwind's purple-*, violet-* and indigo-* utilities (see
+       @theme), so every legacy purple in the app lands on one hue. 600 is
+       the brand. */
+    --purple-50: #F4F2FD;
+    --purple-100: #EFECFB;
+    --purple-200: #DDD6F8;
+    --purple-300: #C3B7F2;
+    --purple-400: #9F8BEA;
+    --purple-500: #7A61E0;
+    --purple-600: #5B3FD6;
+    --purple-700: #4C33BE;
+    --purple-800: #3E2A9A;
+    --purple-900: #33247A;
+    --purple-950: #1F1650;
+
+    /* ── Neutral scale ───────────────────────────────────────────
+       Backs Tailwind's gray-* utilities: warm surfaces, zinc-leaning text,
+       matching the ink above instead of Tailwind's blue-grey. */
+    --gray-50: #F7F7F5;
+    --gray-100: #F0EFEC;
+    --gray-200: #E7E6E3;
+    --gray-300: #D6D5D1;
+    --gray-400: #A1A1A0;
+    --gray-500: #74747A;
+    --gray-600: #57575E;
+    --gray-700: #3F3F46;
+    --gray-800: #27272A;
+    --gray-900: #18181B;
+    --gray-950: #0C0C0E;
 
     /* ── Portfolio Dashboard palette ─────────────────────────────
        Handoff "Birdy — Portfolio Dashboard (variant 3e)". These are
@@ -119,50 +139,50 @@
        outside the semantic scale above: the screen is specced at high
        fidelity, so its greys and tints are exact rather than derived.
        Registered under @theme below as the pd-* colour scale.       */
-    --pd-primary: #6B4EE6;
-    --pd-primary-tint: #F1EEFC;
-    --pd-primary-light: #A98BF5;
-    --pd-primary-pale: #C9BEF3;
-    --pd-ink: #1F1B33;
-    --pd-body: #5A5A6E;
-    --pd-muted: #6B6480;
-    --pd-subtle: #8A8A9A;
-    --pd-faint: #9A9AAB;
-    --pd-divider: #F1F1F5;
-    --pd-border: #ECECF2;
-    --pd-border-strong: #E3E3EC;
-    --pd-chevron: #CFCFDA;
+    --pd-primary: #5B3FD6;
+    --pd-primary-tint: #EFECFB;
+    --pd-primary-light: #9F8BEA;
+    --pd-primary-pale: #C3B7F2;
+    --pd-ink: #18181B;
+    --pd-body: #52525B;
+    --pd-muted: #63636B;
+    --pd-subtle: #85858C;
+    --pd-faint: #98989E;
+    --pd-divider: #EFEEEB;
+    --pd-border: #E7E6E3;
+    --pd-border-strong: #DCDBD7;
+    --pd-chevron: #CFCECA;
     --pd-surface: #ffffff;
-    --pd-canvas: #F7F7FB;
-    --pd-scroll: #DEDCE8;
+    --pd-canvas: #F6F6F4;
+    --pd-scroll: #DAD9D5;
     /* Table head and the alternate row. Both sit a hair off white on purpose:
        the stripe is meant to help the eye track a wide row across, not to
        divide the table into bands. */
-    --pd-table-head: #FAFAFC;
-    --pd-row-zebra: #FCFCFD;
-    --pd-row-border: #F5F5F8;
-    --pd-success: #25A55F;
-    --pd-success-bg: #EDF8F1;
+    --pd-table-head: #FAFAF8;
+    --pd-row-zebra: #FCFCFB;
+    --pd-row-border: #F2F1EE;
+    --pd-success: #16794C;
+    --pd-success-bg: #E8F4EE;
     --pd-danger: #E5484D;
     --pd-danger-bg: #FEF1F1;
     --pd-danger-surface: #FEF6F6;
     --pd-danger-border: #F8DEDE;
-    --pd-danger-tint: #F3FAF6;
+    --pd-danger-tint: #F1F8F4;
     --pd-warning: #E0920A;
     --pd-warning-bg: #FDF6EC;
     --pd-amber: #B4530A;
     --pd-amber-bg: #FDF1E7;
     --pd-info: #3B7DD6;
     --pd-info-bg: #EAF1FD;
-    --pd-healthy-surface: #F3FAF6;
-    --pd-healthy-border: #D5EEDF;
-    --pd-neutral-badge: #E7E7ED;
+    --pd-healthy-surface: #F1F8F4;
+    --pd-healthy-border: #D3E9DC;
+    --pd-neutral-badge: #E7E6E3;
 
     /* Shadows — one per role in the design's shadow table. */
-    --pd-shadow-segment: 0 2px 8px -2px rgba(107, 78, 230, 0.35);
-    --pd-shadow-popover: 0 14px 34px -12px rgba(30, 25, 60, 0.28);
-    --pd-shadow-tooltip: 0 6px 16px -6px rgba(30, 25, 60, 0.5);
-    --pd-shadow-glow: 0 0 0 4px rgba(107, 78, 230, 0.18);
+    --pd-shadow-segment: 0 2px 8px -2px rgba(91, 63, 214, 0.40);
+    --pd-shadow-popover: 0 14px 34px -12px rgba(24, 24, 27, 0.26);
+    --pd-shadow-tooltip: 0 6px 16px -6px rgba(24, 24, 27, 0.45);
+    --pd-shadow-glow: 0 0 0 4px rgba(91, 63, 214, 0.18);
   }
 
 
@@ -218,6 +238,41 @@
   --color-purple-900: var(--purple-900);
   --color-purple-950: var(--purple-950);
 
+  /* violet/indigo collapse onto the one violet; gray onto the warm neutrals */
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-50: var(--gray-50);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  --color-gray-950: var(--gray-950);
+  --color-indigo-100: var(--purple-100);
+  --color-indigo-200: var(--purple-200);
+  --color-indigo-300: var(--purple-300);
+  --color-indigo-400: var(--purple-400);
+  --color-indigo-500: var(--purple-500);
+  --color-indigo-50: var(--purple-50);
+  --color-indigo-600: var(--purple-600);
+  --color-indigo-700: var(--purple-700);
+  --color-indigo-800: var(--purple-800);
+  --color-indigo-900: var(--purple-900);
+  --color-indigo-950: var(--purple-950);
+  --color-violet-100: var(--purple-100);
+  --color-violet-200: var(--purple-200);
+  --color-violet-300: var(--purple-300);
+  --color-violet-400: var(--purple-400);
+  --color-violet-500: var(--purple-500);
+  --color-violet-50: var(--purple-50);
+  --color-violet-600: var(--purple-600);
+  --color-violet-700: var(--purple-700);
+  --color-violet-800: var(--purple-800);
+  --color-violet-900: var(--purple-900);
+  --color-violet-950: var(--purple-950);
+
   /* Portfolio Dashboard palette */
   --color-pd-primary: var(--pd-primary);
   --color-pd-primary-tint: var(--pd-primary-tint);
@@ -258,7 +313,9 @@
   --shadow-pd-tooltip: var(--pd-shadow-tooltip);
   --shadow-pd-glow: var(--pd-shadow-glow);
 
-  --font-pd-display: var(--font-poppins);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-pd-display: var(--font-bricolage);
   --font-pd-body: var(--font-inter);
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -380,7 +437,7 @@
        so cards and rails read as raised surfaces everywhere, not just there.
        `--background` stays white — it is what those surfaces are painted with. */
     background-color: var(--pd-canvas);
-    font-family: var(--font-outfit), 'Outfit', ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     transition: background-color 0.5s ease, color 0.5s ease;
   }
 
@@ -572,7 +629,7 @@
   background-color: var(--card);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  box-shadow: var(--shadow-xs);
   /* shadow-sm */
   padding: 1.5rem;
   /* p-6 */
@@ -580,9 +637,29 @@
 }
 
 .dashboard-card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  box-shadow: var(--shadow-md);
   /* shadow-md */
 }
+/* ---------- Skeleton shimmer ----------
+   A light band sweeping across warm grey. Reads as "loading" without the
+   whole block blinking, and settles to a flat tone for reduced motion. */
+@keyframes skeleton-shimmer {
+  from { background-position: 150% 0; }
+  to   { background-position: -50% 0; }
+}
+
+.skeleton-shimmer {
+  background-color: var(--gray-100);
+  background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer { animation: none; background-image: none; }
+}
+
 /* ---------- Birdy logo flap animation ---------- */
 @keyframes birdy-flap {
   0%   { transform: rotate(0deg)  scaleY(1)    translateY(0); }
@@ -628,18 +705,18 @@
   background-color: var(--primary);
   color: var(--primary-foreground);
   border: 2px solid var(--primary);
-  box-shadow: 0 0 0 4px hsl(260 70% 55% / 0.18);
+  box-shadow: var(--pd-shadow-glow);
 }
 
 /* Card panel housing the active step body */
 .card-gradient {
-  background-image: linear-gradient(135deg, var(--card) 0%, hsl(0 0% 98%) 100%);
+  background-image: linear-gradient(135deg, var(--card) 0%, var(--gray-50) 100%);
 }
 
 .shadow-card {
   box-shadow:
-    0 1px 3px 0 hsl(0 0% 0% / 0.06),
-    0 8px 24px -6px hsl(0 0% 0% / 0.10);
+    0 1px 3px 0 rgba(24, 24, 27, 0.06),
+    0 8px 24px -6px rgba(24, 24, 27, 0.10);
 }
 
 /* Gradient primary button — used for Test Connection, Next, Create */
@@ -652,7 +729,7 @@
 
 .btn-gradient:hover:not(:disabled) {
   filter: brightness(1.05);
-  box-shadow: 0 6px 18px -6px hsl(260 70% 55% / 0.45);
+  box-shadow: 0 6px 18px -6px rgba(91, 63, 214, 0.45);
 }
 
 .btn-gradient:active:not(:disabled) {

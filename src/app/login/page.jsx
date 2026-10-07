@@ -41,7 +41,7 @@ export default function LoginPage() {
           <Silk
             speed={5}
             scale={1}
-            color="#7C3AED"
+            color="#5B3FD6"
             noiseIntensity={1.5}
             rotation={0}
           />

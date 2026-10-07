@@ -246,7 +246,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
             <Button
               onClick={saveProfile}
               disabled={!dirty || savingProfile}
-              className="w-fit bg-[#6B4EE6] text-white hover:bg-[#5B3FD6]"
+              className="w-fit bg-pd-primary text-white hover:bg-purple-700"
             >
               {savingProfile ? "Saving…" : "Save changes"}
             </Button>
@@ -314,7 +314,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               <Button
                 type="submit"
                 disabled={!current || !next || !confirm || savingPassword}
-                className="w-fit bg-[#6B4EE6] text-white hover:bg-[#5B3FD6]"
+                className="w-fit bg-pd-primary text-white hover:bg-purple-700"
               >
                 {savingPassword ? "Updating…" : "Update password"}
               </Button>
@@ -350,7 +350,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
                       aria-pressed={active}
                       className={`rounded-[10px] border-2 p-4 text-left transition ${
                         active
-                          ? "border-[#6B4EE6] bg-[#F1EEFC]"
+                          ? "border-pd-primary bg-pd-primary-tint"
                           : "border-border hover:border-[#CFCFDA]"
                       }`}
                     >
@@ -394,7 +394,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               <Button
                 onClick={saveBrief}
                 disabled={savingBrief}
-                className="mt-4 w-fit bg-[#6B4EE6] text-white hover:bg-[#5B3FD6]"
+                className="mt-4 w-fit bg-pd-primary text-white hover:bg-purple-700"
               >
                 {savingBrief ? "Saving…" : "Save schedule"}
               </Button>

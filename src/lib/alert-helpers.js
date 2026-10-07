@@ -118,7 +118,7 @@ export function conditionSummary(alert) {
 
 export function statusBadge(status, snoozedUntil) {
   if (status === "active")
-    return <Badge className="bg-[#713cdd] text-white border-0 rounded-full text-xs font-semibold hover:bg-primary/80 px-2.5 py-0.5">Active</Badge>
+    return <Badge className="bg-pd-primary text-white border-0 rounded-full text-xs font-semibold hover:bg-primary/80 px-2.5 py-0.5">Active</Badge>
   if (status === "triggered")
     return <Badge className="bg-[#EF4343] text-white border-0 rounded-full text-xs font-semibold px-2.5 py-0.5">Triggered</Badge>
   if (status === "paused") {
@@ -171,7 +171,7 @@ export function ProgressToTrigger({ alert }) {
       ? "bg-orange-400"
       : pct >= 50
         ? "bg-yellow-400"
-        : "bg-[#713cdd]/40"
+        : "bg-pd-primary/40"
 
   const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "neq" ? "≠" : operator === "pct_drop" ? "↓" : "↑"
 

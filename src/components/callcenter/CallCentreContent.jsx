@@ -1449,14 +1449,14 @@ export function CallCentreContent({
   const StatCard = ({ label, value, desc, Icon }) => (
     <Card className="border rounded-lg shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm text-[#71658B] font-medium">{label}</CardTitle>
-        <div className="h-7 w-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+        <CardTitle className="text-sm text-pd-muted font-medium">{label}</CardTitle>
+        <div className="h-7 w-7 bg-pd-primary/10 rounded-md text-center flex items-center justify-center">
           <Icon className="h-5 w-5 text-purple-500" />
         </div>
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{groupsLoading ? "—" : value.toLocaleString()}</div>
-        <p className="text-xs text-[#71658B] text-muted-foreground mt-1">{desc}</p>
+        <p className="text-xs text-pd-muted text-muted-foreground mt-1">{desc}</p>
       </CardContent>
     </Card>
   )

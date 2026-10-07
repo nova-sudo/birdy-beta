@@ -59,8 +59,8 @@ function AdminRail({ pathname }) {
 
 function AdminTopbar() {
   return (
-    <header className="flex h-15 shrink-0 items-center gap-3 border-b border-[#ECECF2] bg-white px-6">
-      <h1 className="text-lg font-bold text-[#1F1B33]">Admin</h1>
+    <header className="flex h-15 shrink-0 items-center gap-3 border-b border-[#E7E6E3] bg-white px-6">
+      <h1 className="text-lg font-bold text-pd-ink">Admin</h1>
       <span className="rounded-md bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-100">
         Internal
       </span>
@@ -68,7 +68,7 @@ function AdminTopbar() {
       <div className="ml-auto flex items-center gap-3">
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#ECECF2] px-3 py-1.5 text-sm font-semibold text-[#5A5A6E] transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#E7E6E3] px-3 py-1.5 text-sm font-semibold text-[#5A5A6E] transition-colors hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Back to Birdy
@@ -88,7 +88,7 @@ export default function AdminShell({ children }) {
   const pathname = usePathname();
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-[#F7F7FB]">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-pd-canvas">
       <AdminRail pathname={pathname} />
       <div className="flex min-w-0 flex-1 flex-col">
         <AdminTopbar />

@@ -10,7 +10,11 @@ function Card({
     <div
       data-slot="card"
       className={cn(
-        "bg-card text-card-foreground flex flex-col gap-2 rounded-xl border py-6 space-y-2",
+        "bg-card text-card-foreground flex flex-col gap-4 rounded-xl border py-6 shadow-sm",
+        // Only cards you can act on lift: links, buttons, or ones marked
+        // data-interactive. A static card that rose on hover would read as
+        // clickable and do nothing.
+        "transition-[transform,box-shadow] duration-300 ease-[cubic-bezier(.2,.8,.2,1)] [a&]:hover:-translate-y-[3px] [a&]:hover:shadow-lg [button&]:hover:-translate-y-[3px] [button&]:hover:shadow-lg data-[interactive=true]:cursor-pointer data-[interactive=true]:hover:-translate-y-[3px] data-[interactive=true]:hover:shadow-lg motion-reduce:transform-none",
         className
       )}
       {...props} />
@@ -39,7 +43,7 @@ function CardTitle({
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn("font-display text-[1.05rem] leading-tight font-semibold tracking-[-0.01em]", className)}
       {...props} />
   );
 }

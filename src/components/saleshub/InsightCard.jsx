@@ -1,7 +1,8 @@
 "use client";
 
 import { ChevronRight, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
+import { Pop } from "@/components/motion";
 import { askBirdy } from "@/lib/ask-birdy";
 
 // ─── Birdy Insights ─────────────────────────────────────────────────────────
@@ -19,9 +20,10 @@ import { askBirdy } from "@/lib/ask-birdy";
  */
 export function InsightCard({ parts, prompt, className }) {
   return (
-    <section
+    <Pop
+      as="section"
       className={cn(
-        "rounded-[16px] border border-[#5A3FD6] bg-gradient-to-br from-pd-primary to-[#8B6BF0] px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(107,78,230,.6)]",
+        "rounded-[16px] border border-purple-700 bg-gradient-to-br from-pd-primary to-[#7A61E0] px-[18px] py-4 shadow-[0_10px_26px_-12px_rgba(91,63,214,.6)]",
         className
       )}
     >
@@ -57,6 +59,6 @@ export function InsightCard({ parts, prompt, className }) {
           <ChevronRight className="size-[13px]" aria-hidden="true" />
         </button>
       )}
-    </section>
+    </Pop>
   );
 }

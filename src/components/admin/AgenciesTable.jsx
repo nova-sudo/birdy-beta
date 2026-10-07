@@ -110,13 +110,13 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Owner / Agency</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Plan</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Sub-accounts</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Leads</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">AI queries</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Last active</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Actions</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Owner / Agency</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Plan</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Sub-accounts</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Leads</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">AI queries</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Last active</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

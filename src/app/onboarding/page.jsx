@@ -114,7 +114,7 @@ const DEFAULT_BRIEF_ITEMS = {
   spend: true, leads: true, conversion: true, top: true, alerts: true, underperform: false,
 }
 
-const CONFETTI_COLORS = ["#6B4EE6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#A98BF5"]
+const CONFETTI_COLORS = ["#5B3FD6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#9F8BEA"]
 
 /**
  * The three answers from the KPI step, as PUT /api/client-groups/{id}/targets
@@ -1191,7 +1191,7 @@ export default function OnboardingPage() {
                     key={p}
                     className="h-1 flex-1 rounded-sm"
                     style={{
-                      background: p < phase ? "#6B4EE6" : p === phase ? "#A98BF5" : "#F1F1F5",
+                      background: p < phase ? "#5B3FD6" : p === phase ? "#9F8BEA" : "#EFEEEB",
                     }}
                   />
                 ))}
@@ -1307,7 +1307,7 @@ export default function OnboardingPage() {
 
           {currentKey === "connect_ghl" && (
             <div className={STEP_COL}>
-              <IconChip bg="#F1EEFC" color="#6B4EE6"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
+              <IconChip bg="#EFECFB" color="#5B3FD6"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
               <div className="mb-[10px]">
                 <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
               </div>
@@ -1496,8 +1496,8 @@ export default function OnboardingPage() {
                     onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
                     className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
                     style={{
-                      borderColor: salesTool === opt.id ? "#6B4EE6" : "#ECECF2",
-                      background: salesTool === opt.id ? "#F1EEFC" : "#fff",
+                      borderColor: salesTool === opt.id ? "#5B3FD6" : "#E7E6E3",
+                      background: salesTool === opt.id ? "#EFECFB" : "#fff",
                     }}
                   >
                     <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] ${opt.chip}`}>
@@ -1891,8 +1891,8 @@ export default function OnboardingPage() {
                     onClick={() => setFrequency(opt.id)}
                     className="flex-1 cursor-pointer rounded-[14px] border-2 px-4 py-[22px] transition-colors"
                     style={{
-                      borderColor: frequency === opt.id ? "#6B4EE6" : "#ECECF2",
-                      background: frequency === opt.id ? "#F1EEFC" : "#fff",
+                      borderColor: frequency === opt.id ? "#5B3FD6" : "#E7E6E3",
+                      background: frequency === opt.id ? "#EFECFB" : "#fff",
                     }}
                   >
                     <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
@@ -1967,8 +1967,8 @@ export default function OnboardingPage() {
                         <span
                           className="flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[5px] border-[1.5px] text-white"
                           style={{
-                            borderColor: on ? "#6B4EE6" : "#DFDFE8",
-                            background: on ? "#6B4EE6" : "#fff",
+                            borderColor: on ? "#5B3FD6" : "#DCDBD7",
+                            background: on ? "#5B3FD6" : "#fff",
                           }}
                         >
                           {on ? "✓" : ""}

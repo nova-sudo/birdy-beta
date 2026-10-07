@@ -423,7 +423,7 @@ const MetricsHub = () => {
           <Button
             aria-label="Create a custom metric"
             onClick={openCreateDialog}
-            className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-[#5A3FD6]"
+            className="size-[38px] rounded-[10px] bg-pd-primary p-0 hover:bg-purple-700"
           >
             <Plus className="size-[17px] text-white" />
           </Button>

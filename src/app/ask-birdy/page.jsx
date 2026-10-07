@@ -271,7 +271,7 @@ export default function AskBirdyPage() {
           {/* The second half of the global/client indicator: a scope badge
               pinned to the right, neutral until a new chat is saved. */}
           {isClientScoped ? (
-            <span className="flex max-w-[40%] items-center gap-1.5 overflow-hidden rounded-full border border-[#E3DAFB] bg-pd-primary-tint px-2.5 py-1 text-[11px] font-semibold text-pd-primary">
+            <span className="flex max-w-[40%] items-center gap-1.5 overflow-hidden rounded-full border border-[#DDD6F8] bg-pd-primary-tint px-2.5 py-1 text-[11px] font-semibold text-pd-primary">
               <UserRound className="size-3 shrink-0" aria-hidden="true" />
               <span className="truncate">{activeConvo.client_name} · client conversation</span>
             </span>

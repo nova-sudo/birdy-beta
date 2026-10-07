@@ -33,7 +33,7 @@ export default function AdminAgenciesPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-[#1F1B33]">Agency owners</h2>
+          <h2 className="text-xl font-bold text-pd-ink">Agency owners</h2>
           <p className="text-sm text-muted-foreground">
             Every agency on Birdy, with impersonation and conversation review.
           </p>

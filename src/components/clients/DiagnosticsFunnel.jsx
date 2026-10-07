@@ -26,7 +26,7 @@ const ICONS = {
 }
 
 const TINTS = {
-  leads: "#6B4EE6",
+  leads: "#5B3FD6",
   in_crm: "#3B7DD6",
   called: "#E0920A",
   closes: "#25A55F",
@@ -132,7 +132,7 @@ export function DiagnosticsFunnel({
               <Button
                 size="sm"
                 onClick={onViewCalls}
-                className="h-auto rounded-[9px] bg-pd-primary px-[13px] py-2 text-[12.5px] font-semibold text-white hover:bg-[#5A3FD6]"
+                className="h-auto rounded-[9px] bg-pd-primary px-[13px] py-2 text-[12.5px] font-semibold text-white hover:bg-purple-700"
               >
                 View calls
               </Button>

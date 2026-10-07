@@ -279,7 +279,7 @@ export function CreditsPanel() {
                     labelStyle={{ fontSize: 12 }}
                     contentStyle={{ fontSize: 12, borderRadius: 8 }}
                   />
-                  <Bar dataKey="credits" fill="#7c3aed" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                  <Bar dataKey="credits" fill="#5B3FD6" radius={[4, 4, 0, 0]} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

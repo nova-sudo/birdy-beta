@@ -91,7 +91,7 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
       <aside className="flex shrink-0 flex-col rounded-2xl border border-pd-border bg-pd-surface p-4 lg:w-[260px]">
         <Button
           onClick={startNew}
-          className="w-full gap-2 rounded-[9px] bg-[#6B4EE6] text-[12.5px] font-semibold text-white hover:bg-[#5B3FD6]"
+          className="w-full gap-2 rounded-[9px] bg-pd-primary text-[12.5px] font-semibold text-white hover:bg-purple-700"
           size="sm"
         >
           <MessageSquarePlus className="size-3.5" />
@@ -123,7 +123,7 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
                 aria-current={activeSessionId === thread.session_id ? "true" : undefined}
                 className={`w-full rounded-[10px] px-3 py-[11px] text-left transition disabled:opacity-60 ${
                   activeSessionId === thread.session_id
-                    ? "bg-[#F1EEFC]"
+                    ? "bg-pd-primary-tint"
                     : "hover:bg-pd-divider"
                 }`}
               >

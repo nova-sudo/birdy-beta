@@ -112,7 +112,7 @@ export function IntegrationAction({ className, ...props }) {
       type="button"
       className={cn(
         ACTION_BASE,
-        "flex-1 bg-pd-primary px-3 text-white hover:bg-[#5B3FD6]",
+        "flex-1 bg-pd-primary px-3 text-white hover:bg-purple-700",
         className
       )}
       {...props}

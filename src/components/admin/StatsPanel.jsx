@@ -102,7 +102,7 @@ export default function StatsPanel({ data, loading }) {
                 <XAxis dataKey="week" tick={{ fontSize: 11 }} />
                 <Tooltip contentStyle={{ borderRadius: 8, border: "1px solid #eee", fontSize: 12 }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="agencies" name="Agencies" fill="#7C3AED" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="agencies" name="Agencies" fill="#5B3FD6" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="sub_accounts" name="Sub-accounts" fill="#C4B5FD" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

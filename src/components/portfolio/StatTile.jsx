@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { DeltaPill } from "./DeltaPill";
 import { toneClass } from "./tones";
+import { CountUp } from "@/components/motion";
 
 // A stat is always the same four things — an icon chip, a value, a label and a
 // delta — so the KPI strip and the call-insight cells are one component. They
@@ -91,7 +92,7 @@ export function StatTile({
           {pill}
         </div>
         <div className={cn("font-pd-display font-bold leading-none text-pd-ink", l.value)}>
-          {value}
+          {typeof value === "string" || typeof value === "number" ? <CountUp value={value} /> : value}
         </div>
         <div className={l.label}>{label}</div>
       </div>
@@ -103,7 +104,7 @@ export function StatTile({
       {chip}
       <div className="min-w-0">
         <div className={cn("font-pd-display font-bold leading-none text-pd-ink", l.value)}>
-          {value}
+          {typeof value === "string" || typeof value === "number" ? <CountUp value={value} /> : value}
         </div>
         <div className={l.label}>{label}</div>
       </div>

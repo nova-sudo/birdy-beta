@@ -421,11 +421,8 @@ export default function ClientDetailsPage() {
   }
 
   return (
-    // The design's type scale is Poppins for headings and numerals over Inter
-    // for body, and it applies to every tab — not just the bar. Scoping the
-    // fonts here rather than on the tab strip is what makes `font-pd-display`
-    // resolve inside the panels; without it the goal figures, chart totals and
-    // card titles silently fall back to the app's own face.
+    // Inter is the base for every tab, not just the bar; the display face
+    // for headings and numerals comes from the variables on <html>.
     <div className={`${pdFontClass} flex flex-col gap-4 w-full`}>
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
@@ -644,7 +641,7 @@ export default function ClientDetailsPage() {
                     onClick={handleToggleStatus}
                     disabled={statusLoading || clientLoading}
                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      clientStatus === "Active" ? "bg-[#713CDD]" : "bg-gray-300"
+                      clientStatus === "Active" ? "bg-pd-primary" : "bg-gray-300"
                     }`}
                   >
                     <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${

@@ -51,9 +51,9 @@ const LEAD_SOURCES = [{ ...LEAD_SOURCE_UNKNOWN, short: "Ask later" }, ...LEAD_SO
 }))
 
 const LEAD_SOURCE_STYLE = {
-  muted: { color: "#9A9AAB", background: "#F1F1F5", borderColor: "#E7E7ED" },
+  muted: { color: "#9A9AAB", background: "#EFEEEB", borderColor: "#E7E7ED" },
   meta: { color: "#2C6BED", background: "#EAF1FD", borderColor: "#CFE0FA" },
-  primary: { color: "#6B4EE6", background: "#F1EEFC", borderColor: "#DCD3F8" },
+  primary: { color: "#5B3FD6", background: "#EFECFB", borderColor: "#DDD6F8" },
 }
 
 // The largest plan (Scale) supports 25 client groups — pre-selecting or
@@ -304,8 +304,8 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           <span
             className="flex h-[15px] w-[15px] items-center justify-center rounded-[4px] border-[1.5px] text-[10px] text-white"
             style={{
-              borderColor: hideInactive ? "#6B4EE6" : "#DFDFE8",
-              background: hideInactive ? "#6B4EE6" : "#fff",
+              borderColor: hideInactive ? "#5B3FD6" : "#DCDBD7",
+              background: hideInactive ? "#5B3FD6" : "#fff",
             }}
           >
             {hideInactive ? "✓" : ""}
@@ -356,8 +356,8 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   !row.importChecked && atSelectionCap ? "cursor-not-allowed" : "cursor-pointer"
                 }`}
                 style={{
-                  borderColor: row.importChecked ? "#6B4EE6" : "#DFDFE8",
-                  background: row.importChecked ? "#6B4EE6" : "#fff",
+                  borderColor: row.importChecked ? "#5B3FD6" : "#DCDBD7",
+                  background: row.importChecked ? "#5B3FD6" : "#fff",
                 }}
               >
                 {row.importChecked ? "✓" : ""}
@@ -468,7 +468,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   style={
                     row.status === "active"
                       ? { color: "#25A55F", background: "#EDF8F1", borderColor: "#BFE8D2" }
-                      : { color: "#9A9AAB", background: "#F1F1F5", borderColor: "#E7E7ED" }
+                      : { color: "#9A9AAB", background: "#EFEEEB", borderColor: "#E7E7ED" }
                   }
                 >
                   {row.status === "active" ? "Active" : "Inactive"}

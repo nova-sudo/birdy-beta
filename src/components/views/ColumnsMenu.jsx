@@ -48,22 +48,22 @@ const SOURCE_STYLE = {
   // Birdy's own derived metrics. Shares the Metrics Hub's purple with Custom —
   // both are ours rather than a platform's — and the label is what tells a
   // built-in ratio apart from a formula the user wrote.
-  birdy:         { color: "#6B4EE6", bg: "#F1EEFC", border: "#E2DAFA", label: "Birdy" },
-  custom:        { color: "#6B4EE6", bg: "#F1EEFC", border: "#E2DAFA", label: "Custom" },
+  birdy:         { color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8", label: "Birdy" },
+  custom:        { color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8", label: "Custom" },
   hotprospector: { color: "#D9722B", bg: "#FDF1E8", border: "#F7DFC9", label: "HP" },
 }
 
 // Anything outside the palette still gets a readable, neutral badge rather
 // than disappearing.
-const NEUTRAL_BADGE = { color: "#5A5A6E", bg: "#F4F4F8", border: "#ECECF2" }
+const NEUTRAL_BADGE = { color: "#5A5A6E", bg: "#F4F4F8", border: "#E7E6E3" }
 
 function Tick({ on }) {
   return (
     <span
       className="flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[4px]"
       style={{
-        background: on ? "#6B4EE6" : "transparent",
-        border: on ? "none" : "2px solid #DFDFE8",
+        background: on ? "#5B3FD6" : "transparent",
+        border: on ? "none" : "2px solid #DCDBD7",
       }}
     >
       {on && (
@@ -240,7 +240,7 @@ export default function ColumnsMenu({
         <button
           type="button"
           aria-haspopup="dialog"
-          className={`flex h-[38px] items-center gap-2 rounded-[10px] border border-[#ECECF2] bg-white px-[13px] text-[13px] font-semibold text-[#5A5A6E] ${buttonClassName}`}
+          className={`flex h-[38px] items-center gap-2 rounded-[10px] border border-[#E7E6E3] bg-white px-[13px] text-[13px] font-semibold text-[#5A5A6E] ${buttonClassName}`}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -265,12 +265,12 @@ export default function ColumnsMenu({
         align="end"
         sideOffset={6}
         aria-label="Columns and saved views"
-        className="flex h-[560px] w-[480px] overflow-hidden rounded-[14px] border-[#ECECF2] bg-white p-0"
+        className="flex h-[560px] w-[480px] overflow-hidden rounded-[14px] border-[#E7E6E3] bg-white p-0"
         style={{ boxShadow: "0 14px 34px -12px rgba(30,25,60,.28)" }}
       >
           {/* ── Left rail ─────────────────────────────────────────────── */}
-          <div className="flex w-[160px] flex-col border-r border-[#ECECF2] bg-[#FAFAFC]">
-            <div className={`${RAIL_LABEL} border-b border-[#ECECF2] px-[14px] pb-[10px] pt-[12px]`}>
+          <div className="flex w-[160px] flex-col border-r border-[#E7E6E3] bg-[#FAFAFC]">
+            <div className={`${RAIL_LABEL} border-b border-[#E7E6E3] px-[14px] pb-[10px] pt-[12px]`}>
               Saved views
             </div>
 
@@ -294,11 +294,11 @@ export default function ColumnsMenu({
                         }}
                         autoFocus
                         aria-label="View name"
-                        className="h-[26px] min-w-0 flex-1 rounded-[6px] border border-[#6B4EE6] bg-white px-[7px] text-[12px] text-[#1F1B33] outline-none"
+                        className="h-[26px] min-w-0 flex-1 rounded-[6px] border border-pd-primary bg-white px-[7px] text-[12px] text-pd-ink outline-none"
                       />
                       <button
                         type="button" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-[#6B4EE6] text-white"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] bg-pd-primary text-white"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
@@ -307,7 +307,7 @@ export default function ColumnsMenu({
                       </button>
                       <button
                         type="button" onClick={() => setEditTarget(null)} aria-label="Cancel rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border border-[#ECECF2] text-[#5A5A6E]"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border border-[#E7E6E3] text-[#5A5A6E]"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -333,7 +333,7 @@ export default function ColumnsMenu({
                         </button>
                         <button
                           type="button" onClick={() => setDeleteTarget(null)}
-                          className="flex-1 rounded-[7px] border border-[#ECECF2] bg-white py-[6px] text-center text-[11.5px] font-semibold text-[#5A5A6E]"
+                          className="flex-1 rounded-[7px] border border-[#E7E6E3] bg-white py-[6px] text-center text-[11.5px] font-semibold text-[#5A5A6E]"
                         >
                           Cancel
                         </button>
@@ -351,8 +351,8 @@ export default function ColumnsMenu({
                     style={{
                       // The selected row keeps its own highlight and never
                       // takes the grey hover treatment.
-                      background: on ? "#F1EEFC" : hovered ? "#F1F1F5" : "transparent",
-                      borderLeftColor: on ? "#6B4EE6" : "transparent",
+                      background: on ? "#EFECFB" : hovered ? "#EFEEEB" : "transparent",
+                      borderLeftColor: on ? "#5B3FD6" : "transparent",
                     }}
                   >
                     <button
@@ -360,7 +360,7 @@ export default function ColumnsMenu({
                       onClick={() => pickView(view)}
                       aria-current={on ? "true" : undefined}
                       className="min-w-0 flex-1 truncate text-left text-[12.5px]"
-                      style={{ color: on ? "#6B4EE6" : "#1F1B33", fontWeight: on ? 700 : 500 }}
+                      style={{ color: on ? "#5B3FD6" : "#18181B", fontWeight: on ? 700 : 500 }}
                     >
                       {view.name}
                     </button>
@@ -416,9 +416,9 @@ export default function ColumnsMenu({
                   aria-pressed={on}
                   className="border-l-[3px] px-[14px] py-[8px] text-left text-[12.5px]"
                   style={{
-                    background: on ? "#F1EEFC" : hovered ? "#F1F1F5" : "transparent",
-                    borderLeftColor: on ? "#6B4EE6" : "transparent",
-                    color: on ? "#6B4EE6" : "#1F1B33",
+                    background: on ? "#EFECFB" : hovered ? "#EFEEEB" : "transparent",
+                    borderLeftColor: on ? "#5B3FD6" : "transparent",
+                    color: on ? "#5B3FD6" : "#18181B",
                     fontWeight: on ? 700 : 500,
                   }}
                 >
@@ -440,7 +440,7 @@ export default function ColumnsMenu({
                     placeholder="View name…"
                     autoFocus
                     aria-label="New view name"
-                    className="h-8 w-full rounded-[7px] border border-[#ECECF2] bg-white px-[10px] text-[12px] text-[#1F1B33] outline-none"
+                    className="h-8 w-full rounded-[7px] border border-[#E7E6E3] bg-white px-[10px] text-[12px] text-pd-ink outline-none"
                   />
                   <div className="flex gap-[6px]">
                     <button
@@ -448,14 +448,14 @@ export default function ColumnsMenu({
                       onClick={confirmSave}
                       disabled={!newName.trim() || busy}
                       className="flex-1 rounded-[7px] py-[7px] text-center text-[12px] font-semibold text-white disabled:opacity-60"
-                      style={{ background: newName.trim() ? "#6B4EE6" : "#C9BEF3" }}
+                      style={{ background: newName.trim() ? "#5B3FD6" : "#C3B7F2" }}
                     >
                       Save
                     </button>
                     <button
                       type="button"
                       onClick={() => { setComposing(false); setNewName("") }}
-                      className="flex-1 rounded-[7px] border border-[#ECECF2] bg-white py-[7px] text-center text-[12px] font-semibold text-[#5A5A6E]"
+                      className="flex-1 rounded-[7px] border border-[#E7E6E3] bg-white py-[7px] text-center text-[12px] font-semibold text-[#5A5A6E]"
                     >
                       Cancel
                     </button>
@@ -470,7 +470,7 @@ export default function ColumnsMenu({
                     onClick={saveToExisting}
                     disabled={busy}
                     className="flex h-8 items-center justify-center gap-[6px] rounded-[8px] text-[12px] font-semibold text-white disabled:opacity-60"
-                    style={{ background: justUpdated ? "#25A55F" : "#6B4EE6" }}
+                    style={{ background: justUpdated ? "#25A55F" : "#5B3FD6" }}
                   >
                     {justUpdated ? (
                       <>
@@ -496,7 +496,7 @@ export default function ColumnsMenu({
                   <button
                     type="button"
                     onClick={() => { setComposing(true); setNewName("") }}
-                    className="flex h-8 items-center justify-center rounded-[8px] border border-[#ECECF2] bg-white text-[12px] font-semibold text-[#5A5A6E]"
+                    className="flex h-8 items-center justify-center rounded-[8px] border border-[#E7E6E3] bg-white text-[12px] font-semibold text-[#5A5A6E]"
                   >
                     Save New View
                   </button>
@@ -514,7 +514,7 @@ export default function ColumnsMenu({
             <button
               type="button"
               onClick={toggleAll}
-              className="flex items-center gap-[10px] border-b border-[#ECECF2] pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
+              className="flex items-center gap-[10px] border-b border-[#E7E6E3] pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
             >
               <Tick on={allOn} />
               <span className={`${RAIL_LABEL} flex-1`}>Metric name</span>
@@ -533,10 +533,10 @@ export default function ColumnsMenu({
                     type="button"
                     onClick={() => toggleColumn(col.id)}
                     aria-pressed={visibleColumns.includes(col.id)}
-                    className="flex w-full items-center gap-[10px] px-[14px] py-[8px] text-left hover:bg-[#F1F1F5]"
+                    className="flex w-full items-center gap-[10px] px-[14px] py-[8px] text-left hover:bg-[#EFEEEB]"
                   >
                     <Tick on={visibleColumns.includes(col.id)} />
-                    <span className="flex-1 truncate text-[12.5px] font-semibold text-[#1F1B33]">
+                    <span className="flex-1 truncate text-[12.5px] font-semibold text-pd-ink">
                       {col.label}
                     </span>
                     <SourceBadge source={col.source} />
@@ -546,8 +546,8 @@ export default function ColumnsMenu({
             </div>
 
             {/* Search sits at the bottom of this pane by design, not the top. */}
-            <div className="border-t border-[#ECECF2] px-[14px] py-[10px]">
-              <div className="flex h-8 items-center gap-[7px] rounded-[8px] border border-[#ECECF2] bg-[#F4F4F8] px-[10px] text-[#9A9AAB]">
+            <div className="border-t border-[#E7E6E3] px-[14px] py-[10px]">
+              <div className="flex h-8 items-center gap-[7px] rounded-[8px] border border-[#E7E6E3] bg-[#F4F4F8] px-[10px] text-[#9A9AAB]">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -558,7 +558,7 @@ export default function ColumnsMenu({
                   onChange={e => setSearch(e.target.value)}
                   placeholder={`Search in ${sources.find(s => s.id === source)?.label ?? "All"}…`}
                   aria-label="Search metrics"
-                  className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-[#1F1B33] outline-none"
+                  className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-pd-ink outline-none"
                 />
               </div>
             </div>

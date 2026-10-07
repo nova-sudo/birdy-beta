@@ -5,11 +5,11 @@ export function StatsCard({ title, value, icon: Icon, subtitle, loading }) {
   return (
     <Card className="border shadow-sm rounded-lg">
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-normal text-[#71658B] text-muted-foreground">
+        <CardTitle className="text-sm font-normal text-pd-muted text-muted-foreground">
           {title}
         </CardTitle>
         {Icon && (
-          <div className="w-8 h-7 bg-[#713CDD1A] rounded-md text-center flex items-center justify-center">
+          <div className="w-8 h-7 bg-pd-primary/10 rounded-md text-center flex items-center justify-center">
             <Icon className="h-4 w-5 text-purple-600" />
           </div>
         )}
@@ -23,7 +23,7 @@ export function StatsCard({ title, value, icon: Icon, subtitle, loading }) {
           <div className="text-2xl font-bold">{value}</div>
         )}
         {subtitle && (
-          <p className="text-xs text-[#71658B] text-muted-foreground">{subtitle}</p>
+          <p className="text-xs text-pd-muted text-muted-foreground">{subtitle}</p>
         )}
       </CardContent>
     </Card>

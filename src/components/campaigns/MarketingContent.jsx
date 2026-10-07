@@ -39,10 +39,9 @@ import { useGranularity } from "@/lib/useGranularity"
 import { usePageHeader } from "@/components/page-header"
 
 // The Marketing Hub is drawn on the design system in
-// design_handoff_hubs/Birdy Style Guide.md — Poppins for headings and numerals,
-// Inter for body, on the --pd-* tokens in globals.css. Both were already
-// implemented for the Portfolio Dashboard, which came from the same handoff
-// bundle, so this screen scopes the same fonts rather than declaring its own.
+// design_handoff_hubs/Birdy Style Guide.md, on the --pd-* tokens in
+// globals.css. Fonts (Bricolage Grotesque display, Inter body) come from the
+// root layout; pdFontClass only sets Inter as the base.
 import { pdFontClass } from "@/lib/pd-fonts"
 import { CHART_LOADING, InsightCard, LoadError, LoadingPulse, PageTabPanel, PageTabs, PdCard, PdSegmented, StatTile, TrendChart } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"

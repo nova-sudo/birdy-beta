@@ -1,7 +1,8 @@
 "use client";
 
 import "./globals.css";
-import { Outfit } from "next/font/google";
+import { fontVariables } from "@/lib/pd-fonts";
+import { MotionConfig } from "framer-motion";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
 import UserMenu from "@/components/UserMenu";
@@ -44,11 +45,6 @@ import {
   PageHeaderTitle,
   useHasPageHeader,
 } from "@/components/page-header";
-
-const outfit = Outfit({
-  variable: "--font-outfit",
-  subsets: ["latin"],
-});
 
 /**
  * The wordmark and version badge, which stand down whenever a page has put its
@@ -156,10 +152,11 @@ export default function RootLayout({ children }) {
   };
 
   return (
-    <html suppressHydrationWarning>
+    <html suppressHydrationWarning className={fontVariables}>
       <head />
-      <body suppressHydrationWarning className={`${outfit.className} antialiased`}>
+      <body suppressHydrationWarning className="antialiased">
         <BirdyDefs />
+        <MotionConfig reducedMotion="user">
         <SWRProvider>
         <ProtectedLayout>
           <SidebarProvider open={false}>
@@ -263,6 +260,7 @@ export default function RootLayout({ children }) {
           </SidebarProvider>
         </ProtectedLayout>
         </SWRProvider>
+        </MotionConfig>
         <Toaster />
       </body>
     </html>

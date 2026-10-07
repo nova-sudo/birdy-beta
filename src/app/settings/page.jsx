@@ -920,8 +920,6 @@ function SettingsPageContent() {
             </div>
           </TabsContent>
 
-          {/* Poppins/Inter are scoped to the subtree that uses them, the way
-              every other redesigned screen applies them. */}
           <TabsContent value="integrations" className={`${pdFontClass} space-y-6`}>
             {error && (
               <Alert variant="destructive">
@@ -1241,8 +1239,6 @@ function SettingsPageContent() {
           </TabsContent>
 
 
-          {/* Poppins/Inter, same as the Integrations tab — the pd- headings
-              below are Poppins only inside this wrapper. */}
           <TabsContent value="tracking" className="space-y-6">
             <TrackingOverview />
           </TabsContent>

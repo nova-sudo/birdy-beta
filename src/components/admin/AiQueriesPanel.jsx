@@ -102,8 +102,8 @@ export default function AiQueriesPanel({ data, loading, onOpenConversation }) {
                 <AreaChart data={volume} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="qvol" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#7C3AED" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#7C3AED" stopOpacity={0} />
+                      <stop offset="0%" stopColor="#5B3FD6" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#5B3FD6" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v?.slice(5)} interval="preserveStartEnd" />
@@ -112,7 +112,7 @@ export default function AiQueriesPanel({ data, loading, onOpenConversation }) {
                     labelFormatter={(v) => v}
                     formatter={(v) => [v, "queries"]}
                   />
-                  <Area type="monotone" dataKey="count" stroke="#7C3AED" strokeWidth={2} fill="url(#qvol)" />
+                  <Area type="monotone" dataKey="count" stroke="#5B3FD6" strokeWidth={2} fill="url(#qvol)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (

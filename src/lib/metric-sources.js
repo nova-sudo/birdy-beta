@@ -19,9 +19,9 @@ export const SOURCE_STYLES = {
   // pulled from HotProspector, the only dialler wired to Birdy; the day a
   // second one lands, this splits by metric rather than by category.
   sales: { label: "HotProspector", color: "#B4530A", bg: "#FDF1E7", border: "#F5DDC0" },
-  birdy: { label: "Birdy", color: "#6B4EE6", bg: "#F1EEFC", border: "#E3DAFB" },
+  birdy: { label: "Birdy", color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8" },
   tag: { label: "Tags", color: "#C93B8C", bg: "#FCEDF6", border: "#F5D6EA" },
-  custom: { label: "Custom Formula", color: "#6B4EE6", bg: "#F1EEFC", border: "#E3DAFB" },
+  custom: { label: "Custom Formula", color: "#5B3FD6", bg: "#EFECFB", border: "#DDD6F8" },
 }
 
 const CATEGORY_TO_SOURCE = {

@@ -525,7 +525,7 @@ function AlertTable({ rows, emptyLabel, evaluating, onEdit, onEvaluate, onToggle
         <thead className="bg-white sticky top-0 z-20">
           <tr className="border-b h-11">
             {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
             ))}
           </tr>
         </thead>
@@ -573,7 +573,7 @@ function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, o
           <thead className="bg-white sticky top-0 z-20">
             <tr className="border-b h-11">
               {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-                <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+                <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
               ))}
             </tr>
           </thead>
@@ -589,7 +589,7 @@ function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, o
         <thead className="bg-white sticky top-0 z-20">
           <tr className="border-b h-11">
             {["Alert Name", "Metric", "Condition", "Progress", "Status", "Targets", "Last Updated", "Actions"].map(h => (
-              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-[#71658B] bg-white">{h}</th>
+              <th key={h} className="h-11 px-4 text-left align-middle font-semibold text-pd-muted bg-white">{h}</th>
             ))}
           </tr>
         </thead>
@@ -968,7 +968,7 @@ function AlertsPageContent() {
         </div>
       ),
       controls: (
-        <Button onClick={openCreate} className="gap-2 bg-pd-primary text-white hover:bg-[#5A3FD6]">
+        <Button onClick={openCreate} className="gap-2 bg-pd-primary text-white hover:bg-purple-700">
           <CirclePlus className="h-4 w-4" />
           Create Alert
         </Button>
@@ -1023,7 +1023,7 @@ function AlertsPageContent() {
 
           {isLoading ? (
             // <div className="flex items-center justify-center py-24">
-            //   <RefreshCw className="h-6 w-6 animate-spin text-[#713cdd]" />
+            //   <RefreshCw className="h-6 w-6 animate-spin text-pd-primary" />
             // </div>
             <div className="flex w-full mx-auto py-30 max-w-xs flex-col gap-2">
               <Skeleton className="h-4 w-full" />
@@ -1482,7 +1482,7 @@ function AlertsPageContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSnoozeTarget(null)}>Cancel</Button>
-            <Button onClick={handleSnoozeConfirm} className="bg-[#713cdd] hover:bg-[#5f2fc0] text-white gap-2">
+            <Button onClick={handleSnoozeConfirm} className="bg-pd-primary hover:bg-[#5f2fc0] text-white gap-2">
               <BellOff className="h-4 w-4" />
               {snoozeTarget?._virtual ? "Snooze Client" : "Snooze"}
             </Button>

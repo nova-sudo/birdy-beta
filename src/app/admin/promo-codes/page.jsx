@@ -110,7 +110,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="promo-code" className="text-xs font-semibold text-[#71658B]">Code</Label>
+              <Label htmlFor="promo-code" className="text-xs font-semibold text-pd-muted">Code</Label>
               <Input
                 id="promo-code"
                 placeholder="SAVE20"
@@ -120,7 +120,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
               />
             </div>
             <div>
-              <Label className="text-xs font-semibold text-[#71658B]">Duration (months)</Label>
+              <Label className="text-xs font-semibold text-pd-muted">Duration (months)</Label>
               <Input
                 type="number" min={1}
                 value={form.promo_duration_months}
@@ -131,7 +131,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
           </div>
 
           <div>
-            <Label className="text-xs font-semibold text-[#71658B]">Discount</Label>
+            <Label className="text-xs font-semibold text-pd-muted">Discount</Label>
             <div className="mt-1 flex gap-2">
               <div className="inline-flex rounded-lg border border-gray-200 bg-gray-50 p-0.5">
                 <button
@@ -159,7 +159,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
           </div>
 
           <div>
-            <Label className="text-xs font-semibold text-[#71658B]">Applies to</Label>
+            <Label className="text-xs font-semibold text-pd-muted">Applies to</Label>
             <div className="mt-2 space-y-3">
               {subscriptionTargets.length > 0 && (
                 <div>
@@ -220,7 +220,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
             </div>
             {!form.unlimited_stock && (
               <div>
-                <Label className="text-xs font-semibold text-[#71658B]">Max uses</Label>
+                <Label className="text-xs font-semibold text-pd-muted">Max uses</Label>
                 <Input
                   type="number" min={1}
                   value={form.stock}
@@ -232,7 +232,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
           </div>
 
           <div>
-            <Label className="text-xs font-semibold text-[#71658B]">Expires (optional)</Label>
+            <Label className="text-xs font-semibold text-pd-muted">Expires (optional)</Label>
             <Input
               type="date"
               value={form.expires_at}
@@ -272,12 +272,12 @@ function PromoCodesTable({ codes, loading, onDelete }) {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Code</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Discount</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Applies to</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Status</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Uses</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Expires</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Code</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Discount</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Applies to</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Status</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted text-right">Uses</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-pd-muted">Expires</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -356,7 +356,7 @@ export default function AdminPromoCodesPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-[#1F1B33] flex items-center gap-2">
+          <h2 className="text-xl font-bold text-pd-ink flex items-center gap-2">
             <Percent className="h-5 w-5 text-purple-600" /> Promo Codes
           </h2>
           <p className="text-sm text-muted-foreground">

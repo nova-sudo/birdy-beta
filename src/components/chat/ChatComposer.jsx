@@ -165,7 +165,7 @@ export default function ChatComposer({
           size="icon"
           className={`shrink-0 rounded-lg transition ${
             canSend
-              ? "bg-[#713cdd] hover:bg-[#5f2fc0] text-white shadow-sm"
+              ? "bg-pd-primary hover:bg-[#5f2fc0] text-white shadow-sm"
               : "bg-gray-100 text-gray-400"
           } ${compact ? "h-7 w-7" : "h-9 w-9"}`}
           aria-label="Send message"

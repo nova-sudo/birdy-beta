@@ -63,7 +63,7 @@ export default function Home() {
           />
           <span className="font-bold text-lg">AskBirdy</span>
         </div>
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[#71658B] bg-white border border-[#E6E1EF] rounded-full px-4 py-2">
+        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-pd-muted bg-white border border-[#E6E1EF] rounded-full px-4 py-2">
           <Sparkles className="w-3.5 h-3.5 text-purple-600" />
           Coming Soon
         </span>
@@ -75,7 +75,7 @@ export default function Home() {
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.05]">
             The AI Brain That Runs &amp; Scales Your Agency
           </h1>
-          <p className="mt-6 text-lg md:text-xl text-[#71658B] max-w-2xl mx-auto">
+          <p className="mt-6 text-lg md:text-xl text-pd-muted max-w-2xl mx-auto">
             AskBirdy connects your ads, CRM, bookings, and revenue data across all clients,
             flags problems early, and guides what to fix or scale next.
           </p>
@@ -86,14 +86,14 @@ export default function Home() {
                 {status === "joined" ? (
                   <>
                     <p className="text-lg font-semibold">Boom... You&apos;re on the List! 🎉</p>
-                    <p className="text-sm text-[#71658B] mt-1">
+                    <p className="text-sm text-pd-muted mt-1">
                       You&apos;re one step closer to running a stress-free agency
                     </p>
                   </>
                 ) : (
                   <>
                     <p className="text-lg font-semibold">Hey... You&apos;re Already on the List! 😉</p>
-                    <p className="text-sm text-[#71658B] mt-1">
+                    <p className="text-sm text-pd-muted mt-1">
                       We&apos;ll get you onboarded as quick as possible.
                     </p>
                   </>
@@ -112,7 +112,7 @@ export default function Home() {
                 <Button
                   type="submit"
                   disabled={status === "loading"}
-                  className="bg-[#713CDD] hover:bg-[#5f30ba] text-white rounded-xl h-11 px-6 font-medium"
+                  className="bg-pd-primary hover:bg-[#5f30ba] text-white rounded-xl h-11 px-6 font-medium"
                 >
                   {status === "loading" ? "Joining..." : "Join the Waitlist"}
                 </Button>
@@ -126,7 +126,7 @@ export default function Home() {
           <div className="w-16 h-16   flex items-center justify-center overflow-hidden">
             <Image src="/birdy-mascot-VmH3J7Wq.png" alt="Birdy" width={56} height={56} className="" />
           </div>
-          <p className="text-[#71658B] font-medium">Product Demo Coming Soon</p>
+          <p className="text-pd-muted font-medium">Product Demo Coming Soon</p>
         </div>
       </main>
 
@@ -136,7 +136,7 @@ export default function Home() {
           <Image src="/birdy-mascot-VmH3J7Wq.png" alt="Birdy" width={20} height={20} className="rounded-full" />
           <span className="font-semibold text-sm">AskBirdy</span>
         </div>
-        <p className="text-sm text-[#71658B]">Built by agency owners, for agency owners.</p>
+        <p className="text-sm text-pd-muted">Built by agency owners, for agency owners.</p>
       </footer>
     </div>
   );

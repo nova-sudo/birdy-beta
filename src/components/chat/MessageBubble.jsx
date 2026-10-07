@@ -32,7 +32,7 @@ export default function MessageBubble({
   if (isUser) {
     return (
       <div className="flex justify-end items-end gap-2">
-        <div className={`${widthClass} bg-[#713cdd] text-white rounded-2xl rounded-br-sm px-4 py-2.5`}>
+        <div className={`${widthClass} bg-pd-primary text-white rounded-2xl rounded-br-sm px-4 py-2.5`}>
           <p className="text-sm leading-relaxed">{message.content}</p>
         </div>
         <div className="h-7 w-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0 mb-0.5">
