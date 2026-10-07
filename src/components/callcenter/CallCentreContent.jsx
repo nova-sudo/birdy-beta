@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
 import StyledTable from "@/components/ui/table-container"
 import { PageTabPanel, PageTabs } from "@/components/portfolio"
@@ -46,9 +47,69 @@ import {
   SlidersHorizontal,
   Loader2,
   Sparkles,
+  Timer,
+  CalendarCheck,
+  AlertTriangle,
+  Coins,
 } from "lucide-react"
 import { toast } from "sonner"
 import { startJob, finishJob } from "@/lib/jobs-store"
+
+// ── Shared dialog chrome ────────────────────────────────────────────────────
+// The three dialogs in this file wear the same shell as the Alerts create
+// dialog and the Billing hub: canvas-grey body, white sticky header and
+// footer, white sections inside. Kept as strings so each dialog is one call.
+const DIALOG_SHELL = "!max-w-none p-0 gap-0 flex flex-col overflow-hidden bg-pd-canvas sm:!max-w-none"
+const DIALOG_HEADER = "bg-pd-surface px-7 py-5 border-b border-pd-border shrink-0"
+const DIALOG_TITLE = "font-pd-display text-[22px] font-bold leading-none tracking-[-0.02em] text-pd-ink"
+const DIALOG_SUBTITLE = "text-[13px] text-pd-subtle mt-1.5"
+const DIALOG_BODY = "px-7 py-6 overflow-y-auto flex-1 min-h-0"
+const DIALOG_FOOTER = "bg-pd-surface px-7 py-4 border-t border-pd-border shrink-0 flex flex-row justify-end gap-2"
+const DIALOG_SECTION = "rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm"
+const DIALOG_ROW = "rounded-xl border border-pd-border bg-pd-surface px-4 py-3"
+const DIALOG_LABEL = "text-[12.5px] font-semibold text-pd-ink"
+const DIALOG_HELP = "text-[12.5px] text-pd-subtle"
+const EYEBROW = "text-[11px] font-bold uppercase tracking-[.04em] text-pd-faint"
+
+// One KPI in a dialog strip — the StatTile shape (icon chip, value, label)
+// without CountUp, since these values are often "3m 20s" rather than numbers.
+function DialogStat({ icon: Icon, value, label }) {
+  return (
+    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-pd-border bg-pd-surface px-4 py-3 shadow-sm">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
+        <Icon className="size-4" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <div className="font-pd-display text-[20px] font-bold leading-none tabular-nums text-pd-ink">{value}</div>
+        <div className="mt-1 truncate text-[12px] text-pd-subtle">{label}</div>
+      </div>
+    </div>
+  )
+}
+
+function DialogEmpty({ icon: Icon, title, hint }) {
+  return (
+    <div className="mx-auto flex max-w-xs flex-col items-center py-16 text-center">
+      <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-pd-primary-tint text-pd-primary">
+        <Icon className="size-5" />
+      </span>
+      <p className="font-pd-display text-[15px] font-semibold text-pd-ink">{title}</p>
+      <p className="mt-1 text-[12.5px] leading-relaxed text-pd-subtle">{hint}</p>
+    </div>
+  )
+}
+
+// The header row of a Birdy answer: avatar, name, and whatever sits beside
+// them (a status line while it thinks, a verdict badge once it's done).
+function BirdyRow({ state, children }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {state ? <BirdyAvatar size={28} state={state} /> : <BirdyAvatar size={28} paused />}
+      <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
+      {children}
+    </div>
+  )
+}
 
 // ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
 function CallLogsDialog({ lead }) {
@@ -58,6 +119,11 @@ function CallLogsDialog({ lead }) {
     return `${mins}m ${secs}s`
   }
 
+  const logs = lead.call_logs
+  const outboundCount = logs.filter((l) => l.call_status === "outbound").length
+  const inboundCount = logs.length - outboundCount
+  const talkSeconds = logs.reduce((sum, l) => sum + (l.duration || 0), 0)
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -66,121 +132,133 @@ function CallLogsDialog({ lead }) {
           {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <div className="pb-6 border-b border-pd-divider">
-          <DialogHeader className="space-y-3">
-            <DialogTitle className="font-pd-display text-2xl font-bold text-pd-ink">{lead.name}</DialogTitle>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-1.5 text-sm text-pd-subtle">
-                <Mail className="h-4 w-4 text-pd-primary" />
-                <span>{lead.email}</span>
-              </div>
-              <div className="w-1 h-1 rounded-full bg-pd-chevron" />
-              <div className="flex items-center gap-1.5 text-sm text-pd-subtle">
-                <Phone className="h-4 w-4 text-pd-primary" />
-                <span>{lead.phone}</span>
+      <DialogContent className={`w-[min(880px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
+        {/* Header */}
+        <div className={DIALOG_HEADER}>
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <DialogTitle className={DIALOG_TITLE}>{lead.name}</DialogTitle>
+              <div className={`${DIALOG_SUBTITLE} flex flex-wrap items-center gap-x-3 gap-y-1`}>
+                <span className="flex items-center gap-1.5">
+                  <Mail className="size-3.5 text-pd-primary" />
+                  {lead.email}
+                </span>
+                <span className="size-1 rounded-full bg-pd-chevron" />
+                <span className="flex items-center gap-1.5">
+                  <Phone className="size-3.5 text-pd-primary" />
+                  {lead.phone}
+                </span>
               </div>
             </div>
-          </DialogHeader>
+            <Badge className="shrink-0 bg-pd-primary-tint text-pd-primary text-[11px] font-bold">
+              {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
+            </Badge>
+          </div>
         </div>
 
-        {lead.call_logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-pd-divider flex items-center justify-center mb-4">
-              <Phone className="h-8 w-8 text-pd-faint" />
-            </div>
-            <h3 className="font-pd-display text-lg font-semibold text-pd-ink mb-2">No Call Logs</h3>
-            <p className="text-sm text-pd-subtle max-w-xs">
-              No recorded calls for this lead in the selected period.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3 mt-6">
-            {lead.call_logs.map((callLog, index) => (
-              <div
-                key={index}
-                className="group relative p-5 rounded-xl border border-pd-border bg-pd-surface hover:border-pd-primary-pale transition-colors duration-200"
-              >
-                <div className="flex items-start justify-between gap-4 mb-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-pd-primary-tint flex items-center justify-center">
-                      <User className="h-5 w-5 text-pd-primary" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-pd-ink text-sm">{callLog.caller_name}</p>
-                      <p className="text-xs text-pd-subtle mt-0.5">
-                        <Clock className="h-3 w-3 inline mr-1" />
-                        {callLog.call_time}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <Badge
-                      className={`${callLog.call_status === "outbound"
-                        ? "bg-pd-info-bg text-pd-info"
-                        : "bg-pd-success-bg text-pd-success"
-                        } text-[11px] font-bold`}
-                    >
-                      {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
-                    </Badge>
-                    {callLog.transfer && (
-                      <Badge
-                        variant="warning"
-                        className="text-[11px] font-bold"
-                      >
-                        ↗ Transferred
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4 p-4 rounded-xl bg-pd-divider/60">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Duration</p>
-                    <p className="text-sm font-semibold text-pd-ink">{formatDuration(callLog.duration)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Speed to Lead</p>
-                    <p className="text-sm font-semibold text-pd-ink">{formatDuration(callLog.speed_to_lead)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-pd-subtle uppercase tracking-wider">Group</p>
-                    <p className="text-sm font-semibold text-pd-ink">{callLog.group || "—"}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 mb-4 px-4 py-3 rounded-xl bg-pd-divider/60 border border-pd-border">
-                  <div className="flex-1">
-                    <p className="text-xs text-pd-subtle mb-1">From</p>
-                    <p className="font-mono text-sm font-semibold text-pd-ink">{callLog.from_number || "—"}</p>
-                  </div>
-                  <div className="text-pd-chevron">→</div>
-                  <div className="flex-1">
-                    <p className="text-xs text-pd-subtle mb-1">To</p>
-                    <p className="font-mono text-sm font-semibold text-pd-ink">{callLog.to_number || "—"}</p>
-                  </div>
-                </div>
-
-                {callLog.recording_url && (
-                  <div className="flex gap-2 pt-3">
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
-                        <Play className="h-4 w-4 mr-2" />
-                        Play
-                      </a>
-                    </Button>
-                    <Button variant="outline" size="sm" asChild className="flex-1">
-                      <a href={callLog.recording_url} download>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download
-                      </a>
-                    </Button>
-                  </div>
-                )}
+        {/* Body */}
+        <div className={DIALOG_BODY}>
+          {logs.length === 0 ? (
+            <DialogEmpty
+              icon={Phone}
+              title="No Call Logs"
+              hint="No recorded calls for this lead in the selected period."
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <DialogStat icon={Phone} value={logs.length} label="Total calls" />
+                <DialogStat icon={PhoneIncoming} value={inboundCount} label="Inbound" />
+                <DialogStat icon={PhoneOutgoing} value={outboundCount} label="Outbound" />
+                <DialogStat icon={Clock} value={formatDuration(talkSeconds)} label="Talk time" />
               </div>
-            ))}
-          </div>
-        )}
+
+              <Stagger gap={0.04} className="space-y-3">
+                {logs.map((callLog, index) => (
+                  <StaggerItem key={index} className={DIALOG_ROW}>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
+                        <User className="size-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13.5px] font-semibold text-pd-ink">{callLog.caller_name}</p>
+                        <p className="mt-0.5 flex items-center gap-1 text-[12px] text-pd-subtle">
+                          <Clock className="size-3" />
+                          {callLog.call_time}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Badge
+                          className={`${callLog.call_status === "outbound"
+                            ? "bg-pd-info-bg text-pd-info"
+                            : "bg-pd-success-bg text-pd-success"
+                            } text-[11px] font-bold`}
+                        >
+                          {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
+                        </Badge>
+                        {callLog.transfer && (
+                          <Badge variant="warning" className="text-[11px] font-bold">
+                            ↗ Transferred
+                          </Badge>
+                        )}
+                      </div>
+                      {callLog.recording_url && (
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
+                              <Play className="h-3.5 w-3.5" />
+                              Play
+                            </a>
+                          </Button>
+                          <Button variant="outline" size="sm" asChild>
+                            <a href={callLog.recording_url} download>
+                              <Download className="h-3.5 w-3.5" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+
+                    <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 border-t border-pd-divider pt-3 sm:grid-cols-4">
+                      <div>
+                        <dt className={EYEBROW}>Duration</dt>
+                        <dd className="mt-0.5 font-pd-display text-[14px] font-bold tabular-nums text-pd-ink">
+                          {formatDuration(callLog.duration)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className={EYEBROW}>Speed to Lead</dt>
+                        <dd className="mt-0.5 font-pd-display text-[14px] font-bold tabular-nums text-pd-ink">
+                          {formatDuration(callLog.speed_to_lead)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className={EYEBROW}>Group</dt>
+                        <dd className="mt-0.5 truncate text-[13px] font-semibold text-pd-ink">{callLog.group || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className={EYEBROW}>From → To</dt>
+                        <dd className="mt-0.5 truncate font-mono text-[12.5px] font-semibold tabular-nums text-pd-ink">
+                          {callLog.from_number || "—"}
+                          <span className="mx-1.5 text-pd-chevron">→</span>
+                          {callLog.to_number || "—"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </StaggerItem>
+                ))}
+              </Stagger>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className={DIALOG_FOOTER}>
+          <DialogClose asChild>
+            <Button variant="outline">Close</Button>
+          </DialogClose>
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -311,6 +389,15 @@ function MemberAnalyzeDialog({ member }) {
     return acc
   }, {})
 
+  const resetRun = () => { memberRuns.delete(name); notifyMemberRuns() }
+  const subtitle = running
+    ? `Transcribing and reviewing ${name}'s recordings.`
+    : run?.status === "done"
+      ? `${analyzed.length} of ${run.total} recent calls analyzed.`
+      : run?.status === "error"
+        ? "The analysis didn't finish."
+        : `Pick how many of ${name}'s recent calls to review.`
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -323,31 +410,165 @@ function MemberAnalyzeDialog({ member }) {
           {running ? `${run.done}/${run.total}` : "Analyze"}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-pd-display text-xl font-bold text-pd-ink flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-pd-primary" />
-            AI Call Analysis — {name}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className={`w-[min(760px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
+        {/* Header */}
+        <div className={DIALOG_HEADER}>
+          <DialogTitle className={DIALOG_TITLE}>AI Call Analysis — {name}</DialogTitle>
+          <p className={DIALOG_SUBTITLE}>{subtitle}</p>
+        </div>
 
-        {/* Setup: how many calls + cost estimate */}
-        {!run && (
-          <div className="space-y-4 pt-2">
-            <div className="flex items-end gap-3">
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-pd-subtle uppercase tracking-wider">
-                  Last how many calls? (1–{MEMBER_ANALYSIS_MAX})
-                </label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={MEMBER_ANALYSIS_MAX}
-                  value={countInput}
-                  onChange={(e) => setCountInput(e.target.value)}
-                  className="w-32"
-                />
+        {/* Body */}
+        <div className={DIALOG_BODY}>
+          {/* Setup: how many calls + cost estimate */}
+          {!run && (
+            <div className="space-y-4">
+              <div className={`${DIALOG_SECTION} space-y-4`}>
+                <div className="space-y-2">
+                  <label htmlFor={`member-analysis-count-${member.id ?? name}`} className={DIALOG_LABEL}>
+                    Last how many calls? (1–{MEMBER_ANALYSIS_MAX})
+                  </label>
+                  <Input
+                    id={`member-analysis-count-${member.id ?? name}`}
+                    type="number"
+                    min={1}
+                    max={MEMBER_ANALYSIS_MAX}
+                    value={countInput}
+                    onChange={(e) => setCountInput(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+
+                <div className="rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
+                  {estimating ? (
+                    <div className="space-y-2" aria-hidden="true">
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                  ) : estimate ? (
+                    estimate.calls_found === 0 ? (
+                      <span className={DIALOG_HELP}>No recorded calls found for this member.</span>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
+                          <Coins className="size-4" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="font-pd-display text-[18px] font-bold leading-none tabular-nums text-pd-ink">
+                            ~{estimate.estimated_credits} credits
+                            <span className="ml-2 font-sans text-[12px] font-normal text-pd-subtle">estimated</span>
+                          </p>
+                          <p className={`${DIALOG_HELP} mt-1`}>
+                            {estimate.calls_found} recorded {estimate.calls_found === 1 ? "call" : "calls"}
+                            {estimate.calls_found < estimate.requested && ` (only ${estimate.calls_found} of ${estimate.requested} requested exist)`}
+                            {" · "}{estimate.total_minutes} min of audio
+                            {estimate.already_transcribed > 0 && ` · ${estimate.already_transcribed} already transcribed (free)`}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    <span className={DIALOG_HELP}>Couldn&apos;t fetch a cost estimate.</span>
+                  )}
+                </div>
+
+                <p className={DIALOG_HELP}>
+                  Recordings are transcribed and reviewed by AI. You can close this window while it runs — you&apos;ll be
+                  notified when the analysis is done.
+                </p>
               </div>
+            </div>
+          )}
+
+          {/* Progress */}
+          {running && (
+            <div className={`${DIALOG_SECTION} space-y-4`}>
+              <BirdyRow state="loading">
+                <span className="chat-shimmer text-[13px] font-semibold">
+                  Analyzing calls… {run.done}/{run.total}
+                </span>
+              </BirdyRow>
+              <div className="space-y-2 pl-9" aria-hidden="true">
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+                <Skeleton className="h-3 w-2/3" />
+              </div>
+              <p className={`${DIALOG_HELP} pl-9`}>
+                Transcribing and reviewing {name}&apos;s recordings. Feel free to close this window — you&apos;ll be
+                notified when it&apos;s done.
+              </p>
+            </div>
+          )}
+
+          {/* Error */}
+          {run?.status === "error" && (
+            <div className={`${DIALOG_SECTION} flex items-start gap-3`}>
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-danger-bg text-pd-danger">
+                <AlertTriangle className="size-4" aria-hidden="true" />
+              </span>
+              <p className="text-[13.5px] text-pd-danger">{run.error}</p>
+            </div>
+          )}
+
+          {/* Results */}
+          {run?.status === "done" && (
+            <div className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <DialogStat icon={Phone} value={analyzed.length} label="Calls analyzed" />
+                <DialogStat icon={CalendarCheck} value={outcomes.appointment_set || 0} label="Appointments set" />
+                <DialogStat icon={Timer} value={outcomes.callback_promised || 0} label="Callbacks promised" />
+              </div>
+
+              <div className={`${DIALOG_SECTION} space-y-4`}>
+                <BirdyRow>
+                  {Object.entries(outcomes).map(([o, n]) => (
+                    <Badge key={o} className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
+                      {o.replace(/_/g, " ")}: {n}
+                    </Badge>
+                  ))}
+                  {run.failed > 0 && (
+                    <Badge variant="destructive" className="text-[11px] font-bold">
+                      {run.failed} failed to transcribe
+                    </Badge>
+                  )}
+                </BirdyRow>
+
+                <Stagger gap={0.04} className="space-y-3">
+                  {run.calls.map((c) => (
+                    <StaggerItem key={c.call_id} className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <p className={EYEBROW}>
+                          {c.started_at ? new Date(c.started_at).toLocaleString() : "—"}
+                          {c.lead_name && ` · ${c.lead_name}`}
+                          {c.duration_seconds != null && ` · ${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s`}
+                        </p>
+                        {c.summary && parseOutcome(c.summary) && (
+                          <Badge
+                            className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} text-[11px] font-bold shrink-0`}
+                          >
+                            {parseOutcome(c.summary).replace(/_/g, " ")}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-pd-body">
+                        {c.summary ? c.summary.replace(/\n?OUTCOME:.*$/i, "").trim() : (
+                          <span className="text-pd-danger">{c.error}</span>
+                        )}
+                      </p>
+                    </StaggerItem>
+                  ))}
+                </Stagger>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className={DIALOG_FOOTER}>
+          {!run && (
+            <>
+              <DialogClose asChild>
+                <Button variant="outline">Cancel</Button>
+              </DialogClose>
               <Button
                 onClick={() => startMemberAnalysis(name, Math.min(count, estimate?.calls_found ?? count))}
                 disabled={estimating || !estimate || estimate.calls_found === 0}
@@ -356,122 +577,33 @@ function MemberAnalyzeDialog({ member }) {
                 <Sparkles className="h-4 w-4" />
                 Analyze
               </Button>
-            </div>
-
-            <div className="rounded-xl border border-pd-primary-pale bg-pd-primary-tint/60 px-4 py-3 text-sm">
-              {estimating ? (
-                <span className="flex items-center gap-2 text-pd-subtle">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Estimating cost…
-                </span>
-              ) : estimate ? (
-                estimate.calls_found === 0 ? (
-                  <span className="text-pd-subtle">No recorded calls found for this member.</span>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="font-semibold text-pd-ink">
-                      ~{estimate.estimated_credits} credits
-                      <span className="ml-2 font-normal text-pd-subtle">estimated</span>
-                    </p>
-                    <p className="text-xs text-pd-subtle">
-                      {estimate.calls_found} recorded {estimate.calls_found === 1 ? "call" : "calls"}
-                      {estimate.calls_found < estimate.requested && ` (only ${estimate.calls_found} of ${estimate.requested} requested exist)`}
-                      {" · "}{estimate.total_minutes} min of audio
-                      {estimate.already_transcribed > 0 && ` · ${estimate.already_transcribed} already transcribed (free)`}
-                    </p>
-                  </div>
-                )
-              ) : (
-                <span className="text-pd-subtle">Couldn&apos;t fetch a cost estimate.</span>
-              )}
-            </div>
-            <p className="text-xs text-pd-subtle">
-              Recordings are transcribed and reviewed by AI. You can close this window while it runs — you&apos;ll be
-              notified when the analysis is done.
-            </p>
-          </div>
-        )}
-
-        {/* Progress */}
-        {running && (
-          <div className="flex flex-col items-center justify-center py-10 text-center gap-3">
-            <div className="flex w-full max-w-xs flex-col gap-2" aria-hidden="true">
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-5/6" />
-              <Skeleton className="h-3 w-2/3" />
-            </div>
-            <p className="text-sm font-semibold text-pd-ink">
-              Analyzing calls… {run.done}/{run.total}
-            </p>
-            <p className="text-xs text-pd-subtle max-w-xs">
-              Transcribing and reviewing {name}&apos;s recordings. Feel free to close this window — you&apos;ll be
-              notified when it&apos;s done.
-            </p>
-          </div>
-        )}
-
-        {/* Error */}
-        {run?.status === "error" && (
-          <div className="space-y-3 py-4">
-            <p className="text-sm text-pd-danger">{run.error}</p>
-            <Button variant="outline" size="sm" onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}>
-              Try again
-            </Button>
-          </div>
-        )}
-
-        {/* Results */}
-        {run?.status === "done" && (
-          <div className="space-y-4 pt-2">
-            <div className="flex flex-wrap items-center gap-2">
-              {Object.entries(outcomes).map(([o, n]) => (
-                <Badge key={o} className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
-                  {o.replace(/_/g, " ")}: {n}
-                </Badge>
-              ))}
-              {run.failed > 0 && (
-                <Badge variant="destructive" className="text-[11px] font-bold">
-                  {run.failed} failed to transcribe
-                </Badge>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              {run.calls.map((c) => (
-                <div key={c.call_id} className="rounded-xl border border-pd-border bg-pd-surface p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <p className="text-xs text-pd-subtle">
-                      {c.started_at ? new Date(c.started_at).toLocaleString() : "—"}
-                      {c.lead_name && ` · ${c.lead_name}`}
-                      {c.duration_seconds != null && ` · ${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s`}
-                    </p>
-                    {c.summary && parseOutcome(c.summary) && (
-                      <Badge
-                        className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} text-[11px] font-bold shrink-0`}
-                      >
-                        {parseOutcome(c.summary).replace(/_/g, " ")}
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-pd-body whitespace-pre-line">
-                    {c.summary ? c.summary.replace(/\n?OUTCOME:.*$/i, "").trim() : (
-                      <span className="text-pd-danger">{c.error}</span>
-                    )}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => { memberRuns.delete(name); notifyMemberRuns() }}
-              className="gap-1.5"
-            >
-              <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
-              New analysis
-            </Button>
-          </div>
-        )}
+            </>
+          )}
+          {running && (
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          )}
+          {run?.status === "error" && (
+            <>
+              <DialogClose asChild>
+                <Button variant="outline">Close</Button>
+              </DialogClose>
+              <Button onClick={resetRun}>Try again</Button>
+            </>
+          )}
+          {run?.status === "done" && (
+            <>
+              <Button variant="outline" onClick={resetRun} className="gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
+                New analysis
+              </Button>
+              <DialogClose asChild>
+                <Button>Close</Button>
+              </DialogClose>
+            </>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   )
@@ -663,36 +795,51 @@ function AnalyzeCell({ row }) {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="font-pd-display flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-pd-primary" />
+        <DialogContent className={`w-[min(640px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
+          {/* Header */}
+          <div className={DIALOG_HEADER}>
+            <DialogTitle className={DIALOG_TITLE}>
               Call analysis — {row.caller_name || row.to_number}
             </DialogTitle>
-          </DialogHeader>
-          {result && (
-            <div className="space-y-3 text-sm">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-pd-subtle">
-                {row.agent_name && <span>Agent: <span className="font-medium text-pd-ink">{row.agent_name}</span></span>}
-                <span>{DURATION_CELL(row.duration)}</span>
-                {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
-                {sections?.outcome && (
-                  <Badge className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
-                    {sections.outcome.replace(/_/g, " ")}
-                  </Badge>
+            <div className={`${DIALOG_SUBTITLE} flex flex-wrap items-center gap-x-3 gap-y-1`}>
+              {row.agent_name && <span>Agent: <span className="font-semibold text-pd-ink">{row.agent_name}</span></span>}
+              <span className="tabular-nums">{DURATION_CELL(row.duration)}</span>
+              {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
+            </div>
+          </div>
+
+          {/* Body */}
+          <div className={DIALOG_BODY}>
+            {result && (
+              <div className={`${DIALOG_SECTION} space-y-4`}>
+                <BirdyRow>
+                  {sections?.outcome && (
+                    <Badge className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
+                      {sections.outcome.replace(/_/g, " ")}
+                    </Badge>
+                  )}
+                </BirdyRow>
+                {sections?.happened ? (
+                  <Stagger gap={0.04} className="space-y-3">
+                    <AnalysisSection label="What happened" text={sections.happened} />
+                    <AnalysisSection label="What went wrong" text={sections.wrong} />
+                    <AnalysisSection label="Coaching" text={sections.coaching} />
+                  </Stagger>
+                ) : (
+                  <div className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
+                    <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-pd-body">{result.analysis}</p>
+                  </div>
                 )}
               </div>
-              {sections?.happened ? (
-                <>
-                  <AnalysisSection label="What happened" text={sections.happened} />
-                  <AnalysisSection label="What went wrong" text={sections.wrong} />
-                  <AnalysisSection label="Coaching" text={sections.coaching} />
-                </>
-              ) : (
-                <p className="whitespace-pre-wrap text-pd-body">{result.analysis}</p>
-              )}
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className={DIALOG_FOOTER}>
+            <DialogClose asChild>
+              <Button variant="outline">Close</Button>
+            </DialogClose>
+          </div>
         </DialogContent>
       </Dialog>
     </>
@@ -702,10 +849,10 @@ function AnalyzeCell({ row }) {
 function AnalysisSection({ label, text }) {
   if (!text) return null
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-pd-faint">{label}</p>
-      <p className="mt-0.5 text-pd-body">{text}</p>
-    </div>
+    <StaggerItem className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
+      <p className={EYEBROW}>{label}</p>
+      <p className="mt-1 text-[13.5px] leading-relaxed text-pd-body">{text}</p>
+    </StaggerItem>
   )
 }
 

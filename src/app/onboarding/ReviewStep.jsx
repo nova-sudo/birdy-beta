@@ -9,6 +9,7 @@ import { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Stagger, StaggerItem } from "@/components/motion"
 import {
   CyclingCaption,
   FakeProgressBar,
@@ -265,18 +266,21 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
     // here needs room that was not there. Capped at the same 1080px as the
     // progress bar in the top bar so the two line up on a wide monitor
     // instead of the table sitting visibly narrower than the chrome above it.
-    <div className="w-full max-w-[1080px]">
-      <div className="mb-2 text-center">
+    // Heading, copy and the stat banner land one after another; the table
+    // below arrives with the step itself, since a row-by-row entrance on 25
+    // rows would be a wait, not a flourish.
+    <Stagger className="w-full max-w-[1080px]" gap={0.06}>
+      <StaggerItem className="mb-2 text-center">
         <StepHeading small>Here&apos;s what we found in your GHL account</StepHeading>
-      </div>
-      <div className="mb-5 text-center text-[13.5px] text-pd-faint">
+      </StaggerItem>
+      <StaggerItem className="mb-5 text-center text-[13.5px] text-pd-faint">
         {hasRecency
           ? `We've pre-selected sub-accounts with a lead in the last 7 days (up to ${MAX_IMPORT_SELECTION}) and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in.`
           : "These are the sub-accounts you haven't imported yet. Review the names, Facebook matches and status, untick any you don't want, then bring them in."}
-      </div>
+      </StaggerItem>
 
       {/* stat banner */}
-      <div className="mb-[18px] flex gap-3 text-left">
+      <StaggerItem className="mb-[18px] flex gap-3 text-left">
         {stats.map((stat) => (
           <div
             key={stat.label}
@@ -286,7 +290,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
             <div className="truncate text-xs text-pd-subtle">{stat.label}</div>
           </div>
         ))}
-      </div>
+      </StaggerItem>
 
       {/* Search. The per-row Facebook dropdown has always had its own filter,
           but the table itself had none — and with 173 sub-accounts, finding the
@@ -602,6 +606,6 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           {importing ? "Importing…" : `Import ${importCount} sub-account${importCount === 1 ? "" : "s"}`}
         </PrimaryButton>
       </div>
-    </div>
+    </Stagger>
   )
 }

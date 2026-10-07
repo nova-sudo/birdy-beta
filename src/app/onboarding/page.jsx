@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
+import { AnimatePresence, motion } from "framer-motion"
 import getSymbolFromCurrency from "currency-symbol-map"
 import {
   AlertCircle,
@@ -34,6 +35,7 @@ import { STORAGE_KEYS } from "@/lib/constants"
 import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 import { pdFontClass } from "@/lib/pd-fonts"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { EASE_OUT, EASE_SPRING, Pop, Stagger, StaggerItem } from "@/components/motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBirdy } from "@/components/birdy/use-birdy"
 import {
@@ -79,6 +81,17 @@ const PHASE_OF = {
 const PHASE_LABEL = {
   1: "Welcome", 2: "Core connections", 3: "Sales stack", 4: "First client",
   5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Billing", 9: "Finished",
+}
+
+// How a step arrives and leaves. `custom` is the direction of travel (+1
+// forward, -1 back): going forward a step slides in from the right and the
+// old one slips out to the left, and the back button mirrors both, so the
+// wizard reads as a strip you move along rather than a stack of screens. The
+// exit is deliberately short — it is the entrance people should notice.
+const STEP_VARIANTS = {
+  enter: (direction) => ({ opacity: 0, x: 40 * direction, scale: 0.98 }),
+  center: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.45, ease: EASE_SPRING } },
+  exit: (direction) => ({ opacity: 0, x: -40 * direction, transition: { duration: 0.2, ease: EASE_OUT } }),
 }
 
 // The twelve the sign-up form used to offer, before currency moved in here.
@@ -187,6 +200,9 @@ export default function OnboardingPage() {
   const [booting, setBooting] = useState(true)
   const [bootError, setBootError] = useState(null)
   const [stepIndex, setStepIndex] = useState(0)
+  // Which way the last step change went, for STEP_VARIANTS. Updated alongside
+  // stepIndex in goToIndex; the boot-time restore leaves it at forward.
+  const [direction, setDirection] = useState(1)
 
   const [name, setName] = useState("")
   const [agency, setAgency] = useState("")
@@ -307,10 +323,11 @@ export default function OnboardingPage() {
   const goToIndex = useCallback(
     (idx, dataPatch) => {
       const clamped = Math.max(0, Math.min(idx, visibleSteps.length - 1))
+      setDirection(clamped < stepIndex ? -1 : 1)
       setStepIndex(clamped)
       persistState({ step: clamped, ...(dataPatch ? { data: dataPatch } : {}) })
     },
-    [visibleSteps.length, persistState]
+    [visibleSteps.length, stepIndex, persistState]
   )
 
   const next = useCallback(
@@ -1192,13 +1209,21 @@ export default function OnboardingPage() {
                 <span className="text-[11.5px] text-pd-faint">Step {stepNum} of {stepTotal}</span>
               </div>
               <div className="flex gap-1">
+                {/* Each segment is a track with a fill that grows from the
+                    left as its phase is reached, and empties again if the
+                    user backs out of it. The fill's colour is the old
+                    three-way split: done, current, not yet. */}
                 {[1, 2, 3, 4, 5, 6, 7].map((p) => (
-                  <div
-                    key={p}
-                    className={`h-1 flex-1 rounded-full ${
-                      p < phase ? "bg-pd-primary" : p === phase ? "bg-pd-primary-light" : "bg-pd-divider"
-                    }`}
-                  />
+                  <div key={p} className="h-1 flex-1 overflow-hidden rounded-full bg-pd-divider">
+                    <motion.div
+                      className={`h-full w-full origin-left rounded-full transition-colors duration-500 ${
+                        p < phase ? "bg-pd-primary" : "bg-pd-primary-light"
+                      }`}
+                      initial={false}
+                      animate={{ scaleX: p <= phase ? 1 : 0 }}
+                      transition={{ duration: 0.6, ease: EASE_OUT }}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -1265,47 +1290,78 @@ export default function OnboardingPage() {
         {/* content */}
         <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
 
+          {/* One step on screen at a time, keyed so a change of step is a
+              change of element: the old one plays its exit, the new one its
+              entrance (STEP_VARIANTS). initial={false} keeps the step the
+              wizard boots onto from sliding in from nowhere on a reload.
+              The wrapper fills the content area and re-centres its child so
+              the step columns sit exactly where they did before — and, being
+              transformed, it is what sync_prompt's inset-0 confetti layer is
+              now positioned against, so it has to be the full area. */}
+          <AnimatePresence mode="wait" initial={false} custom={direction}>
+            <motion.div
+              key={currentKey}
+              className="relative flex min-h-full w-full flex-col items-center justify-center"
+              custom={direction}
+              variants={STEP_VARIANTS}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+
           {currentKey === "welcome" && (
-            <div className={STEP_COL}>
-              <BirdyAvatar size={80} tone="white" state={birdyState} className="mx-auto mb-[26px]" />
-              <div className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></div>
-              <div className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
+            <Stagger className={STEP_COL} gap={0.06}>
+              <Pop delay={0.1} className="mx-auto mb-[26px] w-fit">
+                <BirdyAvatar size={80} tone="white" state={birdyState} />
+              </Pop>
+              <StaggerItem className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></StaggerItem>
+              <StaggerItem className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
                 We&apos;ll get you set up with your first client in under 10 minutes.
-              </div>
-              <PrimaryButton onClick={() => next()}>Get started</PrimaryButton>
-            </div>
+              </StaggerItem>
+              <StaggerItem>
+                <PrimaryButton onClick={() => next()}>Get started</PrimaryButton>
+              </StaggerItem>
+            </Stagger>
           )}
 
           {currentKey === "welcome_name" && (
-            <div className={STEP_COL}>
-              <div className="mb-3"><StepHeading>What should we call you?</StepHeading></div>
-              <UnderlineInput
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Your first name"
-                autoFocus
-              />
-              <PrimaryButton disabled={!name.trim()} onClick={() => next({ name: name.trim() })}>
-                Continue
-              </PrimaryButton>
-            </div>
+            <Stagger className={STEP_COL} gap={0.06}>
+              <StaggerItem className="mb-3"><StepHeading>What should we call you?</StepHeading></StaggerItem>
+              <StaggerItem>
+                <UnderlineInput
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Your first name"
+                  autoFocus
+                />
+              </StaggerItem>
+              <StaggerItem>
+                <PrimaryButton disabled={!name.trim()} onClick={() => next({ name: name.trim() })}>
+                  Continue
+                </PrimaryButton>
+              </StaggerItem>
+            </Stagger>
           )}
 
           {currentKey === "agency" && (
-            <div className={STEP_COL}>
-              <div className="mb-2"><StepHeading>What&apos;s your agency called?</StepHeading></div>
-              <div className="mb-[26px] text-[14px] text-pd-faint">
+            <Stagger className={STEP_COL} gap={0.06}>
+              <StaggerItem className="mb-2"><StepHeading>What&apos;s your agency called?</StepHeading></StaggerItem>
+              <StaggerItem className="mb-[26px] text-[14px] text-pd-faint">
                 This is how it&apos;ll show up across Birdy, {name || "friend"}.
-              </div>
-              <UnderlineInput
-                value={agency}
-                onChange={(e) => setAgency(e.target.value)}
-                placeholder="Agency name"
-              />
-              <PrimaryButton disabled={!agency.trim()} onClick={() => next({ agency: agency.trim() })}>
-                Continue
-              </PrimaryButton>
-            </div>
+              </StaggerItem>
+              <StaggerItem>
+                <UnderlineInput
+                  value={agency}
+                  onChange={(e) => setAgency(e.target.value)}
+                  placeholder="Agency name"
+                />
+              </StaggerItem>
+              <StaggerItem>
+                <PrimaryButton disabled={!agency.trim()} onClick={() => next({ agency: agency.trim() })}>
+                  Continue
+                </PrimaryButton>
+              </StaggerItem>
+            </Stagger>
           )}
 
           {currentKey === "connect_ghl" && (
@@ -2029,13 +2085,15 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "completion" && (
-            <div className={STEP_COL}>
-              <BirdyAvatar size={136} tone="white" state={birdyState} className="mx-auto mb-[22px]" />
-              <div className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></div>
-              <div className="mb-[26px] text-[14px] text-pd-faint">
+            <Stagger className={STEP_COL} gap={0.06}>
+              <Pop delay={0.1} className="mx-auto mb-[22px] w-fit">
+                <BirdyAvatar size={136} tone="white" state={birdyState} />
+              </Pop>
+              <StaggerItem className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></StaggerItem>
+              <StaggerItem className="mb-[26px] text-[14px] text-pd-faint">
                 Here&apos;s everything Birdy just connected{agency ? ` for ${agency}` : ""}. We&apos;ll
                 keep importing the rest in the background.
-              </div>
+              </StaggerItem>
 
               {/* Last chance to notice that the background creation failed.
                   Everything after client_currency ran without needing the
@@ -2072,12 +2130,17 @@ export default function OnboardingPage() {
               )}
 
               {creationState !== "error" && (
-                <PrimaryButton onClick={finish} disabled={completing}>
-                  {completing ? "Opening Birdy…" : "Take a look at Birdy"}
-                </PrimaryButton>
+                <StaggerItem>
+                  <PrimaryButton onClick={finish} disabled={completing}>
+                    {completing ? "Opening Birdy…" : "Take a look at Birdy"}
+                  </PrimaryButton>
+                </StaggerItem>
               )}
-            </div>
+            </Stagger>
           )}
+
+            </motion.div>
+          </AnimatePresence>
 
         </div>
       </div>

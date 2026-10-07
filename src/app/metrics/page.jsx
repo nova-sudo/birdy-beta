@@ -99,7 +99,7 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="p-0 w-fit bg-pd-surface">
+      <PopoverContent className="p-0 w-fit rounded-xl border-pd-border bg-pd-surface shadow-sm">
         <Tabs defaultValue="all" className="w-fit" onValueChange={handleTabChange}>
           <TabsList className="w-fit">
             <TabsTrigger value="all">
@@ -113,7 +113,7 @@ const MetricSelector = ({ value, onChange, availableMetrics }) => {
           </TabsList>
 
           {/* Shared search input */}
-          <div className="px-2 py-2 border-b">
+          <div className="px-2 py-2 border-b border-pd-divider">
             <Input
               placeholder={activeSource === "all" ? "Search all metrics..." : `Search in ${activeSource}...`}
               value={search}
@@ -831,46 +831,46 @@ const MetricsHub = () => {
         {/* Create/Edit Dialog */}
         <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) resetForm() }}>
           <DialogContent
-            className="w-[90vw] !max-w-none h-[90vh] p-0 gap-0 flex flex-col overflow-hidden bg-background sm:!max-w-none"
+            className="w-[min(1120px,94vw)] !max-w-none h-[88vh] p-0 gap-0 flex flex-col overflow-hidden bg-pd-canvas sm:!max-w-none"
             showCloseButton={false}
           >
             {/* Header */}
-            <div className="bg-pd-surface dark:bg-card px-6 py-4 border-b border-border rounded-t-xl shrink-0">
+            <div className="bg-pd-surface px-7 py-5 border-b border-pd-border shrink-0">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-pd-display text-lg font-semibold leading-none tracking-tight">
+                  <h2 className="font-pd-display text-[22px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
                     {editingMetric ? "Edit Metric" : duplicatingFrom ? "Duplicate Metric" : "Create Metric"}
                   </h2>
-                  <p className="text-sm text-muted-foreground mt-1">
+                  <p className="text-[13px] text-pd-subtle mt-1.5">
                     {editingMetric
                       ? "Update the metric configuration."
                       : duplicatingFrom
-                        ? <>Editing a copy of <span className="font-medium text-foreground">&ldquo;{duplicatingFrom.name}&rdquo;</span> — choose a unique name before saving.</>
+                        ? <>Editing a copy of <span className="font-semibold text-pd-ink">&ldquo;{duplicatingFrom.name}&rdquo;</span> — choose a unique name before saving.</>
                         : dialogMode === "birdy"
                           ? "Chat with Birdy to build your metric — it'll create it for you."
                           : "Build a formula by combining metrics and operations."}
                   </p>
                 </div>
                 {!editingMetric && !duplicatingFrom && (
-                  <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/70 border border-border/60 shrink-0">
+                  <div className="flex items-center gap-1 p-1 rounded-full bg-muted shrink-0">
                     <button
                       type="button"
                       onClick={() => setDialogMode("birdy")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                         dialogMode === "birdy"
-                          ? "bg-pd-surface text-pd-primary shadow-pd-segment border border-pd-primary-pale/60"
+                          ? "bg-pd-primary text-white shadow-pd-segment"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <BirdyAvatar size={18} />
+                      <BirdyAvatar size={18} tone="white" />
                       Ask Birdy
                     </button>
                     <button
                       type="button"
                       onClick={() => setDialogMode("manual")}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
+                      className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
                         dialogMode === "manual"
-                          ? "bg-pd-surface text-foreground shadow-pd-segment border border-border/60"
+                          ? "bg-white text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
                     >
@@ -928,7 +928,7 @@ const MetricsHub = () => {
                     }}
                   />
                 </div>
-                <div className="shrink-0 px-6 py-3 border-t border-border bg-pd-surface flex justify-end">
+                <div className="shrink-0 px-7 py-3 border-t border-pd-border bg-pd-surface flex justify-end">
                   <Button variant="outline" size="sm" onClick={resetForm}>
                     Close
                   </Button>
@@ -938,16 +938,16 @@ const MetricsHub = () => {
 
             {/* Body — Manual / Edit / Duplicate mode */}
             {(dialogMode === "manual" || editingMetric || duplicatingFrom) && (
-            <div className="p-6 overflow-y-auto flex-1">
+            <div className="px-7 py-6 overflow-y-auto flex-1">
               <div className="flex flex-col gap-6">
                 {/* Two-column layout */}
                 <div className="flex flex-col lg:flex-row gap-6 items-stretch">
                   {/* Left column */}
                   <div className="w-full lg:w-2/3 flex-1 space-y-4">
                     {/* Name + Description */}
-                    <div className="rounded-xl border border-border bg-card p-6 grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="metric-name" className="block text-base font-semibold mb-1">Metric Name</Label>
+                    <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="metric-name" className="text-[12.5px] font-semibold text-pd-ink">Metric Name</Label>
                         <Input
                           id="metric-name"
                           placeholder="e.g., Lead-to-Close Ratio"
@@ -956,13 +956,13 @@ const MetricsHub = () => {
                           className={isNameDuplicate ? "border-destructive focus-visible:ring-destructive/30" : ""}
                         />
                         {isNameDuplicate && (
-                          <p className="mt-1 text-xs text-destructive">
+                          <p className="text-[12.5px] text-pd-danger">
                             A metric with this name already exists. Pick a different name.
                           </p>
                         )}
                       </div>
-                      <div>
-                        <Label htmlFor="metric-description" className="block text-base font-semibold mb-1">Description</Label>
+                      <div className="space-y-2">
+                        <Label htmlFor="metric-description" className="text-[12.5px] font-semibold text-pd-ink">Description</Label>
                         <Input
                           id="metric-description"
                           placeholder="Describe what this metric measures"
@@ -973,8 +973,8 @@ const MetricsHub = () => {
                     </div>
 
                     {/* Dashboard selector */}
-                    <div className="rounded-xl border border-border bg-card p-6">
-                      <h4 className="font-pd-display text-base font-semibold text-foreground mb-3">Show on Dashboards</h4>
+                    <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
+                      <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Show on Dashboards</h3>
                       {(() => {
                         const LEVEL_MAP = {
                           meta_spend: "group", meta_impressions: "group", meta_clicks: "group",
@@ -1015,7 +1015,7 @@ const MetricsHub = () => {
                         return (
                           <div className="space-y-2">
                             {mixedLevels && (
-                              <p className="text-xs text-pd-danger font-medium">Cannot mix group-level and campaign-level metrics in the same formula.</p>
+                              <p className="text-[12.5px] font-semibold text-pd-danger">Cannot mix group-level and campaign-level metrics in the same formula.</p>
                             )}
                             <div className="flex flex-wrap gap-2">
                               {DASHBOARD_OPTIONS.map(d => {
@@ -1025,12 +1025,12 @@ const MetricsHub = () => {
                                 return (
                                   <label
                                     key={d.value}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm transition-colors ${
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full border text-[13px] font-semibold transition-colors ${
                                       disabled
-                                        ? "opacity-40 cursor-not-allowed bg-muted border-border"
+                                        ? "opacity-40 cursor-not-allowed bg-pd-divider border-pd-border text-pd-body"
                                         : checked
                                           ? "bg-pd-primary-tint border-pd-primary-pale text-pd-primary cursor-pointer"
-                                          : "bg-pd-surface border-border hover:border-pd-primary-pale cursor-pointer"
+                                          : "bg-pd-surface border-pd-border text-pd-body hover:border-pd-primary-pale cursor-pointer"
                                     }`}
                                   >
                                     <Checkbox
@@ -1057,28 +1057,31 @@ const MetricsHub = () => {
                     </div>
 
                     {/* Calculation Logic */}
-                    <div className="rounded-xl border border-border bg-card p-6 flex-1">
-                      <h4 className="font-pd-display text-base font-semibold text-foreground mb-3">Calculation Logic</h4>
-                      <div className="min-h-[80px] rounded-xl border border-dashed border-border/60 bg-muted/30 p-4 flex flex-wrap gap-2 items-center">
+                    <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm flex-1 space-y-4">
+                      <div>
+                        <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Calculation Logic</h3>
+                        <p className="text-[12.5px] text-pd-subtle mt-1">Reads left to right, like a sentence.</p>
+                      </div>
+                      <div className="min-h-[88px] rounded-xl border border-dashed border-pd-border bg-pd-canvas px-4 py-3 flex flex-wrap gap-2 items-center">
                         {metricForm.formulaParts.length === 0 || (metricForm.formulaParts.length === 1 && !metricForm.formulaParts[0].value) ? (
-                          <span className="text-sm text-muted-foreground">Click &quot;Add Metric&quot; to start building your formula</span>
+                          <span className="text-[13px] text-pd-subtle">Click &quot;Add Metric&quot; to start building your formula</span>
                         ) : (
                           metricForm.formulaParts.map((part, index) => {
                             if (part.type === "operator") {
                               return (
-                                <span key={index} className="w-8 h-8 rounded-full bg-pd-primary-tint text-pd-primary flex items-center justify-center text-sm font-semibold">
+                                <span key={index} className="flex size-7 items-center justify-center rounded-full bg-pd-divider font-pd-display text-[14px] font-bold text-pd-body">
                                   {part.value === "*" ? "×" : part.value === "/" ? "÷" : part.value}
                                 </span>
                               )
                             }
                             if (part.type === "number") {
                               return (
-                                <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pd-amber-bg border border-pd-amber/30 text-sm font-medium shadow-sm text-pd-amber">
+                                <span key={index} className="inline-flex items-center gap-1.5 rounded-full bg-pd-warning-bg px-3 py-1 text-[13px] font-semibold tabular-nums text-pd-amber">
                                   {part.label ?? part.value}
                                   <button
                                     type="button"
                                     onClick={() => removeFormulaPart(index)}
-                                    className="text-pd-amber/60 hover:text-pd-danger transition-colors"
+                                    className="opacity-60 hover:opacity-100 hover:text-pd-danger transition-colors"
                                   >
                                     <X className="h-3 w-3" />
                                   </button>
@@ -1090,12 +1093,12 @@ const MetricsHub = () => {
                               || customMetrics.find(cm => cm.id === part.value)?.name
                               || part.value
                             return (
-                              <span key={index} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-pd-surface border border-border text-sm font-medium shadow-sm">
+                              <span key={index} className="inline-flex items-center gap-1.5 rounded-full bg-pd-primary-tint px-3 py-1 text-[13px] font-semibold text-pd-primary">
                                 {metricLabel}
                                 <button
                                   type="button"
                                   onClick={() => removeFormulaPart(index)}
-                                  className="text-muted-foreground hover:text-pd-danger transition-colors"
+                                  className="opacity-60 hover:opacity-100 hover:text-pd-danger transition-colors disabled:opacity-30"
                                   disabled={metricForm.formulaParts.length === 1}
                                 >
                                   <X className="h-3 w-3" />
@@ -1105,7 +1108,7 @@ const MetricsHub = () => {
                           })
                         )}
                       </div>
-                      <div className="flex items-center justify-center gap-3 mt-4">
+                      <div className="flex flex-wrap items-center justify-center gap-3">
                         {/* Operator buttons */}
                         <div className="flex items-center gap-1.5">
                           {["+", "-", "×", "/"].map(op => {
@@ -1123,7 +1126,7 @@ const MetricsHub = () => {
                                     formulaParts: [...f.formulaParts, { type: "operator", value: opVal }],
                                   }))
                                 }}
-                                className="w-9 h-9 rounded-full border border-primary/20 bg-primary/10 text-sm font-semibold text-primary hover:bg-primary/20 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                                className="flex size-9 items-center justify-center rounded-full border border-pd-border bg-pd-surface font-pd-display text-[15px] font-bold text-pd-ink transition-colors hover:bg-pd-divider disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-pd-surface"
                               >
                                 {op}
                               </button>
@@ -1142,7 +1145,7 @@ const MetricsHub = () => {
                               value=""
                               disabled={!canAddMetric}
                               placeholder="+ Add Metric"
-                              triggerClassName="text-xs h-9 gap-1.5 w-auto"
+                              triggerClassName="h-9 w-auto gap-1.5 rounded-full text-[13px] font-semibold"
                               onChange={(metricId) => {
                                 if (isEmpty) {
                                   setMetricForm(f => ({ ...f, formulaParts: [{ type: "metric", value: metricId }] }))
@@ -1169,7 +1172,7 @@ const MetricsHub = () => {
                                   type="button"
                                   variant="outline"
                                   disabled={!canAddNumber}
-                                  className="text-xs h-9 gap-1.5 w-auto disabled:opacity-30"
+                                  className="h-9 w-auto gap-1.5 rounded-full text-[13px] font-semibold disabled:opacity-30"
                                 >
                                   + Add Number
                                 </Button>
@@ -1198,7 +1201,7 @@ const MetricsHub = () => {
                                     }
                                   }}
                                 />
-                                <p className="text-[10px] text-muted-foreground mt-1.5">Press Enter to add</p>
+                                <p className="text-[12.5px] text-pd-subtle mt-1.5">Press Enter to add</p>
                               </PopoverContent>
                             </Popover>
                           )
@@ -1209,10 +1212,10 @@ const MetricsHub = () => {
 
                   {/* Right column — Preview */}
                   <div className="w-full lg:w-1/3 flex-shrink-0 self-stretch">
-                    <div className="rounded-xl border text-card-foreground shadow-sm bg-card h-full flex flex-col">
+                    <div className="rounded-xl border border-pd-border bg-pd-surface shadow-sm h-full flex flex-col">
                       <div className="p-6 pt-6 flex-1 flex flex-col justify-between">
                         <div className="text-center p-4 flex-1 flex flex-col justify-center">
-                          <div className="font-pd-display text-4xl font-bold">
+                          <div className="font-pd-display text-[40px] font-bold leading-none tracking-[-0.02em] tabular-nums text-pd-ink">
                             {(() => {
                               const parts = metricForm.formulaParts
                               if (!parts.length || !parts[0].value) return "–"
@@ -1266,42 +1269,48 @@ const MetricsHub = () => {
                               } catch { return "–" }
                             })()}
                           </div>
-                          <div className="text-[10px] text-muted-foreground/50 mt-1">sample preview</div>
-                          <div className="text-sm text-muted-foreground mt-3">{metricForm.name || "Unnamed Metric"}</div>
-                          <div className="text-xs text-muted-foreground mt-1">
+                          <div className="text-[11px] font-bold uppercase tracking-[.04em] text-pd-faint mt-2">sample preview</div>
+                          <div className="font-pd-display text-[16px] font-semibold text-pd-ink mt-4">{metricForm.name || "Unnamed Metric"}</div>
+                          <div className="text-[12.5px] text-pd-subtle mt-1">
                             {metricForm.formulaParts.length > 0 && metricForm.formulaParts[0].value
                               ? buildFormulaString(metricForm.formulaParts)
                               : "No formula"}
                           </div>
                         </div>
-                        <div className="border-t border-border pt-4 mt-2">
+                        <div className="border-t border-pd-divider pt-4 mt-2">
                           <div className="grid grid-cols-2 gap-3">
-                            <Select
-                              value={metricForm.formatType}
-                              onValueChange={v => setMetricForm(f => ({ ...f, formatType: v }))}
-                            >
-                              <SelectTrigger className="h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-pd-surface">
-                                <SelectItem value="integer">Integer</SelectItem>
-                                <SelectItem value="currency">Currency</SelectItem>
-                                <SelectItem value="percentage">Percentage</SelectItem>
-                                <SelectItem value="decimal">Decimal</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <Select
-                              value={metricForm.aggregation}
-                              onValueChange={v => setMetricForm(f => ({ ...f, aggregation: v }))}
-                            >
-                              <SelectTrigger className="h-10">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="bg-pd-surface">
-                                <SelectItem value="total">Total</SelectItem>
-                                <SelectItem value="average">Average</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <div className="space-y-2">
+                              <Label className="text-[12.5px] font-semibold text-pd-ink">Format</Label>
+                              <Select
+                                value={metricForm.formatType}
+                                onValueChange={v => setMetricForm(f => ({ ...f, formatType: v }))}
+                              >
+                                <SelectTrigger className="h-10 w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-pd-surface">
+                                  <SelectItem value="integer">Integer</SelectItem>
+                                  <SelectItem value="currency">Currency</SelectItem>
+                                  <SelectItem value="percentage">Percentage</SelectItem>
+                                  <SelectItem value="decimal">Decimal</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-[12.5px] font-semibold text-pd-ink">Aggregation</Label>
+                              <Select
+                                value={metricForm.aggregation}
+                                onValueChange={v => setMetricForm(f => ({ ...f, aggregation: v }))}
+                              >
+                                <SelectTrigger className="h-10 w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-pd-surface">
+                                  <SelectItem value="total">Total</SelectItem>
+                                  <SelectItem value="average">Average</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1314,7 +1323,7 @@ const MetricsHub = () => {
 
             {/* Footer — only shown in manual/edit/duplicate mode */}
             {(dialogMode === "manual" || editingMetric || duplicatingFrom) && (
-            <div className="bg-pd-surface dark:bg-card px-6 py-4 border-t border-border rounded-b-xl flex-shrink-0">
+            <div className="bg-pd-surface px-7 py-4 border-t border-pd-border flex-shrink-0">
               <div className="flex flex-row justify-end gap-2">
                 <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
                 <Button

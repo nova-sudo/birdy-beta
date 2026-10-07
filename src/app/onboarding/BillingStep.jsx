@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
 import { PLANS } from "@/components/billing/plans"
+import { Stagger, StaggerItem } from "@/components/motion"
 import { FakeProgressBar, SpinnerRing, STEP_COL, StepHeading, SuccessRow } from "./parts"
 
 const WHOP_ENVIRONMENT =
@@ -130,14 +131,16 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
   }
 
   return (
-    <div className="w-full max-w-[780px] text-left">
-      <div className="mb-2 text-center">
+    // Heading and copy lead the plan tiles in by a beat; the tiles and the
+    // checkout that replaces them come in with the step itself.
+    <Stagger className="w-full max-w-[780px] text-left" gap={0.06}>
+      <StaggerItem className="mb-2 text-center">
         <StepHeading small>One more thing — pick a plan to bring in your sub-accounts</StepHeading>
-      </div>
-      <div className="mb-[22px] text-center text-[13.5px] text-pd-faint">
+      </StaggerItem>
+      <StaggerItem className="mb-[22px] text-center text-[13.5px] text-pd-faint">
         You&apos;re about to import {accountCount} sub-account{accountCount === 1 ? "" : "s"} — an active
         plan is required before Birdy loads their data.
-      </div>
+      </StaggerItem>
 
       {!selectedPlan ? (
         <>
@@ -216,6 +219,6 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
           </div>
         </div>
       )}
-    </div>
+    </Stagger>
   )
 }
