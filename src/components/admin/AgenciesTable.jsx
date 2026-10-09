@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { UserRoundCog, MessagesSquare, Loader2, Trash2 } from "lucide-react"
+import { UserRoundCog, MessagesSquare, Loader2, Trash2, Gauge } from "lucide-react"
 import { toast } from "sonner"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { startImpersonation, fetchMe, deleteUserAccount } from "@/lib/admin-api"
 import { rewriteSessionRole } from "@/lib/session"
+import ClientLimitDialog from "@/components/admin/ClientLimitDialog"
 
 function initials(name = "") {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "?"
@@ -47,6 +48,8 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [confirmEmail, setConfirmEmail] = useState("")
   const [deleting, setDeleting] = useState(false)
+  // Account whose client limit is being edited.
+  const [limitTarget, setLimitTarget] = useState(null)
 
   const confirmImpersonate = async () => {
     if (!target) return
@@ -112,7 +115,7 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Owner / Agency</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Plan</TableHead>
-              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Sub-accounts</TableHead>
+              <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Clients</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">Leads</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B] text-right">AI queries</TableHead>
               <TableHead className="text-[11px] font-semibold uppercase tracking-wide text-[#71658B]">Last active</TableHead>
@@ -148,7 +151,20 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
                 <TableCell>
                   <Badge variant="outline" className={PLAN_STYLES[a.plan] || PLAN_STYLES.Free}>{a.plan}</Badge>
                 </TableCell>
-                <TableCell className="text-right tabular-nums text-sm">{a.sub_accounts.toLocaleString()}</TableCell>
+                <TableCell className="text-right tabular-nums text-sm">
+                  {/* Used / allowed. The allowance is the override when an admin
+                      has set one, otherwise what the plan gives. */}
+                  <span>{a.sub_accounts.toLocaleString()}</span>
+                  <span className="text-muted-foreground"> / {(a.client_limit ?? 0).toLocaleString()}</span>
+                  {a.client_limit_override != null && (
+                    <span
+                      className="ml-1.5 rounded border border-purple-200 bg-purple-50 px-1 py-px text-[10px] font-semibold text-purple-700"
+                      title={`Admin override (plan allows ${a.plan_client_limit})${a.client_limit_override_note ? ` — ${a.client_limit_override_note}` : ""}`}
+                    >
+                      override
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="text-right tabular-nums text-sm">{a.leads.toLocaleString()}</TableCell>
                 <TableCell className="text-right tabular-nums text-sm">{a.ai_queries.toLocaleString()}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">{relative(a.last_active)}</TableCell>
@@ -159,6 +175,14 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
                       className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-muted transition-colors"
                     >
                       <MessagesSquare className="h-3.5 w-3.5" /> Chats
+                    </button>
+                    <button
+                      onClick={() => setLimitTarget(a)}
+                      disabled={a.role === "admin"}
+                      aria-label={`Set the client limit for ${a.email}`}
+                      className="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <Gauge className="h-3.5 w-3.5" /> Limit
                     </button>
                     <button
                       onClick={() => setTarget(a)}
@@ -186,6 +210,12 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
           </TableBody>
         </Table>
       </div>
+
+      <ClientLimitDialog
+        agency={limitTarget}
+        onClose={() => setLimitTarget(null)}
+        onSaved={() => { setLimitTarget(null); onDeleted?.() }}
+      />
 
       <AlertDialog open={!!target} onOpenChange={(o) => !o && !busy && setTarget(null)}>
         <AlertDialogContent className="bg-white">

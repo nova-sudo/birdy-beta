@@ -154,3 +154,19 @@ export async function fetchMe() {
     return null
   }
 }
+
+/**
+ * Override how many clients an account may have, whatever its plan allows.
+ * `limit: null` removes the override. Audited server-side.
+ */
+export async function setClientLimit(email, { limit, note }) {
+  const res = await apiRequest(`/api/admin/agencies/${encodeURIComponent(email)}/client-limit`, {
+    method: "PUT",
+    body: JSON.stringify({ limit, note: note || null }),
+  })
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}))
+    throw new Error(typeof data.detail === "string" ? data.detail : "Failed to update the client limit")
+  }
+  return res.json()
+}
