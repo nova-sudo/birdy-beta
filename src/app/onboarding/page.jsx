@@ -59,14 +59,45 @@ import {
 } from "./parts"
 import ReviewStep from "./ReviewStep"
 import BillingStep from "./BillingStep"
+import ReportDesigner from "@/components/report-designer/ReportDesigner"
 
 const STEPS = [
   "welcome", "welcome_name", "agency", "connect_ghl",
   "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
   "client_confirm", "client_currency", "sync_prompt",
   "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
+  "report_copilot", "sub_accounts_review", "billing", "completion",
+]
+
+// The list before the report copilot replaced the frequency and brief-content
+// steps. A saved step is an index, so a wizard paused under the old list is
+// translated through its step *name* on resume (see the boot effect) — read
+// against the new list directly, everyone past the Slack steps would land one
+// step further on than they were, which skips the sub-account review.
+const STEPS_V1 = [
+  "welcome", "welcome_name", "agency", "connect_ghl",
+  "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
+  "client_confirm", "client_currency", "sync_prompt",
+  "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
   "slack_frequency", "brief_content", "sub_accounts_review", "billing", "completion",
 ]
+const STEPS_VERSION = 2
+
+function visibleFor(list, salesTool) {
+  return list.filter((s) => (s === "hp_key" ? salesTool === "hp" : true))
+}
+
+/** Where a saved step index points in today's wizard. */
+function resumeIndex(savedStep, data) {
+  const visible = visibleFor(STEPS, data.sales_tool)
+  const step = savedStep || 0
+  if (data.steps_version === STEPS_VERSION) return Math.min(step, visible.length - 1)
+  const oldVisible = visibleFor(STEPS_V1, data.sales_tool)
+  let key = oldVisible[Math.min(step, oldVisible.length - 1)]
+  if (key === "slack_frequency" || key === "brief_content") key = "report_copilot"
+  const idx = visible.indexOf(key)
+  return idx === -1 ? Math.min(step, visible.length - 1) : idx
+}
 
 const PHASE_OF = {
   welcome: 1, welcome_name: 1, agency: 1,
@@ -74,7 +105,7 @@ const PHASE_OF = {
   sales_tool: 3, hp_key: 3,
   client_picker: 4, client_confirm: 4, client_currency: 4, meta_ad_picker: 4, sync_prompt: 4,
   kpi_targets: 5, kpi_default: 5,
-  slack_connect: 6, slack_channel: 6, slack_frequency: 6, brief_content: 6,
+  slack_connect: 6, slack_channel: 6, report_copilot: 6,
   sub_accounts_review: 7, billing: 8, completion: 9,
 }
 
@@ -111,22 +142,6 @@ const CURRENCY_OPTIONS = [
   { code: "JPY", label: "Japanese Yen" },
   { code: "CNY", label: "Chinese Yuan" },
 ]
-
-const TIME_OPTIONS = ["7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "12:00 PM", "5:00 PM"]
-const DAY_OPTIONS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-
-const BRIEF_DEFS = [
-  { id: "spend", label: "Ad spend summary", desc: "Yesterday's spend across all ad accounts", rec: true },
-  { id: "leads", label: "Lead volume", desc: "New leads captured in the period", rec: true },
-  { id: "conversion", label: "Conversion rate", desc: "Leads converting to booked or won", rec: true },
-  { id: "top", label: "Top performer", desc: "Your best client or ad set right now", rec: true },
-  { id: "alerts", label: "Alerts triggered", desc: "Anything that crossed a threshold", rec: true },
-  { id: "underperform", label: "Underperforming ads", desc: "Ads worth pausing or reviewing", rec: false },
-]
-
-const DEFAULT_BRIEF_ITEMS = {
-  spend: true, leads: true, conversion: true, top: true, alerts: true, underperform: false,
-}
 
 const CONFETTI_COLORS = ["#5B3FD6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#9F8BEA"]
 
@@ -270,10 +285,8 @@ export default function OnboardingPage() {
   const [oauthError, setOAuthError] = useState(null)
   const [channelSearch, setChannelSearch] = useState("")
   const [selectedChannel, setSelectedChannel] = useState(null)
-  const [frequency, setFrequency] = useState(null)
-  const [notifyTime, setNotifyTime] = useState("9:00 AM")
-  const [notifyDay, setNotifyDay] = useState("Monday")
-  const [briefItems, setBriefItems] = useState(DEFAULT_BRIEF_ITEMS)
+  const [savingReport, setSavingReport] = useState(false)
+  const [reportError, setReportError] = useState(null)
 
   const [review, setReview] = useState(null)
   const [reviewSettled, setReviewSettled] = useState(false)
@@ -325,7 +338,7 @@ export default function OnboardingPage() {
       const clamped = Math.max(0, Math.min(idx, visibleSteps.length - 1))
       setDirection(clamped < stepIndex ? -1 : 1)
       setStepIndex(clamped)
-      persistState({ step: clamped, ...(dataPatch ? { data: dataPatch } : {}) })
+      persistState({ step: clamped, data: { ...(dataPatch || {}), steps_version: STEPS_VERSION } })
     },
     [visibleSteps.length, stepIndex, persistState]
   )
@@ -412,10 +425,6 @@ export default function OnboardingPage() {
           if (data.slack.channel_id) {
             setSelectedChannel({ id: data.slack.channel_id, name: data.slack.channel_name })
           }
-          if (data.slack.frequency) setFrequency(data.slack.frequency)
-          if (data.slack.time) setNotifyTime(data.slack.time)
-          if (data.slack.day) setNotifyDay(data.slack.day)
-          if (data.slack.brief_items) setBriefItems({ ...DEFAULT_BRIEF_ITEMS, ...data.slack.brief_items })
         }
         if (data.wants_sync) setSyncing(true)
         // Recover the sub-accounts picked in ReviewStep if a checkout redirect
@@ -424,8 +433,7 @@ export default function OnboardingPage() {
         // in-memory ref alone doesn't survive that.
         if (Array.isArray(data.pending_import)) pendingImportRef.current = data.pending_import
 
-        const visible = STEPS.filter((s) => (s === "hp_key" ? data.sales_tool === "hp" : true))
-        if (!cancelled) setStepIndex(Math.min(state.step || 0, visible.length - 1))
+        if (!cancelled) setStepIndex(resumeIndex(state.step, data))
 
         // Probe live connection status in the background so a returning OAuth
         // hop shows green — deliberately not awaited: first paint shouldn't
@@ -891,24 +899,32 @@ export default function OnboardingPage() {
     next({ slack: { channel_id: selectedChannel.id, channel_name: selectedChannel.name } })
   }, [selectedChannel, next])
 
-  const saveBrief = useCallback(() => {
-    if (slackStatus === "success" && frequency) {
-      apiRequest("/api/integrations/slack/brief", {
+  // The report copilot's "Use this report": store the template it designed as
+  // the live Slack report, then move on. Saving can fail only if Slack was
+  // disconnected in between, which the user has to hear about rather than
+  // finish with no report going out.
+  const saveReport = useCallback(async (template) => {
+    setSavingReport(true)
+    setReportError(null)
+    try {
+      const res = await apiRequest("/api/integrations/slack/brief", {
         method: "PUT",
-        body: JSON.stringify({
-          frequency,
-          time: notifyTime,
-          day: frequency === "weekly" ? notifyDay : null,
-          items: briefItems,
-        }),
-      }).catch(() => {})
+        body: template ? JSON.stringify({ template }) : JSON.stringify({ frequency: "daily", time: "9:00 AM" }),
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      const { brief } = await res.json()
+      next({ slack: {
+        channel_id: selectedChannel?.id,
+        channel_name: selectedChannel?.name,
+        frequency: brief.frequency, time: brief.time, day: brief.day,
+        sections: brief.sections.length,
+      } })
+    } catch {
+      setReportError("Couldn't save your report. Check Slack is still connected, then try again.")
+    } finally {
+      setSavingReport(false)
     }
-    next({ slack: {
-      channel_id: selectedChannel?.id,
-      channel_name: selectedChannel?.name,
-      frequency, time: notifyTime, day: notifyDay, brief_items: briefItems,
-    } })
-  }, [slackStatus, frequency, notifyTime, notifyDay, briefItems, selectedChannel, next])
+  }, [selectedChannel, next])
 
   // "Yes, set as default" is a promise about every client, and only the first
   // one was ever getting targets — import-subaccounts carries a name, an ad
@@ -1942,128 +1958,33 @@ export default function OnboardingPage() {
             </div>
           )}
 
-          {currentKey === "slack_frequency" && (
-            <div className={STEP_COL}>
-              <div className="mb-[26px]"><StepHeading>How often should Birdy send you a brief?</StepHeading></div>
-              <div className="mb-5 flex gap-[14px]">
-                {[
-                  { id: "daily", label: "Daily", desc: "A summary every morning" },
-                  { id: "weekly", label: "Weekly", desc: "One digest each Monday" },
-                ].map((opt) => (
-                  <div
-                    key={opt.id}
-                    onClick={() => setFrequency(opt.id)}
-                    className={`flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors ${
-                      frequency === opt.id ? "border-pd-primary bg-pd-primary-tint" : "border-pd-border bg-white"
-                    }`}
-                  >
-                    <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
-                    <div className="text-[11.5px] text-pd-faint">{opt.desc}</div>
-                  </div>
-                ))}
-              </div>
-              {frequency === "daily" && (
-                <div className="mb-[22px] text-left">
-                  <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">What time?</div>
-                  <select
-                    value={notifyTime}
-                    onChange={(e) => setNotifyTime(e.target.value)}
-                    className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
-                  >
-                    {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                  </select>
+          {currentKey === "report_copilot" && (
+            <div className="w-full max-w-[1120px]">
+              <div className="mb-5 text-center">
+                <StepHeading small>Let&apos;s design your Slack report.</StepHeading>
+                <div className="mt-1.5 text-[13.5px] text-pd-faint">
+                  Birdy will post it to #{selectedChannel?.name || "your channel"}. Chat it through and watch it take shape.
                 </div>
-              )}
-              {frequency === "weekly" && (
-                <div className="mb-[22px] flex gap-3 text-left">
-                  <div className="flex-1">
-                    <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Which day?</div>
-                    <select
-                      value={notifyDay}
-                      onChange={(e) => setNotifyDay(e.target.value)}
-                      className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
+              </div>
+              <ReportDesigner
+                sessionKey="birdy_onboarding_report"
+                ignoreCreditsGate
+                onUse={saveReport}
+                saving={savingReport}
+                secondaryAction={
+                  <>
+                    {reportError && <div className="text-center text-[12px] text-pd-danger">{reportError}</div>}
+                    <button
+                      type="button"
+                      onClick={() => saveReport(null)}
+                      disabled={savingReport}
+                      className="cursor-pointer border-0 bg-transparent p-1 text-center text-[12.5px] font-medium text-pd-subtle underline-offset-2 hover:text-pd-ink hover:underline disabled:opacity-40"
                     >
-                      {DAY_OPTIONS.map((d) => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
-                  <div className="flex-1">
-                    <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">What time?</div>
-                    <select
-                      value={notifyTime}
-                      onChange={(e) => setNotifyTime(e.target.value)}
-                      className="w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[11px] text-[14.5px] text-pd-ink outline-none"
-                    >
-                      {TIME_OPTIONS.map((t) => <option key={t} value={t}>{t}</option>)}
-                    </select>
-                  </div>
-                </div>
-              )}
-              <PrimaryButton disabled={!frequency} onClick={() => next({ slack: {
-                channel_id: selectedChannel?.id, channel_name: selectedChannel?.name,
-                frequency, time: notifyTime, day: notifyDay,
-              } })}>
-                Continue
-              </PrimaryButton>
-            </div>
-          )}
-
-          {currentKey === "brief_content" && (
-            <div className={STEP_COL_WIDE}>
-              <div className="mb-2 text-center">
-                <StepHeading small>What information do you want in your morning brief?</StepHeading>
-              </div>
-              <div className="mb-[22px] text-center text-[13.5px] text-pd-faint">
-                We&apos;ve pre-selected what most agencies find useful — untick anything you
-                don&apos;t need.
-              </div>
-              <div className="flex flex-col items-start gap-6 text-left sm:flex-row">
-                <div className="w-full flex-[1.2] overflow-hidden rounded-xl border border-pd-border">
-                  {BRIEF_DEFS.map((def) => {
-                    const on = !!briefItems[def.id]
-                    return (
-                      <div
-                        key={def.id}
-                        onClick={() => setBriefItems((prev) => ({ ...prev, [def.id]: !prev[def.id] }))}
-                        className="flex cursor-pointer items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[13px] last:border-b-0"
-                      >
-                        <span
-                          className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-white ${
-                            on ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"
-                          }`}
-                        >
-                          {on ? "✓" : ""}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[13.5px] font-semibold text-pd-ink">{def.label}</div>
-                          <div className="text-[11.5px] text-pd-faint">{def.desc}</div>
-                        </div>
-                        {def.rec && (
-                          <span className="shrink-0 rounded-full bg-pd-primary px-[7px] py-[2px] text-[11px] font-bold text-white">
-                            RECOMMENDED
-                          </span>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                <div className="w-full flex-1">
-                  <div className="mb-[9px] text-[11px] font-bold tracking-[0.05em] text-pd-faint">PREVIEW</div>
-                  <SlackPreviewCard time={notifyTime}>
-                    {briefItems.spend && <div>💰 Spend yesterday: <strong className="text-white">{currencySymbol}142</strong> across 3 ad sets</div>}
-                    {briefItems.leads && <div>📈 New leads: <strong className="text-white">18</strong></div>}
-                    {briefItems.conversion && <div>🎯 Conversion rate: <strong className="text-white">14.2%</strong></div>}
-                    {briefItems.top && <div>🏆 Top performer: <strong className="text-white">{clientDisplayName}</strong></div>}
-                    {briefItems.alerts && <div>🔔 Alerts: <strong className="text-white">1 triggered</strong> — CPA over target</div>}
-                    {briefItems.underperform && <div>⚠️ Underperforming: <strong className="text-white">2 ads</strong> flagged for review</div>}
-                    {!Object.values(briefItems).some(Boolean) && (
-                      <div className="text-white/60">Tick something on the left to see it here.</div>
-                    )}
-                  </SlackPreviewCard>
-                </div>
-              </div>
-              <div className="mt-[26px] text-center">
-                <PrimaryButton onClick={saveBrief}>Continue</PrimaryButton>
-              </div>
+                      Skip, use the standard daily report
+                    </button>
+                  </>
+                }
+              />
             </div>
           )}
 

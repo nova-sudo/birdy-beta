@@ -49,6 +49,11 @@ const TOOL_MAP = {
 
   // Groups
   get_client_groups: { category: "group", icon: Briefcase, label: "Client groups", running: "Loading client groups" },
+  // Slack report copilot (page "report_designer")
+  list_report_clients: { category: "group",   icon: Briefcase,     label: "Clients"        , running: "Checking your clients" },
+  list_report_metrics: { category: "group",   icon: BarChart3,     label: "Report metrics" , running: "Checking which metrics you have" },
+  get_report_draft:    { category: "group",   icon: MessageSquare, label: "Report draft"   , running: "Reading your report" },
+  propose_report:      { category: "group",   icon: Sparkles,      label: "Updated preview", running: "Updating your report" },
 }
 
 const FALLBACK = {

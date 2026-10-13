@@ -1,8 +1,8 @@
 "use client"
 
 // components/settings/GeneralSettings.jsx
-// The Settings General tab: account fields, password, and how often Birdy
-// sends the Slack brief.
+// The Settings General tab: account fields, password, and the Slack report:
+// its schedule here, its contents through the report copilot (SavedReportCard).
 //
 // This tab shipped as a literal placeholder — "General settings content goes
 // here" — because none of it had anywhere to save. The endpoints exist now
@@ -21,6 +21,7 @@ import {
 import { Stagger, StaggerItem } from "@/components/motion"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
+import SavedReportCard from "@/components/report-designer/SavedReportCard"
 
 // Kept short and ordered by likelihood rather than listing every ISO code —
 // the agencies on this product bill in a handful of currencies.
@@ -333,7 +334,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
       <Card className="max-w-[900px]">
         <CardHeader>
           <CardTitle className="font-pd-display text-base">Notification preferences</CardTitle>
-          <CardDescription>How often Birdy sends your Slack brief</CardDescription>
+          <CardDescription>When Birdy sends your Slack report, and what&apos;s in it</CardDescription>
         </CardHeader>
         <Separator />
         <CardContent className="pt-4">
@@ -405,6 +406,8 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
               >
                 {savingBrief ? "Saving…" : "Save schedule"}
               </Button>
+
+              <SavedReportCard brief={brief} onSaved={onBriefSaved} />
             </>
           )}
         </CardContent>

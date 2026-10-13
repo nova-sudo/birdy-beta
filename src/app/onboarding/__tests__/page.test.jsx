@@ -35,6 +35,19 @@ vi.mock("../BillingStep", () => ({
     </div>
   ),
 }))
+// The report copilot is a live chat against /api/chat; its own behaviour is
+// covered in components/report-designer. The stand-in offers its two exits.
+vi.mock("@/components/report-designer/ReportDesigner", () => ({
+  default: ({ onUse, secondaryAction }) => (
+    <div>
+      report designer
+      <button onClick={() => onUse({ frequency: "weekly", day: "Friday", time: "8:00 AM", sections: [{ type: "alerts" }] })}>
+        use this report
+      </button>
+      {secondaryAction}
+    </div>
+  ),
+}))
 // next/font runs at build time and throws when called outside the Next
 // compiler; the wizard only wants the class name off it.
 vi.mock("@/lib/pd-fonts", () => ({
@@ -195,7 +208,7 @@ describe("onboarding wizard", () => {
 
     await user.click(screen.getByRole("button", { name: /continue/i }))
 
-    await screen.findByText(/how often should birdy send you a brief/i)
+    await screen.findByText(/design your slack report/i)
   })
 
   it("does not blank an already-configured channel on the way past", async () => {
@@ -207,7 +220,7 @@ describe("onboarding wizard", () => {
 
     await user.click(screen.getByRole("button", { name: /continue/i }))
 
-    await screen.findByText(/how often should birdy send you a brief/i)
+    await screen.findByText(/design your slack report/i)
     // Either nothing was persisted at all, or what was carries no `slack`.
     // Both are the point; an empty `slack: {}` is what must not appear.
     expect(lastPersistedData()?.slack).toBeUndefined()
@@ -741,5 +754,75 @@ describe("onboarding wizard", () => {
 
     await waitFor(() => expect(screen.getByTestId("importing").textContent).toBe("true"))
     expect(screen.getByTestId("account-count").textContent).toBe("3")
+  })
+
+  // ── The report copilot ────────────────────────────────────────────────
+
+  const SLACK_READY = { "/api/integrations/slack/status": () => json({ installed: true }) }
+
+  it("saves the designed report and moves on to the sub-account review", async () => {
+    const user = userEvent.setup()
+    bootAt(15, {
+      data: { steps_version: 2 },
+      overrides: {
+        ...SLACK_READY,
+        "/api/integrations/slack/brief": () =>
+          json({ ok: true, brief: { frequency: "weekly", day: "Friday", time: "8:00 AM", sections: [{ type: "alerts" }] } }),
+      },
+    })
+    await screen.findByText(/design your slack report/i)
+
+    await user.click(screen.getByRole("button", { name: /use this report/i }))
+
+    const put = apiRequest.mock.calls.find(([url]) => url === "/api/integrations/slack/brief")
+    expect(JSON.parse(put[1].body).template.day).toBe("Friday")
+    await waitFor(() => expect(lastPersistedData()?.slack?.frequency).toBe("weekly"))
+  })
+
+  it("stays put and says so when the report could not be saved", async () => {
+    const user = userEvent.setup()
+    bootAt(15, {
+      data: { steps_version: 2 },
+      overrides: {
+        ...SLACK_READY,
+        "/api/integrations/slack/brief": () => Promise.resolve({ ok: false, status: 404, json: async () => ({}) }),
+      },
+    })
+    await screen.findByText(/design your slack report/i)
+
+    await user.click(screen.getByRole("button", { name: /use this report/i }))
+
+    await screen.findByText(/couldn't save your report/i)
+    expect(screen.getByText(/design your slack report/i)).toBeTruthy()
+  })
+
+  it("can skip to the standard daily report", async () => {
+    const user = userEvent.setup()
+    bootAt(15, {
+      data: { steps_version: 2 },
+      overrides: {
+        ...SLACK_READY,
+        "/api/integrations/slack/brief": () =>
+          json({ ok: true, brief: { frequency: "daily", day: null, time: "9:00 AM", sections: [{ type: "alerts" }] } }),
+      },
+    })
+    await screen.findByText(/design your slack report/i)
+
+    await user.click(screen.getByRole("button", { name: /skip, use the standard daily report/i }))
+
+    const put = apiRequest.mock.calls.find(([url]) => url === "/api/integrations/slack/brief")
+    expect(JSON.parse(put[1].body)).toEqual({ frequency: "daily", time: "9:00 AM" })
+  })
+
+  it("resumes a wizard saved under the old step list on the same step", async () => {
+    // Index 17 used to be the sub-account review; in today's list it is billing.
+    bootAt(17, { data: {} })
+    await waitFor(() => expect(screen.getAllByText(/sub-account/i).length).toBeGreaterThan(0))
+    expect(screen.queryByText(/billing step/i)).toBeNull()
+  })
+
+  it("sends someone paused on the old brief steps to the copilot", async () => {
+    bootAt(16, { data: {}, overrides: SLACK_READY })   // old brief-content step
+    await screen.findByText(/design your slack report/i)
   })
 })

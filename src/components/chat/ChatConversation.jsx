@@ -38,6 +38,10 @@ import { startersFor } from "@/lib/chat-starters"
  *   quickStarters?          [{label, prompt}] — starters; defaults to the page's own
  *   scopeLocked?            the surface is pinned to one client: show it, don't offer a picker
  *   composerAutoFocus?      focus the composer on mount (the side panel)
+ *   showScopePicker?        offer the client picker under the composer (default true)
+ *   hideInitialMessage?     don't show the auto-sent initialMessage as a user bubble
+ *   ignoreCreditsGate?      let the server decide on credits (the onboarding copilot)
+ *   showSlowNotice?         the "taking a little longer, you can close this" hint (default true)
  */
 export default function ChatConversation({
   initialMessages = [],
@@ -59,6 +63,13 @@ export default function ChatConversation({
   quickStarters = null,
   scopeLocked = false,
   composerAutoFocus = false,
+  // The report copilot (onboarding + Settings) talks about the whole account,
+  // opens with a scripted first message nobody typed, and runs during
+  // onboarding — before billing, so the credits gate is the server's call.
+  showScopePicker = true,
+  hideInitialMessage = false,
+  ignoreCreditsGate = false,
+  showSlowNotice = true,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -99,7 +110,8 @@ export default function ChatConversation({
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
   const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
-  const { blocked: outOfCredits, refresh: refreshCredits } = useCredits()
+  const { blocked: creditsBlocked, refresh: refreshCredits } = useCredits()
+  const outOfCredits = creditsBlocked && !ignoreCreditsGate
 
   // Stable refs — prevents inline callbacks from recreating sendMessage every render
   const onMessagesChangeRef = useRef(onMessagesChange)
@@ -154,7 +166,11 @@ export default function ChatConversation({
       // Store-owned send: survives this component unmounting mid-request.
       await sendChatMessage(
         sessionKey,
-        { text, page, clientGroupId: scope.id, clientName: scope.id ? scope.name : null },
+        {
+          text, page,
+          clientGroupId: showScopePicker ? scope.id : null,
+          clientName: showScopePicker && scope.id ? scope.name : null,
+        },
         {
           persistSession: true,
           onSessionId: (id) => onSessionIdRef.current?.(id),
@@ -222,7 +238,7 @@ export default function ChatConversation({
     } finally {
       setLocalLoading(false)
     }
-  }, [loading, sessionId, sessionKey, isControlled, page, scope, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
@@ -243,9 +259,12 @@ export default function ChatConversation({
     sendMessage(`[UI_RESPONSE] ${JSON.stringify(values)}`)
   }
 
-  const visibleMessages = messages.filter(
-    m => !(m.role === "user" && m.content?.startsWith("[UI_RESPONSE]"))
-  )
+  const isHidden = (m, i) =>
+    m.role === "user" && (
+      m.content?.startsWith("[UI_RESPONSE]") ||
+      (hideInitialMessage && i === 0 && m.content === initialMessage)
+    )
+  const visibleMessages = messages.filter((m, i) => !isHidden(m, i))
   const isEmpty = visibleMessages.length === 0
 
   if (!configured) {
@@ -280,7 +299,7 @@ export default function ChatConversation({
           />
         ) : (
           <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
-            {messages.map((m, i) => (
+            {messages.map((m, i) => isHidden(m, i) ? null : (
               <MessageBubble
                 key={i}
                 message={m}
@@ -291,7 +310,7 @@ export default function ChatConversation({
               />
             ))}
             {loading && <TypingIndicator />}
-            {loading && slowNotice && (
+            {loading && slowNotice && showSlowNotice && (
               <p className="pl-[34px] text-[12px] text-pd-faint">
                 This is taking a little longer — likely a call analysis. You can
                 close this window; you&apos;ll be notified when it&apos;s done.
@@ -320,14 +339,14 @@ export default function ChatConversation({
             compact={composerCompact}
             placeholder={composerPlaceholder}
             autoFocus={composerAutoFocus}
-            foot={
+            foot={showScopePicker ? (
               <ScopePicker
                 value={scope}
                 clients={clientGroups}
                 onChange={setScope}
                 locked={scopeLocked}
               />
-            }
+            ) : null}
           />
         </div>
       </div>

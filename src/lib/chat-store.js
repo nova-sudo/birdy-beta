@@ -27,6 +27,7 @@ const SLOW_AFTER_MS = 6000
 const EMPTY = { messages: [], loading: false, sessionId: null, submittedUIs: [] }
 const chats = new Map() // sessionKey -> { messages, loading, sessionId, submittedUIs }
 const listeners = new Map() // sessionKey -> Set<fn>
+const generations = new Map() // sessionKey -> bumped by resetChat, so a reply in flight can't land in the new chat
 
 function entry(sessionKey) {
   if (!chats.has(sessionKey)) chats.set(sessionKey, { ...EMPTY })
@@ -69,6 +70,7 @@ export function seedSessionId(sessionKey, sessionId) {
 
 /** "New chat": drop transcript + session. */
 export function resetChat(sessionKey) {
+  generations.set(sessionKey, (generations.get(sessionKey) ?? 0) + 1)
   chats.set(sessionKey, { ...EMPTY })
   emit(sessionKey)
 }
@@ -87,12 +89,17 @@ export function markUISubmitted(sessionKey, uiKey) {
  * handlers: { on402, on412, onToolUsed, onSessionId, persistSession }
  */
 export async function sendChatMessage(sessionKey, payload, handlers = {}) {
-  const chat = entry(sessionKey)
-  if (chat.loading) return
+  // Always read the live entry: emit() swaps in a fresh object for
+  // useSyncExternalStore, so a reference held across an emit goes stale and
+  // anything written to it afterwards (the reply, loading=false) is lost.
+  const chat = () => entry(sessionKey)
+  if (chat().loading) return
+  const generation = generations.get(sessionKey) ?? 0
+  const stale = () => (generations.get(sessionKey) ?? 0) !== generation
   const { text, page, clientGroupId, clientName } = payload
 
-  chat.messages = [...chat.messages, { role: "user", content: text }]
-  chat.loading = true
+  chat().messages = [...chat().messages, { role: "user", content: text }]
+  chat().loading = true
   emit(sessionKey)
 
   // Surface in the sidebar only once the request is genuinely slow — quick
@@ -109,22 +116,24 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       method: "POST",
       body: JSON.stringify({
         message: text,
-        session_id: chat.sessionId,
+        session_id: chat().sessionId,
         page,
         client_group_id: clientGroupId,
         client_name: clientName,
       }),
     })
 
+    if (stale()) return
+
     if (res.status === 412) {
       handlers.on412?.()
       // Remove the orphaned user bubble — the message never reached a model.
-      chat.messages = chat.messages.slice(0, -1)
+      chat().messages = chat().messages.slice(0, -1)
       return
     }
     if (res.status === 402) {
       handlers.on402?.()
-      chat.messages = chat.messages.slice(0, -1)
+      chat().messages = chat().messages.slice(0, -1)
       return
     }
 
@@ -133,15 +142,16 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       : { reply: "Sorry, something went wrong.", tools_used: [] }
 
     if (data.session_id) {
-      chat.sessionId = data.session_id
+      chat().sessionId = data.session_id
       handlers.onSessionId?.(data.session_id)
       if (handlers.persistSession && typeof window !== "undefined") {
         sessionStorage.setItem(sessionKey, data.session_id)
       }
     }
 
+    if (stale()) return
     const toolsUsed = data.tools_used || []
-    chat.messages = [...chat.messages, { role: "assistant", content: data.reply, tools_used: toolsUsed }]
+    chat().messages = [...chat().messages, { role: "assistant", content: data.reply, tools_used: toolsUsed }]
     toolsUsed.forEach((t) => handlers.onToolUsed?.(t))
 
     // Nobody watching this chat any more → the modal was closed mid-run.
@@ -153,12 +163,16 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       })
     }
   } catch {
-    chat.messages = [...chat.messages, { role: "assistant", content: "Sorry, I hit an error. Please try again.", tools_used: [] }]
+    if (!stale()) {
+      chat().messages = [...chat().messages, { role: "assistant", content: "Sorry, I hit an error. Please try again.", tools_used: [] }]
+    }
   } finally {
     clearTimeout(slowTimer)
     if (jobId) finishJob(jobId)
-    chat.loading = false
-    emit(sessionKey)
+    if (!stale()) {
+      chat().loading = false
+      emit(sessionKey)
+    }
     handlers.onSettled?.()
   }
 }
