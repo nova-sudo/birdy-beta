@@ -17,11 +17,19 @@ describe("scheduleLabel", () => {
 describe("parseMrkdwn", () => {
   it("splits bold, italic and plain runs per line", () => {
     expect(parseMrkdwn("💰 *Ad spend:* £180\n_none_")).toEqual([
-      [{ text: "💰 " }, { text: "Ad spend:", bold: true }, { text: " £180" }],
-      [{ text: "none", italic: true }],
+      { quote: false, segs: [{ text: "💰 " }, { text: "Ad spend:", bold: true }, { text: " £180" }] },
+      { quote: false, segs: [{ text: "none", italic: true }] },
     ])
   })
+  it("reads strikethrough, code, links, quotes and Slack's escaping", () => {
+    const [line, quote] = parseMrkdwn("~old~ `x` <https://a.io|site> R&amp;D\n&gt; note")
+    expect(line.segs).toEqual([
+      { text: "old", strike: true }, { text: " " }, { text: "x", code: true }, { text: " " },
+      { text: "site", href: "https://a.io" }, { text: " R&D" },
+    ])
+    expect(quote).toEqual({ quote: true, segs: [{ text: "note" }] })
+  })
   it("leaves an unmatched asterisk alone", () => {
-    expect(parseMrkdwn("5 * 3")).toEqual([[{ text: "5 * 3" }]])
+    expect(parseMrkdwn("5 * 3")).toEqual([{ quote: false, segs: [{ text: "5 * 3" }] }])
   })
 })

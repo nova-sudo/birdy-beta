@@ -2,9 +2,9 @@
 
 // Settings → Notification preferences: the live Slack report as it will be
 // posted, and two ways to change it: redesign it with Birdy (the same copilot
-// onboarding uses) or edit its sections by hand (ReportEditor). Both open in
+// onboarding uses) or edit its Block Kit blocks by hand (ReportEditor). Both open in
 // the same modal. Schedule changes stay on the controls above this; they
-// keep the report's sections.
+// keep the report's blocks.
 
 import { useCallback, useEffect, useState } from "react"
 import { Pencil, Sparkles } from "lucide-react"
@@ -67,7 +67,7 @@ export default function SavedReportCard({ brief, onSaved }) {
         <div className="flex flex-wrap gap-2">
           <Button type="button" variant="outline" onClick={() => setMode("editor")} className="gap-1.5">
             <Pencil className="size-3.5 text-pd-primary" aria-hidden="true" />
-            Edit sections
+            Edit blocks
           </Button>
           <Button type="button" variant="outline" onClick={() => setMode("copilot")} className="gap-1.5">
             <Sparkles className="size-3.5 text-pd-primary" aria-hidden="true" />
@@ -96,7 +96,7 @@ export default function SavedReportCard({ brief, onSaved }) {
           </DialogTitle>
           <DialogDescription className="mb-4 mt-1 text-[13px] text-pd-subtle">
             {mode === "editor"
-              ? "Add, remove and reorder sections. Nothing changes until you press Save report."
+              ? "Build it from any Slack block: charts, tables, cards, buttons. Nothing changes until you press Save report."
               : "Nothing changes until you press Save report."}
           </DialogDescription>
           {mode === "editor" && (

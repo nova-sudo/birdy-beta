@@ -1,127 +1,112 @@
-// Pure helpers behind the manual report editor
-// (components/report-designer/ReportEditor). The server is the authority on
-// what a template may contain (birdy-backend/services/report_template.py
-// validate); these keep the editor inside the same rules so a save never
-// surprises anyone: at most 12 sections, one Birdy's take, always last.
+// Helpers behind the Slack report message editor
+// (components/report-designer/ReportEditor). The report is a free-form Slack
+// message; live numbers go in as {{placeholders}} the server fills at send
+// time (birdy-backend/services/report_template.py). The server is the
+// authority on what's valid; these only build and insert placeholders.
 
-export const MAX_SECTIONS = 12
-export const MAX_RANKING = 5
+const needsQuotes = (v) => /[\s,"]/.test(String(v))
 
-export const SECTION_TYPES = [
-  { type: "metric", label: "Metric line", hint: "One number, for all clients or one client" },
-  { type: "ranking", label: "Client ranking", hint: "Best or worst clients by a metric" },
-  { type: "alerts", label: "Alerts", hint: "Alerts that fired in the period" },
-  { type: "underperforming_ads", label: "Underperforming ads", hint: "Ads Birdy flagged for review" },
-  { type: "birdy_take", label: "Birdy's take", hint: "A short written read of the numbers" },
-]
-
-export const COMPARE_OPTIONS = [
-  { value: "none", label: "No comparison" },
-  { value: "previous", label: "vs previous period" },
-  { value: "target", label: "vs target" },
-]
-
-let seq = 0
-const uid = () => `s${Date.now().toString(36)}${(seq++).toString(36)}`
-
-/** Give every section a stable client-side key for lists and reordering. */
-export function withKeys(sections = []) {
-  return sections.map((s) => ({ ...s, _key: s._key || uid() }))
+/** {{name key=value key="value with spaces"}} — empty options are left out. */
+export function buildPlaceholder(name, opts = {}) {
+  const parts = Object.entries(opts)
+    .filter(([, v]) => v !== undefined && v !== null && v !== "" && v !== false)
+    .map(([k, v]) => `${k}=${needsQuotes(v) ? `"${String(v).replace(/"/g, "'")}"` : v}`)
+  return `{{${[name, ...parts].join(" ")}}}`
 }
 
-/** The template as the API wants it: no client-side keys. */
-export function toTemplate(base, title, sections) {
-  return {
-    frequency: base?.frequency || "daily",
-    time: base?.time || "9:00 AM",
-    day: base?.day ?? null,
-    title: title?.trim() ? title.trim() : null,
-    sections: sections.map(({ _key, ...rest }) => rest), // eslint-disable-line no-unused-vars
+/** Placeholders that produce several lines read best starting on a fresh line. */
+export function isMultiline(name, opts = {}) {
+  if (name === "breakdown") return true
+  if (name === "ranking") return Number(opts.limit || 3) > 1
+  if (name === "alerts" || name === "flagged_ads") return opts.show === "list"
+  return false
+}
+
+/** Insert `snippet` over the selection [start, end); returns the new text and caret. */
+export function insertAt(text, start, end, snippet) {
+  const before = text.slice(0, start)
+  const after = text.slice(end)
+  const next = before + snippet + after
+  return { text: next, cursor: before.length + snippet.length }
+}
+
+/** Wrap the selection in a Slack mrkdwn marker (*bold*, _italic_, ~strike~, `code`). */
+export function wrapSelection(text, start, end, marker) {
+  const selected = text.slice(start, end) || "text"
+  const snippet = `${marker}${selected}${marker}`
+  const out = insertAt(text, start, end, snippet)
+  return { text: out.text, selStart: start + marker.length, selEnd: start + marker.length + selected.length }
+}
+
+/** Start each selected line with a prefix ("• ", "> ", "# "). */
+export function prefixLines(text, start, end, prefix) {
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1
+  const lineEnd = end > start ? end : (text.indexOf("\n", start) === -1 ? text.length : text.indexOf("\n", start))
+  const block = text.slice(lineStart, lineEnd)
+  const changed = block.split("\n").map((l) => (l.startsWith(prefix) ? l : prefix + l)).join("\n")
+  return { text: text.slice(0, lineStart) + changed + text.slice(lineEnd), cursor: lineStart + changed.length }
+}
+
+/** The placeholders in a message, for listing what live numbers it carries. */
+export function placeholdersIn(body = "") {
+  return [...String(body).matchAll(/\{\{\s*([a-z_]+)[^}]*\}\}/g)].map((m) => ({ raw: m[0], name: m[1] }))
+}
+
+// ── Block Kit editing ─────────────────────────────────────────────────────────
+
+/** Pretty JSON for the editor. */
+export function toJson(blocks) {
+  return JSON.stringify(blocks ?? [], null, 2)
+}
+
+/** The editor's text as blocks, or a readable error (with the line) when it isn't valid JSON. */
+export function parseBlocks(text) {
+  try {
+    const value = JSON.parse(text)
+    if (!Array.isArray(value)) return { blocks: [], error: "The report must be a JSON array of blocks: [ {...}, {...} ]" }
+    return { blocks: value, error: null }
+  } catch (e) {
+    const at = /position (\d+)/.exec(e.message)
+    const line = at ? String(text).slice(0, Number(at[1])).split("\n").length : null
+    return { blocks: [], error: `The JSON isn't valid${line ? ` near line ${line}` : ""}: ${e.message.replace(/^JSON\.parse: /, "")}` }
   }
 }
 
-function firstAvailable(catalog, fallback = "spend") {
-  return (catalog.find((m) => m.available !== false) || catalog[0])?.id || fallback
-}
+const md = (text) => ({ type: "mrkdwn", text })
 
-export function newSection(type, catalog = []) {
-  const base = { _key: uid(), type }
-  if (type === "metric") return { ...base, metric: firstAvailable(catalog), scope: "portfolio", compare: "previous" }
-  if (type === "ranking") return { ...base, metric: firstAvailable(catalog, "leads"), direction: "best", limit: 3 }
-  if (type === "birdy_take") return { ...base, focus: "" }
-  return base
-}
-
-export const hasTake = (sections) => sections.some((s) => s.type === "birdy_take")
-
-export function canAdd(sections, type) {
-  if (sections.length >= MAX_SECTIONS) return false
-  if (type === "birdy_take" && hasTake(sections)) return false
-  return true
-}
-
-/** Add a section; new sections go above Birdy's take, which stays last. */
-export function addSection(sections, section) {
-  if (!canAdd(sections, section.type)) return sections
-  if (section.type === "birdy_take") return [...sections, section]
-  const takeAt = sections.findIndex((s) => s.type === "birdy_take")
-  if (takeAt === -1) return [...sections, section]
-  return [...sections.slice(0, takeAt), section, ...sections.slice(takeAt)]
-}
-
-export function updateSection(sections, key, patch) {
-  return sections.map((s) => (s._key === key ? { ...s, ...patch } : s))
-}
-
-export function removeSection(sections, key) {
-  return sections.filter((s) => s._key !== key)
-}
-
-/** Move a section by `delta` places. Birdy's take never moves and nothing moves below it. */
-export function moveSection(sections, key, delta) {
-  const from = sections.findIndex((s) => s._key === key)
-  if (from === -1 || sections[from].type === "birdy_take") return sections
-  const movable = sections.filter((s) => s.type !== "birdy_take").length
-  const to = Math.max(0, Math.min(movable - 1, from + delta))
-  if (to === from) return sections
-  const next = [...sections]
-  const [item] = next.splice(from, 1)
-  next.splice(to, 0, item)
-  return next
-}
-
-/** Keep Birdy's take last after a drag reorder of the other sections. */
-export function applyOrder(sections, orderedKeys) {
-  const byKey = new Map(sections.map((s) => [s._key, s]))
-  const ordered = orderedKeys.map((k) => byKey.get(k)).filter((s) => s && s.type !== "birdy_take")
-  const take = sections.find((s) => s.type === "birdy_take")
-  return take ? [...ordered, take] : ordered
-}
-
-/** One-line description of a section, for the collapsed row. */
-export function sectionSummary(section, catalogById = {}, clientsById = {}) {
-  const metric = catalogById[section.metric]?.label || section.metric
-  switch (section.type) {
-    case "metric": {
-      const who = typeof section.scope === "object" && section.scope
-        ? clientsById[section.scope.client_id] || "Unknown client"
-        : "All clients"
-      const cmp = COMPARE_OPTIONS.find((c) => c.value === (section.compare || "none"))
-      return `${metric} · ${who}${section.compare && section.compare !== "none" ? ` · ${cmp.label}` : ""}`
-    }
-    case "ranking":
-      return `${section.direction === "worst" ? "Bottom" : "Top"} ${section.limit} clients by ${metric.toLowerCase()}`
-    case "alerts":
-      return "Alerts triggered in the period"
-    case "underperforming_ads":
-      return "Ads flagged for review"
-    case "birdy_take":
-      return section.focus?.trim() ? `Focused on ${section.focus.trim()}` : "Birdy's read of the numbers"
-    default:
-      return section.type
-  }
-}
-
-export function typeLabel(type) {
-  return SECTION_TYPES.find((t) => t.type === type)?.label || type
-}
+/** "Add block" menu: every block a channel message allows, wired to live data where it makes sense. */
+export const BLOCK_TEMPLATES = [
+  { group: "Text", items: [
+    { id: "header", label: "Header", hint: "Big bold title", block: () => ({ type: "header", text: { type: "plain_text", text: "Weekly numbers · {{period}}" } }) },
+    { id: "section", label: "Text", hint: "A paragraph with live numbers", block: () => ({ type: "section", text: md("We spent *{{spend}}* for *{{leads}}* leads ({{spend show=change}}).") }) },
+    { id: "fields", label: "Two-column numbers", hint: "A tidy grid of headline figures", block: () => ({ type: "section", fields: [
+      md("*Ad spend*\n{{spend}}"), md("*Leads*\n{{leads}}"), md("*Cost per lead*\n{{cpl}}"), md("*Deals won*\n{{ghl_won_opps}}"),
+    ] }) },
+    { id: "markdown", label: "Markdown", hint: "Standard Markdown, tables included", block: () => ({ type: "markdown", text: "**Top clients**\n{{ranking metric=leads order=best limit=3}}" }) },
+    { id: "rich_text", label: "Rich text list", hint: "Slack's structured bullets", block: () => ({ type: "rich_text", elements: [{ type: "rich_text_list", style: "bullet", elements: [
+      { type: "rich_text_section", elements: [{ type: "text", text: "Spend: {{spend}}" }] },
+      { type: "rich_text_section", elements: [{ type: "text", text: "Leads: {{leads}}" }] },
+    ] }] }) },
+    { id: "context", label: "Small print", hint: "Grey footnote line", block: () => ({ type: "context", elements: [md("🔔 Alerts: {{alerts}} · {{client_count}} clients")] }) },
+    { id: "divider", label: "Divider", hint: "A line between parts", block: () => ({ type: "divider" }) },
+  ] },
+  { group: "Charts (native Slack, max 2)", items: [
+    { id: "bar", chart: true, label: "Bar chart by client", hint: "Compare clients on one or more metrics", block: () => ({ type: "data_visualization", title: "Spend and leads by client", birdy_data: { chart: "bar", by: "client", metrics: ["spend", "leads"], limit: 8 } }) },
+    { id: "line", chart: true, label: "Line chart by day", hint: "Daily trend over the last days", block: () => ({ type: "data_visualization", title: "Daily spend", birdy_data: { chart: "line", by: "day", metrics: ["spend"], days: 14 } }) },
+    { id: "area", chart: true, label: "Area chart per client", hint: "One layer per client over days", block: () => ({ type: "data_visualization", title: "Daily spend by client", birdy_data: { chart: "area", by: "day", metrics: ["spend"], days: 14, split: "client" } }) },
+    { id: "pie", chart: true, label: "Pie chart", hint: "Each client's share of a total", block: () => ({ type: "data_visualization", title: "Share of spend", birdy_data: { chart: "pie", by: "client", metrics: ["spend"] } }) },
+  ] },
+  { group: "Tables and cards", items: [
+    { id: "data_table", label: "Data table of clients", hint: "Sortable, paginated", block: () => ({ type: "data_table", caption: "Clients", page_size: 10, birdy_data: { metrics: ["spend", "leads", "cpl"], sort: "spend", total_row: true } }) },
+    { id: "table", label: "Simple table", hint: "A fixed grid of clients", block: () => ({ type: "table", birdy_data: { metrics: ["spend", "leads"], limit: 5 } }) },
+    { id: "carousel", label: "Card per client", hint: "A swipeable carousel", block: () => ({ type: "carousel", birdy_data: { metrics: ["spend", "leads"], limit: 5 } }) },
+    { id: "card", label: "Card", hint: "A highlighted tile", block: () => ({ type: "card", title: md("*This week*"), body: md("{{spend}} spent · {{leads}} leads"),
+      actions: [{ type: "button", text: { type: "plain_text", text: "Open Birdy" }, url: "https://birdy-beta.vercel.app/dashboard" }] }) },
+  ] },
+  { group: "Links and media", items: [
+    { id: "actions", label: "Link buttons", hint: "Open Birdy pages", block: () => ({ type: "actions", elements: [
+      { type: "button", text: { type: "plain_text", text: "Open dashboard" }, url: "https://birdy-beta.vercel.app/dashboard", style: "primary" },
+    ] }) },
+    { id: "image", label: "Image", hint: "Any https image", block: () => ({ type: "image", image_url: "https://birdy-beta.vercel.app/icon.png", alt_text: "Birdy" }) },
+  ] },
+]

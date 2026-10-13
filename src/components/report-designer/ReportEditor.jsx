@@ -1,251 +1,262 @@
 "use client"
 
-// The manual editor for the Slack report: the same template the copilot
-// designs, edited by hand. Sections can be added, removed, reordered (drag the
-// handle, or the arrow buttons from the keyboard) and configured inline; the
-// preview on the right re-renders through /api/report-designer/preview, so it
-// is the message that will actually be posted, and a template the server would
-// refuse shows its reasons there before anyone presses Save.
+// The Slack report, edited by hand as a real Block Kit message: the same JSON
+// array of blocks the copilot writes and Slack receives. "Add block" appends a
+// ready-made block of any kind a channel message allows — text, two-column
+// numbers, cards, carousels, tables, data tables, native charts (line, bar,
+// area, pie) — already wired to live data; "Insert live number" writes a
+// {{placeholder}} at the caret. The preview on the right is the message Slack
+// will receive, filled with real figures through /api/report-designer/preview,
+// and anything Slack's rules won't accept is listed there before Save.
 //
 // The schedule is not edited here: it lives on the controls above the report
 // card in Settings, and is carried through unchanged.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Reorder, useDragControls } from "framer-motion"
-import {
-  AlertTriangle, BarChart3, Bell, ChevronDown, ChevronUp, GripVertical, Plus, Sparkles, Trash2, Trophy,
-} from "lucide-react"
+import { Braces, LayoutGrid, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { reportApi, scheduleLabel } from "@/lib/report-designer"
 import {
-  addSection, applyOrder, canAdd, COMPARE_OPTIONS, MAX_RANKING, MAX_SECTIONS, moveSection, newSection,
-  removeSection, SECTION_TYPES, sectionSummary, toTemplate, typeLabel, updateSection, withKeys,
-} from "@/lib/report-editor"
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { BLOCK_TEMPLATES, buildPlaceholder, insertAt, parseBlocks, toJson } from "@/lib/report-editor"
 import SlackMessagePreview from "./SlackMessagePreview"
 
-const ICONS = {
-  metric: BarChart3, ranking: Trophy, alerts: Bell, underperforming_ads: AlertTriangle, birdy_take: Sparkles,
+const ALL = "__all__"
+const REPORT_WINDOW = "__report__"
+
+const KINDS = [
+  { id: "value", label: "A metric's value" },
+  { id: "change", label: "Change vs last report" },
+  { id: "vs_target", label: "On / off target" },
+  { id: "target", label: "The target itself" },
+  { id: "ranking", label: "Ranking of clients" },
+  { id: "breakdown", label: "Per-client breakdown" },
+  { id: "alerts", label: "Alerts" },
+  { id: "flagged_ads", label: "Flagged ads" },
+  { id: "birdy_take", label: "Birdy's take (written by AI)" },
+  { id: "period", label: "Period name (e.g. Yesterday)" },
+  { id: "date", label: "Today's date" },
+  { id: "client_count", label: "Number of clients" },
+]
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <Label className="text-xs font-semibold">{label}</Label>
+      <div className="mt-1.5">{children}</div>
+    </div>
+  )
 }
 
-const PORTFOLIO = "__portfolio__"
-
-function MetricSelect({ value, catalog, onChange, id }) {
-  const groups = useMemo(() => {
-    const out = new Map()
-    for (const m of catalog) {
-      if (!out.has(m.source)) out.set(m.source, [])
-      out.get(m.source).push(m)
-    }
-    return [...out.entries()]
-  }, [catalog])
+function Pick({ value, onChange, children, id }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id={id} className="mt-1.5 h-[36px] w-full text-[13px]"><SelectValue /></SelectTrigger>
-      <SelectContent>
-        {groups.map(([source, items]) => (
-          <SelectGroup key={source}>
-            <SelectLabel>{source}</SelectLabel>
-            {items.map((m) => (
-              <SelectItem key={m.id} value={m.id}>
-                {m.label}{m.available === false ? " · not connected" : ""}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        ))}
-      </SelectContent>
+      <SelectTrigger id={id} className="h-[34px] w-full text-[13px]"><SelectValue /></SelectTrigger>
+      <SelectContent>{children}</SelectContent>
     </Select>
   )
 }
 
-function SectionFields({ section, catalog, clients, onChange }) {
-  const meta = catalog.find((m) => m.id === section.metric)
-  const fid = (name) => `${section._key}-${name}`
-  if (section.type === "metric") {
-    const scopeValue = typeof section.scope === "object" && section.scope ? section.scope.client_id : PORTFOLIO
-    return (
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <Label htmlFor={fid("metric")} className="text-xs font-semibold">Metric</Label>
-          <MetricSelect
-            id={fid("metric")}
-            value={section.metric}
-            catalog={catalog}
-            onChange={(metric) => {
-              const next = catalog.find((m) => m.id === metric)
-              // A target comparison only exists for metrics with a stored target.
-              onChange({ metric, ...(section.compare === "target" && !next?.has_target ? { compare: "none" } : {}) })
-            }}
-          />
-        </div>
-        <div>
-          <Label htmlFor={fid("scope")} className="text-xs font-semibold">For</Label>
-          <Select
-            value={scopeValue}
-            onValueChange={(v) => onChange({ scope: v === PORTFOLIO ? "portfolio" : { client_id: v } })}
-          >
-            <SelectTrigger id={fid("scope")} className="mt-1.5 h-[36px] w-full text-[13px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={PORTFOLIO}>All clients</SelectItem>
-              {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor={fid("compare")} className="text-xs font-semibold">Compare</Label>
-          <Select value={section.compare || "none"} onValueChange={(compare) => onChange({ compare })}>
-            <SelectTrigger id={fid("compare")} className="mt-1.5 h-[36px] w-full text-[13px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {COMPARE_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value} disabled={o.value === "target" && !meta?.has_target}>
-                  {o.label}{o.value === "target" && !meta?.has_target ? " · no target for this metric" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    )
+function MetricItems({ catalog, filter }) {
+  const groups = new Map()
+  for (const m of catalog.filter(filter || (() => true))) {
+    if (!groups.has(m.source)) groups.set(m.source, [])
+    groups.get(m.source).push(m)
   }
-  if (section.type === "ranking") {
-    return (
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <Label htmlFor={fid("metric")} className="text-xs font-semibold">Rank by</Label>
-          <MetricSelect id={fid("metric")} value={section.metric} catalog={catalog} onChange={(metric) => onChange({ metric })} />
-        </div>
-        <div>
-          <Label htmlFor={fid("direction")} className="text-xs font-semibold">Show</Label>
-          <Select value={section.direction} onValueChange={(direction) => onChange({ direction })}>
-            <SelectTrigger id={fid("direction")} className="mt-1.5 h-[36px] w-full text-[13px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="best">Best performers</SelectItem>
-              <SelectItem value="worst">Clients needing attention</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label htmlFor={fid("limit")} className="text-xs font-semibold">How many</Label>
-          <Select value={String(section.limit)} onValueChange={(v) => onChange({ limit: Number(v) })}>
-            <SelectTrigger id={fid("limit")} className="mt-1.5 h-[36px] w-full text-[13px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: MAX_RANKING }, (_, i) => i + 1).map((n) => (
-                <SelectItem key={n} value={String(n)}>{n}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-    )
-  }
-  if (section.type === "birdy_take") {
-    return (
-      <div>
-        <Label htmlFor={fid("focus")} className="text-xs font-semibold">Focus (optional)</Label>
-        <Input
-          id={fid("focus")}
-          value={section.focus || ""}
-          maxLength={140}
-          onChange={(e) => onChange({ focus: e.target.value })}
-          placeholder="e.g. which clients to push budget to"
-          className="mt-1.5 h-[36px] text-[13px]"
-        />
-        <p className="mt-1.5 text-[11.5px] text-pd-faint">Written fresh each time the report goes out, from its own numbers. Uses Birdy Credits.</p>
-      </div>
-    )
-  }
-  return <p className="text-[12px] text-pd-faint">Nothing to set up. Birdy fills this in from the period.</p>
+  return [...groups.entries()].map(([source, items]) => (
+    <SelectGroup key={source}>
+      <SelectLabel>{source}</SelectLabel>
+      {items.map((m) => (
+        <SelectItem key={m.id} value={m.id}>{m.label}{m.available === false ? " · not connected" : ""}</SelectItem>
+      ))}
+    </SelectGroup>
+  ))
 }
 
-function SectionRow({ section, index, count, open, onToggle, onMove, onRemove, onChange, catalog, catalogById, clientsById, clients, draggable }) {
-  const controls = useDragControls()
-  const Icon = ICONS[section.type] || BarChart3
-  const fixed = section.type === "birdy_take"
-  const body = (
-    <div className={`rounded-xl border bg-pd-surface transition-colors ${open ? "border-pd-primary/50" : "border-pd-border"}`}>
-      <div className="flex items-center gap-2 px-2.5 py-2">
-        {draggable ? (
-          <button
-            type="button"
-            aria-label="Drag to reorder"
-            onPointerDown={(e) => controls.start(e)}
-            className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-pd-faint hover:bg-pd-divider hover:text-pd-ink active:cursor-grabbing"
-          >
-            <GripVertical className="size-4" />
-          </button>
-        ) : <span className="size-7 shrink-0" />}
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-pd-primary-tint text-pd-primary">
-          <Icon className="size-3.5" aria-hidden="true" />
-        </span>
-        <button type="button" onClick={onToggle} aria-expanded={open} className="min-w-0 flex-1 cursor-pointer text-left">
-          <div className="text-[13px] font-semibold text-pd-ink">{typeLabel(section.type)}</div>
-          <div className="truncate text-[12px] text-pd-subtle">{sectionSummary(section, catalogById, clientsById)}</div>
-        </button>
-        {!fixed && (
-          <>
-            <button type="button" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)}
-              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-pd-subtle hover:bg-pd-divider disabled:cursor-default disabled:opacity-30">
-              <ChevronUp className="size-4" />
-            </button>
-            <button type="button" aria-label="Move down" disabled={index >= count - 1} onClick={() => onMove(+1)}
-              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-pd-subtle hover:bg-pd-divider disabled:cursor-default disabled:opacity-30">
-              <ChevronDown className="size-4" />
-            </button>
-          </>
-        )}
-        <button type="button" aria-label={`Remove ${typeLabel(section.type)}`} onClick={onRemove}
-          className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-pd-subtle hover:bg-pd-danger-bg hover:text-pd-danger">
-          <Trash2 className="size-3.5" />
-        </button>
-      </div>
-      {open && (
-        <div className="border-t border-pd-divider px-4 py-3.5">
-          <SectionFields section={section} catalog={catalog} clients={clients} onChange={onChange} />
-        </div>
-      )}
-    </div>
-  )
-  if (!draggable) return body
+/** The "Insert live number" form. Calls onInsert(placeholderText). */
+function InsertNumber({ catalog, clients, periods, onInsert }) {
+  const [open, setOpen] = useState(false)
+  const [kind, setKind] = useState("value")
+  const [metric, setMetric] = useState("spend")
+  const [client, setClient] = useState(ALL)
+  const [period, setPeriod] = useState(REPORT_WINDOW)
+  const [order, setOrder] = useState("best")
+  const [limit, setLimit] = useState("3")
+  const [metrics, setMetrics] = useState(["spend", "leads"])
+  const [show, setShow] = useState("summary")
+  const [focus, setFocus] = useState("")
+
+  const targeted = useMemo(() => catalog.filter((m) => m.has_target), [catalog])
+  const needsTarget = kind === "vs_target" || kind === "target"
+  const clientName = client === ALL ? null : clients.find((c) => c.id === client)?.name
+  const periodOpt = period === REPORT_WINDOW ? null : period
+
+  useEffect(() => {
+    if (needsTarget && !targeted.some((m) => m.id === metric) && targeted[0]) setMetric(targeted[0].id)
+  }, [needsTarget, targeted, metric])
+
+  const text = useMemo(() => {
+    switch (kind) {
+      case "value": return buildPlaceholder(metric, { client: clientName, period: periodOpt })
+      case "change": return buildPlaceholder(metric, { client: clientName, show: "change" })
+      case "vs_target":
+      case "target": return buildPlaceholder(metric, { client: clientName, period: periodOpt, show: kind })
+      case "ranking": return buildPlaceholder("ranking", { metric, order, limit, period: periodOpt })
+      case "breakdown": return buildPlaceholder("breakdown", { metrics: metrics.join(","), order: order === "worst" ? "worst" : null, limit: limit === "3" ? null : limit, period: periodOpt })
+      case "alerts":
+      case "flagged_ads": return buildPlaceholder(kind, { show: show === "summary" ? null : show })
+      case "birdy_take": return buildPlaceholder("birdy_take", { focus: focus.trim() || null })
+      default: return buildPlaceholder(kind)
+    }
+  }, [kind, metric, clientName, periodOpt, order, limit, metrics, show, focus])
+
+  const multiline = kind === "breakdown" || (kind === "ranking" && limit !== "1") || ((kind === "alerts" || kind === "flagged_ads") && show === "list")
+  const usesMetric = ["value", "change", "vs_target", "target", "ranking"].includes(kind)
+  const usesClient = ["value", "change", "vs_target", "target"].includes(kind)
+  const usesPeriod = ["value", "vs_target", "target", "ranking", "breakdown"].includes(kind)
+
   return (
-    <Reorder.Item value={section._key} dragListener={false} dragControls={controls} className="list-none">
-      {body}
-    </Reorder.Item>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" size="sm" className="gap-1.5">
+          <Plus className="size-3.5" /> Insert live number
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[340px] space-y-3">
+        <Field label="What">
+          <Pick value={kind} onChange={setKind}>
+            {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
+          </Pick>
+        </Field>
+        {usesMetric && (
+          <Field label="Metric">
+            <Pick value={metric} onChange={setMetric}>
+              <MetricItems catalog={catalog} filter={needsTarget ? (m) => m.has_target : null} />
+            </Pick>
+          </Field>
+        )}
+        {kind === "breakdown" && (
+          <Field label={`Metrics (up to 4) · ${metrics.length} chosen`}>
+            <div className="pd-scrolly max-h-[150px] space-y-0.5 overflow-y-auto rounded-xl border border-pd-border p-1.5">
+              {catalog.map((m) => {
+                const on = metrics.includes(m.id)
+                return (
+                  <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[12.5px] hover:bg-pd-divider">
+                    <input
+                      type="checkbox"
+                      checked={on}
+                      disabled={!on && metrics.length >= 4}
+                      onChange={() => setMetrics((prev) => on ? prev.filter((x) => x !== m.id) : [...prev, m.id])}
+                    />
+                    {m.label}
+                  </label>
+                )
+              })}
+            </div>
+          </Field>
+        )}
+        {usesClient && (
+          <Field label="For">
+            <Pick value={client} onChange={setClient}>
+              <SelectItem value={ALL}>All clients</SelectItem>
+              {clients.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+            </Pick>
+          </Field>
+        )}
+        {(kind === "ranking" || kind === "breakdown") && (
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Order">
+              <Pick value={order} onChange={setOrder}>
+                <SelectItem value="best">Best first</SelectItem>
+                <SelectItem value="worst">Worst first</SelectItem>
+              </Pick>
+            </Field>
+            <Field label="How many">
+              <Pick value={limit} onChange={setLimit}>
+                {["1", "2", "3", "5", "10", "25"].filter((n) => kind === "breakdown" || Number(n) <= 10)
+                  .map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
+              </Pick>
+            </Field>
+          </div>
+        )}
+        {usesPeriod && (
+          <Field label="Period">
+            <Pick value={period} onChange={setPeriod}>
+              <SelectItem value={REPORT_WINDOW}>The report&apos;s own period</SelectItem>
+              {periods.map((p) => <SelectItem key={p.id} value={p.id}>{p.label[0].toUpperCase() + p.label.slice(1)}</SelectItem>)}
+            </Pick>
+          </Field>
+        )}
+        {(kind === "alerts" || kind === "flagged_ads") && (
+          <Field label="Show">
+            <Pick value={show} onChange={setShow}>
+              <SelectItem value="summary">Count and the latest one</SelectItem>
+              <SelectItem value="count">Just the count</SelectItem>
+              <SelectItem value="list">A bullet list</SelectItem>
+            </Pick>
+          </Field>
+        )}
+        {kind === "birdy_take" && (
+          <Field label="Focus (optional)">
+            <Input value={focus} maxLength={140} onChange={(e) => setFocus(e.target.value)}
+              placeholder="e.g. which clients to push budget to" className="h-[34px] text-[13px]" />
+          </Field>
+        )}
+        <code className="block break-all rounded-lg bg-pd-divider px-2.5 py-2 text-[11.5px] text-pd-body">{text}</code>
+        <Button
+          type="button"
+          className="w-full"
+          disabled={kind === "breakdown" && metrics.length === 0}
+          onClick={() => { onInsert(text, multiline); setOpen(false) }}
+        >
+          Insert
+        </Button>
+      </PopoverContent>
+    </Popover>
   )
 }
 
 export default function ReportEditor({ brief, onSave, onCancel, saving = false }) {
   const [catalog, setCatalog] = useState([])
   const [clients, setClients] = useState([])
-  const [title, setTitle] = useState(brief?.title || "")
-  const [sections, setSections] = useState(() => withKeys(brief?.sections || []))
-  const [openKey, setOpenKey] = useState(null)
+  const [periods, setPeriods] = useState([])
+  const [json, setJson] = useState(() => toJson(brief?.blocks || []))
   const [preview, setPreview] = useState(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [errors, setErrors] = useState([])
   const ticket = useRef(0)
+  const area = useRef(null)
 
   useEffect(() => {
     reportApi.state()
-      .then((s) => { setCatalog(s.catalog || []); setClients(s.clients || []) })
+      .then((s) => { setCatalog(s.catalog || []); setClients(s.clients || []); setPeriods(s.periods || []) })
       .catch(() => {})
   }, [])
 
-  const catalogById = useMemo(() => Object.fromEntries(catalog.map((m) => [m.id, m])), [catalog])
-  const clientsById = useMemo(() => Object.fromEntries(clients.map((c) => [c.id, c.name])), [clients])
-  const template = useMemo(() => toTemplate(brief, title, sections), [brief, title, sections])
+  const parsed = useMemo(() => parseBlocks(json), [json])
+  const template = useMemo(() => ({
+    frequency: brief?.frequency || "daily",
+    time: brief?.time || "9:00 AM",
+    day: brief?.day ?? null,
+    blocks: parsed.blocks || [],
+  }), [brief, parsed])
 
   // Re-render the real message shortly after the last edit.
   useEffect(() => {
-    if (!sections.length) {
+    if (parsed.error) {
+      setErrors([parsed.error])
+      return
+    }
+    if (!parsed.blocks.length) {
       setPreview(null)
-      setErrors([])
+      setErrors(["Add a block to start the report."])
       return
     }
     const mine = ++ticket.current
@@ -255,8 +266,8 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
         const res = await reportApi.previewRaw(template)
         if (mine !== ticket.current) return
         if (res.status === 400) {
-          const body = await res.json().catch(() => ({}))
-          setErrors(body?.detail?.errors || ["This report can't be saved as it is."])
+          const data = await res.json().catch(() => ({}))
+          setErrors(data?.detail?.errors || ["Slack won't accept this message as it is."])
         } else if (res.ok) {
           setPreview(await res.json())
           setErrors([])
@@ -264,95 +275,85 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
       } catch { /* keep the last good preview */ } finally {
         if (mine === ticket.current) setPreviewLoading(false)
       }
-    }, 400)
+    }, 500)
     return () => clearTimeout(t)
-  }, [template, sections.length])
+  }, [template, parsed])
 
-  const add = useCallback((type) => {
-    const section = newSection(type, catalog)
-    setSections((prev) => addSection(prev, section))
-    if (type !== "alerts" && type !== "underperforming_ads") setOpenKey(section._key)
-  }, [catalog])
+  const addBlock = (tpl) => {
+    if (parsed.error) return
+    const next = [...parsed.blocks, tpl.block()]
+    setJson(toJson(next))
+    requestAnimationFrame(() => {
+      if (area.current) area.current.scrollTop = area.current.scrollHeight
+    })
+  }
 
-  const movable = sections.filter((s) => s.type !== "birdy_take")
-  const take = sections.find((s) => s.type === "birdy_take")
-  const rowProps = (section, index) => ({
-    section, index, count: movable.length, catalog, catalogById, clientsById, clients,
-    open: openKey === section._key,
-    onToggle: () => setOpenKey((k) => (k === section._key ? null : section._key)),
-    onMove: (d) => setSections((prev) => moveSection(prev, section._key, d)),
-    onRemove: () => setSections((prev) => removeSection(prev, section._key)),
-    onChange: (patch) => setSections((prev) => updateSection(prev, section._key, patch)),
-  })
+  // A placeholder typed into the JSON lives inside a JSON string, so its quotes are escaped.
+  const insertNumber = useCallback((text) => {
+    const el = area.current
+    const start = el ? el.selectionStart : json.length
+    const end = el ? el.selectionEnd : json.length
+    const out = insertAt(json, start, end, JSON.stringify(text).slice(1, -1))
+    setJson(out.text)
+    requestAnimationFrame(() => {
+      if (!area.current) return
+      area.current.focus()
+      area.current.setSelectionRange(out.cursor, out.cursor)
+    })
+  }, [json])
 
-  const canSave = sections.length > 0 && errors.length === 0 && !saving
+  const charts = parsed.blocks?.filter((b) => b?.type === "data_visualization").length || 0
+  const canSave = !parsed.error && parsed.blocks.length > 0 && errors.length === 0 && !saving
 
   return (
-    <div className="grid w-full grid-cols-1 gap-5 text-left lg:h-[min(620px,calc(100dvh-200px))] lg:grid-cols-[minmax(0,1fr)_400px]">
-      {/* Sections */}
+    <div className="grid w-full grid-cols-1 gap-5 text-left lg:h-[min(660px,calc(100dvh-200px))] lg:grid-cols-[minmax(0,1fr)_440px]">
+      {/* The blocks */}
       <div className="flex min-h-0 flex-col">
-        <div className="mb-3">
-          <Label htmlFor="report-title" className="text-xs font-semibold">Report name</Label>
-          <Input
-            id="report-title"
-            value={title}
-            maxLength={60}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={`Birdy ${brief?.frequency === "weekly" ? "weekly" : "daily"} brief`}
-            className="mt-1.5 h-[38px] max-w-[360px] text-[13px]"
-          />
-        </div>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-[11px] font-bold tracking-[0.05em] text-pd-faint">
-            SECTIONS · {sections.length}/{MAX_SECTIONS}
-          </span>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="gap-1.5" disabled={sections.length >= MAX_SECTIONS}>
-                <Plus className="size-3.5" /> Add section
+              <Button type="button" size="sm" variant="outline" className="gap-1.5" disabled={!!parsed.error}>
+                <LayoutGrid className="size-3.5" /> Add block
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-[260px]">
-              {SECTION_TYPES.map((t) => {
-                const Icon = ICONS[t.type]
-                return (
-                  <DropdownMenuItem key={t.type} disabled={!canAdd(sections, t.type)} onSelect={() => add(t.type)} className="items-start gap-2.5 py-2">
-                    <Icon className="mt-0.5 size-3.5 text-pd-primary" />
-                    <div>
-                      <div className="text-[13px] font-semibold">{t.label}</div>
-                      <div className="text-[11.5px] text-pd-faint">{t.type === "birdy_take" && !canAdd(sections, t.type) ? "Already in the report" : t.hint}</div>
-                    </div>
-                  </DropdownMenuItem>
-                )
-              })}
+            <DropdownMenuContent align="start" className="pd-scrolly max-h-[420px] w-[290px] overflow-y-auto">
+              {BLOCK_TEMPLATES.map((group) => (
+                <div key={group.group}>
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-pd-faint">{group.group}</DropdownMenuLabel>
+                  {group.items.map((tpl) => {
+                    const blocked = tpl.chart && charts >= 2
+                    return (
+                      <DropdownMenuItem key={tpl.id} disabled={blocked} onSelect={() => addBlock(tpl)} className="flex-col items-start gap-0 py-1.5">
+                        <span className="text-[13px] font-semibold">{tpl.label}</span>
+                        <span className="text-[11.5px] text-pd-faint">{blocked ? "Slack allows 2 charts per message" : tpl.hint}</span>
+                      </DropdownMenuItem>
+                    )
+                  })}
+                  <DropdownMenuSeparator />
+                </div>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
+          <div className="flex items-center gap-2">
+            <Button type="button" size="sm" variant="ghost" className="gap-1.5" disabled={!!parsed.error}
+              onClick={() => setJson(toJson(parsed.blocks))}>
+              <Braces className="size-3.5" /> Tidy
+            </Button>
+            <InsertNumber catalog={catalog} clients={clients} periods={periods} onInsert={insertNumber} />
+          </div>
         </div>
-
-        <div className="pd-scrolly min-h-[240px] flex-1 overflow-y-auto pr-1">
-          {sections.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-pd-border px-4 py-8 text-center text-[13px] text-pd-subtle">
-              No sections yet. Add one to start building the report.
-            </div>
-          ) : (
-            <>
-              <Reorder.Group
-                axis="y"
-                values={movable.map((s) => s._key)}
-                onReorder={(keys) => setSections((prev) => applyOrder(prev, keys))}
-                className="m-0 flex list-none flex-col gap-2 p-0"
-              >
-                {movable.map((s, i) => <SectionRow key={s._key} draggable {...rowProps(s, i)} />)}
-              </Reorder.Group>
-              {take && (
-                <div className="mt-2">
-                  <SectionRow {...rowProps(take, movable.length)} draggable={false} />
-                  <p className="mt-1 pl-1 text-[11px] text-pd-faint">Birdy&apos;s take always closes the report.</p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+        <textarea
+          ref={area}
+          value={json}
+          onChange={(e) => setJson(e.target.value)}
+          spellCheck={false}
+          aria-label="Report blocks"
+          className="pd-scrolly min-h-[300px] w-full flex-1 resize-none rounded-2xl border border-pd-border bg-pd-surface px-4 py-3 font-mono text-[12px] leading-relaxed text-pd-ink outline-none transition-[border-color,box-shadow] focus:border-pd-primary focus:ring-4 focus:ring-pd-primary/15"
+        />
+        <p className="mt-2 text-[11.5px] leading-relaxed text-pd-faint">
+          Slack Block Kit, as Slack receives it. Live numbers go in <code className="text-pd-body">{"{{ }}"}</code> placeholders,
+          or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you.
+        </p>
       </div>
 
       {/* Preview */}
@@ -362,17 +363,13 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
           <span className="text-[11.5px] text-pd-subtle">{scheduleLabel(template)}</span>
         </div>
         <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
-          {sections.length === 0 ? (
-            <SlackMessagePreview blocks={[]} time={template.time} />
-          ) : (
-            <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} />
-          )}
+          <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} />
           {preview?.sample && (
             <p className="mt-2 text-[11.5px] text-pd-faint">Sample numbers until your clients have synced.</p>
           )}
           {errors.length > 0 && (
             <ul className="mt-2.5 list-disc space-y-0.5 pl-4 text-[12px] text-pd-danger" role="alert">
-              {errors.map((e) => <li key={e}>{e}</li>)}
+              {errors.map((e) => <li key={e} className="break-words">{e}</li>)}
             </ul>
           )}
         </div>

@@ -15,7 +15,7 @@ vi.mock("../ReportDesigner", () => ({
 
 vi.mock("../ReportEditor", () => ({
   default: ({ brief, onSave }) => (
-    <button onClick={() => onSave({ ...brief, sections: [{ type: "underperforming_ads" }] })}>editor save</button>
+    <button onClick={() => onSave({ ...brief, blocks: [{ type: "divider" }] })}>editor save</button>
   ),
 }))
 
@@ -69,12 +69,12 @@ describe("SavedReportCard", () => {
     render(<SavedReportCard brief={SAVED} onSaved={onSaved} />)
     const user = userEvent.setup()
 
-    await user.click(await screen.findByRole("button", { name: /edit sections/i }))
+    await user.click(await screen.findByRole("button", { name: /edit blocks/i }))
     expect(screen.getByText(/edit your slack report/i)).toBeTruthy()
     await user.click(screen.getByRole("button", { name: /editor save/i }))
 
     await waitFor(() => expect(onSaved).toHaveBeenCalled())
     const put = apiRequest.mock.calls.find(([u]) => u === "/api/integrations/slack/brief")
-    expect(JSON.parse(put[1].body).template).toMatchObject({ day: "Monday", sections: [{ type: "underperforming_ads" }] })
+    expect(JSON.parse(put[1].body).template).toMatchObject({ day: "Monday", blocks: [{ type: "divider" }] })
   })
 })

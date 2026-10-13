@@ -917,7 +917,6 @@ export default function OnboardingPage() {
         channel_id: selectedChannel?.id,
         channel_name: selectedChannel?.name,
         frequency: brief.frequency, time: brief.time, day: brief.day,
-        sections: brief.sections.length,
       } })
     } catch {
       setReportError("Couldn't save your report. Check Slack is still connected, then try again.")
