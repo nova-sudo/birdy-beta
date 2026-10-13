@@ -7,7 +7,7 @@
 // divider, image, context, actions, rich_text, markdown, table, data_table
 // (sortable, paginated), data_visualization (SlackChart), card and carousel.
 
-import { Fragment, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react"
@@ -284,9 +284,26 @@ export function Block({ b }) {
   }
 }
 
-export default function SlackMessagePreview({ blocks, time, loading = false }) {
+/**
+ * focus: { index, key } — scroll block `index` into view and flash it, once per
+ * new key. The designer and editor pass the first block that changed, so an
+ * addition below the fold is never mistaken for nothing happening.
+ */
+export default function SlackMessagePreview({ blocks, time, loading = false, focus = null }) {
+  const root = useRef(null)
+  const [flash, setFlash] = useState(null)
+  useEffect(() => {
+    if (!focus || focus.index == null || !blocks?.length) return
+    const el = root.current?.querySelector(`[data-block-index="${Math.min(focus.index, blocks.length - 1)}"]`)
+    if (!el) return
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" })
+    setFlash(focus.key)
+    const t = setTimeout(() => setFlash(null), 1800)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.key, blocks])
   return (
-    <div className="rounded-xl bg-[#1A1D21] px-4 py-[14px] text-left shadow-[0_14px_30px_-16px_rgba(20,14,50,0.55)]">
+    <div ref={root} className="rounded-xl bg-[#1A1D21] px-4 py-[14px] text-left shadow-[0_14px_30px_-16px_rgba(20,14,50,0.55)]">
       <div className="flex gap-[10px]">
         <BirdyAvatar size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
@@ -296,7 +313,17 @@ export default function SlackMessagePreview({ blocks, time, loading = false }) {
             {time && <span className="text-[11px] text-white/50">{time}</span>}
           </div>
           <div className={`mt-1.5 space-y-2.5 text-[13px] leading-[1.6] text-white/85 transition-opacity duration-300 ${loading ? "opacity-40" : ""}`}>
-            {(blocks || []).map((b, i) => <Block key={i} b={b} />)}
+            {(blocks || []).map((b, i) => (
+              <div
+                key={i}
+                data-block-index={i}
+                className={`scroll-my-3 rounded-lg transition-shadow duration-500 ${
+                  flash && focus && i >= focus.index && i < focus.index + (focus.count || 1)
+                    ? "shadow-[0_0_0_2px_#9085e9,0_0_0_6px_rgba(144,133,233,0.25)]" : ""}`}
+              >
+                <Block b={b} />
+              </div>
+            ))}
             {!blocks?.length && (
               <div className="space-y-2">
                 {[70, 92, 84, 60].map((w) => (

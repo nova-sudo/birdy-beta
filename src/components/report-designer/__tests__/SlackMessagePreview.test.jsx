@@ -53,3 +53,16 @@ describe("toRows", () => {
     })).toEqual([{ label: "Mon", Spend: 10, Leads: 2 }, { label: "Tue", Spend: -5, Leads: 3 }])
   })
 })
+
+describe("focus", () => {
+  it("scrolls the changed block into view", () => {
+    const spy = vi.fn()
+    Element.prototype.scrollIntoView = spy
+    render(<SlackMessagePreview focus={{ index: 1, key: 1 }} blocks={[
+      { type: "header", text: { type: "plain_text", text: "A" } },
+      { type: "header", text: { type: "plain_text", text: "B" } },
+    ]} />)
+    expect(spy).toHaveBeenCalledTimes(1)
+    expect(spy.mock.instances[0].textContent).toBe("B")
+  })
+})

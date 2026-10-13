@@ -20,6 +20,15 @@ import { getChat, resetChat } from "@/lib/chat-store"
 import { REPORT_OPENER, REPORT_PAGE, reportApi, scheduleLabel } from "@/lib/report-designer"
 import SlackMessagePreview from "./SlackMessagePreview"
 
+/** Index of the first block that differs between two block lists, or -1. */
+export function firstChange(before, after) {
+  const n = Math.max(before.length, after.length)
+  for (let i = 0; i < n; i++) {
+    if (JSON.stringify(before[i]) !== JSON.stringify(after[i])) return Math.min(i, Math.max(0, after.length - 1))
+  }
+  return -1
+}
+
 export default function ReportDesigner({
   sessionKey = "birdy_report_designer",
   onUse,
@@ -37,6 +46,8 @@ export default function ReportDesigner({
   const [previewLoading, setPreviewLoading] = useState(true)
   const [previewError, setPreviewError] = useState(false)
   const latest = useRef(0)
+  const shownBlocks = useRef(null) // the template blocks currently on screen, to find what changed
+  const [focus, setFocus] = useState(null)
 
   const refreshPreview = useCallback(async () => {
     const ticket = ++latest.current
@@ -44,6 +55,13 @@ export default function ReportDesigner({
     try {
       const data = await reportApi.preview()
       if (ticket === latest.current) {
+        const before = shownBlocks.current
+        const after = data?.template?.blocks || []
+        if (before) {
+          const changed = firstChange(before, after)
+          if (changed !== -1) setFocus({ index: changed, count: Math.max(1, after.length - before.length + 1), key: Date.now() })
+        }
+        shownBlocks.current = after
         setPreview(data)
         setPreviewError(false)
       }
@@ -146,7 +164,7 @@ export default function ReportDesigner({
           )}
         </div>
         <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
-          <SlackMessagePreview blocks={preview?.blocks} time={template?.time} loading={previewLoading && !!preview} />
+          <SlackMessagePreview blocks={preview?.blocks} time={template?.time} loading={previewLoading && !!preview} focus={focus} />
           {preview?.sample && (
             <p className="mt-2.5 text-[11.5px] leading-relaxed text-pd-faint">
               Sample numbers for now. Your real figures appear here once your first client finishes syncing.

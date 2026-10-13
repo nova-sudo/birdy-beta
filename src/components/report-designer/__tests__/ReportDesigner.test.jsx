@@ -88,3 +88,15 @@ describe("ReportDesigner", () => {
     await waitFor(() => expect(onUse).toHaveBeenCalledWith(TEMPLATE))
   })
 })
+
+import { firstChange } from "../ReportDesigner"
+
+describe("firstChange", () => {
+  it("finds where a new or edited block starts", () => {
+    const a = [{ type: "header" }, { type: "divider" }]
+    expect(firstChange(a, a)).toBe(-1)
+    expect(firstChange(a, [...a, { type: "data_visualization" }])).toBe(2)
+    expect(firstChange(a, [{ type: "header" }, { type: "card" }])).toBe(1)
+    expect(firstChange(a, [{ type: "header" }])).toBe(0)         // removal points at what's left
+  })
+})

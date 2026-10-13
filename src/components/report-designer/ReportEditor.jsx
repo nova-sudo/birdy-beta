@@ -233,6 +233,8 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
   const [errors, setErrors] = useState([])
   const ticket = useRef(0)
   const area = useRef(null)
+  const [focus, setFocus] = useState(null)
+  const pendingFocus = useRef(null) // set by "Add block", applied once the preview includes it
 
   useEffect(() => {
     reportApi.state()
@@ -271,6 +273,10 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
         } else if (res.ok) {
           setPreview(await res.json())
           setErrors([])
+          if (pendingFocus.current != null) {
+            setFocus({ index: pendingFocus.current, key: Date.now() })
+            pendingFocus.current = null
+          }
         }
       } catch { /* keep the last good preview */ } finally {
         if (mine === ticket.current) setPreviewLoading(false)
@@ -282,6 +288,7 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
   const addBlock = (tpl) => {
     if (parsed.error) return
     const next = [...parsed.blocks, tpl.block()]
+    pendingFocus.current = next.length - 1
     setJson(toJson(next))
     requestAnimationFrame(() => {
       if (area.current) area.current.scrollTop = area.current.scrollHeight
@@ -363,7 +370,7 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
           <span className="text-[11.5px] text-pd-subtle">{scheduleLabel(template)}</span>
         </div>
         <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
-          <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} />
+          <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} focus={focus} />
           {preview?.sample && (
             <p className="mt-2 text-[11.5px] text-pd-faint">Sample numbers until your clients have synced.</p>
           )}
