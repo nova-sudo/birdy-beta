@@ -68,7 +68,7 @@ export function MetaCampaignsDialog({ open, onOpenChange, group, onSaved }) {
 
   return (
     <Dialog open={!!open} onOpenChange={(o) => !saving && onOpenChange?.(o)}>
-      <DialogContent className="bg-pd-surface sm:max-w-[560px]">
+      <DialogContent className="bg-pd-surface grid-cols-[minmax(0,1fr)] sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle className="font-pd-display">Meta campaigns for {group.name}</DialogTitle>
           <DialogDescription>

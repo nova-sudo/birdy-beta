@@ -74,8 +74,8 @@ import { useClientGroups } from "@/lib/useClientGroups"
 import { isAwaitingFirstData } from "@/lib/client-loading"
 import BulkImportDialog from "@/components/clients/BulkImportDialog"
 import { MetaCampaignPicker } from "@/components/clients/MetaCampaignPicker"
+import { MetaCampaignsDialog } from "@/components/clients/MetaCampaignsDialog"
 import { sharesMetaAccount, remainderOwner, unassignedText } from "@/lib/meta-scope"
-import { Badge } from "@/components/ui/badge"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
@@ -106,6 +106,8 @@ export default function ClientsPage() {
   const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  // The client whose unassigned Meta campaigns the list's "Assign" opened.
+  const [assignGroup, setAssignGroup] = useState(null)
   const [wizardStep, setWizardStep] = useState(1)
   // Defaults to "unknown" rather than guessing. A wrong guess here silently
   // mis-configures the client's tracking, and "Ask later" costs nothing —
@@ -272,11 +274,21 @@ export default function ClientsPage() {
           .split(" ")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
           .join(" ");
-        const nudge = unassignedText((row?.original ?? row)?.meta_scope);
+        const group = row?.original ?? row;
+        const nudge = unassignedText(group?.meta_scope);
+        // Stacked under the name so a long badge never squeezes it.
         return nudge ? (
-          <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
-            <span className="truncate">{name}</span>
-            <Badge variant="warning" className="px-1.5 py-0 text-[10px] font-medium">{nudge}</Badge>
+          <span className="flex min-w-0 flex-col items-start gap-0.5">
+            <span className="max-w-full truncate">{name}</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setAssignGroup(group); }}
+              title={nudge}
+              aria-label={`${nudge} · Assign`}
+              className="whitespace-nowrap rounded-full bg-pd-warning-bg px-2 py-0.5 text-[10px] font-medium text-pd-amber hover:underline focus-visible:underline focus-visible:outline-none"
+            >
+              {group.meta_scope.unassigned.length} unassigned · <span className="font-semibold text-pd-primary">Assign</span>
+            </button>
           </span>
         ) : name;
       },
@@ -1306,6 +1318,13 @@ export default function ClientsPage() {
           invalidateClientGroups?.()
           refreshClientGroups?.()
         }}
+      />
+
+      <MetaCampaignsDialog
+        open={!!assignGroup}
+        onOpenChange={(o) => { if (!o) setAssignGroup(null) }}
+        group={assignGroup}
+        onSaved={() => { invalidateClientGroups?.(); refreshClientGroups?.() }}
       />
 
         {/* StyledTable — receives filtered data */}

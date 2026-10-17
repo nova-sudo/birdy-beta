@@ -92,8 +92,8 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
               <div className="flex justify-between">
                 <span className="text-pd-subtle">Last Refresh</span>
                 <span className="font-medium flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDate(lastRefresh)}
+                  {isRefreshing ? <Spinner className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                  {isRefreshing ? "Refreshing…" : formatDate(lastRefresh)}
                 </span>
               </div>
             </div>
@@ -330,7 +330,11 @@ export default function IntegrationsContent({ group, onRefreshComplete, onCampai
           open={campaignsOpen}
           onOpenChange={setCampaignsOpen}
           group={group}
-          onSaved={() => (onCampaignsSaved ?? onRefreshComplete)?.()}
+          onSaved={() => {
+            // The save starts a Meta refresh server-side; poll it like a manual one.
+            setRefreshStatus(prev => ({ ...prev, meta: "running" }))
+            ;(onCampaignsSaved ?? onRefreshComplete)?.()
+          }}
         />
       )}
     </>

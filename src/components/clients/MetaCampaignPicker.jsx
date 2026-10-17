@@ -131,6 +131,8 @@ export function MetaCampaignPicker({
 
   return (
     <div className="space-y-3">
+      {/* Above the list: a long account would push it out of view. */}
+      {shareNote && <p className="text-xs text-pd-subtle">{shareNote}</p>}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pd-faint w-4 h-4" />
         <Input
@@ -207,7 +209,6 @@ export function MetaCampaignPicker({
           {selected.length} of {campaigns.length} selected
         </p>
       )}
-      {shareNote && <p className="text-xs text-pd-subtle">{shareNote}</p>}
     </div>
   )
 }
