@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck } from "lucide-react"
+import { ArrowLeft, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck, XCircle } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
@@ -43,7 +43,7 @@ import { diagnoseFunnel } from "@/lib/portfolio-metrics"
 import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
 import { leadSourceOption, normalizeLeadSource } from "@/lib/lead-sources"
-import { scopeChipLabel } from "@/lib/meta-scope"
+import { metaTabState, scopeChipLabel } from "@/lib/meta-scope"
 import { SYNCING_MESSAGE } from "@/lib/client-loading"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
@@ -358,23 +358,28 @@ export default function ClientDetailsPage() {
   // campaigns; right after a change its Meta cache is empty while it re-syncs.
   const metaScope = clientData?.group_info?.meta_scope ?? matchingGroup?.meta_scope ?? null
   const metaChip = scopeChipLabel(metaScope)
-  const metaCampaignIds = clientData?.group_info?.meta_campaign_ids
-  const metaSyncing = !!clientData?.meta_data?.syncing
-  const noCampaignsSelected = metaSyncing && Array.isArray(metaCampaignIds) && metaCampaignIds.length === 0
+  const metaState = metaTabState({
+    campaignIds: clientData?.group_info?.meta_campaign_ids,
+    syncing: !!clientData?.meta_data?.syncing,
+    refreshStatus: clientData?.group_info?.meta_refresh_status,
+  })
+  const metaSyncing = metaState === "syncing"
+  const metaRefreshError = clientData?.group_info?.meta_refresh_error
   const handleCampaignsSaved = useCallback(() => {
     invalidate()
     loadClient({ quiet: true })
   }, [invalidate, loadClient])
   // While the scoped cache refills, re-ask quietly so the Marketing tab moves
-  // off its syncing state on its own; refresh the list once it lands.
+  // off its syncing state on its own; refresh the list once it lands. A
+  // failed refresh (meta_refresh_status "error") stops the polling.
   useEffect(() => {
-    if (!metaSyncing || noCampaignsSelected) return
+    if (!metaSyncing) return
     const t = setInterval(() => loadClient({ quiet: true }), 15_000)
     return () => {
       clearInterval(t)
       invalidate()
     }
-  }, [metaSyncing, noCampaignsSelected, loadClient, invalidate])
+  }, [metaSyncing, loadClient, invalidate])
 
   // The design's sub-line reads "Emma T. · client since Mar 2025". There is no
   // primary-contact field on a client group, so only the half that exists is
@@ -570,7 +575,7 @@ export default function ClientDetailsPage() {
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}
         <TabsContent value="marketing" className="mt-5">
-          {noCampaignsSelected ? (
+          {metaState === "none-selected" ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
                 <p className="font-pd-display text-base font-semibold text-pd-ink">No campaigns selected</p>
@@ -588,6 +593,29 @@ export default function ClientDetailsPage() {
                 >
                   Choose campaigns
                 </Button>
+              </CardContent>
+            </Card>
+          ) : metaState === "error" ? (
+            <Card>
+              <CardContent className="flex items-start gap-3 py-6">
+                <XCircle className="mt-0.5 size-4 shrink-0 text-pd-danger" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-pd-ink">Refresh failed</p>
+                  <p className="text-sm text-pd-subtle">
+                    {metaRefreshError || "Meta data for this client could not be loaded."}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => {
+                      setSettingsTab("integrations")
+                      setIntegrationsOpen(true)
+                    }}
+                  >
+                    Open integrations
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ) : metaSyncing ? (

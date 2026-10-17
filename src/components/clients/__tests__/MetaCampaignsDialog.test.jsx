@@ -112,4 +112,33 @@ describe("MetaCampaignsDialog", () => {
     expect(toast.success).toHaveBeenCalledWith("Campaigns saved — Meta data is refreshing")
     expect(toast.info).toHaveBeenCalledWith("Globex now keeps the remaining campaigns")
   })
+
+  it("keeps unsaved ticks when the group revalidates with an equal list", async () => {
+    const g = group()
+    const props = { open: true, onOpenChange: vi.fn(), onSaved: vi.fn() }
+    const { rerender } = render(<MetaCampaignsDialog {...props} group={g} />)
+    const user = userEvent.setup()
+    const box = await screen.findByRole("checkbox", { name: /brand awareness/i })
+    await user.click(box)
+    expect(box).toBeChecked()
+
+    // SWR revalidation (e.g. window focus): same data, new array identity.
+    rerender(<MetaCampaignsDialog {...props} group={{ ...g, meta_campaign_ids: ["c1"] }} />)
+
+    expect(screen.getByRole("checkbox", { name: /brand awareness/i })).toBeChecked()
+  })
+
+  it("starts from the stored selection again when reopened", async () => {
+    const g = group()
+    const props = { onOpenChange: vi.fn(), onSaved: vi.fn() }
+    const { rerender } = render(<MetaCampaignsDialog {...props} open group={g} />)
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole("checkbox", { name: /brand awareness/i }))
+
+    rerender(<MetaCampaignsDialog {...props} open={false} group={g} />)
+    rerender(<MetaCampaignsDialog {...props} open group={g} />)
+
+    expect(await screen.findByRole("checkbox", { name: /brand awareness/i })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: /spring sale/i })).toBeChecked()
+  })
 })

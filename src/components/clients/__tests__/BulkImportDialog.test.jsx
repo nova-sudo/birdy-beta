@@ -51,9 +51,9 @@ describe("BulkImportDialog", () => {
     })
     await user.click(screen.getByRole("button", { name: "Import" }))
     await waitFor(() => expect(onImported).toHaveBeenCalled())
-    expect(toast.warning).toHaveBeenCalledWith("Link Meta campaigns in client settings", {
-      description: "Globex",
-    })
+    expect(toast.warning).toHaveBeenCalledWith(
+      "Meta wasn't linked for Globex — that ad account is already used by another client. Re-add them from Add client to choose their campaigns."
+    )
   })
 
   it("says nothing extra when every Meta account was linked", async () => {

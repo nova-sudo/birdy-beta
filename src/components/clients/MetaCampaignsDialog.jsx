@@ -4,7 +4,7 @@
 // A shared account must name its campaigns ("All campaigns" is hidden), and
 // an empty list never saves from here.
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -22,12 +22,18 @@ export function MetaCampaignsDialog({ open, onOpenChange, group, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
-  // Start from the stored selection each time it opens.
+  // Start from the stored selection each time it opens — only on the
+  // closed -> open transition. SWR revalidation (window focus included) hands
+  // back a new meta_campaign_ids array on every pass, and resetting on that
+  // would wipe the ticks the user has not saved yet.
+  const wasOpen = useRef(false)
   useEffect(() => {
-    if (!open) return
-    const ids = group?.meta_campaign_ids ?? null
-    setValue(shared && ids === null ? [] : ids)
-    setError(null)
+    if (open && !wasOpen.current) {
+      const ids = group?.meta_campaign_ids ?? null
+      setValue(shared && ids === null ? [] : ids)
+      setError(null)
+    }
+    wasOpen.current = open
   }, [open, group?.meta_campaign_ids, shared])
 
   if (!group) return null

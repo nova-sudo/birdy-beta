@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest"
 import {
   unassignedText, campaignsSummary, scopeChipLabel, sharesMetaAccount, remainderOwner,
+  metaTabState,
 } from "@/lib/meta-scope"
 import { normalizeGroupInfo } from "@/lib/normalize-group"
 
@@ -80,5 +81,26 @@ describe("normalizeGroupInfo", () => {
     const g = normalizeGroupInfo({ name: "Acme" }, "g1")
     expect(g.meta_campaign_ids).toBeNull()
     expect(g.meta_scope).toBeNull()
+  })
+})
+
+describe("metaTabState", () => {
+  it("is none-selected for an empty list, syncing or not", () => {
+    expect(metaTabState({ campaignIds: [], syncing: true })).toBe("none-selected")
+    // After the refresh writes its zero presets the cache is no longer
+    // "syncing", but the group still owns nothing.
+    expect(metaTabState({ campaignIds: [], syncing: false })).toBe("none-selected")
+    expect(metaTabState({ campaignIds: [], syncing: false, refreshStatus: "error" })).toBe("none-selected")
+  })
+  it("is syncing while the scoped cache refills", () => {
+    expect(metaTabState({ campaignIds: ["c1"], syncing: true, refreshStatus: "running" })).toBe("syncing")
+  })
+  it("is error when the refresh failed before the cache refilled", () => {
+    expect(metaTabState({ campaignIds: ["c1"], syncing: true, refreshStatus: "error" })).toBe("error")
+  })
+  it("is ready otherwise", () => {
+    expect(metaTabState({ campaignIds: null, syncing: false })).toBe("ready")
+    expect(metaTabState({ campaignIds: ["c1"], syncing: false, refreshStatus: "error" })).toBe("ready")
+    expect(metaTabState({})).toBe("ready")
   })
 })

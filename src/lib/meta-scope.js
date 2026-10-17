@@ -51,3 +51,17 @@ export function remainderOwner(groups, adAccountId, exceptGroupId = null) {
     .sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")))
   return candidates[0]?.name ?? null
 }
+
+/**
+ * What the client page's Marketing tab shows for a group's Meta data:
+ *   "none-selected"  the group owns no campaigns ([]), whatever the cache says
+ *   "error"          its scoped cache is empty and the refresh failed
+ *   "syncing"        its scoped cache is empty while the refresh runs
+ *   "ready"          show the data
+ * Only "syncing" should keep polling.
+ */
+export function metaTabState({ campaignIds, syncing, refreshStatus } = {}) {
+  if (Array.isArray(campaignIds) && campaignIds.length === 0) return "none-selected"
+  if (!syncing) return "ready"
+  return refreshStatus === "error" ? "error" : "syncing"
+}
