@@ -3,7 +3,7 @@
 // value: null = every campaign, string[] = only those campaign ids.
 // Campaigns already owned by another group are shown but cannot be ticked.
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Check, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -85,23 +85,34 @@ export function MetaCampaignPicker({
   const [error, setError] = useState(null)
   const [query, setQuery] = useState("")
 
+  // Only the newest request may write state (account switch, Retry, unmount).
+  const requestId = useRef(0)
+
   const load = useCallback(async () => {
+    const id = ++requestId.current
+    const current = () => id === requestId.current
     setLoading(true)
     setError(null)
     try {
       const res = await apiRequest(`/api/facebook/adaccounts/${adAccountId}/campaigns`)
       const body = await res.json().catch(() => ({}))
+      if (!current()) return
       if (!res.ok) throw new Error(body?.detail || "Could not load campaigns from Meta.")
       setCampaigns(body.campaigns || [])
     } catch (e) {
-      setError(e?.message || "Could not load campaigns from Meta.")
+      if (current()) setError(e?.message || "Could not load campaigns from Meta.")
     } finally {
-      setLoading(false)
+      if (current()) setLoading(false)
     }
   }, [adAccountId])
 
   useEffect(() => {
+    setCampaigns([])
+    setQuery("")
     load()
+    return () => {
+      requestId.current++
+    }
   }, [load])
 
   const selected = useMemo(() => (Array.isArray(value) ? value : []), [value])

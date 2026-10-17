@@ -2,7 +2,7 @@
 // value null = every campaign; an array = only those ids.
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 const apiRequest = vi.fn()
@@ -103,5 +103,25 @@ describe("MetaCampaignPicker", () => {
   it("renders the share note", async () => {
     setup({ shareNote: "The rest stay with Acme" })
     expect(await screen.findByText("The rest stay with Acme")).toBeInTheDocument()
+  })
+
+  it("ignores a stale fetch that resolves after the ad account changed", async () => {
+    let resolveOld
+    apiRequest.mockImplementation((path) =>
+      path.includes("act_1")
+        ? new Promise((r) => { resolveOld = r })
+        : Promise.resolve(ok({ campaigns: [{ id: "n1", name: "New Account Camp", effective_status: "ACTIVE", claimed_by: null }] }))
+    )
+    const onChange = vi.fn()
+    const { rerender } = render(
+      <MetaCampaignPicker adAccountId="act_1" groupId="g1" value={null} onChange={onChange} />
+    )
+    rerender(<MetaCampaignPicker adAccountId="act_2" groupId="g1" value={null} onChange={onChange} />)
+    expect(await screen.findByText("New Account Camp")).toBeInTheDocument()
+    await act(async () => {
+      resolveOld(ok({ campaigns: CAMPAIGNS }))
+    })
+    expect(screen.getByText("New Account Camp")).toBeInTheDocument()
+    expect(screen.queryByText("Spring Sale")).toBeNull()
   })
 })
