@@ -18,6 +18,9 @@ export function normalizeGroupInfo(groupInfo, clientId, datePreset = "last_7d") 
     name: groupInfo.name,
     ghl_location_id: groupInfo.ghl_location_id,
     meta_ad_account_id: groupInfo.meta_ad_account_id,
+    // null = every campaign; [] = none; a list = only those.
+    meta_campaign_ids: groupInfo.meta_campaign_ids ?? null,
+    meta_scope: groupInfo.meta_scope ?? null,
     ad_account_currency: groupInfo.ad_account_currency,
     status: groupInfo.status,
     notes: groupInfo.notes || "",

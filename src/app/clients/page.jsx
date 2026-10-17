@@ -73,6 +73,9 @@ import { apiRequest, API_BASE_URL } from "@/lib/api"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { isAwaitingFirstData } from "@/lib/client-loading"
 import BulkImportDialog from "@/components/clients/BulkImportDialog"
+import { MetaCampaignPicker } from "@/components/clients/MetaCampaignPicker"
+import { sharesMetaAccount, remainderOwner, unassignedText } from "@/lib/meta-scope"
+import { Badge } from "@/components/ui/badge"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 
 const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
@@ -115,6 +118,10 @@ export default function ClientsPage() {
   const [selectedGhlLocation, setSelectedGhlLocation] = useState(null)
   const [newGhlLocationId, setNewGhlLocationId] = useState("")
   const [selectedMetaAdAccount, setSelectedMetaAdAccount] = useState(null)
+  // null = all campaigns; an array = only those. Reset whenever the account
+  // changes, and required (no "All campaigns") when another client already
+  // uses the account.
+  const [metaCampaignIds, setMetaCampaignIds] = useState(null)
   const [selectedHotProspectorGroup, setSelectedHotProspectorGroup] = useState(null)
   const [locationSearchQuery, setLocationSearchQuery] = useState("")
   const [metaSearchQuery, setMetaSearchQuery] = useState("")
@@ -256,7 +263,24 @@ export default function ClientsPage() {
     // Combine and deduplicate — health sits directly after the name column,
     // where the design puts it.
     const seen = new Set();
-    const [nameCol, ...restDynamic] = withTone(dynamicColumns);
+    const [rawNameCol, ...restDynamic] = withTone(dynamicColumns);
+    // Beside the name: campaigns of a shared Meta account no client owns yet.
+    const nameCol = rawNameCol?.id === "name" && !rawNameCol.cell ? {
+      ...rawNameCol,
+      cell: (value, row) => {
+        const name = String(value ?? "—")
+          .split(" ")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+          .join(" ");
+        const nudge = unassignedText((row?.original ?? row)?.meta_scope);
+        return nudge ? (
+          <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+            <span className="truncate">{name}</span>
+            <Badge variant="warning" className="px-1.5 py-0 text-[10px] font-medium">{nudge}</Badge>
+          </span>
+        ) : name;
+      },
+    } : rawNameCol;
     const all = nameCol
       ? [nameCol, health, ...restDynamic, ...custom]
       : [health, ...dynamicColumns, ...custom];
@@ -457,6 +481,13 @@ export default function ClientsPage() {
     }
   }
 
+  const metaAccountShared = !!selectedMetaAdAccount && sharesMetaAccount(clientGroups, selectedMetaAdAccount.id)
+  const metaRemainderOwner = selectedMetaAdAccount ? remainderOwner(clientGroups, selectedMetaAdAccount.id) : null
+  // A shared account needs its own campaigns, and a list must not be empty.
+  const metaCampaignsMissing = !!selectedMetaAdAccount
+    && (metaAccountShared || Array.isArray(metaCampaignIds))
+    && !(Array.isArray(metaCampaignIds) && metaCampaignIds.length > 0)
+
   const handleCreateClientGroup = async () => {
     if (!clientGroupName) {
       toast.error("Please enter a client group name")
@@ -468,6 +499,11 @@ export default function ClientsPage() {
     }
     if (wizardStep === 3 && !selectedMetaAdAccount && metaAdAccounts.length > 0) {
       toast.error("Please select a Meta ad account or skip this step")
+      return
+    }
+    if (wizardStep >= 3 && metaCampaignsMissing) {
+      setWizardStep(3)
+      toast.error("Pick at least one campaign for this client")
       return
     }
     if (wizardStep === 4 && !callLogProvider) {
@@ -505,6 +541,8 @@ export default function ClientsPage() {
     setSelectedGhlLocation(null)
     setNewGhlLocationId("")
     setSelectedMetaAdAccount(null)
+    const creatingMetaCampaignIds = selectedMetaAdAccount ? metaCampaignIds : null
+    setMetaCampaignIds(null)
     setSelectedHotProspectorGroup(null)
     setLocationSearchQuery("")
     setMetaSearchQuery("")
@@ -530,6 +568,7 @@ export default function ClientsPage() {
           meta_ad_account_id: selectedMetaAdAccount?.id || null,
           hotprospector_group_id: selectedHotProspectorGroup?.id || null,
           ad_account_currency: selectedMetaAdAccount?.currency || null,
+          meta_campaign_ids: creatingMetaCampaignIds,
           call_log_provider: callLogProvider || "ghl",
           lead_collection_method: creatingLeadSource,
           notes: "",
@@ -551,6 +590,9 @@ export default function ClientsPage() {
         )
 
         toast.success(`"${creatingGroupName}" created successfully!`)
+        for (const g of data.converted || []) {
+          toast.info(`${g.name} now keeps the remaining campaigns`)
+        }
         invalidateClientGroups()
         clearCache("ghlLocations")
       } else {
@@ -560,10 +602,12 @@ export default function ClientsPage() {
 
         if (response.status === 402 && data.detail?.code === "CLIENT_LIMIT_REACHED") {
           setClientLimitDialogOpen(true)
-        } else if (response.status === 409) {
-          const detail = typeof data.detail === "string" ? data.detail : ""
-          const nameMatch = detail.match(/^A client group named "([^"]+)"/)
-          setDuplicateGroupName(nameMatch ? nameMatch[1] : "another client group")
+        } else if (
+          response.status === 409
+          && /^A client group named "/.test(typeof data.detail === "string" ? data.detail : "")
+        ) {
+          const nameMatch = data.detail.match(/^A client group named "([^"]+)"/)
+          setDuplicateGroupName(nameMatch[1])
           setDuplicateDialogOpen(true)
         } else {
           toast.error(data.detail || "Failed to create client group")
@@ -652,6 +696,7 @@ export default function ClientsPage() {
             setSelectedGhlLocation(null)
             setNewGhlLocationId("")
             setSelectedMetaAdAccount(null)
+            setMetaCampaignIds(null)
             setSelectedHotProspectorGroup(null)
             setLocationSearchQuery("")
             setMetaSearchQuery("")
@@ -882,7 +927,11 @@ export default function ClientsPage() {
                     filteredMetaAdAccounts.map((account) => (
                       <div
                         key={account.id}
-                        onClick={() => setSelectedMetaAdAccount(account)}
+                        onClick={() => {
+                          if (selectedMetaAdAccount?.id === account.id) return
+                          setSelectedMetaAdAccount(account)
+                          setMetaCampaignIds(sharesMetaAccount(clientGroups, account.id) ? [] : null)
+                        }}
                         className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${selectedMetaAdAccount?.id === account.id
                           ? "border-pd-primary bg-pd-primary-tint"
                           : "border-pd-border hover:border-pd-border-strong bg-pd-surface"
@@ -944,6 +993,30 @@ export default function ClientsPage() {
                         Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
                       </span>
                     </div>
+                  </div>
+                )}
+                {selectedMetaAdAccount && (
+                  <div className="space-y-2 pt-2">
+                    <h3 className="font-pd-display text-sm font-semibold text-pd-ink">Campaigns</h3>
+                    {metaAccountShared && (
+                      <p className="text-xs text-pd-subtle">
+                        Another client already uses this ad account. Pick the campaigns that belong to this one.
+                      </p>
+                    )}
+                    <MetaCampaignPicker
+                      adAccountId={selectedMetaAdAccount.id}
+                      value={metaCampaignIds}
+                      onChange={setMetaCampaignIds}
+                      required={metaAccountShared}
+                      shareNote={
+                        metaAccountShared && metaRemainderOwner
+                          ? `The rest stay with ${metaRemainderOwner}`
+                          : null
+                      }
+                    />
+                    {metaCampaignsMissing && (
+                      <p className="text-xs text-pd-amber">Pick at least one campaign to continue.</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -1081,6 +1154,7 @@ export default function ClientsPage() {
                     addingClientGroup
                     || (wizardStep === 1 && !clientGroupName)
                     || (wizardStep === 4 && !callLogProvider)
+                    || (wizardStep >= 3 && metaCampaignsMissing)
                   }
                   className="gap-2 min-w-[160px] justify-center"
                 >

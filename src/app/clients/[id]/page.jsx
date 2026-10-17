@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useState, useMemo } from "react"
+import { useCallback, useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -43,6 +43,8 @@ import { diagnoseFunnel } from "@/lib/portfolio-metrics"
 import { PREVIOUS_PERIOD } from "@/lib/portfolio-series"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
 import { leadSourceOption, normalizeLeadSource } from "@/lib/lead-sources"
+import { scopeChipLabel } from "@/lib/meta-scope"
+import { SYNCING_MESSAGE } from "@/lib/client-loading"
 
 // ── Coming Soon placeholder ──────────────────────────────────────────────────
 function ComingSoon({ title }) {
@@ -280,25 +282,29 @@ export default function ClientDetailsPage() {
     useLandingFunnel(clientId, datePreset)
 
   // ── Fetch client details ────────────────────────────────────────────────────
-  useEffect(() => {
+  // `quiet` re-fetches behind what is on screen (after a campaign change)
+  // instead of blanking the header back to its loading state.
+  const loadClient = useCallback(async ({ quiet = false } = {}) => {
     if (!clientId) return
-    ;(async () => {
-      try {
-        setClientLoading(true)
-        const response = await apiRequest(`/api/client-groups/${clientId}`)
-        if (!response.ok) throw new Error("Failed to fetch client details")
-        const result = await response.json()
-        setClientData(result.data)
-        setClientStatus(result.data?.group_info?.client_status ?? "Active")
-        setClientHealth(result.data?.group_info?.health ?? DEFAULT_CLIENT_HEALTH)
-        setHealthDetail(result.data?.group_info?.health_detail ?? null)
-      } catch {
-        toast.error("Failed to load client details")
-      } finally {
-        setClientLoading(false)
-      }
-    })()
+    try {
+      if (!quiet) setClientLoading(true)
+      const response = await apiRequest(`/api/client-groups/${clientId}`)
+      if (!response.ok) throw new Error("Failed to fetch client details")
+      const result = await response.json()
+      setClientData(result.data)
+      setClientStatus(result.data?.group_info?.client_status ?? "Active")
+      setClientHealth(result.data?.group_info?.health ?? DEFAULT_CLIENT_HEALTH)
+      setHealthDetail(result.data?.group_info?.health_detail ?? null)
+    } catch {
+      if (!quiet) toast.error("Failed to load client details")
+    } finally {
+      if (!quiet) setClientLoading(false)
+    }
   }, [clientId])
+
+  useEffect(() => {
+    loadClient()
+  }, [loadClient])
 
   // ── Toggle client status (used in Integrations tab) ────────────────────────
   const handleToggleStatus = async () => {
@@ -348,6 +354,28 @@ export default function ClientDetailsPage() {
 
   const groupName = clientData?.group_info?.name || "Client"
 
+  // Meta campaign scope. A group sharing an ad account owns only some of its
+  // campaigns; right after a change its Meta cache is empty while it re-syncs.
+  const metaScope = clientData?.group_info?.meta_scope ?? matchingGroup?.meta_scope ?? null
+  const metaChip = scopeChipLabel(metaScope)
+  const metaCampaignIds = clientData?.group_info?.meta_campaign_ids
+  const metaSyncing = !!clientData?.meta_data?.syncing
+  const noCampaignsSelected = metaSyncing && Array.isArray(metaCampaignIds) && metaCampaignIds.length === 0
+  const handleCampaignsSaved = useCallback(() => {
+    invalidate()
+    loadClient({ quiet: true })
+  }, [invalidate, loadClient])
+  // While the scoped cache refills, re-ask quietly so the Marketing tab moves
+  // off its syncing state on its own; refresh the list once it lands.
+  useEffect(() => {
+    if (!metaSyncing || noCampaignsSelected) return
+    const t = setInterval(() => loadClient({ quiet: true }), 15_000)
+    return () => {
+      clearInterval(t)
+      invalidate()
+    }
+  }, [metaSyncing, noCampaignsSelected, loadClient, invalidate])
+
   // The design's sub-line reads "Emma T. · client since Mar 2025". There is no
   // primary-contact field on a client group, so only the half that exists is
   // rendered rather than inventing a name.
@@ -382,6 +410,11 @@ export default function ClientDetailsPage() {
                 {clientLoading ? "…" : groupName}
               </h1>
               {!clientLoading && <HealthPill health={clientHealth} />}
+              {!clientLoading && metaChip && (
+                <Badge variant="secondary" className="shrink-0 text-[11px] font-medium">
+                  {metaChip}
+                </Badge>
+              )}
             </div>
             {clientSubline && (
               <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
@@ -406,7 +439,7 @@ export default function ClientDetailsPage() {
         </div>
       ),
     }),
-    [groupName, clientLoading, clientHealth, clientSubline, datePreset, setDatePreset, router]
+    [groupName, clientLoading, clientHealth, clientSubline, metaChip, datePreset, setDatePreset, router]
   )
   usePageHeader(pageHeader)
 
@@ -537,6 +570,34 @@ export default function ClientDetailsPage() {
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}
         <TabsContent value="marketing" className="mt-5">
+          {noCampaignsSelected ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
+                <p className="font-pd-display text-base font-semibold text-pd-ink">No campaigns selected</p>
+                <p className="max-w-sm text-sm text-pd-subtle">
+                  This client shares its Meta ad account. Choose the campaigns that belong to it to see its spend and results.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => {
+                    setSettingsTab("integrations")
+                    setIntegrationsOpen(true)
+                  }}
+                >
+                  Choose campaigns
+                </Button>
+              </CardContent>
+            </Card>
+          ) : metaSyncing ? (
+            <Card>
+              <CardContent className="flex items-center gap-3 py-6">
+                <Loader2 className="size-4 shrink-0 animate-spin text-pd-primary" aria-hidden="true" />
+                <p className="text-sm text-pd-subtle">{SYNCING_MESSAGE}</p>
+              </CardContent>
+            </Card>
+          ) : (
           <MarketingContent
             clientGroups={singleGroupArray}
             groupsLoading={groupsLoading}
@@ -547,6 +608,7 @@ export default function ClientDetailsPage() {
             showHeader={false}
             onCacheInvalidate={invalidate}
           />
+          )}
         </TabsContent>
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
@@ -733,6 +795,7 @@ export default function ClientDetailsPage() {
               <IntegrationsContent
                 group={matchingGroup}
                 onRefreshComplete={invalidate}
+                onCampaignsSaved={handleCampaignsSaved}
               />
             </TabsContent>
 

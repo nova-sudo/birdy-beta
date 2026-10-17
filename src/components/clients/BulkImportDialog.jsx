@@ -125,6 +125,17 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
         if (already && !added) {
           toast.info("Those clients are already in Birdy.")
         }
+        // Imported without Meta because another client already uses that ad
+        // account; campaigns are split between them in client settings.
+        const nameOf = Object.fromEntries(accounts.map((a) => [a.location_id, a.name]))
+        const unlinked = (d?.imported || [])
+          .filter((r) => r?.meta_skipped_reason)
+          .map((r) => nameOf[r.location_id] || "A client")
+        if (unlinked.length) {
+          toast.warning("Link Meta campaigns in client settings", {
+            description: unlinked.join(", "),
+          })
+        }
 
         onOpenChange(false)
         onImported?.()

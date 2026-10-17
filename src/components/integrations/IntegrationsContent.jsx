@@ -11,6 +11,8 @@ import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 import Image from "next/image"
+import { MetaCampaignsDialog } from "@/components/clients/MetaCampaignsDialog"
+import { campaignsSummary, unassignedText } from "@/lib/meta-scope"
 
 function formatDate(dateStr) {
   if (!dateStr) return "Never"
@@ -46,7 +48,21 @@ function RefreshProgress({ progress }) {
   )
 }
 
-function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshStatus, refreshProgress, refreshError, onRefresh }) {
+// A link-styled action inside a details value ("· Edit", "· Assign").
+function InlineAction({ children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="font-semibold text-pd-primary hover:underline focus-visible:underline focus-visible:outline-none"
+    >
+      {children}
+    </button>
+  )
+}
+
+// `value` may be text or a node; `extra` renders under the details rows.
+function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, refreshStatus, refreshProgress, refreshError, onRefresh }) {
   const isRefreshing = refreshStatus === "running"
 
   return (
@@ -72,6 +88,7 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
                   <span className="font-medium text-right max-w-[60%] truncate">{value}</span>
                 </div>
               ))}
+              {extra}
               <div className="flex justify-between">
                 <span className="text-pd-subtle">Last Refresh</span>
                 <span className="font-medium flex items-center gap-1">
@@ -133,7 +150,8 @@ function IntegrationCard({ name, icon, connected, details, lastRefresh, refreshS
   )
 }
 
-export default function IntegrationsContent({ group, onRefreshComplete }) {
+export default function IntegrationsContent({ group, onRefreshComplete, onCampaignsSaved }) {
+  const [campaignsOpen, setCampaignsOpen] = useState(false)
   const [refreshStatus, setRefreshStatus] = useState({ meta: "idle", ghl: "idle" })
   const [metaProgress, setMetaProgress] = useState(null)
   const [metaError, setMetaError] = useState(null)
@@ -231,7 +249,14 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
   const ghlConnected = !!group.ghl_location_id
   const hpConnected = !!(group.hotprospector && Object.keys(group.hotprospector).length > 0)
 
+  // Which campaigns of the ad account this client owns. Older payloads have
+  // no meta_scope; they read as "All campaigns", which is what null means.
+  const metaScope = group.meta_scope ?? null
+  const unassigned = unassignedText(metaScope)
+  const openCampaigns = () => setCampaignsOpen(true)
+
   return (
+    <>
     <Stagger className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <StaggerItem>
         <IntegrationCard
@@ -262,7 +287,22 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
             },
             { label: "Account ID", value: group.facebook?.ad_account_id || group.meta_ad_account_id || "—" },
             { label: "Currency", value: group.facebook?.currency || group.ad_account_currency || "—" },
+            {
+              label: "Campaigns",
+              value: (
+                <>
+                  {campaignsSummary(metaScope)} · <InlineAction onClick={openCampaigns}>Edit</InlineAction>
+                </>
+              ),
+            },
           ]}
+          extra={
+            unassigned && (
+              <p className="rounded-lg bg-pd-warning-bg px-2.5 py-1.5 text-xs text-pd-amber">
+                {unassigned} · <InlineAction onClick={openCampaigns}>Assign</InlineAction>
+              </p>
+            )
+          }
           lastRefresh={group.last_meta_refresh}
           refreshStatus={refreshStatus.meta}
           refreshProgress={metaProgress}
@@ -285,5 +325,14 @@ export default function IntegrationsContent({ group, onRefreshComplete }) {
         />
       </StaggerItem>
     </Stagger>
+      {metaConnected && (
+        <MetaCampaignsDialog
+          open={campaignsOpen}
+          onOpenChange={setCampaignsOpen}
+          group={group}
+          onSaved={() => (onCampaignsSaved ?? onRefreshComplete)?.()}
+        />
+      )}
+    </>
   )
 }
