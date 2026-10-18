@@ -86,7 +86,14 @@ export function markUISubmitted(sessionKey, uiKey) {
  * component unmounts; `handlers` (owned by whichever component initiated the
  * send) cover the fast failure paths that need component context.
  *
- * handlers: { on402, on412, onToolUsed, onSessionId, persistSession }
+ * handlers: { on402, on412, onToolUsed, onSessionId, persistSession, onDashboardOps }
+ *
+ * The "My dashboards" page also passes `dashboardId` and `getSummary` (a
+ * function, called at send time so the backend sees the live doc, unsaved
+ * edits included). When the reply carries `dashboard_ops`, onDashboardOps
+ * applies them and its `{ applied, diff, error }` is kept on the assistant
+ * message for the bubble to show. Other pages pass neither and get the same
+ * request and message as before.
  */
 export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   // Always read the live entry: emit() swaps in a fresh object for
@@ -96,7 +103,7 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   if (chat().loading) return
   const generation = generations.get(sessionKey) ?? 0
   const stale = () => (generations.get(sessionKey) ?? 0) !== generation
-  const { text, page, clientGroupId, clientName } = payload
+  const { text, page, clientGroupId, clientName, dashboardId, getSummary } = payload
 
   chat().messages = [...chat().messages, { role: "user", content: text }]
   chat().loading = true
@@ -120,6 +127,9 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         page,
         client_group_id: clientGroupId,
         client_name: clientName,
+        // undefined drops out of the JSON, so other pages' bodies are unchanged.
+        dashboard_id: dashboardId ?? undefined,
+        summary: dashboardId ? getSummary?.() : undefined,
       }),
     })
 
@@ -151,7 +161,16 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
 
     if (stale()) return
     const toolsUsed = data.tools_used || []
-    chat().messages = [...chat().messages, { role: "assistant", content: data.reply, tools_used: toolsUsed }]
+    const assistant = { role: "assistant", content: data.reply, tools_used: toolsUsed }
+    if (data.dashboard_ops?.length) {
+      // The reply does not echo which dashboard it was about; the request did.
+      const result = handlers.onDashboardOps?.(data.dashboard_ops, { ...data, dashboard_id: data.dashboard_id ?? dashboardId })
+      assistant.dashboard_ops = data.dashboard_ops
+      assistant.dashboard_diff = result?.diff ?? []
+      assistant.dashboard_applied = result?.applied ?? false
+      assistant.dashboard_error = result?.error
+    }
+    chat().messages = [...chat().messages, assistant]
     toolsUsed.forEach((t) => handlers.onToolUsed?.(t))
 
     // Nobody watching this chat any more → the modal was closed mid-run.

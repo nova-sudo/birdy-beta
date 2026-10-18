@@ -42,6 +42,12 @@ import { startersFor } from "@/lib/chat-starters"
  *   hideInitialMessage?     don't show the auto-sent initialMessage as a user bubble
  *   ignoreCreditsGate?      let the server decide on credits (the onboarding copilot)
  *   showSlowNotice?         the "taking a little longer, you can close this" hint (default true)
+ *   dashboardId?            "My dashboards": the dashboard the chat edits, sent as dashboard_id
+ *   getDashboardSummary?    () => string — summarize() of the live doc, read at send time
+ *   onDashboardOps?         (ops, data) => { applied, diff, error } — applies the reply's ops
+ *
+ * The three dashboard props only reach the store-owned (uncontrolled) send;
+ * the dashboards page is uncontrolled, and /ask-birdy has no dashboard.
  */
 export default function ChatConversation({
   initialMessages = [],
@@ -70,6 +76,9 @@ export default function ChatConversation({
   hideInitialMessage = false,
   ignoreCreditsGate = false,
   showSlowNotice = true,
+  dashboardId = null,
+  getDashboardSummary = null,
+  onDashboardOps = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -118,6 +127,10 @@ export default function ChatConversation({
   const onToolUsedRef = useRef(onToolUsed)
   useEffect(() => { onMessagesChangeRef.current = onMessagesChange }, [onMessagesChange])
   useEffect(() => { onToolUsedRef.current = onToolUsed }, [onToolUsed])
+  const getDashboardSummaryRef = useRef(getDashboardSummary)
+  const onDashboardOpsRef = useRef(onDashboardOps)
+  useEffect(() => { getDashboardSummaryRef.current = getDashboardSummary }, [getDashboardSummary])
+  useEffect(() => { onDashboardOpsRef.current = onDashboardOps }, [onDashboardOps])
 
   // Restore session — only when the caller isn't supplying one.
   useEffect(() => {
@@ -170,11 +183,14 @@ export default function ChatConversation({
           text, page,
           clientGroupId: showScopePicker ? scope.id : null,
           clientName: showScopePicker && scope.id ? scope.name : null,
+          dashboardId,
+          getSummary: () => getDashboardSummaryRef.current?.(),
         },
         {
           persistSession: true,
           onSessionId: (id) => onSessionIdRef.current?.(id),
           onToolUsed: (t) => onToolUsedRef.current?.(t),
+          onDashboardOps: (ops, data) => onDashboardOpsRef.current?.(ops, data),
           on412: () => {
             markUnconfigured()
             refreshCreds()
@@ -238,7 +254,7 @@ export default function ChatConversation({
     } finally {
       setLocalLoading(false)
     }
-  }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.

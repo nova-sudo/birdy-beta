@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { Check, Copy } from "lucide-react"
+import { AlertTriangle, Check, Copy, LayoutDashboard } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
@@ -110,10 +110,54 @@ export default function MessageBubble({
           </div>
       </div>
 
+      {message.dashboard_ops?.length > 0 && (
+        <div className="pl-[34px]">
+          <DashboardChanges message={message} />
+        </div>
+      )}
+
       <div className="pl-[34px]">
         <CopyButton text={message.content} />
       </div>
     </motion.div>
+  )
+}
+
+/**
+ * What a "My dashboards" reply did to the dashboard: the diff lines the page
+ * computed when it applied the ops, or why it couldn't. Styled like the tool
+ * pills above the answer — a quiet receipt, not a second message.
+ */
+function DashboardChanges({ message }) {
+  const applied = message.dashboard_applied
+  const title = applied ? "Updated your dashboard" : "Couldn't apply these changes"
+  const Icon = applied ? LayoutDashboard : AlertTriangle
+  const lines = applied ? message.dashboard_diff ?? [] : []
+
+  return (
+    <div
+      role="status"
+      aria-label={title}
+      className={`rounded-2xl border bg-pd-surface px-3 py-2.5 ${applied ? "border-pd-border" : "border-pd-danger"}`}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-pd-body">
+        <Icon className={`size-3 ${applied ? "text-pd-primary" : "text-pd-danger"}`} aria-hidden="true" />
+        {title}
+      </div>
+      {lines.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5 text-[12.5px] leading-snug text-pd-muted">
+          {lines.map((line, i) => (
+            <li key={i} className="flex gap-1.5">
+              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-pd-faint" aria-hidden="true" />
+              <span className="min-w-0">{line}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!applied && message.dashboard_error && (
+        <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">{message.dashboard_error}</p>
+      )}
+    </div>
   )
 }
 
