@@ -25,6 +25,14 @@
   --dk-font-display: var(--font-pd-display);
 }
 
+/* dashkit gives charts a 160px floor so they never collapse in its own
+   frame. A 2-row cell minus the PdFrame header is shorter than that, so the
+   floor made the frame body clip the x-axis; inside Birdy the chart fills
+   whatever height the body has instead. */
+.dk-root .dk-chart {
+  min-height: 0;
+}
+
 /* ═══════════════════════════════════════════════════════════════
    BIRDY AI — Complete Design System
    ═══════════════════════════════════════════════════════════════ */

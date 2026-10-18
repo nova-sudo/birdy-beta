@@ -63,6 +63,47 @@ describe("dashkit adapters", () => {
     expect(slots).toEqual([null])
   })
 
+  it("dataSource.resolve splits 60 bindings into two POSTs and joins the slots in order", async () => {
+    apiRequest.mockImplementation(async (_endpoint, init) => {
+      const { bindings } = JSON.parse(init.body)
+      return jsonResponse({ slots: bindings.map((b) => ({ shape: "value", value: b.n })), errors: [] })
+    })
+    const bindings = Array.from({ length: 60 }, (_, n) => ({ metric: "spend", window: { preset: "last_7d" }, n }))
+    const shapes = bindings.map(() => "value")
+
+    const slots = await dataSource.resolve(bindings, shapes)
+
+    expect(apiRequest).toHaveBeenCalledTimes(2)
+    const sent = apiRequest.mock.calls.map(([, init]) => JSON.parse(init.body))
+    expect(sent.map((b) => b.bindings.length)).toEqual([50, 10])
+    expect(sent.map((b) => b.shapes.length)).toEqual([50, 10])
+    expect(slots.map((s) => s.value)).toEqual(bindings.map((b) => b.n))
+  })
+
+  it("a failing chunk yields nulls for its own range only", async () => {
+    apiRequest.mockImplementation(async (_endpoint, init) => {
+      const { bindings } = JSON.parse(init.body)
+      if (bindings[0].n === 50) return jsonResponse({ detail: "boom" }, 500)
+      return jsonResponse({ slots: bindings.map((b) => ({ shape: "value", value: b.n })), errors: [] })
+    })
+    const bindings = Array.from({ length: 120 }, (_, n) => ({ metric: "spend", window: { preset: "last_7d" }, n }))
+
+    const slots = await dataSource.resolve(bindings)
+
+    expect(apiRequest).toHaveBeenCalledTimes(3)
+    expect(slots).toHaveLength(120)
+    expect(slots.slice(0, 50).map((s) => s.value)).toEqual(bindings.slice(0, 50).map((b) => b.n))
+    expect(slots.slice(50, 100)).toEqual(Array(50).fill(null))
+    expect(slots.slice(100).map((s) => s.value)).toEqual(bindings.slice(100).map((b) => b.n))
+  })
+
+  it("rejects with the real error when every chunk fails", async () => {
+    apiRequest.mockResolvedValue(jsonResponse({ detail: "down" }, 503))
+    const bindings = Array.from({ length: 60 }, () => ({ metric: "spend", window: { preset: "last_7d" } }))
+
+    await expect(dataSource.resolve(bindings)).rejects.toThrow()
+  })
+
   it("dataSource.catalog GETs /api/dashboards/catalog", async () => {
     apiRequest.mockResolvedValue(jsonResponse({ metrics: [] }))
 
@@ -151,11 +192,27 @@ describe("PdFrame", () => {
     }
   })
 
+  it("fills its grid cell and keeps its spacing inside the body for KPIs to spill into", () => {
+    const { container, rerender } = render(<PdFrame title="Leads" state="ready"><p>12</p></PdFrame>)
+    const root = container.firstElementChild
+    for (const cls of ["flex-1", "w-full", "h-full", "min-h-0", "min-w-0", "rounded-2xl", "border-pd-border", "bg-pd-surface"]) {
+      expect(root.classList.contains(cls)).toBe(true)
+    }
+    expect(container.querySelector("h3").textContent).toBe("Leads")
+    const body = container.querySelector(".dk-frame-body")
+    expect(body.className).toContain("pt-2!")
+    expect(body.className).toContain("pb-3!")
+    expect(body.className).toContain("overflow-hidden")
+
+    rerender(<PdFrame state="ready"><p>12</p></PdFrame>)
+    expect(container.querySelector(".dk-frame-body").className).toContain("pt-0!")
+  })
+
   it("renders the menu without a title", () => {
     const { container } = render(<PdFrame menu={<button>handle</button>} state="ready"><p>12</p></PdFrame>)
     expect(screen.getByText("handle")).toBeTruthy()
     expect(container.querySelector(".dk-frame-menu")).toBeTruthy()
-    expect(container.querySelector("h2")).toBeNull()
+    expect(container.querySelector("h3")).toBeNull()
   })
 
   it("registry components override only Frame and Markdown", () => {

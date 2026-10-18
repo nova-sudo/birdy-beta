@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { AlertTriangle, Check, Copy, LayoutDashboard } from "lucide-react"
+import { AlertTriangle, Check, Copy, LayoutDashboard, Undo2 } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
@@ -21,6 +21,7 @@ export default function MessageBubble({
   onUISubmit,
   submittedUIs,
   widthClass = "max-w-[80%]",
+  onUndoDashboardOps = null,
 }) {
   const isUser = message.role === "user"
 
@@ -112,7 +113,7 @@ export default function MessageBubble({
 
       {message.dashboard_ops?.length > 0 && (
         <div className="pl-[34px]">
-          <DashboardChanges message={message} />
+          <DashboardChanges message={message} onUndo={onUndoDashboardOps} />
         </div>
       )}
 
@@ -127,8 +128,13 @@ export default function MessageBubble({
  * What a "My dashboards" reply did to the dashboard: the diff lines the page
  * computed when it applied the ops, or why it couldn't. Styled like the tool
  * pills above the answer — a quiet receipt, not a second message.
+ *
+ * `onUndo` (only on the newest reply that changed the dashboard) takes those
+ * changes back; it returns false when it could not, e.g. because the user has
+ * edited the dashboard since.
  */
-function DashboardChanges({ message }) {
+function DashboardChanges({ message, onUndo }) {
+  const [undo, setUndo] = useState(null) // null | "done" | "blocked"
   const applied = message.dashboard_applied
   const title = applied ? "Updated your dashboard" : "Couldn't apply these changes"
   const Icon = applied ? LayoutDashboard : AlertTriangle
@@ -143,6 +149,17 @@ function DashboardChanges({ message }) {
       <div className="flex items-center gap-1.5 text-[11px] font-semibold text-pd-body">
         <Icon className={`size-3 ${applied ? "text-pd-primary" : "text-pd-danger"}`} aria-hidden="true" />
         {title}
+        {applied && onUndo && undo !== "done" && (
+          <button
+            type="button"
+            onClick={() => setUndo(onUndo() ? "done" : "blocked")}
+            className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          >
+            <Undo2 className="size-3" aria-hidden="true" />
+            Undo
+          </button>
+        )}
+        {applied && undo === "done" && <span className="ml-auto text-[11.5px] font-medium text-pd-faint">Undone</span>}
       </div>
       {lines.length > 0 && (
         <ul className="mt-1.5 space-y-0.5 text-[12.5px] leading-snug text-pd-muted">
@@ -153,6 +170,11 @@ function DashboardChanges({ message }) {
             </li>
           ))}
         </ul>
+      )}
+      {undo === "blocked" && (
+        <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">
+          Newer edits came after this change. Use Undo in the editor to step back through them.
+        </p>
       )}
       {!applied && message.dashboard_error && (
         <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">{message.dashboard_error}</p>

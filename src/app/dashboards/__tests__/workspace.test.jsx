@@ -283,4 +283,84 @@ describe("Dashboard workspace", () => {
     expect(aside).toHaveTextContent(/once this dashboard loads/)
     expect(chatProps.current).toBeNull()
   })
+
+  it("view-mode AI ops are undoable", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    await waitFor(() => expect(chatProps.current).not.toBeNull())
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull()
+
+    act(() => {
+      chatProps.current.onDashboardOps(
+        [{ op: "updateWidgetData", widgetId: "w1", patch: { markdown: "Rewritten by Birdy" } }],
+        { dashboard_id: "d1" },
+      )
+    })
+    expect(await screen.findByText("Rewritten by Birdy")).toBeInTheDocument()
+    await waitFor(() => expect(puts()).toHaveLength(1))
+
+    // From the chat's Undo under the reply…
+    let undone
+    act(() => {
+      undone = chatProps.current.onUndoDashboardOps()
+    })
+    expect(undone).toBe(true)
+    expect(await screen.findByText("Hello there")).toBeInTheDocument()
+    expect(screen.queryByText("Rewritten by Birdy")).toBeNull()
+    await waitFor(() => expect(puts()).toHaveLength(2))
+    expect(putBody(puts()[1]).sections[0].widgets[0].data.markdown).toBe("Hello there")
+
+    // …and Redo / Undo from the view-mode header.
+    await user.click(screen.getByRole("button", { name: "Redo" }))
+    expect(await screen.findByText("Rewritten by Birdy")).toBeInTheDocument()
+    await waitFor(() => expect(puts()).toHaveLength(3))
+    await user.click(screen.getByRole("button", { name: "Undo" }))
+    expect(await screen.findByText("Hello there")).toBeInTheDocument()
+    await waitFor(() => expect(puts()).toHaveLength(4))
+    expect(putBody(puts()[3]).sections[0].widgets[0].data.markdown).toBe("Hello there")
+  })
+
+  it("the chat's Undo does not take back the user's later edit", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    await waitFor(() => expect(chatProps.current).not.toBeNull())
+    act(() => {
+      chatProps.current.onDashboardOps([textOp("ai", "From Birdy")], { dashboard_id: "d1" })
+    })
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(await screen.findByRole("button", { name: "Add Text" }))
+
+    let undone
+    act(() => {
+      undone = chatProps.current.onUndoDashboardOps()
+    })
+
+    expect(undone).toBe(false)
+    expect(screen.getByText("From Birdy")).toBeInTheDocument()
+  })
+
+  it("history survives a mode switch", async () => {
+    const user = userEvent.setup()
+    const { container } = renderWorkspace()
+    await enterEditAndAddText(user)
+    expect(container.querySelectorAll(".dk-widget")).toHaveLength(2)
+
+    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await waitFor(() => expect(puts()).toHaveLength(1))
+
+    // The edit made in the editor is still on the shared history.
+    const undo = await screen.findByRole("button", { name: "Undo" })
+    await user.click(undo)
+    await waitFor(() => expect(puts()).toHaveLength(2))
+    expect(putBody(puts()[1]).sections[0].widgets).toHaveLength(1)
+
+    // Back in the editor, the toolbar can redo it.
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    const redo = await screen.findByRole("button", { name: "Redo" })
+    expect(redo).not.toBeDisabled()
+    await user.click(redo)
+    await waitFor(() => expect(container.querySelectorAll(".dk-widget")).toHaveLength(2))
+  })
 })

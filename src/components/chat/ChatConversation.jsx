@@ -45,6 +45,8 @@ import { startersFor } from "@/lib/chat-starters"
  *   dashboardId?            "My dashboards": the dashboard the chat edits, sent as dashboard_id
  *   getDashboardSummary?    () => string — summarize() of the live doc, read at send time
  *   onDashboardOps?         (ops, data) => { applied, diff, error } — applies the reply's ops
+ *   onUndoDashboardOps?     () => boolean — takes back the latest applied reply's ops; offered
+ *                           as an Undo on that reply only (true when it undid them)
  *
  * The three dashboard props only reach the store-owned (uncontrolled) send;
  * the dashboards page is uncontrolled, and /ask-birdy has no dashboard.
@@ -79,6 +81,7 @@ export default function ChatConversation({
   dashboardId = null,
   getDashboardSummary = null,
   onDashboardOps = null,
+  onUndoDashboardOps = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -97,6 +100,9 @@ export default function ChatConversation({
   const messages = isControlled ? localMessages : storeChat.messages
   const loading = isControlled ? localLoading : storeChat.loading
   const submittedUIs = isControlled ? localSubmittedUIs : new Set(storeChat.submittedUIs)
+  // Undo steps back the dashboard's latest change, so only the newest reply
+  // that changed the dashboard offers it.
+  const lastAppliedDashboardIndex = messages.findLastIndex((m) => m.role !== "user" && m.dashboard_applied)
 
   const [input, setInput] = useState("")
 
@@ -323,6 +329,7 @@ export default function ChatConversation({
                 onUISubmit={handleUISubmit}
                 submittedUIs={submittedUIs}
                 widthClass={bubbleWidthClass}
+                onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}
               />
             ))}
             {loading && <TypingIndicator />}
