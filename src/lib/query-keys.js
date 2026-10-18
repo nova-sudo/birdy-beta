@@ -36,5 +36,12 @@ export const queryKeys = {
 
   facebookLeadSeries: (params) => `/api/facebook-leads/series?${params}`,
 
+  // "My dashboards": the saved list, one document, and the metric catalog the
+  // editor's binding picker reads. Mutations on the list/doc should revalidate
+  // the matching key.
+  dashboards: () => "/api/dashboards",
+  dashboard: (id) => `/api/dashboards/${id}`,
+  dashboardCatalog: () => "/api/dashboards/catalog",
+
   callCenter: (params) => `/api/hotprospector/call-center?${params}`,
 }

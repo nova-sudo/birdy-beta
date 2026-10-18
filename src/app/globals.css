@@ -1,7 +1,29 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "dashkit/styles.css";
 
 @custom-variant shared (&:is(.shared *));
+
+/* ── dashkit theme ──────────────────────────────────────────────
+   Maps dashkit's 14 --dk-* variables onto Birdy tokens. Same mapping as
+   src/lib/dashkit/theme.js (the tested source of truth) — a stylesheet
+   cannot import a JS string, so it is written out here. Keep them in step. */
+.dk-root {
+  --dk-bg: var(--pd-canvas);
+  --dk-card: var(--pd-surface);
+  --dk-fg: var(--pd-ink);
+  --dk-muted: var(--pd-muted);
+  --dk-border: var(--pd-border);
+  --dk-accent: var(--pd-primary);
+  --dk-success: var(--pd-success);
+  --dk-danger: var(--pd-danger);
+  --dk-warning: var(--pd-warning);
+  --dk-info: var(--pd-info);
+  --dk-radius: var(--radius);
+  --dk-shadow: var(--pd-shadow-popover);
+  --dk-font: var(--font-pd-body);
+  --dk-font-display: var(--font-pd-display);
+}
 
 /* ═══════════════════════════════════════════════════════════════
    BIRDY AI — Complete Design System
