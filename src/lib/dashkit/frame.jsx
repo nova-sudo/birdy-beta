@@ -8,6 +8,14 @@ import { PdCard } from "@/components/portfolio/PdCard"
  * overlay (so stale numbers don't flash away), `empty` and `error` replace
  * them. `menu` is the editor's handles and goes in the header's right slot.
  *
+ * The body carries dashkit's `dk-frame-body` class: that is what makes it the
+ * inline-size container widgets measure their `cqi` text against, so without
+ * it KPI text would track the viewport instead of the card. Its 12/16px
+ * padding would stack on PdCard's own, hence `p-0!` (important, because
+ * dashkit's CSS is unlayered and would otherwise beat Tailwind's layered
+ * utilities). `dk-frame` and `dk-frame-title` are deliberately not used: they
+ * set background, border, radius, shadow and padding that PdCard already owns.
+ *
  * It fills its grid cell (h-full) and the body flexes to the remaining
  * height with min-h-0, so charts sized to 100% have something to measure.
  *
@@ -38,11 +46,11 @@ export function PdFrame({ title, menu, state, error, children }) {
   return (
     <PdCard
       title={title}
-      action={menu ? <div className="ml-auto flex items-center gap-1">{menu}</div> : undefined}
+      action={menu ? <div className="dk-frame-menu">{menu}</div> : undefined}
       className={`flex h-full min-w-0 flex-col ${state === "error" ? "border-pd-danger" : ""}`}
       headerClassName="mb-3"
     >
-      <div className="relative min-h-0 flex-1 overflow-hidden" data-state={state} aria-busy={state === "loading" || undefined}>
+      <div className="dk-frame-body relative min-h-0 flex-1 overflow-hidden p-0!" data-state={state} aria-busy={state === "loading" || undefined}>
         {body}
       </div>
     </PdCard>

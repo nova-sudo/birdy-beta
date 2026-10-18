@@ -10,5 +10,6 @@ export const DASHKIT_BASE_URL = `${API_BASE_URL}/api`
  * the origin back off and route every dashkit call through it.
  */
 export function dashkitFetch(url, init) {
-  return apiRequest(url.replace(API_BASE_URL, ""), init)
+  const path = url.startsWith(API_BASE_URL) ? url.slice(API_BASE_URL.length) : url
+  return apiRequest(path, init)
 }

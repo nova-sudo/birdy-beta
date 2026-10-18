@@ -15,6 +15,8 @@ import { apiRequest } from "@/lib/api"
 import { store } from "@/lib/dashkit/store"
 import { dataSource } from "@/lib/dashkit/data-source"
 import { dkTheme } from "@/lib/dashkit/theme"
+import { readFileSync } from "node:fs"
+import { join } from "node:path"
 import { render, screen } from "@testing-library/react"
 import { PdFrame } from "@/lib/dashkit/frame"
 import { components } from "@/lib/dashkit/registry"
@@ -71,6 +73,17 @@ describe("dashkit adapters", () => {
 })
 
 describe("dashkit theme", () => {
+  it("globals.css .dk-root block declares the same vars as dkTheme", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8")
+    const block = css.match(/^\.dk-root\s*\{([^}]*)\}/m)?.[1] ?? ""
+    const parse = (text) =>
+      Object.fromEntries(
+        [...text.matchAll(/(--dk-[a-z-]+)\s*:\s*([^;}]+)/g)].map(([, k, v]) => [k, v.trim()]),
+      )
+    expect(parse(block)).toEqual(parse(dkTheme))
+    expect(Object.keys(parse(block))).toHaveLength(14)
+  })
+
   it("theme string maps all 14 vars", () => {
     const decls = dkTheme.match(/--dk-[a-z-]+:/g) ?? []
     expect(decls).toHaveLength(14)
@@ -97,6 +110,17 @@ describe("dashkit theme", () => {
   })
 })
 
+describe("dashkitFetch", () => {
+  it("strips the API origin only from the start of the url", async () => {
+    const { dashkitFetch } = await import("@/lib/dashkit/fetch")
+    apiRequest.mockResolvedValue(jsonResponse({}))
+
+    await dashkitFetch("http://api.test/api/dashboards?next=http://api.test/x", { method: "GET" })
+
+    expect(apiRequest.mock.calls[0][0]).toBe("/api/dashboards?next=http://api.test/x")
+  })
+})
+
 describe("PdFrame", () => {
   it("keeps children visible under a pulse while loading", () => {
     const { container } = render(<PdFrame title="Leads" state="loading"><p>12</p></PdFrame>)
@@ -115,6 +139,23 @@ describe("PdFrame", () => {
 
     rerender(<PdFrame title="Leads" state="error" error="Boom"><p>12</p></PdFrame>)
     expect(screen.getByRole("status").textContent).toBe("Boom")
+  })
+
+  it("body is dashkit's inline-size container and data-state tracks state", () => {
+    for (const state of ["ready", "loading", "empty", "error"]) {
+      const { container, unmount } = render(<PdFrame title="Leads" state={state}><p>12</p></PdFrame>)
+      const body = container.querySelector(".dk-frame-body")
+      expect(body).toBeTruthy()
+      expect(body.getAttribute("data-state")).toBe(state)
+      unmount()
+    }
+  })
+
+  it("renders the menu without a title", () => {
+    const { container } = render(<PdFrame menu={<button>handle</button>} state="ready"><p>12</p></PdFrame>)
+    expect(screen.getByText("handle")).toBeTruthy()
+    expect(container.querySelector(".dk-frame-menu")).toBeTruthy()
+    expect(container.querySelector("h2")).toBeNull()
   })
 
   it("registry components override only Frame and Markdown", () => {
