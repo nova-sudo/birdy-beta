@@ -1,4 +1,4 @@
-import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles} from "lucide-react"
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, LayoutDashboard } from "lucide-react"
 import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
@@ -44,6 +44,7 @@ import {
 
 const items = [
   {title: "Dashboard", url: "/dashboard", icon: House },
+  { title: "My dashboards", url: "/dashboards", icon: LayoutDashboard },
   { title: "Clients", url: "/clients", icon: SquareUserRound },
   { title: "Ask Birdy", url: "/ask-birdy", icon: Sparkles },
   { title: "Marketing", url: "/campaigns", icon: ChartNoAxesColumnIncreasing },
