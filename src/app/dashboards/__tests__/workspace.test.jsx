@@ -33,6 +33,7 @@ vi.mock("@/components/chat/ChatConversation", () => ({
 }))
 
 import { apiRequest } from "@/lib/api"
+import { toast } from "sonner"
 
 const res = (body, status = 200) => ({
   ok: status >= 200 && status < 300,
@@ -61,13 +62,30 @@ const CATALOG = {
   windows: [{ preset: "last_7_days", label: "Last 7 days" }],
 }
 
+// How many upcoming PUTs should fail (a 500), to exercise the retry paths.
+let failPuts = 0
 function mockApi(path, init = {}) {
   const method = init.method ?? "GET"
+  if (method === "PUT" && failPuts > 0) {
+    failPuts -= 1
+    return Promise.resolve(res({ detail: "boom" }, 500))
+  }
   if (path === "/api/dashboards/catalog") return Promise.resolve(res(CATALOG))
   if (path === "/api/dashboards/resolve") return Promise.resolve(res({ slots: [] }))
   if (path === "/api/dashboards/d1" && method === "GET") return Promise.resolve(res(DOC))
   if (path === "/api/dashboards/d1" && method === "PUT") return Promise.resolve(res(JSON.parse(init.body)))
   return Promise.resolve(res({}, 404))
+}
+
+const puts = () => vi.mocked(apiRequest).mock.calls.filter(([, init]) => init?.method === "PUT")
+const putBody = (call) => JSON.parse(call[1].body)
+const textOp = (id, markdown) => ({ op: "addWidget", sectionId: "s1", widget: { type: "text", id, data: { markdown } } })
+
+async function enterEditAndAddText(user) {
+  await screen.findByText("Hello there")
+  await user.click(screen.getByRole("radio", { name: /Edit/ }))
+  await user.click(await screen.findByRole("button", { name: "Add Text" }))
+  expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument()
 }
 
 const renderWorkspace = () =>
@@ -83,6 +101,8 @@ const renderWorkspace = () =>
 
 beforeEach(() => {
   search = ""
+  failPuts = 0
+  vi.mocked(toast.error).mockClear()
   replace.mockClear()
   chatProps.current = null
   vi.mocked(apiRequest).mockReset()
@@ -153,5 +173,114 @@ describe("Dashboard workspace", () => {
       expect(JSON.parse(put[1].body).sections[0].widgets[0].data.markdown).toBe("Rewritten by Birdy")
     })
     expect(chatProps.current.getDashboardSummary()).toContain("[w1]")
+  })
+
+  it("unmounting with unsaved edit-mode changes saves them", async () => {
+    const user = userEvent.setup()
+    const { unmount } = renderWorkspace()
+    await enterEditAndAddText(user)
+    expect(puts()).toHaveLength(0)
+
+    unmount()
+
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    expect(putBody(puts()[0]).sections[0].widgets).toHaveLength(2)
+  })
+
+  it("warns before the tab closes while there are unsaved changes", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    const clean = new Event("beforeunload", { cancelable: true })
+    window.dispatchEvent(clean)
+    expect(clean.defaultPrevented).toBe(false)
+
+    await enterEditAndAddText(user)
+    const dirty = new Event("beforeunload", { cancelable: true })
+    window.dispatchEvent(dirty)
+    expect(dirty.defaultPrevented).toBe(true)
+  })
+
+  it("a failed save can be retried from the header", async () => {
+    const user = userEvent.setup()
+    failPuts = 1
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    await waitFor(() => expect(chatProps.current).not.toBeNull())
+
+    act(() => {
+      chatProps.current.onDashboardOps([textOp("ai", "From Birdy")], { dashboard_id: "d1" })
+    })
+
+    expect(await screen.findByText("Save failed")).toBeInTheDocument()
+    expect(toast.error).toHaveBeenCalledWith(
+      "Couldn't save this dashboard",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Retry" }) }),
+    )
+    // The change is still on screen, waiting to be saved.
+    expect(screen.getByText("From Birdy")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Retry" }))
+
+    expect(await screen.findByText("Saved")).toBeInTheDocument()
+    expect(puts()).toHaveLength(2)
+    expect(putBody(puts()[1]).sections[0].widgets.map((w) => w.id)).toEqual(["w1", "ai"])
+  })
+
+  it("a failed toolbar save shows inline, without the page's toast", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await enterEditAndAddText(user)
+    failPuts = 1
+
+    await user.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(await screen.findByText(/^Save failed:/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it("ops that arrive after the workspace unmounted are not applied", async () => {
+    const { unmount } = renderWorkspace()
+    await screen.findByText("Hello there")
+    await waitFor(() => expect(chatProps.current).not.toBeNull())
+    const onDashboardOps = chatProps.current.onDashboardOps
+
+    unmount()
+    const result = onDashboardOps([textOp("late", "Too late")], { dashboard_id: "d1" })
+
+    expect(result.applied).toBe(false)
+    expect(result.error).toBeTruthy()
+    expect(puts()).toHaveLength(0)
+  })
+
+  it("ops in edit mode join the unsaved local edit and save both", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await enterEditAndAddText(user)
+
+    let result
+    act(() => {
+      result = chatProps.current.onDashboardOps([textOp("ai", "From Birdy")], { dashboard_id: "d1" })
+    })
+
+    expect(result.applied).toBe(true)
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    const widgets = putBody(puts()[0]).sections[0].widgets
+    expect(widgets).toHaveLength(3)
+    expect(widgets.map((w) => w.id)).toContain("ai")
+    await waitFor(() => expect(screen.queryByRole("img", { name: "Unsaved changes" })).not.toBeInTheDocument())
+  })
+
+  it("shows an error, not a loading chat, when the dashboard can't load", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/dashboards/d1" ? Promise.resolve(res({ detail: "nope" }, 404)) : mockApi(path, init),
+    )
+    renderWorkspace()
+
+    expect(await screen.findByText(/Couldn.t load this dashboard/)).toBeInTheDocument()
+    const aside = screen.getByRole("complementary", { name: "Ask Birdy" })
+    expect(aside).toHaveTextContent(/once this dashboard loads/)
+    expect(chatProps.current).toBeNull()
   })
 })

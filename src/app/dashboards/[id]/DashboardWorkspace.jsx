@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { AlertTriangle, Check, Eye, Loader2, Pencil } from "lucide-react"
+import { AlertTriangle, Check, Eye, Loader2, Pencil, RotateCw } from "lucide-react"
 import { applyAll, summarize } from "dashkit/core"
 import { ComponentsProvider, DashboardDataProvider, DashboardEditor, DashboardRenderer } from "dashkit/react"
 import { usePageHeader } from "@/components/page-header"
@@ -84,14 +84,23 @@ export default function DashboardWorkspace({ id }) {
     }
   }, [])
 
+  // The doc the editor (or the view) holds right now. onChange keeps
+  // liveDocRef in step with the editor, so the ref alone would do; asking the
+  // editor first just avoids depending on that.
+  const currentDoc = useCallback(() => apiRef.current?.getDoc() ?? liveDocRef.current, [])
+
   // Saves run one after another, so an older PUT can never land after a newer
-  // one and overwrite it.
+  // one and overwrite it. `queuedRef` is the newest doc sent and not yet
+  // failed, so the unmount save doesn't PUT the same doc twice.
   const saveQueue = useRef(Promise.resolve())
   const inFlight = useRef(0)
+  const queuedRef = useRef(null)
+  const retryRef = useRef(() => {})
   const persist = useCallback(
-    (next) => {
+    (next, { fromToolbar = false } = {}) => {
       inFlight.current += 1
-      setSaveState("saving")
+      queuedRef.current = next
+      if (mountedRef.current) setSaveState("saving")
       const run = saveQueue.current.then(() => save(next))
       saveQueue.current = run.catch(() => {})
       return run.then(
@@ -105,10 +114,17 @@ export default function DashboardWorkspace({ id }) {
         },
         (err) => {
           inFlight.current -= 1
+          if (queuedRef.current === next) queuedRef.current = null
           if (mountedRef.current) setSaveState("error")
-          toast.error("Couldn't save this dashboard", {
-            description: "Your changes are still here. Try saving again.",
-          })
+          // The dashkit toolbar shows its own inline "Save failed"; a toast on
+          // top would say it twice. Every other save (Birdy's ops, leaving
+          // edit mode) has no other voice, so it gets one with a way out.
+          if (!fromToolbar) {
+            toast.error("Couldn't save this dashboard", {
+              description: "Your changes are still here.",
+              action: mountedRef.current ? { label: "Retry", onClick: () => retryRef.current() } : undefined,
+            })
+          }
           // Rethrown so the editor's own Save button keeps the doc marked unsaved.
           throw err
         },
@@ -116,6 +132,53 @@ export default function DashboardWorkspace({ id }) {
     },
     [save],
   )
+
+  // Retry saves the doc as it is now, not the one that failed: any edits made
+  // since then go along with it.
+  const retrySave = useCallback(() => {
+    const current = currentDoc()
+    if (current) persist(current).catch(() => {})
+  }, [currentDoc, persist])
+  useEffect(() => {
+    retryRef.current = retrySave
+  }, [retrySave])
+
+  const saveFromToolbar = useCallback((next) => persist(next, { fromToolbar: true }), [persist])
+
+  // Unsaved: the live doc is neither the last one saved nor one on its way.
+  const hasUnsaved = useCallback(() => {
+    const current = currentDoc()
+    return Boolean(current) && current !== lastSavedRef.current && current !== queuedRef.current
+  }, [currentDoc])
+
+  // Leaving the page (a route change, or the key={id} remount) counts as
+  // leaving edit mode: save what is there. Safe after unmount, since save only
+  // touches the global SWR cache. It reads liveDocRef rather than the editor:
+  // by the time this cleanup runs the editor's handle may already be detached,
+  // and onChange has kept the ref current anyway.
+  const persistRef = useRef(persist)
+  useEffect(() => {
+    persistRef.current = persist
+  }, [persist])
+  useEffect(() => {
+    return () => {
+      const current = liveDocRef.current
+      if (current && current !== lastSavedRef.current && current !== queuedRef.current) {
+        persistRef.current(current).catch(() => {})
+      }
+    }
+  }, [])
+
+  // A closing tab can't wait for a save, so ask the browser to confirm instead.
+  useEffect(() => {
+    const onBeforeUnload = (event) => {
+      if (!hasUnsaved()) return
+      event.preventDefault()
+      event.returnValue = ""
+    }
+    window.addEventListener("beforeunload", onBeforeUnload)
+    return () => window.removeEventListener("beforeunload", onBeforeUnload)
+  }, [hasUnsaved])
 
   const changeMode = useCallback(
     (next) => {
@@ -125,7 +188,7 @@ export default function DashboardWorkspace({ id }) {
         const current = apiRef.current?.getDoc() ?? liveDocRef.current
         if (current) {
           updateLiveDoc(current)
-          if (current !== lastSavedRef.current) persist(current).catch(() => {})
+          if (current !== lastSavedRef.current && current !== queuedRef.current) persist(current).catch(() => {})
         }
       }
       setMode(next)
@@ -180,7 +243,7 @@ export default function DashboardWorkspace({ id }) {
       title: <SalesHubHeaderTitle title={title} subtitle="My dashboards" />,
       controls: (
         <div className="flex items-center gap-3">
-          <SaveStatus state={saveState} />
+          <SaveStatus state={saveState} onRetry={retrySave} />
           <PdSegmented
             label="Dashboard mode"
             options={MODES}
@@ -191,7 +254,7 @@ export default function DashboardWorkspace({ id }) {
         </div>
       ),
     }),
-    [title, saveState, mode, changeMode],
+    [title, saveState, mode, changeMode, retrySave],
   )
   usePageHeader(header)
 
@@ -222,7 +285,7 @@ export default function DashboardWorkspace({ id }) {
         dataSource={dataSource}
         components={components}
         onChange={updateLiveDoc}
-        onSave={persist}
+        onSave={saveFromToolbar}
         apiRef={apiRef}
         className="h-full"
       />
@@ -263,7 +326,9 @@ export default function DashboardWorkspace({ id }) {
         <div className="min-h-0 flex-1">
           {/* Mounted once the doc is here, so the first message (the brief)
               goes out with a real summary for Birdy to build on. */}
-          {liveDoc ? (
+          {error && !liveDoc ? (
+            <p className="p-5 text-[13px] text-pd-muted">Birdy can help once this dashboard loads.</p>
+          ) : liveDoc ? (
             <ChatConversation
               page="dashboards"
               sessionKey={`birdy_dashboard_${id}`}
@@ -301,8 +366,11 @@ function BoardSkeleton() {
   )
 }
 
-/** The quiet "Saving… / Saved / Save failed" beside the mode toggle. */
-function SaveStatus({ state }) {
+/**
+ * The quiet "Saving… / Saved / Save failed" beside the mode toggle. A failure
+ * carries its own Retry: in view mode there is no other Save control.
+ */
+function SaveStatus({ state, onRetry }) {
   if (state === "idle") return <span aria-live="polite" />
   const { Icon, label, tone } = {
     saving: { Icon: Loader2, label: "Saving…", tone: "text-pd-faint" },
@@ -313,6 +381,16 @@ function SaveStatus({ state }) {
     <span aria-live="polite" className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${tone}`}>
       <Icon className={`size-3.5 ${state === "saving" ? "animate-spin" : ""}`} aria-hidden="true" />
       {label}
+      {state === "error" && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="ml-1 inline-flex cursor-pointer items-center gap-1 rounded-full bg-pd-divider px-2 py-0.5 text-[11.5px] font-semibold text-pd-ink transition-colors hover:bg-pd-primary-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+        >
+          <RotateCw className="size-3" aria-hidden="true" />
+          Retry
+        </button>
+      )}
     </span>
   )
 }
