@@ -11,8 +11,8 @@ export const RESOLVE_CHUNK_SIZE = 50
  * dashkit's data provider sends every binding queued in one tick as a single
  * batch, so a large dashboard would exceed the backend's limit and every
  * widget would show the 422. When one chunk fails, its bindings resolve to
- * `null` (each of those widgets shows "no data" on its own) and the other
- * chunks still render. Only when every chunk fails does resolve reject, with
+ * `null`, which dashkit renders as that widget's error state ("Data source
+ * returned no data for this binding"), and the other chunks still render. Only when every chunk fails does resolve reject, with
  * the first error, so a whole-request failure (offline, signed out) keeps its
  * real message, as dashkit's DataSource contract asks.
  *
