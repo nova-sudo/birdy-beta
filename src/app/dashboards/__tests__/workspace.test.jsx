@@ -41,7 +41,18 @@ const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({
   default: (props) => {
     chatProps.current = props
-    return <div data-testid="chat" />
+    // A field that keeps Escape for itself, as the composer does while its
+    // slash menu is open.
+    return (
+      <div data-testid="chat">
+        <input
+          aria-label="Stub composer"
+          onKeyDown={(e) => {
+            if (e.key === "Escape" && e.currentTarget.value.startsWith("/")) e.preventDefault()
+          }}
+        />
+      </div>
+    )
   },
 }))
 
@@ -192,6 +203,15 @@ describe("Dashboard workspace", () => {
     await user.keyboard("{Escape}")
     expect(drawer).toHaveAttribute("data-state", "closed")
     expect(open).toHaveFocus()
+
+    // An Escape the chat used itself (closing its slash menu) leaves the drawer open.
+    await user.click(open)
+    await user.type(within(drawer).getByRole("textbox", { name: "Stub composer" }), "/")
+    await user.keyboard("{Escape}")
+    expect(drawer).toHaveAttribute("data-state", "open")
+    await user.clear(within(drawer).getByRole("textbox", { name: "Stub composer" }))
+    await user.keyboard("{Escape}")
+    expect(drawer).toHaveAttribute("data-state", "closed")
 
     // Back in view the chat docks again, still the same one.
     await user.click(screen.getByRole("radio", { name: /View/ }))

@@ -133,6 +133,11 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const [view, setView] = useState("canvas") // the editor's canvas / JSON toggle
   const [saveState, setSaveState] = useState("idle") // idle | saving | saved | error
   const [pickerOpen, setPickerOpen] = useState(false)
+  const editorRootRef = useRef(null)
+  // Set by a pick from the view's picker: once the editor is up, focus goes
+  // to the new widget's properties (the header button that opened the
+  // picker is gone in edit mode, which would drop focus to <body>).
+  const focusPropertiesRef = useRef(false)
 
   // The live doc, as state (to render the title) and as a ref (for the unmount
   // save, which runs when the editor's state is already being torn down).
@@ -282,9 +287,17 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
       if (!editorApplyAll(ops)) return
       setMode("edit")
       select(widgetId)
+      focusPropertiesRef.current = true
     },
     [getDoc, editorApplyAll, select],
   )
+  useEffect(() => {
+    if (!focusPropertiesRef.current || mode !== "edit") return
+    focusPropertiesRef.current = false
+    editorRootRef.current
+      ?.querySelector(".dk-panel :is(input, select, textarea, button):not(:disabled)")
+      ?.focus()
+  }, [mode, editor.selectedId])
 
   // A starter is a finished, bound widget added in view mode, which has no
   // Save button: save it at once. One batch, so one Undo takes it back.
@@ -381,7 +394,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
       <DashboardDataProvider dataSource={dataSource} registry={registry}>
         <ComponentsProvider value={components}>
           <EditorProvider editor={editor} registry={registry} catalog={catalog}>
-            <div className="dk-root dk-editor h-full" data-view={view}>
+            <div ref={editorRootRef} className="dk-root dk-editor h-full" data-view={view}>
               <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} />
               {/* One drag scope for both, so palette tiles drop onto canvas
                   sections; a Palette outside it cannot drag. No element. */}
@@ -496,7 +509,9 @@ function WorkspaceLayout({ board, chat, railed = false }) {
         onKeyDown={
           open
             ? (e) => {
-                if (e.key === "Escape") closeDrawer()
+                // An Escape the chat already used (closing its slash menu)
+                // is not also a request to close the drawer.
+                if (e.key === "Escape" && !e.defaultPrevented) closeDrawer()
               }
             : undefined
         }

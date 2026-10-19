@@ -17,11 +17,13 @@ const DEFINITIONS = {
     label: "KPI strip of spend, leads, clicks and CTR (last 30 days)",
     icon: "rows-3",
     type: "kpi-strip",
+    // The strip shows each metric's change (showDelta is on by default),
+    // which needs the previous period resolved alongside.
     bindings: {
-      a: { metric: "spend", window: inWindow("last_30d") },
-      b: { metric: "meta_leads", window: inWindow("last_30d") },
-      c: { metric: "clicks", window: inWindow("last_30d") },
-      d: { metric: "ctr", window: inWindow("last_30d") },
+      a: { metric: "spend", window: inWindow("last_30d"), compare: "previous" },
+      b: { metric: "meta_leads", window: inWindow("last_30d"), compare: "previous" },
+      c: { metric: "clicks", window: inWindow("last_30d"), compare: "previous" },
+      d: { metric: "ctr", window: inWindow("last_30d"), compare: "previous" },
     },
   },
   "spend-trend-30d": {

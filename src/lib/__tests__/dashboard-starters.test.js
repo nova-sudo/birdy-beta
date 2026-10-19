@@ -40,6 +40,8 @@ describe("dashboard starters", () => {
     ])
   })
 
+  // The strip shows deltas by default (showDelta), so each metric asks for
+  // the previous period to compare against.
   it("starter adds bound widgets", () => {
     const doc = blank()
     const sectionId = doc.sections[0].id
@@ -49,10 +51,10 @@ describe("dashboard starters", () => {
     const widgetId = ops[0].widget.id
     expect(widgetId).toEqual(expect.any(String))
     expect(ops.slice(1)).toEqual([
-      { op: "setBinding", widgetId, slot: "a", binding: { metric: "spend", window: { preset: "last_30d" } } },
-      { op: "setBinding", widgetId, slot: "b", binding: { metric: "meta_leads", window: { preset: "last_30d" } } },
-      { op: "setBinding", widgetId, slot: "c", binding: { metric: "clicks", window: { preset: "last_30d" } } },
-      { op: "setBinding", widgetId, slot: "d", binding: { metric: "ctr", window: { preset: "last_30d" } } },
+      { op: "setBinding", widgetId, slot: "a", binding: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" } },
+      { op: "setBinding", widgetId, slot: "b", binding: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" } },
+      { op: "setBinding", widgetId, slot: "c", binding: { metric: "clicks", window: { preset: "last_30d" }, compare: "previous" } },
+      { op: "setBinding", widgetId, slot: "d", binding: { metric: "ctr", window: { preset: "last_30d" }, compare: "previous" } },
     ])
 
     const next = run(doc, ops)

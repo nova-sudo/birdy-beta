@@ -144,6 +144,9 @@ describe("Dashboard discoverability", () => {
     expect(container.querySelectorAll(".dk-canvas .dk-widget")).toHaveLength(1)
     expect(container.querySelector(".dk-widget--selected")).not.toBeNull()
     expect(within(screen.getByRole("complementary", { name: "Properties" })).queryByText("Select a widget or section")).toBeNull()
+    // The header button that opened the picker is gone in edit mode, so focus
+    // lands in the new widget's properties rather than dropping to <body>.
+    expect(screen.getByRole("complementary", { name: "Properties" })).toContainElement(document.activeElement)
 
     // Edit mode keeps it unsaved until the user saves or leaves the editor.
     expect(puts()).toHaveLength(0)
@@ -205,10 +208,10 @@ describe("Dashboard discoverability", () => {
     const [widget] = JSON.parse(puts()[0][1].body).sections[0].widgets
     expect(widget.type).toBe("kpi-strip")
     expect(widget.bindings).toEqual({
-      a: { metric: "spend", window: { preset: "last_30d" } },
-      b: { metric: "meta_leads", window: { preset: "last_30d" } },
-      c: { metric: "clicks", window: { preset: "last_30d" } },
-      d: { metric: "ctr", window: { preset: "last_30d" } },
+      a: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" },
+      b: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" },
+      c: { metric: "clicks", window: { preset: "last_30d" }, compare: "previous" },
+      d: { metric: "ctr", window: { preset: "last_30d" }, compare: "previous" },
     })
     // Still in view, the starters gone now there is a widget, and one Undo away.
     expect(screen.getByRole("radio", { name: /View/ })).toBeChecked()

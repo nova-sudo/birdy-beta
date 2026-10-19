@@ -75,12 +75,20 @@ export default function ChatComposer({
     }
   }
 
+  const filteredCommands = SLASH_COMMANDS.filter(c =>
+    !slashQuery || c.cmd.slice(1).toLowerCase().startsWith(slashQuery)
+  )
+  const slashMenuOpen = showSlash && filteredCommands.length > 0
+
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey && !showSlash) {
       e.preventDefault()
       if (value.trim() && !disabled) onSend()
     }
     if (e.key === "Escape") {
+      // Closing the menu uses up the key: a drawer or dialog around the
+      // chat that closes on Escape checks defaultPrevented and stays open.
+      if (slashMenuOpen) e.preventDefault()
       setShowSlash(false)
     }
   }
@@ -91,16 +99,12 @@ export default function ChatComposer({
     setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
-  const filteredCommands = SLASH_COMMANDS.filter(c =>
-    !slashQuery || c.cmd.slice(1).toLowerCase().startsWith(slashQuery)
-  )
-
   const canSend = value.trim() && !disabled
 
   return (
     <div className="relative">
       {/* Slash command palette */}
-      {showSlash && filteredCommands.length > 0 && (
+      {slashMenuOpen && (
         <div className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-pd-border bg-pd-surface p-1 shadow-pd-popover overflow-hidden z-20 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
           <div className="px-3 py-1.5 text-[11px] uppercase tracking-[.04em] text-pd-faint font-bold">
             Commands
