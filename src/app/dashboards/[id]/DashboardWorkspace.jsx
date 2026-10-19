@@ -1,10 +1,10 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { AlertTriangle, Check, Eye, Loader2, Pencil, Redo2, RotateCw, Undo2 } from "lucide-react"
+import { AlertTriangle, Check, Eye, Loader2, MessageCircle, Pencil, Plus, Redo2, RotateCw, Undo2, X } from "lucide-react"
 import { summarize } from "dashkit/core"
 import {
   Canvas,
@@ -24,10 +24,13 @@ import { PdCard } from "@/components/portfolio/PdCard"
 import { PdSegmented } from "@/components/portfolio/PdSegmented"
 import { Skeleton } from "@/components/ui/skeleton"
 import ChatConversation from "@/components/chat/ChatConversation"
+import { EmptyStarters } from "@/components/dashboards/EmptyStarters"
+import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { registry, components } from "@/lib/dashkit/registry"
 import { dataSource } from "@/lib/dashkit/data-source"
 import { applyIncomingOps } from "@/lib/dashboard-ops"
+import { addWidgetOps } from "@/lib/dashboard-starters"
 import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 
 // ─── One dashboard ──────────────────────────────────────────────────────────
@@ -45,11 +48,23 @@ import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 // The view renders dashkit's hero (the dashboard's title and description, as
 // the page's one h1), so the top bar carries only a breadcrumb back to the
 // list. The editor has its own title field in its toolbar.
+//
+// Ways in for a new dashboard: view mode's "Add widget" (the palette's grid in
+// a dialog, which drops into the editor with the widget selected), one-click
+// starters while the dashboard has no widgets, and quick starters in the chat.
+// In edit mode the chat folds into a rail on desktop so the canvas has room.
 
 const MODES = [
   { key: "view", label: "View", icon: Eye },
   { key: "edit", label: "Edit", icon: Pencil },
 ]
+
+// Ask Birdy's quick starters on this page: one per kind of change it can make.
+const CHAT_STARTERS = [
+  "Add a table of spend by client",
+  "Make the Overview heading large",
+  "Add a note explaining this dashboard",
+].map((label) => ({ label, prompt: label }))
 
 export default function DashboardWorkspace({ id }) {
   const router = useRouter()
@@ -117,6 +132,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const [mode, setMode] = useState("view")
   const [view, setView] = useState("canvas") // the editor's canvas / JSON toggle
   const [saveState, setSaveState] = useState("idle") // idle | saving | saved | error
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   // The live doc, as state (to render the title) and as a ref (for the unmount
   // save, which runs when the editor's state is already being torn down).
@@ -131,7 +147,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
 
   const editor = useDashboardEditor(liveDoc, { registry, catalog, onChange: updateLiveDoc })
   // Stable for the editor's lifetime (they close over its history).
-  const { getDoc, applyAll: editorApplyAll, undo, redo, markSaved, canUndo, canRedo } = editor
+  const { getDoc, applyAll: editorApplyAll, undo, redo, markSaved, canUndo, canRedo, select } = editor
 
   const mountedRef = useRef(true)
   useEffect(() => {
@@ -257,6 +273,28 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const undoAndSave = useCallback(() => stepAndSave(undo), [stepAndSave, undo])
   const redoAndSave = useCallback(() => stepAndSave(redo), [stepAndSave, redo])
 
+  // The picker's choice goes at the end of the dashboard (in a new section
+  // when there is none), then the editor opens on it, selected, to set up.
+  // Unsaved until the editor saves, like anything added in the editor.
+  const addPickedWidget = useCallback(
+    (type) => {
+      const { ops, widgetId } = addWidgetOps(getDoc(), type)
+      if (!editorApplyAll(ops)) return
+      setMode("edit")
+      select(widgetId)
+    },
+    [getDoc, editorApplyAll, select],
+  )
+
+  // A starter is a finished, bound widget added in view mode, which has no
+  // Save button: save it at once. One batch, so one Undo takes it back.
+  const applyStarter = useCallback(
+    (ops) => {
+      if (editorApplyAll(ops)) persist(getDoc()).catch(() => {})
+    },
+    [editorApplyAll, getDoc, persist],
+  )
+
   // Birdy's ops land on the editor's history in both modes, as one undo step
   // authored "ai" (applyIncomingOps has already dry-run them). The hook's
   // applyAll reports success as a boolean; applyIncomingOps wants the doc.
@@ -318,6 +356,8 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
               {canRedo && <HeaderButton icon={Redo2} label="Redo" onClick={redoAndSave} />}
             </div>
           )}
+          {/* The editor has its palette; the view gets the same grid here. */}
+          {mode === "view" && <HeaderButton icon={Plus} label="Add widget" onClick={() => setPickerOpen(true)} />}
           <PdSegmented
             label="Dashboard mode"
             options={MODES}
@@ -332,6 +372,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   )
   usePageHeader(header)
 
+  const isEmpty = editor.doc.sections.every((section) => section.widgets.length === 0)
   const board =
     mode === "edit" ? (
       // dashkit's DashboardEditor, composed here so it runs on the page's
@@ -360,12 +401,19 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
             <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" header="hero" />
           </ComponentsProvider>
         </DashboardDataProvider>
+        {isEmpty && (
+          <div className="mt-6">
+            <EmptyStarters sectionId={editor.doc.sections.at(-1)?.id} onStart={applyStarter} />
+          </div>
+        )}
+        <WidgetPicker open={pickerOpen} onOpenChange={setPickerOpen} onPick={addPickedWidget} />
       </div>
     )
 
   return (
     <WorkspaceLayout
       board={board}
+      railed={mode === "edit"}
       chat={
         <ChatConversation
           page="dashboards"
@@ -377,7 +425,10 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
           initialMessage={brief}
           hideInitialMessage={false}
           showScopePicker={false}
+          // Starters render on their own; the flag only adds the page's
+          // default ones and the "/" hint, which this panel doesn't want.
           showQuickActions={false}
+          quickStarters={CHAT_STARTERS}
           composerCompact
           bubbleWidthClass="max-w-[90%]"
           emptyStateTitle="Build this dashboard with Birdy"
@@ -388,13 +439,52 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   )
 }
 
-/** The dashboard on the left, Ask Birdy on the right. */
-function WorkspaceLayout({ board, chat }) {
+const ASIDE_BASE =
+  "flex h-[560px] min-h-0 w-full shrink-0 flex-col border-t border-pd-border bg-pd-surface lg:h-auto lg:border-l lg:border-t-0"
+
+/**
+ * The dashboard on the left, Ask Birdy on the right.
+ *
+ * `railed` (edit mode) gives the editor's canvas the room: on desktop the chat
+ * folds into a 56px rail whose "Ask Birdy" button opens it as a 380px drawer
+ * over the canvas. The chat is only ever hidden, never unmounted, so its
+ * conversation (and a reply still streaming in) survives every toggle. Below
+ * lg the page stacks, and the chat stays docked under the board.
+ */
+function WorkspaceLayout({ board, chat, railed = false }) {
+  const panelId = useId()
+  const railButtonRef = useRef(null)
+  const closeButtonRef = useRef(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  // Each visit to edit mode starts with the drawer shut.
+  const [wasRailed, setWasRailed] = useState(railed)
+  if (railed !== wasRailed) {
+    setWasRailed(railed)
+    setDrawerOpen(false)
+  }
+  const open = railed && drawerOpen
+
+  // Focus goes into the drawer as it opens and back to the rail as it closes.
+  useEffect(() => {
+    if (open) closeButtonRef.current?.focus()
+  }, [open])
+  const closeDrawer = () => {
+    setDrawerOpen(false)
+    railButtonRef.current?.focus()
+  }
+
+  let panelClass = "flex min-h-0 flex-1 flex-col"
+  if (railed) {
+    panelClass +=
+      " lg:absolute lg:inset-y-0 lg:right-14 lg:z-30 lg:w-[380px] lg:border-l lg:border-pd-border lg:bg-pd-surface lg:shadow-pd-popover"
+    if (!open) panelClass += " lg:hidden"
+  }
+
   return (
     // Bleeds off the layout's padding like SalesHubShell, but the height is
     // bounded here so the dashboard (or the editor's palette, canvas and
     // property panel) and the chat each scroll on their own.
-    <div className={`${pdFontClass} -m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:flex-row lg:overflow-hidden`}>
+    <div className={`${pdFontClass} -m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden`}>
       {/* Stacked below lg: the page scrolls and the board takes its natural
           height, rather than flex-shrinking to nothing above the chat. */}
       <section aria-label="Dashboard" className="min-w-0 shrink-0 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto">
@@ -403,15 +493,56 @@ function WorkspaceLayout({ board, chat }) {
 
       <aside
         aria-label="Ask Birdy"
-        className="flex h-[560px] min-h-0 w-full shrink-0 flex-col overflow-auto border-t border-pd-border bg-pd-surface lg:h-auto lg:w-[380px] lg:border-l lg:border-t-0"
+        onKeyDown={
+          open
+            ? (e) => {
+                if (e.key === "Escape") closeDrawer()
+              }
+            : undefined
+        }
+        className={`${ASIDE_BASE} ${railed ? "overflow-auto lg:w-14 lg:items-center lg:overflow-visible lg:py-3" : "overflow-auto lg:w-[380px]"}`}
       >
-        <div className="shrink-0 border-b border-pd-divider px-5 py-4">
-          <div className="font-pd-display text-[15px] font-semibold text-pd-ink">Ask Birdy</div>
-          <div className="mt-0.5 text-[12px] text-pd-faint">Describe a change and Birdy makes it on the dashboard.</div>
+        {railed && (
+          <button
+            ref={railButtonRef}
+            type="button"
+            aria-expanded={open}
+            aria-controls={panelId}
+            onClick={() => setDrawerOpen((was) => !was)}
+            className="hidden cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10.5px] font-semibold leading-tight text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary aria-expanded:bg-pd-primary-tint aria-expanded:text-pd-primary lg:flex"
+          >
+            <MessageCircle className="size-[18px]" aria-hidden="true" />
+            Ask Birdy
+          </button>
+        )}
+        {/* Always rendered in this slot, whatever the mode: moving or
+            unmounting it would restart the chat. */}
+        <div
+          id={panelId}
+          data-state={railed ? (open ? "open" : "closed") : undefined}
+          className={panelClass}
+        >
+          <div className="flex shrink-0 items-start gap-3 border-b border-pd-divider px-5 py-4">
+            <div className="min-w-0 flex-1">
+              <div className="font-pd-display text-[15px] font-semibold text-pd-ink">Ask Birdy</div>
+              <div className="mt-0.5 text-[12px] text-pd-faint">Describe a change and Birdy makes it on the dashboard.</div>
+            </div>
+            {railed && (
+              <button
+                ref={closeButtonRef}
+                type="button"
+                aria-label="Close Ask Birdy"
+                onClick={closeDrawer}
+                className="-mr-1.5 hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary lg:inline-flex"
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          {/* The chat mounts with the workspace, once the doc is here, so the
+              first message (the brief) goes out with a real summary. */}
+          <div className="min-h-0 flex-1">{chat}</div>
         </div>
-        {/* The chat mounts with the workspace, once the doc is here, so the
-            first message (the brief) goes out with a real summary. */}
-        <div className="min-h-0 flex-1">{chat}</div>
       </aside>
     </div>
   )

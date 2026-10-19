@@ -119,19 +119,18 @@
   flex-wrap: wrap;
 }
 
-.dk-root .dk-hero {
-  margin-bottom: 20px;
-}
-
-/* Wider side columns than dashkit's 260px, for the pd type and padding.
-   Desktop only: under 1024px dashkit stacks them full width. */
+/* Side columns sized for the canvas: a narrower palette than dashkit's
+   260px (its 2-up icon tiles still fit), a wider property panel for the pd
+   type and padding. With Ask Birdy folded to its 56px rail in edit mode, this
+   leaves the canvas most of a 1440px screen. Desktop only: under 1024px
+   dashkit stacks them full width. */
 @media (min-width: 1024px) {
   .dk-root .dk-palette {
-    width: 280px;
+    width: 240px;
   }
 
   .dk-root.dk-editor > .dk-panel {
-    width: 300px;
+    width: 280px;
   }
 }
 

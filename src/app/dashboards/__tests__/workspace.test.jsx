@@ -161,6 +161,44 @@ describe("Dashboard workspace", () => {
     expect(container.querySelector(".dk-editor")).not.toBeNull()
   })
 
+  it("edit mode folds Ask Birdy into a rail whose button opens it as a drawer", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    const chat = screen.getByTestId("chat")
+    // View mode docks the chat: no rail.
+    expect(screen.queryByRole("button", { name: "Ask Birdy" })).toBeNull()
+
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    const open = await screen.findByRole("button", { name: "Ask Birdy" })
+    expect(open).toHaveAttribute("aria-expanded", "false")
+    const drawer = document.getElementById(open.getAttribute("aria-controls"))
+    expect(drawer).toHaveAttribute("data-state", "closed")
+    expect(drawer).toContainElement(chat)
+
+    await user.click(open)
+    expect(open).toHaveAttribute("aria-expanded", "true")
+    expect(drawer).toHaveAttribute("data-state", "open")
+    expect(within(drawer).getByRole("button", { name: "Close Ask Birdy" })).toHaveFocus()
+    // The same chat, never remounted, so its conversation carries over.
+    expect(screen.getByTestId("chat")).toBe(chat)
+
+    await user.click(within(drawer).getByRole("button", { name: "Close Ask Birdy" }))
+    expect(open).toHaveAttribute("aria-expanded", "false")
+    expect(drawer).toHaveAttribute("data-state", "closed")
+
+    // Escape closes it too.
+    await user.click(open)
+    await user.keyboard("{Escape}")
+    expect(drawer).toHaveAttribute("data-state", "closed")
+    expect(open).toHaveFocus()
+
+    // Back in view the chat docks again, still the same one.
+    await user.click(screen.getByRole("radio", { name: /View/ }))
+    expect(screen.queryByRole("button", { name: "Ask Birdy" })).toBeNull()
+    expect(screen.getByTestId("chat")).toBe(chat)
+  })
+
   it("hero renders the dashboard title and description", async () => {
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")
