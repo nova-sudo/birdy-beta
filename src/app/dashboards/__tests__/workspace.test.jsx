@@ -3,7 +3,7 @@
 // workspace hands the chat (the brief, the live summary, the ops handler)
 // without a model in the loop.
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { act, render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 import { PageHeaderProvider, PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
@@ -23,6 +23,19 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace }),
   useSearchParams: () => new URLSearchParams(search),
 }))
+
+// The real EditorDnd, marked, so a test can check what the workspace puts inside it.
+vi.mock("dashkit/react", async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    EditorDnd: ({ children }) => (
+      <div data-testid="editor-dnd" style={{ display: "contents" }}>
+        <actual.EditorDnd>{children}</actual.EditorDnd>
+      </div>
+    ),
+  }
+})
 
 const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({
@@ -47,6 +60,7 @@ const DOC = {
   id: "d1",
   version: 1,
   title: "Weekly spend",
+  description: "Spend across every client, week by week.",
   sections: [
     {
       id: "s1",
@@ -59,8 +73,32 @@ const DOC = {
 const CATALOG = {
   metrics: [{ key: "spend", label: "Spend", format: "currency", dimensions: [] }],
   dimensions: [],
-  windows: [{ preset: "last_7_days", label: "Last 7 days" }],
+  windows: [
+    { preset: "last_7_days", label: "Last 7 days" },
+    { preset: "last_30_days", label: "Last 30 days" },
+  ],
 }
+// A doc with one bound widget, for the window badge.
+const BOUND_DOC = {
+  ...DOC,
+  sections: [
+    {
+      id: "s1",
+      title: "Overview",
+      widgets: [
+        {
+          id: "k1",
+          type: "kpi",
+          title: "Spend",
+          span: { cols: 3, rows: 1 },
+          data: { showDelta: true, emphasis: "normal" },
+          bindings: { value: { metric: "spend", window: { preset: "last_30_days" } } },
+        },
+      ],
+    },
+  ],
+}
+let doc = DOC
 
 // How many upcoming PUTs should fail (a 500), to exercise the retry paths.
 let failPuts = 0
@@ -72,7 +110,7 @@ function mockApi(path, init = {}) {
   }
   if (path === "/api/dashboards/catalog") return Promise.resolve(res(CATALOG))
   if (path === "/api/dashboards/resolve") return Promise.resolve(res({ slots: [] }))
-  if (path === "/api/dashboards/d1" && method === "GET") return Promise.resolve(res(DOC))
+  if (path === "/api/dashboards/d1" && method === "GET") return Promise.resolve(res(doc))
   if (path === "/api/dashboards/d1" && method === "PUT") return Promise.resolve(res(JSON.parse(init.body)))
   return Promise.resolve(res({}, 404))
 }
@@ -101,6 +139,7 @@ const renderWorkspace = () =>
 
 beforeEach(() => {
   search = ""
+  doc = DOC
   failPuts = 0
   vi.mocked(toast.error).mockClear()
   replace.mockClear()
@@ -120,6 +159,53 @@ describe("Dashboard workspace", () => {
 
     expect(await screen.findByRole("complementary", { name: "Widgets" })).toBeInTheDocument()
     expect(container.querySelector(".dk-editor")).not.toBeNull()
+  })
+
+  it("hero renders the dashboard title and description", async () => {
+    const { container } = renderWorkspace()
+    await screen.findByText("Hello there")
+
+    const hero = container.querySelector(".dk-hero")
+    expect(hero).not.toBeNull()
+    expect(within(hero).getByRole("heading", { level: 1 })).toHaveTextContent("Weekly spend")
+    expect(within(hero).getByText("Spend across every client, week by week.")).toBeInTheDocument()
+
+    // The top bar is a breadcrumb back to the list; the hero carries the big title.
+    const crumb = screen.getByRole("link", { name: "My dashboards" })
+    expect(crumb).toHaveAttribute("href", "/dashboards")
+    expect(crumb.parentElement).toHaveTextContent("My dashboards / Weekly spend")
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+  })
+
+  it("a bound widget shows its window badge", async () => {
+    doc = BOUND_DOC
+    const { container } = renderWorkspace()
+
+    const badge = await screen.findByText("Last 30 days · all clients")
+    expect(badge).toHaveClass("dk-frame-meta")
+    expect(container.querySelector(".dk-frame-titlerow")).toContainElement(badge)
+  })
+
+  it("palette and canvas are inside one EditorDnd", async () => {
+    const user = userEvent.setup()
+    const { container } = renderWorkspace()
+    await screen.findByText("Hello there")
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+
+    const palette = await screen.findByRole("complementary", { name: "Widgets" })
+    const scopes = screen.getAllByTestId("editor-dnd")
+    expect(scopes).toHaveLength(1)
+    expect(scopes[0]).toContainElement(palette)
+    expect(scopes[0]).toContainElement(container.querySelector(".dk-canvas"))
+    // The palette's tiles are pd buttons with their icons.
+    const tile = within(palette).getByRole("button", { name: "Add KPI" })
+    expect(tile).toHaveClass("dk-button", "dk-palette-item")
+    expect(tile.querySelector("svg")).not.toBeNull()
+
+    // The JSON view sits in the same scope.
+    await user.click(screen.getByRole("button", { name: "JSON" }))
+    expect(screen.getAllByTestId("editor-dnd")).toHaveLength(1)
+    expect(screen.getByTestId("editor-dnd")).toContainElement(container.querySelector(".dk-json"))
   })
 
   it("leaving edit mode saves unsaved changes", async () => {

@@ -33,6 +33,104 @@
   min-height: 0;
 }
 
+/* ── dashkit skin ───────────────────────────────────────────────
+   dashkit 0.2.0's type scale (hero 28/700, section h1 24 / h2 20 / h3 16,
+   widget title 14/600, badge 12px), card padding and 24px grid gap already
+   match Birdy's; they pick up the pd fonts and colours through the variables
+   above, so only the spots where Birdy differs are restyled here. */
+
+/* The pd primitives (src/lib/dashkit/primitives.jsx) keep dashkit's
+   dk-button / dk-input / dk-select classes so dashkit's contextual layout
+   rules (canvas controls, palette tiles, the toolbar title, section controls)
+   still apply. dashkit's stylesheet is unlayered, so its base rules for those
+   classes would beat the primitives' Tailwind utilities, which live in
+   @layer utilities. revert-layer hands every property back to the utilities.
+   At (0,1,0) and after dashkit's import, these beat dashkit's base rules
+   (same specificity, earlier) but not its contextual ones (0,2,0 and up). */
+:where(.dk-root) .dk-button,
+:where(.dk-root) .dk-input,
+:where(.dk-root) .dk-select {
+  all: revert-layer;
+}
+
+/* dashkit's focus outline would double the primitives' own focus ring. */
+:where(.dk-root) :is(.dk-button, .dk-input, .dk-select):focus-visible {
+  outline: revert-layer;
+}
+
+/* Palette tiles: pd card chrome rather than the pill PdButton draws. */
+.dk-root .dk-palette-item {
+  border-color: var(--pd-border);
+  border-radius: 12px;
+}
+
+.dk-root .dk-palette-item:hover:not(:disabled) {
+  border-color: var(--pd-border);
+  background: var(--pd-divider);
+}
+
+.dk-root .dk-panel-group-title {
+  color: var(--pd-faint);
+}
+
+/* Segmented choices (e.g. a KPI's Size) hold pill buttons: a pill track. */
+.dk-root .dk-segmented {
+  border-radius: 999px;
+}
+
+/* A selected narrow widget's drag and resize controls wrap rather than
+   pushing the title row past the card. */
+.dk-root .dk-controls {
+  flex-wrap: wrap;
+}
+
+.dk-root .dk-hero {
+  margin-bottom: 20px;
+}
+
+/* Wider side columns than dashkit's 260px, for the pd type and padding.
+   Desktop only: under 1024px dashkit stacks them full width. */
+@media (min-width: 1024px) {
+  .dk-root .dk-palette {
+    width: 280px;
+  }
+
+  .dk-root.dk-editor > .dk-panel {
+    width: 300px;
+  }
+}
+
+/* A 1-row KPI: dashkit's value scale (up to 2.25rem, 2.75rem when large)
+   plus the delta overflows a 104px cell under PdFrame's title row. dashkit
+   marks a cell's row span only in its inline grid style, which browsers
+   serialize differently, so each cell is a named size container and the cap
+   applies by height: one row is 104px (96px compact), two are 232px. The
+   cqi inside still resolves against the frame body, the nearest inline-size
+   container. Matches dashkit's large-emphasis rule (0,3,0) and comes later. */
+.dk-root .dk-grid > .dk-widget {
+  container: dk-cell / size;
+}
+
+@container dk-cell (max-height: 160px) {
+  .dk-root .dk-kpi .dk-kpi-value {
+    font-size: clamp(1.1rem, 9cqi, 1.9rem);
+  }
+
+  /* A badge wrapped under the title takes the ~24px a 1-row KPI's value
+     needs, and the body clips it. Keep the badge on the title's line and let
+     it ellipsize instead (PdFrame gives it the full text as a tooltip). It
+     gives way before the title does (the large shrink factor), down to a
+     stub that still reads as "Last 30…". */
+  .dk-root .dk-frame-titlerow {
+    flex-wrap: nowrap;
+  }
+
+  .dk-root .dk-frame-meta {
+    flex-shrink: 1000;
+    min-width: 4.5rem;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    BIRDY AI — Complete Design System
    ═══════════════════════════════════════════════════════════════ */

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Rebuilds dashkit, packs it and vendors the tarball into this repo, then
-# reinstalls it. Birdy depends on "dashkit": "file:vendor/dashkit-0.1.0.tgz",
-# so fresh clones and deploys (Vercel) install it without the dashkit repo.
+# reinstalls it. Birdy depends on "dashkit": "file:vendor/dashkit-<version>.tgz"
+# (the version in dashkit's package.json), so fresh clones and deploys (Vercel)
+# install it without the dashkit repo. After a version bump, delete the old
+# vendor/dashkit-*.tgz; npm install below repoints package.json at the new one.
 # Usage: DASHKIT_DIR=/path/to/dashkit scripts/refresh-dashkit.sh
 # Commit vendor/dashkit-*.tgz and package-lock.json afterwards.
 set -euo pipefail

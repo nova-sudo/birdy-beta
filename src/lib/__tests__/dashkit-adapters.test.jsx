@@ -195,17 +195,46 @@ describe("PdFrame", () => {
   it("fills its grid cell and keeps its spacing inside the body for KPIs to spill into", () => {
     const { container, rerender } = render(<PdFrame title="Leads" state="ready"><p>12</p></PdFrame>)
     const root = container.firstElementChild
-    for (const cls of ["flex-1", "w-full", "h-full", "min-h-0", "min-w-0", "rounded-2xl", "border-pd-border", "bg-pd-surface"]) {
+    for (const cls of ["flex-1", "w-full", "h-full", "min-h-0", "min-w-0", "rounded-2xl", "border-pd-border", "bg-pd-surface", "shadow-sm"]) {
       expect(root.classList.contains(cls)).toBe(true)
     }
     expect(container.querySelector("h3").textContent).toBe("Leads")
     const body = container.querySelector(".dk-frame-body")
+    // 8px under a title row, so a 1-row KPI still fits.
     expect(body.className).toContain("pt-2!")
-    expect(body.className).toContain("pb-3!")
+    expect(body.className).toContain("px-5!")
+    expect(body.className).toContain("pb-5!")
     expect(body.className).toContain("overflow-hidden")
 
     rerender(<PdFrame state="ready"><p>12</p></PdFrame>)
-    expect(container.querySelector(".dk-frame-body").className).toContain("pt-0!")
+    expect(container.querySelector(".dk-frame-body").className).toContain("pt-4!")
+  })
+
+  it("renders the window badge as a pill inline on the title row, between the title and the menu", () => {
+    const { container } = render(
+      <PdFrame title="Leads" meta="Last 30 days · all clients" menu={<button>handle</button>} state="ready">
+        <p>12</p>
+      </PdFrame>,
+    )
+    const row = container.querySelector(".dk-frame-title > .dk-frame-titlerow")
+    expect(row).toBeTruthy()
+    const [heading, pill, menu] = row.children
+    expect(row.children).toHaveLength(3)
+    expect(heading.tagName).toBe("H3")
+    expect(pill.classList.contains("dk-frame-meta")).toBe(true)
+    expect(menu.classList.contains("dk-frame-menu")).toBe(true)
+    expect(pill.textContent).toBe("Last 30 days · all clients")
+    for (const cls of ["rounded-full", "whitespace-nowrap", "text-[12px]", "max-w-full", "text-ellipsis"]) {
+      expect(pill.classList.contains(cls)).toBe(true)
+    }
+    // Ellipsized on narrow widgets, so the full text is its tooltip.
+    expect(pill.getAttribute("title")).toBe("Last 30 days · all clients")
+  })
+
+  it("renders a title row for a badge alone", () => {
+    const { container } = render(<PdFrame meta="Last 7 days · 1 client" state="ready"><p>12</p></PdFrame>)
+    expect(container.querySelector(".dk-frame-titlerow .dk-frame-meta").textContent).toBe("Last 7 days · 1 client")
+    expect(container.querySelector(".dk-frame-body").className).toContain("pt-2!")
   })
 
   it("renders the menu without a title", () => {
@@ -215,7 +244,8 @@ describe("PdFrame", () => {
     expect(container.querySelector("h3")).toBeNull()
   })
 
-  it("registry components override only Frame and Markdown", () => {
-    expect(Object.keys(components).sort()).toEqual(["Frame", "Markdown"])
+  it("registry components fill all 7 dashkit slots with pd primitives", () => {
+    expect(Object.keys(components).sort()).toEqual(["Button", "Frame", "Icon", "Input", "Markdown", "Menu", "Select"])
+    for (const component of Object.values(components)) expect(typeof component).toBe("function")
   })
 })

@@ -11,6 +11,7 @@ import {
   ComponentsProvider,
   DashboardDataProvider,
   DashboardRenderer,
+  EditorDnd,
   EditorProvider,
   JsonView,
   Palette,
@@ -19,7 +20,6 @@ import {
   useDashboardEditor,
 } from "dashkit/react"
 import { usePageHeader } from "@/components/page-header"
-import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
 import { PdCard } from "@/components/portfolio/PdCard"
 import { PdSegmented } from "@/components/portfolio/PdSegmented"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,6 +41,10 @@ import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 // either mode) goes through the one undo history, and switching modes keeps
 // it. The editor needs the catalog for its pickers and validation, so the
 // workspace waits for both the doc and the catalog before it mounts.
+//
+// The view renders dashkit's hero (the dashboard's title and description, as
+// the page's one h1), so the top bar carries only a breadcrumb back to the
+// list. The editor has its own title field in its toolbar.
 
 const MODES = [
   { key: "view", label: "View", icon: Eye },
@@ -67,9 +71,9 @@ export default function DashboardWorkspace({ id }) {
   const failed = !ready && Boolean((error && !doc) || (catalogError && !catalog))
 
   // Until the workspace mounts (and publishes its own), hold the bar with the
-  // section name so the header doesn't flash back to the wordmark.
+  // breadcrumb so the header doesn't flash back to the wordmark.
   const loadingHeader = useMemo(
-    () => ({ title: <SalesHubHeaderTitle title={isLoading ? "" : "Dashboard"} subtitle="My dashboards" /> }),
+    () => ({ title: <DashboardBreadcrumb title={isLoading ? null : "Dashboard"} /> }),
     [isLoading],
   )
   usePageHeader(ready ? null : loadingHeader)
@@ -303,7 +307,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const title = liveDoc.title || "Dashboard"
   const header = useMemo(
     () => ({
-      title: <SalesHubHeaderTitle title={title} subtitle="My dashboards" />,
+      title: <DashboardBreadcrumb title={title} />,
       controls: (
         <div className="flex items-center gap-3">
           <SaveStatus state={saveState} onRetry={retrySave} />
@@ -338,8 +342,12 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
           <EditorProvider editor={editor} registry={registry} catalog={catalog}>
             <div className="dk-root dk-editor h-full" data-view={view}>
               <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} />
-              <Palette />
-              {view === "json" ? <JsonView /> : <Canvas />}
+              {/* One drag scope for both, so palette tiles drop onto canvas
+                  sections; a Palette outside it cannot drag. No element. */}
+              <EditorDnd>
+                <Palette />
+                {view === "json" ? <JsonView /> : <Canvas />}
+              </EditorDnd>
               <PropertyPanel />
             </div>
           </EditorProvider>
@@ -349,7 +357,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
       <div className="px-6 py-[22px]">
         <DashboardDataProvider dataSource={dataSource} registry={registry}>
           <ComponentsProvider value={components}>
-            <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
+            <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" header="hero" />
           </ComponentsProvider>
         </DashboardDataProvider>
       </div>
@@ -406,6 +414,35 @@ function WorkspaceLayout({ board, chat }) {
         <div className="min-h-0 flex-1">{chat}</div>
       </aside>
     </div>
+  )
+}
+
+/**
+ * The top bar's title: "My dashboards / <title>" on one line, the list as a
+ * link back. Deliberately small: in view mode the hero below carries the big
+ * title, and two h1s would compete. `title` null (still loading) shows the
+ * link alone.
+ */
+function DashboardBreadcrumb({ title }) {
+  return (
+    <nav aria-label="Breadcrumb" className={`${pdFontClass} min-w-0`}>
+      <p className="flex min-w-0 items-baseline gap-0 whitespace-pre font-pd-display text-[15px] font-semibold leading-none">
+        <Link
+          href="/dashboards"
+          className="shrink-0 text-pd-faint transition-colors hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+        >
+          My dashboards
+        </Link>
+        {title && (
+          <>
+            <span className="shrink-0 text-pd-faint">{" / "}</span>
+            <span aria-current="page" className="min-w-0 truncate text-pd-ink">
+              {title}
+            </span>
+          </>
+        )}
+      </p>
+    </nav>
   )
 }
 
