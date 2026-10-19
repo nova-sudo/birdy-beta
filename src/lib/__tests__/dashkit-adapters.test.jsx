@@ -125,6 +125,23 @@ describe("dashkit theme", () => {
     expect(Object.keys(parse(block))).toHaveLength(14)
   })
 
+  it("the primitives' revert-layer skips the raw Markdown textarea, which gets its own pd chrome", () => {
+    const css = readFileSync(join(process.cwd(), "src/app/globals.css"), "utf8")
+    // dashkit renders <textarea class="dk-input dk-textarea"> outside the Input
+    // slot: reverting it would strip its border, radius and padding.
+    const revert = css.match(/([^{}]*)\{\s*all:\s*revert-layer;?\s*\}/)?.[1] ?? ""
+    const inputSelector = revert.split(",").map((sel) => sel.trim()).find((sel) => sel.includes(".dk-input"))
+    expect(inputSelector).toContain(":not(.dk-textarea)")
+    // Wrapped in :where so the rule stays at (0,1,0), below dashkit's contextual rules.
+    expect(inputSelector).toContain(":where(:not(.dk-textarea))")
+
+    const textarea = css.match(/^\.dk-root \.dk-textarea\s*\{([^}]*)\}/m)?.[1] ?? ""
+    for (const decl of ["border: 1px solid var(--pd-border)", "border-radius: 12px", "padding: 8px 12px", "width: 100%", "min-height: 96px", "resize: vertical"]) {
+      expect(textarea).toContain(decl)
+    }
+    expect(css).toMatch(/\.dk-root \.dk-textarea:focus-visible\s*\{[^}]*box-shadow/)
+  })
+
   it("theme string maps all 14 vars", () => {
     const decls = dkTheme.match(/--dk-[a-z-]+:/g) ?? []
     expect(decls).toHaveLength(14)

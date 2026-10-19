@@ -46,16 +46,51 @@
    classes would beat the primitives' Tailwind utilities, which live in
    @layer utilities. revert-layer hands every property back to the utilities.
    At (0,1,0) and after dashkit's import, these beat dashkit's base rules
-   (same specificity, earlier) but not its contextual ones (0,2,0 and up). */
+   (same specificity, earlier) but not its contextual ones (0,2,0 and up).
+   The Text widget's Markdown field is a raw <textarea class="dk-input
+   dk-textarea"> outside the Input slot, with no utilities to fall back on,
+   so it is excluded (inside :where, to keep the specificity at 0,1,0) and
+   styled below. */
 :where(.dk-root) .dk-button,
-:where(.dk-root) .dk-input,
+:where(.dk-root) .dk-input:where(:not(.dk-textarea)),
 :where(.dk-root) .dk-select {
   all: revert-layer;
 }
 
 /* dashkit's focus outline would double the primitives' own focus ring. */
-:where(.dk-root) :is(.dk-button, .dk-input, .dk-select):focus-visible {
+:where(.dk-root) :is(.dk-button, .dk-input, .dk-select):where(:not(.dk-textarea)):focus-visible {
   outline: revert-layer;
+}
+
+/* dashkit's muted hover border would replace the default PdButton's pd one. */
+.dk-root .dk-button:hover:not(:disabled) {
+  border-color: var(--pd-border);
+}
+
+/* The Markdown textarea (raw dashkit markup, not a slot): the pd input's
+   chrome at a textarea's shape. */
+.dk-root .dk-textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 8px 12px;
+  border: 1px solid var(--pd-border);
+  border-radius: 12px;
+  background: var(--pd-surface);
+  color: var(--pd-ink);
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dk-root .dk-textarea:hover {
+  border-color: var(--pd-border-strong);
+}
+
+.dk-root .dk-textarea:focus-visible {
+  outline: none;
+  border-color: var(--pd-primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--pd-primary) 15%, transparent);
 }
 
 /* Palette tiles: pd card chrome rather than the pill PdButton draws. */
@@ -108,6 +143,8 @@
    cqi inside still resolves against the frame body, the nearest inline-size
    container. Matches dashkit's large-emphasis rule (0,3,0) and comes later. */
 .dk-root .dk-grid > .dk-widget {
+  /* Size containment also makes each cell the containing block for its
+     position: fixed descendants (portalled popovers are unaffected). */
   container: dk-cell / size;
 }
 
