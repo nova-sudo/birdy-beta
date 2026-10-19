@@ -21,8 +21,8 @@ export function useDashboards() {
   /**
    * Save a new, empty dashboard and return its id. `brief` is not stored: it is
    * the page's job to hand it to the detail page, where the AI acts on it.
-   * createDashboard seeds one "Overview" section so the AI's propose_widget
-   * has somewhere to put the first widget.
+   * createDashboard makes a v2 doc with no widgets: the AI's first widget and
+   * the empty-state starters place themselves on the grid.
    */
   const create = useCallback(
     async ({ title }) => {

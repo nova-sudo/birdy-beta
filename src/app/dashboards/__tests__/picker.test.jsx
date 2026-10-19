@@ -9,6 +9,7 @@ import { SWRConfig } from "swr"
 import { PageHeaderProvider, PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
 import { registry } from "@/lib/dashkit/registry"
+import { setGridWidth } from "./grid-env"
 import DashboardWorkspace from "../[id]/DashboardWorkspace"
 
 vi.mock("@/lib/api", () => ({
@@ -41,16 +42,28 @@ const res = (body, status = 200) => ({
 })
 
 const now = "2026-10-18T00:00:00.000Z"
-const base = { id: "d1", version: 1, title: "Weekly spend", meta: { createdAt: now, updatedAt: now, lastAuthor: "user" } }
-const NO_SECTIONS = { ...base, sections: [] }
-const EMPTY = { ...base, sections: [{ id: "s1", title: "Overview", widgets: [] }] }
+const base = { id: "d1", version: 2, title: "Weekly spend", meta: { createdAt: now, updatedAt: now, lastAuthor: "user" } }
+// A new dashboard: createDashboard gives v2 docs no widgets at all.
+const EMPTY = { ...base, widgets: [] }
+const OVERVIEW = { id: "s1", type: "heading", version: 1, title: "Overview", layout: { x: 0, y: 0, w: 12, h: 1 }, data: {} }
+// Only a heading: still nothing to look at, so the starters stay.
+const HEADING_ONLY = { ...base, widgets: [OVERVIEW] }
 const WITH_TEXT = {
   ...base,
+  widgets: [
+    OVERVIEW,
+    { id: "w1", type: "text", version: 1, title: "Intro", layout: { x: 0, y: 1, w: 6, h: 3 }, data: { markdown: "Hello there" } },
+  ],
+}
+// A v1 doc saved before dashkit 0.3.0, for the picker on a migrated doc.
+const V1_WITH_TEXT = {
+  ...base,
+  version: 1,
   sections: [
     {
       id: "s1",
       title: "Overview",
-      widgets: [{ id: "w1", type: "text", title: "Intro", span: { cols: 6, rows: 1 }, data: { markdown: "Hello there" } }],
+      widgets: [{ id: "w1", type: "text", version: 1, title: "Intro", span: { cols: 6, rows: 1 }, data: { markdown: "Hello there" } }],
     },
   ],
 }
@@ -99,7 +112,12 @@ const STARTER_LABELS = [
   "Spend by client table (last 7 days)",
 ]
 
+const canvasWidgets = (container) =>
+  [...container.querySelectorAll('[data-dk="canvas"] [data-dk="widget"]')].map((el) => el.closest(".react-grid-item"))
+const selectedHandle = () => screen.getAllByRole("button", { name: /^Select / }).find((b) => b.getAttribute("aria-pressed") === "true")
+
 beforeEach(() => {
+  setGridWidth(1440)
   doc = EMPTY
   chatProps.current = null
   vi.mocked(apiRequest).mockReset()
@@ -127,8 +145,7 @@ describe("WidgetPicker", () => {
 })
 
 describe("Dashboard discoverability", () => {
-  it("add widget from view creates a section", async () => {
-    doc = NO_SECTIONS
+  it("add widget from view adds it to an empty dashboard and selects it", async () => {
     const user = userEvent.setup()
     const { container } = renderWorkspace()
 
@@ -136,14 +153,14 @@ describe("Dashboard discoverability", () => {
     const dialog = await screen.findByRole("dialog", { name: "Add a widget" })
     await user.click(within(dialog).getByRole("button", { name: "Add KPI" }))
 
-    // Edit mode, with the new widget in a new section and selected.
-    await waitFor(() => expect(container.querySelector(".dk-editor")).not.toBeNull())
+    // Edit mode, with the new widget on the canvas and selected.
+    await waitFor(() => expect(container.querySelector('[data-dk="canvas"]')).not.toBeNull())
     expect(screen.getByRole("radio", { name: /Edit/ })).toBeChecked()
     expect(screen.queryByRole("dialog", { name: "Add a widget" })).toBeNull()
-    expect(container.querySelectorAll(".dk-canvas .dk-section")).toHaveLength(1)
-    expect(container.querySelectorAll(".dk-canvas .dk-widget")).toHaveLength(1)
-    expect(container.querySelector(".dk-widget--selected")).not.toBeNull()
-    expect(within(screen.getByRole("complementary", { name: "Properties" })).queryByText("Select a widget or section")).toBeNull()
+    // The canvas grid mounts once it has measured its width.
+    await waitFor(() => expect(canvasWidgets(container)).toHaveLength(1))
+    expect(selectedHandle()).toHaveAccessibleName(/^Select KPI/)
+    expect(within(screen.getByRole("complementary", { name: "Properties" })).queryByText("Select a widget to edit it")).toBeNull()
     // The header button that opened the picker is gone in edit mode, so focus
     // lands in the new widget's properties rather than dropping to <body>.
     expect(screen.getByRole("complementary", { name: "Properties" })).toContainElement(document.activeElement)
@@ -153,23 +170,31 @@ describe("Dashboard discoverability", () => {
     await user.click(screen.getByRole("radio", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
     const saved = JSON.parse(puts()[0][1].body)
-    expect(saved.sections).toHaveLength(1)
-    expect(saved.sections[0].widgets.map((w) => w.type)).toEqual(["kpi"])
+    expect(saved.version).toBe(2)
+    expect(saved.widgets.map((w) => w.type)).toEqual(["kpi"])
   })
 
-  it("add widget appends to the last section", async () => {
-    doc = { ...WITH_TEXT, sections: [...WITH_TEXT.sections, { id: "s2", title: "More", widgets: [] }] }
+  it("add widget goes after the last widget of a migrated v1 doc", async () => {
+    doc = V1_WITH_TEXT
     const user = userEvent.setup()
     const { container } = renderWorkspace()
 
     await user.click(await screen.findByRole("button", { name: "Add widget" }))
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Add Table" }))
 
-    await waitFor(() => expect(container.querySelector(".dk-editor")).not.toBeNull())
-    const sections = container.querySelectorAll(".dk-canvas .dk-section")
-    expect(sections).toHaveLength(2)
-    expect(sections[0].querySelectorAll(".dk-widget")).toHaveLength(1)
-    expect(sections[1].querySelector(".dk-widget--selected")).not.toBeNull()
+    await waitFor(() => expect(container.querySelector('[data-dk="canvas"]')).not.toBeNull())
+    // Heading, text, and the new table: selected, below the text (too wide for its row).
+    // The canvas grid mounts once it has measured its width.
+    await waitFor(() => expect(canvasWidgets(container)).toHaveLength(3))
+    expect(selectedHandle()).toHaveAccessibleName(/^Select Table/)
+    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    const saved = JSON.parse(puts()[0][1].body)
+    expect(saved.widgets.map((w) => [w.id === "s1" || w.id === "w1" ? w.id : w.type, w.layout.y])).toEqual([
+      ["s1", 0],
+      ["w1", 1],
+      ["table", 3],
+    ])
   })
 
   it("the header's Add widget is a view-mode control", async () => {
@@ -191,6 +216,12 @@ describe("Dashboard discoverability", () => {
     expect(within(starters).getAllByRole("button").map((b) => b.textContent)).toEqual(STARTER_LABELS)
   })
 
+  it("a dashboard with only a heading still shows the starters", async () => {
+    doc = HEADING_ONLY
+    renderWorkspace()
+    expect(await screen.findByRole("region", { name: "Start with" })).toBeInTheDocument()
+  })
+
   it("a dashboard with widgets shows no starters", async () => {
     doc = WITH_TEXT
     renderWorkspace()
@@ -205,8 +236,13 @@ describe("Dashboard discoverability", () => {
     await user.click(await screen.findByRole("button", { name: STARTER_LABELS[0] }))
 
     await waitFor(() => expect(puts()).toHaveLength(1))
-    const [widget] = JSON.parse(puts()[0][1].body).sections[0].widgets
+    // An empty dashboard gets its page title as a level-1 heading, the widget under it.
+    const saved = JSON.parse(puts()[0][1].body)
+    expect(saved.version).toBe(2)
+    const [heading, widget] = saved.widgets
+    expect(heading).toMatchObject({ type: "heading", title: "Weekly spend", data: { level: 1 }, layout: { x: 0, y: 0, w: 12 } })
     expect(widget.type).toBe("kpi-strip")
+    expect(widget.layout.y).toBe(heading.layout.h)
     expect(widget.bindings).toEqual({
       a: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" },
       b: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" },
@@ -225,7 +261,7 @@ describe("Dashboard discoverability", () => {
 
     expect(chatProps.current.quickStarters.map((s) => s.label)).toEqual([
       "Add a table of spend by client",
-      "Make the Overview heading large",
+      "Add a page title heading",
       "Add a note explaining this dashboard",
     ])
     for (const s of chatProps.current.quickStarters) expect(s.prompt).toBe(s.label)

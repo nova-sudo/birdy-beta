@@ -7,6 +7,8 @@ import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 import { PageHeaderProvider, PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
+import { setGridWidth } from "./grid-env"
+import BIRDY_V1 from "./fixtures/birdy-v1.json"
 import DashboardWorkspace from "../[id]/DashboardWorkspace"
 
 vi.mock("@/lib/api", () => ({
@@ -23,19 +25,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace }),
   useSearchParams: () => new URLSearchParams(search),
 }))
-
-// The real EditorDnd, marked, so a test can check what the workspace puts inside it.
-vi.mock("dashkit/react", async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    EditorDnd: ({ children }) => (
-      <div data-testid="editor-dnd" style={{ display: "contents" }}>
-        <actual.EditorDnd>{children}</actual.EditorDnd>
-      </div>
-    ),
-  }
-})
 
 const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({
@@ -67,6 +56,8 @@ const res = (body, status = 200) => ({
 })
 
 const now = "2026-10-18T00:00:00.000Z"
+// Stored before dashkit 0.3.0: a v1 doc (sections of spanned widgets). The
+// workspace migrates it on load; every save after that stores v2.
 const DOC = {
   id: "d1",
   version: 1,
@@ -76,7 +67,7 @@ const DOC = {
     {
       id: "s1",
       title: "Overview",
-      widgets: [{ id: "w1", type: "text", title: "Intro", span: { cols: 6, rows: 1 }, data: { markdown: "Hello there" } }],
+      widgets: [{ id: "w1", type: "text", version: 1, title: "Intro", span: { cols: 6, rows: 1 }, data: { markdown: "Hello there" } }],
     },
   ],
   meta: { createdAt: now, updatedAt: now, lastAuthor: "user" },
@@ -100,6 +91,7 @@ const BOUND_DOC = {
         {
           id: "k1",
           type: "kpi",
+          version: 1,
           title: "Spend",
           span: { cols: 3, rows: 1 },
           data: { showDelta: true, emphasis: "normal" },
@@ -110,6 +102,14 @@ const BOUND_DOC = {
   ],
 }
 let doc = DOC
+
+// Saved docs are v2: a flat widget list, where the migrated "Overview"
+// section is a heading widget (id s1). These are the widgets under it.
+const bodyWidgets = (saved) => {
+  expect(saved.version).toBe(2)
+  expect(saved.sections).toBeUndefined()
+  return saved.widgets.filter((w) => w.type !== "heading")
+}
 
 // How many upcoming PUTs should fail (a 500), to exercise the retry paths.
 let failPuts = 0
@@ -128,13 +128,13 @@ function mockApi(path, init = {}) {
 
 const puts = () => vi.mocked(apiRequest).mock.calls.filter(([, init]) => init?.method === "PUT")
 const putBody = (call) => JSON.parse(call[1].body)
-const textOp = (id, markdown) => ({ op: "addWidget", sectionId: "s1", widget: { type: "text", id, data: { markdown } } })
+const textOp = (id, markdown) => ({ op: "addWidget", after: "w1", widget: { type: "text", id, data: { markdown } } })
 
 async function enterEditAndAddText(user) {
   await screen.findByText("Hello there")
   await user.click(screen.getByRole("radio", { name: /Edit/ }))
   await user.click(await screen.findByRole("button", { name: "Add Text" }))
-  expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument()
+  expect(screen.getByText("Unsaved changes")).toBeInTheDocument()
 }
 
 const renderWorkspace = () =>
@@ -149,6 +149,7 @@ const renderWorkspace = () =>
   )
 
 beforeEach(() => {
+  setGridWidth(1440)
   search = ""
   doc = DOC
   failPuts = 0
@@ -164,12 +165,63 @@ describe("Dashboard workspace", () => {
     const user = userEvent.setup()
     const { container } = renderWorkspace()
     expect(await screen.findByText("Hello there")).toBeInTheDocument()
-    expect(container.querySelector(".dk-editor")).toBeNull()
+    expect(container.querySelector('[data-dk="canvas"]')).toBeNull()
 
     await user.click(screen.getByRole("radio", { name: /Edit/ }))
 
     expect(await screen.findByRole("complementary", { name: "Widgets" })).toBeInTheDocument()
-    expect(container.querySelector(".dk-editor")).not.toBeNull()
+    expect(container.querySelector('[data-dk="canvas"]')).not.toBeNull()
+    expect(screen.getByRole("complementary", { name: "Properties" })).toBeInTheDocument()
+  })
+
+  it("loads a v1 doc as v2", async () => {
+    doc = { ...BIRDY_V1, id: "d1" }
+    const { container } = renderWorkspace()
+
+    // The v1 section "Overview" is now a heading widget, above its widgets.
+    expect(await screen.findByRole("heading", { name: "Overview" })).toBeInTheDocument()
+    expect(container.querySelector('[data-dk="heading"]')).toHaveTextContent("Overview")
+    await waitFor(() => expect(chatProps.current).not.toBeNull())
+    const summary = chatProps.current.getDashboardSummary()
+    expect(summary).toMatch(/^# Weekly spend \(5 widgets\)/)
+    expect(summary).toContain('- [sec_overview] heading "Overview" 12×1 @0,0')
+    expect(summary).toContain("[w_kpi_spend] kpi")
+
+    // The next save stores v2.
+    act(() => {
+      chatProps.current.onDashboardOps(
+        [{ op: "updateWidgetData", widgetId: "sec_overview", patch: { level: 1 } }],
+        { dashboard_id: "d1" },
+      )
+    })
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    const saved = putBody(puts()[0])
+    expect(saved.version).toBe(2)
+    expect(saved.sections).toBeUndefined()
+    expect(saved.widgets.map((w) => w.id)).toEqual([
+      "sec_overview",
+      "w_spend_by_client",
+      "w_kpi_strip",
+      "w_trend_spend",
+      "w_kpi_spend",
+    ])
+    expect(saved.widgets[0]).toMatchObject({ type: "heading", title: "Overview", data: { level: 1 } })
+  })
+
+  it("a container narrower than 1024px keeps the toolbar and shows the dashboard read-only", async () => {
+    setGridWidth(800)
+    const user = userEvent.setup()
+    const { container } = renderWorkspace()
+    await screen.findByText("Hello there")
+
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+
+    expect(await screen.findByText("Editing needs a wider window")).toBeInTheDocument()
+    expect(screen.getByRole("textbox", { name: "Dashboard title" })).toBeInTheDocument()
+    expect(screen.queryByRole("complementary", { name: "Widgets" })).toBeNull()
+    expect(container.querySelector('[data-dk="canvas"]')).toBeNull()
+    // The read-only grid mounts once it has measured its own width.
+    expect(await screen.findByText("Hello there")).toBeInTheDocument()
   })
 
   it("edit mode folds Ask Birdy into a rail whose button opens it as a drawer", async () => {
@@ -219,20 +271,16 @@ describe("Dashboard workspace", () => {
     expect(screen.getByTestId("chat")).toBe(chat)
   })
 
-  it("hero renders the dashboard title and description", async () => {
+  it("the page header carries the dashboard title; the board renders no hero", async () => {
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")
 
-    const hero = container.querySelector(".dk-hero")
-    expect(hero).not.toBeNull()
-    expect(within(hero).getByRole("heading", { level: 1 })).toHaveTextContent("Weekly spend")
-    expect(within(hero).getByText("Spend across every client, week by week.")).toBeInTheDocument()
-
-    // The top bar is a breadcrumb back to the list; the hero carries the big title.
+    expect(container.querySelector(".dk-hero")).toBeNull()
     const crumb = screen.getByRole("link", { name: "My dashboards" })
     expect(crumb).toHaveAttribute("href", "/dashboards")
     expect(crumb.parentElement).toHaveTextContent("My dashboards / Weekly spend")
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1)
+    // The migrated section title is a heading widget on the board.
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument()
   })
 
   it("a bound widget shows its window badge", async () => {
@@ -240,30 +288,30 @@ describe("Dashboard workspace", () => {
     const { container } = renderWorkspace()
 
     const badge = await screen.findByText("Last 30 days · all clients")
-    expect(badge).toHaveClass("dk-frame-meta")
-    expect(container.querySelector(".dk-frame-titlerow")).toContainElement(badge)
+    expect(badge.closest('[data-dk="window-badge"]')).not.toBeNull()
+    expect(container.querySelector('[data-dk="frame-title"]').parentElement).toContainElement(badge)
   })
 
-  it("palette and canvas are inside one EditorDnd", async () => {
+  it("edit mode composes dashkit's toolbar, palette, canvas and property panel", async () => {
     const user = userEvent.setup()
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")
     await user.click(screen.getByRole("radio", { name: /Edit/ }))
 
     const palette = await screen.findByRole("complementary", { name: "Widgets" })
-    const scopes = screen.getAllByTestId("editor-dnd")
-    expect(scopes).toHaveLength(1)
-    expect(scopes[0]).toContainElement(palette)
-    expect(scopes[0]).toContainElement(container.querySelector(".dk-canvas"))
-    // The palette's tiles are pd buttons with their icons.
+    const root = palette.closest(".dk-root")
+    expect(root).not.toBeNull()
+    expect(root).toContainElement(container.querySelector('[data-dk="toolbar"]'))
+    expect(root).toContainElement(container.querySelector('[data-dk="canvas"]'))
+    expect(root).toContainElement(screen.getByRole("complementary", { name: "Properties" }))
+    // dashkit's own palette tiles, with their icons.
     const tile = within(palette).getByRole("button", { name: "Add KPI" })
-    expect(tile).toHaveClass("dk-button", "dk-palette-item")
     expect(tile.querySelector("svg")).not.toBeNull()
 
-    // The JSON view sits in the same scope.
+    // The JSON view replaces the canvas, in the same editor.
     await user.click(screen.getByRole("button", { name: "JSON" }))
-    expect(screen.getAllByTestId("editor-dnd")).toHaveLength(1)
-    expect(screen.getByTestId("editor-dnd")).toContainElement(container.querySelector(".dk-json"))
+    expect(container.querySelector('[data-dk="canvas"]')).toBeNull()
+    expect(root).toContainElement(container.querySelector('[data-dk="json"]'))
   })
 
   it("leaving edit mode saves unsaved changes", async () => {
@@ -278,7 +326,7 @@ describe("Dashboard workspace", () => {
 
     await waitFor(() => {
       const put = vi.mocked(apiRequest).mock.calls.find(([, init]) => init?.method === "PUT")
-      expect(JSON.parse(put[1].body).sections[0].widgets).toHaveLength(2)
+      expect(bodyWidgets(JSON.parse(put[1].body))).toHaveLength(2)
     })
     expect(await screen.findByText("Saved")).toBeInTheDocument()
   })
@@ -314,7 +362,7 @@ describe("Dashboard workspace", () => {
     expect(await screen.findByText("Rewritten by Birdy")).toBeInTheDocument()
     await waitFor(() => {
       const put = vi.mocked(apiRequest).mock.calls.find(([, init]) => init?.method === "PUT")
-      expect(JSON.parse(put[1].body).sections[0].widgets[0].data.markdown).toBe("Rewritten by Birdy")
+      expect(bodyWidgets(JSON.parse(put[1].body))[0].data.markdown).toBe("Rewritten by Birdy")
     })
     expect(chatProps.current.getDashboardSummary()).toContain("[w1]")
   })
@@ -328,7 +376,7 @@ describe("Dashboard workspace", () => {
     unmount()
 
     await waitFor(() => expect(puts()).toHaveLength(1))
-    expect(putBody(puts()[0]).sections[0].widgets).toHaveLength(2)
+    expect(bodyWidgets(putBody(puts()[0]))).toHaveLength(2)
   })
 
   it("warns before the tab closes while there are unsaved changes", async () => {
@@ -368,7 +416,7 @@ describe("Dashboard workspace", () => {
 
     expect(await screen.findByText("Saved")).toBeInTheDocument()
     expect(puts()).toHaveLength(2)
-    expect(putBody(puts()[1]).sections[0].widgets.map((w) => w.id)).toEqual(["w1", "ai"])
+    expect(bodyWidgets(putBody(puts()[1])).map((w) => w.id)).toEqual(["w1", "ai"])
   })
 
   it("a failed toolbar save shows inline, without the page's toast", async () => {
@@ -410,10 +458,10 @@ describe("Dashboard workspace", () => {
 
     expect(result.applied).toBe(true)
     await waitFor(() => expect(puts()).toHaveLength(1))
-    const widgets = putBody(puts()[0]).sections[0].widgets
+    const widgets = bodyWidgets(putBody(puts()[0]))
     expect(widgets).toHaveLength(3)
     expect(widgets.map((w) => w.id)).toContain("ai")
-    await waitFor(() => expect(screen.queryByRole("img", { name: "Unsaved changes" })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText("Unsaved changes")).not.toBeInTheDocument())
   })
 
   it("shows an error, not a loading chat, when the dashboard can't load", async () => {
@@ -453,7 +501,7 @@ describe("Dashboard workspace", () => {
     expect(await screen.findByText("Hello there")).toBeInTheDocument()
     expect(screen.queryByText("Rewritten by Birdy")).toBeNull()
     await waitFor(() => expect(puts()).toHaveLength(2))
-    expect(putBody(puts()[1]).sections[0].widgets[0].data.markdown).toBe("Hello there")
+    expect(bodyWidgets(putBody(puts()[1]))[0].data.markdown).toBe("Hello there")
 
     // …and Redo / Undo from the view-mode header.
     await user.click(screen.getByRole("button", { name: "Redo" }))
@@ -462,7 +510,7 @@ describe("Dashboard workspace", () => {
     await user.click(screen.getByRole("button", { name: "Undo" }))
     expect(await screen.findByText("Hello there")).toBeInTheDocument()
     await waitFor(() => expect(puts()).toHaveLength(4))
-    expect(putBody(puts()[3]).sections[0].widgets[0].data.markdown).toBe("Hello there")
+    expect(bodyWidgets(putBody(puts()[3]))[0].data.markdown).toBe("Hello there")
   })
 
   it("the chat's Undo does not take back the user's later edit", async () => {
@@ -489,7 +537,8 @@ describe("Dashboard workspace", () => {
     const user = userEvent.setup()
     const { container } = renderWorkspace()
     await enterEditAndAddText(user)
-    expect(container.querySelectorAll(".dk-widget")).toHaveLength(2)
+    // The migrated heading plus the two text widgets.
+    expect(container.querySelectorAll('[data-dk="widget"]')).toHaveLength(3)
 
     await user.click(screen.getByRole("radio", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
@@ -498,13 +547,13 @@ describe("Dashboard workspace", () => {
     const undo = await screen.findByRole("button", { name: "Undo" })
     await user.click(undo)
     await waitFor(() => expect(puts()).toHaveLength(2))
-    expect(putBody(puts()[1]).sections[0].widgets).toHaveLength(1)
+    expect(bodyWidgets(putBody(puts()[1]))).toHaveLength(1)
 
     // Back in the editor, the toolbar can redo it.
     await user.click(screen.getByRole("radio", { name: /Edit/ }))
     const redo = await screen.findByRole("button", { name: "Redo" })
     expect(redo).not.toBeDisabled()
     await user.click(redo)
-    await waitFor(() => expect(container.querySelectorAll(".dk-widget")).toHaveLength(2))
+    await waitFor(() => expect(container.querySelectorAll('[data-dk="widget"]')).toHaveLength(3))
   })
 })

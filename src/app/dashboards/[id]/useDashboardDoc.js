@@ -2,6 +2,8 @@
 
 import { useCallback } from "react"
 import useSWR from "swr"
+import { migrate } from "dashkit/core"
+import { registry } from "@/lib/dashkit/registry"
 import { store } from "@/lib/dashkit/store"
 import { dataSource } from "@/lib/dashkit/data-source"
 import { queryKeys } from "@/lib/query-keys"
@@ -9,13 +11,21 @@ import { queryKeys } from "@/lib/query-keys"
 /**
  * One saved dashboard document, and the write that saves it.
  *
+ * Documents saved before dashkit 0.3.0 are v1 (sections of spanned widgets).
+ * They are upgraded here, in memory, as they load: `migrate` turns each
+ * titled section into a heading widget and places the widgets on the grid
+ * (a no-op on v2 docs). The next save stores v2, which is all the backend
+ * accepts, so no bulk migration is needed.
+ *
  * The page keeps its own live copy once this has loaded (the editor owns undo
  * history and unsaved edits), so this cache only has to hold the last saved
  * version: `save` writes it back without a refetch, which would otherwise race
  * the next edit.
  */
 export function useDashboardDoc(id) {
-  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.dashboard(id) : null, () => store.load(id))
+  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.dashboard(id) : null, async () =>
+    migrate(await store.load(id), { registry }),
+  )
 
   const save = useCallback(
     async (doc) => {

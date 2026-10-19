@@ -4,14 +4,13 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { AlertTriangle, Check, Eye, Loader2, MessageCircle, Pencil, Plus, Redo2, RotateCw, Undo2, X } from "lucide-react"
+import { AlertTriangle, Check, Eye, Loader2, MessageCircle, Monitor, Pencil, Plus, Redo2, RotateCw, Undo2, X } from "lucide-react"
 import { summarize } from "dashkit/core"
 import {
   Canvas,
   ComponentsProvider,
   DashboardDataProvider,
   DashboardRenderer,
-  EditorDnd,
   EditorProvider,
   JsonView,
   Palette,
@@ -30,7 +29,7 @@ import { pdFontClass } from "@/lib/pd-fonts"
 import { registry, components } from "@/lib/dashkit/registry"
 import { dataSource } from "@/lib/dashkit/data-source"
 import { applyIncomingOps } from "@/lib/dashboard-ops"
-import { addWidgetOps } from "@/lib/dashboard-starters"
+import { addWidgetOps, starterOps } from "@/lib/dashboard-starters"
 import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 
 // ─── One dashboard ──────────────────────────────────────────────────────────
@@ -45,9 +44,14 @@ import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 // it. The editor needs the catalog for its pickers and validation, so the
 // workspace waits for both the doc and the catalog before it mounts.
 //
-// The view renders dashkit's hero (the dashboard's title and description, as
-// the page's one h1), so the top bar carries only a breadcrumb back to the
-// list. The editor has its own title field in its toolbar.
+// The page header is the dashboard's title: the top bar's breadcrumb back to
+// the list ends in it. dashkit draws no page title of its own (no hero); a
+// level-1 heading widget is the board's title when the doc has one (the
+// starters add one to an empty dashboard). The editor has its own title
+// field in its toolbar.
+//
+// Docs arrive as dashkit v2 (useDashboardDoc migrates stored v1 ones), a flat
+// list of widgets on a 12-column grid, with headings in place of sections.
 //
 // Ways in for a new dashboard: view mode's "Add widget" (the palette's grid in
 // a dialog, which drops into the editor with the widget selected), one-click
@@ -62,7 +66,7 @@ const MODES = [
 // Ask Birdy's quick starters on this page: one per kind of change it can make.
 const CHAT_STARTERS = [
   "Add a table of spend by client",
-  "Make the Overview heading large",
+  "Add a page title heading",
   "Add a note explaining this dashboard",
 ].map((label) => ({ label, prompt: label }))
 
@@ -134,6 +138,19 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const [saveState, setSaveState] = useState("idle") // idle | saving | saved | error
   const [pickerOpen, setPickerOpen] = useState(false)
   const editorRootRef = useRef(null)
+  // dashkit's editor needs its 12 columns: narrower than EDITOR_MIN_WIDTH it
+  // keeps the toolbar and shows the dashboard read-only, as DashboardEditor
+  // does. Measured on the editor itself, not the window (the sidebar and the
+  // chat rail take their share).
+  const [editorWidth, measureEditor] = useElementWidth()
+  const editorRef = useCallback(
+    (node) => {
+      editorRootRef.current = node
+      measureEditor(node)
+    },
+    [measureEditor],
+  )
+  const narrow = editorWidth > 0 && editorWidth < EDITOR_MIN_WIDTH
   // Set by a pick from the view's picker: once the editor is up, focus goes
   // to the new widget's properties (the header button that opened the
   // picker is gone in edit mode, which would drop focus to <body>).
@@ -278,8 +295,8 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const undoAndSave = useCallback(() => stepAndSave(undo), [stepAndSave, undo])
   const redoAndSave = useCallback(() => stepAndSave(redo), [stepAndSave, redo])
 
-  // The picker's choice goes at the end of the dashboard (in a new section
-  // when there is none), then the editor opens on it, selected, to set up.
+  // The picker's choice goes at the end of the dashboard (after its last
+  // widget), then the editor opens on it, selected, to set up.
   // Unsaved until the editor saves, like anything added in the editor.
   const addPickedWidget = useCallback(
     (type) => {
@@ -295,15 +312,15 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
     if (!focusPropertiesRef.current || mode !== "edit") return
     focusPropertiesRef.current = false
     editorRootRef.current
-      ?.querySelector(".dk-panel :is(input, select, textarea, button):not(:disabled)")
+      ?.querySelector('[data-dk="panel"] :is(input, select, textarea, button):not(:disabled)')
       ?.focus()
   }, [mode, editor.selectedId])
 
   // A starter is a finished, bound widget added in view mode, which has no
   // Save button: save it at once. One batch, so one Undo takes it back.
   const applyStarter = useCallback(
-    (ops) => {
-      if (editorApplyAll(ops)) persist(getDoc()).catch(() => {})
+    (kind) => {
+      if (editorApplyAll(starterOps(kind, getDoc()))) persist(getDoc()).catch(() => {})
     },
     [editorApplyAll, getDoc, persist],
   )
@@ -385,24 +402,54 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   )
   usePageHeader(header)
 
-  const isEmpty = editor.doc.sections.every((section) => section.widgets.length === 0)
+  // Nothing to look at yet: no widgets, or only headings.
+  const isEmpty = editor.doc.widgets.every((widget) => widget.type === "heading")
   const board =
     mode === "edit" ? (
       // dashkit's DashboardEditor, composed here so it runs on the page's
-      // editor state instead of its own (keep in step with dashkit's
-      // src/react/editor/editor.tsx).
+      // editor state instead of its own. Keep the structure and classes in
+      // step with dashkit's src/react/editor/editor.tsx: the dk: classes are
+      // dashkit's own compiled utilities (dashkit/styles.css).
       <DashboardDataProvider dataSource={dataSource} registry={registry}>
         <ComponentsProvider value={components}>
           <EditorProvider editor={editor} registry={registry} catalog={catalog}>
-            <div ref={editorRootRef} className="dk-root dk-editor h-full" data-view={view}>
-              <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} />
-              {/* One drag scope for both, so palette tiles drop onto canvas
-                  sections; a Palette outside it cannot drag. No element. */}
-              <EditorDnd>
-                <Palette />
-                {view === "json" ? <JsonView /> : <Canvas />}
-              </EditorDnd>
-              <PropertyPanel />
+            <div
+              ref={editorRef}
+              data-dk="editor"
+              data-view={view}
+              data-narrow={narrow ? "true" : undefined}
+              className="dk-root dk:flex dk:h-full dk:min-h-[480px] dk:w-full dk:flex-col dk:overflow-hidden dk:bg-bg dk:font-sans dk:text-fg"
+            >
+              <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} compact={narrow} />
+              {narrow ? (
+                // The toolbar stays (save, undo, the unsaved note, JSON); only
+                // the grid's editing surfaces need the width.
+                view === "json" ? (
+                  <main className="dk:min-h-0 dk:flex-1 dk:overflow-auto">
+                    <JsonView />
+                  </main>
+                ) : (
+                  <div className="dk:flex dk:min-h-0 dk:flex-1 dk:flex-col dk:gap-4 dk:overflow-y-auto dk:p-4">
+                    <p
+                      role="note"
+                      data-dk="narrow-notice"
+                      className="dk:m-0 dk:flex dk:items-center dk:gap-2 dk:rounded-xl dk:border dk:border-border dk:bg-card dk:px-4 dk:py-3 dk:text-sm dk:text-body"
+                    >
+                      <Monitor className="dk:size-4 dk:shrink-0 dk:text-muted" aria-hidden="true" />
+                      <span>Editing needs a wider window</span>
+                    </p>
+                    <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
+                  </div>
+                )
+              ) : (
+                <div className="dk:flex dk:min-h-0 dk:flex-1">
+                  <Palette />
+                  <main className="dk:min-w-0 dk:flex-1 dk:overflow-auto">
+                    {view === "json" ? <JsonView /> : <Canvas />}
+                  </main>
+                  <PropertyPanel />
+                </div>
+              )}
             </div>
           </EditorProvider>
         </ComponentsProvider>
@@ -411,12 +458,12 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
       <div className="px-6 py-[22px]">
         <DashboardDataProvider dataSource={dataSource} registry={registry}>
           <ComponentsProvider value={components}>
-            <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" header="hero" />
+            <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
           </ComponentsProvider>
         </DashboardDataProvider>
         {isEmpty && (
           <div className="mt-6">
-            <EmptyStarters sectionId={editor.doc.sections.at(-1)?.id} onStart={applyStarter} />
+            <EmptyStarters onStart={applyStarter} />
           </div>
         )}
         <WidgetPicker open={pickerOpen} onOpenChange={setPickerOpen} onPick={addPickedWidget} />
@@ -450,6 +497,33 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
       }
     />
   )
+}
+
+/** dashkit's editor disables editing below this container width (its EDITOR_MIN_WIDTH). */
+const EDITOR_MIN_WIDTH = 1024
+
+/**
+ * The rendered width of an element, kept up to date with a ResizeObserver,
+ * and the callback ref that picks the element. 0 until it has been measured
+ * (SSR, the first paint); after that the last positive width is kept, so an
+ * element hidden for a moment doesn't flip the editor into its narrow mode.
+ */
+function useElementWidth() {
+  const [width, setWidth] = useState(0)
+  const observerRef = useRef(null)
+  const measure = useCallback((node) => {
+    observerRef.current?.disconnect()
+    observerRef.current = null
+    if (!node) return
+    const update = (next) => {
+      if (next > 0) setWidth(Math.round(next))
+    }
+    update(node.getBoundingClientRect().width)
+    if (typeof ResizeObserver === "undefined") return
+    observerRef.current = new ResizeObserver(([entry]) => update(entry.contentRect.width))
+    observerRef.current.observe(node)
+  }, [])
+  return [width, measure]
 }
 
 const ASIDE_BASE =
@@ -565,9 +639,9 @@ function WorkspaceLayout({ board, chat, railed = false }) {
 
 /**
  * The top bar's title: "My dashboards / <title>" on one line, the list as a
- * link back. Deliberately small: in view mode the hero below carries the big
- * title, and two h1s would compete. `title` null (still loading) shows the
- * link alone.
+ * link back. Deliberately small and not a heading: a level-1 heading widget
+ * on the board is the big title when the dashboard has one, and two h1s
+ * would compete. `title` null (still loading) shows the link alone.
  */
 function DashboardBreadcrumb({ title }) {
   return (

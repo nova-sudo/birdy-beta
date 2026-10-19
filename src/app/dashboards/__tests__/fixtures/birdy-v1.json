@@ -1,0 +1,65 @@
+{
+  "id": "dash_weekly_spend",
+  "version": 1,
+  "title": "Weekly spend",
+  "sections": [
+    {
+      "id": "sec_overview",
+      "title": "Overview",
+      "widgets": [
+        {
+          "id": "w_spend_by_client",
+          "type": "table",
+          "version": 1,
+          "title": "Spend and Leads by Client (Last 7 Days)",
+          "span": { "cols": 12, "rows": 2 },
+          "data": { "columns": ["client", "spend"], "dense": false },
+          "bindings": {
+            "rows": { "metric": "spend", "by": "client", "window": { "preset": "last_7d" } }
+          }
+        },
+        {
+          "id": "w_kpi_strip",
+          "type": "kpi-strip",
+          "version": 1,
+          "title": "KPI Strip: Spend, Leads, Clicks, CTR (Last 30 Days)",
+          "span": { "cols": 12, "rows": 1 },
+          "data": { "showDelta": true },
+          "bindings": {
+            "a": { "metric": "spend", "window": { "preset": "last_30d" }, "compare": "previous" },
+            "b": { "metric": "leads", "window": { "preset": "last_30d" } },
+            "c": { "metric": "clicks", "window": { "preset": "last_30d" }, "compare": "previous" },
+            "d": { "metric": "ctr", "window": { "preset": "last_30d" } }
+          }
+        },
+        {
+          "id": "w_trend_spend",
+          "type": "trend",
+          "version": 1,
+          "title": "Trend of Spend by Day",
+          "span": { "cols": 6, "rows": 2 },
+          "data": { "area": false, "showPrevious": false },
+          "bindings": {
+            "series": { "metric": "spend", "by": "day", "window": { "preset": "last_30d" } }
+          }
+        },
+        {
+          "id": "w_kpi_spend",
+          "type": "kpi",
+          "version": 1,
+          "title": "Spend (Last 7 Days)",
+          "span": { "cols": 3, "rows": 1 },
+          "data": { "showDelta": true, "emphasis": "normal" },
+          "bindings": {
+            "value": { "metric": "spend", "window": { "preset": "last_7d" }, "compare": "previous" }
+          }
+        }
+      ]
+    }
+  ],
+  "meta": {
+    "createdAt": "2026-10-19T09:00:00.000Z",
+    "updatedAt": "2026-10-19T09:30:00.000Z",
+    "lastAuthor": "ai"
+  }
+}

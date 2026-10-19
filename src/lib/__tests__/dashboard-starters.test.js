@@ -2,7 +2,7 @@
  * The one-click starters on an empty dashboard, and the ops the "Add widget"
  * picker sends from view mode. Each list is applied to a real dashkit doc and
  * validated against a catalog shaped like the backend's, so a wrong slot,
- * metric or window shows up here rather than as an empty widget.
+ * metric, window or placement shows up here rather than as an empty widget.
  */
 import { describe, it, expect } from "vitest"
 import { applyAll, createDashboard, validate } from "dashkit/core"
@@ -13,9 +13,9 @@ const registry = createRegistry(builtinWidgets)
 const catalog = {
   metrics: [
     { key: "spend", label: "Spend", format: "currency", dimensions: ["client", "day"] },
-    { key: "meta_leads", label: "Meta leads", format: "number", dimensions: ["client"] },
-    { key: "clicks", label: "Clicks", format: "number", dimensions: ["client", "day"] },
-    { key: "ctr", label: "CTR", format: "percent", dimensions: ["client"] },
+    { key: "meta_leads", label: "Meta leads", format: "integer", dimensions: ["client"] },
+    { key: "clicks", label: "Clicks", format: "integer", dimensions: ["client", "day"] },
+    { key: "ctr", label: "CTR", format: "percentage", dimensions: ["client"] },
   ],
   dimensions: [
     { key: "client", label: "Client" },
@@ -29,7 +29,7 @@ const catalog = {
 
 const blank = () => createDashboard({ title: "Blank", id: "d1" })
 const run = (doc, ops) => applyAll(doc, ops, { registry })
-const allWidgets = (doc) => doc.sections.flatMap((s) => s.widgets)
+const heading = (id, title, level) => ({ op: "addWidget", widget: { id, type: "heading", title, data: { level } } })
 
 describe("dashboard starters", () => {
   it("lists the three starters with the spec's copy", () => {
@@ -40,17 +40,31 @@ describe("dashboard starters", () => {
     ])
   })
 
-  // The strip shows deltas by default (showDelta), so each metric asks for
-  // the previous period to compare against.
-  it("starter adds bound widgets", () => {
-    const doc = blank()
-    const sectionId = doc.sections[0].id
-    const ops = starterOps("kpi-strip-30d", { sectionId })
+  it("starters validate under v2", () => {
+    for (const { kind } of STARTERS) {
+      const next = run(blank(), starterOps(kind, blank()))
+      expect(next.version).toBe(2)
+      expect(next.sections).toBeUndefined()
+      expect(validate(next, { registry, catalog }).errors).toEqual([])
+      expect(next.widgets.map((w) => w.type)).toEqual(["heading", expect.not.stringMatching(/^heading$/)])
+    }
+  })
 
-    expect(ops[0]).toMatchObject({ op: "addWidget", sectionId, widget: { type: "kpi-strip" } })
-    const widgetId = ops[0].widget.id
-    expect(widgetId).toEqual(expect.any(String))
-    expect(ops.slice(1)).toEqual([
+  // On an empty dashboard the starter gives it a page title first: a level-1
+  // heading with the dashboard's title, then the widget placed after it.
+  it("on an empty dashboard a starter adds a level-1 heading, then its widget after it", () => {
+    const doc = blank()
+    const ops = starterOps("kpi-strip-30d", doc)
+
+    expect(ops[0]).toMatchObject({ op: "addWidget", widget: { type: "heading", title: "Blank", data: { level: 1 } } })
+    const headingId = ops[0].widget.id
+    expect(headingId).toEqual(expect.any(String))
+    expect(ops[1]).toMatchObject({ op: "addWidget", after: headingId, widget: { type: "kpi-strip" } })
+    expect(ops.some((op) => "sectionId" in op || /Section/.test(op.op))).toBe(false)
+    const widgetId = ops[1].widget.id
+    // The strip shows deltas by default (showDelta), so each metric asks for
+    // the previous period to compare against.
+    expect(ops.slice(2)).toEqual([
       { op: "setBinding", widgetId, slot: "a", binding: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" } },
       { op: "setBinding", widgetId, slot: "b", binding: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" } },
       { op: "setBinding", widgetId, slot: "c", binding: { metric: "clicks", window: { preset: "last_30d" }, compare: "previous" } },
@@ -58,65 +72,76 @@ describe("dashboard starters", () => {
     ])
 
     const next = run(doc, ops)
-    expect(allWidgets(next)).toHaveLength(1)
-    expect(validate(next, { registry, catalog }).errors).toEqual([])
+    const [title, strip] = next.widgets
+    expect(title.layout).toEqual({ x: 0, y: 0, w: 12, h: 1 })
+    expect(strip.id).toBe(widgetId)
+    expect(strip.layout).toMatchObject({ x: 0, y: 1, w: 12 })
   })
 
   it("trend starter binds spend by day over the last 30 days", () => {
-    const doc = blank()
-    const ops = starterOps("spend-trend-30d", { sectionId: doc.sections[0].id })
-    const next = run(doc, ops)
+    const next = run(blank(), starterOps("spend-trend-30d", blank()))
 
-    const [widget] = allWidgets(next)
-    expect(widget.type).toBe("trend")
+    const widget = next.widgets.find((w) => w.type === "trend")
     expect(widget.bindings).toEqual({ series: { metric: "spend", by: "day", window: { preset: "last_30d" } } })
-    expect(validate(next, { registry, catalog }).errors).toEqual([])
   })
 
   it("table starter binds spend by client over the last 7 days", () => {
-    const doc = blank()
-    const ops = starterOps("spend-by-client-table-7d", { sectionId: doc.sections[0].id })
-    const next = run(doc, ops)
+    const next = run(blank(), starterOps("spend-by-client-table-7d", blank()))
 
-    const [widget] = allWidgets(next)
-    expect(widget.type).toBe("table")
+    const widget = next.widgets.find((w) => w.type === "table")
     expect(widget.bindings).toEqual({ rows: { metric: "spend", by: "client", window: { preset: "last_7d" } } })
+  })
+
+  // Only the first widget under a heading uses the heading as `after`; later
+  // ones chain to the widget before them, so they read in order.
+  it("on a dashboard with widgets a starter chains after the last one, without another heading", () => {
+    const doc = run(blank(), [
+      heading("h", "Overview", 2),
+      { op: "addWidget", after: "h", widget: { id: "k", type: "kpi", bindings: { value: { metric: "spend", window: { preset: "last_7d" } } } } },
+    ])
+    const ops = starterOps("spend-trend-30d", doc)
+
+    expect(ops[0]).toMatchObject({ op: "addWidget", after: "k", widget: { type: "trend" } })
+    expect(ops.filter((op) => op.widget?.type === "heading")).toEqual([])
+    const next = run(doc, ops)
+    const trend = next.widgets.find((w) => w.type === "trend")
+    // A 6-wide trend fits to the right of the 3-wide KPI, on its row.
+    expect(trend.layout).toMatchObject({ x: 3, y: 1 })
     expect(validate(next, { registry, catalog }).errors).toEqual([])
   })
 
-  it("a starter on a doc with no sections adds one first, in the same batch", () => {
-    const doc = { ...blank(), sections: [] }
-    const ops = starterOps("spend-trend-30d", {})
+  it("a heading-only dashboard gets the widget under that heading", () => {
+    const doc = run(blank(), [heading("h", "Overview", 1)])
+    const ops = starterOps("spend-trend-30d", doc)
 
-    expect(ops[0].op).toBe("addSection")
-    const next = run(doc, ops)
-    expect(next.sections).toHaveLength(1)
-    expect(next.sections[0].widgets.map((w) => w.type)).toEqual(["trend"])
+    expect(ops[0]).toMatchObject({ op: "addWidget", after: "h", widget: { type: "trend" } })
+    expect(run(doc, ops).widgets.map((w) => w.id)).toEqual(["h", ops[0].widget.id])
   })
 
   it("rejects an unknown starter", () => {
-    expect(() => starterOps("nope", { sectionId: "s1" })).toThrow(/nope/)
+    expect(() => starterOps("nope", blank())).toThrow(/nope/)
   })
 })
 
 describe("addWidgetOps", () => {
-  it("appends to the last section", () => {
-    const doc = run(blank(), [{ op: "addSection", section: { id: "s2", title: "More" } }])
-    const { ops, widgetId } = addWidgetOps(doc, "kpi")
+  it("adds the first widget of an empty dashboard at the top, with no heading", () => {
+    const { ops, widgetId } = addWidgetOps(blank(), "kpi")
 
-    expect(ops).toEqual([{ op: "addWidget", sectionId: "s2", widget: { type: "kpi", id: widgetId } }])
-    const next = run(doc, ops)
-    expect(next.sections[1].widgets.map((w) => w.id)).toEqual([widgetId])
-    expect(next.sections[0].widgets).toEqual([])
+    expect(ops).toEqual([{ op: "addWidget", widget: { type: "kpi", id: widgetId } }])
+    const next = run(blank(), ops)
+    expect(next.widgets.map((w) => [w.id, w.layout.x, w.layout.y])).toEqual([[widgetId, 0, 0]])
   })
 
-  it("adds a section first when the doc has none", () => {
-    const doc = { ...blank(), sections: [] }
-    const { ops, widgetId } = addWidgetOps(doc, "kpi")
+  it("chains after the dashboard's last widget, in reading order", () => {
+    const doc = run(blank(), [
+      heading("h", "Overview", 2),
+      { op: "addWidget", after: "h", widget: { id: "a", type: "text", data: { markdown: "a" } } },
+      { op: "addWidget", after: "a", widget: { id: "b", type: "text", data: { markdown: "b" } } },
+    ])
+    const { ops, widgetId } = addWidgetOps(doc, "table")
 
-    expect(ops.map((o) => o.op)).toEqual(["addSection", "addWidget"])
+    expect(ops).toEqual([{ op: "addWidget", after: "b", widget: { type: "table", id: widgetId } }])
     const next = run(doc, ops)
-    expect(next.sections).toHaveLength(1)
-    expect(next.sections[0].widgets.map((w) => w.id)).toEqual([widgetId])
+    expect(next.widgets.at(-1).id).toBe(widgetId)
   })
 })

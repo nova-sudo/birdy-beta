@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { registry } from "@/lib/dashkit/registry"
-import { PdIcon } from "@/lib/dashkit/primitives"
+import { WidgetIcon } from "./WidgetIcon"
 
 // The editor palette's order; anything else follows, as the palette does.
 const CATEGORY_ORDER = ["metrics", "charts", "tables", "content"]
@@ -55,7 +55,7 @@ export function WidgetPicker({ open, onOpenChange, onPick }) {
                     onClick={() => pick(def.type)}
                     className="flex h-[72px] min-w-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-pd-border bg-pd-surface px-1.5 text-center transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
                   >
-                    <PdIcon name={def.icon} className="size-[18px] text-pd-muted" />
+                    <WidgetIcon name={def.icon} className="size-[18px] text-pd-muted" />
                     <span className="max-w-full truncate text-[12px] font-medium text-pd-ink">{def.label}</span>
                   </button>
                 ))}

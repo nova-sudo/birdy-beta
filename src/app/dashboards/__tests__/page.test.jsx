@@ -93,7 +93,10 @@ describe("My dashboards list page", () => {
     expect(put[0]).toMatch(/^\/api\/dashboards\/[^/]+$/)
     const saved = JSON.parse(put[1].body)
     expect(saved.title).toBe("Q4 overview")
-    expect(saved.sections).toHaveLength(1)
+    // A v2 doc with nothing on it yet (the backend rejects v1 saves).
+    expect(saved.version).toBe(2)
+    expect(saved.widgets).toEqual([])
+    expect(saved.sections).toBeUndefined()
     expect(push).toHaveBeenCalledWith(`/dashboards/${saved.id}`)
   })
 

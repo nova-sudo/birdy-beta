@@ -14,25 +14,34 @@ import { applyAll, diff, validate } from "dashkit/core"
  */
 const DRAFT_CODES = new Set(["SLOT_REQUIRED"])
 
+const WIDGET_PATH = /^widgets\.(\d+)/
+
 /**
- * `validate()` reports paths by index (`sections.0.widgets.2.bindings.value`),
- * which shift when anything moves. Re-key them by section/widget id so an
- * existing error that merely moved is not mistaken for a new one.
+ * `validate()` reports paths by index (`widgets.2.bindings.value`), and every
+ * op re-sorts widgets by row and column, so an index shifts whenever a widget
+ * lands above another. Re-key them by widget id so an existing error that
+ * merely moved is not mistaken for a new one. Each error also carries the
+ * widget it belongs to, so the chat can name it by its title.
  */
 function errorKeys(doc, ctx) {
   const keys = new Map()
   for (const e of validate(doc, ctx).errors) {
     if (DRAFT_CODES.has(e.code)) continue
-    const path = e.path.replace(/^sections\.(\d+)(?:\.widgets\.(\d+))?/, (whole, si, wi) => {
-      const section = doc.sections?.[Number(si)]
-      if (!section) return whole
-      if (wi === undefined) return `section:${section.id}`
-      const widget = section.widgets?.[Number(wi)]
+    let widget = null
+    const path = e.path.replace(WIDGET_PATH, (whole, i) => {
+      widget = doc.widgets?.[Number(i)] ?? null
       return widget ? `widget:${widget.id}` : whole
     })
-    keys.set(`${path}|${e.code}|${e.message}`, e)
+    keys.set(`${path}|${e.code}|${e.message}`, { error: e, widget })
   }
   return keys
+}
+
+/** An error as the chat shows it: prefixed with the widget's title (or its kind) when it has one. */
+function describeError({ error, widget }, registry) {
+  if (!widget) return error.message
+  const name = widget.title || registry.get(widget.type)?.label || widget.type
+  return `${name}: ${error.message}`
 }
 
 const messageOf = (err) => (err instanceof Error ? err.message : String(err))
@@ -77,7 +86,7 @@ export function applyIncomingOps(target, ops, { dashboardId, currentId, registry
     const existing = errorKeys(before, { registry, catalog })
     const introduced = [...errorKeys(preview, { registry, catalog })].filter(([key]) => !existing.has(key))
     if (introduced.length > 0) {
-      return { applied: false, diff: [], error: introduced[0][1].message }
+      return { applied: false, diff: [], error: describeError(introduced[0][1], registry) }
     }
   }
 
