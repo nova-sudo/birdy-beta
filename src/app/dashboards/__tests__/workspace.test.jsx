@@ -186,6 +186,10 @@ describe("Dashboard workspace", () => {
     expect(summary).toMatch(/^# Weekly spend \(5 widgets\)/)
     expect(summary).toContain('- [sec_overview] heading "Overview" 12×1 @0,0')
     expect(summary).toContain("[w_kpi_spend] kpi")
+    // 1-row v1 KPIs and strips migrate to dashkit's 3-row minimum, so their values fit.
+    expect(summary).toMatch(/- \[w_kpi_strip\] kpi-strip "[^"]*" 12×3 @0,5/)
+    expect(summary).toMatch(/- \[w_trend_spend\] trend "[^"]*" 6×4 @0,8/)
+    expect(summary).toMatch(/- \[w_kpi_spend\] kpi "[^"]*" 3×3 @6,8/)
 
     // The next save stores v2.
     act(() => {
