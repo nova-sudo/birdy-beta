@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { act, render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
+import { EDITOR_MIN_WIDTH } from "dashkit/react"
 import { PageHeaderProvider, PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { setGridWidth } from "./grid-env"
 import BIRDY_V1 from "./fixtures/birdy-v1.json"
@@ -212,8 +213,12 @@ describe("Dashboard workspace", () => {
     expect(saved.widgets[0]).toMatchObject({ type: "heading", title: "Overview", data: { level: 1 } })
   })
 
-  it("a container narrower than 1024px keeps the toolbar and shows the dashboard read-only", async () => {
-    setGridWidth(800)
+  it("the narrow cutoff is dashkit's exported EDITOR_MIN_WIDTH", () => {
+    expect(EDITOR_MIN_WIDTH).toBe(1024)
+  })
+
+  it("a container narrower than EDITOR_MIN_WIDTH keeps the toolbar and shows the dashboard read-only", async () => {
+    setGridWidth(EDITOR_MIN_WIDTH - 1)
     const user = userEvent.setup()
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")

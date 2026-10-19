@@ -11,6 +11,7 @@ import {
   ComponentsProvider,
   DashboardDataProvider,
   DashboardRenderer,
+  EDITOR_MIN_WIDTH,
   EditorProvider,
   JsonView,
   Palette,
@@ -498,9 +499,6 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
     />
   )
 }
-
-/** dashkit's editor disables editing below this container width (its EDITOR_MIN_WIDTH). */
-const EDITOR_MIN_WIDTH = 1024
 
 /**
  * The rendered width of an element, kept up to date with a ResizeObserver,
