@@ -63,6 +63,10 @@ describe("shapeDelta", () => {
     expect(shapeDelta({ deltaPct: 8 })).toMatchObject({ direction: "up", value: "8%", polarity: HIGHER_IS_BETTER })
   })
 
+  it("keeps a neutral metric's direction without calling it good or bad", () => {
+    expect(shapeDelta({ deltaPct: -1.7, polarity: "neutral" })).toMatchObject({ direction: "down", polarity: "neutral" })
+  })
+
   it("shows a flat delta without a direction", () => {
     expect(shapeDelta({ deltaPct: 0 })).toMatchObject({ direction: null, value: "0%" })
   })
@@ -85,5 +89,20 @@ describe("formatValue / formatTick", () => {
     expect(formatTick(2.5, "currency", "£")).toBe("£2.5")
     expect(formatTick(42, "percentage")).toBe("42%")
     expect(formatTick(3.24, "multiplier")).toBe("3.2x")
+  })
+})
+
+describe("labels and currencies from tool results", () => {
+  it("prints ISO dates as day and month", async () => {
+    const { prettyLabel } = await import("@/lib/chat-viz")
+    expect(prettyLabel("2026-10-03")).toBe("3 Oct")
+    expect(prettyLabel("Aura")).toBe("Aura")
+    expect(shapeChart({ type: "line", data: [{ label: "2026-09-20", value: 1 }, { label: "2026-09-21", value: 2 }] }).rows[0].label).toBe("20 Sep")
+  })
+
+  it("turns an ad account's ISO currency code into its symbol", () => {
+    expect(formatTick(280, "currency", "GBP")).toBe("£280")
+    expect(formatValue(14.2, "currency", "EUR")).toBe("€14.20")
+    expect(formatValue(14.2, "currency", "SEK")).toBe("SEK 14.20")
   })
 })

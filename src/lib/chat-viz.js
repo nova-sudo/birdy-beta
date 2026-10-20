@@ -11,17 +11,38 @@ import { formatCompact, formatMetric } from "@/lib/format-metric"
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "@/lib/portfolio-metrics"
 
 // Violet first, then the hues the hubs already use for their own series.
+// Amber second: blue beside violet reads as one colour when two lines cross.
 export const SERIES_COLORS = [
   "var(--pd-primary)",
-  "var(--pd-info)",
   "var(--pd-amber)",
+  "var(--pd-info)",
   "var(--pd-success)",
   "var(--pd-danger)",
   "var(--pd-primary-light)",
 ]
 
+// Tool results carry the ad account's ISO code ("GBP"); print the symbol.
+const CURRENCY_SYMBOLS = { GBP: "£", USD: "$", EUR: "€", AUD: "A$", CAD: "C$", NZD: "NZ$", AED: "AED ", INR: "₹", JPY: "¥" }
+
+export function currencySymbol(currency) {
+  if (!currency) return "$"
+  const code = String(currency).trim().toUpperCase()
+  if (CURRENCY_SYMBOLS[code]) return CURRENCY_SYMBOLS[code]
+  return /^[A-Z]{3}$/.test(code) ? `${code} ` : String(currency)
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+/** "2026-10-03" → "3 Oct"; any other label is left alone. */
+export function prettyLabel(label) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(label))
+  if (!m) return String(label)
+  return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1] ?? m[2]}`
+}
+
 /** Full reading of one value, for tooltips, labels and table cells. */
 export function formatValue(value, format = "integer", currency) {
+  currency = currency ? currencySymbol(currency) : currency
   if (value === null || value === undefined || !Number.isFinite(Number(value))) return "–"
   const num = Number(value)
   if (format === "currency") {
@@ -38,6 +59,7 @@ export function formatValue(value, format = "integer", currency) {
 
 /** Short reading for an axis tick. */
 export function formatTick(value, format = "integer", currency) {
+  currency = currency ? currencySymbol(currency) : currency
   const num = Number(value)
   if (!Number.isFinite(num)) return ""
   if (format === "percentage") return `${formatCompact(num)}%`
@@ -61,7 +83,7 @@ export function shapeChart(payload) {
   const multi = series.length > 1
 
   let rows = payload.data.map((d) => {
-    const row = { label: String(d?.label ?? d?.name ?? "") }
+    const row = { label: prettyLabel(d?.label ?? d?.name ?? "") }
     for (const s of series) {
       const raw = multi ? d?.[s.key] : (d?.value ?? d?.[s.key])
       row[s.key] = raw === null || raw === undefined || raw === "" ? null : Number(raw)
@@ -146,7 +168,7 @@ function shapeSeries(payload, type, fmt) {
  */
 export function shapeDelta(kpi) {
   if (!kpi) return null
-  const polarity = kpi.polarity === "lower" ? LOWER_IS_BETTER : HIGHER_IS_BETTER
+  const polarity = kpi.polarity === "lower" ? LOWER_IS_BETTER : kpi.polarity === "neutral" ? "neutral" : HIGHER_IS_BETTER
   const pct = toNumber(kpi.deltaPct)
   if (pct !== null) {
     if (pct === 0) return { direction: null, value: "0%", polarity, label: kpi.deltaLabel || null }

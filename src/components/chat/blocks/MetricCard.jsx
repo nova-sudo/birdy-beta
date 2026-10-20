@@ -1,6 +1,6 @@
 "use client"
 import { useId } from "react"
-import { Activity, BarChart3, DollarSign, Target, Users } from "lucide-react"
+import { Activity, ArrowDown, ArrowUp, BarChart3, DollarSign, Target, Users } from "lucide-react"
 import { Area, AreaChart, ResponsiveContainer } from "recharts"
 import { CountUp } from "@/components/motion"
 import { DeltaPill } from "@/components/portfolio/DeltaPill"
@@ -86,11 +86,18 @@ export default function MetricCard({ payload }) {
   )
 }
 
-/** The hubs' delta pill, or a grey "0%" chip when nothing moved. */
+/**
+ * The hubs' delta pill. Grey when nothing moved, or when the metric is
+ * neutral (spend going up isn't good or bad by itself): the arrow still
+ * says which way.
+ */
 export function Delta({ delta, size = "md" }) {
-  if (!delta.direction) {
+  if (!delta.direction || delta.polarity === "neutral") {
+    const Arrow = delta.direction === "up" ? ArrowUp : delta.direction === "down" ? ArrowDown : null
     return (
-      <span className={`rounded-full bg-pd-neutral-badge font-bold text-pd-subtle ${size === "md" ? "px-[9px] py-[5px] text-[12px]" : "px-[7px] py-1 text-[10.5px]"}`}>
+      <span className={`inline-flex shrink-0 items-center rounded-full bg-pd-neutral-badge font-bold text-pd-subtle ${size === "md" ? "gap-[5px] px-[9px] py-[5px] text-[12px]" : "gap-1 px-[7px] py-1 text-[10.5px]"}`}>
+        {Arrow && <Arrow className={size === "md" ? "size-3" : "size-[11px]"} strokeWidth={3} aria-hidden="true" />}
+        {Arrow && <span className="sr-only">{delta.direction} </span>}
         {delta.value}
       </span>
     )

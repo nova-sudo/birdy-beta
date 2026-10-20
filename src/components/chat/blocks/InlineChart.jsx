@@ -3,7 +3,7 @@ import { Component, useId } from "react"
 import { useReducedMotion } from "framer-motion"
 import {
   Area, Bar, CartesianGrid, Cell, ComposedChart, LabelList, Line, Pie, PieChart,
-  ResponsiveContainer, Tooltip, XAxis, YAxis,
+  ResponsiveContainer, Text, Tooltip, XAxis, YAxis,
 } from "recharts"
 import { formatTick, formatValue, SERIES_COLORS, shapeChart } from "@/lib/chat-viz"
 
@@ -29,6 +29,18 @@ class ChartErrorBoundary extends Component {
 }
 
 const AXIS_TICK = { fontSize: 10.5, fill: "var(--pd-faint)" }
+
+// A handful of categories (clients, campaigns) each get their label, wrapped
+// to two lines in their own slot, instead of recharts dropping the ones that
+// would collide in a narrow panel.
+function CategoryTick({ x, y, payload, width, visibleTicksCount }) {
+  const slot = Math.max(40, (width || 0) / Math.max(1, visibleTicksCount || 1) - 6)
+  return (
+    <Text x={x} y={y} width={slot} maxLines={2} textAnchor="middle" verticalAnchor="start" {...AXIS_TICK}>
+      {payload.value}
+    </Text>
+  )
+}
 
 /**
  * An inline chart from a :::chart block — line, area, bar, combo or donut,
@@ -145,6 +157,7 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
   const left = chart.series.find((s) => s.axis === "left") || chart.series[0]
   const right = chart.series.find((s) => s.axis === "right")
   const manyPoints = chart.rows.length > 12
+  const fewCategories = chart.rows.length <= 6
   return (
     <ComposedChart {...rest} data={chart.rows} margin={{ top: 18, right: right ? 4 : 8, bottom: 0, left: 0 }}>
       <defs>
@@ -161,8 +174,9 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
         tick={AXIS_TICK}
         tickLine={false}
         axisLine={{ stroke: "var(--pd-border)" }}
-        interval="preserveStartEnd"
-        minTickGap={18}
+        {...(fewCategories
+          ? { interval: 0, tick: <CategoryTick />, height: 38 }
+          : { interval: "preserveStartEnd", minTickGap: 18 })}
         tickMargin={8}
       />
       <YAxis
