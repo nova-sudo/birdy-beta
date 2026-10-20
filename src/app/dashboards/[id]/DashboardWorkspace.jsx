@@ -16,6 +16,7 @@ import {
   EditorProvider,
   JsonView,
   Palette,
+  PortalContainerProvider,
   PropertyPanel,
   Toolbar,
   useDashboardEditor,
@@ -145,6 +146,11 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const [saveState, setSaveState] = useState("idle") // idle | saving | saved | error
   const [pickerOpen, setPickerOpen] = useState(false)
   const editorRootRef = useRef(null)
+  // The editor's .dk-root, as state: dashkit's popovers, selects and menus
+  // portal into it (DashboardEditor does this for itself). In document.body
+  // they would sit outside .dk-root, with no --dk-* tokens, and paint
+  // transparent.
+  const [portalRoot, setPortalRoot] = useState(null)
   // dashkit's editor needs its 12 columns: narrower than EDITOR_MIN_WIDTH it
   // keeps the toolbar and shows the dashboard read-only, as DashboardEditor
   // does. Measured on the editor itself, not the window (the sidebar and the
@@ -153,6 +159,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   const editorRef = useCallback(
     (node) => {
       editorRootRef.current = node
+      setPortalRoot(node)
       measureEditor(node)
     },
     [measureEditor],
@@ -427,36 +434,38 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
               data-narrow={narrow ? "true" : undefined}
               className="dk-root dk:flex dk:h-full dk:min-h-[480px] dk:w-full dk:flex-col dk:overflow-hidden dk:bg-bg dk:font-sans dk:text-fg"
             >
-              <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} compact={narrow} />
-              {narrow ? (
-                // The toolbar stays (save, undo, the unsaved note, JSON); only
-                // the grid's editing surfaces need the width.
-                view === "json" ? (
-                  <main className="dk:min-h-0 dk:flex-1 dk:overflow-auto">
-                    <JsonView />
-                  </main>
+              <PortalContainerProvider value={portalRoot}>
+                <Toolbar onSave={saveFromToolbar} view={view} onViewChange={setView} compact={narrow} />
+                {narrow ? (
+                  // The toolbar stays (save, undo, the unsaved note, JSON); only
+                  // the grid's editing surfaces need the width.
+                  view === "json" ? (
+                    <main className="dk:min-h-0 dk:flex-1 dk:overflow-auto">
+                      <JsonView />
+                    </main>
+                  ) : (
+                    <div className="dk:flex dk:min-h-0 dk:flex-1 dk:flex-col dk:gap-4 dk:overflow-y-auto dk:p-4">
+                      <p
+                        role="note"
+                        data-dk="narrow-notice"
+                        className="dk:m-0 dk:flex dk:items-center dk:gap-2 dk:rounded-xl dk:border dk:border-border dk:bg-card dk:px-4 dk:py-3 dk:text-sm dk:text-body"
+                      >
+                        <Monitor className="dk:size-4 dk:shrink-0 dk:text-muted-foreground" aria-hidden="true" />
+                        <span>Editing needs a wider window</span>
+                      </p>
+                      <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
+                    </div>
+                  )
                 ) : (
-                  <div className="dk:flex dk:min-h-0 dk:flex-1 dk:flex-col dk:gap-4 dk:overflow-y-auto dk:p-4">
-                    <p
-                      role="note"
-                      data-dk="narrow-notice"
-                      className="dk:m-0 dk:flex dk:items-center dk:gap-2 dk:rounded-xl dk:border dk:border-border dk:bg-card dk:px-4 dk:py-3 dk:text-sm dk:text-body"
-                    >
-                      <Monitor className="dk:size-4 dk:shrink-0 dk:text-muted-foreground" aria-hidden="true" />
-                      <span>Editing needs a wider window</span>
-                    </p>
-                    <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
+                  <div className="dk:flex dk:min-h-0 dk:flex-1">
+                    <Palette />
+                    <main className="dk:min-w-0 dk:flex-1 dk:overflow-auto">
+                      {view === "json" ? <JsonView /> : <Canvas />}
+                    </main>
+                    <PropertyPanel />
                   </div>
-                )
-              ) : (
-                <div className="dk:flex dk:min-h-0 dk:flex-1">
-                  <Palette />
-                  <main className="dk:min-w-0 dk:flex-1 dk:overflow-auto">
-                    {view === "json" ? <JsonView /> : <Canvas />}
-                  </main>
-                  <PropertyPanel />
-                </div>
-              )}
+                )}
+              </PortalContainerProvider>
             </div>
           </EditorProvider>
         </ComponentsProvider>

@@ -336,6 +336,28 @@ describe("Dashboard workspace", () => {
     expect(root).toContainElement(container.querySelector('[data-dk="json"]'))
   })
 
+  it("the editor's menus open inside .dk-root, where its colours are defined", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+    await screen.findByText("Hello there")
+    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+
+    const palette = await screen.findByRole("complementary", { name: "Widgets" })
+    await user.click(within(palette).getByRole("button", { name: "Add Table" }))
+    const panel = screen.getByRole("complementary", { name: "Properties" })
+    // jsdom has no pointer capture or layout scrolling, which Radix Select uses.
+    Element.prototype.hasPointerCapture ??= () => false
+    Element.prototype.setPointerCapture ??= () => {}
+    Element.prototype.releasePointerCapture ??= () => {}
+    Element.prototype.scrollIntoView ??= () => {}
+    await user.click(within(panel).getByRole("combobox"))
+    const option = await screen.findByRole("option", { name: "Table" })
+
+    // Portalled into document.body, the editor's selects and menus had no
+    // --dk-* tokens and painted with a transparent background.
+    expect(option.closest(".dk-root")).toBe(palette.closest(".dk-root"))
+  })
+
   it("leaving edit mode saves unsaved changes", async () => {
     const user = userEvent.setup()
     renderWorkspace()
