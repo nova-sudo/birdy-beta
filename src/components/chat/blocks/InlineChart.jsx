@@ -1,14 +1,14 @@
 "use client"
-import { Component } from "react"
+import { Component, useId } from "react"
+import { useReducedMotion } from "framer-motion"
 import {
-  BarChart, Bar, LineChart, Line, ComposedChart, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList, Legend,
+  Area, Bar, CartesianGrid, Cell, ComposedChart, LabelList, Line, Pie, PieChart,
+  ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts"
-import { formatCompact } from "@/lib/format-metric"
+import { formatTick, formatValue, SERIES_COLORS, shapeChart } from "@/lib/chat-viz"
 
-// Tiny error boundary so a recharts crash doesn't silently wipe the chart.
-// If anything throws, we fall back to a compact data table so the user sees
-// the numbers instead of a blank bubble.
+// A recharts crash shouldn't wipe the whole answer: say the chart failed and
+// leave the prose around it standing.
 class ChartErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
   static getDerivedStateFromError(error) { return { error } }
@@ -18,8 +18,8 @@ class ChartErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="my-3 rounded-2xl bg-pd-warning-bg p-3 text-xs text-pd-amber">
-          <div className="font-medium mb-1">Chart failed to render</div>
+        <div className="not-prose my-3 rounded-2xl bg-pd-warning-bg p-3 text-xs text-pd-amber">
+          <div className="mb-1 font-semibold">Chart failed to render</div>
           <div className="opacity-75">{String(this.state.error?.message || this.state.error)}</div>
         </div>
       )
@@ -28,25 +28,17 @@ class ChartErrorBoundary extends Component {
   }
 }
 
-// Violet first, then the semantic hues, then violet's own tints.
-const PALETTE = ["#5B3FD6", "#3B7DD6", "#16794C", "#E0920A", "#E5484D", "#9F8BEA", "#B4530A", "#C3B7F2"]
+const AXIS_TICK = { fontSize: 10.5, fill: "var(--pd-faint)" }
 
 /**
- * Renders an inline chart from a :::chart block.
+ * An inline chart from a :::chart block — line, area, bar, combo or donut,
+ * drawn in the hubs' chart language: pd tokens, a violet gradient under
+ * lines, baseline-only grid, and the dark tooltip TrendPlot uses.
  *
- * Single-series payload:
- *   { type?: "bar"|"line"|"donut", title?, data: [{label, value}], color?, currency?, orientation?, sort? }
- *
- * Multi-series payload (for overlaying lines, combo charts, etc.):
- *   {
- *     type?: "line"|"bar"|"composed",
- *     title?,
- *     data: [{label: "Jan", spend: 1200, cpl: 3.5}, ...],
- *     series: [
- *       {key: "spend", name: "Ad Spend", type: "line"|"bar", color, axis: "left"|"right", currency: "£"},
- *       {key: "cpl",   name: "CPL",      type: "line",       color, axis: "right",        currency: "£"}
- *     ]
- *   }
+ * Payload (render_ui, birdy-backend ai/tools/render_ui_tools.py):
+ *   { type, title?, subtitle?, format?, currency?, data: [{label, value}] }
+ *   { type, ..., data: [{label, spend, cpl}], series: [{key, name, type, axis, format, currency}] }
+ * Older hand-typed payloads (color, orientation, sort, inferred series) still render.
  */
 export default function InlineChart({ payload }) {
   return (
@@ -57,285 +49,278 @@ export default function InlineChart({ payload }) {
 }
 
 function InlineChartInner({ payload }) {
-  if (!payload || !Array.isArray(payload.data) || payload.data.length === 0) {
+  const chart = shapeChart(payload)
+  const reduceMotion = useReducedMotion()
+  const gradientId = useId().replace(/:/g, "")
+
+  if (!chart) {
     return (
-      <div className="my-3 rounded-xl border border-dashed border-border/50 bg-white p-4 text-xs text-muted-foreground text-center">
-        Chart data is empty.
-      </div>
+      <figure className="not-prose my-3 rounded-2xl border border-dashed border-pd-border bg-pd-surface p-4 text-center text-xs text-pd-subtle">
+        {payload?.title ? `${payload.title}: no data to chart.` : "No data to chart."}
+      </figure>
     )
   }
 
-  const {
-    type = "bar",
-    title,
-    data,
-    color = "#5B3FD6",
-    currency,
-    orientation = "auto",
-    sort = true,
-    series,
-  } = payload
-
-  // Detect multi-series mode (either explicit `series` or data rows with multiple numeric keys besides "label")
-  const seriesList = normalizeSeries(series, data, color, currency)
-  const isMultiSeries = seriesList.length > 1
-
-  // Normalize data rows for recharts: keep `label` and all series keys
-  let normalized = data.map(d => {
-    const row = { label: String(d.label ?? d.name ?? "") }
-    if (isMultiSeries) {
-      for (const s of seriesList) {
-        const v = d[s.key]
-        row[s.key] = v === null || v === undefined ? null : Number(v)
-      }
-    } else {
-      row.value = Number(d.value ?? d[seriesList[0].key] ?? 0)
-    }
-    return row
-  })
-
-  // Sort (single-series only; multi-series is usually time ordered)
-  if (!isMultiSeries && sort && type !== "line") {
-    normalized = [...normalized].sort((a, b) => b.value - a.value)
-  }
-  // Drop zero-valued rows from single-series bar charts
-  if (!isMultiSeries && type === "bar") {
-    normalized = normalized.filter(d => d.value > 0)
-  }
-
-  if (normalized.length === 0) {
-    return (
-      <div className="my-3 rounded-xl border border-pd-border bg-pd-surface p-4 shadow-sm text-sm text-muted-foreground text-center">
-        No data to display.
-      </div>
-    )
-  }
-
-  const singleValueFormatter = (v) => currency ? `${currency}${formatCompact(v)}` : formatCompact(v)
-
-  // Bar orientation decision for single-series bar charts
-  const longestLabel = normalized.reduce((m, d) => Math.max(m, d.label.length), 0)
-  const isHorizontal = !isMultiSeries && type === "bar" && (
-    orientation === "horizontal" ||
-    (orientation === "auto" && (normalized.length > 5 || longestLabel > 12))
-  )
-
-  const rowHeight = 28
-  const chartHeight = isHorizontal
-    ? Math.min(Math.max(normalized.length * rowHeight + 40, 160), 560)
-    : isMultiSeries
-      ? 320
-      : 260
-
-  // Whether we need a dual-axis composed chart
-  const hasRightAxis = isMultiSeries && seriesList.some(s => s.axis === "right")
+  const animate = !reduceMotion
+  const height = chart.kind === "donut"
+    ? 200
+    : chart.horizontal
+      ? Math.min(Math.max(chart.rows.length * 30 + 24, 150), 520)
+      : 240
 
   return (
-    <div className="my-3 rounded-xl border border-pd-border bg-pd-surface p-3 shadow-sm">
-      {title && (
-        <div className="mb-2 px-1 text-xs font-semibold text-foreground/80">{title}</div>
-      )}
-      <div style={{ height: chartHeight }}>
-        <ResponsiveContainer width="100%" height="100%">
-          {isMultiSeries ? (
-            <ComposedChart data={normalized} margin={{ top: 16, right: hasRightAxis ? 44 : 12, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" />
-              <YAxis
-                yAxisId="left"
-                tick={{ fontSize: 10 }}
-                stroke={seriesList.find(s => s.axis === "left")?.color || "#98989E"}
-                tickFormatter={formatCompact}
-                width={48}
-              />
-              {hasRightAxis && (
-                <YAxis
-                  yAxisId="right"
-                  orientation="right"
-                  tick={{ fontSize: 10 }}
-                  stroke={seriesList.find(s => s.axis === "right")?.color || "#98989E"}
-                  tickFormatter={formatCompact}
-                  width={44}
-                />
-              )}
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
-                formatter={(v, name, entry) => {
-                  const key = entry?.dataKey
-                  const s = seriesList.find(s => s.key === key)
-                  const cur = s?.currency || ""
-                  return [`${cur}${formatCompact(Number(v))}`, s?.name || name]
-                }}
-              />
-              <Legend
-                iconType="line"
-                wrapperStyle={{ fontSize: 11, paddingTop: 4 }}
-              />
-              {seriesList.map((s, i) => {
-                const axisId = s.axis === "right" ? "right" : "left"
-                const commonProps = {
-                  yAxisId: axisId,
-                  dataKey: s.key,
-                  name: s.name,
-                  isAnimationActive: false,
-                }
-                if ((s.type || type) === "bar") {
-                  return <Bar key={s.key} {...commonProps} fill={s.color || PALETTE[i % PALETTE.length]} radius={[4, 4, 0, 0]} />
-                }
-                return (
-                  <Line
-                    key={s.key}
-                    {...commonProps}
-                    type="monotone"
-                    stroke={s.color || PALETTE[i % PALETTE.length]}
-                    strokeWidth={2}
-                    dot={{ r: 3 }}
-                    connectNulls
-                  />
-                )
-              })}
-            </ComposedChart>
-          ) : type === "line" ? (
-            <LineChart data={normalized} margin={{ top: 8, right: 12, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" />
-              <YAxis tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} width={44} />
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
-                formatter={(v) => [singleValueFormatter(v), ""]}
-              />
-              <Line type="monotone" dataKey="value" stroke={color} strokeWidth={2} dot={{ r: 3 }} isAnimationActive={false} />
-            </LineChart>
-          ) : type === "donut" ? (
-            <PieChart>
-              <Pie
-                data={normalized}
-                dataKey="value"
-                nameKey="label"
-                innerRadius={40}
-                outerRadius={70}
-                paddingAngle={2}
-                isAnimationActive={false}
-              >
-                {normalized.map((_, i) => (
-                  <Cell key={i} fill={PALETTE[i % PALETTE.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
-                formatter={(v, n) => [singleValueFormatter(v), n]}
-              />
-            </PieChart>
-          ) : isHorizontal ? (
-            <BarChart
-              layout="vertical"
-              data={normalized}
-              margin={{ top: 4, right: 56, bottom: 4, left: 4 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} />
-              <YAxis
-                dataKey="label"
-                type="category"
-                tick={{ fontSize: 11 }}
-                stroke="#63636B"
-                width={140}
-                interval={0}
-                tickFormatter={(v) => v.length > 18 ? v.slice(0, 17) + "…" : v}
-              />
-              <Tooltip
-                cursor={{ fill: "rgba(91,63,214,0.06)" }}
-                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
-                formatter={(v) => [singleValueFormatter(v), ""]}
-              />
-              <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                <LabelList
-                  dataKey="value"
-                  position="right"
-                  formatter={singleValueFormatter}
-                  style={{ fontSize: 10, fill: "#52525B", fontWeight: 500 }}
-                />
-              </Bar>
-            </BarChart>
-          ) : (
-            <BarChart data={normalized} margin={{ top: 20, right: 8, bottom: 4, left: 4 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EFEEEB" vertical={false} />
-              <XAxis dataKey="label" tick={{ fontSize: 10 }} stroke="#98989E" interval={0} angle={-15} textAnchor="end" height={44} />
-              <YAxis tick={{ fontSize: 10 }} stroke="#98989E" tickFormatter={formatCompact} width={44} />
-              <Tooltip
-                cursor={{ fill: "rgba(91,63,214,0.06)" }}
-                contentStyle={{ fontSize: 11, borderRadius: 14, border: "1px solid #E7E6E3", boxShadow: "0 14px 34px -12px rgba(24,24,27,.26)" }}
-                formatter={(v) => [singleValueFormatter(v), ""]}
-              />
-              <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                <LabelList
-                  dataKey="value"
-                  position="top"
-                  formatter={singleValueFormatter}
-                  style={{ fontSize: 10, fill: "#52525B", fontWeight: 500 }}
-                />
-              </Bar>
-            </BarChart>
-          )}
-        </ResponsiveContainer>
-      </div>
-      {!isMultiSeries && type === "donut" && (
-        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 px-1">
-          {normalized.map((d, i) => (
-            <div key={i} className="flex items-center gap-1.5 text-[11px]">
-              <span className="h-2 w-2 rounded-full" style={{ background: PALETTE[i % PALETTE.length] }} />
-              <span className="text-muted-foreground truncate max-w-[100px]">{d.label}</span>
-              <span className="font-medium tabular-nums">{singleValueFormatter(d.value)}</span>
-            </div>
-          ))}
+    <figure
+      className="not-prose my-3 overflow-hidden rounded-2xl border border-pd-border bg-pd-surface px-4 pb-3 pt-3.5 shadow-sm"
+      aria-label={chart.title || "Chart"}
+    >
+      <ChartHeader chart={chart} />
+      {chart.kind === "donut" ? (
+        <Donut chart={chart} height={height} animate={animate} />
+      ) : (
+        <div style={{ height }} className="mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            {chart.horizontal
+              ? <HorizontalBars chart={chart} animate={animate} />
+              : <Cartesian chart={chart} animate={animate} gradientId={gradientId} />}
+          </ResponsiveContainer>
         </div>
       )}
+    </figure>
+  )
+}
+
+function ChartHeader({ chart }) {
+  const showLegend = chart.multi
+  if (!chart.title && !chart.subtitle && !showLegend) return null
+  return (
+    <figcaption className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5">
+      <div className="min-w-0">
+        {chart.title && (
+          <div className="font-pd-display text-[14px] font-bold leading-snug text-pd-ink">{chart.title}</div>
+        )}
+        {chart.subtitle && <div className="mt-0.5 text-[12px] text-pd-subtle">{chart.subtitle}</div>}
+      </div>
+      {showLegend && (
+        <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5" aria-label="Legend">
+          {chart.series.map((s) => (
+            <li key={s.key} className="flex items-center gap-1.5 text-[11.5px] font-medium text-pd-body">
+              <span
+                className={s.type === "bar" ? "size-2.5 rounded-[3px]" : "h-[3px] w-3 rounded-full"}
+                style={{ background: s.color }}
+                aria-hidden="true"
+              />
+              {s.name}
+              {s.axis === "right" && <span className="text-pd-faint">(right)</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </figcaption>
+  )
+}
+
+/** The dark pill TrendPlot hangs off its dots, one line per series. */
+function DarkTooltip({ active, payload, label, series }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-xl bg-pd-ink px-2.5 py-2 text-white shadow-pd-tooltip">
+      <div className="mb-1 text-[10.5px] text-pd-primary-pale">{label}</div>
+      {payload.map((p) => {
+        const s = series.find((x) => x.key === p.dataKey) || series[0]
+        return (
+          <div key={p.dataKey} className="flex items-center gap-2 text-[12px] leading-5">
+            {series.length > 1 && (
+              <span className="size-2 rounded-full" style={{ background: s.color }} aria-hidden="true" />
+            )}
+            {series.length > 1 && <span className="text-white/70">{s.name}</span>}
+            <span className="ml-auto font-pd-display font-bold">{formatValue(p.value, s.format, s.currency)}</span>
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-/**
- * Build a canonical series list from the payload.
- * - If explicit `series` is provided, use it (fill in defaults).
- * - Else if data rows have multiple numeric keys (beyond "label"), infer series from keys.
- * - Else return a single-series list with key="value".
- */
-function normalizeSeries(series, data, fallbackColor, fallbackCurrency) {
-  // Explicit series list provided
-  if (Array.isArray(series) && series.length > 0) {
-    return series.map((s, i) => ({
-      key: s.key,
-      name: s.name || s.key,
-      type: s.type,                    // undefined → inherits from parent `type`
-      color: s.color || PALETTE[i % PALETTE.length],
-      axis: s.axis === "right" ? "right" : "left",
-      currency: s.currency || "",
-    }))
-  }
-
-  // Infer from data: look at the first row's numeric keys other than "label"/"name"
-  const first = data[0] || {}
-  const numericKeys = Object.keys(first).filter(
-    k => k !== "label" && k !== "name" && k !== "value" && typeof first[k] === "number"
+function Cartesian({ chart, animate, gradientId, ...rest }) {
+  const left = chart.series.find((s) => s.axis === "left") || chart.series[0]
+  const right = chart.series.find((s) => s.axis === "right")
+  const manyPoints = chart.rows.length > 12
+  return (
+    <ComposedChart {...rest} data={chart.rows} margin={{ top: 18, right: right ? 4 : 8, bottom: 0, left: 0 }}>
+      <defs>
+        {chart.series.map((s, i) => (
+          <linearGradient key={s.key} id={`${gradientId}-${i}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={s.color} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={s.color} stopOpacity={0} />
+          </linearGradient>
+        ))}
+      </defs>
+      <CartesianGrid vertical={false} stroke="var(--pd-divider)" />
+      <XAxis
+        dataKey="label"
+        tick={AXIS_TICK}
+        tickLine={false}
+        axisLine={{ stroke: "var(--pd-border)" }}
+        interval="preserveStartEnd"
+        minTickGap={18}
+        tickMargin={8}
+      />
+      <YAxis
+        yAxisId="left"
+        tick={AXIS_TICK}
+        tickLine={false}
+        axisLine={false}
+        width={52}
+        tickFormatter={(v) => formatTick(v, left.format, left.currency)}
+      />
+      {right && (
+        <YAxis
+          yAxisId="right"
+          orientation="right"
+          tick={AXIS_TICK}
+          tickLine={false}
+          axisLine={false}
+          width={46}
+          tickFormatter={(v) => formatTick(v, right.format, right.currency)}
+        />
+      )}
+      <Tooltip
+        cursor={{ stroke: "var(--pd-border-strong)", strokeDasharray: "3 3", fill: "var(--pd-primary-tint)", fillOpacity: 0.5 }}
+        content={<DarkTooltip series={chart.series} />}
+      />
+      {chart.series.map((s, i) => {
+        const common = {
+          dataKey: s.key,
+          name: s.name,
+          yAxisId: s.axis,
+          isAnimationActive: animate,
+          animationDuration: 700,
+        }
+        if (s.type === "bar") {
+          return (
+            <Bar key={s.key} {...common} fill={s.color} radius={[6, 6, 0, 0]} maxBarSize={chart.multi ? 22 : 36}>
+              {!chart.multi && !manyPoints && (
+                <LabelList
+                  dataKey={s.key}
+                  position="top"
+                  formatter={(v) => formatTick(v, s.format, s.currency)}
+                  style={{ fontSize: 10.5, fill: "var(--pd-body)", fontWeight: 600 }}
+                />
+              )}
+            </Bar>
+          )
+        }
+        // A lone line gets the hubs' gradient underneath; overlaid lines stay
+        // bare so their fills don't muddy each other.
+        const filled = s.type === "area" || (!chart.multi && s.type === "line")
+        const lineProps = {
+          ...common,
+          type: "monotone",
+          stroke: s.color,
+          strokeWidth: 2.5,
+          dot: manyPoints ? false : { r: 3, strokeWidth: 2, stroke: "var(--pd-surface)", fill: s.color },
+          activeDot: { r: 5, strokeWidth: 2, stroke: "var(--pd-surface)", fill: s.color },
+          connectNulls: true,
+        }
+        return filled
+          ? <Area key={s.key} {...lineProps} fill={`url(#${gradientId}-${i})`} fillOpacity={1} />
+          : <Line key={s.key} {...lineProps} />
+      })}
+    </ComposedChart>
   )
-  if (numericKeys.length > 1) {
-    return numericKeys.map((k, i) => ({
-      key: k,
-      name: k.charAt(0).toUpperCase() + k.slice(1).replace(/_/g, " "),
-      type: undefined,
-      color: PALETTE[i % PALETTE.length],
-      axis: i === 0 ? "left" : "right",
-      currency: fallbackCurrency || "",
-    }))
-  }
+}
 
-  // Single-series fallback
-  return [{
-    key: "value",
-    name: "Value",
-    type: undefined,
-    color: fallbackColor,
-    axis: "left",
-    currency: fallbackCurrency || "",
-  }]
+function HorizontalBars({ chart, animate, ...rest }) {
+  const s = chart.series[0]
+  return (
+    <ComposedChart {...rest} layout="vertical" data={chart.rows} margin={{ top: 0, right: 56, bottom: 0, left: 0 }}>
+      <XAxis type="number" hide />
+      <YAxis
+        dataKey="label"
+        type="category"
+        tick={{ fontSize: 11.5, fill: "var(--pd-body)" }}
+        tickLine={false}
+        axisLine={false}
+        width={128}
+        interval={0}
+        tickFormatter={(v) => (v.length > 18 ? v.slice(0, 17) + "…" : v)}
+      />
+      <Tooltip cursor={{ fill: "var(--pd-primary-tint)", fillOpacity: 0.6 }} content={<DarkTooltip series={chart.series} />} />
+      <Bar
+        dataKey={s.key}
+        name={s.name}
+        fill={s.color}
+        radius={[0, 6, 6, 0]}
+        barSize={16}
+        background={{ fill: "var(--pd-divider)", radius: 6 }}
+        isAnimationActive={animate}
+        animationDuration={700}
+      >
+        <LabelList
+          dataKey={s.key}
+          position="right"
+          formatter={(v) => formatValue(v, s.format, s.currency)}
+          style={{ fontSize: 11, fill: "var(--pd-ink)", fontWeight: 600 }}
+        />
+      </Bar>
+    </ComposedChart>
+  )
+}
+
+function Donut({ chart, height, animate }) {
+  const s = chart.series[0]
+  return (
+    <div className="mt-2 flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+      <div className="relative shrink-0" style={{ width: height, height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chart.rows}
+              dataKey={s.key}
+              nameKey="label"
+              innerRadius="64%"
+              outerRadius="96%"
+              paddingAngle={1.5}
+              cornerRadius={4}
+              stroke="none"
+              isAnimationActive={animate}
+              animationDuration={700}
+            >
+              {chart.rows.map((_, i) => (
+                <Cell key={i} fill={SERIES_COLORS[i % SERIES_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<DonutTooltip series={s} />} />
+          </PieChart>
+        </ResponsiveContainer>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="font-pd-display text-[18px] font-bold text-pd-ink">{formatTick(chart.total, s.format, s.currency)}</span>
+          <span className="text-[10.5px] text-pd-faint">total</span>
+        </div>
+      </div>
+      <ul className="w-full min-w-0 space-y-1.5">
+        {chart.rows.map((r, i) => (
+          <li key={r.label + i} className="flex items-center gap-2 text-[12.5px]">
+            <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }} aria-hidden="true" />
+            <span className="min-w-0 truncate text-pd-body">{r.label}</span>
+            <span className="ml-auto font-semibold tabular-nums text-pd-ink">{formatValue(r[s.key], s.format, s.currency)}</span>
+            <span className="w-10 text-right tabular-nums text-pd-faint">
+              {chart.total ? `${Math.round((r[s.key] / chart.total) * 100)}%` : ""}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+function DonutTooltip({ active, payload, series }) {
+  if (!active || !payload?.length) return null
+  const p = payload[0]
+  return (
+    <div className="rounded-xl bg-pd-ink px-2.5 py-1.5 text-white shadow-pd-tooltip">
+      <div className="font-pd-display text-[12.5px] font-bold">{formatValue(p.value, series.format, series.currency)}</div>
+      <div className="mt-0.5 text-[10.5px] text-pd-primary-pale">{p.name}</div>
+    </div>
+  )
 }
