@@ -37,6 +37,10 @@
   --dk-chart-2: #2E9E8F;
   --dk-chart-3: var(--pd-warning);
   --dk-chart-4: var(--pd-faint);
+  --dk-chart-5: var(--pd-amber);
+  --dk-chart-6: #2F6FD0;
+  --dk-chart-7: #CF4A3A;
+  --dk-chart-8: #8F5FC2;
   --dk-radius: calc(var(--radius) + 8px);
   --dk-shadow: var(--shadow-sm);
   --dk-shadow-pop: var(--pd-shadow-popover);

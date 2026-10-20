@@ -6,18 +6,16 @@ import { applyAll, diff, validate } from "dashkit/core"
 // them to the doc the user is looking at, unsaved edits included, then saves.
 // This module is that apply step, kept free of React so it can be tested
 // against a plain history.
-
-/**
- * Validation errors the editor treats as a draft, not a fault: the palette
- * itself adds unbound widgets, so an op batch that adds one is no worse than
- * the user clicking "Add KPI".
- */
-const DRAFT_CODES = new Set(["SLOT_REQUIRED"])
+//
+// Birdy binds data with dashkit 0.4.0's `setQuery` (or a `query` on
+// `addWidget`) and unbinds with `clearQuery`. A data widget without a query
+// is a draft, as the palette's own new widgets are: dashkit's validate()
+// reports nothing for it, so it never blocks a batch.
 
 const WIDGET_PATH = /^widgets\.(\d+)/
 
 /**
- * `validate()` reports paths by index (`widgets.2.bindings.value`), and every
+ * `validate()` reports paths by index (`widgets.2.bindings.query`), and every
  * op re-sorts widgets by row and column, so an index shifts whenever a widget
  * lands above another. Re-key them by widget id so an existing error that
  * merely moved is not mistaken for a new one. Each error also carries the
@@ -26,7 +24,6 @@ const WIDGET_PATH = /^widgets\.(\d+)/
 function errorKeys(doc, ctx) {
   const keys = new Map()
   for (const e of validate(doc, ctx).errors) {
-    if (DRAFT_CODES.has(e.code)) continue
     let widget = null
     const path = e.path.replace(WIDGET_PATH, (whole, i) => {
       widget = doc.widgets?.[Number(i)] ?? null
@@ -53,7 +50,9 @@ const messageOf = (err) => (err instanceof Error ? err.message : String(err))
  * the editor's imperative handle in edit mode, a thin wrapper around the
  * page's own state in view mode. The ops are dry-run first with dashkit's pure
  * `applyAll`, so a bad batch is rejected with a message before the target (and
- * its undo history) is touched, and the batch is atomic either way.
+ * its undo history) is touched, and the batch is atomic either way. The dry
+ * run gets the catalog, as the editor's history does, so query rules that need
+ * it (a donut needs a metric that adds up) reject here too.
  *
  * Validation rejects only errors the ops introduce: a doc that already had a
  * problem (a metric since removed from the catalog, say) must not block every
@@ -77,7 +76,7 @@ export function applyIncomingOps(target, ops, { dashboardId, currentId, registry
   const before = target.getDoc()
   let preview
   try {
-    preview = applyAll(before, ops, { registry, author: "ai" })
+    preview = applyAll(before, ops, { registry, ...(catalog ? { catalog } : {}), author: "ai" })
   } catch (err) {
     return { applied: false, diff: [], error: messageOf(err) }
   }

@@ -1,0 +1,620 @@
+{
+  "metrics": [
+    {
+      "key": "meta_spend",
+      "label": "Meta Spend",
+      "format": "currency",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "meta_impressions",
+      "label": "Meta Impressions",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "meta_clicks",
+      "label": "Meta Clicks",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "meta_reach",
+      "label": "Meta Reach",
+      "format": "integer",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "meta_results",
+      "label": "Meta Results",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "meta_leads",
+      "label": "Meta Leads",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "meta_ctr",
+      "label": "Meta CTR",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "meta_cpc",
+      "label": "Meta CPC",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "meta_cpm",
+      "label": "Meta CPM",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "spend",
+      "label": "Spend",
+      "format": "currency",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "impressions",
+      "label": "Impressions",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "clicks",
+      "label": "Clicks",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "reach",
+      "label": "Reach",
+      "format": "integer",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "results",
+      "label": "Results",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "leads",
+      "label": "Leads",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ctr",
+      "label": "CTR",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "cpc",
+      "label": "CPC",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "cpm",
+      "label": "CPM",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "cpl",
+      "label": "CPL",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "cost_per_result",
+      "label": "Cost Per Result",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "frequency",
+      "label": "Frequency",
+      "format": "decimal",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "ghl_won_opps",
+      "label": "GHL Won Opps",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_lost_opps",
+      "label": "GHL Lost Opps",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_open_opps",
+      "label": "GHL Open Opps",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_abandoned_opps",
+      "label": "GHL Abandoned Opps",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_total_opps",
+      "label": "GHL Total Opps",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_revenue",
+      "label": "GHL Revenue",
+      "format": "currency",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_conversion",
+      "label": "GHL Conversion",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "ghl_contacts",
+      "label": "GHL Contacts",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "ghl_leads",
+      "label": "GHL Leads",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "total_tags",
+      "label": "Total Tags",
+      "format": "integer",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "hp_leads",
+      "label": "HP Leads",
+      "format": "integer",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": true
+    },
+    {
+      "key": "hp_total_calls",
+      "label": "HP Total Calls",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_inbound",
+      "label": "HP Inbound",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_outbound",
+      "label": "HP Outbound",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_transfers",
+      "label": "HP Transfers",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_leads_with_calls",
+      "label": "HP Leads With Calls",
+      "format": "integer",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "hp_answered_calls",
+      "label": "HP Answered Calls",
+      "format": "integer",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_talk_time",
+      "label": "HP Talk Time",
+      "format": "decimal",
+      "dimensions": [
+        "client",
+        "day"
+      ],
+      "aggregation": "sum",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": true
+    },
+    {
+      "key": "hp_connect_rate",
+      "label": "HP Connect Rate",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": false,
+      "additive": false
+    },
+    {
+      "key": "hp_answer_rate",
+      "label": "HP Answer Rate",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "conversion_rate",
+      "label": "Conversion Rate",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "cost_per_lead",
+      "label": "Cost Per Lead",
+      "format": "currency",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "lower_is_better",
+      "over": true,
+      "additive": false
+    },
+    {
+      "key": "engagement_rate",
+      "label": "Engagement Rate",
+      "format": "percentage",
+      "dimensions": [
+        "client"
+      ],
+      "aggregation": "avg",
+      "polarity": "higher_is_better",
+      "over": true,
+      "additive": false
+    }
+  ],
+  "dimensions": [
+    {
+      "key": "client",
+      "label": "Client"
+    },
+    {
+      "key": "day",
+      "label": "Day"
+    }
+  ],
+  "windows": [
+    {
+      "preset": "maximum",
+      "label": "All time"
+    },
+    {
+      "preset": "today",
+      "label": "Today"
+    },
+    {
+      "preset": "yesterday",
+      "label": "Yesterday"
+    },
+    {
+      "preset": "this_week",
+      "label": "This week"
+    },
+    {
+      "preset": "last_7d",
+      "label": "Last 7 days"
+    },
+    {
+      "preset": "last_14d",
+      "label": "Last 14 days"
+    },
+    {
+      "preset": "last_30d",
+      "label": "Last 30 days"
+    },
+    {
+      "preset": "this_month",
+      "label": "This month"
+    },
+    {
+      "preset": "last_month",
+      "label": "Last month"
+    },
+    {
+      "preset": "this_quarter",
+      "label": "This quarter"
+    },
+    {
+      "preset": "last_quarter",
+      "label": "Last quarter"
+    },
+    {
+      "preset": "this_year",
+      "label": "This year"
+    },
+    {
+      "preset": "last_year",
+      "label": "Last year"
+    }
+  ]
+}

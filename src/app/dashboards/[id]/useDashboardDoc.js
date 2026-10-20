@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import useSWR from "swr"
 import { migrate } from "dashkit/core"
 import { registry } from "@/lib/dashkit/registry"
@@ -11,21 +11,39 @@ import { queryKeys } from "@/lib/query-keys"
 /**
  * One saved dashboard document, and the write that saves it.
  *
- * Documents saved before dashkit 0.3.0 are v1 (sections of spanned widgets).
- * They are upgraded here, in memory, as they load: `migrate` turns each
- * titled section into a heading widget and places the widgets on the grid
- * (a no-op on v2 docs). The next save stores v2, which is all the backend
- * accepts, so no bulk migration is needed.
+ * Stored documents may be older than dashkit 0.4.0: v1 (sections of spanned
+ * widgets, before 0.3.0) or v2 (a binding per slot). They are upgraded here,
+ * in memory, as they load: `migrate` takes them to v3 (one `query` per
+ * widget), a no-op on v3 docs. The next save stores v3, so no bulk migration
+ * is needed.
  *
- * The page keeps its own live copy once this has loaded (the editor owns undo
- * history and unsaved edits), so this cache only has to hold the last saved
- * version: `save` writes it back without a refetch, which would otherwise race
- * the next edit.
+ * The migration needs the metric catalog: it decides what some v2 widgets
+ * become (a donut of a metric that doesn't add up turns into a bar chart, a
+ * chart keeps only the metrics that share its first one's format). The backend
+ * migrates stored docs with the same catalog, so both sides see the same v3
+ * doc. Until the catalog is here there is no doc; a catalog that fails to
+ * load is this hook's error too.
+ *
+ * The cache holds the doc as stored (or as last saved); the migrated copy is
+ * derived from it. The page keeps its own live copy once this has loaded (the
+ * editor owns undo history and unsaved edits), so this cache only has to hold
+ * the last saved version: `save` writes it back without a refetch, which would
+ * otherwise race the next edit.
  */
 export function useDashboardDoc(id) {
-  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.dashboard(id) : null, async () =>
-    migrate(await store.load(id), { registry }),
+  const { data, error: loadError, isLoading: docLoading, mutate } = useSWR(id ? queryKeys.dashboard(id) : null, () =>
+    store.load(id),
   )
+  const { catalog, error: catalogError, isLoading: catalogLoading } = useDashboardCatalog()
+
+  const migrated = useMemo(() => {
+    if (!data || !catalog) return { doc: null, error: null }
+    try {
+      return { doc: migrate(data, { registry, catalog }), error: null }
+    } catch (err) {
+      return { doc: null, error: err }
+    }
+  }, [data, catalog])
 
   const save = useCallback(
     async (doc) => {
@@ -36,13 +54,18 @@ export function useDashboardDoc(id) {
     [mutate],
   )
 
-  return { doc: data ?? null, isLoading, error, save }
+  return {
+    doc: migrated.doc,
+    isLoading: docLoading || catalogLoading,
+    error: loadError ?? catalogError ?? migrated.error ?? undefined,
+    save,
+  }
 }
 
 /**
- * The metric catalog: what a binding may name. The editor's pickers and
- * validation need it, so the page holds the editor back until it is here; the
- * read-only view can render without it.
+ * The metric catalog: what a query may name. The doc's migration, the
+ * editor's pickers and validation need it, so the page waits for it before
+ * it mounts the dashboard.
  */
 export function useDashboardCatalog() {
   const { data, error, isLoading } = useSWR(queryKeys.dashboardCatalog(), () => dataSource.catalog(), {

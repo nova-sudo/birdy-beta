@@ -4,9 +4,10 @@ import { STARTERS } from "@/lib/dashboard-starters"
 import { WidgetIcon } from "./WidgetIcon"
 
 /**
- * An empty dashboard's way in: three starters, each one click away from a
- * widget already bound to real numbers. `onStart(kind)` gets the starter's
- * kind; the caller builds its ops (`starterOps`) against the live doc.
+ * An empty dashboard's way in: the default board and three single widgets,
+ * each one click away and already bound to real numbers. `onStart(kind)` gets
+ * the starter's kind; the caller builds its ops (`starterOps`) against the
+ * live doc.
  */
 export function EmptyStarters({ onStart }) {
   return (
@@ -17,7 +18,7 @@ export function EmptyStarters({ onStart }) {
       <p className="mt-1 text-[13px] text-pd-muted">
         Add a ready-made widget, use Add widget above, or ask Birdy for what you want to see.
       </p>
-      <div className="mt-4 grid gap-2 md:grid-cols-3">
+      <div className="mt-4 grid gap-2 md:grid-cols-2">
         {STARTERS.map((starter) => (
           <button
             key={starter.kind}

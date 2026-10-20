@@ -10,14 +10,17 @@ import { applyIncomingOps } from "@/lib/dashboard-ops"
 
 const registry = createRegistry(builtinWidgets)
 const catalog = {
-  metrics: [{ key: "spend", label: "Spend", format: "currency", dimensions: ["day"] }],
-  dimensions: [{ key: "day", label: "Day" }],
+  metrics: [
+    { key: "spend", label: "Spend", format: "currency", dimensions: ["client"], over: true, additive: true },
+    { key: "ctr", label: "CTR", format: "percentage", dimensions: ["client"], over: true, additive: false },
+  ],
+  dimensions: [{ key: "client", label: "Client" }],
   windows: [{ preset: "last_7_days", label: "Last 7 days" }],
 }
 
 /** A stand-in for the editor's apiRef: same contract (never throws, returns the doc). */
 function historyTarget(doc) {
-  const history = createHistory(doc, { registry })
+  const history = createHistory(doc, { registry, catalog })
   return {
     history,
     getDoc: () => history.doc,
@@ -47,10 +50,11 @@ function setup() {
 }
 
 const ctx = { dashboardId: "d1", currentId: "d1", registry, catalog }
+const query = (metric, extra = {}) => ({ metrics: [{ metric }], window: { preset: "last_7_days" }, ...extra })
 const kpi = (id, metric, extra = {}) => ({
   op: "addWidget",
   ...extra,
-  widget: { type: "kpi", id, title: `KPI ${id}`, bindings: { value: { metric, window: { preset: "last_7_days" } } } },
+  widget: { type: "kpi", id, title: `KPI ${id}`, query: query(metric) },
 })
 
 describe("applyIncomingOps", () => {
@@ -149,9 +153,58 @@ describe("applyIncomingOps", () => {
     expect(target.getDoc().widgets.findIndex((w) => w.id === "old")).not.toBe(broken.widgets.findIndex((w) => w.id === "old"))
 
     // A new bad value on the same widget is new, and is reported by its title.
-    const rebind = [{ op: "setBinding", widgetId: "old", slot: "value", binding: { metric: "other_bad", window: { preset: "last_7_days" } } }]
+    const rebind = [{ op: "setQuery", widgetId: "old", query: query("other_bad") }]
     const second = applyIncomingOps(target, rebind, ctx)
     expect(second.applied).toBe(false)
     expect(second.error).toBe('KPI old: Unknown metric "other_bad"')
+  })
+  it("Birdy's setQuery rebinds a widget, and clearQuery unbinds it", () => {
+    const { target } = setup()
+    target.applyAll([kpi("k", "spend", { after: "local" })], "user")
+
+    const set = applyIncomingOps(target, [{ op: "setQuery", widgetId: "k", query: query("ctr", { compare: "previous" }) }], ctx)
+
+    expect(set.applied).toBe(true)
+    expect(target.getDoc().widgets.find((w) => w.id === "k").bindings).toEqual({ query: query("ctr", { compare: "previous" }) })
+    expect(target.getDoc().meta.lastAuthor).toBe("ai")
+
+    // An unbound data widget is a draft, as the palette's own widgets are, not an error.
+    const cleared = applyIncomingOps(target, [{ op: "clearQuery", widgetId: "k" }], ctx)
+
+    expect(cleared.applied).toBe(true)
+    expect(cleared.error).toBeUndefined()
+    expect(target.getDoc().widgets.find((w) => w.id === "k").bindings).toBeUndefined()
+  })
+
+  it("a setQuery that breaks the widget's query rules is rejected with dashkit's message", () => {
+    const { target } = setup()
+    target.applyAll([kpi("k", "spend", { after: "local" })], "user")
+    const before = target.getDoc()
+
+    const result = applyIncomingOps(target, [{ op: "setQuery", widgetId: "k", query: query("spend", { by: "client" }) }], ctx)
+
+    expect(result.applied).toBe(false)
+    expect(result.error).toMatch(/by/)
+    expect(target.getDoc()).toBe(before)
+  })
+
+  // The editor's history checks rules that need the catalog (a donut needs an
+  // additive metric); the dry run must too, or it would pass what the editor rejects.
+  it("the dry run checks catalog rules: a donut of a non-additive metric is rejected", () => {
+    const { target } = setup()
+    const ops = [
+      {
+        op: "addWidget",
+        after: "local",
+        widget: { type: "chart", id: "c", data: { chart: "donut", orientation: "vertical", stacked: false }, query: query("ctr", { by: "client" }) },
+      },
+    ]
+    const before = target.getDoc()
+
+    const result = applyIncomingOps(target, ops, ctx)
+
+    expect(result.applied).toBe(false)
+    expect(result.error).toMatch(/CTR|ctr|additive|donut/i)
+    expect(target.getDoc()).toBe(before)
   })
 })

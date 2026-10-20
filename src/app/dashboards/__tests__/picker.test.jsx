@@ -10,6 +10,7 @@ import { PageHeaderProvider, PageHeaderControls, PageHeaderTitle } from "@/compo
 import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
 import { registry } from "@/lib/dashkit/registry"
 import { setGridWidth } from "./grid-env"
+import CATALOG from "./fixtures/birdy-catalog.json"
 import DashboardWorkspace from "../[id]/DashboardWorkspace"
 
 vi.mock("@/lib/api", () => ({
@@ -42,8 +43,8 @@ const res = (body, status = 200) => ({
 })
 
 const now = "2026-10-18T00:00:00.000Z"
-const base = { id: "d1", version: 2, title: "Weekly spend", meta: { createdAt: now, updatedAt: now, lastAuthor: "user" } }
-// A new dashboard: createDashboard gives v2 docs no widgets at all.
+const base = { id: "d1", version: 3, title: "Weekly spend", meta: { createdAt: now, updatedAt: now, lastAuthor: "user" } }
+// A new dashboard: createDashboard gives v3 docs no widgets at all.
 const EMPTY = { ...base, widgets: [] }
 const OVERVIEW = { id: "s1", type: "heading", version: 1, title: "Overview", layout: { x: 0, y: 0, w: 12, h: 1 }, data: {} }
 // Only a heading: still nothing to look at, so the starters stay.
@@ -67,28 +68,13 @@ const V1_WITH_TEXT = {
     },
   ],
 }
-const CATALOG = {
-  metrics: [
-    { key: "spend", label: "Spend", format: "currency", dimensions: ["client", "day"] },
-    { key: "meta_leads", label: "Meta leads", format: "number", dimensions: ["client"] },
-    { key: "clicks", label: "Clicks", format: "number", dimensions: ["client", "day"] },
-    { key: "ctr", label: "CTR", format: "percent", dimensions: ["client"] },
-  ],
-  dimensions: [
-    { key: "client", label: "Client" },
-    { key: "day", label: "Day" },
-  ],
-  windows: [
-    { preset: "last_7d", label: "Last 7 days" },
-    { preset: "last_30d", label: "Last 30 days" },
-  ],
-}
-
 let doc = EMPTY
 function mockApi(path, init = {}) {
   const method = init.method ?? "GET"
   if (path === "/api/dashboards/catalog") return Promise.resolve(res(CATALOG))
-  if (path === "/api/dashboards/resolve") return Promise.resolve(res({ slots: [] }))
+  if (path === "/api/dashboards/query") {
+    return Promise.resolve(res({ frames: JSON.parse(init.body).queries.map(() => null) }))
+  }
   if (path === "/api/dashboards/d1" && method === "GET") return Promise.resolve(res(doc))
   if (path === "/api/dashboards/d1" && method === "PUT") return Promise.resolve(res(JSON.parse(init.body)))
   return Promise.resolve(res({}, 404))
@@ -107,6 +93,7 @@ const renderWorkspace = () =>
   )
 
 const STARTER_LABELS = [
+  "Overview board: KPIs, trend, funnel, leaderboard and table (last 30 days)",
   "KPI strip of spend, leads, clicks and CTR (last 30 days)",
   "Spend trend by day (last 30 days)",
   "Spend by client table (last 7 days)",
@@ -137,6 +124,19 @@ describe("WidgetPicker", () => {
 
     const tiles = within(dialog).getAllByRole("button", { name: /^Add / })
     expect(tiles).toHaveLength(registry.list().length)
+    // dashkit 0.4's ten kinds: bar, donut and comparison folded into Chart.
+    expect(tiles.map((t) => t.getAttribute("aria-label"))).toEqual([
+      "Add KPI",
+      "Add KPI strip",
+      "Add Trend",
+      "Add Chart",
+      "Add Funnel",
+      "Add Leaderboard",
+      "Add Table",
+      "Add Heading",
+      "Add Text",
+      "Add Briefing",
+    ])
     for (const tile of tiles) expect(tile.querySelector("svg")).not.toBeNull()
 
     await user.click(within(dialog).getByRole("button", { name: "Add Trend" }))
@@ -170,7 +170,7 @@ describe("Dashboard discoverability", () => {
     await user.click(screen.getByRole("radio", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
     const saved = JSON.parse(puts()[0][1].body)
-    expect(saved.version).toBe(2)
+    expect(saved.version).toBe(3)
     expect(saved.widgets.map((w) => w.type)).toEqual(["kpi"])
   })
 
@@ -209,7 +209,7 @@ describe("Dashboard discoverability", () => {
     expect(screen.queryByRole("button", { name: "Add widget" })).toBeNull()
   })
 
-  it("empty dashboard shows three starters", async () => {
+  it("empty dashboard shows the four starters", async () => {
     renderWorkspace()
 
     const starters = await screen.findByRole("region", { name: "Start with" })
@@ -233,26 +233,42 @@ describe("Dashboard discoverability", () => {
     const user = userEvent.setup()
     renderWorkspace()
 
-    await user.click(await screen.findByRole("button", { name: STARTER_LABELS[0] }))
+    await user.click(await screen.findByRole("button", { name: STARTER_LABELS[1] }))
 
     await waitFor(() => expect(puts()).toHaveLength(1))
     // An empty dashboard gets its page title as a level-1 heading, the widget under it.
     const saved = JSON.parse(puts()[0][1].body)
-    expect(saved.version).toBe(2)
+    expect(saved.version).toBe(3)
     const [heading, widget] = saved.widgets
     expect(heading).toMatchObject({ type: "heading", title: "Weekly spend", data: { level: 1 }, layout: { x: 0, y: 0, w: 12 } })
     expect(widget.type).toBe("kpi-strip")
     expect(widget.layout.y).toBe(heading.layout.h)
     expect(widget.bindings).toEqual({
-      a: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" },
-      b: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" },
-      c: { metric: "clicks", window: { preset: "last_30d" }, compare: "previous" },
-      d: { metric: "ctr", window: { preset: "last_30d" }, compare: "previous" },
+      query: {
+        metrics: [{ metric: "spend" }, { metric: "meta_leads" }, { metric: "clicks" }, { metric: "ctr" }],
+        window: { preset: "last_30d" },
+        compare: "previous",
+      },
     })
     // Still in view, the starters gone now there is a widget, and one Undo away.
     expect(screen.getByRole("radio", { name: /View/ })).toBeChecked()
     expect(screen.queryByRole("region", { name: "Start with" })).toBeNull()
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument()
+  })
+
+  it("the default board starter adds the whole board in one click", async () => {
+    const user = userEvent.setup()
+    renderWorkspace()
+
+    await user.click(await screen.findByRole("button", { name: STARTER_LABELS[0] }))
+
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    const saved = JSON.parse(puts()[0][1].body)
+    expect(saved.widgets.map((w) => w.type)).toEqual(["heading", "kpi-strip", "trend", "funnel", "leaderboard", "table"])
+    // One batch, so one Undo takes it all back.
+    await user.click(screen.getByRole("button", { name: "Undo" }))
+    await waitFor(() => expect(puts()).toHaveLength(2))
+    expect(JSON.parse(puts()[1][1].body).widgets).toEqual([])
   })
 
   it("chat panel receives the three starters", async () => {

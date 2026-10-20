@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { AlertTriangle, Check, Eye, Loader2, MessageCircle, Monitor, Pencil, Plus, Redo2, RotateCw, Undo2, X } from "lucide-react"
 import { summarize } from "dashkit/core"
 import {
+  BriefingProvider,
   Canvas,
   ComponentsProvider,
   DashboardDataProvider,
@@ -29,6 +30,7 @@ import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { registry, components } from "@/lib/dashkit/registry"
 import { dataSource } from "@/lib/dashkit/data-source"
+import { fetchBriefing } from "@/lib/dashkit/briefing"
 import { applyIncomingOps } from "@/lib/dashboard-ops"
 import { addWidgetOps, starterOps } from "@/lib/dashboard-starters"
 import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
@@ -51,8 +53,12 @@ import { useDashboardCatalog, useDashboardDoc } from "./useDashboardDoc"
 // starters add one to an empty dashboard). The editor has its own title
 // field in its toolbar.
 //
-// Docs arrive as dashkit v2 (useDashboardDoc migrates stored v1 ones), a flat
-// list of widgets on a 12-column grid, with headings in place of sections.
+// Docs arrive as dashkit v3 (useDashboardDoc migrates stored v1 and v2 ones,
+// with the catalog), a flat list of widgets on a 12-column grid, with headings
+// in place of sections, each data widget carrying one query.
+//
+// Both modes sit inside one BriefingProvider: briefing widgets ask
+// POST /api/dashboards/<id>/briefing for their text (lib/dashkit/briefing).
 //
 // Ways in for a new dashboard: view mode's "Add widget" (the palette's grid in
 // a dialog, which drops into the editor with the widget selected), one-click
@@ -436,7 +442,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
                       data-dk="narrow-notice"
                       className="dk:m-0 dk:flex dk:items-center dk:gap-2 dk:rounded-xl dk:border dk:border-border dk:bg-card dk:px-4 dk:py-3 dk:text-sm dk:text-body"
                     >
-                      <Monitor className="dk:size-4 dk:shrink-0 dk:text-muted" aria-hidden="true" />
+                      <Monitor className="dk:size-4 dk:shrink-0 dk:text-muted-foreground" aria-hidden="true" />
                       <span>Editing needs a wider window</span>
                     </p>
                     <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
@@ -473,7 +479,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
 
   return (
     <WorkspaceLayout
-      board={board}
+      board={<BriefingProvider onBriefing={fetchBriefing}>{board}</BriefingProvider>}
       railed={mode === "edit"}
       chat={
         <ChatConversation

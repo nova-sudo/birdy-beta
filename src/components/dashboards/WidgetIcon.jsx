@@ -1,11 +1,10 @@
 "use client"
 import {
   ChartColumn,
-  ChartPie,
-  Columns2,
   Funnel,
   Gauge,
   Heading,
+  LayoutDashboard,
   ListOrdered,
   Rows3,
   Sparkles,
@@ -16,8 +15,8 @@ import {
 
 /**
  * Lucide icons for dashkit's widget icon names (each widget definition's
- * `icon`), for Birdy's own dashboard UI around the editor: the view-mode
- * "Add widget" picker and the empty-state starters. The editor itself draws
+ * `icon`, for dashkit 0.4.0's ten kinds), for Birdy's own dashboard UI around
+ * the editor: the view-mode "Add widget" picker and the empty-state starters. The editor itself draws
  * dashkit's icons. A static map rather than lucide's dynamic import: it is a
  * closed set, and the bundle should carry only these.
  */
@@ -29,11 +28,11 @@ const ICONS = {
   sparkles: Sparkles,
   "trending-up": TrendingUp,
   "bar-chart-3": ChartColumn,
-  "pie-chart": ChartPie,
-  "columns-2": Columns2,
   filter: Funnel,
   "list-ordered": ListOrdered,
   table: Table,
+  // Not a widget kind: the empty state's default-board starter.
+  "layout-dashboard": LayoutDashboard,
 }
 
 /**

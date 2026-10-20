@@ -58,7 +58,7 @@ const res = (body, status = 200) => ({
 
 const now = "2026-10-18T00:00:00.000Z"
 // Stored before dashkit 0.3.0: a v1 doc (sections of spanned widgets). The
-// workspace migrates it on load; every save after that stores v2.
+// workspace migrates it on load; every save after that stores v3.
 const DOC = {
   id: "d1",
   version: 1,
@@ -104,12 +104,21 @@ const BOUND_DOC = {
 }
 let doc = DOC
 
-// Saved docs are v2: a flat widget list, where the migrated "Overview"
+// Saved docs are v3: a flat widget list, where the migrated "Overview"
 // section is a heading widget (id s1). These are the widgets under it.
 const bodyWidgets = (saved) => {
-  expect(saved.version).toBe(2)
+  expect(saved.version).toBe(3)
   expect(saved.sections).toBeUndefined()
   return saved.widgets.filter((w) => w.type !== "heading")
+}
+
+// The briefing route's reply to one request body; tests swap it.
+let briefingReply = () => res(BRIEFING)
+const BRIEFING = {
+  parts: [{ text: "Spend is " }, { text: "steady", bold: true }, { text: " this week." }],
+  findings: [{ text: "Leads held at 120", tone: "neutral" }],
+  generated_at: new Date().toISOString(),
+  cached: false,
 }
 
 // How many upcoming PUTs should fail (a 500), to exercise the retry paths.
@@ -121,7 +130,10 @@ function mockApi(path, init = {}) {
     return Promise.resolve(res({ detail: "boom" }, 500))
   }
   if (path === "/api/dashboards/catalog") return Promise.resolve(res(CATALOG))
-  if (path === "/api/dashboards/resolve") return Promise.resolve(res({ slots: [] }))
+  if (path === "/api/dashboards/query") {
+    return Promise.resolve(res({ frames: JSON.parse(init.body).queries.map(() => null) }))
+  }
+  if (path === "/api/dashboards/d1/briefing") return Promise.resolve(briefingReply(JSON.parse(init.body)))
   if (path === "/api/dashboards/d1" && method === "GET") return Promise.resolve(res(doc))
   if (path === "/api/dashboards/d1" && method === "PUT") return Promise.resolve(res(JSON.parse(init.body)))
   return Promise.resolve(res({}, 404))
@@ -154,6 +166,7 @@ beforeEach(() => {
   search = ""
   doc = DOC
   failPuts = 0
+  briefingReply = () => res(BRIEFING)
   vi.mocked(toast.error).mockClear()
   replace.mockClear()
   chatProps.current = null
@@ -175,7 +188,7 @@ describe("Dashboard workspace", () => {
     expect(screen.getByRole("complementary", { name: "Properties" })).toBeInTheDocument()
   })
 
-  it("loads a v1 doc as v2", async () => {
+  it("loads a v1 doc as v3", async () => {
     doc = { ...BIRDY_V1, id: "d1" }
     const { container } = renderWorkspace()
 
@@ -192,7 +205,7 @@ describe("Dashboard workspace", () => {
     expect(summary).toMatch(/- \[w_trend_spend\] trend "[^"]*" 6×4 @0,8/)
     expect(summary).toMatch(/- \[w_kpi_spend\] kpi "[^"]*" 3×3 @6,8/)
 
-    // The next save stores v2.
+    // The next save stores v3.
     act(() => {
       chatProps.current.onDashboardOps(
         [{ op: "updateWidgetData", widgetId: "sec_overview", patch: { level: 1 } }],
@@ -201,7 +214,7 @@ describe("Dashboard workspace", () => {
     })
     await waitFor(() => expect(puts()).toHaveLength(1))
     const saved = putBody(puts()[0])
-    expect(saved.version).toBe(2)
+    expect(saved.version).toBe(3)
     expect(saved.sections).toBeUndefined()
     expect(saved.widgets.map((w) => w.id)).toEqual([
       "sec_overview",
@@ -564,5 +577,71 @@ describe("Dashboard workspace", () => {
     expect(redo).not.toBeDisabled()
     await user.click(redo)
     await waitFor(() => expect(container.querySelectorAll('[data-dk="widget"]')).toHaveLength(3))
+  })
+  describe("briefing", () => {
+    // Stored as v3: one briefing widget, which asks the host for its text.
+    const BRIEFING_DOC = {
+      id: "d1",
+      version: 3,
+      title: "Weekly spend",
+      widgets: [{ id: "b1", type: "briefing", version: 2, title: "Briefing", layout: { x: 0, y: 0, w: 6, h: 5 }, data: {} }],
+      meta: { createdAt: now, updatedAt: now, lastAuthor: "user" },
+    }
+    const briefingPosts = () =>
+      vi
+        .mocked(apiRequest)
+        .mock.calls.filter(([path]) => path === "/api/dashboards/d1/briefing")
+        .map(([, init]) => ({ method: init.method, body: JSON.parse(init.body) }))
+
+    it("BriefingProvider posts refresh flag", async () => {
+      doc = BRIEFING_DOC
+      const user = userEvent.setup()
+      renderWorkspace()
+
+      // Mount asks for the (possibly cached) briefing.
+      expect(await screen.findByText("steady")).toBeInTheDocument()
+      expect(screen.getByText("Leads held at 120")).toBeInTheDocument()
+      expect(briefingPosts()).toEqual([{ method: "POST", body: { refresh: false } }])
+      // generated_at reached the widget as generatedAt.
+      expect(screen.getByText("Updated just now")).toBeInTheDocument()
+
+      // Refresh skips the cache.
+      await user.click(screen.getByRole("button", { name: "Refresh" }))
+      await waitFor(() => expect(briefingPosts()).toHaveLength(2))
+      expect(briefingPosts()[1]).toEqual({ method: "POST", body: { refresh: true } })
+    })
+
+    it("a focus on the widget goes along with the request", async () => {
+      doc = { ...BRIEFING_DOC, widgets: [{ ...BRIEFING_DOC.widgets[0], data: { focus: "lead quality" } }] }
+      renderWorkspace()
+
+      await screen.findByText("steady")
+      expect(briefingPosts()).toEqual([{ method: "POST", body: { focus: "lead quality", refresh: false } }])
+    })
+
+    it("a rate-limited refresh keeps the briefing and says why, with Retry", async () => {
+      doc = BRIEFING_DOC
+      const user = userEvent.setup()
+      renderWorkspace()
+      await screen.findByText("steady")
+
+      briefingReply = () => res({ detail: "Too many briefing refreshes; try again later." }, 429)
+      await user.click(screen.getByRole("button", { name: "Refresh" }))
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/Too many refreshes/)
+      expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument()
+      expect(screen.getByText("steady")).toBeInTheDocument()
+    })
+
+    it("a briefing the model couldn't write shows the error state", async () => {
+      doc = BRIEFING_DOC
+      briefingReply = () => res({ detail: "Couldn't write the briefing right now." }, 502)
+      renderWorkspace()
+
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(/couldn.t write the briefing/i)
+      expect(within(alert).getByRole("button", { name: "Retry" })).toBeInTheDocument()
+    })
   })
 })

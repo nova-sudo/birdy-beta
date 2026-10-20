@@ -1,53 +1,78 @@
 /**
  * The one-click starters on an empty dashboard, and the ops the "Add widget"
  * picker sends from view mode. Each list is applied to a real dashkit doc and
- * validated against a catalog shaped like the backend's, so a wrong slot,
- * metric, window or placement shows up here rather than as an empty widget.
+ * validated against Birdy's catalog (a snapshot of the backend's), so a wrong
+ * metric, window, query shape or placement shows up here rather than as an
+ * empty widget.
  */
 import { describe, it, expect } from "vitest"
 import { applyAll, createDashboard, validate } from "dashkit/core"
 import { createRegistry, builtinWidgets } from "dashkit/react"
 import { STARTERS, addWidgetOps, starterOps } from "@/lib/dashboard-starters"
+import catalog from "@/app/dashboards/__tests__/fixtures/birdy-catalog.json"
 
 const registry = createRegistry(builtinWidgets)
-const catalog = {
-  metrics: [
-    { key: "spend", label: "Spend", format: "currency", dimensions: ["client", "day"] },
-    { key: "meta_leads", label: "Meta leads", format: "integer", dimensions: ["client"] },
-    { key: "clicks", label: "Clicks", format: "integer", dimensions: ["client", "day"] },
-    { key: "ctr", label: "CTR", format: "percentage", dimensions: ["client"] },
-  ],
-  dimensions: [
-    { key: "client", label: "Client" },
-    { key: "day", label: "Day" },
-  ],
-  windows: [
-    { preset: "last_7d", label: "Last 7 days" },
-    { preset: "last_30d", label: "Last 30 days" },
-  ],
-}
 
 const blank = () => createDashboard({ title: "Blank", id: "d1" })
-const run = (doc, ops) => applyAll(doc, ops, { registry })
+const run = (doc, ops) => applyAll(doc, ops, { registry, catalog })
 const heading = (id, title, level) => ({ op: "addWidget", widget: { id, type: "heading", title, data: { level } } })
+const last30 = { preset: "last_30d" }
 
 describe("dashboard starters", () => {
-  it("lists the three starters with the spec's copy", () => {
+  it("lists the default board first, then the single-widget starters", () => {
     expect(STARTERS.map((s) => s.label)).toEqual([
+      "Overview board: KPIs, trend, funnel, leaderboard and table (last 30 days)",
       "KPI strip of spend, leads, clicks and CTR (last 30 days)",
       "Spend trend by day (last 30 days)",
       "Spend by client table (last 7 days)",
     ])
   })
 
-  it("starters validate under v2", () => {
+  it("starters validate against the v3 registry", () => {
     for (const { kind } of STARTERS) {
       const next = run(blank(), starterOps(kind, blank()))
-      expect(next.version).toBe(2)
-      expect(next.sections).toBeUndefined()
+      expect(next.version).toBe(3)
       expect(validate(next, { registry, catalog }).errors).toEqual([])
-      expect(next.widgets.map((w) => w.type)).toEqual(["heading", expect.not.stringMatching(/^heading$/)])
+      expect(next.widgets[0]).toMatchObject({ type: "heading", data: { level: 1 } })
+      // Every widget after the title is bound to a v3 query.
+      for (const widget of next.widgets.slice(1)) {
+        expect(widget.bindings, `${kind} ${widget.type}`).toEqual({ query: expect.any(Object) })
+        expect(Object.keys(widget.bindings)).toEqual(["query"])
+      }
     }
+  })
+
+  it("the default board is the KPI row, a trend over day, a funnel, a leaderboard and a table", () => {
+    const next = run(blank(), starterOps("overview-board", blank()))
+    const [title, strip, trend, funnel, leaders, table] = next.widgets
+
+    expect(next.widgets.map((w) => w.type)).toEqual(["heading", "kpi-strip", "trend", "funnel", "leaderboard", "table"])
+    expect(title).toMatchObject({ title: "Blank", data: { level: 1 } })
+    expect(strip.bindings.query.metrics.map((m) => m.metric)).toEqual(["spend", "meta_leads", "clicks", "ctr"])
+    expect(strip.bindings.query).toMatchObject({ window: last30, compare: "previous" })
+    expect(trend.bindings.query).toEqual({ metrics: [{ metric: "spend" }], over: "day", window: last30 })
+    expect(funnel.bindings.query).toEqual({
+      metrics: [
+        { metric: "impressions", label: "Impressions" },
+        { metric: "clicks", label: "Clicks" },
+        { metric: "meta_leads", label: "Leads" },
+        { metric: "ghl_won_opps", label: "Won opps" },
+      ],
+      window: last30,
+    })
+    expect(leaders.bindings.query).toMatchObject({ by: "client", window: last30, compare: "previous" })
+    expect(leaders.bindings.query.metrics[0].metric).toBe("spend")
+    expect(table.bindings.query).toMatchObject({ by: "client", window: last30 })
+
+    // Laid out in reading order: the strip under the title, then two rows of pairs.
+    expect(strip.layout).toMatchObject({ x: 0, y: 1, w: 12 })
+    expect([trend, funnel].map((w) => [w.layout.x, w.layout.y])).toEqual([
+      [0, 4],
+      [6, 4],
+    ])
+    expect(leaders.layout.y).toBe(trend.layout.y + trend.layout.h)
+    expect([leaders.layout.x, table.layout.x]).toEqual([0, 6])
+    expect(table.layout.y).toBe(leaders.layout.y)
   })
 
   // On an empty dashboard the starter gives it a page title first: a level-1
@@ -59,37 +84,41 @@ describe("dashboard starters", () => {
     expect(ops[0]).toMatchObject({ op: "addWidget", widget: { type: "heading", title: "Blank", data: { level: 1 } } })
     const headingId = ops[0].widget.id
     expect(headingId).toEqual(expect.any(String))
-    expect(ops[1]).toMatchObject({ op: "addWidget", after: headingId, widget: { type: "kpi-strip" } })
-    expect(ops.some((op) => "sectionId" in op || /Section/.test(op.op))).toBe(false)
-    const widgetId = ops[1].widget.id
-    // The strip shows deltas by default (showDelta), so each metric asks for
-    // the previous period to compare against.
-    expect(ops.slice(2)).toEqual([
-      { op: "setBinding", widgetId, slot: "a", binding: { metric: "spend", window: { preset: "last_30d" }, compare: "previous" } },
-      { op: "setBinding", widgetId, slot: "b", binding: { metric: "meta_leads", window: { preset: "last_30d" }, compare: "previous" } },
-      { op: "setBinding", widgetId, slot: "c", binding: { metric: "clicks", window: { preset: "last_30d" }, compare: "previous" } },
-      { op: "setBinding", widgetId, slot: "d", binding: { metric: "ctr", window: { preset: "last_30d" }, compare: "previous" } },
-    ])
+    expect(ops).toHaveLength(2)
+    // The strip shows each metric's change, so the query asks for the previous period.
+    expect(ops[1]).toEqual({
+      op: "addWidget",
+      after: headingId,
+      widget: {
+        type: "kpi-strip",
+        id: expect.any(String),
+        query: {
+          metrics: [{ metric: "spend" }, { metric: "meta_leads" }, { metric: "clicks" }, { metric: "ctr" }],
+          window: last30,
+          compare: "previous",
+        },
+      },
+    })
 
     const next = run(doc, ops)
     const [title, strip] = next.widgets
     expect(title.layout).toEqual({ x: 0, y: 0, w: 12, h: 1 })
-    expect(strip.id).toBe(widgetId)
+    expect(strip.id).toBe(ops[1].widget.id)
     expect(strip.layout).toMatchObject({ x: 0, y: 1, w: 12 })
   })
 
-  it("trend starter binds spend by day over the last 30 days", () => {
+  it("trend starter queries spend over day for the last 30 days", () => {
     const next = run(blank(), starterOps("spend-trend-30d", blank()))
 
     const widget = next.widgets.find((w) => w.type === "trend")
-    expect(widget.bindings).toEqual({ series: { metric: "spend", by: "day", window: { preset: "last_30d" } } })
+    expect(widget.bindings).toEqual({ query: { metrics: [{ metric: "spend" }], over: "day", window: last30 } })
   })
 
-  it("table starter binds spend by client over the last 7 days", () => {
+  it("table starter queries spend by client for the last 7 days", () => {
     const next = run(blank(), starterOps("spend-by-client-table-7d", blank()))
 
     const widget = next.widgets.find((w) => w.type === "table")
-    expect(widget.bindings).toEqual({ rows: { metric: "spend", by: "client", window: { preset: "last_7d" } } })
+    expect(widget.bindings).toEqual({ query: { metrics: [{ metric: "spend" }], by: "client", window: { preset: "last_7d" } } })
   })
 
   // Only the first widget under a heading uses the heading as `after`; later
@@ -97,7 +126,11 @@ describe("dashboard starters", () => {
   it("on a dashboard with widgets a starter chains after the last one, without another heading", () => {
     const doc = run(blank(), [
       heading("h", "Overview", 2),
-      { op: "addWidget", after: "h", widget: { id: "k", type: "kpi", bindings: { value: { metric: "spend", window: { preset: "last_7d" } } } } },
+      {
+        op: "addWidget",
+        after: "h",
+        widget: { id: "k", type: "kpi", query: { metrics: [{ metric: "spend" }], window: { preset: "last_7d" } } },
+      },
     ])
     const ops = starterOps("spend-trend-30d", doc)
 
@@ -108,6 +141,16 @@ describe("dashboard starters", () => {
     // A 6-wide trend fits to the right of the 3-wide KPI, on its row.
     expect(trend.layout).toMatchObject({ x: 3, y: 1 })
     expect(validate(next, { registry, catalog }).errors).toEqual([])
+  })
+
+  it("the default board chains its widgets after the last one too", () => {
+    const doc = run(blank(), [heading("h", "Overview", 1)])
+    const ops = starterOps("overview-board", doc)
+
+    expect(ops[0]).toMatchObject({ op: "addWidget", after: "h", widget: { type: "kpi-strip" } })
+    // Each next widget goes after the one before it.
+    for (let i = 1; i < ops.length; i++) expect(ops[i].after).toBe(ops[i - 1].widget.id)
+    expect(run(doc, ops).widgets.map((w) => w.id)).toEqual(["h", ...ops.map((op) => op.widget.id)])
   })
 
   it("a heading-only dashboard gets the widget under that heading", () => {

@@ -4,9 +4,15 @@ import { createTheme } from "dashkit/react"
  * Every dashkit theme variable (`DK_VARS`), mapped onto a Birdy token, so
  * dashboards follow the product's colours, radius, shadows and fonts rather
  * than dashkit's built-in copy of them. References are `var(--…)` so a token
- * change flows through without touching this file. Two values are not tokens:
+ * change flows through without touching this file. Five values are not tokens:
  * - `--dk-chart-2` is #2E9E8F, the teal of dashkit's checked chart palette;
  *   Birdy has no token for a second series colour.
+ * - `--dk-chart-6..8` are dashkit's own defaults (blue, red, violet). A trend
+ *   split by client draws up to eight lines and no hue may repeat; the pd
+ *   palette's remaining hues are status colours (success green is the kpi's
+ *   "up" colour, danger red and info blue sit next to dashkit's 7 and 6), so
+ *   Birdy has nothing distinct to give them. `--dk-chart-5` is the one pd hue
+ *   left that is distinct from all seven others: the burnt orange `--pd-amber`.
  * - `--dk-radius` is Birdy's card radius (PdCard's rounded-2xl), which only
  *   exists as a Tailwind theme value, so it is spelled out here.
  * The fonts point at the next/font variables on <html> (`--font-pd-*` are
@@ -46,6 +52,10 @@ export const DK_THEME_VARS = {
   "--dk-chart-2": "#2E9E8F",
   "--dk-chart-3": "var(--pd-warning)",
   "--dk-chart-4": "var(--pd-faint)",
+  "--dk-chart-5": "var(--pd-amber)",
+  "--dk-chart-6": "#2F6FD0",
+  "--dk-chart-7": "#CF4A3A",
+  "--dk-chart-8": "#8F5FC2",
   // Shape and type
   "--dk-radius": "calc(var(--radius) + 8px)",
   "--dk-shadow": "var(--shadow-sm)",
