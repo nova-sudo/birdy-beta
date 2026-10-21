@@ -25,6 +25,7 @@ const TOOL_MAP = {
   get_facebook_leads:     { category: "meta",   icon: Users,         label: "Meta leads"      , running: "Fetching Meta leads" },
   get_meta_insights_live: { category: "meta",   icon: Activity,      label: "Meta live"       , running: "Calling Meta API" },
   get_meta_leads_live:    { category: "meta",   icon: Activity,      label: "Meta leads (live)", running: "Calling Meta API for leads" },
+  get_daily_metrics:      { category: "meta",   icon: TrendingUp,    label: "Daily metrics"   , running: "Reading day-by-day results" },
 
   // GHL tools
   get_ghl_contacts:           { category: "ghl", icon: Users,      label: "GHL contacts"      , running: "Fetching GHL contacts" },
@@ -37,6 +38,7 @@ const TOOL_MAP = {
   // Summary / comparison
   get_account_summary: { category: "compare", icon: Briefcase,   label: "Summary"   , running: "Building your summary" },
   compare_periods:     { category: "compare", icon: TrendingUp,  label: "Compare"   , running: "Comparing periods" },
+  render_ui:           { category: "compare", icon: BarChart3,   label: "Chart"     , running: "Drawing the chart" },
 
   // Custom metrics
   list_custom_metrics:   { category: "custom", icon: Sparkles,   label: "Custom metrics", running: "Looking up custom metrics" },

@@ -1,64 +1,45 @@
 "use client"
-import { formatMetric } from "@/lib/format-metric"
-import { TrendingUp, TrendingDown } from "lucide-react"
+import { CountUp } from "@/components/motion"
+import { Delta } from "@/components/chat/blocks/MetricCard"
+import { formatValue, shapeDelta } from "@/lib/chat-viz"
+
+const VARIANT_TEXT = { success: "text-pd-success", warning: "text-pd-amber", error: "text-pd-danger" }
 
 /**
- * Renders a compact multi-KPI grid from a :::stats block.
+ * 2-4 related KPIs from a :::stats block: one card split into cells, like the
+ * KPI strip on the hubs, rather than a row of separate boxes.
  *
- * Payload: array of stat objects:
- *   [{ label, value, format?, variant?, delta? }, ...]
+ * Payload: [{ label, value, format?, currency?, deltaPct?, deltaLabel?, polarity? }, ...]
+ * (older replies: { variant, delta }).
  */
 export default function StatsGrid({ payload }) {
   if (!Array.isArray(payload) || payload.length === 0) return null
-
-  const cols = payload.length === 2 ? "grid-cols-2"
-    : payload.length === 3 ? "grid-cols-3"
-    : payload.length >= 4 ? "grid-cols-2 md:grid-cols-4"
-    : "grid-cols-1"
+  const items = payload.slice(0, 4)
+  const cols = items.length === 1 ? "grid-cols-1"
+    : items.length === 2 ? "grid-cols-2"
+    : items.length === 3 ? "grid-cols-3"
+    : "grid-cols-2 sm:grid-cols-4"
 
   return (
-    <div className={`my-3 grid ${cols} gap-2`}>
-      {payload.map((s, i) => <Stat key={i} stat={s} />)}
+    <div className={`not-prose my-3 grid ${cols} overflow-hidden rounded-2xl border border-pd-border bg-pd-border shadow-sm`} style={{ gap: 1 }}>
+      {items.map((stat, i) => <Stat key={i} stat={stat || {}} />)}
     </div>
   )
 }
 
 function Stat({ stat }) {
-  const {
-    label,
-    value,
-    format = "integer",
-    variant,
-    delta,
-    currency = "$",
-  } = stat || {}
-
-  const accent = variant === "success" ? "text-pd-success"
-    : variant === "warning" ? "text-pd-warning"
-    : variant === "error" ? "text-pd-danger"
-    : "text-pd-ink"
-
-  const deltaNum = typeof delta === "number" ? delta : null
-  const DeltaIcon = deltaNum != null
-    ? (deltaNum > 0 ? TrendingUp : deltaNum < 0 ? TrendingDown : null)
-    : null
-  const deltaColor = deltaNum > 0 ? "text-pd-success"
-    : deltaNum < 0 ? "text-pd-danger"
-    : "text-pd-subtle"
-
+  const { label, value, format = "integer", currency, variant } = stat
+  const delta = shapeDelta(stat)
   return (
-    <div className="rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-sm">
-      <div className="text-[10.5px] uppercase tracking-[.04em] text-pd-faint font-bold truncate">
-        {label}
+    <div className="min-w-0 bg-pd-surface px-4 py-3.5">
+      <div className="truncate text-[12px] font-medium text-pd-subtle">{label}</div>
+      <div className={`mt-1.5 font-pd-display text-[21px] font-bold leading-none tabular-nums ${VARIANT_TEXT[variant] || "text-pd-ink"}`}>
+        <CountUp value={formatValue(value, format, currency)} />
       </div>
-      <div className={`mt-0.5 font-pd-display text-[19px] font-bold tabular-nums ${accent}`}>
-        {formatMetric(value, format, currency)}
-      </div>
-      {DeltaIcon && (
-        <div className={`mt-0.5 flex items-center gap-1 text-[10px] font-medium tabular-nums ${deltaColor}`}>
-          <DeltaIcon className="h-3 w-3" />
-          {Math.abs(deltaNum).toFixed(format === "percentage" ? 1 : 0)}
-          {format === "percentage" ? "%" : ""}
+      {delta && (
+        <div className="mt-2 flex min-w-0 items-center gap-1.5">
+          <Delta delta={delta} size="sm" />
+          {delta.label && <span className="truncate text-[11px] text-pd-faint">{delta.label}</span>}
         </div>
       )}
     </div>
