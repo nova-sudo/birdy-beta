@@ -8,6 +8,7 @@ import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
+import { delatex } from "@/lib/chat-math"
 import ChatUIBlock from "@/components/chat/ChatUIBlock"
 import ToolPill from "@/components/chat/ToolPill"
 import MetricCard from "@/components/chat/blocks/MetricCard"
@@ -84,7 +85,7 @@ export default function MessageBubble({
                 case "text":
                   return (
                     <ReactMarkdown key={key} remarkPlugins={[remarkGfm]} components={mdComponents}>
-                      {seg.content}
+                      {delatex(seg.content)}
                     </ReactMarkdown>
                   )
                 case "ui":
