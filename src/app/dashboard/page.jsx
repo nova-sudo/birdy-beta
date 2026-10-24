@@ -47,7 +47,7 @@ import {
 //
 // The handoff draws a full 1600×1040 app frame — a 68px icon rail and a 64px
 // header with an avatar. Birdy already renders both globally from
-// src/app/layout.jsx (AppSidebar + the search header + UserMenu), so the rail
+// src/app/layout.jsx (the ds AppSidebar and TopBar), so the rail
 // and the avatar are dropped here rather than duplicated, and the design's
 // title block and controls become a page-level header. What is kept is the
 // frame itself: canvas background, 1px border, 16px radius, with the content

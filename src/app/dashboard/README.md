@@ -273,7 +273,7 @@ These are deliberate. Everything else matches the design's tokens.
    background (`body` in `globals.css`, plus `SidebarInset`), so the box has
    nothing left to delimit — cards and rails read as raised surfaces on every
    route, not just this one. The title survives as an ordinary page heading.
-2. **No icon rail, no header avatar.** `AppSidebar` and `UserMenu` already
+2. **No icon rail, no header avatar.** `AppSidebar` (account menu included) and `TopBar` already
    render both globally from `src/app/layout.jsx`. Duplicating them would put
    two nav systems on one screen. The design's frame — canvas, border, radius,
    independently scrolling columns — is kept.

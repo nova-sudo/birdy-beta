@@ -74,11 +74,41 @@ describe("RootLayout shell", () => {
     expect(screen.getByRole("dialog", { name: "Birdy chat" })).toBeInTheDocument()
   })
 
-  it("opens the chat on Ctrl+J and the search on Ctrl+K", () => {
+  // Opening the mobile sheet runs before any palette test: a palette left
+  // mounted by a finished test (Radix keeps closing content until an
+  // animationend that jsdom never fires) leaves a second focus trap behind,
+  // and two traps fighting over focus spin forever.
+  it("closes the mobile navigation sheet on a route change", () => {
+    const { rerender } = renderLayout()
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }))
+    expect(screen.getByRole("dialog", { name: "Navigation" })).toBeInTheDocument()
+    pathnameMock.value = "/clients"
+    rerender(<RootLayout><p>page body</p></RootLayout>)
+    expect(screen.queryByRole("dialog", { name: "Navigation" })).toBeNull()
+  })
+
+  it("opens the chat on Ctrl+J", () => {
+    renderLayout()
+    fireEvent.keyDown(window, { key: "j", ctrlKey: true })
+    expect(screen.getByRole("dialog", { name: "Birdy chat" })).toBeInTheDocument()
+  })
+
+  it("opens the search on Ctrl+K", () => {
     renderLayout()
     fireEvent.keyDown(window, { key: "k", ctrlKey: true })
     expect(screen.getByPlaceholderText(/Search pages/)).toBeInTheDocument()
-    fireEvent.keyDown(window, { key: "j", ctrlKey: true })
+  })
+
+  it("sends the typed text to Birdy when the Ask row is chosen", () => {
+    const heard = vi.fn()
+    const onAsk = (e) => heard(e.detail)
+    window.addEventListener(ASK_BIRDY_EVENT, onAsk)
+    renderLayout()
+    fireEvent.keyDown(window, { key: "k", ctrlKey: true })
+    fireEvent.change(screen.getByPlaceholderText(/Search pages/), { target: { value: "roas this week" } })
+    fireEvent.click(screen.getByText("Ask Birdy: roas this week"))
+    window.removeEventListener(ASK_BIRDY_EVENT, onAsk)
+    expect(heard).toHaveBeenCalledWith({ message: "roas this week" })
     expect(screen.getByRole("dialog", { name: "Birdy chat" })).toBeInTheDocument()
   })
 })

@@ -97,10 +97,12 @@ export default function ImpersonationBar() {
               </Button>
             }
           >
-            <UserRoundCog className="mr-2 inline size-4 align-text-bottom" />
-            Impersonating <span className="font-semibold">{me.name || me.email}</span>
-            <span className="hidden sm:inline"> ({me.email})</span>
-            {me.act && <span className="opacity-80"> · as {me.act}</span>}
+            <span className="block min-w-0 truncate">
+              <UserRoundCog className="mr-2 inline size-4 align-text-bottom" />
+              Impersonating <span className="font-semibold">{me.name || me.email}</span>
+              <span className="hidden sm:inline"> ({me.email})</span>
+              {me.act && <span className="opacity-80"> · as {me.act}</span>}
+            </span>
           </SystemBanner>
         </motion.div>
       )}
