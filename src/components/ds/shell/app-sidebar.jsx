@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "../overlays/dropdown-menu"
 import { NAV_ITEMS, isActive } from "./nav-config"
+import { useModKey } from "./use-mod-key"
 import { SidebarCredits } from "./sidebar-credits"
 import { SidebarJobs } from "./sidebar-jobs"
 
@@ -77,13 +78,16 @@ function useStoredUserName() {
  * @param {string} [props.agencyName] Overrides the name read from the stored user.
  * @param {() => void} [props.onSearch] Called by the search button (and ⌘K handlers wired by the layout).
  * @param {() => void} [props.onNavigate] Called after any link is chosen; the mobile sheet uses it to close.
+ * @param {boolean} [props.minimal] Admin console: no Browse/Ask switch, search, credits or jobs.
+ * @param {string} [props.homeHref="/clients"] Where the agency header links.
  */
-function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, className }) {
+function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, minimal = false, homeHref = "/clients", className }) {
   const pathname = usePathname()
   const { state: birdyState } = useBirdy()
   const { isAdmin } = useRole()
   const userName = useStoredUserName()
   const name = agencyName ?? userName ?? "Birdy"
+  const modKey = useModKey()
   const [mode, setMode] = React.useState("browse")
 
   const handleMode = (next) => {
@@ -114,31 +118,34 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, class
       )}
     >
       <Link
-        href="/clients"
+        href={homeHref}
         onClick={onNavigate}
         className="flex min-w-0 items-center gap-2.5 rounded-control p-1 outline-none focus-visible:shadow-control-focus"
       >
         <BirdyAvatar state={birdyState} size={32} />
         <span className="min-w-0 flex-1 truncate text-base font-semibold">{name}</span>
       </Link>
+      {!minimal && (
+        <>
+          <SegmentedTabs
+            ariaLabel="Sidebar mode"
+            value={mode}
+            onValueChange={handleMode}
+            items={MODES}
+            className="w-full [&>button]:flex-1"
+          />
 
-      <SegmentedTabs
-        ariaLabel="Sidebar mode"
-        value={mode}
-        onValueChange={handleMode}
-        items={MODES}
-        className="w-full [&>button]:flex-1"
-      />
-
-      <button
-        type="button"
-        onClick={onSearch}
-        className="flex h-control items-center gap-2 rounded-control bg-background px-3 text-sm text-muted-foreground shadow-control outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus"
-      >
-        <Search className="size-4 shrink-0" />
-        <span className="flex-1 text-left">Search</span>
-        <Kbd>⌘K</Kbd>
-      </button>
+          <button
+            type="button"
+            onClick={onSearch}
+            className="flex h-control items-center gap-2 rounded-control bg-background px-3 text-sm text-muted-foreground shadow-control outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus"
+          >
+            <Search className="size-4 shrink-0" />
+            <span className="flex-1 text-left">Search</span>
+            <Kbd>{modKey}K</Kbd>
+          </button>
+        </>
+      )}
 
       <nav aria-label="Main" className="-mx-1 flex-1 overflow-y-auto px-1">
         <ul className="flex flex-col gap-0.5">
@@ -174,8 +181,8 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, class
       </nav>
 
       <div className="flex flex-col gap-2">
-        <SidebarJobs />
-        <SidebarCredits />
+        {!minimal && <SidebarJobs />}
+        {!minimal && <SidebarCredits />}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

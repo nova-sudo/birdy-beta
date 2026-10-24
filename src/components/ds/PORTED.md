@@ -52,7 +52,9 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | shell/page-header.jsx | Paper-only, no Bytes source | n/a | Eyebrow, `h1` `text-2xl`, `text-base` muted description, period + actions on the right; unrelated to legacy `src/components/page-header.jsx` (the title-slot context) |
 | shell/system-banner.jsx | Paper-only, no Bytes source | n/a | Full-width `role="status"` strip, soft status tones, optional action and dismiss |
 | shell/mobile-nav-sheet.jsx | Paper-only, no Bytes source | n/a | ds `Sheet side="left"` wrapping `AppSidebar`; `onNavigate` closes it |
-| shell/sidebar-credits.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarCredits.jsx`) | `useSidebar` collapsed-rail variant | Same `useCredits` data and copy; ds tokens. Legacy file untouched until Task 10 |
-| shell/sidebar-jobs.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarJobs.jsx`) | `useSidebar` menu primitives | Same `useJobs` data; ds `Popover`/`Tooltip` (`side="right"`). Legacy file untouched until Task 10 |
+| shell/sidebar-credits.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarCredits.jsx`) | `useSidebar` collapsed-rail variant | Same `useCredits` data and copy; ds tokens. Legacy file deleted in Task 10 |
+| shell/sidebar-jobs.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarJobs.jsx`) | `useSidebar` menu primitives | Same `useJobs` data; ds `Popover`/`Tooltip` (`side="right"`). Legacy file deleted in Task 10 |
+| shell/command-search.jsx | Paper-only, no Bytes source | n/a | ⌘K palette over `CommandDialog`: nav pages plus an "Ask Birdy: <text>" row (the old header search bar behaviour) |
+| shell/use-mod-key.js | Paper-only, no Bytes source | n/a | "⌘" vs "Ctrl" label, copying the legacy header's platform detection |
 
 Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.

@@ -10,6 +10,7 @@ import { DashboardHeaderControls, DashboardHeaderTitle } from "@/components/dash
 import { PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { Button } from "../primitives/button"
 import { Kbd } from "../primitives/kbd"
+import { useModKey } from "./use-mod-key"
 
 /**
  * Global header: menu button (below md), the page's title, Ask Birdy, the
@@ -28,6 +29,7 @@ import { Kbd } from "../primitives/kbd"
  * @param {() => void} [props.onSearch] Called by the search icon button (below md).
  */
 function TopBar({ title, actions, onMenuClick, onSearch, className }) {
+  const modKey = useModKey()
   return (
     <header
       data-ds="top-bar"
@@ -68,7 +70,7 @@ function TopBar({ title, actions, onMenuClick, onSearch, className }) {
         <Button variant="outline" className="hidden md:inline-flex" onClick={openBirdyChat}>
           <Sparkles className="text-primary" />
           Ask Birdy
-          <Kbd>⌘J</Kbd>
+          <Kbd>{modKey}J</Kbd>
         </Button>
         <NotificationsDropdown />
       </div>
