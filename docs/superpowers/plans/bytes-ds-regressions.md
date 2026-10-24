@@ -16,3 +16,7 @@ Crawled with no token breakage: `/dashboard`, `/clients`, `/clients/[id]`, `/cli
 Not reachable with this account: `/admin/*` (redirects to `/dashboard`, account is not an admin), `/onboarding` (already onboarded, redirects to `/clients`), `/credits` (redirects to `/billing`), `/register` (signed in), `/install/[siteId]` (needs a site id). These need checking in Phases 7–9.
 
 Note for future crawls: the first screenshot after a navigation catches the page's fade-in at partial opacity. Take a throwaway capture, wait one second, then capture again.
+
+## Dev-only hydration warning (2026-10-24)
+
+Every page logs a React hydration mismatch on `next dev`: Radix `useId` values in the shell (sidebar account menu, search dialog) differ between server HTML and the client. It does not happen in the production build. With `next build && next start`, the account menu trigger's id equals the `aria-labelledby` the opened menu points back to. On `next dev` the two differ. So the dev server renders the tree one branch deeper on the server than on the client, and the app code is not the cause. A layout change (2c82b72) only moved the ids, so it was reverted (72941ff). Ignore this warning in dev crawls. If it ever shows up in a production build, investigate it then.
