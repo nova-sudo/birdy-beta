@@ -5,7 +5,9 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import { AlertTriangle, Check, Copy, LayoutDashboard, Undo2 } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { Button, Surface } from "@/components/ds"
 import { EASE_SPRING } from "@/components/motion"
+import { cn } from "@/lib/utils"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
 import { delatex } from "@/lib/chat-math"
@@ -31,19 +33,21 @@ export default function MessageBubble({
   const parsed = !isUser ? parseChatUI(message.content) : null
 
 
-  // Your side is a soft pill on the right; Birdy's side is an unboxed,
+  // Your side is an ink bubble on the right; Birdy's side is an unboxed,
   // full-width answer with the mascot and name above it — it reads like a
   // short report, which leaves room for the charts and tables it carries.
   if (isUser) {
     return (
       <motion.div
+        data-ds="message-bubble"
+        data-role="user"
         className="flex justify-end"
         initial={{ opacity: 0, y: 18, scale: 0.96 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: EASE_SPRING }}
       >
-        <div className={`${widthClass} rounded-[22px] bg-pd-divider px-4 py-2.5 text-pd-ink`}>
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
+        <div className={cn(widthClass, "rounded-tl-[18px] rounded-tr-[18px] rounded-bl-[18px] rounded-br-sm bg-foreground px-3.5 py-2 text-background")}>
+          <p className="whitespace-pre-wrap text-base leading-[22px]">{message.content}</p>
         </div>
       </motion.div>
     )
@@ -59,26 +63,28 @@ export default function MessageBubble({
 
   return (
     <motion.div
+      data-ds="message-bubble"
+      data-role="assistant"
       className="group flex flex-col gap-2"
       initial={{ opacity: 0, y: 22, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.6, ease: EASE_SPRING }}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <BirdyAvatar size={30} paused />
-        <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
+        <BirdyAvatar size={28} paused />
+        <span className="text-sm font-semibold text-foreground">Birdy</span>
         {tools.map(([tool, n]) => (
           <ToolPill key={tool} name={tool} count={n > 1 ? n : undefined} />
         ))}
       </div>
 
-      <div className="w-full pl-[34px]">
-          <div className="prose prose-sm max-w-none text-pd-body
-            prose-headings:font-pd-display prose-headings:text-pd-ink prose-headings:font-semibold
-            prose-p:text-pd-body prose-p:text-[14px] prose-p:leading-[1.65] prose-p:my-1.5
-            prose-strong:text-pd-ink
-            prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-[14px]
-            prose-code:text-pd-primary prose-code:bg-pd-primary-tint prose-code:px-1 prose-code:rounded-md prose-code:text-xs">
+      <div className="w-full pl-9">
+          <div className="prose prose-sm max-w-none text-foreground
+            prose-headings:text-foreground prose-headings:font-semibold
+            prose-p:text-foreground prose-p:text-base prose-p:leading-6 prose-p:my-1.5
+            prose-strong:text-foreground
+            prose-ul:my-1.5 prose-li:my-0.5 prose-li:text-base
+            prose-code:text-primary prose-code:bg-primary-soft prose-code:px-1 prose-code:rounded-sm prose-code:text-xs">
             {parsed?.segments.map((seg, i) => {
               const key = `${messageIndex}-${i}`
               switch (seg.type) {
@@ -113,12 +119,12 @@ export default function MessageBubble({
       </div>
 
       {message.dashboard_ops?.length > 0 && (
-        <div className="pl-[34px]">
+        <div className="pl-9">
           <DashboardChanges message={message} onUndo={onUndoDashboardOps} />
         </div>
       )}
 
-      <div className="pl-[34px]">
+      <div className="pl-9">
         <CopyButton text={message.content} />
       </div>
     </motion.div>
@@ -142,45 +148,46 @@ function DashboardChanges({ message, onUndo }) {
   const lines = applied ? message.dashboard_diff ?? [] : []
 
   return (
-    <div
+    <Surface
       role="status"
       aria-label={title}
-      className={`rounded-2xl border bg-pd-surface px-3 py-2.5 ${applied ? "border-pd-border" : "border-pd-danger"}`}
+      className={cn("px-3 py-2.5", !applied && "bg-danger-soft text-danger-ink")}
     >
-      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-pd-body">
-        <Icon className={`size-3 ${applied ? "text-pd-primary" : "text-pd-danger"}`} aria-hidden="true" />
+      <div className="flex items-center gap-1.5 text-xs font-medium">
+        <Icon className={cn("size-3.5", applied ? "text-primary" : "text-danger")} aria-hidden="true" />
         {title}
         {applied && onUndo && undo !== "done" && (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setUndo(onUndo() ? "done" : "blocked")}
-            className="ml-auto inline-flex cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+            className="ml-auto h-6 px-2 text-xs"
           >
             <Undo2 className="size-3" aria-hidden="true" />
             Undo
-          </button>
+          </Button>
         )}
-        {applied && undo === "done" && <span className="ml-auto text-[11.5px] font-medium text-pd-faint">Undone</span>}
+        {applied && undo === "done" && <span className="ml-auto text-xs text-muted-foreground">Undone</span>}
       </div>
       {lines.length > 0 && (
-        <ul className="mt-1.5 space-y-0.5 text-[12.5px] leading-snug text-pd-muted">
+        <ul className="mt-1.5 space-y-0.5 text-xs leading-snug text-muted-foreground">
           {lines.map((line, i) => (
             <li key={i} className="flex gap-1.5">
-              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-pd-faint" aria-hidden="true" />
+              <span className="mt-[7px] size-1 shrink-0 rounded-full bg-muted-foreground" aria-hidden="true" />
               <span className="min-w-0">{line}</span>
             </li>
           ))}
         </ul>
       )}
       {undo === "blocked" && (
-        <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">
+        <p className="mt-1 text-xs leading-snug text-muted-foreground">
           Newer edits came after this change. Use Undo in the editor to step back through them.
         </p>
       )}
       {!applied && message.dashboard_error && (
-        <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">{message.dashboard_error}</p>
+        <p className="mt-1 text-xs leading-snug">{message.dashboard_error}</p>
       )}
-    </div>
+    </Surface>
   )
 }
 
@@ -189,8 +196,9 @@ function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
   if (!text || typeof navigator === "undefined" || !navigator.clipboard) return null
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text)
@@ -200,10 +208,10 @@ function CopyButton({ text }) {
           // Clipboard can be blocked (permissions, insecure origin) — nothing to do.
         }
       }}
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-medium text-pd-subtle opacity-60 transition-[opacity,background-color,color] hover:bg-foreground/5 hover:text-pd-ink group-hover:opacity-100"
+      className="h-6 px-2 text-xs text-muted-foreground opacity-60 transition-[opacity,background-color,color] hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
     >
-      {copied ? <Check className="size-3.5 text-pd-success" /> : <Copy className="size-3.5" />}
+      {copied ? <Check className="size-3.5 text-success" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
       {copied ? "Copied" : "Copy"}
-    </button>
+    </Button>
   )
 }

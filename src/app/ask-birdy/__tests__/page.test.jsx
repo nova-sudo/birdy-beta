@@ -64,6 +64,20 @@ beforeEach(() => {
   chatProps.current = null
 })
 
+describe("page chrome", () => {
+  it("renders the PageHeader title and the ds scope tabs and surfaces", async () => {
+    seed([convo("s1", "A chat")])
+    const { container } = render(<AskBirdyPage />)
+    await screen.findByText("A chat")
+
+    const header = container.querySelector('[data-ds="page-header"]')
+    expect(header).toHaveTextContent("Ask Birdy")
+    expect(container.querySelector('[data-ds="segmented-tabs"]')).not.toBeNull()
+    expect(container.querySelectorAll('[data-ds="surface"]').length).toBe(2)
+    expect(container.querySelector('[data-ds="button"]')).toHaveTextContent("New Chat")
+  })
+})
+
 describe("loading history", () => {
   it("lists the conversations the server returns", async () => {
     seed([convo("s1", "What is my CPL?"), convo("s2", "Lead summary")])
@@ -232,7 +246,7 @@ describe("conversation scope", () => {
     const user = userEvent.setup()
     render(<AskBirdyPage />)
 
-    await user.click(await screen.findByRole("radio", { name: "Clients" }))
+    await user.click(await screen.findByRole("tab", { name: "Clients" }))
 
     expect(screen.getByText("Aura's CPL")).toBeInTheDocument()
     expect(screen.queryByText("Whole account")).not.toBeInTheDocument()
@@ -243,7 +257,7 @@ describe("conversation scope", () => {
     const user = userEvent.setup()
     render(<AskBirdyPage />)
 
-    await user.click(await screen.findByRole("radio", { name: "Global" }))
+    await user.click(await screen.findByRole("tab", { name: "Global" }))
 
     expect(screen.getByText("Whole account")).toBeInTheDocument()
     expect(screen.queryByText("Aura's CPL")).not.toBeInTheDocument()
@@ -262,7 +276,7 @@ describe("conversation scope", () => {
     await user.click(await screen.findByText("Aura's CPL"))
     await waitFor(() => expect(chatProps.current.sessionId).toBe("s2"))
 
-    await user.click(screen.getByRole("radio", { name: "Global" }))
+    await user.click(screen.getByRole("tab", { name: "Global" }))
     expect(chatProps.current.sessionId).toBe("s2")
   })
 

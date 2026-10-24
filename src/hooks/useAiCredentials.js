@@ -26,8 +26,19 @@ function readCache() {
  * an already-mounted BirdyChatModal instance in the same tab/document).
  */
 export function useAiCredentials() {
-  const [status, setStatus] = useState(() => readCache())
+  // The cache is read after mount, never during render: the server has no
+  // localStorage, so a lazy initial read made the first client render differ
+  // from the server's (React hydration error 418 on /ask-birdy). `hydrated` tells
+  // callers the cache has been consulted, so they can hold a neutral shell
+  // instead of flashing the "add your key" state at a returning user.
+  const [status, setStatus] = useState({ configured: false })
+  const [hydrated, setHydrated] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setStatus(readCache())
+    setHydrated(true)
+  }, [])
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -71,6 +82,7 @@ export function useAiCredentials() {
 
   return {
     configured: !!status.configured,
+    hydrated,
     loading,
     provider: status.provider,
     model: status.model,

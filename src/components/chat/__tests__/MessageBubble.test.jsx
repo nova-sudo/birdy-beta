@@ -106,11 +106,25 @@ describe("MessageBubble inline visuals", () => {
     expect(screen.getByText("Cost per lead")).toBeInTheDocument()
     // CPL fell and lower is better, so the pill reads as an improvement.
     const pill = screen.getAllByText("12.5%")[0].closest("span")
-    expect(pill.className).toContain("text-pd-success")
+    expect(pill.className).toContain("text-success-ink")
     expect(screen.getByText("Spend")).toBeInTheDocument()
     expect(screen.getByText("0%")).toBeInTheDocument()
     expect(screen.getByRole("figure", { name: "Ad spend vs CPL" })).toBeInTheDocument()
     expect(screen.getByRole("list", { name: "Legend" })).toHaveTextContent("Ad spendCPL(right)")
     expect(screen.getByText("Most of the drop came from Aura.")).toBeInTheDocument()
+  })
+})
+
+describe("MessageBubble ds bubbles", () => {
+  it("renders the user's message as an ink bubble and Birdy's as an unboxed reply", () => {
+    const { container, rerender } = render(
+      <MessageBubble message={{ role: "user", content: "How is CPL?" }} messageIndex={0} />,
+    )
+    const user = container.querySelector('[data-ds="message-bubble"][data-role="user"]')
+    expect(user).toHaveTextContent("How is CPL?")
+    expect(user.firstElementChild.className).toContain("bg-foreground")
+
+    rerender(<MessageBubble message={reply({ content: "Down 12%." })} messageIndex={1} />)
+    expect(container.querySelector('[data-ds="message-bubble"][data-role="assistant"]')).toHaveTextContent("Down 12%.")
   })
 })

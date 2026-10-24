@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import { Check, CheckCircle2 } from "lucide-react"
 import Image from "next/image"
 
@@ -54,19 +53,19 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
 
   if (disabled) {
     return (
-      <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-pd-success">
-        <CheckCircle2 className="h-3.5 w-3.5" />
+      <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-success-ink">
+        <CheckCircle2 className="size-3.5" aria-hidden="true" />
         <span>Answered</span>
       </div>
     )
   }
 
   return (
-    <div className="mt-3 -mx-1 space-y-3">
+    <div data-ds="chat-ui-block" className="mt-3 space-y-3">
       {fields.map(field => (
         <div key={field.id} className="space-y-2">
           {field.label && (
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider px-1">
+            <p className="text-xs font-medium text-muted-foreground px-1">
               {field.label}
             </p>
           )}
@@ -81,16 +80,19 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
                     key={opt.value}
                     type="button"
                     onClick={() => handleRadioSelect(field.id, opt.value)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-full border text-left text-sm transition-[background-color,border-color,transform] duration-200 active:scale-[.98] ${
+                    aria-pressed={selected}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-control px-3.5 py-2.5 text-left text-sm outline-none transition-[background-color,box-shadow,transform] duration-150 ease-press focus-visible:shadow-control-focus active:scale-[.99] motion-reduce:transform-none",
                       selected
-                        ? "bg-pd-primary border-pd-primary text-white shadow-pd-segment"
-                        : "bg-pd-surface border-pd-border text-pd-ink hover:border-pd-primary hover:bg-pd-primary-tint/50"
-                    }`}
+                        ? "bg-background shadow-control-focus"
+                        : "bg-muted hover:bg-neutral-soft"
+                    )}
                   >
-                    <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                      selected ? "border-white bg-white/30" : "border-gray-300"
-                    }`}>
-                      {selected && <div className="h-1.5 w-1.5 rounded-full bg-white" />}
+                    <div className={cn(
+                      "flex size-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                      selected ? "border-primary" : "border-border"
+                    )}>
+                      {selected && <div className="size-1.5 rounded-full bg-primary" />}
                     </div>
                     <span className="font-medium">{opt.label}</span>
                   </button>
@@ -109,13 +111,15 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
                     key={opt.value}
                     type="button"
                     onClick={() => toggleCheckbox(field.id, opt.value)}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border text-sm font-semibold transition-[background-color,border-color,transform] duration-200 active:scale-[.97] ${
+                    aria-pressed={checked}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-control px-3 py-1.5 text-sm font-medium outline-none transition-[background-color,box-shadow,transform] duration-150 ease-press focus-visible:shadow-control-focus active:scale-[.98] motion-reduce:transform-none",
                       checked
-                        ? "bg-pd-primary border-pd-primary text-white"
-                        : "bg-pd-surface border-pd-border text-pd-ink hover:border-pd-primary hover:bg-pd-primary-tint/50"
-                    }`}
+                        ? "bg-primary text-primary-foreground shadow-control"
+                        : "bg-muted text-foreground hover:bg-neutral-soft"
+                    )}
                   >
-                    {checked && <Check className="h-3 w-3" />}
+                    {checked && <Check className="size-3" aria-hidden="true" />}
                     {opt.label}
                   </button>
                 )
@@ -126,7 +130,6 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
           {/* Text input */}
           {field.type === "text" && (
             <Input
-              className="h-9 text-sm"
               placeholder={field.placeholder || ""}
               value={values[field.id] || ""}
               onChange={e => setValue(field.id, e.target.value)}
@@ -137,7 +140,6 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
           {field.type === "number" && (
             <Input
               type="number"
-              className="h-9 text-sm"
               min={field.min}
               max={field.max}
               step={field.step || "any"}
@@ -150,7 +152,7 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
           {/* Select */}
           {field.type === "select" && (
             <Select value={values[field.id] || ""} onValueChange={v => setValue(field.id, v)}>
-              <SelectTrigger className="h-9 w-full text-sm">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder={field.placeholder || "Select..."}>
                   {(() => {
                     const opt = (field.options || []).flatMap(o => o.options || [o]).find(o => o.value === values[field.id])
@@ -164,12 +166,12 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
                   })()}
                 </SelectValue>
               </SelectTrigger>
-              <SelectContent className="bg-white max-h-[240px]">
+              <SelectContent className="max-h-60">
                 {(field.options || []).map((optOrGroup, i) => {
                   if (optOrGroup.group) {
                     return (
                       <div key={i}>
-                        <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">{optOrGroup.group}</div>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">{optOrGroup.group}</div>
                         {optOrGroup.options.map(opt => (
                           <SelectItem key={opt.value} value={opt.value}>
                             <span className="flex items-center gap-2">
@@ -199,12 +201,8 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
       {/* Confirm button — only for non-radio-only forms */}
       {!isRadioOnly && (
         <div className="flex justify-end pt-1">
-          <Button
-            onClick={handleSubmit}
-            size="sm"
-            className="h-8 px-4 text-xs gap-1.5"
-          >
-            <Check className="h-3.5 w-3.5" />
+          <Button onClick={handleSubmit} variant="primary" size="sm">
+            <Check aria-hidden="true" />
             Confirm
           </Button>
         </div>
