@@ -203,7 +203,7 @@ function DataTable({
           </div>
         ) : (
           <>
-            <div data-slot="data-table-scroll" className="overflow-x-auto max-md:hidden">
+            <div data-slot="data-table-scroll" className="relative overflow-x-auto max-md:hidden">
               <table className="w-full text-sm">
                 <thead>
                   {table.getHeaderGroups().map((group) => (

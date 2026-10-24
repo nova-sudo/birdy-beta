@@ -117,7 +117,11 @@ function PricingControls({ config, mutate }) {
       </div>
 
       {/* Enforcement (the hard stopper) */}
+      {/* role="group": Notice defaults to a live region, and a toggle inside one
+          would re-announce itself every time it flips. */}
       <Notice
+        role="group"
+        aria-label="Credit enforcement"
         tone={enforce ? "danger" : "neutral"}
         title="Enforce credit limits"
         className="items-start gap-4 p-4"

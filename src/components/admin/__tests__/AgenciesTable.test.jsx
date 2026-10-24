@@ -7,7 +7,7 @@
 // (the server refuses them, this just says so before the round trip).
 
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 const deleteUserAccount = vi.fn()
@@ -163,6 +163,30 @@ describe("row actions", () => {
     await openMenu(user)
     await user.click(await screen.findByRole("menuitem", { name: /view chats/i }))
     expect(onViewChats).toHaveBeenCalledWith(expect.objectContaining({ email: "owner@agency.com" }))
+  })
+})
+
+describe("plan filter", () => {
+  it("offers the plans in the data and hides the other rows", async () => {
+    const user = userEvent.setup()
+    render(
+      <AgenciesTable
+        loading={false}
+        agencies={[
+          owner(),
+          owner({ email: "free@agency.com", owner: "Free Person", plan: "Free" }),
+        ]}
+        toolbar={<span />}
+      />
+    )
+    expect(table().getByText("Free Person")).toBeInTheDocument()
+
+    // fireEvent, as the ds DataTable tests do: the facet popover opens on click, not pointerdown.
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: /plan/i }))
+    fireEvent.click(screen.getByRole("radio", { name: /free/i }))
+
+    expect(table().getByText("Free Person")).toBeInTheDocument()
+    expect(table().queryByText("SOUP Marketing")).toBeNull()
   })
 })
 

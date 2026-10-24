@@ -62,6 +62,13 @@ describe("admin credits page", () => {
     expect(markup).toHaveValue(1)
   })
 
+  it("keeps the enforcement switch out of a live region", () => {
+    render(<AdminCreditsPage />)
+    const sw = screen.getByRole("switch", { name: "Enforce credit limits" })
+    expect(sw.closest("[role='status']")).toBeNull()
+    expect(sw.closest("[data-ds='notice']")).not.toBeNull()
+  })
+
   it("has no legacy classes or inline hex", () => {
     const { container } = render(<AdminCreditsPage />)
     const legacy = new RegExp(["p", "d-"].join("") + "|font-" + ["p", "d"].join("") + "-display")

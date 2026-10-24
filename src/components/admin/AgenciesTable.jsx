@@ -112,6 +112,14 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
     }
   }
 
+  const planOptions = useMemo(
+    () =>
+      [...new Set((agencies || []).map((a) => a.plan).filter(Boolean))]
+        .sort()
+        .map((p) => ({ value: p, label: p })),
+    [agencies]
+  )
+
   const columns = useMemo(
     () => [
       {
@@ -139,7 +147,8 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
       {
         accessorKey: "plan",
         header: "Plan",
-        meta: { label: "Plan" },
+        // Options are the plans actually present, so the filter never offers an empty choice.
+        meta: { label: "Plan", variant: "select", options: planOptions },
         cell: ({ row }) => <Badge tone={planTone(row.original.plan)}>{row.original.plan}</Badge>,
       },
       {
@@ -232,7 +241,7 @@ export default function AgenciesTable({ agencies, loading, onViewChats, onDelete
         },
       },
     ],
-    [onViewChats]
+    [onViewChats, planOptions]
   )
 
   return (

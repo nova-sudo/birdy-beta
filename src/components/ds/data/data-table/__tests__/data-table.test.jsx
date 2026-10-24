@@ -67,6 +67,13 @@ describe("DataTable", () => {
     expect(t.queryByText("Charlie")).toBeNull()
   })
 
+  it("positions the scroll container so absolutely placed header content stays clipped", () => {
+    // An sr-only span in a header is position:absolute; without a positioned ancestor it
+    // escapes overflow-x-auto and widens the page. jsdom can't measure, so assert the class.
+    const { container } = render(<DataTable columns={columns} data={data} />)
+    expect(container.querySelector("[data-slot='data-table-scroll']").className).toMatch(/\brelative\b/)
+  })
+
   it("clicking a sortable header toggles aria-sort", () => {
     render(<DataTable columns={columns} data={data} />)
     const th = () => within(table()).getByRole("columnheader", { name: /Spend/ })
