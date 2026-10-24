@@ -129,7 +129,9 @@ export default function ChatComposer({
       )}
 
       {/* One pill: field and send on a single centre line. It takes the
-          focus ring while you type in it. */}
+          focus ring while you type in it. The 22/26px radii are the legacy
+          composer's, kept so the pill reads round at both heights (Paper p-6-0
+          Composer v2 is a 52px full pill). */}
       <div
         className={cn(
           "flex items-end gap-2 bg-background shadow-floating transition-shadow duration-150 focus-within:shadow-control-focus",
@@ -167,7 +169,7 @@ export default function ChatComposer({
         <div className="mt-2 flex items-center justify-between gap-3 px-3 text-xs text-muted-foreground">
           <span className="min-w-0">{foot}</span>
           {!compact && (
-            <span className="flex shrink-0 items-center gap-1">
+            <span className="hidden shrink-0 items-center gap-1 sm:flex">
               <Kbd>↵</Kbd> send ·
               <Kbd className="ml-1">/</Kbd> commands
             </span>

@@ -9,9 +9,8 @@ import { renderToString } from "react-dom/server"
 import { hydrateRoot } from "react-dom/client"
 import { act } from "react"
 
-vi.mock("@/lib/api", () => ({
-  apiRequest: vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ configured: true }) })),
-}))
+const apiRequest = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ configured: true }) }))
+vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: () => ({ clientGroups: [] }) }))
 vi.mock("@/components/birdy/BirdyAvatar", () => ({ default: () => <span data-testid="birdy-avatar" /> }))
@@ -50,6 +49,28 @@ describe("ChatConversation hydration", () => {
     expect(mismatches).toEqual([])
     // After mount the cache is honoured: the composer is there.
     expect(host.querySelector("textarea")).not.toBeNull()
+    host.remove()
+  })
+
+  it("shows the shell on the server, then the add-your-key state once status resolves with no cache", async () => {
+    apiRequest.mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ configured: false }) })
+
+    const html = renderToString(<ChatConversation sessionId={null} />)
+    expect(html).not.toContain("Add your own AI agent")
+    expect(html).not.toContain("<textarea")
+
+    const host = document.createElement("div")
+    document.body.appendChild(host)
+    host.innerHTML = html
+    await act(async () => {
+      hydrateRoot(host, <ChatConversation sessionId={null} />, {
+        onRecoverableError: (e) => errors(String(e)),
+      })
+    })
+
+    expect(errors.mock.calls.filter((c) => /hydrat|didn't match|did not match/i.test(c.join(" ")))).toEqual([])
+    expect(host.textContent).toContain("Add your own AI agent")
+    expect(host.querySelector("textarea")).toBeNull()
     host.remove()
   })
 })

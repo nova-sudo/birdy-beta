@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useLayoutEffect, useCallback } from "react"
 import { apiRequest } from "@/lib/api"
 
 const CACHE_KEY = "aiCredentialsIntegration"
@@ -35,7 +35,9 @@ export function useAiCredentials() {
   const [hydrated, setHydrated] = useState(false)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  // Layout effect: runs before the first paint, so a returning user never sees
+  // the blank shell frame (it is a no-op on the server, with no SSR warning in React 19).
+  useLayoutEffect(() => {
     setStatus(readCache())
     setHydrated(true)
   }, [])

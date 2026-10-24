@@ -84,7 +84,7 @@ export default function ChatUIBlock({ fields = [], onSubmit, disabled = false })
                     className={cn(
                       "flex w-full items-center gap-3 rounded-control px-3.5 py-2.5 text-left text-sm outline-none transition-[background-color,box-shadow,transform] duration-150 ease-press focus-visible:shadow-control-focus active:scale-[.99] motion-reduce:transform-none",
                       selected
-                        ? "bg-background shadow-control-focus"
+                        ? "bg-primary-soft shadow-[inset_0_0_0_1.5px_var(--color-primary)]"
                         : "bg-muted hover:bg-neutral-soft"
                     )}
                   >

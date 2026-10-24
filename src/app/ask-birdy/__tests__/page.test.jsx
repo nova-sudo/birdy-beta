@@ -73,8 +73,43 @@ describe("page chrome", () => {
     const header = container.querySelector('[data-ds="page-header"]')
     expect(header).toHaveTextContent("Ask Birdy")
     expect(container.querySelector('[data-ds="segmented-tabs"]')).not.toBeNull()
-    expect(container.querySelectorAll('[data-ds="surface"]').length).toBe(2)
+    // The chat itself sits in the page's main region, the list in its aside.
+    expect(within(screen.getByRole("main")).getByText("fire-session")).toBeInTheDocument()
+    expect(screen.getByRole("complementary")).toHaveTextContent("A chat")
     expect(container.querySelector('[data-ds="button"]')).toHaveTextContent("New Chat")
+  })
+})
+
+describe("Chats sheet below md", () => {
+  it("opens the same list from the Chats button and closes when a row is picked", async () => {
+    seed([convo("s1", "Earlier chat")])
+    apiRequest.mockResolvedValueOnce(ok({ session_id: "s1", messages: [] }))
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+    await screen.findByText("Earlier chat")
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+    await user.click(screen.getByRole("button", { name: "Chats" }))
+    const sheet = await screen.findByRole("dialog")
+    expect(within(sheet).getByRole("tab", { name: "Clients" })).toBeInTheDocument()
+    expect(within(sheet).getByRole("button", { name: /new chat/i })).toBeInTheDocument()
+    expect(within(sheet).getByRole("button", { name: /delete conversation: earlier chat/i })).toBeInTheDocument()
+
+    await user.click(within(sheet).getByText("Earlier chat"))
+    await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("closes when a new chat is started from the sheet", async () => {
+    seed([convo("s1", "Earlier chat")])
+    const user = userEvent.setup()
+    render(<AskBirdyPage />)
+    await screen.findByText("Earlier chat")
+
+    await user.click(screen.getByRole("button", { name: "Chats" }))
+    const sheet = await screen.findByRole("dialog")
+    await user.click(within(sheet).getByRole("button", { name: /new chat/i }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
   })
 })
 

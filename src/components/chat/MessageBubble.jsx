@@ -46,6 +46,7 @@ export default function MessageBubble({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: EASE_SPRING }}
       >
+        {/* 18/18/6/18 corners: Paper p-6-0 user bubble. */}
         <div className={cn(widthClass, "rounded-tl-[18px] rounded-tr-[18px] rounded-bl-[18px] rounded-br-sm bg-foreground px-3.5 py-2 text-background")}>
           <p className="whitespace-pre-wrap text-base leading-[22px]">{message.content}</p>
         </div>
@@ -161,7 +162,7 @@ function DashboardChanges({ message, onUndo }) {
             variant="ghost"
             size="sm"
             onClick={() => setUndo(onUndo() ? "done" : "blocked")}
-            className="ml-auto h-6 px-2 text-xs"
+            className="ml-auto"
           >
             <Undo2 className="size-3" aria-hidden="true" />
             Undo
@@ -208,7 +209,7 @@ function CopyButton({ text }) {
           // Clipboard can be blocked (permissions, insecure origin) — nothing to do.
         }
       }}
-      className="h-6 px-2 text-xs text-muted-foreground opacity-60 transition-[opacity,background-color,color] hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
+      className="text-muted-foreground opacity-60 transition-[opacity,background-color,color] hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100"
     >
       {copied ? <Check className="size-3.5 text-success" aria-hidden="true" /> : <Copy className="size-3.5" aria-hidden="true" />}
       {copied ? "Copied" : "Copy"}
