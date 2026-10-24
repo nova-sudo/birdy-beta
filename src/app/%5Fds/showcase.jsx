@@ -129,7 +129,8 @@ const SWATCHES = [
 ]
 const TYPE = [
   ["text-xs", "text-xs", "13 · Captions and meta"], ["text-sm", "text-sm", "14 · Body and controls"], ["text-base", "text-base", "16 · Section titles"],
-  ["text-lg", "text-lg", "20 · Card figures"], ["text-xl", "text-xl", "24 · Page titles"], ["text-2xl", "text-2xl", "32 · Hero figures"],
+  ["text-lg", "text-lg", "18 · Card sub-figures"], ["text-xl", "text-xl", "20 · Page section headings"], ["text-figure", "text-figure", "28 · Metric figures"],
+  ["text-2xl", "text-2xl", "32 · Page titles and hero figures"],
 ]
 const RADII = [["control", "rounded-control"], ["surface", "rounded-surface"], ["frame", "rounded-frame"], ["overlay", "rounded-overlay"]]
 const SHADOWS = [["control", "shadow-control"], ["surface", "shadow-surface"], ["floating", "shadow-floating"], ["overlay", "shadow-overlay"]]

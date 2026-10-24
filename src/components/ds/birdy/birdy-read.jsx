@@ -15,10 +15,10 @@ const MAX_ROWS = 5
 
 // Soft tinted chip behind each row's icon; the icon takes the tone's ink.
 const TONES = {
-  danger: { chip: "bg-danger-soft text-danger", Icon: AlertCircleIcon },
+  danger: { chip: "bg-danger-soft text-danger-ink", Icon: AlertCircleIcon },
   warning: { chip: "bg-warning-soft text-warning-ink", Icon: ClockIcon },
-  success: { chip: "bg-success-soft text-success", Icon: CheckIcon },
-  info: { chip: "bg-info-soft text-info", Icon: InfoIcon },
+  success: { chip: "bg-success-soft text-success-ink", Icon: CheckIcon },
+  info: { chip: "bg-info-soft text-info-ink", Icon: InfoIcon },
   neutral: { chip: "bg-neutral-soft text-neutral-ink", Icon: MinusIcon },
 }
 
@@ -30,11 +30,13 @@ function Action({ action }) {
     <span className="w-20 shrink-0">
       {href ? (
         <Button asChild size="sm" className="w-full">
-          <Link href={href}>{label}</Link>
+          <Link href={href}>
+            <span className="truncate">{label}</span>
+          </Link>
         </Button>
       ) : (
         <Button size="sm" className="w-full" onClick={onClick}>
-          {label}
+          <span className="truncate">{label}</span>
         </Button>
       )}
     </span>
@@ -59,13 +61,20 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, class
       data-ds="birdy-read"
       className={className}
       title={
-        <span className="inline-flex items-center gap-2">
-          <BirdyAvatar size={28} tone="white" />
-          {title}
+        <span className="flex min-w-0 items-center gap-2">
+          <BirdyAvatar size={28} tone="white" className="shrink-0" />
+          <span className="truncate">{title}</span>
           {findings.length > 0 && (
-            <span className="num inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
-              {findings.length}
-            </span>
+            <>
+              <span
+                data-slot="birdy-read-count"
+                aria-hidden="true"
+                className="num inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
+              >
+                {findings.length}
+              </span>
+              <span className="sr-only">{` \u2014 ${findings.length} ${findings.length === 1 ? "item" : "items"}`}</span>
+            </>
           )}
         </span>
       }

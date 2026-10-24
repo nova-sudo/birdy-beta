@@ -28,7 +28,8 @@ describe("BirdyRead", () => {
 
   it("shows the finding count in a primary badge", () => {
     render(<BirdyRead findings={[finding(1), finding(2), finding(3)]} />)
-    const badge = screen.getByText("3")
+    const badge = document.querySelector('[data-slot="birdy-read-count"]')
+    expect(badge.textContent).toBe("3")
     expect(badge.className).toContain("bg-primary")
   })
 
@@ -47,7 +48,7 @@ describe("BirdyRead", () => {
   it("renders the default empty line with no findings, and no badge", () => {
     render(<BirdyRead findings={[]} />)
     expect(screen.getByText("Nothing needs you right now.")).toBeTruthy()
-    expect(screen.queryByText("0")).toBeNull()
+    expect(document.querySelector('[data-slot="birdy-read-count"]')).toBeNull()
   })
 
   it("renders a custom empty node", () => {
