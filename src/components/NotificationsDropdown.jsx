@@ -8,9 +8,7 @@ import { optionalFetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
 import { formatRelative } from "@/lib/alert-helpers"
 import { flash as flashBirdy } from "@/components/birdy/birdy-store"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Badge, Button, Popover, PopoverContent, PopoverTrigger, Skeleton } from "@/components/ds"
 import { Stagger, StaggerItem } from "@/components/motion"
 
 function formatTriggerDate(dateStr) {
@@ -62,12 +60,12 @@ function groupTriggeredRows(rows) {
 
 function TriggerMeta({ dateStr }) {
   const trigger = formatTriggerDate(dateStr)
-  if (!trigger) return <p className="text-xs text-pd-faint mt-0.5">Trigger date unknown</p>
+  if (!trigger) return <p className="text-xs text-muted-foreground mt-0.5">Trigger date unknown</p>
   return (
     <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-      <span className="text-xs text-pd-danger font-medium">{trigger.relative}</span>
-      <span className="text-xs text-pd-faint">·</span>
-      <span className="text-xs text-pd-faint">{trigger.absolute}</span>
+      <span className="text-xs text-danger-ink font-medium">{trigger.relative}</span>
+      <span className="text-xs text-muted-foreground">·</span>
+      <span className="text-xs text-muted-foreground">{trigger.absolute}</span>
     </div>
   )
 }
@@ -147,15 +145,18 @@ export default function NotificationsDropdown() {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          size="icon-lg"
-          className="relative size-10"
+          size="icon"
+          className="relative"
           aria-label="Notifications"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="size-5" />
           {totalCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-pd-danger text-white text-[10px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
+            <Badge
+              tone="danger"
+              className="num absolute -top-1.5 -right-1.5 min-w-4 justify-center rounded-full px-1 py-0 leading-4 shadow-surface"
+            >
               {totalCount > 99 ? "99+" : totalCount}
-            </span>
+            </Badge>
           )}
         </Button>
       </PopoverTrigger>
@@ -163,25 +164,25 @@ export default function NotificationsDropdown() {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-[340px] overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0"
+        className="w-[340px] overflow-hidden p-0"
       >
         {/* Header — no bell icon, just text */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-pd-divider">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <div className="flex items-center gap-2">
-            <span className="font-pd-display font-semibold text-sm text-pd-ink">Notifications</span>
+            <span className="font-semibold text-sm text-foreground">Notifications</span>
             {totalCount > 0 && (
-              <span className="bg-pd-danger text-white text-[11px] font-bold px-1.5 py-0.5 rounded-full leading-none">
+              <Badge tone="danger" className="num rounded-full">
                 {totalCount}
-              </span>
+              </Badge>
             )}
           </div>
           <Button
             variant="ghost"
-            size="icon-xs"
+            size="icon-sm"
             onClick={() => setOpen(false)}
             aria-label="Close"
           >
-            <X className="text-pd-faint" />
+            <X className="text-muted-foreground" />
           </Button>
         </div>
 
@@ -190,16 +191,16 @@ export default function NotificationsDropdown() {
           {loading ? (
             <div className="flex flex-col gap-2 p-4">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 rounded-xl" />
+                <Skeleton key={i} className="h-12" />
               ))}
             </div>
           ) : groups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 text-center px-4">
-              <Bell className="w-8 h-8 text-pd-faint mb-2" />
-              <p className="text-sm text-pd-subtle">No triggered alerts</p>
+              <Bell className="size-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">No triggered alerts</p>
             </div>
           ) : (
-            <Stagger as="ul" gap={0.05} className="divide-y divide-pd-divider">
+            <Stagger as="ul" gap={0.05} className="divide-y divide-border">
               {groups.map(({ parentAlert, children }) => {
                 const hasChildren = children.length > 0
 
@@ -209,11 +210,11 @@ export default function NotificationsDropdown() {
                     <StaggerItem as="li" key={child._virtual_id ?? `${child.id}_${child._client_id}`}>
                       <button
                         onClick={goToAlerts}
-                        className="w-full text-left px-4 py-3 hover:bg-pd-danger-bg/60 transition-colors flex items-start gap-2.5"
+                        className="w-full text-left px-4 py-3 hover:bg-danger-soft transition-colors flex items-start gap-2.5"
                       >
-                        <BellRing className="w-4 h-4 text-pd-danger mt-0.5 shrink-0" />
+                        <BellRing className="w-4 h-4 text-danger mt-0.5 shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-pd-ink truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {child._client_name}
                           </p>
                           <TriggerMeta dateStr={child.last_triggered_at} />
@@ -228,11 +229,11 @@ export default function NotificationsDropdown() {
                   <StaggerItem as="li" key={`real_${parentAlert.id}`}>
                     <button
                       onClick={goToAlerts}
-                      className="w-full text-left px-4 py-3 hover:bg-pd-danger-bg/50 transition-colors flex items-start gap-2.5"
+                      className="w-full text-left px-4 py-3 hover:bg-danger-soft transition-colors flex items-start gap-2.5"
                     >
-                      <BellRing className="w-4 h-4 text-pd-danger mt-0.5 shrink-0" />
+                      <BellRing className="w-4 h-4 text-danger mt-0.5 shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-pd-ink truncate">{parentAlert.name}</p>
+                        <p className="text-sm font-medium text-foreground truncate">{parentAlert.name}</p>
                         <TriggerMeta dateStr={parentAlert.last_triggered_at} />
                       </div>
                     </button>

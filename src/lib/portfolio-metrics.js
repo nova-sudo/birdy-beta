@@ -25,8 +25,8 @@ export function isImprovement(direction, polarity = HIGHER_IS_BETTER) {
 /** Tailwind text/background pair for a delta, given its direction and polarity. */
 export function deltaTone(direction, polarity = HIGHER_IS_BETTER) {
   return isImprovement(direction, polarity)
-    ? { text: "text-pd-success", bg: "bg-pd-success-bg" }
-    : { text: "text-pd-danger", bg: "bg-pd-danger-bg" };
+    ? { text: "text-success-ink", bg: "bg-success-soft" }
+    : { text: "text-danger-ink", bg: "bg-danger-soft" };
 }
 
 // ─── Funnel diagnosis ───────────────────────────────────────────────────────

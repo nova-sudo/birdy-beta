@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button, Input, Label, Notice } from "@/components/ds"
 import { publicRequest } from "@/lib/api"
@@ -124,9 +125,9 @@ export default function RegisterPage() {
 
         <p className="text-center text-xs text-muted-foreground">
           By creating an account, you agree to our{" "}
-          <a href="/billing/terms-of-service" className="text-primary hover:underline">Terms of Service</a>{" "}
+          <Link href="/billing/terms-of-service" className="text-primary hover:underline">Terms of Service</Link>{" "}
           and{" "}
-          <a href="/billing/privacy-policy" className="text-primary hover:underline">Privacy Policy</a>
+          <Link href="/billing/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>
         </p>
       </div>
     </AuthLayout>
