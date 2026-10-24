@@ -596,7 +596,7 @@ export default function MetricsHub() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="primary" aria-label="Create a custom metric" onClick={openCreateDialog}>
+            <Button variant="primary" aria-label="Create metric" onClick={openCreateDialog}>
               <Plus />
               <span className="hidden sm:inline">Create metric</span>
             </Button>

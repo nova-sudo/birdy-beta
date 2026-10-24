@@ -78,7 +78,7 @@ describe("Metrics Hub", () => {
     const header = document.querySelector('[data-ds="page-header"]')
     expect(within(header).getByRole("heading", { name: "Metrics Hub" })).toBeInTheDocument()
     expect(within(header).getByLabelText("Search metrics")).toBeInTheDocument()
-    expect(within(header).getByRole("button", { name: "Create a custom metric" })).toBeInTheDocument()
+    expect(within(header).getByRole("button", { name: "Create metric" })).toBeInTheDocument()
   })
 
   it("lists the catalogue in a ds DataTable with ds tabs", async () => {
