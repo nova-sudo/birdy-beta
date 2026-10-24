@@ -249,3 +249,66 @@ describe("cells", () => {
     expect(screen.queryByText("Retail")).toBeNull()
   })
 })
+
+describe("DataTable row expansion", () => {
+  const tree = [
+    { id: "r1", name: "Rule one", metric: "CPL", subRows: [{ id: "c1", name: "Aura" }, { id: "c2", name: "Beta" }] },
+    { id: "r2", name: "Rule two", metric: "Spend" },
+  ]
+  const cols = [
+    {
+      accessorKey: "name",
+      header: "Name",
+      cell: ({ row, getValue }) => (
+        <span>
+          {row.getCanExpand() && (
+            <button type="button" aria-label={`Expand ${getValue()}`} onClick={row.getToggleExpandedHandler()}>
+              +
+            </button>
+          )}
+          {getValue()}
+        </span>
+      ),
+    },
+    { accessorKey: "metric", header: "Metric" },
+  ]
+  const expandable = { getSubRows: (r) => r.subRows, getRowId: (r) => r.id }
+
+  it("does nothing without getSubRows: subRows stay data, rows are not nested", () => {
+    render(<DataTable columns={cols} data={tree} />)
+    expect(within(table()).queryByText("Aura")).toBeNull()
+    expect(within(table()).getAllByRole("row")).toHaveLength(3)
+  })
+
+  it("starts collapsed and reveals child rows when a parent is expanded", () => {
+    render(<DataTable columns={cols} data={tree} {...expandable} />)
+    expect(within(table()).queryByText("Aura")).toBeNull()
+    fireEvent.click(within(table()).getByRole("button", { name: "Expand Rule one" }))
+    expect(within(table()).getAllByRole("row")).toHaveLength(5) // header + 2 rules + 2 clients
+    expect(within(table()).getByText("Aura").closest("tr")).toHaveAttribute("data-depth", "1")
+    expect(within(table()).getByText("Rule one").closest("tr")).toHaveAttribute("data-depth", "0")
+  })
+
+  it("gives child rows a muted background and an indented first cell", () => {
+    render(<DataTable columns={cols} data={tree} {...expandable} state={{ expanded: { r1: true } }} />)
+    const child = within(table()).getByText("Aura").closest("tr")
+    expect(child.className).toContain("bg-muted")
+    expect(within(table()).getByText("Aura").closest("td").className).toContain("pl-10")
+  })
+
+  it("pages the parent rows only: children do not count toward the page size", () => {
+    render(<DataTable columns={cols} data={tree} pageSize={1} {...expandable} state={{ expanded: { r1: true } }} />)
+    expect(within(table()).getByText("Rule one")).toBeInTheDocument()
+    expect(within(table()).getByText("Aura")).toBeInTheDocument()
+    expect(within(table()).queryByText("Rule two")).toBeNull()
+  })
+
+  it("renders child rows as nested cards on narrow screens", () => {
+    const { container } = render(
+      <DataTable columns={cols} data={tree} {...expandable} state={{ expanded: { r1: true } }} />
+    )
+    const cards = container.querySelectorAll("[data-slot='data-table-card']")
+    expect(cards).toHaveLength(4)
+    expect(cards[1]).toHaveAttribute("data-depth", "1")
+  })
+})

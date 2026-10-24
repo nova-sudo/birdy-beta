@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   flexRender,
   getCoreRowModel,
+  getExpandedRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
@@ -47,7 +48,7 @@ const headerLabel = (column) =>
  * Table and cards both exist in the DOM, so tests should scope to `role=table` or `data-slot=data-table-card`.
  *
  * State lives here unless the page passes `state` / `onStateChange` (`sorting`,
- * `columnFilters`, `columnVisibility`, `columnOrder`, `pagination`), which is how a page syncs to a URL.
+ * `columnFilters`, `columnVisibility`, `columnOrder`, `pagination`, `expanded`), which is how a page syncs to a URL.
  *
  * @param {object} props
  * @param {import("@tanstack/react-table").ColumnDef[]} props.columns
@@ -63,6 +64,7 @@ const headerLabel = (column) =>
  * @param {boolean} [props.stickyFirstColumn] Pins the first column while the table scrolls sideways. Cells never wrap; `meta.minWidth` (px) sets a column's minimum width
  * @param {string[]} [props.lockedColumnIds] Columns that cannot be dragged and cannot be dropped onto (so nothing lands before a locked first column)
  * @param {(fromId: string, toId: string) => void} [props.onColumnReorder] Makes headers draggable; called with the dragged column id and the one it was dropped on
+ * @param {(row: object) => object[]|undefined} [props.getSubRows] Opts into row expansion: returns a row's child rows. Child rows render under an expanded parent with a muted background and an indented first cell; a column's `cell` toggles with `row.getToggleExpandedHandler()`. Paging counts parent rows only
  * @param {(row: object) => void} [props.onRowClick]
  * @param {(row: object, index: number) => string} [props.getRowId]
  * @param {object} [props.state] Controlled slice of table state
@@ -82,6 +84,7 @@ function DataTable({
   onColumnReorder,
   stickyFirstColumn = false,
   lockedColumnIds = [],
+  getSubRows,
   onRowClick,
   getRowId,
   state: controlled,
@@ -95,6 +98,7 @@ function DataTable({
     columnVisibility: {},
     columnOrder: [],
     pagination: { pageIndex: 0, pageSize },
+    expanded: {},
   })
   const state = { ...local, ...controlled }
 
@@ -117,6 +121,8 @@ function DataTable({
     columns: defs,
     state,
     getRowId,
+    getSubRows,
+    onExpandedChange: update("expanded"),
     onSortingChange: update("sorting"),
     onColumnFiltersChange: (u) => {
       // A new filter changes the row set, so go back to the first page.
@@ -132,6 +138,7 @@ function DataTable({
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    ...(getSubRows ? { getExpandedRowModel: getExpandedRowModel(), paginateExpandedRows: false } : {}),
     manualPagination,
     rowCount: manualPagination ? rowCount : undefined,
     autoResetPageIndex: false,
@@ -258,9 +265,11 @@ function DataTable({
                   {rows.map((row) => (
                     <tr
                       key={row.id}
+                      data-depth={row.depth}
                       {...rowProps(row)}
                       className={cn(
                         "border-b border-border transition-colors last:border-0 hover:bg-muted/50",
+                        row.depth > 0 && "bg-muted/40",
                         rowProps(row).className
                       )}
                     >
@@ -270,6 +279,7 @@ function DataTable({
                           style={minWidthStyle(cell.column)}
                           className={cn(
                             "whitespace-nowrap px-4 py-3 align-middle",
+                            row.depth > 0 && colIndex === 0 && "pl-10",
                             stickyFirstColumn && colIndex === 0 && STICKY_CELL
                           )}
                         >
@@ -288,13 +298,20 @@ function DataTable({
                   <li
                     key={row.id}
                     data-slot="data-table-card"
+                    data-depth={row.depth}
                     {...rowProps(row)}
-                    className={cn("rounded-surface bg-muted/40 p-4", rowProps(row).className)}
+                    className={cn(
+                      "rounded-surface bg-muted/40 p-4",
+                      row.depth > 0 && "ml-4 bg-muted/70",
+                      rowProps(row).className
+                    )}
                   >
                     {lead && <div className="mb-2">{flexRender(lead.column.columnDef.cell, lead.getContext())}</div>}
                     <dl className="flex flex-col gap-1.5">
                       {rest
                         .filter((cell) => !cell.column.columnDef.meta?.cardHidden)
+                        // A child row leaves out the columns it has no value for.
+                        .filter((cell) => row.depth === 0 || cell.getValue() != null)
                         .map((cell) => (
                           <div key={cell.id} className="flex items-center justify-between gap-3">
                             <dt className="text-xs text-muted-foreground">{headerLabel(cell.column)}</dt>

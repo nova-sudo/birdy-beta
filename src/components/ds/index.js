@@ -40,6 +40,7 @@ export { Breakdown } from "./data/breakdown"
 export { BarList } from "./data/bar-list"
 export { FunnelBar } from "./data/funnel-bar"
 export { Sparkline } from "./data/sparkline"
+export { ProgressBar, progressTone } from "./data/progress-bar"
 
 // Overlays
 export {
