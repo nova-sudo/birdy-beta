@@ -1,46 +1,43 @@
 // components/settings/IntegrationTile.jsx
-// The chrome for one connected-service tile on Settings → Integrations, and
-// the three controls its footer is built from.
+// One connected-service row on Settings → Integrations, and the three controls
+// its right-hand side is built from.
 //
-// Everything here is presentational: the tile knows nothing about OAuth,
-// tokens or the API. Settings keeps all of that and hands each tile a status,
-// a key/value row and whatever buttons that service actually supports — the
+// Everything here is presentational: the row knows nothing about OAuth,
+// tokens or the API. Settings keeps all of that and hands each row a status,
+// a key/value line and whatever buttons that service actually supports — the
 // four services differ enough (Slack has a channel picker, HotProspector
 // connects through a credentials dialog, GHL and Meta can expire) that a
 // data-driven list would be mostly exceptions.
 //
-// Metrics come from design_handoff_app_settings: 14px radius, 30px icon chip,
-// 34px minimum description height so the four tiles' key/value rows line up
-// across the row, and footer actions pinned with mt-auto for the same reason.
+// Laid out as a Frame row: logo, name and description on the left; status
+// badge and buttons on the right. Rows stack below md.
 
 import { ExternalLink } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Badge, Button } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
-/** The badge in the top-right of a tile. Keyed by the tile's `status`.
-    Solid fills, as every status badge in the app: the tint-on-tint pair is
-    kept for banners and soft surfaces. */
+/** The badge on the right of a row. Keyed by the row's `status`. */
 const STATUS_BADGES = {
-  connected: { label: "Connected", className: "bg-pd-success-bg text-pd-success" },
-  expired: { label: "Expired", className: "bg-pd-danger-bg text-pd-danger" },
-  checking: { label: "Checking…", className: "bg-pd-divider text-pd-body" },
-  disconnected: { label: "Not connected", className: "bg-pd-divider text-pd-body" },
+  connected: { label: "Connected", tone: "success" },
+  expired: { label: "Expired", tone: "danger" },
+  checking: { label: "Checking…", tone: "neutral" },
+  disconnected: { label: "Not connected", tone: "neutral" },
 }
 
 /**
- * @param {string} name service name, shown beside the icon chip
- * @param {React.ReactNode} icon 15–16px glyph, coloured by `chipClassName`
- * @param {string} chipClassName background + text colour for the icon chip
- * @param {string} description one line; wraps to two at narrow widths
- * @param {{label: string, value: React.ReactNode}} [meta] the key/value row
+ * @param {string} name service name, shown beside the logo
+ * @param {React.ReactNode} icon 16px glyph, drawn in `iconColor`
+ * @param {string} [iconColor] CSS colour for the glyph (a brand colour from lib/brand-colors)
+ * @param {string} description one line; wraps at narrow widths
+ * @param {{label: string, value: React.ReactNode}} [meta] the key/value line
  * @param {"connected"|"expired"|"checking"|"disconnected"} status
- * @param {React.ReactNode} [children] extra section above the footer (Slack)
- * @param {React.ReactNode} actions footer controls, pinned to the tile's base
+ * @param {React.ReactNode} [children] extra control under the row (Slack's channel picker)
+ * @param {React.ReactNode} actions buttons, right-aligned
  */
 export function IntegrationTile({
   name,
   icon,
-  chipClassName,
+  iconColor,
   description,
   meta,
   status,
@@ -50,89 +47,62 @@ export function IntegrationTile({
   const badge = STATUS_BADGES[status] ?? STATUS_BADGES.disconnected
 
   return (
-    <section className="flex w-full flex-col rounded-xl border border-pd-border bg-pd-surface px-[18px] py-4">
-      <div className="mb-3.5 flex items-center gap-[9px]">
-        <span
-          aria-hidden="true"
-          className={cn(
-            "flex size-[30px] shrink-0 items-center justify-center rounded-full",
-            chipClassName
-          )}
-        >
-          {icon}
-        </span>
-        <h3 className="truncate font-pd-display text-[14px] font-semibold text-pd-ink">
-          {name}
-        </h3>
-        <span
-          className={cn(
-            "ml-auto shrink-0 rounded-full px-2 py-[3px] text-[11px] font-bold",
-            badge.className
-          )}
-        >
-          {badge.label}
-        </span>
-      </div>
-
-      {/* min-height, not a fixed one: a description that wraps to two lines
-          still pushes the row below it down, but a one-line description does
-          not leave its tile's key/value row sitting a line higher than the
-          other three. */}
-      <p className="mb-3 min-h-[34px] text-[12px] leading-[1.45] text-pd-subtle">
-        {description}
-      </p>
-
-      {meta && (
-        <div className="mb-3.5 flex items-center justify-between gap-2">
-          <span className="text-[12px] text-pd-subtle">{meta.label}</span>
-          <span className="truncate text-[12px] font-semibold text-pd-ink">
-            {meta.value}
+    <section data-slot="integration-row" className="flex flex-col gap-3 px-5 py-4">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-8">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <span
+            aria-hidden="true"
+            style={iconColor ? { color: iconColor } : undefined}
+            className="flex size-8 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground"
+          >
+            {icon}
           </span>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-medium text-foreground">{name}</h3>
+            <p className="text-xs text-muted-foreground">{description}</p>
+            {meta && (
+              <p className="mt-1 flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground">{meta.label}</span>
+                <span className="num truncate font-medium text-foreground">{meta.value}</span>
+              </p>
+            )}
+          </div>
         </div>
-      )}
-
-      {children && (
-        <div className="mb-3.5 border-t border-pd-divider pt-3">{children}</div>
-      )}
-
-      <div className="mt-auto flex items-center gap-2">{actions}</div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
+          <Badge tone={badge.tone} variant="dot">{badge.label}</Badge>
+          {actions}
+        </div>
+      </div>
+      {children && <div className="md:pl-11">{children}</div>}
     </section>
   )
 }
 
-// The footer controls. All three are the shared <Button> at 38px tall so a tile
-// with a Connect button and a tile with Remove + the link circle end at the
-// same height; colour and shape come from the button's own variants.
+// The row controls. All three are the ds Button at its small height so a row
+// with Connect and a row with Remove + the link end at the same line.
 
-const ACTION_SIZE = "h-[38px] flex-1 px-3 text-[12.5px]"
-
-/** Filled purple, for Connect and Reconnect. Fills the footer on its own. */
+/** Outline, for Connect and Reconnect. */
 export function IntegrationAction({ className, ...props }) {
-  return (
-    <Button
-      type="button"
-      className={cn(ACTION_SIZE, className)}
-      {...props}
-    />
-  )
+  return <Button type="button" variant="outline" size="sm" className={className} {...props} />
 }
 
-/** Red, for Remove. Also fills the footer, with the link circle beside it. */
+/** Outline in the danger ink, for Remove. */
 export function IntegrationDangerAction({ className, ...props }) {
   return (
     <Button
       type="button"
-      variant="destructive-outline"
-      className={cn(ACTION_SIZE, className)}
+      variant="outline"
+      size="sm"
+      className={cn("text-danger-ink hover:bg-danger-soft", className)}
       {...props}
     />
   )
 }
 
-/** The circle that opens the service's own site in a new tab. */
+/** The icon button that opens the service's own site in a new tab. */
 export function IntegrationSiteLink({ href, label }) {
   return (
-    <Button asChild variant="outline" size="icon" className="size-[38px] shrink-0 text-pd-body">
+    <Button asChild variant="ghost" size="icon-sm" className="text-muted-foreground">
       <a
         href={href}
         target="_blank"
@@ -140,7 +110,7 @@ export function IntegrationSiteLink({ href, label }) {
         aria-label={label}
         title={label}
       >
-        <ExternalLink className="size-3.5" aria-hidden="true" />
+        <ExternalLink aria-hidden="true" />
       </a>
     </Button>
   )

@@ -15,7 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { CalendarClock, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import ChatConversation from "@/components/chat/ChatConversation"
-import { Button } from "@/components/ui/button"
+import { Button, ErrorState } from "@/components/ds"
 import { getChat, resetChat } from "@/lib/chat-store"
 import { REPORT_OPENER, REPORT_PAGE, reportApi, scheduleLabel } from "@/lib/report-designer"
 import SlackMessagePreview from "./SlackMessagePreview"
@@ -114,20 +114,16 @@ export default function ReportDesigner({
   return (
     <div className={`grid w-full grid-cols-1 gap-5 text-left lg:grid-cols-[minmax(0,1fr)_400px] ${heightClass}`}>
       {/* Conversation */}
-      <div className="flex h-[480px] min-h-0 flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface lg:h-full">
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-pd-divider px-5 py-3.5">
+      <div className="flex h-[480px] min-h-0 flex-col overflow-hidden rounded-frame border border-border bg-background lg:h-full">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-5 py-3.5">
           <div>
-            <div className="font-pd-display text-[15px] font-semibold text-pd-ink">Design your report with Birdy</div>
-            <div className="mt-0.5 text-[12px] text-pd-faint">Answer a few questions, or just say what you want.</div>
+            <div className="text-base font-semibold text-foreground">Design your report with Birdy</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">Answer a few questions, or just say what you want.</div>
           </div>
-          <button
-            type="button"
-            onClick={startOver}
-            className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[12px] font-medium text-pd-subtle transition-colors hover:bg-pd-divider hover:text-pd-ink"
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={startOver} className="shrink-0 text-muted-foreground">
             <RotateCcw className="size-3.5" aria-hidden="true" />
             Start over
-          </button>
+          </Button>
         </div>
         <div className="min-h-0 flex-1">
           {ready && (
@@ -155,31 +151,35 @@ export default function ReportDesigner({
       {/* Live preview */}
       <div className="flex min-h-0 flex-col">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-[11px] font-bold tracking-[0.05em] text-pd-faint">LIVE PREVIEW</span>
+          <span className="text-xs font-bold tracking-[0.05em] text-muted-foreground">LIVE PREVIEW</span>
           {template && (
-            <span className="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-pd-subtle">
+            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <CalendarClock className="size-3.5" aria-hidden="true" />
               {scheduleLabel(template)}
             </span>
           )}
         </div>
-        <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto">
           <SlackMessagePreview blocks={preview?.blocks} time={template?.time} loading={previewLoading && !!preview} focus={focus} />
           {preview?.sample && (
-            <p className="mt-2.5 text-[11.5px] leading-relaxed text-pd-faint">
+            <p className="mt-2.5 text-xs leading-relaxed text-muted-foreground">
               Sample numbers for now. Your real figures appear here once your first client finishes syncing.
             </p>
           )}
           {previewError && (
-            <p className="mt-2.5 text-[11.5px] text-pd-danger">
-              Couldn&apos;t refresh the preview.{" "}
-              <button type="button" onClick={refreshPreview} className="cursor-pointer font-semibold underline">Try again</button>
-            </p>
+            <ErrorState
+              className="mt-2.5"
+              title="Couldn't refresh the preview."
+              description="The report is as it was at the last refresh."
+              onRetry={refreshPreview}
+            />
           )}
         </div>
         <div className="mt-4 flex flex-col items-stretch gap-2">
           <Button
             type="button"
+            variant="primary"
+            size="lg"
             onClick={() => {
               if (!template) {
                 toast.error("The preview hasn't loaded yet")
@@ -188,7 +188,6 @@ export default function ReportDesigner({
               use()
             }}
             disabled={saving || !template}
-            className="h-auto py-[13px] text-[14.5px] disabled:opacity-40"
           >
             {saving ? "Saving…" : primaryLabel}
           </Button>

@@ -46,7 +46,7 @@ vi.mock("@/components/billing/PlanPicker", () => ({
 }))
 // Radix Select needs pointer APIs jsdom lacks; a native <select> keeps the
 // same value/onValueChange contract and lets the test pick an option.
-vi.mock("@/components/ui/select", () => {
+vi.mock("@/components/ds/primitives/select", () => {
   const React = require("react")
   const SelectTrigger = () => null
   const SelectValue = () => null
@@ -92,7 +92,16 @@ vi.mock("@/lib/oauth-handoff", () => ({
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { usePageHeader } from "@/components/page-header"
+import { ConfirmHost } from "@/components/ds"
 import SettingsPage from "../page"
+
+// remove-integration asks through ds confirm(), which needs its host mounted
+const Page = () => (
+  <>
+    <SettingsPage />
+    <ConfirmHost />
+  </>
+)
 
 const DEFAULT_ROUTES = {
   "/api/status": {},
@@ -130,10 +139,10 @@ beforeEach(() => {
 describe("tabs", () => {
   it("lists the four tabs and defaults to Integrations", async () => {
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     const strip = screen.getByRole("tablist", { name: "Settings section" })
     expect(within(strip).getAllByRole("tab").map((t) => t.textContent)).toEqual([
-      "General", "Integrations", "Tracking", "Billing",
+      "General", "Tracking", "Integrations", "Billing",
     ])
     expect(await screen.findByText("Connected services")).toBeInTheDocument()
     expect(screen.queryByTestId("general-settings")).toBeNull()
@@ -148,7 +157,7 @@ describe("tabs", () => {
   ])("?tab=%s shows its panel", async (name, testId) => {
     nav.params = `tab=${name}`
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByTestId(testId)).toBeInTheDocument()
     expect(screen.queryByText("Connected services")).toBeNull()
   })
@@ -156,14 +165,14 @@ describe("tabs", () => {
   it("falls back to Integrations for an unknown tab", async () => {
     nav.params = "tab=nonsense"
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("Connected services")).toBeInTheDocument()
   })
 
   it("switching tab swaps the panel and replaces the URL", async () => {
     respond()
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(screen.getByRole("tab", { name: "Billing" }))
     expect(nav.replace).toHaveBeenCalledWith("/settings?tab=billing", { scroll: false })
     expect(await screen.findByTestId("credits-panel")).toBeInTheDocument()
@@ -175,24 +184,106 @@ describe("tabs", () => {
 
   it("follows ?tab= when the URL changes without a remount", async () => {
     respond()
-    const { rerender } = render(<SettingsPage />)
+    const { rerender } = render(<Page />)
     expect(await screen.findByText("Connected services")).toBeInTheDocument()
     nav.params = "tab=billing"
-    rerender(<SettingsPage />)
+    rerender(<Page />)
     expect(await screen.findByTestId("credits-panel")).toBeInTheDocument()
   })
 
   it("sets the page header", async () => {
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(usePageHeader).toHaveBeenCalled()
+  })
+
+  it("re-probes /api/status when ?tab= changes (the init effect depends on the URL)", async () => {
+    respond()
+    const { rerender } = render(<Page />)
+    await waitFor(() => expect(calls("/api/status")).toHaveLength(1))
+    nav.params = "tab=billing"
+    rerender(<Page />)
+    await waitFor(() => expect(calls("/api/status")).toHaveLength(2))
+  })
+})
+
+describe("rail", () => {
+  it("groups the sections under Workspace, Connections and Account", async () => {
+    respond()
+    render(<Page />)
+    const rail = screen.getByRole("tablist", { name: "Settings section" })
+    for (const group of ["Workspace", "Connections", "Account"]) {
+      expect(within(rail).getByText(group)).toBeInTheDocument()
+    }
+    expect(within(rail).getByRole("tab", { name: "Integrations" })).toHaveAttribute("aria-selected", "true")
+    expect(within(rail).getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "false")
+    await screen.findByText("Connected services")
+  })
+
+  it.each([
+    ["general", "General"],
+    ["tracking", "Tracking"],
+    ["integrations", "Integrations"],
+    ["billing", "Billing"],
+  ])("?tab=%s selects its rail item and names the section", async (key, label) => {
+    nav.params = `tab=${key}`
+    respond()
+    render(<Page />)
+    expect(screen.getByRole("tab", { name: label })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("heading", { level: 2, name: label })).toBeInTheDocument()
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("aria-labelledby", `settings-tab-${key}`)
+  })
+
+  it("an old ?tab=account lands on Billing's rail item", async () => {
+    nav.params = "tab=account"
+    respond()
+    render(<Page />)
+    expect(screen.getByRole("tab", { name: "Billing" })).toHaveAttribute("aria-selected", "true")
+  })
+
+  it("clicking an item selects it and writes ?tab= to the URL", async () => {
+    respond()
+    const user = userEvent.setup()
+    render(<Page />)
+    await user.click(screen.getByRole("tab", { name: "General" }))
+    expect(nav.replace).toHaveBeenCalledWith("/settings?tab=general", { scroll: false })
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true")
+    expect(await screen.findByTestId("general-settings")).toBeInTheDocument()
+    expect(screen.getByRole("heading", { level: 2, name: "General" })).toBeInTheDocument()
+  })
+
+  it("arrow keys move between sections", async () => {
+    nav.params = "tab=general"
+    respond()
+    const user = userEvent.setup()
+    render(<Page />)
+    screen.getByRole("tab", { name: "General" }).focus()
+    await user.keyboard("{ArrowDown}")
+    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=tracking", { scroll: false })
+    expect(screen.getByRole("tab", { name: "Tracking" })).toHaveFocus()
+    await user.keyboard("{ArrowUp}")
+    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=general", { scroll: false })
+  })
+
+  it("flags Integrations in the rail only when a token has expired", async () => {
+    respond({ "/api/status": { facebook: { connected: true, expires_at: "2000-01-01T00:00:00Z", token_expired: true } } })
+    render(<Page />)
+    const item = screen.getByRole("tab", { name: /Integrations/ })
+    await waitFor(() => expect(within(item).getByText("Expired")).toBeInTheDocument())
+  })
+
+  it("shows no chip when nothing needs attention", async () => {
+    respond()
+    render(<Page />)
+    await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
+    expect(within(screen.getByRole("tab", { name: "Integrations" })).queryByText("Expired")).toBeNull()
   })
 })
 
 describe("integrations: status loading", () => {
   it("probes every integration on mount", async () => {
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(calls("/api/integrations/slack/status")).toHaveLength(1))
     for (const url of ["/api/status", "/api/hotprospector/status", "/api/billing/status", "/api/capabilities", "/api/dashboard/settings"]) {
       expect(calls(url)).toHaveLength(1)
@@ -201,7 +292,7 @@ describe("integrations: status loading", () => {
 
   it("shows Checking before the first status resolves, then Not connected tiles", async () => {
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(screen.getAllByText("Checking…").length).toBeGreaterThan(0)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     expect(screen.getAllByRole("button", { name: "Connect" })).toHaveLength(4)
@@ -216,12 +307,13 @@ describe("integrations: status loading", () => {
       "/api/hotprospector/status": { connected: true, api_uid: "uid-9" },
       "/api/integrations/slack/status": { installed: true, team_name: "Acme HQ" },
     })
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("Acme HQ")).toBeInTheDocument()
     expect(screen.getByText("uid-9")).toBeInTheDocument()
     expect(screen.getByText("API UID")).toBeInTheDocument()
     expect(screen.getAllByText("Connected")).toHaveLength(3)
-    expect(screen.getByText("Expired")).toBeInTheDocument()
+    const meta = screen.getByRole("heading", { name: "Meta" }).closest("section")
+    expect(within(meta).getByText("Expired")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Reconnect" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Remove Meta (Facebook)" })).toBeInTheDocument()
     expect(JSON.parse(localStorage.getItem("goHighLevelIntegration")).connected).toBe(true)
@@ -233,22 +325,31 @@ describe("integrations: status loading", () => {
   it("renders from the localStorage cache while the status is in flight", async () => {
     localStorage.setItem("hotprospectorIntegration", JSON.stringify({ connected: true, api_uid: "cached-uid" }))
     vi.mocked(apiRequest).mockImplementation(() => new Promise(() => {}))
-    render(<SettingsPage />)
+    render(<Page />)
     expect(screen.getByText("cached-uid")).toBeInTheDocument()
   })
 
   it("shows the failure and a toast when /api/status errors, keeping the cached state", async () => {
     localStorage.setItem("goHighLevelIntegration", JSON.stringify({ connected: true, expires_at: "2030-01-01T00:00:00Z" }))
     respond({ "/api/status": { __status: 500 } })
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("Failed to fetch integration status: Status fetch failed: 500")).toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith("Error", { description: "Status fetch failed: 500" })
     expect(screen.getAllByText("Connected").length).toBe(1)
   })
 
+  it("offers a retry when the status probe fails, and probes again", async () => {
+    respond({ "/api/status": { __status: 500 } })
+    const user = userEvent.setup()
+    render(<Page />)
+    expect(await screen.findByText("Couldn't load your integrations")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: /try again/i }))
+    await waitFor(() => expect(calls("/api/status")).toHaveLength(2))
+  })
+
   it("reacts to another tab changing an integration (storage event)", async () => {
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     localStorage.setItem("goHighLevelIntegration", JSON.stringify({ connected: true }))
     window.dispatchEvent(new StorageEvent("storage", { key: "goHighLevelIntegration" }))
@@ -260,7 +361,7 @@ describe("integrations: connect and remove", () => {
   it("Connect on GoHighLevel and Meta hit their own endpoints", async () => {
     respond({ "/api/connect": {}, "/api/connect/facebook": {} })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     const tile = (name) => screen.getByRole("heading", { name }).closest("section")
     await user.click(within(tile("GoHighLevel")).getByRole("button", { name: "Connect" }))
@@ -274,7 +375,7 @@ describe("integrations: connect and remove", () => {
   it("Connect on Slack surfaces the server's detail on failure", async () => {
     respond({ "/api/connect/slack": { __status: 400, detail: "Slack is not configured" } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     const slack = screen.getByRole("heading", { name: "Slack" }).closest("section")
     await user.click(within(slack).getByRole("button", { name: "Connect" }))
@@ -287,7 +388,7 @@ describe("integrations: connect and remove", () => {
       "DELETE /api/integrations/facebook/remove": { ok: true },
     })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     // Wait for the whole probe: the remove button is redefined on every render
     // of the page, so a late status update would close an open dialog.
     await waitFor(() => expect(calls("/api/integrations/slack/status")).toHaveLength(1))
@@ -312,7 +413,7 @@ describe("integrations: connect and remove", () => {
       "DELETE /api/integrations/slack/remove": { __status: 500, detail: "nope" },
     })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: /^Remove$/ }))
     await user.click(await screen.findByRole("button", { name: "Yes, remove it" }))
     expect(await screen.findByText("Failed to remove integration: nope")).toBeInTheDocument()
@@ -323,7 +424,7 @@ describe("integrations: connect and remove", () => {
   it("connects HotProspector with the credentials from the dialog", async () => {
     respond({ "POST /api/hotprospector/connect": { groups_count: 3 } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     const hp = screen.getByRole("heading", { name: "Hot Prospector" }).closest("section")
     await user.click(within(hp).getByRole("button", { name: "Connect" }))
@@ -352,7 +453,7 @@ describe("integrations: connect and remove", () => {
   it("Cancel in the HotProspector dialog sends nothing", async () => {
     respond()
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     const hp = screen.getByRole("heading", { name: "Hot Prospector" }).closest("section")
     await user.click(within(hp).getByRole("button", { name: "Connect" }))
@@ -364,7 +465,7 @@ describe("integrations: connect and remove", () => {
   it("a rejected HotProspector connect shows the detail", async () => {
     respond({ "POST /api/hotprospector/connect": { __status: 400, detail: "Bad credentials" } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
     const hp = screen.getByRole("heading", { name: "Hot Prospector" }).closest("section")
     await user.click(within(hp).getByRole("button", { name: "Connect" }))
@@ -384,7 +485,7 @@ describe("integrations: Slack channel", () => {
 
   it("loads channels on open and saves the picked one", async () => {
     respond({ ...slackRoutes, "PUT /api/integrations/slack/channel": { ok: true } })
-    render(<SettingsPage />)
+    render(<Page />)
     const select = await screen.findByLabelText("Channel Birdy posts AI suggestions to")
     fireEvent.focus(select)
     await waitFor(() => expect(calls("/api/integrations/slack/channels")).toHaveLength(1))
@@ -402,7 +503,7 @@ describe("integrations: Slack channel", () => {
 
   it("choosing 'Don't post' clears the channel", async () => {
     respond({ ...slackRoutes, "PUT /api/integrations/slack/channel": { ok: true } })
-    render(<SettingsPage />)
+    render(<Page />)
     const select = await screen.findByLabelText("Channel Birdy posts AI suggestions to")
     fireEvent.change(select, { target: { value: "__none__" } })
     await waitFor(() =>
@@ -416,7 +517,7 @@ describe("integrations: Slack channel", () => {
 
   it("a failed save toasts", async () => {
     respond({ ...slackRoutes, "PUT /api/integrations/slack/channel": { __status: 500 } })
-    render(<SettingsPage />)
+    render(<Page />)
     const select = await screen.findByLabelText("Channel Birdy posts AI suggestions to")
     fireEvent.change(select, { target: { value: "__none__" } })
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't save channel"))
@@ -424,7 +525,7 @@ describe("integrations: Slack channel", () => {
 
   it("offers a reconnect when the channel list cannot load", async () => {
     respond({ ...slackRoutes, "/api/integrations/slack/channels": { __status: 403 } })
-    render(<SettingsPage />)
+    render(<Page />)
     const select = await screen.findByLabelText("Channel Birdy posts AI suggestions to")
     fireEvent.focus(select)
     expect(await screen.findByRole("button", { name: "Reconnect Slack" })).toBeInTheDocument()
@@ -436,7 +537,7 @@ describe("OAuth callback", () => {
   it("shows an error callback and toasts, without probing status", async () => {
     nav.params = "status=error&error=access_denied&error_description=User%20said%20no"
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("access_denied: User said no")).toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith("Connection Failed", { description: "access_denied: User said no" })
     expect(calls("/api/status")).toHaveLength(0)
@@ -447,7 +548,7 @@ describe("OAuth callback", () => {
     handoff.stored = "/onboarding"
     handoff.passing = true
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/onboarding"))
     expect(handoff.stored).toBeNull()
   })
@@ -457,7 +558,7 @@ describe("OAuth callback", () => {
     handoff.stored = "/onboarding"
     handoff.passing = true
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(screen.getByRole("status", { name: "Finishing up" })).toBeInTheDocument()
     expect(screen.queryByRole("tablist")).toBeNull()
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/onboarding"))
@@ -468,7 +569,7 @@ describe("OAuth callback", () => {
     const tokens = { scope: "contacts.readonly", expires_in: 100, expires_at: "2099-01-01T00:00:00Z" }
     nav.params = `status=success&tokens=${encodeURIComponent(JSON.stringify(tokens))}`
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith("Connection Successful", {
         description: "GoHighLevel connected successfully.",
@@ -485,16 +586,30 @@ describe("OAuth callback", () => {
     nav.params = `status=success&tokens=${encodeURIComponent(JSON.stringify(tokens))}`
     handoff.stored = "/onboarding"
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/onboarding"))
     expect(JSON.parse(localStorage.getItem("facebookIntegration")).connected).toBe(true)
     expect(toast.success).not.toHaveBeenCalled()
   })
 
+  it("an unreadable payload on a hand-off load swaps the hand-off screen for the page plus the error", async () => {
+    nav.params = "status=success&tokens=%7Bnot-json"
+    handoff.stored = "/onboarding"
+    handoff.passing = true
+    respond()
+    render(<Page />)
+    // the effect has already dropped the hand-off flag by the time render() returns
+    expect(await screen.findByText("Invalid token data received")).toBeInTheDocument()
+    expect(screen.queryByRole("status", { name: "Finishing up" })).toBeNull()
+    expect(screen.getByRole("tablist", { name: "Settings section" })).toBeInTheDocument()
+    expect(nav.replace).not.toHaveBeenCalled()
+    expect(handoff.stored).toBeNull()
+  })
+
   it("an unreadable token payload shows Invalid token data", async () => {
     nav.params = "status=success&tokens=%7Bnot-json"
     respond()
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("Invalid token data received")).toBeInTheDocument()
     expect(toast.error).toHaveBeenCalledWith("Connection Failed", { description: "Invalid token data received" })
   })
@@ -505,7 +620,7 @@ describe("general tab", () => {
 
   it("gives GeneralSettings the Slack state", async () => {
     respond({ "/api/integrations/slack/status": { installed: true, brief: "weekly" } })
-    render(<SettingsPage />)
+    render(<Page />)
     const general = await screen.findByTestId("general-settings")
     await waitFor(() => expect(general).toHaveAttribute("data-slack-connected", "true"))
     expect(general).toHaveAttribute("data-brief", "weekly")
@@ -513,7 +628,7 @@ describe("general tab", () => {
 
   it("reflects the saved capabilities on the Media Buying Analyst switch", async () => {
     respond({ "/api/capabilities": { media_buying: true } })
-    render(<SettingsPage />)
+    render(<Page />)
     expect(await screen.findByText("Agent Capabilities")).toBeInTheDocument()
     const toggle = screen.getByRole("switch", { name: "Toggle the Media Buying Analyst capability" })
     await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "true"))
@@ -523,7 +638,7 @@ describe("general tab", () => {
   it("toggling sends the capability and toasts", async () => {
     respond({ "PUT /api/capabilities": { media_buying: true } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     const toggle = await screen.findByRole("switch", { name: "Toggle the Media Buying Analyst capability" })
     await waitFor(() => expect(toggle).not.toBeDisabled())
     await user.click(toggle)
@@ -544,7 +659,7 @@ describe("general tab", () => {
   it("reverts the switch and toasts when the save fails", async () => {
     respond({ "PUT /api/capabilities": { __status: 500 } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     const toggle = await screen.findByRole("switch", { name: "Toggle the Media Buying Analyst capability" })
     await waitFor(() => expect(toggle).not.toBeDisabled())
     await user.click(toggle)
@@ -561,7 +676,7 @@ describe("general tab", () => {
       "PUT /api/dashboard/settings": { __status: 500 },
     })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     const select = await screen.findByLabelText(/how strict should birdy be/i)
     await waitFor(() => expect(select).toHaveValue("strict"))
     await user.selectOptions(select, "lenient")
@@ -577,7 +692,7 @@ describe("billing tab", () => {
 
   it("hands the billing status to the plan picker", async () => {
     respond({ "/api/billing/status": { plan: "scale" } })
-    render(<SettingsPage />)
+    render(<Page />)
     const picker = await screen.findByTestId("plan-picker")
     await waitFor(() => expect(picker).toHaveAttribute("data-plan", "scale"))
   })
@@ -585,7 +700,7 @@ describe("billing tab", () => {
   it("cancel POSTs, refetches the status and toasts", async () => {
     respond({ "POST /api/billing/cancel": {} })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: "cancel-sub" }))
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/api/billing/cancel", { method: "POST" }))
     await waitFor(() =>
@@ -597,7 +712,7 @@ describe("billing tab", () => {
   it("reactivate POSTs and toasts", async () => {
     respond({ "POST /api/billing/reactivate": {} })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: "reactivate-sub" }))
     await waitFor(() => expect(apiRequest).toHaveBeenCalledWith("/api/billing/reactivate", { method: "POST" }))
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Your subscription will keep running."))
@@ -606,7 +721,7 @@ describe("billing tab", () => {
   it("a failed cancel toasts the server detail", async () => {
     respond({ "POST /api/billing/cancel": { __status: 400, detail: "Already cancelled" } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: "cancel-sub" }))
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Subscription", { description: "Already cancelled" }))
   })
@@ -615,7 +730,7 @@ describe("billing tab", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null)
     respond({ "/api/billing/portal-url": { portal_url: "https://portal.test/x" } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: "manage" }))
     await waitFor(() => expect(open).toHaveBeenCalledWith("https://portal.test/x", "_blank", "noopener,noreferrer"))
   })
@@ -623,7 +738,7 @@ describe("billing tab", () => {
   it("a portal failure toasts", async () => {
     respond({ "/api/billing/portal-url": { __status: 500, detail: "down" } })
     const user = userEvent.setup()
-    render(<SettingsPage />)
+    render(<Page />)
     await user.click(await screen.findByRole("button", { name: "manage" }))
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Billing Portal Error", { description: "down" }))
   })

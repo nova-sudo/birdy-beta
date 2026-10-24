@@ -6,7 +6,7 @@ import { STRICTNESS_OPTIONS } from "./constants"
 // General tab state: the per-user agent capability switches and the
 // suggestion strictness that sits under the Media Buying Analyst one.
 export function useCapabilities() {
-  // ── Capabilities (Settings → Capabilities tab) ────────────────────────────
+  // ── Agent capabilities (Settings → General) ────────────────────────────
   // Per-user Birdy agent ability toggles, persisted server-side via
   // /api/capabilities. `capsLoaded` gates the switches until the real values
   // arrive so we don't flash a default-off state over an enabled capability.
@@ -19,7 +19,7 @@ export function useCapabilities() {
   const [strictnessLoaded, setStrictnessLoaded] = useState(false)
   const [savingStrictness, setSavingStrictness] = useState(false)
 
-  // Load the user's capability flags for the Capabilities tab.
+  // Load the user's capability flags for the General tab's Agent Capabilities block.
   useEffect(() => {
     apiRequest("/api/capabilities")
       .then(res => res.ok ? res.json() : null)

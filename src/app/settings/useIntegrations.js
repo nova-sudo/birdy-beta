@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useLayoutEffect } from "react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { peekOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
@@ -9,7 +9,7 @@ import { peekOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 // and comes back) doesn't flash a stale "Connect" button while
 // /api/status is in flight. The init effect below still hits the backend
 // and overwrites with truth — this just bridges the network gap with the
-// last-known-good state. Same pattern as the existing `user` state below.
+// last-known-good state.
 //
 // `token_expired` is recomputed against the current clock every time we
 // read from cache, so a stored `false` from yesterday doesn't claim a
@@ -45,10 +45,10 @@ const readCachedSlackStatus = () => {
 // `searchParams` and `setPassingThrough` come from the page, which owns the
 // hand-off screen.
 export function useIntegrations({ router, searchParams, setPassingThrough }) {
-  const [ghlStatus, setGhlStatus] = useState(() => readCachedStatus("goHighLevelIntegration"))
-  const [facebookStatus, setFacebookStatus] = useState(() => readCachedStatus("facebookIntegration"))
-  const [hotprospectorStatus, setHotprospectorStatus] = useState(() => readCachedStatus("hotprospectorIntegration"))
-  const [slackStatus, setSlackStatus] = useState(() => readCachedSlackStatus())
+  const [ghlStatus, setGhlStatus] = useState({ connected: false })
+  const [facebookStatus, setFacebookStatus] = useState({ connected: false })
+  const [hotprospectorStatus, setHotprospectorStatus] = useState({ connected: false })
+  const [slackStatus, setSlackStatus] = useState({ installed: false })
   const [slackChannels, setSlackChannels] = useState([])
   const [channelsLoading, setChannelsLoading] = useState(false)
   const [channelsError, setChannelsError] = useState(false)
@@ -60,11 +60,26 @@ export function useIntegrations({ router, searchParams, setPassingThrough }) {
   // this because the cache short-circuits them straight to "Connected".
   const [statusInitialLoading, setStatusInitialLoading] = useState(true)
 
+  // Fill the statuses from the cache before the first paint. A layout effect
+  // rather than the useState initialisers, so storage and the clock are not
+  // read while rendering; it still runs ahead of the browser's paint, so a
+  // returning user never sees the empty state.
+  useLayoutEffect(() => {
+    setGhlStatus(readCachedStatus("goHighLevelIntegration"))
+    setFacebookStatus(readCachedStatus("facebookIntegration"))
+    setHotprospectorStatus(readCachedStatus("hotprospectorIntegration"))
+    setSlackStatus(readCachedSlackStatus())
+  }, [])
+
   const [hotprospectorDialogOpen, setHotprospectorDialogOpen] = useState(false)
   const [hotprospectorCredentials, setHotprospectorCredentials] = useState({ api_uid: "", api_key: "" })
   const [isLoading, setIsLoading] = useState(false)
   const [removingIntegration, setRemovingIntegration] = useState(null)
   const [error, setError] = useState(null)
+  // The message of a failed status probe, so the page can offer a retry for
+  // that failure only (a failed connect or remove sets `error` but not this).
+  const [statusError, setStatusError] = useState(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   const setCookie = (name, value, maxAge) => {
     const safeMaxAge = Number.isInteger(maxAge) && maxAge > 0 ? maxAge : 3600
@@ -249,6 +264,7 @@ export function useIntegrations({ router, searchParams, setPassingThrough }) {
       } catch (err) {
         console.error("init error:", err)
         setError(`Failed to fetch integration status: ${err.message}`)
+        setStatusError(`Failed to fetch integration status: ${err.message}`)
         toast.error("Error", { description: err.message })
 
         // Fall back to localStorage on error so UI still shows last known state
@@ -267,7 +283,9 @@ export function useIntegrations({ router, searchParams, setPassingThrough }) {
     }
 
     init()
-  }, [searchParams])
+  }, [searchParams, reloadKey])
+
+  const retryStatus = () => setReloadKey((k) => k + 1)
 
   // ── Cross-tab sync ────────────────────────────────────────────────────
   // If the user disconnects (or connects) an integration in another tab,
@@ -454,6 +472,8 @@ export function useIntegrations({ router, searchParams, setPassingThrough }) {
   }
 
   return {
+    statusError,
+    retryStatus,
     ghlStatus,
     facebookStatus,
     hotprospectorStatus,
