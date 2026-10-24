@@ -46,7 +46,7 @@ describe("CallAnalysisButton", () => {
     expect(screen.getByText("—")).toBeInTheDocument()
   })
 
-  it("opens a ds Sheet in the Transcribing state while the request runs", async () => {
+  it("opens a ds Sheet that says only what is observed while the request runs", async () => {
     const user = userEvent.setup()
     render(<CallAnalysisButton row={ROW} />)
     await user.click(screen.getByRole("button", { name: /analyze this call/i }))
@@ -55,7 +55,8 @@ describe("CallAnalysisButton", () => {
     expect(sheet).toHaveAttribute("data-ds", "sheet")
     expect(sheet).toHaveTextContent("Call analysis — Sarah Whitmore")
     expect(sheet).toHaveTextContent("Priya Shah")
-    expect(screen.getByText("Transcribing", { selector: "[data-step]" })).toHaveAttribute("aria-current", "step")
+    expect(screen.getByText("Analysing call", { selector: "[data-step]" })).toHaveAttribute("aria-current", "step")
+    expect(screen.getByText("Analysing call…")).toBeInTheDocument()
 
     const [url, init] = vi.mocked(apiRequest).mock.calls[0]
     expect(url).toBe("/api/call_logs/analyze")
@@ -68,15 +69,32 @@ describe("CallAnalysisButton", () => {
     })
   })
 
-  it("moves on to Reviewing after a while", async () => {
+  it("never claims a stage the backend did not report", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
     render(<CallAnalysisButton row={ROW} />)
     await user.click(screen.getByRole("button", { name: /analyze this call/i }))
     await screen.findByRole("dialog")
 
-    await act(async () => vi.advanceTimersByTime(9000))
-    expect(screen.getByText("Reviewing", { selector: "[data-step]" })).toHaveAttribute("aria-current", "step")
+    await act(async () => vi.advanceTimersByTime(60000))
+    const sheet = screen.getByRole("dialog")
+    expect(sheet).not.toHaveTextContent(/transcrib|reviewing/i)
+    expect(screen.getByText("Analysing call", { selector: "[data-step]" })).toHaveAttribute("aria-current", "step")
+  })
+
+  it("offers a View action on the completion toast that reopens the sheet", async () => {
+    const user = userEvent.setup()
+    render(<CallAnalysisButton row={ROW} />)
+    await user.click(screen.getByRole("button", { name: /analyze this call/i }))
+    await screen.findByRole("dialog")
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await finish()
+
+    const [, opts] = vi.mocked(toast.success).mock.calls[0]
+    expect(opts.action.label).toBe("View")
+    await act(async () => opts.action.onClick())
+    expect(await screen.findByText("What happened")).toBeInTheDocument()
   })
 
   it("shows the live sections and the outcome badge, and no Score", async () => {

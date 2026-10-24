@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { SparklesIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -30,28 +30,18 @@ import { formatDuration, outcomeTone, parseAnalysisSections } from "./analysis"
 // verdict is cached server-side — re-clicking an analyzed call is instant.
 //
 // The analysis opens in a right-side Sheet (bottom sheet below md). The backend
-// is one request, so it reports no stage; the stepper moves from Transcribing
-// to Reviewing after REVIEW_AFTER_MS, which is an estimate, not a signal.
+// is one request and reports no stage, so the sheet names only what it can
+// observe: the request is in flight, then it is done.
 
-const STEPS = [{ label: "Transcribing" }, { label: "Reviewing" }, { label: "Done" }]
-const REVIEW_AFTER_MS = 8000
+const STEPS = [{ label: "Analysing call" }, { label: "Done" }]
 
-function CallAnalysisBody({ row, status, result }) {
-  const [stage, setStage] = useState(0)
-
-  useEffect(() => {
-    if (status !== "loading") return
-    setStage(0)
-    const t = setTimeout(() => setStage(1), REVIEW_AFTER_MS)
-    return () => clearTimeout(t)
-  }, [status])
-
+function CallAnalysisBody({ status, result }) {
   if (status === "loading") {
     return (
       <div className="flex flex-col gap-4">
         <BirdyRow state="loading">
           <span className="text-sm font-medium text-muted-foreground">
-            {stage === 0 ? "Transcribing…" : "Reviewing…"}
+            Analysing call…
           </span>
         </BirdyRow>
         <div className="flex flex-col gap-2 pl-9" aria-hidden="true">
@@ -59,7 +49,7 @@ function CallAnalysisBody({ row, status, result }) {
           <Skeleton className="h-3 w-5/6" />
           <Skeleton className="h-3 w-2/3" />
         </div>
-        <Stepper steps={STEPS} current={stage} />
+        <Stepper steps={STEPS} current={0} />
         <p className="text-sm text-muted-foreground">
           Feel free to close this panel. You&apos;ll be notified when it&apos;s ready.
         </p>
@@ -139,6 +129,7 @@ export function CallAnalysisButton({ row }) {
       setStatus("done")
       toast.success("Call analysis ready", {
         description: data.cached ? "Loaded from a previous analysis (free)." : undefined,
+        action: { label: "View", onClick: () => setOpen(true) },
       })
     } catch (e) {
       const msg = e?.message || "Analysis failed."
@@ -175,7 +166,7 @@ export function CallAnalysisButton({ row }) {
             </SheetDescription>
           </SheetHeader>
           <div className="min-h-0 flex-1 overflow-y-auto px-4">
-            <CallAnalysisBody row={row} status={status} result={result} />
+            <CallAnalysisBody status={status} result={result} />
           </div>
           <SheetFooter>
             <SheetClose asChild>

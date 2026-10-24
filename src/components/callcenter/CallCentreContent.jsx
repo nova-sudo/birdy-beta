@@ -22,6 +22,7 @@ import {
   Input,
   Label,
   MetricGroup,
+  Notice,
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -411,6 +412,8 @@ export function CallCentreContent({
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsBackgroundLoading, setLeadsBackgroundLoading] = useState(false)
   const [leadsTotal, setLeadsTotal] = useState(0)
+  // A background batch failed: the rows that did load stay, and the table says so.
+  const [leadsPartial, setLeadsPartial] = useState(false)
   const [leadsError, setLeadsError] = useState(null)
   const [leadsAttempt, setLeadsAttempt] = useState(0)
   // Client filter: "all" or a client_group id. Controlled by the page on the
@@ -551,6 +554,7 @@ export function CallCentreContent({
       setLeadsLoading(true)
       setLeadsBackgroundLoading(false)
       setLeadsError(null)
+      setLeadsPartial(false)
       setLeadsTotal(0)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
@@ -602,13 +606,23 @@ export function CallCentreContent({
             for (let i = 0; i < remainingSkips.length; i += LEADS_BACKGROUND_CONCURRENCY) {
               if (cancelled) return
               const chunk = remainingSkips.slice(i, i + LEADS_BACKGROUND_CONCURRENCY)
-              const results = await Promise.all(chunk.map((skip) => fetchBatch(skip, LEADS_BACKGROUND_BATCH_SIZE)))
+              // allSettled: one failed request must not discard its siblings' rows.
+              const results = await Promise.allSettled(chunk.map((skip) => fetchBatch(skip, LEADS_BACKGROUND_BATCH_SIZE)))
               if (cancelled) return
-              const newLeads = results.flatMap((data) => (data.data || []).map(mapLead))
+              const ok = results.filter((r) => r.status === "fulfilled")
+              const newLeads = ok.flatMap((r) => (r.value.data || []).map(mapLead))
               setLeads((prev) => [...prev, ...newLeads])
+              if (ok.length < results.length) {
+                console.error("Error loading remaining call-center leads (keeping what's loaded so far)")
+                setLeadsPartial(true)
+                break
+              }
             }
           } catch (err) {
-            if (!cancelled) console.error("Error loading remaining call-center leads (keeping what's loaded so far):", err)
+            if (!cancelled) {
+              console.error("Error loading remaining call-center leads (keeping what's loaded so far):", err)
+              setLeadsPartial(true)
+            }
           } finally {
             if (!cancelled) setLeadsBackgroundLoading(false)
           }
@@ -992,6 +1006,12 @@ export function CallCentreContent({
                 Loaded {leads.length} of {leadsTotal} leads — loading the rest in the background…
               </span>
             </div>
+          )}
+
+          {leadsPartial && (
+            <Notice tone="warning">
+              Loaded {leads.length} of {leadsTotal}, some rows couldn&apos;t load
+            </Notice>
           )}
 
           {leadsError
