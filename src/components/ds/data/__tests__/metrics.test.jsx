@@ -148,6 +148,20 @@ describe("MetricTabsChart states and adapter", () => {
   })
 })
 
+describe("MetricTabsChart plotFallback", () => {
+  it("replaces the plot, even when the metric has a series, but not the loading skeleton", () => {
+    const fallback = <p>No source for this</p>
+    const { container, rerender } = render(
+      <MetricTabsChart metrics={metrics} value="a" plotFallback={fallback} />
+    )
+    expect(screen.getByText("No source for this")).toBeInTheDocument()
+    expect(screen.queryByText("Nothing to plot for this window yet.")).toBeNull()
+    rerender(<MetricTabsChart metrics={metrics} value="a" plotFallback={fallback} plotLoading />)
+    expect(screen.queryByText("No source for this")).toBeNull()
+    expect(container.querySelector('[role="tabpanel"] [data-ds="skeleton"]')).not.toBeNull()
+  })
+})
+
 describe("Breakdown / BarList", () => {
   it("shares render as tabular figures", () => {
     render(

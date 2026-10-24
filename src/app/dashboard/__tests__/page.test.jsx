@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
 import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import PortfolioDashboardPage from "../page";
+import { usePortfolioData } from "../usePortfolioData";
 import { DashboardControlsProvider } from "@/components/dashboard-controls";
 import { PageHeaderProvider, PageHeaderTitle } from "@/components/page-header";
 
@@ -239,7 +240,7 @@ describe("Portfolio Dashboard", () => {
     expect(screen.getByTestId("top-bar")).toHaveTextContent("Dashboard");
   });
 
-  it("shows the four metrics as tabs, with cost per lead as the inverted one", async () => {
+  it("shows the five metrics as tabs, with cost per lead as the inverted one", async () => {
     await renderPage();
 
     const chart = ds("metric-tabs-chart");
@@ -247,6 +248,7 @@ describe("Portfolio Dashboard", () => {
     expect(tabs.map((t) => t.querySelector("span").textContent)).toEqual([
       "Leads",
       "Closes",
+      "Calls",
       "Cost per lead",
       "Ad spend",
     ]);
@@ -275,7 +277,7 @@ describe("Portfolio Dashboard", () => {
     expect(tab(/^Leads/)).toHaveAttribute("aria-selected", "false");
   });
 
-  it("does not fetch call logs, which no tab plots any more", async () => {
+  it("does not fetch call logs until the Calls tab is opened", async () => {
     await renderPage();
     expect(
       apiRequest.mock.calls.some(([url]) => url.startsWith("/api/hotprospector/call-center"))
@@ -541,5 +543,196 @@ describe("Dashboard states", () => {
         "No dated leads in this window yet."
       )
     );
+  });
+});
+
+const callFetches = () =>
+  apiRequest.mock.calls.filter(([url]) => url.startsWith("/api/hotprospector/call-center"));
+
+describe("Calls tab", () => {
+  it("shows the group's total calls on the tab", async () => {
+    await renderPage();
+    // 120 + 80 from the two groups' call_stats.
+    expect(tab(/^Calls/)).toHaveTextContent("200");
+  });
+
+  it("fetches call logs once per preset, lazily, and plots them", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    expect(callFetches()).toHaveLength(0);
+
+    await user.click(tab(/^Calls/));
+    await waitFor(() => expect(callFetches()).toHaveLength(1));
+    expect(callFetches()[0][0]).toContain("limit=2000");
+    expect(tab(/^Calls/)).toHaveAttribute("aria-selected", "true");
+
+    // Away and back: the rows for this preset are held, not refetched.
+    await user.click(tab(/^Leads/));
+    await user.click(tab(/^Calls/));
+    await waitFor(() => expect(ds("metric-tabs-chart")).toBeInTheDocument());
+    expect(callFetches()).toHaveLength(1);
+    expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).not.toHaveTextContent(
+      "No dated calls"
+    );
+  });
+
+  it("refetches for a new preset", async () => {
+    const user = userEvent.setup();
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
+    );
+    await renderPage();
+    await user.click(tab(/^Calls/));
+    await waitFor(() => expect(callFetches()).toHaveLength(1));
+
+    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
+    await waitFor(() => expect(callFetches()).toHaveLength(2));
+  });
+
+  it("says so when the window has no dated calls", async () => {
+    const user = userEvent.setup();
+    mockEndpoints({ callRows: [] });
+    await renderPage();
+    await user.click(tab(/^Calls/));
+    await waitFor(() =>
+      expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).toHaveTextContent(
+        "No dated calls in this window yet."
+      )
+    );
+  });
+
+  it("keeps the tab, explains itself and fetches nothing when no client has a call centre", async () => {
+    const user = userEvent.setup();
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
+    );
+    await renderPage();
+    expect(tab(/^Calls/)).toHaveTextContent("—");
+
+    await user.click(tab(/^Calls/));
+    const panel = ds("metric-tabs-chart").querySelector("[role=tabpanel]");
+    expect(panel).toHaveTextContent("No call data across your clients");
+    expect(panel).toHaveTextContent("so there's no call volume to plot");
+    expect(callFetches()).toHaveLength(0);
+  });
+});
+
+describe("Call insights", () => {
+  const group_ = () => within(document.querySelector('[data-ds="metric-group"]'));
+
+  it("renders all six cells under the group heading", async () => {
+    await renderPage();
+    const insights = document.querySelector('[data-ds="metric-group"]');
+    expect(insights).toHaveTextContent("Call insights");
+    expect(insights).toHaveTextContent("Across all client call centres");
+    const cards = insights.querySelectorAll('[data-ds="metric-card"]');
+    expect(Array.from(cards).map((c) => c.firstChild.textContent)).toEqual([
+      "Total calls",
+      "Talk time (min)",
+      "Answer rate",
+      "Calls per lead",
+      "Calls per close",
+      "Conversion rate",
+    ]);
+    expect(group_().getByText("Total calls").parentElement).toHaveTextContent("200");
+    expect(screen.queryByText(/None of your clients use a call centre/)).not.toBeInTheDocument();
+  });
+
+  it("keeps every cell but greys the call-centre ones, with a notice, when nobody dials", async () => {
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
+    );
+    await renderPage();
+
+    const notice = ds("notice");
+    expect(notice).toHaveTextContent(
+      "None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
+    );
+    const insights = document.querySelector('[data-ds="metric-group"]');
+    const cards = insights.querySelectorAll('[data-ds="metric-card"]');
+    expect(cards).toHaveLength(6);
+    // Five placeholders; conversion (closes / leads) stays a real number: 16 / 200.
+    expect(insights.querySelectorAll("[title^='Not available']")).toHaveLength(5);
+    expect(cards[5]).toHaveTextContent("8.0%");
+  });
+
+  it("shows a skeleton in its place while the portfolio loads", () => {
+    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { loading: true }));
+    renderDashboard();
+    expect(document.querySelector('[data-ds="metric-group"]')).toBeNull();
+  });
+});
+
+describe("Granularity", () => {
+  // Eight days across two ISO weeks: Mon 6 Jul to Mon 13 Jul 2026.
+  const DAYS = Array.from({ length: 8 }, (_, i) => ({
+    date: `2026-07-${String(6 + i).padStart(2, "0")}`,
+    leads: 1,
+    closes: 1,
+  }));
+
+  beforeEach(() => {
+    // Radix Select leans on pointer-capture and scroll APIs jsdom lacks.
+    Element.prototype.hasPointerCapture ??= () => false;
+    Element.prototype.releasePointerCapture ??= () => {};
+    Element.prototype.scrollIntoView ??= () => {};
+  });
+
+  it("offers Daily, Weekly and Monthly, starting from the window's own", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    const trigger = screen.getByRole("combobox", { name: "Chart granularity" });
+    expect(trigger).toHaveTextContent("Daily");
+    await user.click(trigger);
+    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Daily",
+      "Weekly",
+      "Monthly",
+    ]);
+  });
+
+  it("follows the reader's pick in the control", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    await user.click(screen.getByRole("combobox", { name: "Chart granularity" }));
+    await user.click(screen.getByRole("option", { name: "Weekly" }));
+    expect(screen.getByRole("combobox", { name: "Chart granularity" })).toHaveTextContent("Weekly");
+  });
+
+  it("re-buckets every series in the hook when granularity changes", async () => {
+    mockEndpoints({ leadDays: DAYS });
+    const { result, rerender } = renderHook(
+      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity }),
+      { initialProps: { granularity: "Daily" } }
+    );
+    await waitFor(() => expect(result.current.chartMetrics.leads.values.length).toBe(8));
+    expect(result.current.chartMetrics.closes.values.length).toBe(8);
+    // Spend is dated relative to today, so it is bucketed by the same setting.
+    const dailySpend = result.current.chartMetrics.spend.values.length;
+
+    rerender({ granularity: "Weekly" });
+    const weekly = result.current.chartMetrics.leads.values;
+    expect(weekly.length).toBe(2);
+    expect(weekly.reduce((a, b) => a + b, 0)).toBe(8);
+    expect(result.current.chartMetrics.closes.values.length).toBe(2);
+    expect(result.current.chartMetrics.spend.values.length).toBeLessThanOrEqual(dailySpend);
+  });
+
+  it("re-buckets the calls series too", async () => {
+    mockEndpoints({
+      callRows: [
+        {
+          id: "l1",
+          call_logs: DAYS.map((d) => ({ call_time_iso: `${d.date}T10:00:00Z` })),
+        },
+      ],
+    });
+    const { result, rerender } = renderHook(
+      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity, chartMetric: "calls" }),
+      { initialProps: { granularity: "Daily" } }
+    );
+    await waitFor(() => expect(result.current.chartMetrics.calls.values.length).toBe(8));
+    rerender({ granularity: "Weekly" });
+    expect(result.current.chartMetrics.calls.values).toHaveLength(2);
   });
 });

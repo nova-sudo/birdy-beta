@@ -5,6 +5,24 @@
 /** Called is the one funnel stage a portfolio with no dialler cannot report. */
 export const CALL_CENTRE_FUNNEL_KEYS = ["called"];
 
+/**
+ * Which of the six call-insight figures a call centre has to report for.
+ *
+ * Five of the six. `conversion` is the odd one out and it is worth saying why,
+ * because it sits in a group headed "Call insights" and looks like the others:
+ * it is closes ÷ leads — GHL won opportunities over Meta results — and a
+ * client with no dialler still has both. Greying it out would be telling the
+ * reader we can't measure something we can measure perfectly well.
+ *
+ * `perClose` goes the other way and is included: calls ÷ closes has a real
+ * denominator but no numerator, and a ratio is only as available as its worst
+ * input.
+ *
+ * Mapped from buildCallInsights in lib/portfolio-aggregate.js, whose figures
+ * come out of `hotprospector.call_stats`.
+ */
+export const CALL_CENTRE_STAT_KEYS = ["total", "speed", "answer", "perLead", "perClose"];
+
 const MAX_FINDINGS = 5;
 
 // Worst first, so the cap drops good news before it drops a problem.
@@ -175,4 +193,34 @@ export function toFindings(briefing, suggestions, { onApply, onDismiss } = {}) {
   return [...fromSuggestions, ...fromBriefing]
     .sort((a, b) => TONE_ORDER.indexOf(a.tone) - TONE_ORDER.indexOf(b.tone))
     .slice(0, MAX_FINDINGS);
+}
+
+/**
+ * Call insights as MetricGroup cells. Where no client has a call centre the
+ * figures that need one are flagged `unavailable` (the page renders its
+ * placeholder in their place) rather than passed through as the zeroes they
+ * sum to; the cells themselves stay, so the reader still sees which six
+ * figures Birdy tracks here.
+ *
+ * @param {{key: string, label: string, value: string}[]} insights buildCallInsights output
+ * @param {boolean} hasCallCentre
+ * @returns {{key: string, label: string, value: string, unavailable?: boolean}[]}
+ */
+export function callInsightItems(insights, hasCallCentre) {
+  return (insights ?? []).map(({ key, label, value }) => ({
+    key,
+    label,
+    value,
+    ...(!hasCallCentre && CALL_CENTRE_STAT_KEYS.includes(key) ? { unavailable: true } : {}),
+  }));
+}
+
+/**
+ * The Calls tab's headline figure. There is no calls KPI in the strip (the
+ * insights carry the total), and with no call centre the total is a dash, not
+ * a 0.
+ */
+export function callsTabValue(insights, hasCallCentre) {
+  if (!hasCallCentre) return "—";
+  return (insights ?? []).find((i) => i.key === "total")?.value ?? "—";
 }

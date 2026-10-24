@@ -46,6 +46,8 @@ function ChartTooltip({ active, payload, label, formatValue, metric }) {
  * @param {boolean} [props.loading] Figures not yet available: skeleton tabs and plot
  * @param {boolean} [props.plotLoading] Series still counting: skeleton plot only
  * @param {React.ReactNode} [props.emptyMessage] Shown in the plot when the active metric has no series
+ * @param {React.ReactNode} [props.plotFallback] Replaces the plot (after loading) with custom content, e.g. "this metric has no source"; wins over the series and `emptyMessage`
+ * @param {string|number} [props.redrawKey] Changes when the same metric is re-bucketed (granularity, period): replays the draw
  *
  * A metric is selectable when `plottable` is not false, even with no `series` yet:
  * the panel shows the empty state until the hub supplies the series for the new tab.
@@ -59,6 +61,8 @@ function MetricTabsChart({
   loading = false,
   plotLoading = false,
   emptyMessage = "Nothing to plot for this window yet.",
+  plotFallback,
+  redrawKey = "",
   className,
   ...props
 }) {
@@ -130,6 +134,8 @@ function MetricTabsChart({
       >
         {loading || plotLoading ? (
           <Skeleton className="h-56 w-full rounded-surface" />
+        ) : plotFallback ? (
+          <div className="flex min-h-56 items-center justify-center">{plotFallback}</div>
         ) : series?.length > 0 ? (
           <div className="h-56" aria-label={xLabel}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -154,9 +160,9 @@ function MetricTabsChart({
                   cursor={{ stroke: "var(--color-border)" }}
                   content={<ChartTooltip formatValue={formatValue} metric={active} />}
                 />
-                {/* Keyed on the metric so switching tabs replays the draw. */}
+                {/* Keyed on the metric (and redrawKey) so switching tabs or buckets replays the draw. */}
                 <Area
-                  key={`prev-${active.key}`}
+                  key={`prev-${active.key}-${redrawKey}`}
                   dataKey="previous"
                   type="monotone"
                   stroke="var(--color-muted-foreground)"
@@ -168,7 +174,7 @@ function MetricTabsChart({
                   animationDuration={DRAW_MS}
                 />
                 <Area
-                  key={`cur-${active.key}`}
+                  key={`cur-${active.key}-${redrawKey}`}
                   dataKey="current"
                   type="monotone"
                   stroke="var(--color-chart-1)"

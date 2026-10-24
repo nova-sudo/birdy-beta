@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   briefingFromDiagnosis,
+  callInsightItems,
+  callsTabValue,
   clientBreakdown,
   comparableFunnel,
   costPerLeadSeries,
@@ -225,5 +227,24 @@ describe("portfolioSummary and greeting", () => {
   it("is a neutral hello until the hour is known, so server and first client render agree", () => {
     expect(greeting(null, "Sam")).toBe("Hello, Sam");
     expect(greeting(undefined)).toBe("Hello");
+  });
+});
+
+describe("callInsightItems / callsTabValue", () => {
+  const insights = [
+    { key: "total", label: "Total calls", value: "200" },
+    { key: "perClose", label: "Calls per close", value: "4.0" },
+    { key: "conversion", label: "Conversion rate", value: "8.0%" },
+  ];
+
+  it("passes every figure through when somebody dials", () => {
+    expect(callInsightItems(insights, true).some((i) => i.unavailable)).toBe(false);
+    expect(callsTabValue(insights, true)).toBe("200");
+  });
+
+  it("flags the call-centre figures, not conversion, when nobody dials", () => {
+    const items = callInsightItems(insights, false);
+    expect(items.map((i) => Boolean(i.unavailable))).toEqual([true, true, false]);
+    expect(callsTabValue(insights, false)).toBe("—");
   });
 });

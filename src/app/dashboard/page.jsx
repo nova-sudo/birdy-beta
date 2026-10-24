@@ -7,17 +7,33 @@ import {
   Breakdown,
   EmptyState,
   ErrorState,
+  MetricGroup,
   MetricTabsChart,
+  Notice,
   PageHeader,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   Skeleton,
   fromPortfolioTabs,
 } from "@/components/ds";
+import {
+  CallCentreUnavailable,
+  LinkSalesToolLink,
+  UnavailableValue,
+} from "@/components/callcenter/CallCentreUnavailable";
+import { GRANULARITIES } from "@/lib/portfolio-series";
+import { useGranularity } from "@/lib/useGranularity";
 import { useDashboardControls } from "@/components/dashboard-controls";
 import { usePageHeader } from "@/components/page-header";
 import { PeriodControl } from "./PeriodControl";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 import {
   briefingFromDiagnosis,
+  callInsightItems,
+  callsTabValue,
   clientBreakdown,
   comparableFunnel,
   costPerLeadSeries,
@@ -33,8 +49,9 @@ import {
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
 // Agency-level view: across all clients, what is happening and where is the
-// problem? Hub layout, option A: a greeting and the period, four metrics that
-// rise into one chart, then "By client" beside Birdy's read.
+// problem? Hub layout, option A: a greeting and the period, five metrics that
+// rise into one chart, then "By client" beside Birdy's read, then the call
+// insights.
 //
 // This file is only composition and wiring. The fetching is in
 // usePortfolioData, the arithmetic in @/lib/portfolio-*, and the wording and
@@ -44,6 +61,11 @@ import {
 const METRIC_TABS = [
   { key: "leads", label: "Leads", kpi: "leads" },
   { key: "closes", label: "Closes", kpi: "closes" },
+  // The Calls tab stays in the row rather than being hidden: the reader picked
+  // a metric and deserves an answer about it, and a tab that quietly
+  // disappears when a client is onboarded a certain way is harder to explain
+  // than one that says why. It has no KPI of its own; see callsTabValue.
+  { key: "calls", label: "Calls", kpi: "calls" },
   { key: "cpl", label: "Cost per lead", kpi: "cpl" },
   { key: "spend", label: "Ad spend", kpi: "spend" },
 ];
@@ -96,6 +118,7 @@ function LoadingBody() {
     <div className={BODY_GRID}>
       <Skeleton className="h-64 rounded-surface" />
       <Skeleton className="h-64 rounded-frame" />
+      <Skeleton className="h-40 rounded-frame lg:col-span-2" />
     </div>
   );
 }
@@ -103,22 +126,28 @@ function LoadingBody() {
 export default function PortfolioDashboardPage() {
   const { preset, setPreset } = useDashboardControls();
   const [chartMetric, setChartMetric] = useState("leads");
+  // The date preset picks the window every figure covers; granularity only
+  // changes how finely the chart buckets that same window. Auto from the
+  // range until the reader picks one, as on the other hubs.
+  const { granularity, setGranularity } = useGranularity(preset);
   const { firstName, hour } = useGreetingParts();
 
   const {
     clientCount,
     clientRows,
     kpis,
+    callInsights,
     funnel,
     chartMetrics,
     suggestions,
     loading,
     seriesLoading,
+    callsLoading,
     error,
     hasClients,
     hasComparison,
     hasCallCentre,
-  } = usePortfolioData({ preset });
+  } = usePortfolioData({ preset, granularity, chartMetric });
 
   // The top bar shows the page's name; the greeting below is the page's own.
   const topBar = useMemo(() => ({ title: "Dashboard" }), []);
@@ -161,6 +190,7 @@ export default function PortfolioDashboardPage() {
       leads: toSeries(chartMetrics.leads),
       closes: toSeries(chartMetrics.closes),
       cpl: costPerLeadSeries(chartMetrics.leads, chartMetrics.spend),
+      calls: toSeries(chartMetrics.calls),
       spend: toSeries(chartMetrics.spend),
     };
     // Too short to draw is withheld, but counted, so the empty message can say
@@ -172,7 +202,9 @@ export default function PortfolioDashboardPage() {
       ])
     );
     const tabs = METRIC_TABS.map(({ key, label, kpi }) => ({
-      ...kpis.find((k) => k.key === kpi),
+      ...(kpi === "calls"
+        ? { value: callsTabValue(callInsights, hasCallCentre) }
+        : kpis.find((k) => k.key === kpi)),
       key,
       label,
     }));
@@ -184,7 +216,7 @@ export default function PortfolioDashboardPage() {
       caption: m.delta !== undefined ? "vs previous period" : undefined,
       symbol,
     }));
-  }, [chartMetrics, kpis, chartMetric]);
+  }, [chartMetrics, kpis, callInsights, hasCallCentre, chartMetric]);
 
   const formatValue = useCallback((n, metric) => {
     if (metric?.key === "cpl") return `${metric.symbol}${n.toFixed(2)}`;
@@ -208,6 +240,24 @@ export default function PortfolioDashboardPage() {
     );
   }, [funnel, hasCallCentre, hasComparison, suggestions, removed, handleApply, handleDismiss]);
 
+  // Where no client has a dialler, the call-centre figures show the placeholder
+  // rather than the zeroes they sum to. Which cells that touches is enumerated
+  // in presentation.js — notably not conversion rate, which comes from the CRM.
+  const callCells = useMemo(
+    () =>
+      callInsightItems(callInsights, hasCallCentre).map(({ unavailable, ...cell }) =>
+        unavailable ? { ...cell, value: <UnavailableValue /> } : cell
+      ),
+    [callInsights, hasCallCentre]
+  );
+
+  const callsSelected = chartMetric === "calls";
+  // The calls series is its own request, so it has its own loading state; the
+  // lead series' says nothing about it.
+  const plotLoading = callsSelected
+    ? hasCallCentre && (callsLoading || Boolean(chartMetrics.calls?.pending))
+    : seriesLoading;
+
   const showData = !loading && !error && hasClients;
   const summary = showData ? portfolioSummary({ clientCount, kpis }) : null;
   const activeMetric = metrics.find((m) => m.key === chartMetric);
@@ -217,8 +267,20 @@ export default function PortfolioDashboardPage() {
       <PageHeader
         title={greeting(hour, firstName)}
         description={summary ?? "Portfolio-level performance"}
-        period={
-          <PeriodControl value={preset} onChange={setPreset} />
+        period={<PeriodControl value={preset} onChange={setPreset} />}
+        actions={
+          <Select value={granularity} onValueChange={setGranularity}>
+            <SelectTrigger size="sm" aria-label="Chart granularity">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {GRANULARITIES.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         }
       />
 
@@ -242,19 +304,32 @@ export default function PortfolioDashboardPage() {
             formatValue={formatValue}
             xLabel={`${activeMetric?.label ?? "Metric"} over the period`}
             loading={loading}
-            plotLoading={seriesLoading}
+            plotLoading={plotLoading}
+            redrawKey={`${granularity}-${preset}`}
+            plotFallback={
+              callsSelected && !hasCallCentre ? (
+                <CallCentreUnavailable
+                  className="bg-transparent shadow-none"
+                  title="No call data across your clients"
+                  body="None of your clients use a call centre, so there's no call volume to plot. Ad spend, leads and closes are unaffected."
+                />
+              ) : undefined
+            }
             emptyMessage={
               activeMetric?.points === 1
                 ? "Pick 7 days or longer to see a trend."
                 : chartMetric === "spend"
                   ? "No daily spend in this window yet."
-                  : "No dated leads in this window yet."
+                  : callsSelected
+                    ? "No dated calls in this window yet."
+                    : "No dated leads in this window yet."
             }
           />
 
           {loading ? (
             <LoadingBody />
           ) : (
+            <>
             <div className={BODY_GRID}>
               {breakdown.rows.length > 0 ? (
                 <Breakdown
@@ -270,6 +345,25 @@ export default function PortfolioDashboardPage() {
               )}
               <BirdyRead findings={findings} prompt={BIRDY_PROMPT} />
             </div>
+
+            {/* The cells stay even when none of them can be filled in — the
+                reader still needs to know which six figures Birdy tracks here,
+                and an empty group answers "what am I missing out on?" with
+                nothing at all. The note carries the reason and the way out. */}
+            <div className="flex flex-col gap-3">
+              {!hasCallCentre && (
+                <Notice tone="neutral" action={<LinkSalesToolLink />}>
+                  None of your clients use a call centre, so these figures have no source.
+                  Conversion rate is unaffected — it comes from your CRM.
+                </Notice>
+              )}
+              <MetricGroup
+                title="Call insights"
+                meta="Across all client call centres"
+                items={callCells}
+              />
+            </div>
+            </>
           )}
         </>
       )}
