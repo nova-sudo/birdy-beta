@@ -160,7 +160,7 @@ export default function LoginForm() {
           />
         </div>
 
-        {error && <Notice tone="danger">{error}</Notice>}
+        {error && <Notice tone="danger" role="alert">{error}</Notice>}
 
         <Button type="submit" variant="primary" size="lg" className="w-full" loading={isLoading}>
           {isLoading ? "Signing in..." : "Sign in"}

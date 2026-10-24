@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BellRing } from "lucide-react";
-import { Badge, Button, Input } from "@/components/ds";
+import { Button, Input } from "@/components/ds";
 import BirdyAvatar from "@/components/birdy/BirdyAvatar";
 import { CountUp, EASE_OUT, Pop, Reveal } from "@/components/motion";
 import { publicRequest } from "@/lib/api";
@@ -137,7 +137,7 @@ export default function Home() {
           <BirdyAvatar size={34} />
           <span className="text-xl font-semibold tracking-tight">Birdy</span>
         </div>
-        <Badge tone="neutral" className="px-3 py-1.5">Coming soon</Badge>
+        <span className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background">Coming soon</span>
       </header>
 
       {/* HERO */}

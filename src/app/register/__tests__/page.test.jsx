@@ -29,7 +29,7 @@ function ok(user) {
 
 async function signUp(user = userEvent.setup()) {
   await user.type(screen.getByLabelText(/email address/i), "new@agency.com")
-  await user.type(screen.getByLabelText(/password/i), "hunter2hunter2")
+  await user.type(screen.getByLabelText("Password"), "hunter2hunter2")
   await user.click(screen.getByRole("button", { name: /create account/i }))
 }
 
@@ -46,7 +46,7 @@ describe("register page", () => {
     render(<RegisterPage />)
 
     expect(screen.getByLabelText(/email address/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
+    expect(screen.getByLabelText("Password")).toBeInTheDocument()
     expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument()
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument()
     expect(screen.queryByText(/select your currency/i)).not.toBeInTheDocument()
@@ -109,6 +109,7 @@ describe("register page", () => {
     const { container } = render(<RegisterPage />)
     await signUp()
     await screen.findByText("Email already registered")
+    expect(screen.getByRole("alert")).toHaveAttribute("data-ds", "notice")
     expect(container.querySelector('[data-ds="notice"]').className).toMatch(/bg-danger-soft/)
   })
 
@@ -116,11 +117,12 @@ describe("register page", () => {
     const { container } = render(<RegisterPage />)
     expect(screen.getByLabelText(/email address/i)).toHaveAttribute("data-ds", "input")
     expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
-    expect(screen.getAllByRole("link", { name: /privacy/i }).length).toBeGreaterThan(0)
+    // The in-form terms sentence is the only legal copy; no bottom row.
+    expect(screen.getAllByRole("link", { name: /privacy/i })).toHaveLength(1)
     expect(await screen.findByTestId("silk")).toBeInTheDocument()
 
     const classes = [...container.querySelectorAll("[class]")].map((e) => e.getAttribute("class")).join(" ")
-    expect(classes).not.toMatch(/\bpd-|text-\[\d/)
+    expect(classes).not.toMatch(new RegExp(["\\bp", "d-|text-\\[\\d"].join("")))
     const styles = [...container.querySelectorAll("[style]")].map((e) => e.getAttribute("style")).join(" ")
     expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i)
   })

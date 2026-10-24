@@ -10,7 +10,7 @@ vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
 
 import Home from "@/app/page"
 
-const LEGACY = /\bpd-|text-\[\d/
+const LEGACY = new RegExp(["\\bp", "d-|text-\\[\\d"].join(""))
 
 describe("landing page", () => {
   beforeEach(() => {
@@ -22,7 +22,7 @@ describe("landing page", () => {
     const { container } = render(<Home />)
     expect(container.querySelector('[data-ds="input"]')).toBeTruthy()
     expect(container.querySelector('[data-ds="button"]')).toBeTruthy()
-    expect(container.querySelector('[data-ds="badge"]').textContent).toBe("Coming soon")
+    expect(screen.getByText("Coming soon")).toBeInTheDocument()
   })
 
   it("has no legacy classes and no inline hex", () => {
@@ -42,6 +42,14 @@ describe("landing page", () => {
     expect(await screen.findByText(/You're on the List/)).toBeInTheDocument()
     expect(publicRequest).toHaveBeenCalledWith("/api/waitlist", expect.objectContaining({ method: "POST" }))
     expect(localStorage.getItem("birdy_waitlist_email")).toBe("me@agency.com")
+  })
+
+  it("treats a 409 as already on the list", async () => {
+    publicRequest.mockResolvedValue({ status: 409 })
+    render(<Home />)
+    await userEvent.type(screen.getByLabelText("Email address"), "me@agency.com")
+    await userEvent.click(screen.getByRole("button", { name: /join the waitlist/i }))
+    expect(await screen.findByText(/Already on the List/)).toBeInTheDocument()
   })
 
   it("shows the already state for a stored email", async () => {

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import AuthSilkPanel from "./AuthSilkPanel"
 
 /**
@@ -11,25 +12,30 @@ import AuthSilkPanel from "./AuthSilkPanel"
  * @param {string} props.linkLabel
  * @param {React.ReactNode} props.panelHeadline
  * @param {React.ReactNode} props.panelSub
+ * @param {boolean} [props.showLegal=true] Terms · Privacy row under the form; off where the form carries its own terms sentence
  */
-export default function AuthLayout({ prompt, linkHref, linkLabel, panelHeadline, panelSub, children }) {
+export default function AuthLayout({ prompt, linkHref, linkLabel, panelHeadline, panelSub, showLegal = true, children }) {
   return (
     <div data-ds="auth-layout" className="flex min-h-svh bg-background text-foreground">
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-14 items-center justify-end gap-1.5 px-4 text-sm">
           <span className="text-muted-foreground">{prompt}</span>
-          <a href={linkHref} className="font-medium text-primary hover:underline">
+          <Link href={linkHref} className="font-medium text-primary hover:underline">
             {linkLabel}
-          </a>
+          </Link>
         </div>
         <div className="flex flex-1 items-center justify-center px-4">
           <div className="w-full max-w-[400px]">{children}</div>
         </div>
-        <div className="flex h-10 items-center justify-center gap-1.5 px-4 text-xs text-muted-foreground">
-          <a href="/billing/terms-of-service" className="hover:text-foreground">Terms</a>
-          <span aria-hidden>·</span>
-          <a href="/billing/privacy-policy" className="hover:text-foreground">Privacy</a>
-        </div>
+        {showLegal ? (
+          <div className="flex h-10 items-center justify-center gap-1.5 px-4 text-xs text-muted-foreground">
+            <Link href="/billing/terms-of-service" className="hover:text-foreground">Terms</Link>
+            <span aria-hidden>·</span>
+            <Link href="/billing/privacy-policy" className="hover:text-foreground">Privacy</Link>
+          </div>
+        ) : (
+          <div className="h-10" />
+        )}
       </div>
       <div className="hidden w-[680px] lg:block">
         <AuthSilkPanel headline={panelHeadline} sub={panelSub} />

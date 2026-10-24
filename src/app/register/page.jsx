@@ -79,6 +79,7 @@ export default function RegisterPage() {
       linkHref="/login"
       linkLabel="Sign in"
       panelHeadline="Join Birdy"
+      showLegal={false}
       panelSub="Start growing smarter campaigns, conversations, and conversions in minutes."
     >
       <div className="flex flex-col gap-6">
@@ -114,7 +115,7 @@ export default function RegisterPage() {
             <p className="text-xs text-muted-foreground">Must be at least 8 characters long</p>
           </div>
 
-          {error && <Notice tone="danger">{error}</Notice>}
+          {error && <Notice tone="danger" role="alert">{error}</Notice>}
 
           <Button type="submit" variant="primary" size="lg" className="w-full" loading={isLoading}>
             {isLoading ? "Creating account..." : "Create Account"}

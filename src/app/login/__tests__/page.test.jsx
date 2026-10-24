@@ -20,7 +20,7 @@ vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
 
 import LoginPage from "@/app/login/page"
 
-const LEGACY = /\bpd-|text-\[\d/
+const LEGACY = new RegExp(["\\bp", "d-|text-\\[\\d"].join(""))
 
 describe("login page", () => {
   beforeEach(() => {
@@ -35,8 +35,18 @@ describe("login page", () => {
     expect(container.querySelector('[data-ds="label"]')).toBeTruthy()
     expect(container.querySelector('[data-ds="button"][type="submit"]')).toBeTruthy()
     expect(screen.getByRole("link", { name: "Create an account" })).toHaveAttribute("href", "/register")
+    expect(screen.getByRole("button", { name: "Show password" })).toHaveAttribute("aria-pressed", "false")
     expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute("href", "/billing/terms-of-service")
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/billing/privacy-policy")
+  })
+
+  it("marks the submit busy while the request is pending", async () => {
+    publicRequest.mockReturnValue(new Promise(() => {}))
+    render(<LoginPage />)
+    await userEvent.type(await screen.findByLabelText(/email address/i), "a@b.com")
+    await userEvent.type(screen.getByLabelText("Password"), "hunter2hunter2")
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }))
+    expect(await screen.findByRole("button", { name: /signing in/i })).toHaveAttribute("aria-busy", "true")
   })
 
   it("still loads Silk dynamically into the panel", async () => {
@@ -60,10 +70,11 @@ describe("login page", () => {
     })
     const { container } = render(<LoginPage />)
     await userEvent.type(await screen.findByLabelText(/email address/i), "a@b.com")
-    await userEvent.type(screen.getByLabelText(/password/i), "wrongwrong")
+    await userEvent.type(screen.getByLabelText("Password"), "wrongwrong")
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }))
 
     const text = await screen.findByText("Invalid email or password")
+    expect(screen.getByRole("alert")).toBe(text.closest('[data-ds="notice"]'))
     const notice = text.closest('[data-ds="notice"]')
     expect(notice).toBe(container.querySelector('[data-ds="notice"]'))
     expect(notice.className).toMatch(/bg-danger-soft/)

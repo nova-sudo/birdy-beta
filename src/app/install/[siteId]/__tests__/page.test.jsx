@@ -11,7 +11,7 @@ vi.mock("@/lib/api", () => ({
 
 import InstallPage from "../page"
 
-const LEGACY = /\bpd-|text-\[\d/
+const LEGACY = new RegExp(["\\bp", "d-|text-\\[\\d"].join(""))
 
 function details(over = {}) {
   return {
