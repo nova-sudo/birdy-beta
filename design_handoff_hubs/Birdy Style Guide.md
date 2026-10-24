@@ -18,8 +18,8 @@ records where each file came from and what changed.
    are in `src/lib/brand-colors.js`. Nothing else may contain a hex colour.
 3. **Light mode only.** There is no dark theme and no `dark:` classes.
 4. **Motion goes through `@/components/motion`** (`Reveal`, `Stagger`,
-   `StaggerItem`, `Pop`, `CountUp`). Reduced motion is respected: every
-   animation has a `motion-reduce:` or `prefers-reduced-motion` fallback.
+   `StaggerItem`, `Pop`, `CountUp`). Reduced motion is respected: the root layout wraps the app in
+   `<MotionConfig reducedMotion="user">`, and CSS animations use `motion-reduce:`.
 5. **Every ds component's root carries `data-ds="<file-name>"`.** Tests and
    crawls find components by that marker.
 6. **Import from the barrel:** `import { Button, Surface } from "@/components/ds"`.
