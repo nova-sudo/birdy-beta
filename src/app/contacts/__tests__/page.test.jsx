@@ -69,6 +69,23 @@ describe("/contacts", () => {
     expect(screen.getByTestId("leads")).toHaveAttribute("data-group", "g2")
   })
 
+  it("selects either of two groups that share a name", async () => {
+    vi.mocked(useClientGroupsWithSeries).mockReturnValue({
+      clientGroups: [
+        { id: "u1", name: "", ghl_location_id: "l1" },
+        { id: "u2", name: "", ghl_location_id: "l2" },
+      ],
+      loading: false, error: null, refresh: vi.fn(), datePreset: "last_7d", setDatePreset,
+    })
+    const user = userEvent.setup()
+    render(<ContactPage />)
+    await user.click(screen.getByRole("combobox", { name: "Client group" }))
+    const options = await screen.findAllByRole("option", { name: "Unnamed Client" })
+    expect(options).toHaveLength(2)
+    await user.click(options[1])
+    expect(screen.getByTestId("leads")).toHaveAttribute("data-group", "u2")
+  })
+
   it("lets the chart granularity be chosen", async () => {
     const user = userEvent.setup()
     render(<ContactPage />)

@@ -27,6 +27,8 @@ facetFilterFn.autoRemove = (values) => values == null || values === "" || values
 // First column pinned: opaque so scrolled cells pass beneath it, with a hairline on its right edge.
 const STICKY_CELL = "sticky left-0 z-10 bg-background shadow-[inset_-1px_0_0_var(--color-border)]"
 
+const STICKY_CELL_DRAG = STICKY_CELL.replace("bg-background", "bg-muted")
+
 const minWidthStyle = (column) => {
   const minWidth = column.columnDef.meta?.minWidth
   return minWidth ? { minWidth } : undefined
@@ -195,88 +197,89 @@ function DataTable({
         ) : (
           <>
             <div data-slot="data-table-scroll" className="overflow-x-auto max-md:hidden">
-            <table className="w-full text-sm">
-              <thead>
-                {table.getHeaderGroups().map((group) => (
-                  <tr key={group.id} className="border-b border-border">
-                    {group.headers.map((header, colIndex) => {
-                      const { column } = header
-                      const sorted = column.getIsSorted()
-                      const locked = lockedColumnIds.includes(column.id)
-                      return (
-                        <th
-                          key={header.id}
-                          scope="col"
-                          aria-sort={
-                            column.getCanSort() ? (sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none") : undefined
-                          }
-                          style={minWidthStyle(column)}
+              <table className="w-full text-sm">
+                <thead>
+                  {table.getHeaderGroups().map((group) => (
+                    <tr key={group.id} className="border-b border-border">
+                      {group.headers.map((header, colIndex) => {
+                        const { column } = header
+                        const sorted = column.getIsSorted()
+                        const locked = lockedColumnIds.includes(column.id)
+                        return (
+                          <th
+                            key={header.id}
+                            scope="col"
+                            aria-sort={
+                              column.getCanSort() ? (sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none") : undefined
+                            }
+                            style={minWidthStyle(column)}
+                            className={cn(
+                              "h-10 whitespace-nowrap px-4 text-left text-xs font-medium text-muted-foreground",
+                              onColumnReorder && !locked && "cursor-grab",
+                              stickyFirstColumn && colIndex === 0 && (dragOver === column.id ? STICKY_CELL_DRAG : STICKY_CELL),
+                              // After the pinned bg-background, and swaps it out rather than racing it.
+                              dragOver === column.id && !(stickyFirstColumn && colIndex === 0) && "bg-muted"
+                            )}
+                            {...(onColumnReorder
+                              ? {
+                                  draggable: !locked,
+                                  onDragStart: (e) => {
+                                    e.dataTransfer.effectAllowed = "move"
+                                    e.dataTransfer.setData("text/plain", column.id)
+                                  },
+                                  onDragOver: (e) => {
+                                    if (locked) return
+                                    e.preventDefault()
+                                    setDragOver(column.id)
+                                  },
+                                  onDragLeave: () => setDragOver(null),
+                                  onDrop: (e) => {
+                                    e.preventDefault()
+                                    setDragOver(null)
+                                    const from = e.dataTransfer.getData("text/plain")
+                                    if (locked) return
+                                    if (from && from !== column.id && !lockedColumnIds.includes(from)) onColumnReorder(from, column.id)
+                                  },
+                                }
+                              : {})}
+                          >
+                            {header.isPlaceholder ? null : typeof column.columnDef.header === "string" ? (
+                              <DataTableColumnHeader column={column} title={column.columnDef.header} />
+                            ) : (
+                              flexRender(column.columnDef.header, header.getContext())
+                            )}
+                          </th>
+                        )
+                      })}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {rows.map((row) => (
+                    <tr
+                      key={row.id}
+                      {...rowProps(row)}
+                      className={cn(
+                        "border-b border-border transition-colors last:border-0 hover:bg-muted/50",
+                        rowProps(row).className
+                      )}
+                    >
+                      {row.getVisibleCells().map((cell, colIndex) => (
+                        <td
+                          key={cell.id}
+                          style={minWidthStyle(cell.column)}
                           className={cn(
-                            "h-10 whitespace-nowrap px-4 text-left text-xs font-medium text-muted-foreground",
-                            onColumnReorder && !locked && "cursor-grab",
-                            dragOver === column.id && "bg-muted",
+                            "whitespace-nowrap px-4 py-3 align-middle",
                             stickyFirstColumn && colIndex === 0 && STICKY_CELL
                           )}
-                          {...(onColumnReorder
-                            ? {
-                                draggable: !locked,
-                                onDragStart: (e) => {
-                                  e.dataTransfer.effectAllowed = "move"
-                                  e.dataTransfer.setData("text/plain", column.id)
-                                },
-                                onDragOver: (e) => {
-                                  if (locked) return
-                                  e.preventDefault()
-                                  setDragOver(column.id)
-                                },
-                                onDragLeave: () => setDragOver(null),
-                                onDrop: (e) => {
-                                  e.preventDefault()
-                                  setDragOver(null)
-                                  const from = e.dataTransfer.getData("text/plain")
-                                  if (locked) return
-                                  if (from && from !== column.id && !lockedColumnIds.includes(from)) onColumnReorder(from, column.id)
-                                },
-                              }
-                            : {})}
                         >
-                          {header.isPlaceholder ? null : typeof column.columnDef.header === "string" ? (
-                            <DataTableColumnHeader column={column} title={column.columnDef.header} />
-                          ) : (
-                            flexRender(column.columnDef.header, header.getContext())
-                          )}
-                        </th>
-                      )
-                    })}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.id}
-                    {...rowProps(row)}
-                    className={cn(
-                      "border-b border-border transition-colors last:border-0 hover:bg-muted/50",
-                      rowProps(row).className
-                    )}
-                  >
-                    {row.getVisibleCells().map((cell, colIndex) => (
-                      <td
-                        key={cell.id}
-                        style={minWidthStyle(cell.column)}
-                        className={cn(
-                          "whitespace-nowrap px-4 py-3 align-middle",
-                          stickyFirstColumn && colIndex === 0 && STICKY_CELL
-                        )}
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             <ul className="flex flex-col gap-3 p-3 md:hidden">
               {rows.map((row) => {

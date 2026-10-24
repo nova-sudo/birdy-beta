@@ -150,6 +150,21 @@ describe("LeadsContent", () => {
     expect(views.saveViewDebounced).not.toHaveBeenCalled()
   })
 
+  it("puts Name first even when a saved view has it mid-order, and keeps it first after a drop", async () => {
+    views.savedColumns = ["email", "contactName", "groupName", "phone"]
+    renderLeads()
+    await inTable("Lead Number 1")
+    const heads = () => within(screen.getByRole("table")).getAllByRole("columnheader")
+    expect(heads().map((h) => h.textContent.trim()).slice(0, 4)).toEqual(["Name", "Email", "Client Group", "Phone"])
+
+    // Dropping on the first movable column (index 1) must never land ahead of Name.
+    const dt = { setData: vi.fn(), getData: () => "phone", effectAllowed: "" }
+    fireEvent.drop(heads().find((h) => h.textContent.trim() === "Email"), { dataTransfer: dt })
+    const saved = views.saveViewDebounced.mock.calls.at(-1)[0]
+    expect(saved[0]).toBe("contactName")
+    expect(saved.slice(0, 3)).toEqual(["contactName", "phone", "email"])
+  })
+
   it("keeps the Columns menu and the source icons", async () => {
     renderLeads()
     await inTable("Lead Number 1")

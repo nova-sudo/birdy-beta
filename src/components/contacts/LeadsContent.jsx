@@ -41,6 +41,12 @@ const PAGE_SIZE = 15
 // The name column leads and stays put: it cannot be dragged, and nothing goes ahead of it.
 const LOCKED_COLUMNS = ["contactName"]
 
+// Any column order, with the locked columns first. Saved views from before the lock can have Name anywhere.
+const lockedFirst = (ids) => [
+  ...LOCKED_COLUMNS.filter((id) => ids.includes(id)),
+  ...ids.filter((id) => !LOCKED_COLUMNS.includes(id)),
+]
+
 const PIPELINE_TABS = [
   { key: "all", label: "All Leads", stat: "lead_count" },
   { key: "open", label: "Open", stat: "open" },
@@ -136,13 +142,14 @@ export function LeadsContent({
 
   const tableColumns = useMemo(() => toTableColumns(contactColumns), [contactColumns])
 
-  const [visibleColumns, setVisibleColumns] = useState(
-    baseContactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
+  const [visibleColumns, setVisibleColumnsRaw] = useState(
+    lockedFirst(baseContactColumns.filter((col) => col.defaultVisible).map((col) => col.id))
   )
+  const setVisibleColumns = useCallback((ids) => setVisibleColumnsRaw(lockedFirst(ids)), [])
   useEffect(() => {
     if (!viewsLoaded || !savedColumns) return
     setVisibleColumns(savedColumns)
-  }, [viewsLoaded, savedColumns])
+  }, [viewsLoaded, savedColumns, setVisibleColumns])
 
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedSources, setSelectedSources] = useState([])
@@ -164,7 +171,7 @@ export function LeadsContent({
   // ── Saved column views ─────────────────────────────────────────────────
   const applyColumnView = useCallback((s) => {
     if (Array.isArray(s.visibleColumns)) setVisibleColumns(s.visibleColumns)
-  }, [])
+  }, [setVisibleColumns])
 
   // Explicit save only — see ColumnsMenu. Toggling changes the table but is
   // not written until "Save to existing" or "Save New View".
@@ -193,7 +200,7 @@ export function LeadsContent({
   )
 
   const defaultColumnIds = useMemo(
-    () => baseContactColumns.filter(c => c.defaultVisible).map(c => c.id),
+    () => lockedFirst(baseContactColumns.filter(c => c.defaultVisible).map(c => c.id)),
     []
   )
 
@@ -211,8 +218,9 @@ export function LeadsContent({
     const from = visibleColumns.indexOf(fromId)
     const to = visibleColumns.indexOf(toId)
     if (from < 0 || to < 0 || LOCKED_COLUMNS.includes(fromId) || LOCKED_COLUMNS.includes(toId)) return
-    const next = visibleColumns.filter((id) => id !== fromId)
-    next.splice(next.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    const moved = visibleColumns.filter((id) => id !== fromId)
+    moved.splice(moved.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    const next = lockedFirst(moved)
     setVisibleColumns(next)
     saveViewDebounced(next)
   }, [visibleColumns, saveViewDebounced])
