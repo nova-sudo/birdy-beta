@@ -39,6 +39,7 @@ export { MetricTabsChart, fromPortfolioTabs } from "./data/metric-tabs-chart"
 export { Breakdown } from "./data/breakdown"
 export { BarList } from "./data/bar-list"
 export { FunnelBar } from "./data/funnel-bar"
+export { Sparkline } from "./data/sparkline"
 
 // Overlays
 export {

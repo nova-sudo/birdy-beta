@@ -3,7 +3,6 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(() => Promise.resolve({ ok: false })) }))
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 
@@ -24,8 +23,8 @@ describe.each([
   it("says the data is missing rather than showing it as zero", () => {
     render(<Overview {...props} groupsError="HTTP 500" />)
 
-    expect(screen.getByText(/couldn’t load your client data/i)).toBeInTheDocument()
-    expect(screen.getByText("HTTP 500")).toBeInTheDocument()
+    expect(screen.getByText(/couldn't load your client data/i)).toBeInTheDocument()
+    expect(screen.getByText(/HTTP 500/)).toBeInTheDocument()
     // No tile may claim a figure while the fetch is known to have failed.
     expect(screen.queryByText("0")).not.toBeInTheDocument()
   })
@@ -41,6 +40,6 @@ describe.each([
 
   it("draws its normal row when there is no error", () => {
     render(<Overview {...props} />)
-    expect(screen.queryByText(/couldn’t load your client data/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/couldn't load your client data/i)).not.toBeInTheDocument()
   })
 })

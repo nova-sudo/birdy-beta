@@ -1,27 +1,53 @@
 "use client"
 
 import { useState, useEffect, useMemo, useCallback } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import BirdyAvatar from "@/components/birdy/BirdyAvatar"
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent } from "@/components/ui/dropdown-menu"
-import StyledTable from "@/components/ui/table-container"
-import { PageTabPanel, PageTabs } from "@/components/portfolio"
+import {
+  ChevronDownIcon,
+  LayoutGridIcon,
+  PhoneIcon,
+  SearchIcon,
+  SlidersHorizontalIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react"
+
+import {
+  Badge,
+  Button,
+  Checkbox,
+  DataTable,
+  EmptyState,
+  ErrorState,
+  Input,
+  Label,
+  MetricGroup,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  SegmentedTabs,
+  Skeleton,
+  Sparkline,
+  Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ds"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { windowCallSeries, windowCallTotals } from "@/lib/saleshub-totals"
-import { Sparkline } from "@/components/ui/sparkline"
 import { scopeHasCallCentre, groupsWithoutCallCentre } from "@/lib/call-centre-availability"
+import { toTableColumns } from "@/lib/contact-columns"
 import { CallCentreUnavailable } from "@/components/callcenter/CallCentreUnavailable"
+import { CallLogsDialog, RecordingLinks } from "@/components/callcenter/CallLogsDialog"
+import { MemberAnalyzeDialog } from "@/components/callcenter/MemberAnalyzeDialog"
+import { CallAnalysisButton } from "@/components/callcenter/CallAnalysisSheet"
+import { DirectionBadge } from "@/components/callcenter/CallCentreParts"
+import { formatDuration } from "@/components/callcenter/analysis"
 import { hpIcon as HP } from "@/lib/icons"
 import {
   CALLS_FETCH_MULTIPLIER,
@@ -31,586 +57,13 @@ import {
   MAX_CALLS_LIMIT,
   DEFAULT_CALLS_LIMIT,
 } from "@/constants"
-import {
-  Users,
-  Phone,
-  PhoneIncoming,
-  PhoneOutgoing,
-  Clock,
-  Play,
-  Download,
-  User,
-  Mail,
-  ChevronDown,
-  LayoutGrid,
-  Search,
-  X,
-  SlidersHorizontal,
-  Loader2,
-  Sparkles,
-  Timer,
-  CalendarCheck,
-  AlertTriangle,
-  Coins,
-} from "lucide-react"
-import { toast } from "sonner"
-import { startJob, finishJob } from "@/lib/jobs-store"
 
-// ── Shared dialog chrome ────────────────────────────────────────────────────
-// The three dialogs in this file wear the same shell as the Alerts create
-// dialog and the Billing hub: canvas-grey body, white sticky header and
-// footer, white sections inside. Kept as strings so each dialog is one call.
-const DIALOG_SHELL = "!max-w-none p-0 gap-0 flex flex-col overflow-hidden bg-pd-canvas sm:!max-w-none"
-const DIALOG_HEADER = "bg-pd-surface px-7 py-5 border-b border-pd-border shrink-0"
-const DIALOG_TITLE = "font-pd-display text-[22px] font-bold leading-none tracking-[-0.02em] text-pd-ink"
-const DIALOG_SUBTITLE = "text-[13px] text-pd-subtle mt-1.5"
-const DIALOG_BODY = "px-7 py-6 overflow-y-auto flex-1 min-h-0"
-const DIALOG_FOOTER = "bg-pd-surface px-7 py-4 border-t border-pd-border shrink-0 flex flex-row justify-end gap-2"
-const DIALOG_SECTION = "rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm"
-const DIALOG_ROW = "rounded-xl border border-pd-border bg-pd-surface px-4 py-3"
-const DIALOG_LABEL = "text-[12.5px] font-semibold text-pd-ink"
-const DIALOG_HELP = "text-[12.5px] text-pd-subtle"
-const EYEBROW = "text-[11px] font-bold uppercase tracking-[.04em] text-pd-faint"
+// Every table pages client-side at this size. The Leads table can hold
+// thousands of rows in memory; only one page of them is ever rendered.
+const PAGE_SIZE = 25
+const PAGE_SIZE_OPTIONS = [25, 50]
 
-// One KPI in a dialog strip — the StatTile shape (icon chip, value, label)
-// without CountUp, since these values are often "3m 20s" rather than numbers.
-function DialogStat({ icon: Icon, value, label }) {
-  return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-pd-border bg-pd-surface px-4 py-3 shadow-sm">
-      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <div className="font-pd-display text-[20px] font-bold leading-none tabular-nums text-pd-ink">{value}</div>
-        <div className="mt-1 truncate text-[12px] text-pd-subtle">{label}</div>
-      </div>
-    </div>
-  )
-}
-
-function DialogEmpty({ icon: Icon, title, hint }) {
-  return (
-    <div className="mx-auto flex max-w-xs flex-col items-center py-16 text-center">
-      <span className="mb-3 flex size-12 items-center justify-center rounded-2xl bg-pd-primary-tint text-pd-primary">
-        <Icon className="size-5" />
-      </span>
-      <p className="font-pd-display text-[15px] font-semibold text-pd-ink">{title}</p>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-pd-subtle">{hint}</p>
-    </div>
-  )
-}
-
-// The header row of a Birdy answer: avatar, name, and whatever sits beside
-// them (a status line while it thinks, a verdict badge once it's done).
-function BirdyRow({ state, children }) {
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      {state ? <BirdyAvatar size={28} state={state} /> : <BirdyAvatar size={28} paused />}
-      <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
-      {children}
-    </div>
-  )
-}
-
-// ── Call Logs dialog (opened from the Leads tab's "Call Logs" cell) ──────────
-function CallLogsDialog({ lead }) {
-  const formatDuration = (seconds) => {
-    const mins = Math.floor((seconds || 0) / 60)
-    const secs = (seconds || 0) % 60
-    return `${mins}m ${secs}s`
-  }
-
-  const logs = lead.call_logs
-  const outboundCount = logs.filter((l) => l.call_status === "outbound").length
-  const inboundCount = logs.length - outboundCount
-  const talkSeconds = logs.reduce((sum, l) => sum + (l.duration || 0), 0)
-
-  return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Phone className="h-4 w-4" />
-          {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className={`w-[min(880px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
-        {/* Header */}
-        <div className={DIALOG_HEADER}>
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <DialogTitle className={DIALOG_TITLE}>{lead.name}</DialogTitle>
-              <div className={`${DIALOG_SUBTITLE} flex flex-wrap items-center gap-x-3 gap-y-1`}>
-                <span className="flex items-center gap-1.5">
-                  <Mail className="size-3.5 text-pd-primary" />
-                  {lead.email}
-                </span>
-                <span className="size-1 rounded-full bg-pd-chevron" />
-                <span className="flex items-center gap-1.5">
-                  <Phone className="size-3.5 text-pd-primary" />
-                  {lead.phone}
-                </span>
-              </div>
-            </div>
-            <Badge className="shrink-0 bg-pd-primary-tint text-pd-primary text-[11px] font-bold">
-              {lead.call_logs_count} {lead.call_logs_count === 1 ? "call" : "calls"}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Body */}
-        <div className={DIALOG_BODY}>
-          {logs.length === 0 ? (
-            <DialogEmpty
-              icon={Phone}
-              title="No Call Logs"
-              hint="No recorded calls for this lead in the selected period."
-            />
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <DialogStat icon={Phone} value={logs.length} label="Total calls" />
-                <DialogStat icon={PhoneIncoming} value={inboundCount} label="Inbound" />
-                <DialogStat icon={PhoneOutgoing} value={outboundCount} label="Outbound" />
-                <DialogStat icon={Clock} value={formatDuration(talkSeconds)} label="Talk time" />
-              </div>
-
-              <Stagger gap={0.04} className="space-y-3">
-                {logs.map((callLog, index) => (
-                  <StaggerItem key={index} className={DIALOG_ROW}>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
-                        <User className="size-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13.5px] font-semibold text-pd-ink">{callLog.caller_name}</p>
-                        <p className="mt-0.5 flex items-center gap-1 text-[12px] text-pd-subtle">
-                          <Clock className="size-3" />
-                          {callLog.call_time}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Badge
-                          className={`${callLog.call_status === "outbound"
-                            ? "bg-pd-info-bg text-pd-info"
-                            : "bg-pd-success-bg text-pd-success"
-                            } text-[11px] font-bold`}
-                        >
-                          {callLog.call_status === "outbound" ? "📤 Outbound" : "📥 Inbound"}
-                        </Badge>
-                        {callLog.transfer && (
-                          <Badge variant="warning" className="text-[11px] font-bold">
-                            ↗ Transferred
-                          </Badge>
-                        )}
-                      </div>
-                      {callLog.recording_url && (
-                        <div className="flex shrink-0 items-center gap-1.5">
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={callLog.recording_url} target="_blank" rel="noopener noreferrer">
-                              <Play className="h-3.5 w-3.5" />
-                              Play
-                            </a>
-                          </Button>
-                          <Button variant="outline" size="sm" asChild>
-                            <a href={callLog.recording_url} download>
-                              <Download className="h-3.5 w-3.5" />
-                              Download
-                            </a>
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-
-                    <dl className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2.5 border-t border-pd-divider pt-3 sm:grid-cols-4">
-                      <div>
-                        <dt className={EYEBROW}>Duration</dt>
-                        <dd className="mt-0.5 font-pd-display text-[14px] font-bold tabular-nums text-pd-ink">
-                          {formatDuration(callLog.duration)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={EYEBROW}>Speed to Lead</dt>
-                        <dd className="mt-0.5 font-pd-display text-[14px] font-bold tabular-nums text-pd-ink">
-                          {formatDuration(callLog.speed_to_lead)}
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className={EYEBROW}>Group</dt>
-                        <dd className="mt-0.5 truncate text-[13px] font-semibold text-pd-ink">{callLog.group || "—"}</dd>
-                      </div>
-                      <div>
-                        <dt className={EYEBROW}>From → To</dt>
-                        <dd className="mt-0.5 truncate font-mono text-[12.5px] font-semibold tabular-nums text-pd-ink">
-                          {callLog.from_number || "—"}
-                          <span className="mx-1.5 text-pd-chevron">→</span>
-                          {callLog.to_number || "—"}
-                        </dd>
-                      </div>
-                    </dl>
-                  </StaggerItem>
-                ))}
-              </Stagger>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className={DIALOG_FOOTER}>
-          <DialogClose asChild>
-            <Button variant="outline">Close</Button>
-          </DialogClose>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-// ── Member AI analysis (Members tab: "analyze this agent's last N calls") ────
-// Runs live in a module-level store so closing the dialog does NOT cancel the
-// analysis — the user is told they'll be notified, and a sonner toast fires on
-// completion whether or not the dialog is still open. Reopening the dialog
-// re-attaches to the same run/result.
-const memberRuns = new Map() // member name -> { status, total, done, calls, failed, error }
-const memberRunListeners = new Set()
-const notifyMemberRuns = () => memberRunListeners.forEach((l) => l())
-
-const MEMBER_ANALYSIS_MAX = 50
-const MEMBER_ANALYSIS_BATCH = 15 // mirrors the backend per-request cap
-
-async function startMemberAnalysis(name, total) {
-  const run = { status: "running", total, done: 0, calls: [], failed: 0, error: null }
-  memberRuns.set(name, run)
-  notifyMemberRuns()
-  // Sidebar "background tasks" indicator (lib/jobs-store.js).
-  const jobId = startJob(`Analyzing ${name}'s calls`, {
-    detail: `Up to ${total} recent calls — results land in the Members tab.`,
-  })
-  try {
-    let before = null
-    while (run.done < total) {
-      const res = await apiRequest("/api/call-analysis/member/analyze", {
-        method: "POST",
-        body: JSON.stringify({
-          agent_name: name,
-          limit: Math.min(MEMBER_ANALYSIS_BATCH, total - run.done),
-          before,
-        }),
-      })
-      if (res.status === 402) throw new Error("Out of Birdy Credits — top up to run analyses.")
-      if (!res.ok) throw new Error("Analysis request failed.")
-      const data = await res.json()
-      run.calls.push(...(data.calls || []))
-      run.failed += data.counts?.failed || 0
-      run.done += data.counts?.selected || 0
-      before = data.next_before
-      notifyMemberRuns()
-      // Fewer recorded calls exist than requested — stop cleanly.
-      if (!before || !(data.counts?.selected > 0) || data.counts?.remaining === 0) break
-    }
-    run.status = "done"
-    finishJob(jobId)
-    toast.success(`Call analysis for ${name} is ready`, {
-      description: `${run.calls.filter((c) => c.summary).length} calls analyzed. Open their Analyze dialog in the Members tab to view.`,
-    })
-  } catch (e) {
-    run.status = "error"
-    run.error = e?.message || "Analysis failed."
-    finishJob(jobId, { status: "error", detail: run.error })
-    toast.error(`Call analysis for ${name} failed`, { description: run.error })
-  }
-  notifyMemberRuns()
-}
-
-const OUTCOME_STYLES = {
-  connected: "bg-pd-success-bg text-pd-success",
-  appointment_set: "bg-pd-success-bg text-pd-success",
-  callback_promised: "bg-pd-info-bg text-pd-info",
-  voicemail: "bg-pd-warning-bg text-pd-amber",
-  no_answer: "bg-pd-divider text-pd-body",
-  not_interested: "bg-pd-danger-bg text-pd-danger",
-  wrong_number: "bg-pd-danger-bg text-pd-danger",
-  other: "bg-pd-divider text-pd-body",
-}
-
-const parseOutcome = (summary) => {
-  const m = /OUTCOME:\s*([a-z_]+)/i.exec(summary || "")
-  return m ? m[1].toLowerCase() : null
-}
-
-function MemberAnalyzeDialog({ member }) {
-  const [open, setOpen] = useState(false)
-  const [countInput, setCountInput] = useState("10")
-  const [estimate, setEstimate] = useState(null)
-  const [estimating, setEstimating] = useState(false)
-  const [, forceRerender] = useState(0)
-
-  const name = member.name && member.name !== "—" ? member.name : null
-  const run = name ? memberRuns.get(name) : null
-  const count = Math.min(MEMBER_ANALYSIS_MAX, Math.max(1, Number(countInput) || 10))
-
-  // Re-render on run-store updates (progress ticks, completion) while open.
-  useEffect(() => {
-    if (!open) return
-    const listener = () => forceRerender((n) => n + 1)
-    memberRunListeners.add(listener)
-    return () => memberRunListeners.delete(listener)
-  }, [open])
-
-  // Debounced cost estimate — refetched when the dialog opens or N changes.
-  useEffect(() => {
-    if (!open || !name) return
-    let cancelled = false
-    setEstimating(true)
-    const t = setTimeout(async () => {
-      try {
-        const res = await apiRequest(
-          `/api/call-analysis/member/estimate?agent_name=${encodeURIComponent(name)}&limit=${count}`,
-        )
-        const data = res.ok ? await res.json() : null
-        if (!cancelled) setEstimate(data)
-      } catch {
-        if (!cancelled) setEstimate(null)
-      } finally {
-        if (!cancelled) setEstimating(false)
-      }
-    }, 350)
-    return () => {
-      cancelled = true
-      clearTimeout(t)
-    }
-  }, [open, name, count])
-
-  if (!name) return <span className="text-sm text-pd-subtle">—</span>
-
-  const running = run?.status === "running"
-  const analyzed = (run?.calls || []).filter((c) => c.summary)
-  const outcomes = analyzed.reduce((acc, c) => {
-    const o = parseOutcome(c.summary) || "other"
-    acc[o] = (acc[o] || 0) + 1
-    return acc
-  }, {})
-
-  const resetRun = () => { memberRuns.delete(name); notifyMemberRuns() }
-  const subtitle = running
-    ? `Transcribing and reviewing ${name}'s recordings.`
-    : run?.status === "done"
-      ? `${analyzed.length} of ${run.total} recent calls analyzed.`
-      : run?.status === "error"
-        ? "The analysis didn't finish."
-        : `Pick how many of ${name}'s recent calls to review.`
-
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-1.5">
-          {running ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-pd-primary" />
-          ) : (
-            <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
-          )}
-          {running ? `${run.done}/${run.total}` : "Analyze"}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className={`w-[min(760px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
-        {/* Header */}
-        <div className={DIALOG_HEADER}>
-          <DialogTitle className={DIALOG_TITLE}>AI Call Analysis — {name}</DialogTitle>
-          <p className={DIALOG_SUBTITLE}>{subtitle}</p>
-        </div>
-
-        {/* Body */}
-        <div className={DIALOG_BODY}>
-          {/* Setup: how many calls + cost estimate */}
-          {!run && (
-            <div className="space-y-4">
-              <div className={`${DIALOG_SECTION} space-y-4`}>
-                <div className="space-y-2">
-                  <label htmlFor={`member-analysis-count-${member.id ?? name}`} className={DIALOG_LABEL}>
-                    Last how many calls? (1–{MEMBER_ANALYSIS_MAX})
-                  </label>
-                  <Input
-                    id={`member-analysis-count-${member.id ?? name}`}
-                    type="number"
-                    min={1}
-                    max={MEMBER_ANALYSIS_MAX}
-                    value={countInput}
-                    onChange={(e) => setCountInput(e.target.value)}
-                    className="w-32"
-                  />
-                </div>
-
-                <div className="rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
-                  {estimating ? (
-                    <div className="space-y-2" aria-hidden="true">
-                      <Skeleton className="h-5 w-40" />
-                      <Skeleton className="h-3 w-64" />
-                    </div>
-                  ) : estimate ? (
-                    estimate.calls_found === 0 ? (
-                      <span className={DIALOG_HELP}>No recorded calls found for this member.</span>
-                    ) : (
-                      <div className="flex items-center gap-3">
-                        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
-                          <Coins className="size-4" aria-hidden="true" />
-                        </span>
-                        <div className="min-w-0">
-                          <p className="font-pd-display text-[18px] font-bold leading-none tabular-nums text-pd-ink">
-                            ~{estimate.estimated_credits} credits
-                            <span className="ml-2 font-sans text-[12px] font-normal text-pd-subtle">estimated</span>
-                          </p>
-                          <p className={`${DIALOG_HELP} mt-1`}>
-                            {estimate.calls_found} recorded {estimate.calls_found === 1 ? "call" : "calls"}
-                            {estimate.calls_found < estimate.requested && ` (only ${estimate.calls_found} of ${estimate.requested} requested exist)`}
-                            {" · "}{estimate.total_minutes} min of audio
-                            {estimate.already_transcribed > 0 && ` · ${estimate.already_transcribed} already transcribed (free)`}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  ) : (
-                    <span className={DIALOG_HELP}>Couldn&apos;t fetch a cost estimate.</span>
-                  )}
-                </div>
-
-                <p className={DIALOG_HELP}>
-                  Recordings are transcribed and reviewed by AI. You can close this window while it runs — you&apos;ll be
-                  notified when the analysis is done.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Progress */}
-          {running && (
-            <div className={`${DIALOG_SECTION} space-y-4`}>
-              <BirdyRow state="loading">
-                <span className="chat-shimmer text-[13px] font-semibold">
-                  Analyzing calls… {run.done}/{run.total}
-                </span>
-              </BirdyRow>
-              <div className="space-y-2 pl-9" aria-hidden="true">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-5/6" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
-              <p className={`${DIALOG_HELP} pl-9`}>
-                Transcribing and reviewing {name}&apos;s recordings. Feel free to close this window — you&apos;ll be
-                notified when it&apos;s done.
-              </p>
-            </div>
-          )}
-
-          {/* Error */}
-          {run?.status === "error" && (
-            <div className={`${DIALOG_SECTION} flex items-start gap-3`}>
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-pd-danger-bg text-pd-danger">
-                <AlertTriangle className="size-4" aria-hidden="true" />
-              </span>
-              <p className="text-[13.5px] text-pd-danger">{run.error}</p>
-            </div>
-          )}
-
-          {/* Results */}
-          {run?.status === "done" && (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <DialogStat icon={Phone} value={analyzed.length} label="Calls analyzed" />
-                <DialogStat icon={CalendarCheck} value={outcomes.appointment_set || 0} label="Appointments set" />
-                <DialogStat icon={Timer} value={outcomes.callback_promised || 0} label="Callbacks promised" />
-              </div>
-
-              <div className={`${DIALOG_SECTION} space-y-4`}>
-                <BirdyRow>
-                  {Object.entries(outcomes).map(([o, n]) => (
-                    <Badge key={o} className={`${OUTCOME_STYLES[o] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
-                      {o.replace(/_/g, " ")}: {n}
-                    </Badge>
-                  ))}
-                  {run.failed > 0 && (
-                    <Badge variant="destructive" className="text-[11px] font-bold">
-                      {run.failed} failed to transcribe
-                    </Badge>
-                  )}
-                </BirdyRow>
-
-                <Stagger gap={0.04} className="space-y-3">
-                  {run.calls.map((c) => (
-                    <StaggerItem key={c.call_id} className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
-                      <div className="mb-2 flex items-center justify-between gap-2">
-                        <p className={EYEBROW}>
-                          {c.started_at ? new Date(c.started_at).toLocaleString() : "—"}
-                          {c.lead_name && ` · ${c.lead_name}`}
-                          {c.duration_seconds != null && ` · ${Math.floor(c.duration_seconds / 60)}m ${c.duration_seconds % 60}s`}
-                        </p>
-                        {c.summary && parseOutcome(c.summary) && (
-                          <Badge
-                            className={`${OUTCOME_STYLES[parseOutcome(c.summary)] || OUTCOME_STYLES.other} text-[11px] font-bold shrink-0`}
-                          >
-                            {parseOutcome(c.summary).replace(/_/g, " ")}
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="whitespace-pre-line text-[13.5px] leading-relaxed text-pd-body">
-                        {c.summary ? c.summary.replace(/\n?OUTCOME:.*$/i, "").trim() : (
-                          <span className="text-pd-danger">{c.error}</span>
-                        )}
-                      </p>
-                    </StaggerItem>
-                  ))}
-                </Stagger>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className={DIALOG_FOOTER}>
-          {!run && (
-            <>
-              <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-              </DialogClose>
-              <Button
-                onClick={() => startMemberAnalysis(name, Math.min(count, estimate?.calls_found ?? count))}
-                disabled={estimating || !estimate || estimate.calls_found === 0}
-                className="gap-2"
-              >
-                <Sparkles className="h-4 w-4" />
-                Analyze
-              </Button>
-            </>
-          )}
-          {running && (
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-          )}
-          {run?.status === "error" && (
-            <>
-              <DialogClose asChild>
-                <Button variant="outline">Close</Button>
-              </DialogClose>
-              <Button onClick={resetRun}>Try again</Button>
-            </>
-          )}
-          {run?.status === "done" && (
-            <>
-              <Button variant="outline" onClick={resetRun} className="gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-pd-primary" />
-                New analysis
-              </Button>
-              <DialogClose asChild>
-                <Button>Close</Button>
-              </DialogClose>
-            </>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-const MEMBER_AI_CELL = (_v, row) => <MemberAnalyzeDialog member={row} />
+const NONE = <span className="text-sm text-muted-foreground">—</span>
 
 // ── Column definitions per tab ───────────────────────────────────────────────
 // Under the client's name: how much of its pool the window's calls reached.
@@ -627,7 +80,7 @@ const OVERVIEW_COLUMNS = [
   { id: "name", label: "Client", sortable: true, sub: REACH_SUB },
   // Not sortable: an array has no order, and the figures it summarises are
   // sortable in the columns beside it.
-  { id: "trend", label: "Trend", sortable: false, align: "left", icons: HP, cell: TREND_CELL },
+  { id: "trend", label: "Trend", sortable: false, icons: HP, cell: TREND_CELL },
   { id: "total_leads", label: "Total Leads", sortable: true, icons: HP },
   { id: "leads", label: "Leads Called", sortable: true, icons: HP },
   { id: "total_calls", label: "Total Calls", sortable: true, icons: HP },
@@ -638,20 +91,11 @@ const OVERVIEW_COLUMNS = [
 ]
 
 const STATUS_CELL = (_v, row) => (
-  <Badge
-    variant={row.status === "Inactive" ? "destructive" : "success"}
-    className="text-[11px] font-bold"
-  >
-    {row.status || "Active"}
-  </Badge>
+  <Badge tone={row.status === "Inactive" ? "danger" : "success"}>{row.status || "Active"}</Badge>
 )
 
 const CALLS_CELL = (_v, row) =>
-  row.call_logs_count > 0 ? (
-    <CallLogsDialog lead={row} />
-  ) : (
-    <span className="text-sm text-pd-subtle">No calls</span>
-  )
+  row.call_logs_count > 0 ? <CallLogsDialog lead={row} /> : <span className="text-sm text-muted-foreground">No calls</span>
 
 const DATE_CELL = (v) => (v ? new Date(v).toLocaleDateString() : "—")
 
@@ -664,9 +108,11 @@ const LEAD_COLUMNS = [
   { id: "location", label: "Location", sortable: true, icons: HP },
   { id: "first_call", label: "First Call", sortable: true, icons: HP, cell: DATE_CELL },
   { id: "last_call", label: "Last Call", sortable: true, icons: HP, cell: DATE_CELL },
-  { id: "calls", label: "Call Logs", sortable: true, icons: HP, align: "left", cell: CALLS_CELL },
+  { id: "calls", label: "Call Logs", sortable: true, icons: HP, cell: CALLS_CELL },
   { id: "status", label: "Status", sortable: true, cell: STATUS_CELL },
 ]
+
+const MEMBER_AI_CELL = (_v, row) => <MemberAnalyzeDialog member={row} />
 
 const MEMBER_COLUMNS = [
   { id: "name", label: "Name", sortable: true },
@@ -683,194 +129,11 @@ const MEMBER_COLUMNS = [
   { id: "ai", label: "AI Analysis", cell: MEMBER_AI_CELL },
 ]
 
-const DIRECTION_CELL = (_v, row) => (
-  <Badge
-    className={`${row.direction === "outbound"
-      ? "bg-pd-info-bg text-pd-info"
-      : "bg-pd-success-bg text-pd-success"
-      } text-[11px] font-bold`}
-  >
-    {row.direction === "outbound" ? "Outbound" : "Inbound"}
-  </Badge>
-)
-
-const DURATION_CELL = (v) => {
-  const mins = Math.floor((v || 0) / 60)
-  const secs = (v || 0) % 60
-  return `${mins}m ${secs}s`
-}
-
+const DIRECTION_CELL = (_v, row) => <DirectionBadge direction={row.direction} />
+const DURATION_CELL = (v) => <span className="num">{formatDuration(v)}</span>
 const CALL_TIME_CELL = (v) => (v ? new Date(v).toLocaleString() : "—")
-
-const RECORDING_CELL = (_v, row) =>
-  row.recording_url ? (
-    <div className="flex items-center gap-1">
-      <Button variant="outline" size="icon-sm" asChild>
-        <a href={row.recording_url} target="_blank" rel="noopener noreferrer" title="Play recording">
-          <Play className="h-3.5 w-3.5" />
-        </a>
-      </Button>
-      <Button variant="outline" size="icon-sm" asChild>
-        <a href={row.recording_url} download title="Download recording">
-          <Download className="h-3.5 w-3.5" />
-        </a>
-      </Button>
-    </div>
-  ) : (
-    <span className="text-sm text-pd-subtle">—</span>
-  )
-
-// ── Per-call AI analysis (Calls tab: sparkle button next to play/download) ──
-// Rows here come from the HotProspector cache and carry no Mongo id, so the
-// backend is addressed by recording_url (POST /api/call_logs/analyze matches
-// it against call_logs, or analyzes ad-hoc if the cron hasn't synced it yet).
-// The request registers in lib/jobs-store.js so the sidebar shows it, and the
-// verdict is cached server-side — re-clicking an analyzed call is instant.
-
-function parseAnalysisSections(text) {
-  const grab = (label) => {
-    const re = new RegExp(
-      `${label}:\\s*([\\s\\S]*?)(?=\\n?\\s*(?:WHAT HAPPENED|WHAT WENT WRONG|COACHING|OUTCOME):|$)`,
-      "i",
-    )
-    return re.exec(text || "")?.[1]?.trim() || null
-  }
-  return {
-    happened: grab("WHAT HAPPENED"),
-    wrong: grab("WHAT WENT WRONG"),
-    coaching: grab("COACHING"),
-    outcome: parseOutcome(text),
-  }
-}
-
-function AnalyzeCell({ row }) {
-  const [status, setStatus] = useState("idle") // idle | loading | done
-  const [result, setResult] = useState(null)
-  const [open, setOpen] = useState(false)
-
-  if (!row.recording_url) return <span className="text-sm text-pd-subtle">—</span>
-
-  const analyze = async () => {
-    if (status === "loading") return
-    if (result) {
-      setOpen(true)
-      return
-    }
-    setStatus("loading")
-    const who = row.caller_name && row.caller_name !== "—" ? row.caller_name : row.to_number
-    const jobId = startJob(`Analyzing call — ${who}`, {
-      detail: "Transcribing and reviewing the recording.",
-    })
-    try {
-      const res = await apiRequest("/api/call_logs/analyze", {
-        method: "POST",
-        body: JSON.stringify({
-          recording_url: row.recording_url,
-          agent_name: row.agent_name,
-          lead_name: row.caller_name,
-          direction: row.direction,
-          duration_seconds: row.duration,
-        }),
-      })
-      const data = await res.json().catch(() => ({}))
-      if (res.status === 402) throw new Error("Out of Birdy Credits — top up to run analyses.")
-      if (!res.ok) throw new Error(data.detail || "Analysis failed.")
-      finishJob(jobId)
-      setResult(data)
-      setStatus("done")
-      setOpen(true)
-      toast.success("Call analysis ready", {
-        description: data.cached ? "Loaded from a previous analysis (free)." : undefined,
-      })
-    } catch (e) {
-      const msg = e?.message || "Analysis failed."
-      finishJob(jobId, { status: "error", detail: msg })
-      toast.error("Couldn't analyze this call", { description: msg })
-      setStatus("idle")
-    }
-  }
-
-  const sections = result ? parseAnalysisSections(result.analysis) : null
-
-  return (
-    <>
-      <Button
-        variant="outline"
-        size="icon-sm"
-        onClick={analyze}
-        disabled={status === "loading"}
-        title={result ? "View AI analysis" : "AI analyze this call"}
-      >
-        {status === "loading" ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin text-pd-primary" />
-        ) : (
-          <Sparkles className={`h-3.5 w-3.5 ${result ? "text-pd-primary" : ""}`} />
-        )}
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className={`w-[min(640px,94vw)] max-h-[85vh] ${DIALOG_SHELL}`} showCloseButton={false}>
-          {/* Header */}
-          <div className={DIALOG_HEADER}>
-            <DialogTitle className={DIALOG_TITLE}>
-              Call analysis — {row.caller_name || row.to_number}
-            </DialogTitle>
-            <div className={`${DIALOG_SUBTITLE} flex flex-wrap items-center gap-x-3 gap-y-1`}>
-              {row.agent_name && <span>Agent: <span className="font-semibold text-pd-ink">{row.agent_name}</span></span>}
-              <span className="tabular-nums">{DURATION_CELL(row.duration)}</span>
-              {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className={DIALOG_BODY}>
-            {result && (
-              <div className={`${DIALOG_SECTION} space-y-4`}>
-                <BirdyRow>
-                  {sections?.outcome && (
-                    <Badge className={`${OUTCOME_STYLES[sections.outcome] || OUTCOME_STYLES.other} text-[11px] font-bold`}>
-                      {sections.outcome.replace(/_/g, " ")}
-                    </Badge>
-                  )}
-                </BirdyRow>
-                {sections?.happened ? (
-                  <Stagger gap={0.04} className="space-y-3">
-                    <AnalysisSection label="What happened" text={sections.happened} />
-                    <AnalysisSection label="What went wrong" text={sections.wrong} />
-                    <AnalysisSection label="Coaching" text={sections.coaching} />
-                  </Stagger>
-                ) : (
-                  <div className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
-                    <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-pd-body">{result.analysis}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className={DIALOG_FOOTER}>
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  )
-}
-
-function AnalysisSection({ label, text }) {
-  if (!text) return null
-  return (
-    <StaggerItem className={`${DIALOG_ROW} border-pd-divider bg-pd-canvas`}>
-      <p className={EYEBROW}>{label}</p>
-      <p className="mt-1 text-[13.5px] leading-relaxed text-pd-body">{text}</p>
-    </StaggerItem>
-  )
-}
-
-const ANALYZE_CELL = (_v, row) => <AnalyzeCell row={row} />
+const RECORDING_CELL = (_v, row) => (row.recording_url ? <RecordingLinks url={row.recording_url} /> : NONE)
+const ANALYZE_CELL = (_v, row) => <CallAnalysisButton row={row} />
 
 const CALL_COLUMNS = [
   { id: "caller_name", label: "Lead", sortable: true, icons: HP },
@@ -886,33 +149,57 @@ const CALL_COLUMNS = [
 
 const TAB_COLUMNS = { overview: OVERVIEW_COLUMNS, leads: LEAD_COLUMNS, members: MEMBER_COLUMNS, calls: CALL_COLUMNS }
 
-// The section tabs, with the design's 14px leading glyph. Overview and Members
-// are hub-only: Overview lists one row per client, and Members is account-wide
-// team data with no per-client filter upstream — neither means anything once
-// the view is already scoped to a single client.
+// Table column defs are built once per tab, not per render: DataTable re-runs
+// when `columns` changes identity.
+const toColumns = (cols) => toTableColumns(cols.map((c) => ({ ...c, header: c.label })))
+const TABLE_COLUMNS = Object.fromEntries(Object.entries(TAB_COLUMNS).map(([tab, cols]) => [tab, toColumns(cols)]))
+
+// The section tabs. Overview and Members are hub-only: Overview lists one row
+// per client, and Members is account-wide team data with no per-client filter
+// upstream — neither means anything once the view is already scoped to a
+// single client.
 const SECTION_TABS = [
-  { key: "overview", label: "Overview", icon: LayoutGrid, hubOnly: true },
-  { key: "leads", label: "Leads", icon: User, hubOnly: false },
-  { key: "members", label: "Members", icon: Users, hubOnly: true },
-  { key: "calls", label: "Calls", icon: Phone, hubOnly: false },
+  { key: "overview", label: "Overview", icon: LayoutGridIcon, hubOnly: true },
+  { key: "leads", label: "Leads", icon: UserIcon, hubOnly: false },
+  { key: "members", label: "Members", icon: UsersIcon, hubOnly: true },
+  { key: "calls", label: "Calls", icon: PhoneIcon, hubOnly: false },
 ]
-
-// Ties the tablist to the panel it swaps, for anyone navigating by role.
-const TABLE_PANEL_ID = "sales-hub-table-panel"
-
-// Every control in the toolbar row wears the design's dropdown trigger: 38px
-// tall, white, hairline border, pill radius, Inter 600 13px.
-const TOOLBAR_CHIP =
-  "flex h-[38px] cursor-pointer items-center gap-2 rounded-full border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider" 
 
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
 
 const clampCallsLimit = (n) => Math.min(MAX_CALLS_LIMIT, Math.max(MIN_CALLS_LIMIT, Number(n) || DEFAULT_CALLS_LIMIT))
 
+// ── Toolbar filters ──────────────────────────────────────────────────────────
+function FilterButton({ count, children, width = "w-80" }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button size="sm">
+          <SlidersHorizontalIcon />
+          Filters
+          {count > 0 && (
+            <Badge tone="primary" className="num px-1.5">
+              {count}
+            </Badge>
+          )}
+          <ChevronDownIcon />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className={`${width} flex flex-col gap-4`}>
+        {children}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+const DIRECTION_ITEMS = [
+  { value: "all", label: "All" },
+  { value: "inbound", label: "Inbound" },
+  { value: "outbound", label: "Outbound" },
+]
+
 // ── Calls tab filters: recent-calls count, direction, duration range ──
-function CallsFilterDropdown({
-  open,
-  setOpen,
+function CallsFilter({
   recentLimitInput,
   onRecentLimitChange,
   onRecentLimitCommit,
@@ -920,191 +207,98 @@ function CallsFilterDropdown({
   maxLimit,
   direction,
   setDirection,
-  durationMinMinutes,
-  setDurationMinMinutes,
-  durationMinSeconds,
-  setDurationMinSeconds,
-  durationMaxMinutes,
-  setDurationMaxMinutes,
-  durationMaxSeconds,
-  setDurationMaxSeconds,
+  minMinutes,
+  setMinMinutes,
+  minSeconds,
+  setMinSeconds,
+  maxMinutes,
+  setMaxMinutes,
+  maxSeconds,
+  setMaxSeconds,
   onClear,
 }) {
   const activeCount = [
     direction !== "all",
-    durationMinMinutes !== "" || durationMinSeconds !== "",
-    durationMaxMinutes !== "" || durationMaxSeconds !== "",
+    minMinutes !== "" || minSeconds !== "",
+    maxMinutes !== "" || maxSeconds !== "",
   ].filter(Boolean).length
 
+  const part = (label, placeholder, value, set, max) => (
+    <Input
+      type="number"
+      min={0}
+      max={max}
+      aria-label={label}
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => set(e.target.value)}
+      className="h-control-sm w-14 px-2"
+    />
+  )
+
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={TOOLBAR_CHIP}>
-          <SlidersHorizontal className="size-[14px]" />
-          <span className="hidden lg:inline">Filters</span>
-          {activeCount > 0 && (
-            <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pd-primary px-1 text-[11px] font-bold text-white">
-              {activeCount}
-            </span>
-          )}
-          <ChevronDown className="size-3" />
+    <FilterButton count={activeCount}>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="recent-calls-limit">Show last</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="recent-calls-limit"
+            type="number"
+            min={minLimit}
+            max={maxLimit}
+            value={recentLimitInput}
+            onChange={(e) => onRecentLimitChange(e.target.value)}
+            onBlur={onRecentLimitCommit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur()
+            }}
+            className="h-control-sm w-20"
+          />
+          <span className="text-sm text-muted-foreground">calls</span>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">Direction</span>
+        <SegmentedTabs ariaLabel="Direction" size="sm" value={direction} onValueChange={setDirection} items={DIRECTION_ITEMS} />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium">Duration</span>
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          {part("Minimum minutes", "Min", minMinutes, setMinMinutes)}m
+          {part("Minimum seconds", "Sec", minSeconds, setMinSeconds, 59)}s to
+          {part("Maximum minutes", "Max", maxMinutes, setMaxMinutes)}m
+          {part("Maximum seconds", "Sec", maxSeconds, setMaxSeconds, 59)}s
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 border-t border-border pt-3">
+        <Button size="sm" onClick={onClear}>
+          Clear
         </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent
-        align="end"
-        className="bg-pd-surface p-4 w-[340px] space-y-4"
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
-          <label htmlFor="recent-calls-limit" className="text-xs font-medium text-pd-subtle">
-            Show last
-          </label>
-          <div className="flex items-center gap-2">
-            <Input
-              id="recent-calls-limit"
-              type="number"
-              min={minLimit}
-              max={maxLimit}
-              value={recentLimitInput}
-              onChange={(e) => onRecentLimitChange(e.target.value)}
-              onBlur={onRecentLimitCommit}
-              onKeyDown={(e) => {
-                e.stopPropagation()
-                if (e.key === "Enter") e.currentTarget.blur()
-              }}
-              className="h-9 w-20 text-sm"
-            />
-            <span className="text-sm text-pd-subtle">calls</span>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <span className="text-xs font-medium text-pd-subtle">Direction</span>
-          <div className="flex gap-1">
-            {[
-              ["all", "All"],
-              ["inbound", "Inbound"],
-              ["outbound", "Outbound"],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setDirection(id)}
-                className={`flex-1 h-8 rounded-full text-xs font-medium border transition-colors ${
-                  direction === id
-                    ? "bg-pd-primary text-white border-pd-primary"
-                    : "bg-pd-surface text-pd-body border-pd-border hover:bg-pd-divider"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5" onFocusCapture={(e) => e.stopPropagation()}>
-          <span className="text-xs font-medium text-pd-subtle">Duration</span>
-          <div className="flex items-center gap-1.5">
-            <Input
-              type="number"
-              min={0}
-              placeholder="Min"
-              value={durationMinMinutes}
-              onChange={(e) => setDurationMinMinutes(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="h-9 text-sm w-14"
-            />
-            <span className="text-xs text-pd-subtle">m</span>
-            <Input
-              type="number"
-              min={0}
-              max={59}
-              placeholder="Sec"
-              value={durationMinSeconds}
-              onChange={(e) => setDurationMinSeconds(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="h-9 text-sm w-14"
-            />
-            <span className="text-xs text-pd-subtle">s</span>
-            <span className="text-xs text-pd-subtle">to</span>
-            <Input
-              type="number"
-              min={0}
-              placeholder="Max"
-              value={durationMaxMinutes}
-              onChange={(e) => setDurationMaxMinutes(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="h-9 text-sm w-14"
-            />
-            <span className="text-xs text-pd-subtle">m</span>
-            <Input
-              type="number"
-              min={0}
-              max={59}
-              placeholder="Sec"
-              value={durationMaxSeconds}
-              onChange={(e) => setDurationMaxSeconds(e.target.value)}
-              onKeyDown={(e) => e.stopPropagation()}
-              className="h-9 text-sm w-14"
-            />
-            <span className="text-xs text-pd-subtle">s</span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 pt-3 border-t border-pd-divider">
-          <Button variant="outline" size="sm" onClick={onClear}>
-            Clear
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => setOpen(false)}
-            className="flex-1"
-          >
-            Done
-          </Button>
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </div>
+    </FilterButton>
   )
 }
 
 // ── Leads tab filter: hide leads with no dialer activity ──
-function LeadsFilterDropdown({ open, setOpen, hideNoDialerActivity, setHideNoDialerActivity }) {
-  const activeCount = hideNoDialerActivity ? 1 : 0
-
+function LeadsFilter({ hideNoDialerActivity, setHideNoDialerActivity }) {
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={TOOLBAR_CHIP}>
-          <SlidersHorizontal className="size-[14px]" />
-          <span className="hidden lg:inline">Filters</span>
-          {activeCount > 0 && (
-            <span className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-pd-primary px-1 text-[11px] font-bold text-white">
-              {activeCount}
-            </span>
-          )}
-          <ChevronDown className="size-3" />
-        </Button>
-      </DropdownMenuTrigger>
-
-      <DropdownMenuContent align="end" className="bg-pd-surface p-4 w-[300px] space-y-3">
-        <label className="flex items-start gap-2.5 cursor-pointer">
-          <Checkbox
-            checked={hideNoDialerActivity}
-            onCheckedChange={(checked) => setHideNoDialerActivity(!!checked)}
-            className="mt-0.5"
-          />
-          <span className="text-sm">
-            <span className="block font-medium text-pd-ink">Hide No-Dialer-Activity Leads</span>
-            <span className="block text-xs text-pd-subtle mt-0.5">
-              Only show leads the dialer has called in the selected period.
-            </span>
-          </span>
-        </label>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <FilterButton count={hideNoDialerActivity ? 1 : 0} width="w-72">
+      <div className="flex items-start gap-2.5">
+        <Checkbox
+          id="hide-no-dialer"
+          checked={hideNoDialerActivity}
+          onCheckedChange={(checked) => setHideNoDialerActivity(!!checked)}
+          className="mt-0.5"
+        />
+        <div className="flex flex-col gap-0.5">
+          <Label htmlFor="hide-no-dialer">Hide No-Dialer-Activity Leads</Label>
+          <p className="text-xs text-muted-foreground">Only show leads the dialer has called in the selected period.</p>
+        </div>
+      </div>
+    </FilterButton>
   )
 }
 
@@ -1126,6 +320,42 @@ const flattenCalls = (leadsData) =>
       agent_name: log.caller_name || null,
     }))
   })
+
+const mapLead = (lead) => {
+  const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
+  const logs = lead.call_logs || []
+  // Only dates a HP lead carries are its call times; expose first/last (windowed).
+  const isos = logs.map((l) => l.call_time_iso).filter(Boolean).sort()
+  // Coerce to a real number — the API can send call_logs_count as a string,
+  // which would make the table's comparator sort it lexicographically.
+  const callsCount = Number(lead.call_logs_count ?? logs.length) || 0
+  return {
+    id: lead.id,
+    name: fullName || lead.phone || lead.email || "—",
+    client: lead.client_name || "—",
+    email: lead.email || "—",
+    phone: lead.phone || lead.mobile || "—",
+    company: lead.company || "—",
+    location: [lead.city, lead.state].filter(Boolean).join(", ") || "—",
+    first_call: isos[0] || null,
+    last_call: isos[isos.length - 1] || null,
+    call_logs: logs,
+    call_logs_count: callsCount,
+    // "calls" is the sort key for the Call Logs column; the cell itself
+    // renders from call_logs/call_logs_count above.
+    calls: callsCount,
+    status: "Active",
+  }
+}
+
+// The toolbar's search matches the first visible column, as it always has.
+const searchRows = (rows, columns, visibility, query) => {
+  if (!query) return rows
+  const q = query.toLowerCase()
+  const key = columns.find((c) => visibility[c.id])?.id
+  if (!key) return rows
+  return rows.filter((row) => row[key] != null && row[key].toString().toLowerCase().includes(q))
+}
 
 // Leads still load the *entire* windowed dataset client-side, so the table
 // can sort/paginate across all of it (not just one server page) — matching
@@ -1165,7 +395,7 @@ export function CallCentreContent({
   const [activeTab, setActiveTab] = useState(showGroupFilter ? "overview" : "leads")
   const [searchQuery, setSearchQuery] = useState("")
 
-  // Column visibility (one map per tab) + the shared dropdown's open state.
+  // Column visibility (one map per tab).
   const [colVis, setColVis] = useState({
     overview: allVisible(OVERVIEW_COLUMNS),
     leads: allVisible(LEAD_COLUMNS),
@@ -1181,6 +411,8 @@ export function CallCentreContent({
   const [leadsLoading, setLeadsLoading] = useState(false)
   const [leadsBackgroundLoading, setLeadsBackgroundLoading] = useState(false)
   const [leadsTotal, setLeadsTotal] = useState(0)
+  const [leadsError, setLeadsError] = useState(null)
+  const [leadsAttempt, setLeadsAttempt] = useState(0)
   // Client filter: "all" or a client_group id. Controlled by the page on the
   // Sales Hub, internal on /clients/[id].
   const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
@@ -1197,30 +429,29 @@ export function CallCentreContent({
   // Leads tab filter: hide leads with no dialer activity. Sent to the backend
   // as has_calls=true so it's filtered against the whole dataset, not just
   // whatever page/batch has already been fetched.
-  const [leadsFilterOpen, setLeadsFilterOpen] = useState(false)
   const [hideNoDialerActivity, setHideNoDialerActivity] = useState(false)
 
   // Members tab (account-wide HotProspector team).
   const [members, setMembers] = useState([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [membersError, setMembersError] = useState(null)
+  const [membersAttempt, setMembersAttempt] = useState(0)
 
   // Calls tab (most recent calls, flattened from the leads endpoint).
   const [calls, setCalls] = useState([])
   const [callsLoading, setCallsLoading] = useState(false)
-  const [recentCallsLimit, setRecentCallsLimit] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT)
-      return stored ? clampCallsLimit(stored) : DEFAULT_CALLS_LIMIT
-    } catch {
-      return DEFAULT_CALLS_LIMIT
-    }
-  })
+  const [callsError, setCallsError] = useState(null)
+  const [callsAttempt, setCallsAttempt] = useState(0)
+  const [recentCallsLimit, setRecentCallsLimit] = useState(DEFAULT_CALLS_LIMIT)
+  // The stored limit is read in an effect, not during render. Until it has
+  // been read, nothing is fetched or written, so the default never overwrites it.
+  const [limitReady, setLimitReady] = useState(false)
   // Raw text of the limit input, kept separate from recentCallsLimit so the
   // field can be freely edited (including a transient empty string while the
   // user backspaces) without being clamped back to a value on every keystroke.
-  const [callsLimitInput, setCallsLimitInput] = useState(String(recentCallsLimit))
+  const [callsLimitInput, setCallsLimitInput] = useState(String(DEFAULT_CALLS_LIMIT))
   const commitCallsLimit = () => setRecentCallsLimit(clampCallsLimit(callsLimitInput))
   // Calls tab filters (client-side, applied on top of the fetched batch).
-  const [callsFilterOpen, setCallsFilterOpen] = useState(false)
   const [callDirection, setCallDirection] = useState("all")
   const [callDurationMinMinutes, setCallDurationMinMinutes] = useState("")
   const [callDurationMinSeconds, setCallDurationMinSeconds] = useState("")
@@ -1319,6 +550,7 @@ export function CallCentreContent({
     const run = async () => {
       setLeadsLoading(true)
       setLeadsBackgroundLoading(false)
+      setLeadsError(null)
       setLeadsTotal(0)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
@@ -1341,8 +573,8 @@ export function CallCentreContent({
 
         // Small first page — get real rows on screen as fast as possible
         // instead of holding a skeleton for however long the full dataset takes.
-        // Nothing has rendered yet at this point, so a failure here still
-        // clears to empty (the outer catch below) — same as the old behavior.
+        // Nothing has rendered yet at this point, so a failure here is an
+        // error state (the outer catch below), with a retry.
         const first = await fetchBatch(0, LEADS_FIRST_BATCH_SIZE)
         if (cancelled) return
         const firstBatch = first.data || []
@@ -1385,6 +617,7 @@ export function CallCentreContent({
         if (cancelled) return
         console.error("Error loading call-center leads:", err)
         setLeads([])
+        setLeadsError(err?.message || "The request failed")
       } finally {
         if (!cancelled) {
           setLeadsLoading(false)
@@ -1396,7 +629,7 @@ export function CallCentreContent({
     return () => {
       cancelled = true
     }
-  }, [activeTab, datePreset, selectedLocationId, hideNoDialerActivity])
+  }, [activeTab, datePreset, selectedLocationId, hideNoDialerActivity, leadsAttempt])
 
   // ── Fetch members (team + per-day dashboard metrics) on preset change ──
   //    getMemberDashboardData is a per-day snapshot, so we pass the selected
@@ -1408,6 +641,8 @@ export function CallCentreContent({
     if (!showGroupFilter) return
     let cancelled = false
     const run = async () => {
+      setMembersLoading(true)
+      setMembersError(null)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
         const params = new URLSearchParams()
@@ -1415,10 +650,7 @@ export function CallCentreContent({
         if (end_date) params.set("end_date", end_date)
         const q = params.toString()
         const res = await apiRequest(`/api/hotprospector/members/dashboard${q ? `?${q}` : ""}`)
-        if (!res.ok) {
-          if (!cancelled) setMembers([])
-          return
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const data = await res.json()
         if (cancelled) return
         setMembers(
@@ -1440,34 +672,51 @@ export function CallCentreContent({
             }
           }),
         )
-      } catch {
-        if (!cancelled) setMembers([])
+      } catch (err) {
+        if (cancelled) return
+        setMembers([])
+        setMembersError(err?.message || "The request failed")
+      } finally {
+        if (!cancelled) setMembersLoading(false)
       }
     }
     run()
     return () => {
       cancelled = true
     }
-  }, [datePreset, showGroupFilter])
+  }, [datePreset, showGroupFilter, membersAttempt])
+
+  // Read the stored "recent calls" count once, after mount.
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT)
+      if (stored) setRecentCallsLimit(clampCallsLimit(stored))
+    } catch {
+      // localStorage unavailable (e.g. private mode) — the default stands.
+    }
+    setLimitReady(true)
+  }, [])
 
   // Persist the user-configured "recent calls" count across sessions, and
   // keep the (freely-editable) input text in sync with the committed value.
   useEffect(() => {
     setCallsLimitInput(String(recentCallsLimit))
+    if (!limitReady) return
     try {
       localStorage.setItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT, String(recentCallsLimit))
     } catch {
       // localStorage unavailable (e.g. private mode) — setting just won't persist.
     }
-  }, [recentCallsLimit])
+  }, [recentCallsLimit, limitReady])
 
   // ── Fetch calls (Calls tab): pull enough leads' call logs, flatten, sort by
   //    recency, and keep only the user-configured number of most recent calls.
   useEffect(() => {
-    if (activeTab !== "calls") return
+    if (activeTab !== "calls" || !limitReady) return
     let cancelled = false
     const run = async () => {
       setCallsLoading(true)
+      setCallsError(null)
       try {
         const { start_date, end_date } = presetToDateRange(datePreset)
         const qs = new URLSearchParams({
@@ -1491,6 +740,7 @@ export function CallCentreContent({
         if (cancelled) return
         console.error("Error loading recent calls:", err)
         setCalls([])
+        setCallsError(err?.message || "The request failed")
       } finally {
         if (!cancelled) setCallsLoading(false)
       }
@@ -1499,9 +749,9 @@ export function CallCentreContent({
     return () => {
       cancelled = true
     }
-  }, [activeTab, datePreset, selectedLocationId, recentCallsLimit])
+  }, [activeTab, datePreset, selectedLocationId, recentCallsLimit, limitReady, callsAttempt])
 
-  // Apply the Calls-tab filter dropdown (direction / duration) client-side.
+  // Apply the Calls-tab filters (direction / duration) client-side.
   const filteredCalls = useMemo(() => {
     const hasMin = callDurationMinMinutes !== "" || callDurationMinSeconds !== ""
     const hasMax = callDurationMaxMinutes !== "" || callDurationMaxSeconds !== ""
@@ -1516,33 +766,6 @@ export function CallCentreContent({
     })
   }, [calls, callDirection, callDurationMinMinutes, callDurationMinSeconds, callDurationMaxMinutes, callDurationMaxSeconds])
 
-  const mapLead = (lead) => {
-    const fullName = `${lead.first_name || ""} ${lead.last_name || ""}`.trim()
-    const logs = lead.call_logs || []
-    // Only dates a HP lead carries are its call times; expose first/last (windowed).
-    const isos = logs.map((l) => l.call_time_iso).filter(Boolean).sort()
-    // Coerce to a real number — the API can send call_logs_count as a string,
-    // which would make the table's comparator sort it lexicographically.
-    const callsCount = Number(lead.call_logs_count ?? logs.length) || 0
-    return {
-      id: lead.id,
-      name: fullName || lead.phone || lead.email || "—",
-      client: lead.client_name || "—",
-      email: lead.email || "—",
-      phone: lead.phone || lead.mobile || "—",
-      company: lead.company || "—",
-      location: [lead.city, lead.state].filter(Boolean).join(", ") || "—",
-      first_call: isos[0] || null,
-      last_call: isos[isos.length - 1] || null,
-      call_logs: logs,
-      call_logs_count: callsCount,
-      // "calls" is the sort key for the Call Logs column; the cell itself
-      // renders from call_logs/call_logs_count above.
-      calls: callsCount,
-      status: "Active",
-    }
-  }
-
   // Names the current scope for the Leads tab's "showing this client only" chip.
   const selectedClientLabel = useMemo(() => {
     if (selectedClientGroup === "all") return "All Clients"
@@ -1556,7 +779,6 @@ export function CallCentreContent({
     setActiveTab("leads")
   }
 
-  // ── Column-visibility dropdown wiring (operates on the active tab's columns) ──
   const sectionTabs = useMemo(
     () => SECTION_TABS.filter((t) => showGroupFilter || !t.hubOnly),
     [showGroupFilter],
@@ -1615,19 +837,69 @@ export function CallCentreContent({
   // "Default" restores this tab's baseline: every column on.
   const defaultColumnIds = activeColumns.map((c) => c.id)
 
-  const StatCard = ({ label, value, desc, Icon }) => (
-    <Card className="border border-pd-border rounded-xl shadow-sm">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-sm text-pd-muted font-medium">{label}</CardTitle>
-        <div className="h-7 w-7 bg-pd-primary-tint rounded-xl text-center flex items-center justify-center">
-          <Icon className="h-5 w-5 text-pd-primary" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="font-pd-display text-2xl font-bold text-pd-ink">{groupsLoading ? "—" : value.toLocaleString()}</div>
-        <p className="text-xs text-pd-muted mt-1">{desc}</p>
-      </CardContent>
-    </Card>
+  // One toolbar for whichever table is showing: search, any tab-specific
+  // filters, then the Columns menu.
+  const toolbar = (filters) => (
+    <>
+      <div className="relative w-full sm:w-56">
+        <SearchIcon
+          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          placeholder="Search…"
+          aria-label="Search the table"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-control-sm pl-9"
+        />
+      </div>
+      {filters}
+      <ColumnsMenu
+        columns={columnCatalogue}
+        visibleColumns={visibleColumnIds}
+        onChange={setVisibleColumnIds}
+        defaultColumns={defaultColumnIds}
+        views={pageViews}
+        sources={columnSources}
+        buttonClassName="ml-auto"
+      />
+    </>
+  )
+
+  // The empty slot: a search that matches nothing is not "no data".
+  const emptyFor = (empty) =>
+    searchQuery ? (
+      <EmptyState
+        title="No results"
+        description={`Nothing in the first visible column matches "${searchQuery}".`}
+        action={<Button size="sm" onClick={() => setSearchQuery("")}>Clear search</Button>}
+      />
+    ) : (
+      empty
+    )
+
+  const tableFor = (tab, rows, props) => (
+    <DataTable
+      columns={TABLE_COLUMNS[tab]}
+      data={searchRows(rows, TAB_COLUMNS[tab], colVis[tab], searchQuery)}
+      state={{ columnVisibility: colVis[tab] }}
+      stickyFirstColumn
+      pageSize={PAGE_SIZE}
+      pageSizeOptions={PAGE_SIZE_OPTIONS}
+      getRowId={(row, index) => String(row.id ?? index)}
+      {...props}
+      empty={emptyFor(props.empty)}
+    />
+  )
+
+  const errorFor = (what, error, onRetry) => (
+    <ErrorState
+      title={`Couldn't load the ${what}`}
+      description={`${String(error).replace(/\.+$/, "")}. The ${what} are fine — we just couldn't reach them.`}
+      onRetry={onRetry}
+    />
   )
 
   // Placed after every hook, so the branch changes what is drawn and not what
@@ -1649,171 +921,158 @@ export function CallCentreContent({
   }
 
   return (
-    // Width comes from the container now. This used to be sized off the
-    // viewport minus the rail (100dvw-130px), which is the sort of measurement
-    // that goes wrong the moment anything else changes width — and did, inside
-    // the Sales Hub's own scroll region.
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
-        {/* Stat cards (windowed). The Sales Hub draws its own six-tile KPI grid
-            from the same figures and turns these off; /clients/[id] has no call
-            KPIs of its own on this tab, so they stay its default. */}
-        {showStatCards && (
-          <Stagger gap={0.05} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StaggerItem><StatCard label="Leads Called" value={totals.leads} desc="Leads contacted in the period" Icon={Users} /></StaggerItem>
-            <StaggerItem><StatCard label="Total Calls" value={totals.calls} desc="In the selected period" Icon={Phone} /></StaggerItem>
-            <StaggerItem><StatCard label="Inbound" value={totals.inbound} desc="Inbound calls" Icon={PhoneIncoming} /></StaggerItem>
-            <StaggerItem><StatCard label="Outbound" value={totals.outbound} desc="Outbound calls" Icon={PhoneOutgoing} /></StaggerItem>
-          </Stagger>
+    // Width comes from the container, not the viewport.
+    <div className="flex min-w-0 flex-col gap-6">
+      {/* Stat cards (windowed). The Sales Hub draws its own hero from the same
+          figures and turns these off; /clients/[id] draws the hero too, so they
+          stay off there as well. */}
+      {showStatCards && (
+        <MetricGroup
+          title="Call centre"
+          items={[
+            { key: "leads", label: "Leads Called", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.leads.toLocaleString(), caption: "Leads contacted in the period" },
+            { key: "calls", label: "Total Calls", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.calls.toLocaleString(), caption: "In the selected period" },
+            { key: "inbound", label: "Inbound", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.inbound.toLocaleString(), caption: "Inbound calls" },
+            { key: "outbound", label: "Outbound", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.outbound.toLocaleString(), caption: "Outbound calls" },
+          ]}
+        />
+      )}
+
+      {/* Radix mounts only the selected panel; each carries its own fetch. */}
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList aria-label="Sales Hub section">
+          {sectionTabs.map((t) => (
+            <TabsTrigger key={t.key} value={t.key}>
+              <t.icon aria-hidden="true" />
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+
+        {showGroupFilter && (
+          <TabsContent value="overview">
+            {/* One row per client, windowed KPIs — click to drill into Leads. */}
+            {tableFor("overview", filteredOverview, {
+              loading: groupsLoading,
+              toolbar: toolbar(null),
+              onRowClick: handleDrillIn,
+              empty: (
+                <EmptyState
+                  icon={LayoutGridIcon}
+                  title="No calls in this window"
+                  description="Clients with at least one call in the selected period appear here."
+                />
+              ),
+            })}
+          </TabsContent>
         )}
 
-        {/* Section tabs, and the controls that act on whichever table is under
-            them. The design puts view switches above the content they filter
-            and the window filter up in the header — see the shell. */}
-        <StaggerItem>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <PageTabs
-              label="Sales Hub section"
-              panelId={TABLE_PANEL_ID}
-              tabs={sectionTabs}
-              value={activeTab}
-              onChange={setActiveTab}
-            />
-
-            <div className="flex items-center gap-2.5 md:ml-auto">
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
-                  aria-hidden="true"
-                />
-                <Input
-                  placeholder="Search…"
-                  aria-label="Search the table"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full pl-9 text-[13px] md:w-[220px]"
-                />
-              </div>
-              <ColumnsMenu
-                columns={columnCatalogue}
-                visibleColumns={visibleColumnIds}
-                onChange={setVisibleColumnIds}
-                defaultColumns={defaultColumnIds}
-                views={pageViews}
-                sources={columnSources}
-              />
-              {activeTab === "leads" && (
-                <LeadsFilterDropdown
-                  open={leadsFilterOpen}
-                  setOpen={setLeadsFilterOpen}
-                  hideNoDialerActivity={hideNoDialerActivity}
-                  setHideNoDialerActivity={setHideNoDialerActivity}
-                />
-              )}
-              {activeTab === "calls" && (
-                <CallsFilterDropdown
-                  open={callsFilterOpen}
-                  setOpen={setCallsFilterOpen}
-                  recentLimitInput={callsLimitInput}
-                  onRecentLimitChange={setCallsLimitInput}
-                  onRecentLimitCommit={commitCallsLimit}
-                  minLimit={MIN_CALLS_LIMIT}
-                  maxLimit={MAX_CALLS_LIMIT}
-                  direction={callDirection}
-                  setDirection={setCallDirection}
-                  durationMinMinutes={callDurationMinMinutes}
-                  setDurationMinMinutes={setCallDurationMinMinutes}
-                  durationMinSeconds={callDurationMinSeconds}
-                  setDurationMinSeconds={setCallDurationMinSeconds}
-                  durationMaxMinutes={callDurationMaxMinutes}
-                  setDurationMaxMinutes={setCallDurationMaxMinutes}
-                  durationMaxSeconds={callDurationMaxSeconds}
-                  setDurationMaxSeconds={setCallDurationMaxSeconds}
-                  onClear={clearCallFilters}
-                />
-              )}
+        <TabsContent value="leads" className="flex flex-col gap-3">
+          {selectedClientGroup !== "all" && (
+            <div className="flex items-center gap-2">
+              <Badge tone="primary" className="gap-2 py-1">
+                <span>Client: {selectedClientLabel}</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedClientGroup("all")}
+                  className="cursor-pointer outline-none hover:text-foreground focus-visible:shadow-control-focus"
+                  aria-label="Show all clients"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              </Badge>
+              <span className="text-xs text-muted-foreground">Showing this client only</span>
             </div>
-          </div>
+          )}
 
-          {/* One panel, whichever section is selected. Radix's Tabs mounted all
-              four and hid three; each of these carries its own fetch, so the
-              hidden ones were work nobody asked for. */}
-          <PageTabPanel id={TABLE_PANEL_ID} label="Sales Hub table" className="mt-4">
-            {activeTab === "overview" && showGroupFilter && (
-              // One row per client, windowed KPIs — click to drill into Leads.
-              <StyledTable
-                columns={OVERVIEW_COLUMNS}
-                data={filteredOverview}
-                columnVisibility={colVis.overview}
-                searchQuery={searchQuery}
-                isLoading={groupsLoading}
-                onRowClick={handleDrillIn}
-              />
-            )}
+          {leadsBackgroundLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Spinner size={14} />
+              <span>
+                Loaded {leads.length} of {leadsTotal} leads — loading the rest in the background…
+              </span>
+            </div>
+          )}
 
-            {activeTab === "leads" && (
-              <>
-                {selectedClientGroup !== "all" && (
-                  <div className="mb-3 flex items-center gap-2">
-                    <span className="flex items-center gap-2 rounded-full bg-pd-primary-tint px-2.5 py-1 text-[11.5px] font-semibold text-pd-primary">
-                      Client: {selectedClientLabel}
-                      <button
-                        type="button"
-                        onClick={() => setSelectedClientGroup("all")}
-                        className="cursor-pointer hover:text-pd-ink"
-                        aria-label="Show all clients"
-                      >
-                        <X className="size-3.5" />
-                      </button>
-                    </span>
-                    <span className="text-[11.5px] text-pd-faint">Showing this client only</span>
-                  </div>
-                )}
+          {leadsError
+            ? errorFor("leads", leadsError, () => setLeadsAttempt((n) => n + 1))
+            : tableFor("leads", leads, {
+                loading: leadsLoading,
+                toolbar: toolbar(
+                  <LeadsFilter
+                    hideNoDialerActivity={hideNoDialerActivity}
+                    setHideNoDialerActivity={setHideNoDialerActivity}
+                  />,
+                ),
+                empty: (
+                  <EmptyState
+                    icon={UserIcon}
+                    title="No leads in this window"
+                    description={
+                      hideNoDialerActivity
+                        ? "No leads were called by the dialer in this period. Turn off the filter to see the rest."
+                        : "Leads from the call centre appear here."
+                    }
+                  />
+                ),
+              })}
+        </TabsContent>
 
-                {leadsBackgroundLoading && (
-                  <div className="mb-3 flex items-center gap-2 text-[11.5px] text-pd-faint">
-                    <Loader2 className="size-3.5 animate-spin" />
-                    <span>
-                      Loaded {leads.length} of {leadsTotal} leads — loading the rest in the
-                      background…
-                    </span>
-                  </div>
-                )}
+        {showGroupFilter && (
+          <TabsContent value="members">
+            {/* Account-wide HotProspector team. */}
+            {membersError
+              ? errorFor("members", membersError, () => setMembersAttempt((n) => n + 1))
+              : tableFor("members", members, {
+                  loading: membersLoading,
+                  toolbar: toolbar(null),
+                  empty: (
+                    <EmptyState
+                      icon={UsersIcon}
+                      title="No team members"
+                      description="Agents from your HotProspector account appear here."
+                    />
+                  ),
+                })}
+          </TabsContent>
+        )}
 
-                <StyledTable
-                  columns={LEAD_COLUMNS}
-                  data={leads}
-                  columnVisibility={colVis.leads}
-                  searchQuery={searchQuery}
-                  isLoading={leadsLoading}
-                />
-              </>
-            )}
-
-            {activeTab === "members" && showGroupFilter && (
-              // Account-wide HotProspector team.
-              <StyledTable
-                columns={MEMBER_COLUMNS}
-                data={members}
-                columnVisibility={colVis.members}
-                searchQuery={searchQuery}
-                isLoading={false}
-              />
-            )}
-
-            {activeTab === "calls" && (
-              // Most recent calls across leads; the count is user-configurable.
-              <StyledTable
-                columns={CALL_COLUMNS}
-                data={filteredCalls}
-                columnVisibility={colVis.calls}
-                searchQuery={searchQuery}
-                isLoading={callsLoading}
-              />
-            )}
-          </PageTabPanel>
-        </StaggerItem>
-      </Stagger>
+        <TabsContent value="calls">
+          {/* Most recent calls across leads; the count is user-configurable. */}
+          {callsError
+            ? errorFor("calls", callsError, () => setCallsAttempt((n) => n + 1))
+            : tableFor("calls", filteredCalls, {
+                loading: callsLoading,
+                toolbar: toolbar(
+                  <CallsFilter
+                    recentLimitInput={callsLimitInput}
+                    onRecentLimitChange={setCallsLimitInput}
+                    onRecentLimitCommit={commitCallsLimit}
+                    minLimit={MIN_CALLS_LIMIT}
+                    maxLimit={MAX_CALLS_LIMIT}
+                    direction={callDirection}
+                    setDirection={setCallDirection}
+                    minMinutes={callDurationMinMinutes}
+                    setMinMinutes={setCallDurationMinMinutes}
+                    minSeconds={callDurationMinSeconds}
+                    setMinSeconds={setCallDurationMinSeconds}
+                    maxMinutes={callDurationMaxMinutes}
+                    setMaxMinutes={setCallDurationMaxMinutes}
+                    maxSeconds={callDurationMaxSeconds}
+                    setMaxSeconds={setCallDurationMaxSeconds}
+                    onClear={clearCallFilters}
+                  />,
+                ),
+                empty: (
+                  <EmptyState
+                    icon={PhoneIcon}
+                    title="No calls to show"
+                    description="Recent calls in the selected period appear here. Widen the period or the filters."
+                  />
+                ),
+              })}
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

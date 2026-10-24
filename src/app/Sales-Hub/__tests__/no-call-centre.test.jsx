@@ -4,7 +4,17 @@ import SalesHubPage from "../page"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }))
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+
+// Radix Select (the granularity menu) needs these from the browser.
+Element.prototype.scrollIntoView ??= () => {}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 import { apiRequest } from "@/lib/api"
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
@@ -86,20 +96,12 @@ describe("Sales Hub without a call centre", () => {
     expect(document.body.textContent).not.toContain("120")
   })
 
-  it("dims the tab's dot along with its figure", async () => {
-    // The tile's tone is what says "this is the calls one, this is the
-    // talk-time one". Left lit beside a grey dash it reads as a live figure
-    // that has gone momentarily missing — the opposite of the truth.
+  it("leaves the figures unselectable, since there is no curve to open", async () => {
     mockGroups([group({ id: "a", name: "Quiet Co", provider: "none" })])
     render(<SalesHubPage />)
 
     await waitFor(() => expect(screen.getByText("Total calls")).toBeInTheDocument())
-
-    // The figure is a tab on the chart now; its colour is the dot before the
-    // label, which goes grey with the figure.
-    const tile = screen.getByText("Total calls").closest("button")
-    expect(tile.querySelector(".bg-pd-faint")).not.toBeNull()
-    expect(tile.querySelector(".bg-pd-info")).toBeNull()
+    expect(screen.getByText("Total calls").closest("button")).toBeDisabled()
   })
 
   it("draws the real figures when a dialler is connected", async () => {

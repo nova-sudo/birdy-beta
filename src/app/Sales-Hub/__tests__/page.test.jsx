@@ -10,15 +10,23 @@ vi.mock("@/lib/api", () => ({
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({
   useClientGroupsWithSeries: vi.fn(),
 }))
-// next/font hits the network at module load, which a unit test has no business
-// doing — the class names are all the shell uses.
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+
+// Radix Select (the granularity menu) needs these from the browser.
+Element.prototype.scrollIntoView ??= () => {}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 import { apiRequest } from "@/lib/api"
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 
 // 8 leads, one call each, at increasing timestamps (Lead08 is the most recent).
-const mockLeads = Array.from({ length: 8 }, (_, i) => {
+const makeLeads = (count) => Array.from({ length: count }, (_, i) => {
   const n = i + 1
   return {
     id: `l${n}`,
@@ -32,10 +40,13 @@ const mockLeads = Array.from({ length: 8 }, (_, i) => {
         duration: 60,
         from_number: "111",
         to_number: "222",
+        // Lead 08 has a recording, so the Calls table has links to draw.
+        recording_url: n === 8 ? "https://rec.example/8.mp3" : null,
       },
     ],
   }
 })
+let mockLeads = makeLeads(8)
 
 // The call-centre endpoint pages. meta.total is how many leads the window
 // holds; each request returns the slice its skip/limit asks for.
@@ -60,6 +71,7 @@ function mockApiRequest(url) {
 
 beforeEach(() => {
   localStorage.clear()
+  mockLeads = makeLeads(8)
   vi.mocked(apiRequest).mockImplementation(mockApiRequest)
   vi.mocked(useClientGroupsWithSeries).mockReturnValue({
     clientGroups: [],
@@ -71,6 +83,7 @@ beforeEach(() => {
 
 // The chart above the table has tabs of its own ("Leads called", "Total
 // calls"), so section tabs are looked up inside their own tablist.
+const rows = () => within(screen.getByRole("table"))
 const sectionTab = (name) =>
   within(screen.getByRole("tablist", { name: "Sales Hub section" })).getByRole("tab", { name })
 
@@ -102,7 +115,7 @@ describe("Sales Hub — Calls tab", () => {
     await waitFor(() => expect(leadsBatchFetched()).toBe(true))
 
     await user.click(sectionTab(/calls/i))
-    await waitFor(() => expect(screen.getByText("Lead 08")).toBeInTheDocument())
+    await waitFor(() => expect(rows().getByText("Lead 08")).toBeInTheDocument())
   })
 
   it("shows the most recent calls, sorted newest first, when the Calls tab is opened", async () => {
@@ -112,8 +125,8 @@ describe("Sales Hub — Calls tab", () => {
     await user.click(sectionTab(/calls/i))
 
     await waitFor(() => {
-      expect(screen.getByText("Lead 08")).toBeInTheDocument()
-      expect(screen.getByText("Lead 01")).toBeInTheDocument()
+      expect(rows().getByText("Lead 08")).toBeInTheDocument()
+      expect(rows().getByText("Lead 01")).toBeInTheDocument()
     })
   })
 
@@ -122,10 +135,10 @@ describe("Sales Hub — Calls tab", () => {
     render(<CallCenterPage />)
 
     await user.click(sectionTab(/calls/i))
-    await waitFor(() => expect(screen.getByText("Lead 08")).toBeInTheDocument())
+    await waitFor(() => expect(rows().getByText("Lead 08")).toBeInTheDocument())
 
     // All 8 calls fit under the default limit of 20.
-    expect(screen.getByText("Lead 01")).toBeInTheDocument()
+    expect(rows().getByText("Lead 01")).toBeInTheDocument()
 
     // The limit lives in the Calls tab's filter menu, so it has to be opened
     // before it exists to query. This assertion used to run against a closed
@@ -140,10 +153,10 @@ describe("Sales Hub — Calls tab", () => {
 
     await waitFor(() => {
       // Only the 5 most recent calls (Lead 08..04) should remain.
-      expect(screen.getByText("Lead 08")).toBeInTheDocument()
-      expect(screen.getByText("Lead 04")).toBeInTheDocument()
-      expect(screen.queryByText("Lead 03")).not.toBeInTheDocument()
-      expect(screen.queryByText("Lead 01")).not.toBeInTheDocument()
+      expect(rows().getByText("Lead 08")).toBeInTheDocument()
+      expect(rows().getByText("Lead 04")).toBeInTheDocument()
+      expect(rows().queryByText("Lead 03")).not.toBeInTheDocument()
+      expect(rows().queryByText("Lead 01")).not.toBeInTheDocument()
     })
 
     expect(localStorage.getItem(STORAGE_KEYS.SALES_HUB_CALLS_LIMIT)).toBe("5")

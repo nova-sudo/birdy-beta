@@ -9,24 +9,28 @@ Route: `/Sales-Hub`.
 ## Layout
 
 ```
-global top bar           Sales Hub · date range · client picker · bell · profile
-SalesHubShell            canvas + one scroll region
+global top bar           page name · bell · profile
+PageHeader               Sales Hub · period · granularity · client picker
 ├── hero row               CallCentreOverview
-│   ├── MetricTabsChart    the six figures as tabs; the selected one is plotted
-│   └── BirdyBriefing      Birdy's read: one sentence + up to three findings
-└── CallCentreContent    section tabs · search/columns · table
+│   ├── MetricTabsChart    the five figures as tabs; the selected one is plotted
+│   └── BirdyRead          Birdy's read: one sentence + up to five findings
+└── CallCentreContent    ds Tabs · search/columns/filters · ds DataTable (25 a page)
+    ├── CallLogsDialog       a lead's calls (Leads tab)
+    ├── MemberAnalyzeDialog  three-step batch analysis (Members tab)
+    └── CallAnalysisSheet    single-call analysis, right Sheet (Calls tab)
 ```
 
 | Where | What |
 |---|---|
 | `page.jsx` | Composition, and the window/scope state the controls hold |
 | `useSalesHubSeries.js` | The chart's series, counted from call logs |
-| `presentation.js` | Which tone each figure wears, and which series it plots |
+| `presentation.js` | Which series each figure plots |
 | `src/lib/saleshub-series.js` | Bucketing the five plottable metrics (pure) |
 | `src/lib/saleshub-totals.js` | Summing the call stats (pure) |
 | `src/lib/saleshub-insight.js` | The briefing sentence and findings (pure) |
-| `src/components/saleshub/` | Shell, picker, the hero row |
-| `src/components/portfolio/` | `MetricTabsChart`, `BirdyBriefing`, `TrendPlot`, reused |
+| `src/components/saleshub/` | The hero row |
+| `src/components/callcenter/` | The tables, dialogs and sheet |
+| `src/components/ds/` | `MetricTabsChart`, `BirdyRead`, `DataTable`, `Sparkline` |
 
 ## State
 
@@ -140,8 +144,8 @@ These are deliberate. Everything else matches the design's tokens.
 4. **A client picker in the header.** The design's header carries only a date
    range. This is Birdy's own and it stays — the hub is an all-clients view
    whose first move is usually "which client is this?".
-5. **The table keeps its existing design.** `StyledTable` renders as it does on
-   every other screen; the handoff's table chrome is not applied.
+5. **Tables are the ds `DataTable`.** Client-side paging at 25 rows (50 on
+   request), so a Leads table of thousands of rows renders one page at a time.
 6. **Menus close on outside click and Escape**, and the segmented controls are
    keyboard-operable with roving focus. The prototype closed only on selection.
 7. **One table panel is mounted at a time.** Radix's `Tabs` mounted all four and
