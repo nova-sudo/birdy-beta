@@ -37,7 +37,7 @@ const headerLabel = (column) =>
  * Table and cards both exist in the DOM, so tests should scope to `role=table` or `data-slot=data-table-card`.
  *
  * State lives here unless the page passes `state` / `onStateChange` (`sorting`,
- * `columnFilters`, `columnVisibility`, `pagination`), which is how a page syncs to a URL.
+ * `columnFilters`, `columnVisibility`, `columnOrder`, `pagination`), which is how a page syncs to a URL.
  *
  * @param {object} props
  * @param {import("@tanstack/react-table").ColumnDef[]} props.columns
@@ -47,6 +47,10 @@ const headerLabel = (column) =>
  * @param {React.ReactNode} [props.emptyFiltered] Shown when filters leave no rows; defaults to "No results" with a clear-filters action
  * @param {React.ReactNode|((table: import("@tanstack/react-table").Table) => React.ReactNode)} [props.toolbar] Extra toolbar controls
  * @param {number} [props.pageSize=25]
+ * @param {number[]} [props.pageSizeOptions] Choices in the rows-per-page select
+ * @param {boolean} [props.manualPagination] `data` is already the current page (server paging): rows are not sliced, `rowCount` sets the page count and `state.pagination` / `onStateChange` carry the page index
+ * @param {number} [props.rowCount] Total rows across all pages; only with `manualPagination`
+ * @param {(fromId: string, toId: string) => void} [props.onColumnReorder] Makes headers draggable; called with the dragged column id and the one it was dropped on
  * @param {(row: object) => void} [props.onRowClick]
  * @param {(row: object, index: number) => string} [props.getRowId]
  * @param {object} [props.state] Controlled slice of table state
@@ -60,6 +64,10 @@ function DataTable({
   emptyFiltered,
   toolbar,
   pageSize = 25,
+  pageSizeOptions,
+  manualPagination = false,
+  rowCount,
+  onColumnReorder,
   onRowClick,
   getRowId,
   state: controlled,
@@ -71,6 +79,7 @@ function DataTable({
     sorting: [],
     columnFilters: [],
     columnVisibility: {},
+    columnOrder: [],
     pagination: { pageIndex: 0, pageSize },
   })
   const state = { ...local, ...controlled }
@@ -103,11 +112,14 @@ function DataTable({
       onStateChange?.(nextState)
     },
     onColumnVisibilityChange: update("columnVisibility"),
+    onColumnOrderChange: update("columnOrder"),
     onPaginationChange: update("pagination"),
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
+    manualPagination,
+    rowCount: manualPagination ? rowCount : undefined,
     autoResetPageIndex: false,
   })
 
@@ -118,6 +130,7 @@ function DataTable({
   const isEmpty = !loading && totalRows === 0
   const pageIndex = state.pagination.pageIndex
   const pageCount = table.getPageCount()
+  const [dragOver, setDragOver] = React.useState(null)
 
   // Data can shrink under the current page (refetch, narrower filter); pull back to the last page.
   React.useEffect(() => {
@@ -182,7 +195,31 @@ function DataTable({
                           aria-sort={
                             column.getCanSort() ? (sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none") : undefined
                           }
-                          className="h-10 px-4 text-left text-xs font-medium text-muted-foreground"
+                          className={cn(
+                            "h-10 px-4 text-left text-xs font-medium text-muted-foreground",
+                            onColumnReorder && "cursor-grab",
+                            dragOver === column.id && "bg-muted"
+                          )}
+                          {...(onColumnReorder
+                            ? {
+                                draggable: true,
+                                onDragStart: (e) => {
+                                  e.dataTransfer.effectAllowed = "move"
+                                  e.dataTransfer.setData("text/plain", column.id)
+                                },
+                                onDragOver: (e) => {
+                                  e.preventDefault()
+                                  setDragOver(column.id)
+                                },
+                                onDragLeave: () => setDragOver(null),
+                                onDrop: (e) => {
+                                  e.preventDefault()
+                                  setDragOver(null)
+                                  const from = e.dataTransfer.getData("text/plain")
+                                  if (from && from !== column.id) onColumnReorder(from, column.id)
+                                },
+                              }
+                            : {})}
                         >
                           {header.isPlaceholder ? null : typeof column.columnDef.header === "string" ? (
                             <DataTableColumnHeader column={column} title={column.columnDef.header} />
@@ -242,7 +279,7 @@ function DataTable({
           </>
         )}
       </div>
-      {!loading && !isEmpty && <DataTablePagination table={table} />}
+      {!loading && !isEmpty && <DataTablePagination table={table} pageSizeOptions={pageSizeOptions} />}
     </div>
   )
 }

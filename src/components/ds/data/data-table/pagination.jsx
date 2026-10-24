@@ -14,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
  * @param {import("@tanstack/react-table").Table} props.table
  * @param {number[]} [props.pageSizeOptions]
  */
-function DataTablePagination({ table, pageSizeOptions = [10, 25, 50, 100], className, ...props }) {
+function DataTablePagination({ table, pageSizeOptions: options, className, ...props }) {
+  const pageSizeOptions = options ?? [10, 25, 50, 100]
   const pageSize = table.getState().pagination.pageSize
   // An unlisted size would leave the Select blank, so fold the current one in.
   const sizes = pageSizeOptions.includes(pageSize)

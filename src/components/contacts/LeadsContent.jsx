@@ -1,44 +1,42 @@
 "use client"
-import { ChevronLeft, ChevronRight, Search } from "lucide-react"
+import { CheckIcon, XIcon } from "lucide-react"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import StyledTable from "@/components/ui/table-container"
-import { PageTabPanel, PageTabs } from "@/components/portfolio"
-import { Stagger, StaggerItem } from "@/components/motion"
+import {
+  Button,
+  DataTable,
+  DataTableFacetedFilter,
+  EmptyState,
+  ErrorState,
+  Input,
+  SegmentedTabs,
+} from "@/components/ds"
 import { presetToDateRange } from "@/lib/date-utils"
 import { apiRequest } from "@/lib/api"
-import { buildContactColumns } from "@/lib/contact-columns"
+import { buildContactColumns, toTableColumns } from "@/lib/contact-columns"
 import { ContactStats } from "@/components/contacts/ContactStats"
-import { ErrorBanner } from "@/components/ErrorBanner"
-import { FilterPanel } from "@/components/ui/Filterpanel.jsx"
 import { flaskIcon as Flask, ghlIcon as ghl } from "@/lib/icons"
 
 // ─── Lead Hub table + pipeline tabs ─────────────────────────────────────────
-// The lower half of the Lead Hub — everything the page's shell, chart, insight
-// card and KPI tiles (src/app/contacts/page.jsx) sit above. Shell/header/chart
-// live entirely on the page; this component owns only the pipeline tabs, the
-// table toolbar, and the table itself, the same split Sales-Hub's
-// CallCentreContent draws against its own page.
+// The lower half of the Lead Hub — everything the page's header, chart and
+// Birdy's read (src/app/contacts/page.jsx) sit above. Shell/header/chart live
+// entirely on the page; this component owns only the pipeline tabs, the table
+// toolbar, and the table itself, the same split Sales-Hub's CallCentreContent
+// draws against its own page.
 //
 // Also embedded read-only inside /clients/[id] (showStatCards defaults true
 // there, and selectedClientGroup/onSelectClientGroup are left uncontrolled so
 // this manages its own single-client scope) — see the client-group-selection
 // comment below for how that split works.
+//
+// The list is paged on the server (15 a page); search, the Types facet and
+// column sorting work on the page that is loaded, as they always have.
 
 const baseContactColumns = buildContactColumns()
 
-// Every control in the toolbar row wears the design's dropdown trigger: 38px
-// tall, white, hairline border, pill radius, Inter 600 13px — matches
-// Sales-Hub's CallCentreContent.
-const TOOLBAR_CHIP =
-  "flex h-[38px] cursor-pointer items-center gap-2 rounded-full border border-pd-border bg-pd-surface px-[13px] text-[13px] font-semibold text-pd-body hover:bg-pd-divider"
-
-// Ties the pipeline tabs to the table they filter, for anyone navigating by role.
-const LEADS_PANEL_ID = "lead-hub-table-panel"
+const PAGE_SIZE = 15
 
 const PIPELINE_TABS = [
   { key: "all", label: "All Leads", stat: "lead_count" },
@@ -47,6 +45,11 @@ const PIPELINE_TABS = [
   { key: "abandoned", label: "Abandoned", stat: "abandoned" },
   { key: "lost", label: "Lost", stat: "lost" },
 ]
+
+// Contact columns carry a `category`; map it onto the menu's source ids.
+const CATEGORY_TO_SOURCE = { meta: "meta", ghl: "ghl", tags: "tags", custom: "custom" }
+
+const asOptions = (items) => items.map((value) => ({ value, label: value }))
 
 export function LeadsContent({
   clientGroups,
@@ -108,7 +111,7 @@ export function LeadsContent({
       sortable: true,
       icons: Flask,
       category: "custom",
-      cell: (row) => row?.[m.id] ?? "–",
+      cell: (value) => value ?? "–",
     }))
 
     const tagCols = availableTags.map(tag => ({
@@ -120,11 +123,15 @@ export function LeadsContent({
       icons: ghl,
       category: "tags",
       _tagName: tag,
-      cell: (_, row) => row?.tags?.includes(tag) ? "✅" : "–",
+      cell: (_, row) => row?.tags?.includes(tag)
+        ? <><CheckIcon aria-hidden className="size-4 text-success-ink" /><span className="sr-only">Yes</span></>
+        : "–",
     }))
 
     return [...baseContactColumns, ...custom, ...tagCols]
   }, [customMetrics, availableTags])
+
+  const tableColumns = useMemo(() => toTableColumns(contactColumns), [contactColumns])
 
   const [visibleColumns, setVisibleColumns] = useState(
     baseContactColumns.filter((col) => col.defaultVisible).map((col) => col.id)
@@ -139,12 +146,11 @@ export function LeadsContent({
   const [selectedType, setSelectedType] = useState("all")
   const [selectedOpportunityStatus, setSelectedOpportunityStatus] = useState("all")
   const [selectedTags, setSelectedTags] = useState([])
-  const [sortColumn, setSortColumn] = useState("")
-  const [sortDirection, setSortDirection] = useState("asc")
+  const [sorting, setSorting] = useState([])
 
   // Client-group selection is controlled when the Lead Hub page passes
   // selectedClientGroup/onSelectClientGroup (it renders its own picker in the
-  // global header) and internal otherwise — the same split
+  // page header) and internal otherwise — the same split
   // CallCentreContent's selectedClientGroup uses, for the same reason:
   // /clients/[id] is already scoped to one client and never moves it.
   const [uncontrolledClientGroup, setUncontrolledClientGroup] = useState("all")
@@ -169,19 +175,16 @@ export function LeadsContent({
     ready: viewsLoaded,
   })
 
-  // Contact columns carry a `category`; map it onto the menu's source ids.
-  const CATEGORY_TO_SOURCE = { meta: 'meta', ghl: 'ghl', tags: 'tags', custom: 'custom' }
-
   const columnCatalogue = useMemo(
     () => contactColumns.map(c => ({
       id: c.id,
       label: c.label ?? c.id,
       source:
         CATEGORY_TO_SOURCE[c.category] ??
-        (c.id.startsWith('tag_') ? 'tags'
-          : c.id.startsWith('ghl_') ? 'ghl'
-          : c.id.startsWith('custom_') ? 'custom'
-          : 'meta'),
+        (c.id.startsWith("tag_") ? "tags"
+          : c.id.startsWith("ghl_") ? "ghl"
+          : c.id.startsWith("custom_") ? "custom"
+          : "meta"),
     })),
     [contactColumns]
   )
@@ -196,8 +199,20 @@ export function LeadsContent({
       (acc, col) => ({ ...acc, [col.id]: visibleColumns.includes(col.id) }),
       {}
     ),
-    [visibleColumns]
+    [contactColumns, visibleColumns]
   )
+
+  // Dragging a header onto another moves it there. The order is the visible
+  // list, so it is saved the way the old table saved a reorder (debounced).
+  const reorderColumn = useCallback((fromId, toId) => {
+    const from = visibleColumns.indexOf(fromId)
+    const to = visibleColumns.indexOf(toId)
+    if (from < 0 || to < 0) return
+    const next = visibleColumns.filter((id) => id !== fromId)
+    next.splice(next.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    setVisibleColumns(next)
+    saveViewDebounced(next)
+  }, [visibleColumns, saveViewDebounced])
 
   // ── Fetch filter options from backend ──────────────────────────────────────
   useEffect(() => {
@@ -216,7 +231,9 @@ export function LeadsContent({
 
     apiRequest(url)
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data) setFilterOptions(data) })
+      .then(data => {
+        if (data) setFilterOptions({ sources: data.sources ?? [], types: data.types ?? [], tags: data.tags ?? [] })
+      })
       .catch(() => {})
   }, [selectedClientGroup, ghlClientGroups.length, datePreset])
 
@@ -233,22 +250,21 @@ export function LeadsContent({
     [contacts]
   )
 
-  // Every filter on this page, in one control. Sources and Tags narrow to a
-  // set; Types and Opportunities pick one, with "all" meaning unfiltered.
-  const filterGroups = useMemo(() => [
-    { id: "sources", label: "Sources", mode: "multi",
-      items: sources, value: selectedSources, onChange: setSelectedSources },
-    { id: "types", label: "Types", mode: "single",
-      items: types, value: selectedType, onChange: setSelectedType },
-    { id: "opportunities", label: "Opportunities", mode: "single",
-      items: opportunityStatuses, value: selectedOpportunityStatus,
-      onChange: setSelectedOpportunityStatus },
-    { id: "tags", label: "Tags", mode: "multi",
-      items: allTags, value: selectedTags, onChange: setSelectedTags },
-  ], [sources, selectedSources, types, selectedType, opportunityStatuses,
-      selectedOpportunityStatus, allTags, selectedTags])
+  // Every filter on this page. Sources and Tags narrow to a set; Types and
+  // Opportunities pick one, with "all" meaning unfiltered.
+  const facets = [
+    { id: "sources", title: "Sources", multiple: true, options: asOptions(sources),
+      value: selectedSources, onChange: setSelectedSources },
+    { id: "types", title: "Types", options: asOptions(types),
+      value: selectedType === "all" ? [] : [selectedType], onChange: (v) => setSelectedType(v[0] ?? "all") },
+    { id: "opportunities", title: "Opportunities", options: asOptions(opportunityStatuses),
+      value: selectedOpportunityStatus === "all" ? [] : [selectedOpportunityStatus],
+      onChange: (v) => setSelectedOpportunityStatus(v[0] ?? "all") },
+    { id: "tags", title: "Tags", multiple: true, options: asOptions(allTags),
+      value: selectedTags, onChange: setSelectedTags },
+  ]
 
-  const fetchContacts = async (page = 1, overrides = {}) => {
+  const fetchContacts = async (page = 1) => {
     setLoading(true)
     setError(null)
     try {
@@ -262,16 +278,14 @@ export function LeadsContent({
       const groupsParam = selectedClientGroup !== "all" ? selectedClientGroup : ""
       const { start_date, end_date } = presetToDateRange(datePreset)
 
-      const activeSources = overrides.sources ?? selectedSources
-      const activeTags = overrides.tags ?? selectedTags
-      const activeStatus = overrides.opportunityStatus ?? selectedOpportunityStatus
-
-      let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=15`
+      let endpoint = `/api/leads/unified?groups=${groupsParam}&page=${page}&limit=${PAGE_SIZE}`
       if (start_date) endpoint += `&start_date=${start_date}`
       if (end_date) endpoint += `&end_date=${end_date}`
-      activeSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
-      activeTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
-      if (activeStatus && activeStatus !== "all") endpoint += `&opportunity_status=${encodeURIComponent(activeStatus)}`
+      selectedSources.forEach(s => { endpoint += `&source=${encodeURIComponent(s)}` })
+      selectedTags.forEach(t => { endpoint += `&tag=${encodeURIComponent(t)}` })
+      if (selectedOpportunityStatus && selectedOpportunityStatus !== "all") {
+        endpoint += `&opportunity_status=${encodeURIComponent(selectedOpportunityStatus)}`
+      }
 
       const response = await apiRequest(endpoint)
       if (!response.ok) throw new Error(`Failed: ${response.status}`)
@@ -292,7 +306,7 @@ export function LeadsContent({
 
   // When embedded for a single group under internal (uncontrolled) selection,
   // auto-select it once groups load. Controlled usage (the Lead Hub page)
-  // owns this decision itself, via its own ClientGroupPicker.
+  // owns this decision itself, via its own client group picker.
   useEffect(() => {
     if (controlledClientGroup !== undefined) return
     if (ghlClientGroups.length === 1 && uncontrolledClientGroup === "all") {
@@ -304,10 +318,13 @@ export function LeadsContent({
   useEffect(() => {
     if (ghlClientGroups.length > 0) {
       fetchContacts(1)
+    } else if (!groupsLoading) {
+      // Nothing to scope to: say so rather than leave the skeleton up.
+      setLoading(false)
     }
   }, [selectedClientGroup, ghlClientGroups.length, datePreset, selectedSources, selectedTags, selectedOpportunityStatus])
 
-  const filteredAndSortedContacts = useMemo(() => {
+  const visibleContacts = useMemo(() => {
     let filtered = [...contacts]
 
     if (searchQuery) {
@@ -328,28 +345,8 @@ export function LeadsContent({
       filtered = filtered.filter(c => (c.contactType || c.type) === selectedType)
     }
 
-    if (sortColumn) {
-      filtered.sort((a, b) => {
-        let aVal = a[sortColumn] ?? ""
-        let bVal = b[sortColumn] ?? ""
-        if (sortColumn === "dateAdded") {
-          aVal = aVal ? new Date(aVal).getTime() : 0
-          bVal = bVal ? new Date(bVal).getTime() : 0
-        }
-        if (sortColumn === "leadValue") {
-          aVal = aVal || 0
-          bVal = bVal || 0
-        }
-        if (typeof aVal === "string") {
-          aVal = aVal.toLowerCase()
-          bVal = bVal.toLowerCase()
-        }
-        return (aVal < bVal ? -1 : 1) * (sortDirection === "asc" ? 1 : -1)
-      })
-    }
-
     return filtered
-  }, [contacts, searchQuery, selectedType, selectedOpportunityStatus, sortColumn, sortDirection])
+  }, [contacts, searchQuery, selectedType])
 
   const clearAllFilters = () => {
     setSearchQuery("")
@@ -358,25 +355,17 @@ export function LeadsContent({
     setSelectedOpportunityStatus("all")
     setSelectedClientGroup("all")
     setSelectedTags([])
-    setSortColumn("")
-    setSortDirection("asc")
+    setSorting([])
   }
 
-  const hasActiveFilters =
+  const hasActiveFilters = Boolean(
     searchQuery ||
     selectedSources.length > 0 ||
     selectedType !== "all" ||
     selectedOpportunityStatus !== "all" ||
     selectedClientGroup !== "all" ||
     selectedTags.length > 0
-
-
-  const handlePreviousPage = () => {
-    if (currentPage > 1) fetchContacts(currentPage - 1)
-  }
-  const handleNextPage = () => {
-    if (metaData?.has_next) fetchContacts(currentPage + 1)
-  }
+  )
 
   // Pipeline tabs, with the design's count badges — the same figures the
   // Lead Hub page's KPI tiles show, sourced here from this fetch's own
@@ -384,103 +373,125 @@ export function LeadsContent({
   // them on every window/group change.
   const pipelineTabs = useMemo(() => {
     const stats = metaData?.stats ?? {}
-    // PageTabs tints the badges (purple on the active tab, neutral elsewhere).
     return PIPELINE_TABS.map((tab) => ({
-      key: tab.key,
+      value: tab.key,
       label: tab.label,
-      badge: (stats[tab.stat] ?? 0).toLocaleString(),
+      count: (stats[tab.stat] ?? 0).toLocaleString(),
     }))
   }, [metaData])
 
+  // Page count comes from the server's own total_pages, as "Page X of Y" always has.
+  const rowCount = (metaData?.total_pages ?? 1) * PAGE_SIZE
+
+  const tableState = useMemo(
+    () => ({
+      sorting,
+      columnVisibility: columnVisibilityMap,
+      columnOrder: visibleColumns,
+      pagination: { pageIndex: currentPage - 1, pageSize: PAGE_SIZE },
+    }),
+    [sorting, columnVisibilityMap, visibleColumns, currentPage]
+  )
+
+  const handleTableState = (next) => {
+    setSorting(next.sorting)
+    if (next.pagination.pageIndex !== currentPage - 1) fetchContacts(next.pagination.pageIndex + 1)
+  }
+
+  const toolbar = (
+    <>
+      <Input
+        type="search"
+        placeholder="Search leads…"
+        aria-label="Search leads"
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className="h-control-sm w-full sm:w-56"
+      />
+
+      {facets.map((facet) => (
+        <DataTableFacetedFilter
+          key={facet.id}
+          title={facet.title}
+          options={facet.options}
+          multiple={facet.multiple}
+          value={facet.value}
+          onValueChange={facet.onChange}
+        />
+      ))}
+
+      {hasActiveFilters && (
+        <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+          <XIcon aria-hidden />
+          Clear
+        </Button>
+      )}
+
+      {/* The facets above are this page's filters; the Columns menu owns the
+          column set and the saved views. */}
+      <ColumnsMenu
+        columns={columnCatalogue}
+        visibleColumns={visibleColumns}
+        onChange={setVisibleColumns}
+        defaultColumns={defaultColumnIds}
+        views={pageViews}
+        onSaveDefault={saveDefaultColumns}
+        buttonClassName="ml-auto"
+      />
+    </>
+  )
+
   return (
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
-        <ErrorBanner error={error} />
+    <div className="flex min-w-0 flex-col gap-6">
+      {showStatCards && <ContactStats metaStats={metaData?.stats} loading={loading} />}
 
-        {showStatCards && (
-          <StaggerItem>
-            <ContactStats metaStats={metaData?.stats} loading={loading} />
-          </StaggerItem>
-        )}
-
-        <StaggerItem>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center">
-            <PageTabs
-              label="Pipeline stage"
-              panelId={LEADS_PANEL_ID}
-              tabs={pipelineTabs}
+      {error ? (
+        <ErrorState
+          title="Couldn't load your leads"
+          description={`${error}. Your leads are fine — we just couldn't reach them.`}
+          onRetry={() => fetchContacts(currentPage)}
+        />
+      ) : (
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="max-w-full overflow-x-auto">
+            <SegmentedTabs
+              ariaLabel="Pipeline stage"
               value={selectedOpportunityStatus}
-              onChange={setSelectedOpportunityStatus}
+              onValueChange={setSelectedOpportunityStatus}
+              items={pipelineTabs}
             />
-
-            <div className="flex items-center gap-2.5 md:ml-auto">
-              <div className="relative">
-                <Search
-                  className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
-                  aria-hidden="true"
-                />
-                <Input
-                  placeholder="Search leads…"
-                  aria-label="Search leads"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-[38px] w-full pl-9 text-[13px] md:w-[200px]"
-                />
-              </div>
-
-              <FilterPanel groups={filterGroups} triggerClassName={TOOLBAR_CHIP} />
-
-
-              {/* The dropdown above is this page's filter panel (Sources,
-                  Types, Opportunities, Tags) as well as a column toggle, so it
-                  stays; the Columns menu owns saved views. */}
-              <ColumnsMenu
-                columns={columnCatalogue}
-                visibleColumns={visibleColumns}
-                onChange={setVisibleColumns}
-                defaultColumns={defaultColumnIds}
-                views={pageViews}
-                onSaveDefault={saveDefaultColumns}
-              />
-
-              {hasActiveFilters && (
-                <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-[38px]">
-                  Clear
-                </Button>
-              )}
-            </div>
           </div>
 
-          <PageTabPanel id={LEADS_PANEL_ID} label="Leads" className="mt-4">
-            <StyledTable
-              columns={contactColumns}
-              data={filteredAndSortedContacts}
-              columnVisibility={columnVisibilityMap}
-              searchQuery=""
-              clickableFirstColumn={false}
-              isLoading={loading}
-              initialColumnOrder={visibleColumns}
-              onColumnOrderChange={(newOrder) => {
-                setVisibleColumns(newOrder)
-                // Auto-persist on drag-reorder (debounced inside the hook).
-                saveViewDebounced(newOrder)
-              }}
-            />
-          </PageTabPanel>
-        </StaggerItem>
-
-        <div className="flex justify-center gap-4">
-          <Button variant="ghost" onClick={handlePreviousPage} disabled={currentPage === 1}>
-            <ChevronLeft className="h-4 w-4" />Previous
-          </Button>
-          <span className="text-sm font-medium text-pd-body py-2">
-            Page {currentPage} of {metaData?.total_pages || 1}
-          </span>
-          <Button variant="ghost" onClick={handleNextPage} disabled={!metaData?.has_next}>
-            Next<ChevronRight className="h-4 w-4" />
-          </Button>
+          <DataTable
+            columns={tableColumns}
+            data={visibleContacts}
+            loading={loading}
+            toolbar={toolbar}
+            state={tableState}
+            onStateChange={handleTableState}
+            onColumnReorder={reorderColumn}
+            manualPagination
+            rowCount={rowCount}
+            pageSize={PAGE_SIZE}
+            pageSizeOptions={[PAGE_SIZE]}
+            getRowId={(row, index) => row.id ?? `${currentPage}-${index}`}
+            empty={
+              hasActiveFilters ? (
+                <EmptyState
+                  title="No leads match"
+                  description="Nothing on this page fits the current filters."
+                  action={<Button size="sm" onClick={clearAllFilters}>Clear filters</Button>}
+                />
+              ) : (
+                <EmptyState
+                  title="No leads yet"
+                  description="Leads and contacts from your connected GoHighLevel accounts appear here."
+                />
+              )
+            }
+          />
         </div>
-      </Stagger>
+      )}
     </div>
   )
 }

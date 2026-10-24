@@ -1,6 +1,5 @@
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { TiTag } from "react-icons/ti"
+import { TagIcon } from "lucide-react"
+import { Badge, Tooltip, TooltipContent, TooltipTrigger, DataTableColumnHeader } from "@/components/ds"
 import { ghlIcon as ghl, metaIcon as meta, hpIcon as hp, labIcon as lab } from "@/lib/icons"
 import Image from "next/image"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -13,6 +12,10 @@ function toTitleCase(str) {
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ")
 }
+
+// Opportunity stage to status tone: colour means status, and "abandoned" reads
+// as needing attention.
+const OPPORTUNITY_TONE = { open: "info", won: "success", lost: "danger", abandoned: "warning" }
 
 const getCurrency = () =>
   typeof window !== "undefined"
@@ -143,25 +146,17 @@ export const buildContactColumns = () => [
       const score = row?.score ? `+${row.score}` : null
       return (
         <div className="flex items-center gap-2 max-w-xs">
-          <span className="max-w-[150px] truncate rounded-[6px] border border-pd-border bg-pd-divider px-2 py-[3px] text-[11px] text-pd-body">
-            {mainTag}
-          </span>
-          {score && (
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-              {score}
-            </span>
-          )}
+          <Badge className="max-w-[150px] truncate">{mainTag}</Badge>
+          {score && <Badge tone="primary">{score}</Badge>}
           {hasMoreTags && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 rounded-[6px] bg-pd-primary-tint px-[7px] py-[3px] text-[10.5px] font-bold text-pd-primary">
-                  +{tags.length - 1}
-                </span>
+                <Badge tone="primary">+{tags.length - 1}</Badge>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="max-h-48 overflow-y-auto">
                 {tags.slice(1).map((tag, tagIndex) => (
                   <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
-                    <TiTag className="w-3 h-3" />{tag}
+                    <TagIcon aria-hidden className="size-3" />{tag}
                   </div>
                 ))}
               </TooltipContent>
@@ -183,13 +178,9 @@ export const buildContactColumns = () => [
       if (!type) return <span className="text-muted-foreground text-sm">–</span>
       const isLead = type === "lead"
       return (
-        <span
-          className={`inline-block rounded-[6px] px-[9px] py-[3px] text-[11px] font-semibold capitalize ${
-            isLead ? "bg-pd-primary-tint text-pd-primary" : "bg-pd-divider text-pd-subtle"
-          }`}
-        >
+        <Badge tone={isLead ? "primary" : "neutral"} className="capitalize">
           {type}
-        </span>
+        </Badge>
       )
     },
   },
@@ -207,35 +198,21 @@ export const buildContactColumns = () => [
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppStatus = mainOpp.status || "unknown"
-      // open/won/lost match the design's palette exactly; abandoned has no
-      // documented swatch there, so it borrows the amber tone the rest of
-      // this screen already uses for "needs attention" figures.
-      const statusColors = {
-        open: "bg-pd-info-bg text-pd-info",
-        won: "bg-pd-success-bg text-pd-success",
-        lost: "bg-pd-danger-bg text-pd-danger",
-        abandoned: "bg-pd-amber-bg text-pd-amber",
-      }
-      const tone = statusColors[oppStatus] || "bg-pd-divider text-pd-subtle"
+      const tone = OPPORTUNITY_TONE[oppStatus] || "neutral"
       return (
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-[6px] rounded-[6px] px-[9px] py-[3px] text-[11px] font-semibold capitalize ${tone}`}>
-            <span className="size-[6px] shrink-0 rounded-full bg-current" aria-hidden="true" />
+          <Badge variant="dot" tone={tone} className="capitalize">
             {oppStatus}
-          </span>
+          </Badge>
           {hasMoreOpps && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="shrink-0 rounded-[6px] bg-pd-primary-tint px-[7px] py-[3px] text-[10.5px] font-bold text-pd-primary">
-                  +{opportunities.length - 1}
-                </span>
+                <Badge tone="primary">+{opportunities.length - 1}</Badge>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="max-h-48 overflow-y-auto">
                 {opportunities.slice(1).map((opp, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    <span className={`rounded-[6px] px-2 py-0.5 text-xs font-semibold capitalize ${statusColors[opp.status] || "bg-pd-divider text-pd-subtle"}`}>
-                      {opp.status}
-                    </span>
+                  <div key={idx} className="py-0.5 text-xs capitalize">
+                    {opp.status}
                   </div>
                 ))}
               </TooltipContent>
@@ -272,17 +249,13 @@ export const buildContactColumns = () => [
           {hasMoreOpps && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
+                <Badge>+{opportunities.length - 1}</Badge>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="max-h-48 overflow-y-auto">
                 {opportunities.slice(1).map((opp, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm py-1">
-                    {opp.monetaryValue > 0 && (
-                      <span className="text-sm text-foreground">{sym}{opp.monetaryValue.toLocaleString()}</span>
-                    )}
-                    {opp.monetaryValue === 0 && (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
+                  <div key={idx} className="flex items-center gap-2 py-0.5 text-xs">
+                    {opp.monetaryValue > 0 && <span>{sym}{opp.monetaryValue.toLocaleString()}</span>}
+                    {opp.monetaryValue === 0 && <span>—</span>}
                   </div>
                 ))}
               </TooltipContent>
@@ -314,7 +287,7 @@ export const buildContactColumns = () => [
     icons: ghl,
     cell: (v) => !v
       ? <span className="text-muted-foreground text-sm">-</span>
-      : <Badge variant="outline" className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
+      : <Badge className="capitalize">{v.split(",").map((s) => s.trim()).join(", ")}</Badge>,
   },
   { id: "city", header: "City", label: "City", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
   { id: "state", header: "State", label: "State", defaultVisible: false, sortable: true, icons: ghl, cell: (v) => <span className="text-sm">{v || "-"}</span> },
@@ -437,3 +410,42 @@ export const buildContactColumns = () => [
     cell: (_, row) => <span className="text-sm">{row?.hp_enrichment?.call_logs_count ?? "–"}</span>,
   },
 ]
+
+/**
+ * The column set above, as ds DataTable column defs.
+ *
+ * Cells keep their `(value, row)` shape, so the same definitions render the
+ * same thing they did in the old table. A column's source icon (`icons`) leads
+ * its header, and the name column carries its `sub` line (source, stage)
+ * beneath it. Hiding is left to the page's Columns menu, so the table's own
+ * View picker stays out of the way.
+ *
+ * @param {object[]} columns buildContactColumns() plus any custom/tag columns
+ */
+export function toTableColumns(columns) {
+  return columns.map((col, index) => ({
+    id: col.id,
+    accessorFn: (row) => row?.[col.id],
+    header: ({ column }) => (
+      <span className="inline-flex items-center gap-1.5">
+        {col.icons && <Image src={col.icons} alt="" width={14} height={14} className="shrink-0" />}
+        <DataTableColumnHeader column={column} title={col.header} />
+      </span>
+    ),
+    enableSorting: Boolean(col.sortable),
+    enableHiding: false,
+    meta: { label: col.label ?? col.header },
+    cell: ({ getValue, row }) => {
+      const content = col.cell ? col.cell(getValue(), row.original) : getValue()
+      const sub = index === 0 && col.sub ? col.sub(row.original) : null
+      return sub ? (
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {content}
+          <span className="truncate text-xs text-muted-foreground">{sub}</span>
+        </div>
+      ) : (
+        content
+      )
+    },
+  }))
+}

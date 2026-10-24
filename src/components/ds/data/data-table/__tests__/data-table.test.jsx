@@ -138,6 +138,42 @@ describe("DataTable", () => {
   })
 })
 
+describe("server-side pagination and column reorder", () => {
+  it("manualPagination pages by rowCount and reports page changes without slicing data", () => {
+    const onStateChange = vi.fn()
+    render(
+      <DataTable
+        columns={columns}
+        data={data}
+        manualPagination
+        rowCount={40}
+        pageSize={15}
+        pageSizeOptions={[15]}
+        state={{ pagination: { pageIndex: 0, pageSize: 15 } }}
+        onStateChange={onStateChange}
+      />
+    )
+    expect(within(table()).getAllByRole("row")).toHaveLength(4)
+    expect(screen.getByText("Page 1 of 3")).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }))
+    expect(onStateChange).toHaveBeenCalledWith(
+      expect.objectContaining({ pagination: { pageIndex: 1, pageSize: 15 } })
+    )
+  })
+
+  it("onColumnReorder fires when a header is dropped on another", () => {
+    const onColumnReorder = vi.fn()
+    render(<DataTable columns={columns} data={data} onColumnReorder={onColumnReorder} />)
+    const heads = within(table()).getAllByRole("columnheader")
+    expect(heads[0]).toHaveAttribute("draggable", "true")
+    const dataTransfer = { setData: vi.fn(), getData: () => "name", effectAllowed: "" }
+    fireEvent.dragStart(heads[0], { dataTransfer })
+    fireEvent.dragOver(heads[2], { dataTransfer })
+    fireEvent.drop(heads[2], { dataTransfer })
+    expect(onColumnReorder).toHaveBeenCalledWith("name", "spend")
+  })
+})
+
 describe("cells", () => {
   it("MoneyCell renders GBP with num class", () => {
     render(<MoneyCell value={1234.5} />)

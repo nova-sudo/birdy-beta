@@ -4,20 +4,18 @@ import { useMemo, useState } from "react"
 
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { GRANULARITIES } from "@/lib/portfolio-series"
+import { useGranularity } from "@/lib/useGranularity"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { GranularitySelect } from "@/components/GranularitySelect"
-import { useGranularity } from "@/lib/useGranularity"
-import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
-import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { ClientGroupSelect } from "@/components/contacts/ClientGroupSelect"
+import { PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ds"
+import { PeriodControl } from "@/app/dashboard/PeriodControl"
 import { usePageHeader } from "@/components/page-header"
 
 // ─── Lead Hub ───────────────────────────────────────────────────────────────
 // Every lead and contact across every client group: is lead quality holding
-// up? Built from the "Lead Hub" design handoff in design_handoff_lead_hub/,
-// on the shell/chart/insight/tile components Sales-Hub introduced (see
-// SalesHubShell.jsx — generic despite the name, per its own file header).
+// up? Built from the "Lead Hub" design handoff in design_handoff_lead_hub/.
 //
 // Chart, briefing and hero figures are all summed from the same client-side
 // daily lead series (leadhub-totals.js/leadhub-series.js) rather than a live
@@ -27,7 +25,7 @@ import { usePageHeader } from "@/components/page-header"
 // The one thing that series can't give: the insight card's anomaly clause
 // (which client group has the most contacts with no email captured) is a
 // cross-client comparison the backend computes live in get_unified_leads —
-// this page makes one lightweight call for it (limit=1, stats only) below.
+// LeadHubOverview makes one lightweight call for it (limit=1, stats only).
 
 export default function ContactPage() {
   const {
@@ -44,35 +42,39 @@ export default function ContactPage() {
     [clientGroups]
   )
 
-  // Title and filters live in the global top bar, where the design puts them
-  // — see Sales-Hub/page.jsx for the full reasoning and usePageHeader.
-  const header = useMemo(
-    () => ({
-      title: (
-        <SalesHubHeaderTitle
-          title="Lead Hub"
-          subtitle="Every lead and contact across all client groups"
-        />
-      ),
-      controls: (
-        <div className="hidden items-center gap-2 md:flex">
-          <GranularitySelect value={granularity} onChange={setGranularity} />
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <ClientGroupPicker
-            clientGroups={ghlClientGroups}
-            value={selectedClientGroup}
-            onChange={setSelectedClientGroup}
-          />
-        </div>
-      ),
-    }),
-    [granularity, setGranularity, datePreset, setDatePreset, ghlClientGroups, selectedClientGroup]
-  )
-  usePageHeader(header)
-
+  // The page's own title is in the PageHeader below; the top bar only names the page.
+  const topBar = useMemo(() => ({ title: "Lead Hub" }), [])
+  usePageHeader(topBar)
 
   return (
-    <SalesHubShell>
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        title="Lead Hub"
+        description="Every lead and contact across all client groups"
+        period={<PeriodControl value={datePreset} onChange={setDatePreset} />}
+        actions={
+          <>
+            <Select value={granularity} onValueChange={setGranularity}>
+              <SelectTrigger size="sm" aria-label="Chart granularity">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {GRANULARITIES.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ClientGroupSelect
+              clientGroups={ghlClientGroups}
+              value={selectedClientGroup}
+              onChange={setSelectedClientGroup}
+            />
+          </>
+        }
+      />
+
       <LeadHubOverview
         clientGroups={clientGroups}
         groupsLoading={groupsLoading}
@@ -91,6 +93,6 @@ export default function ContactPage() {
         selectedClientGroup={selectedClientGroup}
         onSelectClientGroup={setSelectedClientGroup}
       />
-    </SalesHubShell>
+    </div>
   )
 }

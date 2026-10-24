@@ -6,9 +6,8 @@ vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(() => Promise.resolve({ ok: fals
 vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
-import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
 
-// Both rows sum their KPI tiles out of the client groups they are handed. Given
+// The row sums its KPI tiles out of the client groups they are handed. Given
 // an empty list they render 0 across the board and a chart that says nothing
 // happened this window — which is what a failed fetch used to look like, since
 // `loading` had already gone false and neither page rendered the error.
@@ -18,9 +17,9 @@ const props = {
   datePreset: "last_30_days",
 }
 
+// (The Lead Hub's equivalent lives in contacts/__tests__/LeadHubOverview.test.jsx.)
 describe.each([
   ["Call Centre", CallCentreOverview],
-  ["Lead Hub", LeadHubOverview],
 ])("%s overview", (_name, Overview) => {
   it("says the data is missing rather than showing it as zero", () => {
     render(<Overview {...props} groupsError="HTTP 500" />)
