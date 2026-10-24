@@ -47,11 +47,10 @@ async function logout() {
   }
 }
 
-// The signed-in user's agency name, as stored at login; "Birdy" until known.
-function useAgencyName(override) {
+// The signed-in user's name as stored at login; null until known.
+function useStoredUserName() {
   const [name, setName] = React.useState(null)
   React.useEffect(() => {
-    if (override) return
     const read = () => {
       try {
         setName(JSON.parse(localStorage.getItem("user") || "null")?.name ?? null)
@@ -62,8 +61,8 @@ function useAgencyName(override) {
     read()
     window.addEventListener("userUpdated", read)
     return () => window.removeEventListener("userUpdated", read)
-  }, [override])
-  return override ?? name ?? "Birdy"
+  }, [])
+  return name
 }
 
 /**
@@ -83,7 +82,8 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, class
   const pathname = usePathname()
   const { state: birdyState } = useBirdy()
   const { isAdmin } = useRole()
-  const name = useAgencyName(agencyName)
+  const userName = useStoredUserName()
+  const name = agencyName ?? userName ?? "Birdy"
   const [mode, setMode] = React.useState("browse")
 
   const handleMode = (next) => {
@@ -184,7 +184,7 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, class
               aria-label="Account menu"
               className="flex h-control items-center gap-2 rounded-control px-3 text-sm font-medium outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus"
             >
-              <span className="min-w-0 flex-1 truncate text-left">Account</span>
+              <span className="min-w-0 flex-1 truncate text-left">{userName ?? "Account"}</span>
               <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>

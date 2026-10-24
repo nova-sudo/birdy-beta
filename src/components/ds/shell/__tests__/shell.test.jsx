@@ -9,14 +9,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 vi.mock("@/lib/ask-birdy", () => ({ openBirdyChat, askBirdy: vi.fn() }))
-vi.mock("@/hooks/useCredits", () => ({
-  useCredits: () => ({
-    loading: false, balance: 40, allowance: 100, used: 60, remainingAllowance: 40,
-    isOut: false, low: false, subscribed: true,
-  }),
-}))
+const HEALTHY = {
+  loading: false, balance: 40, allowance: 100, used: 60, remainingAllowance: 40,
+  isOut: false, low: false, subscribed: true,
+}
+const creditsMock = vi.hoisted(() => ({ value: null }))
+vi.mock("@/hooks/useCredits", () => ({ useCredits: () => creditsMock.value }))
 vi.mock("@/hooks/useRole", () => ({ useRole: () => ({ isAdmin: false }) }))
-vi.mock("@/lib/jobs-store", () => ({ useJobs: () => [] }))
+const jobsMock = vi.hoisted(() => ({ value: [] }))
+vi.mock("@/lib/jobs-store", () => ({ useJobs: () => jobsMock.value }))
 vi.mock("@/components/birdy/use-birdy", () => ({ useBirdy: () => ({ state: "idle" }) }))
 vi.mock("@/components/birdy/BirdyAvatar", () => ({
   default: ({ size }) => <span data-testid="avatar" data-size={size} />,
@@ -29,7 +30,10 @@ vi.mock("@/components/dashboard-controls", () => ({
   DashboardHeaderControls: () => null,
 }))
 
+import { PageHeaderProvider, usePageHeader } from "@/components/page-header"
 import {
+  SidebarCredits,
+  SidebarJobs,
   AppSidebar,
   TopBar,
   PageHeader,
@@ -41,6 +45,9 @@ import {
 beforeEach(() => {
   pathnameMock.value = "/dashboard"
   openBirdyChat.mockClear()
+  jobsMock.value = []
+  localStorage.clear()
+  creditsMock.value = HEALTHY
 })
 
 describe("AppSidebar", () => {
@@ -77,6 +84,12 @@ describe("AppSidebar", () => {
     expect(openBirdyChat).toHaveBeenCalledTimes(1)
   })
 
+  it("shows the stored user's name on the account trigger", () => {
+    localStorage.setItem("user", JSON.stringify({ name: "Sam Rivera" }))
+    render(<AppSidebar />)
+    expect(screen.getByRole("button", { name: "Account menu" }).textContent).toContain("Sam Rivera")
+  })
+
   it("carries data-ds", () => {
     const { container } = render(<AppSidebar />)
     expect(container.querySelector('[data-ds="app-sidebar"]')).toBeTruthy()
@@ -102,6 +115,68 @@ describe("TopBar", () => {
     expect(screen.getByText("A very long page title").closest("[class*='truncate']")).toBeTruthy()
     // Search is an icon button below md; the pill text is not rendered.
     expect(screen.getByRole("button", { name: "Search" }).className).toContain("md:hidden")
+  })
+})
+
+function Publisher({ content }) {
+  usePageHeader(content)
+  return null
+}
+
+describe("TopBar context title", () => {
+  it("falls back to the title the page published", () => {
+    const content = { title: <span>Published title</span> }
+    render(
+      <PageHeaderProvider>
+        <Publisher content={content} />
+        <TopBar />
+      </PageHeaderProvider>
+    )
+    expect(screen.getByText("Published title")).toBeTruthy()
+  })
+})
+
+describe("SidebarCredits", () => {
+  it("is success-toned with the used count when healthy", () => {
+    const { container } = render(<SidebarCredits />)
+    expect(screen.getByText("60 / 100 used")).toBeTruthy()
+    expect(container.querySelector(".bg-success").style.width).toBe("40%")
+  })
+
+  it("turns warning when low", () => {
+    creditsMock.value = { ...HEALTHY, low: true, remainingAllowance: 10 }
+    const { container } = render(<SidebarCredits />)
+    expect(screen.getByText("Running low — top up")).toBeTruthy()
+    expect(container.querySelector(".bg-warning").style.width).toBe("10%")
+  })
+
+  it("turns danger when out", () => {
+    creditsMock.value = { ...HEALTHY, isOut: true, balance: 0, remainingAllowance: 0 }
+    const { container } = render(<SidebarCredits />)
+    expect(screen.getByText("Out — top up")).toBeTruthy()
+    expect(container.querySelector(".bg-danger").style.width).toBe("0%")
+  })
+})
+
+describe("SidebarJobs", () => {
+  it("renders nothing when idle", () => {
+    const { container } = render(<SidebarJobs />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it("summarises one job by label", () => {
+    jobsMock.value = [{ id: 1, label: "Analysing calls", status: "running", startedAt: Date.now() }]
+    render(<SidebarJobs />)
+    expect(screen.getByText("Analysing calls")).toBeTruthy()
+  })
+
+  it("summarises several jobs by count", () => {
+    jobsMock.value = [
+      { id: 1, label: "A", status: "running", startedAt: Date.now() },
+      { id: 2, label: "B", status: "running", startedAt: Date.now() },
+    ]
+    render(<SidebarJobs />)
+    expect(screen.getByText("2 tasks running")).toBeTruthy()
   })
 })
 

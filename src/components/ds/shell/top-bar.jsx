@@ -5,21 +5,11 @@ import { Menu, Search, Sparkles } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { openBirdyChat } from "@/lib/ask-birdy"
+import NotificationsDropdown from "@/components/NotificationsDropdown"
+import { DashboardHeaderControls, DashboardHeaderTitle } from "@/components/dashboard-controls"
 import { PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { Button } from "../primitives/button"
 import { Kbd } from "../primitives/kbd"
-
-// Loaded on first render rather than at import. NotificationsDropdown pulls in
-// lib/alert-helpers.js (a .js file containing JSX) and dashboard-controls pulls
-// in next/font; vitest can load neither, and a static import here would break
-// every test that imports the ds index.
-const NotificationsDropdown = React.lazy(() => import("@/components/NotificationsDropdown"))
-const DashboardHeaderTitle = React.lazy(() =>
-  import("@/components/dashboard-controls").then((m) => ({ default: m.DashboardHeaderTitle }))
-)
-const DashboardHeaderControls = React.lazy(() =>
-  import("@/components/dashboard-controls").then((m) => ({ default: m.DashboardHeaderControls }))
-)
 
 /**
  * Global header: menu button (below md), the page's title, Ask Birdy, the
@@ -58,17 +48,15 @@ function TopBar({ title, actions, onMenuClick, onSearch, className }) {
 
       <div className="min-w-0 flex-1 truncate text-base font-semibold">
         {title ?? (
-          <React.Suspense fallback={null}>
+          <>
             <DashboardHeaderTitle />
             <PageHeaderTitle />
-          </React.Suspense>
+          </>
         )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        <React.Suspense fallback={null}>
-          <DashboardHeaderControls />
-        </React.Suspense>
+        <DashboardHeaderControls />
         <PageHeaderControls />
         {actions}
         <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={onSearch}>
@@ -82,9 +70,7 @@ function TopBar({ title, actions, onMenuClick, onSearch, className }) {
           Ask Birdy
           <Kbd>⌘J</Kbd>
         </Button>
-        <React.Suspense fallback={<span className="size-control" aria-hidden />}>
-          <NotificationsDropdown />
-        </React.Suspense>
+        <NotificationsDropdown />
       </div>
     </header>
   )
