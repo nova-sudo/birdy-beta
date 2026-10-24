@@ -45,5 +45,6 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | data/data-table/view-options.jsx | table/data-table-view-options.tsx | remixicon, `enableHiding` gate | Popover + Command column picker; hidden below `md`; renders nothing with no hideable columns |
 | data/data-table/skeleton.jsx | table/data-table-skeleton.tsx | Filter / view / pagination placeholders, ui/table | Plain table rows from `md`, card blocks below |
 | data/data-table/cells.jsx | table/cells/money-cell.tsx, two-line-cell.tsx, status-dot-cell.tsx | formatCurrency, CellTone colours, raw-colour dot | `MoneyCell` uses `Intl.NumberFormat("en-GB")` with `currency` (default GBP), `num` class; `StatusCell` is a Badge dot with `tone`; split-bar / money-split cells not ported |
+| birdy/birdy-read.jsx | Paper-only, no Bytes source | n/a | Frame + Surface of tone rows (fixed 28px icon slot, fixed-width action slot), count badge, `askBirdy` footer link; max 5 rows |
 
 Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.

@@ -104,3 +104,6 @@ export { DataTableColumnHeader } from "./data/data-table/column-header"
 export { DataTableViewOptions } from "./data/data-table/view-options"
 export { DataTableSkeleton } from "./data/data-table/skeleton"
 export { MoneyCell, StatusCell, TwoLineCell } from "./data/data-table/cells"
+
+// Birdy
+export { BirdyRead } from "./birdy/birdy-read"
