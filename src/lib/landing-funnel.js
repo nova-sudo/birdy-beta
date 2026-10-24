@@ -24,40 +24,36 @@
  * other), so that stage carries no share.
  */
 
-import { Eye, MousePointerClick, PenLine, UserCheck } from "lucide-react"
 import { formatSharePct } from "@/lib/client-funnel"
-
-// Which icon and colour family each stage wears. Same shape as the dashboard's
-// presentation tables — the components take a name, never a colour.
-export const LANDING_STAGE_PRESENTATION = {
-  ad_views: { icon: MousePointerClick, tone: "primary" },
-  views: { icon: Eye, tone: "info" },
-  form_starts: { icon: PenLine, tone: "amber" },
-  opt_ins: { icon: UserCheck, tone: "success" },
-}
 
 const num = (value) => (Number.isFinite(Number(value)) ? Number(value) : 0)
 
+// What each stage is called when the bar is only a phone wide.
+const SHORT_LABELS = { ad_views: "Ads", form_starts: "Form" }
+
 /**
- * The API's stages in FunnelStepper's shape.
+ * The API's stages as FunnelBar steps.
  *
- * The server sends `share` as a fraction and the count as a number; the
- * component wants a formatted percentage and a printable figure, and holds no
- * opinion about either. Deltas arrive already resolved against the previous
- * window, so a stage with no comparable previous period simply has none —
- * an unknown movement is not a flat one.
+ * The server sends `share` as a fraction of landing views and the count as a
+ * number; both go straight through, with `share: null` kept explicit so the
+ * bar does not compute one against the first step (ad clicks are a slice of the
+ * views, not a step above them). Deltas arrive already resolved against the
+ * previous window, so a stage with no comparable previous period simply has
+ * none: an unknown movement is not a flat one.
  */
-export function buildLandingStages(funnel) {
+export function buildLandingSteps(funnel) {
   if (!funnel?.stages?.length) return null
 
   return funnel.stages.map((stage) => ({
     key: stage.key,
-    stage: stage.label,
-    count: num(stage.count).toLocaleString(),
-    share: stage.share == null ? null : formatSharePct(stage.share),
+    label: stage.label,
+    shortLabel: SHORT_LABELS[stage.key],
+    value: num(stage.count),
+    share: stage.share == null ? null : num(stage.share),
     hint: stage.hint,
-    ...(LANDING_STAGE_PRESENTATION[stage.key] ?? LANDING_STAGE_PRESENTATION.views),
-    ...(stage.direction ? { direction: stage.direction, delta: stage.delta } : {}),
+    ...(stage.direction
+      ? { delta: stage.direction === "down" ? -num(stage.delta) : num(stage.delta) }
+      : {}),
   }))
 }
 

@@ -1,5 +1,5 @@
 // components/clients/HealthPill.jsx
-// The Healthy / Warning / Critical pill from the Client Detail and Client Hub
+// The Healthy / Warning / Critical badge from the Client Detail and Client Hub
 // handoffs, and the value list behind the settings dropdown.
 //
 // Health is set by hand, never derived. The design describes the control as
@@ -7,41 +7,25 @@
 // client — so this renders a stored choice and nothing more. A client with no
 // choice recorded reads as Healthy, matching the backend default.
 
+import { Badge } from "@/components/ds"
+
 export const CLIENT_HEALTH = ["Healthy", "Warning", "Critical"]
 export const DEFAULT_CLIENT_HEALTH = "Healthy"
 
-// Solid semantic badges: coloured fill, white text.
-const STYLES = {
-  Healthy:  "bg-pd-success-bg text-pd-success",
-  Warning:  "bg-pd-warning-bg text-pd-amber",
-  Critical: "bg-pd-danger-bg text-pd-danger",
-}
-
-export function healthStyle(health) {
-  return STYLES[health] ?? STYLES[DEFAULT_CLIENT_HEALTH]
-}
+/** Health reads in the same status tones the rest of the app uses. */
+export const HEALTH_TONE = { Healthy: "success", Warning: "warning", Critical: "danger" }
 
 /**
  * @param {string}  health   one of CLIENT_HEALTH; anything else falls back to the default
- * @param {boolean} withDot  leading 6px dot — the design uses it on status pills
- *                           and on the Client Detail header, but not in the
- *                           Client Hub table's HEALTH column
+ * @param {boolean} withDot  a status dot before the label (the Client Detail header);
+ *                           without it the badge is a soft tinted chip
  */
-export function HealthPill({ health, withDot = true, className = "" }) {
+export function HealthPill({ health, withDot = true, className }) {
   const value = CLIENT_HEALTH.includes(health) ? health : DEFAULT_CLIENT_HEALTH
-  const tone = healthStyle(value)
 
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-[9px] py-[3px] text-[11px] font-bold ${tone} ${className}`}
-    >
-      {withDot && (
-        <span
-          className="size-1.5 rounded-full bg-current"
-          aria-hidden="true"
-        />
-      )}
+    <Badge tone={HEALTH_TONE[value]} variant={withDot ? "dot" : "soft"} className={className}>
       {value}
-    </span>
+    </Badge>
   )
 }

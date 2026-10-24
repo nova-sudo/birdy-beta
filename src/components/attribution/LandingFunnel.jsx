@@ -16,32 +16,18 @@
 // reports a form start.
 
 import { useMemo } from "react"
-import { ArrowRight, TrendingDown } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 import Link from "next/link"
 
-import { DiagnosticBanner, FunnelStepper, PdCard } from "@/components/portfolio"
-import { Skeleton } from "@/components/ui/skeleton"
-import { pdFontClass } from "@/lib/fonts"
+import { Frame, FunnelBar, Notice, Surface } from "@/components/ds"
 import {
   buildExitSplit,
-  buildLandingStages,
+  buildLandingSteps,
   diagnoseLandingFunnel,
 } from "@/lib/landing-funnel"
 
-// The card carries the handoff's fonts itself rather than being wrapped in
-// them by each caller. A wrapper would still be in the flow on the screens
-// where this renders nothing, and an empty div inside a `gap-6` column is a
-// 24px hole on every client who has no landing page.
-function Frame({ children, action }) {
-  return (
-    <PdCard title="Landing page funnel" action={action} className={pdFontClass}>
-      {children}
-    </PdCard>
-  )
-}
-
-export function LandingFunnel({ funnel, loading = false, error = null, groupId = null }) {
-  const stages = useMemo(() => buildLandingStages(funnel), [funnel])
+export function LandingFunnel({ funnel, loading = false, error = null, groupId = null, className }) {
+  const steps = useMemo(() => buildLandingSteps(funnel), [funnel])
   const exits = useMemo(() => buildExitSplit(funnel), [funnel])
   const diagnosis = useMemo(() => diagnoseLandingFunnel(funnel), [funnel])
 
@@ -52,37 +38,22 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
   // the skeleton inside it.
   if (loading && !funnel?.applicable) return null
 
-  if (loading) {
-    return (
-      <Frame>
-        <div className="flex items-start gap-6">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex-1 space-y-2">
-              <Skeleton className="mx-auto size-[42px] rounded-xl" />
-              <Skeleton className="mx-auto h-3 w-20" />
-              <Skeleton className="mx-auto h-5 w-14" />
-            </div>
-          ))}
-        </div>
-      </Frame>
-    )
-  }
-
   // Not a landing-page client, or the fetch failed. Either way there is
   // nothing truthful to draw, and a card apologising for itself on every
   // Instant Form client's screen is worse than no card.
-  if (error || !funnel?.applicable || !stages) return null
+  if (!loading && (error || !funnel?.applicable || !steps)) return null
 
-  const installed = funnel.installed
-  const empty = !funnel.totals?.views
-
-  return (
+  const frame = (children) => (
     <Frame
-      action={
+      data-ds="landing-funnel"
+      title="Landing page funnel"
+      meta="shares are of landing views"
+      className={className}
+      actions={
         groupId ? (
           <Link
             href={`/clients/${groupId}/tracking`}
-            className="flex items-center gap-1 text-[12.5px] font-semibold text-pd-primary hover:underline"
+            className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus"
           >
             Tracking setup
             <ArrowRight className="size-3.5" aria-hidden="true" />
@@ -90,65 +61,73 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
         ) : null
       }
     >
-      <FunnelStepper stages={stages} shareOf="landing views" />
+      {children}
+    </Frame>
+  )
 
-      {/* Nothing has arrived yet. Which of the two reasons it is matters — a
-          snippet that was never installed is a task for someone, a quiet
-          window is not — so the card says which rather than drawing zeroes and
-          leaving the reader to guess. */}
-      {empty && (
-        <p className="mt-4 border-t border-pd-border pt-4 text-[12.5px] leading-[1.5] text-pd-faint">
-          {installed
-            ? "No landing page visits in this window. The snippet is live and reporting, so this is a quiet period rather than a broken tag."
-            : "We haven't seen a single page view from this client yet — the snippet isn't on their landing page, or it sits behind a cookie banner that blocks it until someone consents."}
-        </p>
-      )}
+  if (loading) {
+    return frame(
+      <Surface>
+        <FunnelBar loading steps={steps ?? []} />
+      </Surface>
+    )
+  }
 
-      {exits && (
-        <div className="mt-[18px] border-t border-pd-border pt-4">
-          <div className="mb-3 flex items-baseline gap-2">
-            <TrendingDown className="size-4 shrink-0 self-center text-pd-subtle" aria-hidden="true" />
-            <p className="font-pd-display text-[13px] font-semibold text-pd-ink">
-              Left without opting in
-            </p>
-            <p className="text-[12.5px] text-pd-faint">
-              {exits.totalLabel} visits · {exits.rate}
-            </p>
+  const installed = funnel.installed
+  const empty = !funnel.totals?.views
+
+  return frame(
+    <>
+      <Surface className="flex flex-col gap-4">
+        <FunnelBar steps={steps} />
+
+        {/* Nothing has arrived yet. Which of the two reasons it is matters — a
+            snippet that was never installed is a task for someone, a quiet
+            window is not — so the card says which rather than drawing zeroes and
+            leaving the reader to guess. */}
+        {empty && (
+          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+            {installed
+              ? "No landing page visits in this window. The snippet is live and reporting, so this is a quiet period rather than a broken tag."
+              : "We haven't seen a single page view from this client yet — the snippet isn't on their landing page, or it sits behind a cookie banner that blocks it until someone consents."}
+          </p>
+        )}
+
+        {exits && (
+          <div className="flex flex-col gap-3 border-t border-border pt-4">
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <h3 className="text-sm font-semibold text-foreground">Left without opting in</h3>
+              <p className="num text-sm text-muted-foreground">
+                {exits.totalLabel} visits · {exits.rate}
+              </p>
+            </div>
+
+            <ul className="grid gap-3 md:grid-cols-2">
+              {exits.rows.map((row) => (
+                <li key={row.key} className="rounded-control bg-muted p-3">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-sm text-body">{row.label}</span>
+                    <span className="num text-lg font-medium text-foreground">{row.countLabel}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-baseline justify-between gap-3">
+                    {/* The fix each half points at. Two numbers with no reading
+                        attached is the thing this card exists to replace. */}
+                    <span className="text-xs text-muted-foreground">{row.note}</span>
+                    <span className="num shrink-0 text-xs text-muted-foreground">{row.share}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
-
-          <ul className="grid gap-[10px] md:grid-cols-2">
-            {exits.rows.map((row) => (
-              <li
-                key={row.key}
-                className="rounded-xl border border-pd-border bg-pd-canvas px-[14px] py-3"
-              >
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[12.5px] text-pd-body">{row.label}</span>
-                  <span className="font-pd-display text-[17px] font-bold text-pd-ink">
-                    {row.countLabel}
-                  </span>
-                </div>
-                <div className="mt-0.5 flex items-baseline justify-between gap-3">
-                  {/* The fix each half points at. Two numbers with no reading
-                      attached is the thing this card exists to replace. */}
-                  <span className="text-[11.5px] leading-[1.45] text-pd-faint">{row.note}</span>
-                  <span className="shrink-0 text-[11.5px] text-pd-faint">{row.share}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        )}
+      </Surface>
 
       {diagnosis && (
-        <DiagnosticBanner
-          state={diagnosis.state}
-          title={diagnosis.title}
-          body={diagnosis.body}
-          className="mt-[14px]"
-        />
+        <Notice tone={diagnosis.state === "problem" ? "danger" : "success"} title={diagnosis.title}>
+          {diagnosis.body}
+        </Notice>
       )}
-    </Frame>
+    </>
   )
 }
 

@@ -15,6 +15,7 @@
 
 import { Check, CircleDashed, Info } from "lucide-react"
 
+import { Badge, Notice, Surface } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
 export default function SetupChecklist({ diagnostics, polling }) {
@@ -24,13 +25,15 @@ export default function SetupChecklist({ diagnostics, polling }) {
   // wall of crosses would be telling them to fix a setup they don't have.
   if (!diagnostics.applicable) {
     return (
-      <div className="flex items-start gap-2 rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
-        <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
-        <p className="text-[12.5px] leading-[1.5] text-pd-body">
-          This client&apos;s leads come straight from Meta Instant Forms, so there is
-          nothing to install. Their leads and CPL are already reported.
-        </p>
-      </div>
+      <Notice tone="neutral">
+        <span className="flex items-start gap-2">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            This client&apos;s leads come straight from Meta Instant Forms, so there is
+            nothing to install. Their leads and CPL are already reported.
+          </span>
+        </span>
+      </Notice>
     )
   }
 
@@ -41,69 +44,50 @@ export default function SetupChecklist({ diagnostics, polling }) {
       {stages.map((stage) => {
         const isBlocker = stage.key === diagnostics.next_step
         return (
-          <div
-            key={stage.key}
-            className={cn(
-              "rounded-xl border px-3.5 py-3",
-              isBlocker
-                ? "border-pd-border-strong bg-pd-surface"
-                : "border-pd-border bg-pd-surface",
-            )}
-          >
+          <Surface key={stage.key} data-slot="checklist-stage" className="px-3.5 py-3">
             <div className="flex items-center gap-2.5">
               <span
                 className={cn(
                   "flex size-5 shrink-0 items-center justify-center rounded-full",
-                  stage.done
-                    ? "bg-pd-success-bg text-pd-success"
-                    : "bg-pd-divider text-pd-faint",
+                  stage.done ? "bg-success-soft text-success-ink" : "bg-muted text-muted-foreground"
                 )}
               >
                 {stage.done ? (
-                  <Check className="size-[12px]" aria-hidden="true" />
+                  <Check className="size-3" aria-hidden="true" />
                 ) : (
-                  <CircleDashed className="size-[12px]" aria-hidden="true" />
+                  <CircleDashed className="size-3" aria-hidden="true" />
                 )}
               </span>
 
-              <span
-                className={cn(
-                  "text-[13px]",
-                  stage.done ? "text-pd-body" : "font-medium text-pd-ink",
-                )}
-              >
+              <span className={cn("text-sm", stage.done ? "text-body" : "font-medium text-foreground")}>
                 {stage.label}
               </span>
 
-              {stage.optional && !stage.done && (
-                <span className="rounded-full bg-gray-600 px-2 py-0.5 text-[10.5px] font-bold text-white">
-                  optional
-                </span>
-              )}
+              {stage.optional && !stage.done && <Badge tone="neutral">optional</Badge>}
 
               {isBlocker && polling && (
-                <span className="ml-auto text-[11px] text-pd-faint">checking…</span>
+                <span className="ml-auto text-xs text-muted-foreground">checking…</span>
               )}
             </div>
 
             {/* Only the thing actually blocking progress explains itself. */}
             {isBlocker && stage.hint && (
-              <p className="mt-2 pl-[30px] text-[12px] leading-[1.5] text-pd-body">
-                {stage.hint}
-              </p>
+              <p className="mt-2 pl-7 text-sm leading-normal text-body">{stage.hint}</p>
             )}
-          </div>
+          </Surface>
         )
       })}
 
       {diagnostics.complete && (
-        <div className="flex items-center gap-2 rounded-xl border border-pd-healthy-border bg-pd-healthy-surface px-3.5 py-3">
-          <Check className="size-4 shrink-0 text-pd-success" aria-hidden="true" />
-          <p className="text-[12.5px] text-pd-body">
-            Tracking is working. Leads from this client&apos;s landing pages are being
-            counted against the ads that produced them.
-          </p>
-        </div>
+        <Notice tone="success">
+          <span className="flex items-center gap-2">
+            <Check className="size-4 shrink-0" aria-hidden="true" />
+            <span>
+              Tracking is working. Leads from this client&apos;s landing pages are being
+              counted against the ads that produced them.
+            </span>
+          </span>
+        </Notice>
       )}
     </div>
   )

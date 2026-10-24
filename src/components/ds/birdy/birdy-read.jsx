@@ -68,9 +68,10 @@ function Dismiss({ title, onDismiss }) {
  * @param {{id: string, tone: "danger"|"warning"|"success"|"info"|"neutral", title: React.ReactNode, detail?: React.ReactNode, action?: {label: string, onClick?: () => void, href?: string}, onDismiss?: () => void}[]} props.findings
  *   `onDismiss` adds an icon-only dismiss button after the action
  * @param {string} [props.prompt] Seeds the "Ask Birdy about this" footer link
+ * @param {(prompt: string) => void} [props.onAsk] Handles that link instead of opening the global assistant (a client page sends it to its own chat)
  * @param {React.ReactNode} [props.empty] Shown with no findings; defaults to "Nothing needs you right now."
  */
-function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, className, ...props }) {
+function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty, className, ...props }) {
   const rows = findings.slice(0, MAX_ROWS)
   const canDismiss = rows.some((f) => f.onDismiss)
 
@@ -116,8 +117,12 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, class
                     <Icon className="size-4" strokeWidth={2.5} />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-base font-medium text-foreground">{f.title}</span>
-                    {f.detail && <span className="truncate text-xs text-muted-foreground">{f.detail}</span>}
+                    <span className="truncate text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
+                    {f.detail && (
+                      <span className="truncate text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
+                        {f.detail}
+                      </span>
+                    )}
                   </div>
                   <Action action={f.action} />
                   {canDismiss && <Dismiss title={f.title} onDismiss={f.onDismiss} />}
@@ -130,7 +135,7 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, class
       {prompt && (
         <button
           type="button"
-          onClick={() => askBirdy(prompt)}
+          onClick={() => (onAsk ? onAsk(prompt) : askBirdy(prompt))}
           className="self-start px-1 text-sm font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus"
         >
           Ask Birdy about this →

@@ -6,7 +6,7 @@
 // majority of clients from a card about a page they don't have.
 
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 
 // next/font can't run outside Next's build, and the card only wants the class
 // name it hands back — same stub the overview's own tests use.
@@ -40,9 +40,22 @@ describe("LandingFunnel", () => {
     expect(screen.getByText("200")).toBeInTheDocument()
   })
 
-  it("takes its shares against landing views, not leads", () => {
+  it("draws the stages as a FunnelBar, with shares against landing views, not the first step", () => {
     render(<LandingFunnel funnel={funnel()} />)
-    expect(screen.getByText(/10% of landing views/)).toBeInTheDocument()
+    const bar = document.querySelector('[data-ds="funnel-bar"]')
+    expect(bar).not.toBeNull()
+    expect(screen.getByText(/shares are of landing views/)).toBeInTheDocument()
+    // 300/1000 and 100/1000, not 300/800 of ad clicks.
+    expect(within(bar).getByText("30.0%")).toBeInTheDocument()
+    expect(within(bar).getByText("10.0%")).toBeInTheDocument()
+    // Ad clicks are a slice of the views, so there is no conversion into views.
+    const conv = bar.querySelector('[data-slot="funnel-conversions"]')
+    expect(conv.children[1].textContent).toBe("—")
+  })
+
+  it("links to the tracking setup", () => {
+    render(<LandingFunnel funnel={funnel()} groupId="g1" />)
+    expect(screen.getByRole("link", { name: /Tracking setup/ })).toHaveAttribute("href", "/clients/g1/tracking")
   })
 
   it("renders nothing for a client with no landing page", () => {

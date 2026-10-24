@@ -15,6 +15,13 @@ import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+// recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 const { ClientTrendChart } = await import("@/components/clients/ClientTrendChart")
 
 /** A run of days, as `meta_daily_spend` stores them. */
@@ -55,7 +62,7 @@ const TRUNCATED = group({
 /** Render and switch to one of the four metric tabs. */
 async function showing(metricLabel, groupData = TRUNCATED) {
   render(<ClientTrendChart group={groupData} datePreset="maximum" currencySymbol="£" />)
-  await userEvent.click(screen.getByRole("radio", { name: metricLabel }))
+  await userEvent.click(screen.getByRole("tab", { name: new RegExp(`^${metricLabel}`) }))
 }
 
 describe("ClientTrendChart headlines", () => {
@@ -114,5 +121,28 @@ describe("ClientTrendChart headlines", () => {
     // different things, so the headline stays the sum of its own line.
     await showing("Leads")
     expect(screen.getByText("500")).toBeInTheDocument()
+  })
+
+  it("a window of one bucket is a figure, not a trend", async () => {
+    // Today is a single day: the figures still show, the plot says why it is empty.
+    render(
+      <ClientTrendChart
+        group={group({
+          insights: { spend: 50, results: 5 },
+          spend: spendDays("2026-04-10", "2026-04-10", 50),
+          leads: leadDays("2026-04-10", "2026-04-10", 5),
+        })}
+        datePreset="maximum"
+        currencySymbol="£"
+      />
+    )
+    expect(screen.getByText("£50")).toBeInTheDocument()
+    expect(screen.getByText("Pick 7 days or longer to see a trend.")).toBeInTheDocument()
+  })
+
+  it("loading shows the chart's skeleton tabs", () => {
+    render(<ClientTrendChart group={null} datePreset="maximum" loading />)
+    expect(screen.queryByRole("tablist")).toBeNull()
+    expect(document.querySelector('[data-ds="metric-tabs-chart"] [data-ds="skeleton"]')).not.toBeNull()
   })
 })

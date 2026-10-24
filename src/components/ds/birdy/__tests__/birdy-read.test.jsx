@@ -85,6 +85,20 @@ describe("BirdyRead", () => {
     expect(askBirdy).toHaveBeenCalledWith("What changed this week?")
   })
 
+  it("hands the prompt to onAsk instead of the global assistant when given", () => {
+    const onAsk = vi.fn()
+    render(<BirdyRead findings={[finding(1)]} prompt="About this client" onAsk={onAsk} />)
+    fireEvent.click(screen.getByRole("button", { name: /Ask Birdy about this/ }))
+    expect(onAsk).toHaveBeenCalledWith("About this client")
+    expect(askBirdy).not.toHaveBeenCalled()
+  })
+
+  it("gives truncated text its full string as a tooltip", () => {
+    render(<BirdyRead findings={[finding(1, { detail: "A long detail sentence" })]} />)
+    expect(screen.getByText("Finding 1")).toHaveAttribute("title", "Finding 1")
+    expect(screen.getByText("A long detail sentence")).toHaveAttribute("title", "A long detail sentence")
+  })
+
   it("omits the ask link without a prompt", () => {
     render(<BirdyRead findings={[finding(1)]} />)
     expect(screen.queryByText(/Ask Birdy about this/)).toBeNull()

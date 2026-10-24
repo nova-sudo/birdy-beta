@@ -38,6 +38,7 @@ export { MetricGroup } from "./data/metric-group"
 export { MetricTabsChart, fromPortfolioTabs } from "./data/metric-tabs-chart"
 export { Breakdown } from "./data/breakdown"
 export { BarList } from "./data/bar-list"
+export { FunnelBar } from "./data/funnel-bar"
 
 // Overlays
 export {

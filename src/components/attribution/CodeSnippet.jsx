@@ -18,7 +18,7 @@ import { Check, Copy, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import { Button } from "@/components/ds"
 
 export default function CodeSnippet({
   value,
@@ -53,12 +53,12 @@ export default function CodeSnippet({
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && (
         <div className="flex items-center gap-2">
-          <span className="text-[12px] font-medium text-pd-body">{label}</span>
+          <span className="text-xs font-medium text-body">{label}</span>
           {secret && (
             <button
               type="button"
               onClick={() => setRevealed((r) => !r)}
-              className="flex items-center gap-1 text-[11px] text-pd-faint hover:text-pd-body"
+              className="flex items-center gap-1 rounded-sm text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:shadow-control-focus"
             >
               {revealed ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
               {revealed ? "Hide" : "Show"}
@@ -70,8 +70,8 @@ export default function CodeSnippet({
       <div className="flex items-stretch gap-2">
         <code
           className={cn(
-            "min-w-0 flex-1 rounded-xl border border-pd-border bg-pd-canvas px-3 py-2.5",
-            "font-mono text-[11.5px] leading-[1.5] text-pd-ink",
+            "min-w-0 flex-1 rounded-control bg-muted px-3 py-2.5",
+            "font-mono text-xs leading-normal text-foreground",
             // Wrap, never truncate. A half-copied script tag is worse than an
             // ugly box.
             "whitespace-pre-wrap break-all",
@@ -83,17 +83,17 @@ export default function CodeSnippet({
         <Button
           type="button"
           size="sm"
-          variant={copied ? "outline" : "default"}
+          variant={copied ? "outline" : "primary"}
           onClick={copy}
           aria-label={label ? `Copy ${label}` : "Copy"}
-          className={cn("shrink-0 self-center text-[12px]", copied && "text-pd-success")}
+          className={cn("shrink-0 self-center", copied && "text-success-ink")}
         >
-          {copied ? <Check className="size-[14px]" /> : <Copy className="size-[14px]" />}
+          {copied ? <Check /> : <Copy />}
           {copied ? "Copied" : "Copy"}
         </Button>
       </div>
 
-      {hint && <p className="text-[11.5px] leading-[1.45] text-pd-faint">{hint}</p>}
+      {hint && <p className="text-xs leading-snug text-muted-foreground">{hint}</p>}
     </div>
   )
 }

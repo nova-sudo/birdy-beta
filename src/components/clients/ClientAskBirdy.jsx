@@ -14,8 +14,8 @@ import { useCallback, useEffect, useState } from "react"
 import { MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, Skeleton, Surface } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import BirdyChat from "@/components/chat/BirdyChat"
 
 export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
@@ -87,34 +87,30 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
     // The design fixes this row's height and lets each pane scroll inside it,
     // so the composer stays put instead of walking down the page as a thread
     // grows. Stacked below lg, where a fixed height would trap the chat.
-    <div className="flex flex-col gap-[18px] lg:h-[660px] lg:flex-row">
+    <div className="flex flex-col gap-4 lg:h-[660px] lg:flex-row">
       {/* ── Thread rail ────────────────────────────────────────────── */}
-      <aside className="flex shrink-0 flex-col rounded-xl border border-pd-border bg-pd-surface p-4 lg:w-[260px]">
-        <Button
-          onClick={startNew}
-          className="w-full gap-2 text-[12.5px]"
-          size="sm"
-        >
-          <MessageSquarePlus className="size-3.5" />
+      <Surface as="aside" className="flex shrink-0 flex-col lg:w-64">
+        <Button variant="primary" onClick={startNew} className="w-full">
+          <MessageSquarePlus />
           New conversation
         </Button>
 
-        <p className="mb-2.5 mt-3.5 text-[11px] font-bold uppercase tracking-[.05em] text-pd-faint">
+        <p className="mb-2 mt-4 text-xs font-medium text-muted-foreground">
           Recent
         </p>
 
-        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto max-lg:max-h-[320px]">
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto max-lg:max-h-80">
           {loadingThreads ? (
-            <div className="space-y-1" aria-busy="true">
+            <div className="flex flex-col gap-1" aria-busy="true">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-2 px-3 py-[11px]">
+                <div key={i} className="flex flex-col gap-2 px-3 py-2.5">
                   <Skeleton className="h-3.5 w-4/5" />
                   <Skeleton className="h-3 w-1/2" />
                 </div>
               ))}
             </div>
           ) : threads.length === 0 ? (
-            <p className="px-1 py-4 text-xs text-pd-subtle">
+            <p className="px-1 py-4 text-sm text-muted-foreground">
               No conversations about {clientName || "this client"} yet.
             </p>
           ) : (
@@ -126,24 +122,20 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
                 onClick={() => openThread(thread)}
                 disabled={opening}
                 aria-current={activeSessionId === thread.session_id ? "true" : undefined}
-                className={`w-full rounded-xl px-3 py-[11px] text-left transition disabled:opacity-60 ${
-                  activeSessionId === thread.session_id
-                    ? "bg-pd-primary-tint"
-                    : "hover:bg-pd-divider"
-                }`}
+                className={cn(
+                  "w-full rounded-control px-3 py-2.5 text-left outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
+                  activeSessionId === thread.session_id ? "bg-primary-soft" : "hover:bg-muted"
+                )}
               >
                 <p
-                  className={`truncate text-[12.5px] font-semibold leading-[1.35] ${
-                    activeSessionId === thread.session_id ? "text-pd-primary" : "text-pd-body"
-                  }`}
+                  className={cn(
+                    "truncate text-sm font-medium leading-snug",
+                    activeSessionId === thread.session_id ? "text-primary" : "text-body"
+                  )}
                 >
                   {thread.title}
                 </p>
-                <p
-                  className={`mt-1 text-[11px] ${
-                    activeSessionId === thread.session_id ? "text-pd-primary-light" : "text-pd-faint"
-                  }`}
-                >
+                <p className="mt-1 text-xs text-muted-foreground">
                   {thread.updated_at
                     ? new Date(thread.updated_at).toLocaleDateString()
                     : ""}
@@ -153,7 +145,7 @@ export function ClientAskBirdy({ clientId, clientName, initialMessage }) {
             ))
           )}
         </div>
-      </aside>
+      </Surface>
 
       {/* ── Chat card ──────────────────────────────────────────────── */}
       <div className="min-w-0 flex-1">

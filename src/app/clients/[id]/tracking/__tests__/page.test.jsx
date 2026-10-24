@@ -8,9 +8,10 @@ import userEvent from "@testing-library/user-event"
 // through GHL. Only a client's own landing page with its own records walks the
 // pixel steps.
 
+const push = vi.fn()
 vi.mock("next/navigation", () => ({
   useParams: () => ({ id: "g1" }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push }),
 }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
@@ -108,5 +109,42 @@ describe("tracking setup", () => {
     expect(screen.getByText("A form tool that sends leads to GoHighLevel")).toBeInTheDocument()
     expect(screen.getByText("Their own landing page and records")).toBeInTheDocument()
     expect(screen.getByText(/Needs the Birdy pixel/)).toBeInTheDocument()
+  })
+
+  it("is a ds page: PageHeader, a Frame per step, Surface blocks, code in a mono snippet", async () => {
+    current = portal("landing_page")
+    const user = userEvent.setup()
+    render(<TrackingPortalPage />)
+
+    await screen.findByRole("button", { name: /Next: install the pixel/ })
+    expect(document.querySelector('[data-ds="page-header"] h1')).toHaveTextContent("Tracking setup")
+    expect(document.querySelector('[data-ds="page-header"]')).toHaveTextContent("Glow Clinic")
+    expect(document.querySelector('[data-ds="frame"]')).not.toBeNull()
+    expect(document.querySelector('[data-ds="surface"]')).not.toBeNull()
+
+    await user.click(screen.getByRole("button", { name: /Next: install the pixel/ }))
+    const code = screen.getByText(/t\.example\/t\/s1\.js/)
+    expect(code.tagName).toBe("CODE")
+    expect(code).toHaveClass("font-mono")
+  })
+
+  it("goes back to the client", async () => {
+    current = portal("instant_form")
+    const user = userEvent.setup()
+    render(<TrackingPortalPage />)
+    await user.click(await screen.findByRole("button", { name: "Back to client" }))
+    expect(push).toHaveBeenCalledWith("/clients/g1")
+  })
+
+  it("a failed load shows ErrorState with a retry that reloads", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) })
+    current = portal("instant_form")
+    const user = userEvent.setup()
+    render(<TrackingPortalPage />)
+
+    expect(await screen.findByText(/Couldn't load tracking setup \(500\)/)).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="error-state"]')).not.toBeNull()
+    await user.click(screen.getByRole("button", { name: /try again/i }))
+    expect(await screen.findByText("Meta Instant Forms")).toBeInTheDocument()
   })
 })
