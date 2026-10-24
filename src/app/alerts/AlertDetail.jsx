@@ -1,324 +1,139 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  BellRing,
-  Ellipsis,
-  Pencil,
-  Trash2,
-  RefreshCw,
-  BellOff,
-  Zap,
-  User,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react"
-import { motion } from "framer-motion"
-import { StaggerItem, EASE_OUT } from "@/components/motion"
-import { METRIC_OPTIONS, formatRelative, conditionSummary, metricIcon } from "@/lib/alert-helpers"
+import { ChevronDown, ChevronRight, RefreshCw, User } from "lucide-react"
+import { Badge, Button, ProgressBar } from "@/components/ds"
+import { ProgressToTrigger } from "@/lib/alert-helpers"
 
 // The triggered tab's per-client detail: a rule that fired for several clients
-// collapses to one header row, and expands into one row per client.
+// is one expandable row, and expands into one row per client.
 
-// ── Progress bar ──────────────────────────────────────────────────────────────
-
-export function ClientProgressBar({ pct }) {
-  const clamped = Math.min(100, Math.max(0, pct ?? 0))
-  const color =
-    clamped >= 100 ? "bg-pd-danger" :
-    clamped >= 75  ? "bg-pd-warning" :
-    "bg-pd-primary"
-  return (
-    <div className="flex items-center gap-2 min-w-[100px]">
-      <div className="flex-1 h-2 rounded-full bg-pd-divider overflow-hidden">
-        <motion.div
-          className={`h-full rounded-full ${color}`}
-          initial={{ width: 0 }}
-          animate={{ width: `${clamped}%` }}
-          transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.15 }}
-        />
-      </div>
-      <span className="text-xs tabular-nums text-pd-subtle w-8 text-right">{clamped.toFixed(0)}%</span>
-    </div>
-  )
-}
-
-// ── Group triggered rows by parent alert ──────────────────────────────────────
-
+/**
+ * Turns the triggered list into the table's tree. Real alerts are plain rows; the
+ * per-client entries of one rule (virtual rows sharing an id) become one parent
+ * row carrying its clients as `subRows`.
+ */
 export function groupTriggeredRows(rows) {
   const map = new Map()
   for (const row of rows) {
     if (!row._virtual) {
-      const key = `real_${row.id}`
-      map.set(key, { parentAlert: row, children: [] })
+      map.set(`real_${row.id}`, { ...row, _rowKey: `real_${row.id}` })
       continue
     }
-    const key = String(row.id)
+    const key = `group_${row.id}`
     if (!map.has(key)) {
       map.set(key, {
-        parentAlert: {
-          id: row.id,
-          name: row.name,
-          description: row.description,
-          condition: row.condition,
-          tracking_mode: row.tracking_mode,
-          target_group_ids: row.target_group_ids,
-          target_group_names: row.target_group_names,
-          updated_at: row.updated_at,
-          last_triggered_at: row.last_triggered_at,
-          status: "triggered",
-          _isGroup: true,
-        },
-        children: [],
+        id: row.id,
+        name: row.name,
+        description: row.description,
+        condition: row.condition,
+        tracking_mode: row.tracking_mode,
+        target_group_ids: row.target_group_ids,
+        target_group_names: row.target_group_names,
+        updated_at: row.updated_at,
+        last_triggered_at: row.last_triggered_at,
+        status: "triggered",
+        _isGroup: true,
+        _rowKey: key,
+        subRows: [],
       })
     }
-    map.get(key).children.push(row)
+    map.get(key).subRows.push(row)
   }
   return [...map.values()]
 }
 
-// ── Sub-alert row (client inside an expanded group) ───────────────────────────
-
-export function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
-  const isEval = evaluating === row._virtual_id
+/** Chevron that opens or closes a group; the row itself also toggles on click. */
+export function ExpandToggle({ row, name }) {
+  const open = row.getIsExpanded()
+  const Icon = open ? ChevronDown : ChevronRight
   return (
-    <StaggerItem as="tr" className="border-b border-pd-row-border bg-pd-primary-tint/40 hover:bg-pd-primary-tint/70 transition-colors h-14">
-      {/* Name — indented */}
-      <td className="py-3 px-4 align-middle min-w-[180px]">
-        <div className="flex items-start gap-2 pl-8">
-          <div className="w-0.5 self-stretch rounded-full bg-pd-primary-pale shrink-0" />
-          <div>
-            <div className="flex items-center gap-1.5">
-              <User className="h-3.5 w-3.5 text-pd-primary shrink-0" />
-              <span className="font-semibold text-sm text-pd-ink">{row._client_name}</span>
-            </div>
-          </div>
-        </div>
-      </td>
-
-      {/* Metric */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{metricIcon(row.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === row.condition?.metric)?.label || row.condition?.metric}</span>
-        </div>
-      </td>
-
-      {/* Condition + actual */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(row)}</div>
-        {row._client_value != null && (
-          <div className="text-xs text-pd-danger tabular-nums mt-0.5">actual: {row._client_value?.toFixed(2)}</div>
-        )}
-      </td>
-
-      {/* Progress */}
-      <td className="py-3 px-4 align-middle">
-        <ClientProgressBar pct={row._client_progress} />
-      </td>
-
-      {/* Status */}
-      <td className="py-3 px-4 align-middle">
-        <Badge variant="destructive" className="gap-1 text-xs">
-          <BellRing className="h-3 w-3" /> Triggered
-        </Badge>
-      </td>
-
-      {/* Targets */}
-      <td className="py-3 px-4 align-middle">
-        <Badge className="text-[10.5px] px-2 py-0 gap-1">
-          <User className="h-2.5 w-2.5" /> Per Client
-        </Badge>
-      </td>
-
-      {/* Last updated */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap">
-        <div className="text-sm text-pd-subtle">{formatRelative(new Date(row.updated_at))}</div>
-        {row.last_triggered_at && (
-          <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
-            <BellRing className="h-3 w-3" />
-            {formatRelative(new Date(row.last_triggered_at))}
-          </div>
-        )}
-      </td>
-
-      {/* Actions */}
-      <td className="py-3 px-4 align-middle">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
-              <Ellipsis className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem
-              onClick={() => onEvaluate(row)}
-              disabled={!!evaluating}
-              className="gap-2 cursor-pointer"
-            >
-              {isEval ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              Evaluate now
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onSnooze(row)} className="gap-2 cursor-pointer">
-              <BellOff className="h-4 w-4" /> Snooze Client
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(row)}
-              className="gap-2 cursor-pointer text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
-            >
-              <Trash2 className="h-4 w-4" /> Delete Entry
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </td>
-    </StaggerItem>
-  )
-}
-
-// ── Group header row ──────────────────────────────────────────────────────────
-
-export function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvaluate, evaluating, onDelete }) {
-  const { parentAlert, children } = group
-  const isEval = evaluating === parentAlert.id
-  const childCount = children.length
-
-  return (
-    <StaggerItem
-      as="tr"
-      className="border-b border-pd-row-border bg-pd-surface hover:bg-pd-table-head transition-colors h-14 cursor-pointer"
-      onClick={onToggle}
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={`${open ? "Collapse" : "Expand"} ${name}`}
+      onClick={(e) => {
+        e.stopPropagation()
+        row.toggleExpanded()
+      }}
+      className="inline-flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:shadow-control-focus"
     >
-      {/* Name */}
-      <td className="py-3 px-4 align-middle min-w-[180px] shadow-[inset_3px_0_0_var(--pd-danger)]">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            onClick={e => { e.stopPropagation(); onToggle() }}
-          >
-            {isExpanded
-              ? <ChevronDown className="h-4 w-4" />
-              : <ChevronRight className="h-4 w-4" />}
-          </button>
-          <div>
-            <div className="font-semibold text-pd-ink flex items-center gap-2">
-              {parentAlert.name}
-              <Badge className="bg-pd-danger-bg text-pd-danger border-0 text-[10.5px] px-2 py-0 gap-1">
-                <BellRing className="h-2.5 w-2.5" />
-                {childCount} client{childCount !== 1 ? "s" : ""}
-              </Badge>
-            </div>
-            {parentAlert.description && (
-              <div className="text-xs text-muted-foreground mt-0.5 max-w-[220px] truncate">
-                {parentAlert.description}
-              </div>
-            )}
-          </div>
-        </div>
-      </td>
-
-      {/* Metric */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center gap-2 text-sm">
-          <span className="text-muted-foreground">{metricIcon(parentAlert.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === parentAlert.condition?.metric)?.label || parentAlert.condition?.metric}</span>
-        </div>
-      </td>
-
-      {/* Condition */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
-        <div className="text-sm font-semibold tabular-nums text-pd-ink">{conditionSummary(parentAlert)}</div>
-        {parentAlert.condition?.period && (
-          <div className="text-xs text-muted-foreground mt-0.5">
-            {["pct_drop", "pct_rise"].includes(parentAlert.condition?.operator) ? "vs " : "window: "}
-            {parentAlert.condition.period}
-          </div>
-        )}
-      </td>
-
-      {/* Progress — show worst client */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
-        <ClientProgressBar pct={Math.max(...children.map(c => c._client_progress ?? 0))} />
-      </td>
-
-      {/* Status */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
-        <Badge variant="destructive" className="gap-1 text-xs">
-          <BellRing className="h-3 w-3" /> Triggered
-        </Badge>
-      </td>
-
-      {/* Targets */}
-      <td className="py-3 px-4 align-middle min-w-[140px]" onClick={e => e.stopPropagation()}>
-        <div className="flex flex-col gap-0.5 max-w-[180px]">
-          <Badge className="text-[10.5px] px-2 py-0 gap-1 w-fit">
-            <User className="h-2.5 w-2.5" /> Per Client
-          </Badge>
-          {(parentAlert.target_group_names?.length ? parentAlert.target_group_names : parentAlert.target_group_ids || [])
-            .slice(0, 2)
-            .map((name, i) => <span key={i} className="text-sm truncate">{name}</span>)}
-          {(parentAlert.target_group_ids?.length ?? 0) > 2 && (
-            <span className="text-xs text-muted-foreground">+{parentAlert.target_group_ids.length - 2} more</span>
-          )}
-        </div>
-      </td>
-
-      {/* Last updated */}
-      <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
-        <div className="text-sm text-pd-subtle">{formatRelative(new Date(parentAlert.updated_at))}</div>
-        {parentAlert.last_triggered_at && (
-          <div className="text-xs text-pd-danger mt-0.5 flex items-center gap-1">
-            <BellRing className="h-3 w-3" />
-            {formatRelative(new Date(parentAlert.last_triggered_at))}
-          </div>
-        )}
-      </td>
-
-      {/* Actions */}
-      <td className="py-3 px-4 align-middle" onClick={e => e.stopPropagation()}>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Alert actions">
-              <Ellipsis className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onClick={() => onEdit(parentAlert)} className="gap-2 cursor-pointer">
-              <Pencil className="h-4 w-4" /> Edit Alert
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onEvaluate(parentAlert)}
-              disabled={!!evaluating}
-              className="gap-2 cursor-pointer"
-            >
-              {isEval ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-              Evaluate now
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onSnooze(parentAlert)} className="gap-2 cursor-pointer">
-              <BellOff className="h-4 w-4" /> Snooze All
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() => onDelete(parentAlert)}
-              className="gap-2 cursor-pointer text-pd-danger focus:bg-pd-danger-bg focus:text-pd-danger"
-            >
-              <Trash2 className="h-4 w-4" /> Delete Alert
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </td>
-    </StaggerItem>
+      <Icon className="size-4" />
+    </button>
   )
 }
 
+/** Name cell of a group's parent row: the rule, with how many clients fired. */
+export function GroupNameCell({ alert, row }) {
+  const count = alert.subRows.length
+  return (
+    <div className="flex items-center gap-2">
+      <ExpandToggle row={row} name={alert.name} />
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          {alert.name}
+          <Badge tone="danger">
+            {count} client{count !== 1 ? "s" : ""}
+          </Badge>
+        </div>
+        {alert.description && (
+          <div className="max-w-[220px] truncate text-xs text-muted-foreground">{alert.description}</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Name cell of a client row inside an expanded group. */
+export function ClientNameCell({ client }) {
+  return (
+    <div className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+      <User className="size-3.5 shrink-0 text-muted-foreground" />
+      {client._client_name}
+    </div>
+  )
+}
+
+/** A group's progress: the client closest to (or past) the threshold. */
+export function GroupProgress({ alert }) {
+  const worst = Math.max(...alert.subRows.map((c) => c._client_progress ?? 0))
+  return (
+    <div className="flex min-w-[140px] max-w-[180px] flex-col gap-1">
+      <span className="num text-sm font-semibold">{alert.subRows.length} triggered</span>
+      <ProgressBar value={worst} triggered label="Closest client to the threshold" />
+      <span className="num text-xs text-muted-foreground">Worst client {worst.toFixed(0)}% to trigger</span>
+    </div>
+  )
+}
+
+/** A client row's progress, read as the rule's own progress for that client. */
+export function ClientProgress({ client }) {
+  return (
+    <ProgressToTrigger
+      alert={{
+        ...client,
+        status: "triggered",
+        progress_pct: client._client_progress,
+        current_value: client._client_value,
+      }}
+    />
+  )
+}
+
+/** Evaluate, snooze and dismiss for one client of a triggered rule. */
+export function ClientActions({ client, evaluating, onEvaluate, onSnooze, onDismiss }) {
+  const isEval = evaluating === client._virtual_id
+  return (
+    <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+      <Button size="sm" aria-label={`Evaluate ${client._client_name}`} onClick={() => onEvaluate(client)} disabled={!!evaluating}>
+        {isEval && <RefreshCw className="animate-spin" />}
+        Evaluate
+      </Button>
+      <Button size="sm" aria-label={`Snooze ${client._client_name}`} onClick={() => onSnooze(client)}>
+        Snooze
+      </Button>
+      <Button size="sm" variant="ghost" aria-label={`Dismiss ${client._client_name}`} onClick={() => onDismiss(client)}>
+        Dismiss
+      </Button>
+    </div>
+  )
+}

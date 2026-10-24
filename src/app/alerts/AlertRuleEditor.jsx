@@ -2,67 +2,120 @@
 
 import { useState, useEffect } from "react"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Bell, Clock, Layers, Mail, Slack, Sparkles, Target, User, Users } from "lucide-react"
 import {
-  Bell,
-  Sparkles,
-  RefreshCw,
-  Target,
-  Users,
-  Clock,
-  Mail,
-  Slack,
-  Layers,
-  User,
-} from "lucide-react"
+  Badge,
+  Button,
+  Checkbox,
+  Input,
+  Label,
+  SegmentedTabs,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  Surface,
+  Switch,
+} from "@/components/ds"
 import MetricPicker from "@/components/ui/MetricPicker"
 import { OPERATOR_OPTIONS, PERIOD_OPTIONS, TYPE_OPTIONS, FREQUENCY_OPTIONS } from "@/lib/alert-helpers"
 import ChatConversation from "@/components/chat/ChatConversation"
 
-// ── Tracking mode toggle ──────────────────────────────────────────────────────
+const MODES = [
+  {
+    value: "birdy",
+    label: (
+      <>
+        <Sparkles className="size-3.5" /> Ask Birdy
+      </>
+    ),
+  },
+  { value: "manual", label: "Manual" },
+]
 
-function TrackingModeToggle({ value, onChange }) {
+const TRACKING = [
+  {
+    value: "total",
+    label: (
+      <>
+        <Layers className="size-3.5" /> Total
+      </>
+    ),
+  },
+  {
+    value: "per_client",
+    label: (
+      <>
+        <User className="size-3.5" /> Per Client
+      </>
+    ),
+  },
+]
+
+const QUICK_STARTERS = [
+  { label: "CPL alert", prompt: "Alert me when cost per lead exceeds a threshold" },
+  { label: "Spend alert", prompt: "Alert me when ad spend goes too high" },
+  { label: "Revenue alert", prompt: "Alert me when GHL revenue drops" },
+  { label: "Calls alert", prompt: "Alert me on call center metrics" },
+]
+
+function Field({ id, label, children }) {
   return (
-    <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit">
-      <button
-        type="button"
-        onClick={() => onChange("total")}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-          value === "total"
-            ? "bg-white text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Layers className="h-3.5 w-3.5" />
-        Total
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("per_client")}
-        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-          value === "per_client"
-            ? "bg-white text-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <User className="h-3.5 w-3.5" />
-        Per Client
-      </button>
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <Label htmlFor={id}>{label}</Label>
+      {children}
     </div>
   )
 }
 
+function Section({ title, action, children }) {
+  return (
+    <Surface as="section" className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-base font-semibold text-foreground">{title}</h3>
+        {action}
+      </div>
+      {children}
+    </Surface>
+  )
+}
+
+function PreviewRow({ icon: Icon, label, children }) {
+  return (
+    <div className="flex items-center justify-between gap-3 text-sm">
+      <div className="flex items-center gap-2 text-muted-foreground">
+        <Icon className="size-4" />
+        <span>{label}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function ChannelRow({ icon: Icon, label, soon, ...switchProps }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Icon className="size-4 text-muted-foreground" />
+        {label}
+        {soon && <Badge>Soon</Badge>}
+      </div>
+      <Switch aria-label={label} {...switchProps} />
+    </div>
+  )
+}
 
 /**
- * Create / edit dialog. Creating opens in "Ask Birdy" (a chat that makes the
- * rule); "Manual" and editing show the form.
+ * Create / edit alert in a wide side sheet. Creating opens in "Ask Birdy" (a chat
+ * that makes the rule); "Manual" and editing show the form: details, condition and
+ * targets on the left, a live preview with frequency and channels on the right.
  *
  * @param {object} props
  * @param {boolean} props.open
@@ -90,386 +143,292 @@ export default function AlertRuleEditor({
     if (open) setClientSearch("")
   }, [open])
 
+  const set = (key) => (value) => setForm((f) => ({ ...f, [key]: value }))
+  const setField = (key) => (e) => set(key)(e.target.value)
+
   const toggleGroup = (id) => {
-    setForm(f => ({
+    setForm((f) => ({
       ...f,
       target_group_ids: f.target_group_ids.includes(id)
-        ? f.target_group_ids.filter(g => g !== id)
+        ? f.target_group_ids.filter((g) => g !== id)
         : [...f.target_group_ids, id],
     }))
   }
 
+  const showForm = mode === "manual" || !!editingAlert
+  const selectedMetric = metricOptions.find((m) => m.id === form.metric)
+  const perClient = form.tracking_mode === "per_client"
+
+  const description = editingAlert
+    ? "Update the alert configuration."
+    : mode === "birdy"
+      ? "Chat with Birdy to set up your alert — it'll create it for you."
+      : "Fill in the form to configure your alert manually."
+
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent
-          className="w-[min(1120px,94vw)] !max-w-none h-[88vh] p-0 gap-0 flex flex-col overflow-hidden bg-pd-canvas sm:!max-w-none"
-          showCloseButton={false}
-        >
-          {/* Header */}
-          <div className="bg-pd-surface px-7 py-5 border-b border-pd-border shrink-0">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-pd-display text-[22px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
-                  {editingAlert ? "Edit Alert" : "Create Alert"}
-                </h2>
-                <p className="text-[13px] text-pd-subtle mt-1.5">
-                  {editingAlert
-                    ? "Update the alert configuration."
-                    : mode === "birdy"
-                      ? "Chat with Birdy to set up your alert — it'll create it for you."
-                      : "Fill in the form to configure your alert manually."}
-                </p>
-              </div>
-              {!editingAlert && (
-                <div className="flex items-center gap-1 p-1 rounded-full bg-muted shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => onModeChange("birdy")}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                      mode === "birdy"
-                        ? "bg-pd-primary text-white shadow-pd-segment"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <Sparkles className={`h-3.5 w-3.5 ${mode === "birdy" ? "text-white" : "text-muted-foreground"}`} />
-                    Ask Birdy
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onModeChange("manual")}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                      mode === "manual"
-                        ? "bg-white text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Manual
-                  </button>
-                </div>
-              )}
-            </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        className="gap-0 p-0 md:inset-y-2 md:right-2 md:h-auto md:w-[min(880px,calc(100%-16px))] md:max-w-none md:rounded-overlay"
+      >
+        <SheetHeader className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-b border-border py-4 pr-14 pl-5">
+          <div className="min-w-0">
+            <SheetTitle>{editingAlert ? "Edit Alert" : "Create Alert"}</SheetTitle>
+            <SheetDescription>{description}</SheetDescription>
           </div>
-
-          {/* Body — Birdy AI mode */}
-          {mode === "birdy" && !editingAlert && (
-            <div className="flex-1 min-h-0 flex flex-col bg-pd-canvas overflow-hidden">
-              <div className="flex-1 min-h-0 h-full overflow-hidden">
-                <ChatConversation
-                  key={chatKey}
-                  page="alerts"
-                  sessionKey={`birdy_alert_session_${chatKey}`}
-                  initialMessage="Hi, I want to create a new alert"
-                  bubbleWidthClass="max-w-[85%]"
-                  composerCompact
-                  composerPlaceholder="Type your answer..."
-                  showQuickActions={false}
-                  quickStarters={[
-                    { label: "CPL alert", prompt: "Alert me when cost per lead exceeds a threshold" },
-                    { label: "Spend alert", prompt: "Alert me when ad spend goes too high" },
-                    { label: "Revenue alert", prompt: "Alert me when GHL revenue drops" },
-                    { label: "Calls alert", prompt: "Alert me on call center metrics" },
-                  ]}
-                  emptyStateTitle="Let's create an alert"
-                  emptyStateSubtitle="Tell me what you want to monitor and I'll set it up for you."
-                  onToolUsed={(toolName) => {
-                    if (toolName === "create_alert") onAlertsChanged()
-                  }}
-                />
-              </div>
-              <div className="shrink-0 px-7 py-3 border-t border-pd-border bg-pd-surface flex justify-end">
-                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                  Close
-                </Button>
-              </div>
-            </div>
+          {!editingAlert && (
+            <SegmentedTabs ariaLabel="How to create the alert" value={mode} onValueChange={onModeChange} items={MODES} />
           )}
+        </SheetHeader>
 
-          {/* Body — Manual form mode */}
-          {(mode === "manual" || editingAlert) && (
-          <div className="px-7 py-6 overflow-y-auto flex-1">
-            {/* Form */}
-            <form id="create-alert-form" onSubmit={e => { e.preventDefault(); onSave() }}>
-              <div className="flex flex-col lg:flex-row gap-6 items-stretch">
-                {/* Left Column */}
-                <div className="w-full lg:w-2/3 flex-1 space-y-4">
-                  {/* Basic Info */}
-                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm">
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-[12.5px] font-semibold text-pd-ink">Name</Label>
-                        <Input
-                          placeholder="e.g. Low ROI Alert"
-                          value={form.name}
-                          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[12.5px] font-semibold text-pd-ink">Description</Label>
-                        <Input
-                          placeholder="Describe when this alert fires..."
-                          value={form.description}
-                          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[12.5px] font-semibold text-pd-ink">Type</Label>
-                        <Select value={form.type} onValueChange={v => setForm(f => ({ ...f, type: v }))}>
-                          <SelectTrigger className="h-10 w-full">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TYPE_OPTIONS.map(t => (
-                              <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
+        {/* Ask Birdy mode */}
+        {mode === "birdy" && !editingAlert && (
+          <>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ChatConversation
+                key={chatKey}
+                page="alerts"
+                sessionKey={`birdy_alert_session_${chatKey}`}
+                initialMessage="Hi, I want to create a new alert"
+                bubbleWidthClass="max-w-[85%]"
+                composerCompact
+                composerPlaceholder="Type your answer..."
+                showQuickActions={false}
+                quickStarters={QUICK_STARTERS}
+                emptyStateTitle="Let's create an alert"
+                emptyStateSubtitle="Tell me what you want to monitor and I'll set it up for you."
+                onToolUsed={(toolName) => {
+                  if (toolName === "create_alert") onAlertsChanged()
+                }}
+              />
+            </div>
+            <SheetFooter className="shrink-0 flex-row justify-end border-t border-border px-5 py-3">
+              <Button onClick={() => onOpenChange(false)}>Close</Button>
+            </SheetFooter>
+          </>
+        )}
+
+        {/* Manual form mode */}
+        {showForm && (
+          <>
+            <form
+              id="create-alert-form"
+              onSubmit={(e) => {
+                e.preventDefault()
+                onSave()
+              }}
+              className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto bg-muted p-4 md:grid-cols-[minmax(0,1fr)_280px]"
+            >
+              {/* Left column */}
+              <div className="flex min-w-0 flex-col gap-4">
+                <Section title="Details">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Field id="alert-name" label="Name">
+                      <Input id="alert-name" placeholder="e.g. Low ROI Alert" value={form.name} onChange={setField("name")} />
+                    </Field>
+                    <Field id="alert-description" label="Description">
+                      <Input
+                        id="alert-description"
+                        placeholder="Describe when this alert fires..."
+                        value={form.description}
+                        onChange={setField("description")}
+                      />
+                    </Field>
+                    <Field id="alert-type" label="Type">
+                      <Select value={form.type} onValueChange={set("type")}>
+                        <SelectTrigger id="alert-type" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TYPE_OPTIONS.map((t) => (
+                            <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
                   </div>
+                </Section>
 
-                  {/* Condition */}
-                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
-                    <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Condition</h3>
-                    <div className="grid grid-cols-[2fr_1fr_110px_1fr] gap-4">
-                      <div className="space-y-2">
-                      <Label className="text-[12.5px] font-semibold text-pd-ink">Metric</Label>
+                <Section title="Condition">
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_.8fr_1fr]">
+                    <Field id="alert-metric" label="Metric">
                       <MetricPicker
                         metrics={metricOptions}
                         value={form.metric}
-                        onChange={v => setForm(f => ({ ...f, metric: v }))}
+                        onChange={set("metric")}
                         placeholder="Select metric..."
                         triggerClassName="w-full"
                       />
-                      </div>
-                      <div className="space-y-2">
-                      <Label className="text-[12.5px] font-semibold text-pd-ink">When it</Label>
-                      <Select value={form.operator} onValueChange={v => setForm(f => ({ ...f, operator: v }))}>
-                          <SelectTrigger className="h-10 w-full">
-                            <SelectValue />
-                          </SelectTrigger>
+                    </Field>
+                    <Field id="alert-operator" label="When it">
+                      <Select value={form.operator} onValueChange={set("operator")}>
+                        <SelectTrigger id="alert-operator" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                            {OPERATOR_OPTIONS.map(o => (
-                              <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                            ))}
+                          {OPERATOR_OPTIONS.map((o) => (
+                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-[12.5px] font-semibold text-pd-ink">Value</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          className="h-10"
-                          value={form.value}
-                          onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                      <Label className="text-[12.5px] font-semibold text-pd-ink">Over</Label>
-                      <Select value={form.period} onValueChange={v => setForm(f => ({ ...f, period: v }))}>
-                          <SelectTrigger className="h-10 w-full">
-                            <SelectValue />
-                          </SelectTrigger>
+                    </Field>
+                    <Field id="alert-value" label="Value">
+                      <Input id="alert-value" type="number" min="0" step="0.01" value={form.value} onChange={setField("value")} />
+                    </Field>
+                    <Field id="alert-period" label="Over">
+                      <Select value={form.period} onValueChange={set("period")}>
+                        <SelectTrigger id="alert-period" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
                         <SelectContent>
-                            {PERIOD_OPTIONS.map(p => (
-                              <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
-                            ))}
+                          {PERIOD_OPTIONS.map((p) => (
+                            <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      </div>
-                    </div>
+                    </Field>
                   </div>
+                </Section>
 
-                  {/* Target Client Groups */}
-                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Target Client Groups</h3>
-                      <div className="flex flex-col items-end gap-1">
-                        <TrackingModeToggle value={form.tracking_mode} onChange={v => setForm(f => ({ ...f, tracking_mode: v }))} />
-                        <p className="text-xs text-muted-foreground max-w-[280px] text-right">
-                          {form.tracking_mode === "total"
-                            ? "Alert triggers when the combined value across all selected clients crosses the threshold."
-                            : "Alert triggers separately for each client that crosses the threshold on their own."}
-                        </p>
-                      </div>
-                    </div>
-                    <Input placeholder="Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
-                    <div className="max-h-[220px] overflow-y-auto rounded-2xl border border-pd-border divide-y divide-pd-divider">
-                        {/* Select All */}
-                      <label className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-pd-table-head transition-colors font-medium bg-muted/30">
-                        <Checkbox
-                          checked={clientGroups.length > 0 && form.target_group_ids.length === clientGroups.length}
-                            onCheckedChange={(checked) => {
-                              setForm(f => ({
-                                ...f,
-                                target_group_ids: checked ? clientGroups.map(g => g.id) : [],
-                              }))
-                            }}
-                        />
-                        <span className="text-sm font-medium">Target All Client Groups</span>
-                      </label>
-                        {/* Client groups */}
-                      {clientGroups
-                        .filter(g => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
-                        .map(g => (
-                          <label key={g.id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-pd-table-head transition-colors">
-                            <Checkbox checked={form.target_group_ids.includes(g.id)} onCheckedChange={() => toggleGroup(g.id)} />
-                            <span className="text-sm">{g.name}</span>
-                          </label>
-                        ))}
-                    </div>
+                <Section
+                  title="Target Client Groups"
+                  action={
+                    <SegmentedTabs
+                      ariaLabel="Tracking mode"
+                      size="sm"
+                      value={form.tracking_mode}
+                      onValueChange={set("tracking_mode")}
+                      items={TRACKING}
+                    />
+                  }
+                >
+                  <p className="text-sm text-muted-foreground">
+                    {perClient
+                      ? "Alert triggers separately for each client that crosses the threshold on their own."
+                      : "Alert triggers when the combined value across all selected clients crosses the threshold."}
+                  </p>
+                  <Input
+                    aria-label="Search clients"
+                    placeholder="Search clients..."
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                  />
+                  <div className="max-h-[220px] divide-y divide-border overflow-y-auto rounded-control shadow-surface">
+                    <label className="flex cursor-pointer items-center gap-3 bg-muted/50 px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted">
+                      <Checkbox
+                        checked={clientGroups.length > 0 && form.target_group_ids.length === clientGroups.length}
+                        onCheckedChange={(checked) =>
+                          setForm((f) => ({ ...f, target_group_ids: checked ? clientGroups.map((g) => g.id) : [] }))
+                        }
+                      />
+                      Target All Client Groups
+                    </label>
+                    {clientGroups
+                      .filter((g) => g.name.toLowerCase().includes(clientSearch.toLowerCase()))
+                      .map((g) => (
+                        <label
+                          key={g.id}
+                          className="flex cursor-pointer items-center gap-3 px-3 py-2.5 text-sm transition-colors hover:bg-muted"
+                        >
+                          <Checkbox checked={form.target_group_ids.includes(g.id)} onCheckedChange={() => toggleGroup(g.id)} />
+                          {g.name}
+                        </label>
+                      ))}
                   </div>
-                </div>
+                </Section>
+              </div>
 
-                {/* Right Column */}
-                <div className="w-full lg:w-1/3 flex-shrink-0 self-stretch space-y-4">
-                  {/* Preview Card */}
-                  <div className="rounded-xl border border-pd-border bg-pd-surface shadow-sm flex flex-col">
-                    <div className="p-6 pt-6 flex-1 flex flex-col">
-                      <div className="text-center p-4 flex-1 flex flex-col justify-center">
-                        <div className="font-pd-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink">{form.name || "Unnamed Alert"}</div>
-                        <div className="text-sm text-muted-foreground mt-2 flex items-center justify-center gap-2">
-                          {(() => {
-                            const sel = metricOptions.find(m => m.id === form.metric)
-                            if (!sel) return "Select a metric to preview"
-                            return (
-                              <>
-                                {sel.icon && <Image src={sel.icon} alt="" width={16} height={16} className="opacity-70" />}
-                                {sel.label}
-                              </>
-                            )
-                          })()}
-                        </div>
-                      </div>
-                      <div className="border-t border-border pt-4 mt-2 space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Target className="h-4 w-4" />
-                            <span>Scope</span>
-                          </div>
-                          <Badge variant="secondary" className="capitalize">client</Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            {form.tracking_mode === "per_client" ? <User className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
-                            <span>Tracking</span>
-                          </div>
-                          {form.tracking_mode === "per_client" ? (
-                            <Badge className="gap-1 text-xs"><User className="h-3 w-3" /> Per Client</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="gap-1 text-xs"><Layers className="h-3 w-3" /> Total</Badge>
+              {/* Right column: live preview, frequency and channels */}
+              <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-0 md:self-start">
+                <Surface as="section" className="flex flex-col gap-4" aria-label="Preview">
+                  <div className="flex flex-col items-center gap-1 py-2 text-center">
+                    <div className="text-lg font-semibold text-foreground">{form.name || "Unnamed Alert"}</div>
+                    <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                      {selectedMetric ? (
+                        <>
+                          {selectedMetric.icon && (
+                            <Image src={selectedMetric.icon} alt="" width={16} height={16} className="opacity-70" />
                           )}
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /><span>Targets</span></div>
-                          <span className="font-medium">{form.target_group_ids.length ? `${form.target_group_ids.length} selected` : "None"}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-4 w-4" /><span>Frequency</span></div>
-                          <Select value={form.frequency} onValueChange={v => setForm(f => ({ ...f, frequency: v }))}>
-                            <SelectTrigger className="w-[120px] h-8 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {FREQUENCY_OPTIONS.map(f => (
-                                <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <Mail className="h-4 w-4" />
-                            <span>Channels</span>
-                          </div>
-                          <span className="font-medium">
-                            {form.notification_channels.length} active
-                          </span>
-                        </div>
-                      </div>
+                          {selectedMetric.label}
+                        </>
+                      ) : (
+                        "Select a metric to preview"
+                      )}
                     </div>
                   </div>
+                  <div className="flex flex-col gap-3 border-t border-border pt-4">
+                    <PreviewRow icon={Target} label="Scope">
+                      <Badge className="capitalize">client</Badge>
+                    </PreviewRow>
+                    <PreviewRow icon={perClient ? User : Layers} label="Tracking">
+                      {perClient ? (
+                        <Badge tone="primary">
+                          <User /> Per Client
+                        </Badge>
+                      ) : (
+                        <Badge>
+                          <Layers /> Total
+                        </Badge>
+                      )}
+                    </PreviewRow>
+                    <PreviewRow icon={Users} label="Targets">
+                      <span className="text-sm font-medium">
+                        {form.target_group_ids.length ? `${form.target_group_ids.length} selected` : "None"}
+                      </span>
+                    </PreviewRow>
+                    <PreviewRow icon={Clock} label="Frequency">
+                      <Select value={form.frequency} onValueChange={set("frequency")}>
+                        <SelectTrigger size="sm" aria-label="Frequency" className="w-[120px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {FREQUENCY_OPTIONS.map((f) => (
+                            <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </PreviewRow>
+                    <PreviewRow icon={Mail} label="Channels">
+                      <span className="text-sm font-medium">{form.notification_channels.length} active</span>
+                    </PreviewRow>
+                  </div>
+                </Surface>
 
-                  {/* Notification Channels */}
-                  <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
-                    <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Notification Channels</h3>
-                    <div className="space-y-3">
-                      {/* Internal */}
-                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Bell className="h-4 w-4 text-primary" />
-                            <span className="text-sm font-medium">Internal</span>
-                          </div>
-                          <Switch
-                            checked={form.notification_channels.includes("in_app")}
-                            onCheckedChange={(checked) => {
-                              setForm(f => ({
-                              ...f,
-                              notification_channels: checked
-                                ? [...f.notification_channels.filter(c => c !== "in_app"), "in_app"]
-                                : f.notification_channels.filter(c => c !== "in_app"),
-                              }))
-                            }}
-                          />
-                        </div>
-                        {form.notification_channels.includes("in_app") && (
-                          <p className="text-xs text-muted-foreground">Notifications will appear in your Birdy dashboard.</p>
-                        )}
-                      </div>
-                      {/* Slack — Coming Soon */}
-                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2 opacity-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Slack className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Slack</span>
-                            <Badge className="bg-pd-divider text-pd-body border-0 text-[10px] px-2 py-0">Soon</Badge>
-                          </div>
-                          <Switch disabled checked={false} />
-                        </div>
-                      </div>
-                      {/* Email — Coming Soon */}
-                      <div className="rounded-2xl border border-pd-border p-3.5 space-y-2 opacity-50">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-medium">Email</span>
-                            <Badge className="bg-pd-divider text-pd-body border-0 text-[10px] px-2 py-0">Soon</Badge>
-                          </div>
-                          <Switch disabled checked={false} />
-                        </div>
-                      </div>
-                    </div>
+                <Section title="Notification Channels">
+                  <div className="flex flex-col gap-3">
+                    <ChannelRow
+                      icon={Bell}
+                      label="Internal"
+                      checked={form.notification_channels.includes("in_app")}
+                      onCheckedChange={(checked) =>
+                        setForm((f) => ({
+                          ...f,
+                          notification_channels: checked
+                            ? [...f.notification_channels.filter((c) => c !== "in_app"), "in_app"]
+                            : f.notification_channels.filter((c) => c !== "in_app"),
+                        }))
+                      }
+                    />
+                    {form.notification_channels.includes("in_app") && (
+                      <p className="-mt-1 text-xs text-muted-foreground">Notifications will appear in your Birdy dashboard.</p>
+                    )}
+                    <ChannelRow icon={Slack} label="Slack" soon disabled checked={false} />
+                    <ChannelRow icon={Mail} label="Email" soon disabled checked={false} />
                   </div>
-                </div>
+                </Section>
               </div>
             </form>
-          </div>
-          )}
 
-          {/* Footer — only shown in manual/edit mode */}
-          {(mode === "manual" || editingAlert) && (
-          <div className="bg-pd-surface px-7 py-4 border-t border-pd-border flex-shrink-0">
-            <div className="flex flex-row justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            <SheetFooter className="shrink-0 flex-row justify-end border-t border-border px-5 py-3">
+              <Button onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                form="create-alert-form"
-                disabled={saving}
-              >
-                {saving
-                  ? <><RefreshCw className="h-4 w-4 animate-spin mr-2" />Saving...</>
-                  : (editingAlert ? "Save Changes" : "Create Alert")}
+              <Button type="submit" form="create-alert-form" variant="primary" loading={saving}>
+                {saving ? "Saving..." : editingAlert ? "Save Changes" : "Create Alert"}
               </Button>
-            </div>
-          </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+            </SheetFooter>
+          </>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }

@@ -1,39 +1,35 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useSearchParams } from "next/navigation"
-import { usePageHeader } from "@/components/page-header"
-import { pdFontClass } from "@/lib/fonts"
-import { PageTabs } from "@/components/portfolio"
+import { toast } from "sonner"
+import { BellOff, Plus } from "lucide-react"
 import {
+  Badge,
+  Button,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { toast } from "sonner"
-import { CirclePlus, BellOff } from "lucide-react"
+  Label,
+  PageHeader,
+  SegmentedTabs,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+  confirm,
+} from "@/components/ds"
+import { usePageHeader } from "@/components/page-header"
 import { apiRequest } from "@/lib/api"
 import { buildMetricPickerOptions } from "@/lib/metric-picker-options"
 import { SNOOZE_OPTIONS, EMPTY_FORM } from "@/lib/alert-helpers"
 import AlertRuleEditor from "./AlertRuleEditor"
-import { AlertTable, AlertTableSkeleton, TriggeredTable } from "./AlertsList"
+import AlertsList from "./AlertsList"
 import { activeGroups } from "@/lib/client-status"
 
 
@@ -56,8 +52,6 @@ function AlertsPageContent() {
   const [customMetrics, setCustomMetrics] = useState([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAlert, setEditingAlert] = useState(null)
-  const [deleteTarget, setDeleteTarget] = useState(null)
-  const [deleteSubTarget, setDeleteSubTarget] = useState(null)
   const [snoozeTarget, setSnoozeTarget] = useState(null)
   const [snoozeHours, setSnoozeHours] = useState(24)
   const [evaluating, setEvaluating] = useState(null)
@@ -216,48 +210,45 @@ function AlertsPageContent() {
 
   // ── Actions ───────────────────────────────────────────────────────────────
 
-  const handleDeleteRequest = useCallback((alert) => {
-    setDeleteTarget(alert)
-  }, [])
-
-  const handleDeleteConfirm = async () => {
-    const target = deleteTarget
-    if (!target) return
-    setDeleteTarget(null)
+  const handleDelete = useCallback(async (alert) => {
+    const ok = await confirm({
+      title: "Delete alert?",
+      description: `"${alert.name}" will be permanently deleted. This cannot be undone.`,
+      confirmLabel: "Delete",
+    })
+    if (!ok) return
     try {
-      const res = await apiRequest(`/api/alerts/${target.id}`, { method: "DELETE" })
+      const res = await apiRequest(`/api/alerts/${alert.id}`, { method: "DELETE" })
       if (!res.ok) throw new Error(await res.text())
       toast.success("Alert deleted")
-      setDeleteTarget(null)
       fetchAlerts()
     } catch {
       toast.error("Failed to delete alert")
     }
-  }
+  }, [fetchAlerts])
 
   // Sub-alert delete: calls dismiss-client endpoint to surgically remove the
   // client entry from per_client_results (backend auto-flips alert to active
   // if no triggered clients remain)
-  const handleDeleteSubRequest = useCallback((row) => {
-    setDeleteSubTarget(row)
-  }, [])
-
-  const handleDeleteSubConfirm = async () => {
-    const target = deleteSubTarget
-    if (!target) return
-    setDeleteSubTarget(null)
+  const handleDeleteSub = useCallback(async (row) => {
+    const ok = await confirm({
+      title: "Remove triggered entry?",
+      description: `This will dismiss the triggered entry for ${row._client_name}. The alert will re-trigger if the condition is met again.`,
+      confirmLabel: "Remove",
+    })
+    if (!ok) return
     try {
-      const res = await apiRequest(`/api/alerts/${target.id}/dismiss-client`, {
+      const res = await apiRequest(`/api/alerts/${row.id}/dismiss-client`, {
         method: "POST",
-        body: JSON.stringify({ client_id: target._client_id }),
+        body: JSON.stringify({ client_id: row._client_id }),
       })
       if (!res.ok) throw new Error(await res.text())
-      toast.success(`Removed triggered entry for ${target._client_name}`)
+      toast.success(`Removed triggered entry for ${row._client_name}`)
       fetchAlerts()
     } catch {
       toast.error("Failed to remove triggered entry")
     }
-  }
+  }, [fetchAlerts])
 
   const handleTogglePause = useCallback(async (alert) => {
     const newStatus = alert.status === "active" || alert.status === "triggered" ? "paused" : "active"
@@ -328,103 +319,65 @@ function AlertsPageContent() {
     }
   }, [fetchAlerts])
 
-  // Title and the create action belong in the global top bar, in place of the
-  // Birdy wordmark — the same place Marketing, Sales, Leads and the Client Hub
-  // put theirs. See components/page-header.jsx.
-  const header = useMemo(
-    () => ({
-      title: (
-        <div className={`${pdFontClass} min-w-0`}>
-          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
-            Alerts
-          </h1>
-          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
-            Every rule watching your accounts, and everything it has caught
-          </p>
-        </div>
-      ),
-      controls: (
-        <Button onClick={openCreate} className="gap-2">
-          <CirclePlus className="h-4 w-4" />
-          Create Alert
-        </Button>
-      ),
-    }),
-    [openCreate]
-  )
-  usePageHeader(header)
+  // The page's own title is in the PageHeader below; the top bar only names the page.
+  const topBar = useMemo(() => ({ title: "Alerts" }), [])
+  usePageHeader(topBar)
 
-  const rowHandlers = {
-    evaluating,
-    onEdit: openEdit,
-    onEvaluate: handleEvaluate,
-    onTogglePause: handleTogglePause,
-    onSnooze: handleSnoozeRequest,
-    onDelete: handleDeleteRequest,
-  }
+  const counts = alerts.counts || {}
+  const tabs = [
+    { value: "active", label: "Active Alerts", count: counts.active || undefined },
+    {
+      value: "triggered",
+      label: "Triggered",
+      count: counts.triggered ? <Badge tone="danger">{counts.triggered}</Badge> : undefined,
+    },
+    {
+      value: "paused",
+      label: "Snoozed / Paused",
+      count: counts.paused ? <Badge tone="warning">{counts.paused}</Badge> : undefined,
+    },
+  ]
 
   return (
-    <main className={`${pdFontClass} w-full min-w-0`}>
-      <div className=" mx-auto">
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        title="Alerts"
+        description="Every rule watching your accounts, and everything it has caught"
+        actions={
+          <Button variant="primary" onClick={openCreate}>
+            <Plus />
+            Create Alert
+          </Button>
+        }
+      />
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-4">  
-          {/* The app's page tab bar. Triggered and Snoozed keep their own badge
-              colours — red and amber carry meaning here, so they override the
-              strip's default tint rather than reading as a plain count. Active
-              has no such meaning and takes the default. A count of 0 passes
-              undefined, which renders no badge at all. */}
-          <div className={pdFontClass}>
-            <PageTabs
-              label="Alert state"
-              tabs={[
-                { key: "active", label: "Active Alerts", badge: alerts.counts?.active || undefined },
-                {
-                  key: "triggered",
-                  label: "Triggered",
-                  badge: alerts.counts?.triggered || undefined,
-                  badgeClassName: "bg-pd-danger-bg text-pd-danger",
-                },
-                {
-                  key: "paused",
-                  label: "Snoozed / Paused",
-                  badge: alerts.counts?.paused || undefined,
-                  badgeClassName: "bg-pd-warning-bg text-pd-amber",
-                },
-              ]}
-              value={activeTab}
-              onChange={setActiveTab}
-            />
-          </div>
-
-          {isLoading ? (
-            <div className="mt-2"><AlertTableSkeleton /></div>
-          ) : (
-            <>
-              <TabsContent value="active" className="mt-2">
-                <AlertTable rows={alerts.active || []} emptyLabel="active" {...rowHandlers} />
-              </TabsContent>
-              <TabsContent value="triggered" className="mt-2">
-                <TriggeredTable
-                  rows={alerts.triggered || []}
-                  evaluating={evaluating}
-                  onEdit={openEdit}
-                  onEvaluate={handleEvaluate}
-                  onTogglePause={handleTogglePause}
-                  onSnooze={handleSnoozeRequest}
-                  onDelete={handleDeleteRequest}
-                  onDeleteSub={handleDeleteSubRequest}
-                />
-              </TabsContent>
-              <TabsContent value="paused" className="mt-2">
-                <AlertTable rows={alerts.paused || []} emptyLabel="paused" {...rowHandlers} />
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="max-w-full overflow-x-auto">
+          <SegmentedTabs
+            ariaLabel="Alert state"
+            panelId="alerts-panel"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            items={tabs}
+          />
+        </div>
+        <div id="alerts-panel" role="tabpanel" aria-labelledby={`alerts-panel-tab-${activeTab}`}>
+          <AlertsList
+            key={activeTab}
+            rows={alerts[activeTab] || []}
+            tab={activeTab}
+            loading={isLoading}
+            evaluating={evaluating}
+            onEdit={openEdit}
+            onEvaluate={handleEvaluate}
+            onTogglePause={handleTogglePause}
+            onSnooze={handleSnoozeRequest}
+            onDelete={handleDelete}
+            onDeleteSub={handleDeleteSub}
+          />
+        </div>
       </div>
 
-      {/* ── Create / Edit Dialog ──────────────────────────────── */}
       <AlertRuleEditor
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -441,38 +394,6 @@ function AlertsPageContent() {
         metricOptions={alertMetricOptions}
       />
 
-      {/* ── Delete Confirmation ───────────────────────────────── */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={open => !open && setDeleteTarget(null)}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete alert?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <strong>"{deleteTarget?.name}"</strong> will be permanently deleted. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* ── Delete sub-alert (client triggered entry) ─────────── */}
-      <AlertDialog open={!!deleteSubTarget} onOpenChange={open => { if (!open) setDeleteSubTarget(null) }}>
-        <AlertDialogContent className="bg-white">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove triggered entry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will dismiss the triggered entry for <strong>{deleteSubTarget?._client_name}</strong>. The alert will re-trigger if the condition is met again.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={handleDeleteSubConfirm}>Remove</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {/* ── Snooze Dialog ─────────────────────────────────────── */}
       <Dialog open={!!snoozeTarget} onOpenChange={open => !open && setSnoozeTarget(null)}>
         <DialogContent className="sm:max-w-[400px]">
@@ -485,10 +406,10 @@ function AlertsPageContent() {
               }
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2 space-y-3">
-            <Label>Snooze for</Label>
+          <div className="flex flex-col gap-2 py-2">
+            <Label htmlFor="snooze-hours">Snooze for</Label>
             <Select value={String(snoozeHours)} onValueChange={v => setSnoozeHours(Number(v))}>
-              <SelectTrigger>
+              <SelectTrigger id="snooze-hours" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -499,15 +420,15 @@ function AlertsPageContent() {
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setSnoozeTarget(null)}>Cancel</Button>
-            <Button onClick={handleSnoozeConfirm} className="gap-2">
-              <BellOff className="h-4 w-4" />
+            <Button onClick={() => setSnoozeTarget(null)}>Cancel</Button>
+            <Button variant="primary" onClick={handleSnoozeConfirm}>
+              <BellOff />
               {snoozeTarget?._virtual ? "Snooze Client" : "Snooze"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   )
 }
 
@@ -515,7 +436,10 @@ export default function AlertsPage() {
   return (
     <Suspense
       fallback={
-        <div className="mt-[62px]"><AlertTableSkeleton /></div>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-8 w-40" />
+          <Skeleton className="h-64 w-full" />
+        </div>
       }
     >
       <AlertsPageContent />
