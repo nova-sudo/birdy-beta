@@ -1096,6 +1096,7 @@ export default function ClientsPage() {
           <DataTable
             columns={orderedColumns}
             data={rows}
+            stickyFirstColumn
             state={{ columnVisibility }}
             onStateChange={(next) => setVisibilityChoices(next.columnVisibility)}
             toolbar={

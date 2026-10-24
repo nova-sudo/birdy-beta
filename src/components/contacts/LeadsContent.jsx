@@ -38,6 +38,9 @@ const baseContactColumns = buildContactColumns()
 
 const PAGE_SIZE = 15
 
+// The name column leads and stays put: it cannot be dragged, and nothing goes ahead of it.
+const LOCKED_COLUMNS = ["contactName"]
+
 const PIPELINE_TABS = [
   { key: "all", label: "All Leads", stat: "lead_count" },
   { key: "open", label: "Open", stat: "open" },
@@ -111,7 +114,7 @@ export function LeadsContent({
       sortable: true,
       icons: Flask,
       category: "custom",
-      cell: (value) => value ?? "–",
+      cell: (value) => (value == null || typeof value === "object" ? "–" : value),
     }))
 
     const tagCols = availableTags.map(tag => ({
@@ -207,7 +210,7 @@ export function LeadsContent({
   const reorderColumn = useCallback((fromId, toId) => {
     const from = visibleColumns.indexOf(fromId)
     const to = visibleColumns.indexOf(toId)
-    if (from < 0 || to < 0) return
+    if (from < 0 || to < 0 || LOCKED_COLUMNS.includes(fromId) || LOCKED_COLUMNS.includes(toId)) return
     const next = visibleColumns.filter((id) => id !== fromId)
     next.splice(next.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
     setVisibleColumns(next)
@@ -470,6 +473,8 @@ export function LeadsContent({
             state={tableState}
             onStateChange={handleTableState}
             onColumnReorder={reorderColumn}
+            lockedColumnIds={LOCKED_COLUMNS}
+            stickyFirstColumn
             manualPagination
             rowCount={rowCount}
             pageSize={PAGE_SIZE}

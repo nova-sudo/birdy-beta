@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within, waitFor } from "@testing-library/react"
+import { render, screen, within, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Lead table ──────────────────────────────────────────────────────────────
@@ -126,6 +126,28 @@ describe("LeadsContent", () => {
     const t = within(screen.getByRole("table"))
     expect(t.getByText("Lead Number 2")).toBeInTheDocument()
     expect(t.queryByText("Lead Number 1")).toBeNull()
+  })
+
+  it("saves a dragged column order (move right and left) and keeps Name locked", async () => {
+    renderLeads()
+    await inTable("Lead Number 1")
+    const heads = () => within(screen.getByRole("table")).getAllByRole("columnheader")
+    const dropOn = (fromId, headerText) => {
+      const dt = { setData: vi.fn(), getData: () => fromId, effectAllowed: "" }
+      fireEvent.drop(heads().find((h) => h.textContent.trim() === headerText), { dataTransfer: dt })
+    }
+    const saved = () => views.saveViewDebounced.mock.calls.at(-1)[0]
+    expect(heads()[0]).toHaveAttribute("draggable", "false")
+
+    dropOn("groupName", "Email") // move right
+    expect(saved().slice(0, 3)).toEqual(["contactName", "email", "groupName"])
+    dropOn("groupName", "Email") // move left again
+    expect(saved().slice(0, 3)).toEqual(["contactName", "groupName", "email"])
+
+    views.saveViewDebounced.mockClear()
+    dropOn("contactName", "Email") // Name cannot be dragged
+    dropOn("email", "Name") // nothing goes ahead of Name
+    expect(views.saveViewDebounced).not.toHaveBeenCalled()
   })
 
   it("keeps the Columns menu and the source icons", async () => {

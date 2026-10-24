@@ -99,6 +99,12 @@ describe("BirdyRead", () => {
     expect(screen.getByText("A long detail sentence")).toHaveAttribute("title", "A long detail sentence")
   })
 
+  it("lets titles and details wrap to two lines instead of cutting to one", () => {
+    render(<BirdyRead findings={[finding(1, { detail: "A long detail sentence" })]} />)
+    expect(screen.getByText("Finding 1").className).toContain("line-clamp-2")
+    expect(screen.getByText("A long detail sentence").className).toContain("line-clamp-2")
+  })
+
   it("omits the ask link without a prompt", () => {
     render(<BirdyRead findings={[finding(1)]} />)
     expect(screen.queryByText(/Ask Birdy about this/)).toBeNull()

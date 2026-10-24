@@ -434,7 +434,7 @@ export function toTableColumns(columns) {
     ),
     enableSorting: Boolean(col.sortable),
     enableHiding: false,
-    meta: { label: col.label ?? col.header },
+    meta: { label: col.label ?? col.header, minWidth: index === 0 ? 220 : 140 },
     cell: ({ getValue, row }) => {
       const content = col.cell ? col.cell(getValue(), row.original) : getValue()
       const sub = index === 0 && col.sub ? col.sub(row.original) : null

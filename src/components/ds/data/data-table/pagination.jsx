@@ -28,6 +28,8 @@ function DataTablePagination({ table, pageSizeOptions: options, className, ...pr
       className={cn("flex w-full flex-col-reverse items-center justify-between gap-4 p-1 sm:flex-row", className)}
       {...props}
     >
+      {/* A single size is no choice; leave the select out. */}
+      {sizes.length > 1 ? (
       <div className="flex items-center gap-2">
         <p className="whitespace-nowrap text-sm text-muted-foreground">Rows per page</p>
         <Select value={`${pageSize}`} onValueChange={(v) => table.setPageSize(Number(v))}>
@@ -43,6 +45,9 @@ function DataTablePagination({ table, pageSizeOptions: options, className, ...pr
           </SelectContent>
         </Select>
       </div>
+      ) : (
+        <span aria-hidden />
+      )}
       <div className="flex items-center gap-4">
         <p className="num text-sm text-muted-foreground">
           Page {table.getState().pagination.pageIndex + 1} of {Math.max(table.getPageCount(), 1)}

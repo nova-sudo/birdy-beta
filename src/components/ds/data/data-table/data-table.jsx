@@ -24,6 +24,14 @@ const FACET_VARIANTS = ["select", "multiSelect"]
 const facetFilterFn = (row, columnId, values) => [].concat(values).includes(row.getValue(columnId))
 facetFilterFn.autoRemove = (values) => values == null || values === "" || values.length === 0
 
+// First column pinned: opaque so scrolled cells pass beneath it, with a hairline on its right edge.
+const STICKY_CELL = "sticky left-0 z-10 bg-background shadow-[inset_-1px_0_0_var(--color-border)]"
+
+const minWidthStyle = (column) => {
+  const minWidth = column.columnDef.meta?.minWidth
+  return minWidth ? { minWidth } : undefined
+}
+
 const headerLabel = (column) =>
   column.columnDef.meta?.label ?? (typeof column.columnDef.header === "string" ? column.columnDef.header : column.id)
 
@@ -50,6 +58,8 @@ const headerLabel = (column) =>
  * @param {number[]} [props.pageSizeOptions] Choices in the rows-per-page select
  * @param {boolean} [props.manualPagination] `data` is already the current page (server paging): rows are not sliced, `rowCount` sets the page count and `state.pagination` / `onStateChange` carry the page index
  * @param {number} [props.rowCount] Total rows across all pages; only with `manualPagination`
+ * @param {boolean} [props.stickyFirstColumn] Pins the first column while the table scrolls sideways. Cells never wrap; `meta.minWidth` (px) sets a column's minimum width
+ * @param {string[]} [props.lockedColumnIds] Columns that cannot be dragged and cannot be dropped onto (so nothing lands before a locked first column)
  * @param {(fromId: string, toId: string) => void} [props.onColumnReorder] Makes headers draggable; called with the dragged column id and the one it was dropped on
  * @param {(row: object) => void} [props.onRowClick]
  * @param {(row: object, index: number) => string} [props.getRowId]
@@ -68,6 +78,8 @@ function DataTable({
   manualPagination = false,
   rowCount,
   onColumnReorder,
+  stickyFirstColumn = false,
+  lockedColumnIds = [],
   onRowClick,
   getRowId,
   state: controlled,
@@ -134,7 +146,8 @@ function DataTable({
 
   // Data can shrink under the current page (refetch, narrower filter); pull back to the last page.
   React.useEffect(() => {
-    if (pageIndex > 0 && pageIndex >= pageCount) table.setPageIndex(Math.max(0, pageCount - 1))
+    // With server paging the page owns the index; clamping would fight it.
+    if (!manualPagination && pageIndex > 0 && pageIndex >= pageCount) table.setPageIndex(Math.max(0, pageCount - 1))
   })
 
   const rowProps = (row) =>
@@ -181,13 +194,15 @@ function DataTable({
           </div>
         ) : (
           <>
-            <table className="w-full text-sm max-md:hidden">
+            <div data-slot="data-table-scroll" className="overflow-x-auto max-md:hidden">
+            <table className="w-full text-sm">
               <thead>
                 {table.getHeaderGroups().map((group) => (
                   <tr key={group.id} className="border-b border-border">
-                    {group.headers.map((header) => {
+                    {group.headers.map((header, colIndex) => {
                       const { column } = header
                       const sorted = column.getIsSorted()
+                      const locked = lockedColumnIds.includes(column.id)
                       return (
                         <th
                           key={header.id}
@@ -195,19 +210,22 @@ function DataTable({
                           aria-sort={
                             column.getCanSort() ? (sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : "none") : undefined
                           }
+                          style={minWidthStyle(column)}
                           className={cn(
-                            "h-10 px-4 text-left text-xs font-medium text-muted-foreground",
-                            onColumnReorder && "cursor-grab",
-                            dragOver === column.id && "bg-muted"
+                            "h-10 whitespace-nowrap px-4 text-left text-xs font-medium text-muted-foreground",
+                            onColumnReorder && !locked && "cursor-grab",
+                            dragOver === column.id && "bg-muted",
+                            stickyFirstColumn && colIndex === 0 && STICKY_CELL
                           )}
                           {...(onColumnReorder
                             ? {
-                                draggable: true,
+                                draggable: !locked,
                                 onDragStart: (e) => {
                                   e.dataTransfer.effectAllowed = "move"
                                   e.dataTransfer.setData("text/plain", column.id)
                                 },
                                 onDragOver: (e) => {
+                                  if (locked) return
                                   e.preventDefault()
                                   setDragOver(column.id)
                                 },
@@ -216,7 +234,8 @@ function DataTable({
                                   e.preventDefault()
                                   setDragOver(null)
                                   const from = e.dataTransfer.getData("text/plain")
-                                  if (from && from !== column.id) onColumnReorder(from, column.id)
+                                  if (locked) return
+                                  if (from && from !== column.id && !lockedColumnIds.includes(from)) onColumnReorder(from, column.id)
                                 },
                               }
                             : {})}
@@ -242,8 +261,15 @@ function DataTable({
                       rowProps(row).className
                     )}
                   >
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 align-middle">
+                    {row.getVisibleCells().map((cell, colIndex) => (
+                      <td
+                        key={cell.id}
+                        style={minWidthStyle(cell.column)}
+                        className={cn(
+                          "whitespace-nowrap px-4 py-3 align-middle",
+                          stickyFirstColumn && colIndex === 0 && STICKY_CELL
+                        )}
+                      >
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -251,6 +277,7 @@ function DataTable({
                 ))}
               </tbody>
             </table>
+            </div>
             <ul className="flex flex-col gap-3 p-3 md:hidden">
               {rows.map((row) => {
                 const [lead, ...rest] = row.getVisibleCells()

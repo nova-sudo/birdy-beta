@@ -61,7 +61,7 @@ export function ClientGroupSelect({ clientGroups, value, onChange }) {
             {items.map((item) => (
               <CommandItem
                 key={item.id}
-                value={`${item.name} ${item.id}`}
+                value={item.name}
                 onSelect={() => {
                   onChange(item.id)
                   setOpen(false)

@@ -117,9 +117,9 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty
                     <Icon className="size-4" strokeWidth={2.5} />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
+                    <span className="line-clamp-2 text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
                     {f.detail && (
-                      <span className="truncate text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
+                      <span className="line-clamp-2 text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
                         {f.detail}
                       </span>
                     )}

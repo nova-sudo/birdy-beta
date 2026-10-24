@@ -43,7 +43,7 @@ describe("DataTable", () => {
     expect(cards).toHaveLength(3)
     expect(within(cards[0]).getByText("Alpha")).toBeInTheDocument()
     expect(within(cards[0]).getByText("Spend")).toBeInTheDocument()
-    expect(table().className).toContain("max-md:hidden")
+    expect(table().closest("[data-slot='data-table-scroll']").className).toContain("max-md:hidden")
   })
 
   it("loading shows skeleton rows instead of data", () => {
@@ -171,6 +171,60 @@ describe("server-side pagination and column reorder", () => {
     fireEvent.dragOver(heads[2], { dataTransfer })
     fireEvent.drop(heads[2], { dataTransfer })
     expect(onColumnReorder).toHaveBeenCalledWith("name", "spend")
+  })
+})
+
+describe("wide tables", () => {
+  it("scrolls sideways inside its own container and never wraps cells", () => {
+    render(<DataTable columns={columns} data={data} />)
+    const scroll = table().closest("[data-slot='data-table-scroll']")
+    expect(scroll.className).toContain("overflow-x-auto")
+    expect(within(table()).getByText("Alpha").closest("td").className).toContain("whitespace-nowrap")
+  })
+
+  it("pins the first column only when asked, and honours meta.minWidth", () => {
+    const wide = [{ ...columns[0], meta: { ...columns[0].meta, minWidth: 220 } }, ...columns.slice(1)]
+    const { rerender } = render(<DataTable columns={wide} data={data} />)
+    expect(within(table()).getByText("Alpha").closest("td").className).not.toContain("sticky")
+    rerender(<DataTable columns={wide} data={data} stickyFirstColumn />)
+    const heads = within(table()).getAllByRole("columnheader")
+    expect(heads[0].className).toContain("sticky")
+    expect(heads[0].className).toContain("left-0")
+    expect(heads[1].className).not.toContain("sticky")
+    const cell = within(table()).getByText("Alpha").closest("td")
+    expect(cell.className).toContain("sticky")
+    expect(cell.className).toContain("bg-background")
+    expect(cell).toHaveStyle({ minWidth: "220px" })
+  })
+
+  it("locked columns cannot be dragged or dropped onto", () => {
+    const onColumnReorder = vi.fn()
+    render(<DataTable columns={columns} data={data} onColumnReorder={onColumnReorder} lockedColumnIds={["name"]} />)
+    const heads = within(table()).getAllByRole("columnheader")
+    expect(heads[0]).toHaveAttribute("draggable", "false")
+    expect(heads[1]).toHaveAttribute("draggable", "true")
+    const dt = { setData: vi.fn(), getData: () => "status", effectAllowed: "" }
+    fireEvent.drop(heads[0], { dataTransfer: dt })
+    expect(onColumnReorder).not.toHaveBeenCalled()
+    const fromLocked = { setData: vi.fn(), getData: () => "name", effectAllowed: "" }
+    fireEvent.drop(heads[2], { dataTransfer: fromLocked })
+    expect(onColumnReorder).not.toHaveBeenCalled()
+  })
+
+  it("an empty server-paged table settles on page 1 of 1 without fighting the page", () => {
+    const onStateChange = vi.fn()
+    render(
+      <DataTable columns={columns} data={[]} manualPagination rowCount={0} empty={<p>none</p>}
+        state={{ pagination: { pageIndex: 2, pageSize: 15 } }} onStateChange={onStateChange} />
+    )
+    expect(onStateChange).not.toHaveBeenCalled()
+  })
+
+  it("hides rows-per-page when there is only one size", () => {
+    const { rerender } = render(<DataTable columns={columns} data={data} pageSize={15} pageSizeOptions={[15]} />)
+    expect(screen.queryByText("Rows per page")).toBeNull()
+    rerender(<DataTable columns={columns} data={data} />)
+    expect(screen.getByText("Rows per page")).toBeInTheDocument()
   })
 })
 
