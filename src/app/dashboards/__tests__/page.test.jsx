@@ -76,6 +76,24 @@ describe("My dashboards list page", () => {
     renderPage()
 
     expect(await screen.findByText("No dashboards yet")).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="empty-state"]')).not.toBeNull()
+  })
+
+  it("shows an error state with a retry when the list fails to load", async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/dashboards" && (init.method ?? "GET") === "GET"
+        ? Promise.resolve(res({}, 500))
+        : mockApi(path, init),
+    )
+    renderPage()
+
+    expect(await screen.findByText("Couldn't load your dashboards")).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="error-state"]')).not.toBeNull()
+
+    vi.mocked(apiRequest).mockImplementation(mockApi)
+    await user.click(screen.getByRole("button", { name: /Try again/ }))
+    expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
   })
 
   it("create blank saves and navigates", async () => {

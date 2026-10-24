@@ -22,13 +22,10 @@ import {
   useDashboardEditor,
 } from "dashkit/react"
 import { usePageHeader } from "@/components/page-header"
-import { PdCard } from "@/components/portfolio/PdCard"
-import { PdSegmented } from "@/components/portfolio/PdSegmented"
-import { Skeleton } from "@/components/ui/skeleton"
+import { SegmentedTabs, Skeleton, Surface } from "@/components/ds"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { EmptyStarters } from "@/components/dashboards/EmptyStarters"
 import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
-import { pdFontClass } from "@/lib/fonts"
 import { registry, components } from "@/lib/dashkit/registry"
 import { dataSource } from "@/lib/dashkit/data-source"
 import { fetchBriefing } from "@/lib/dashkit/briefing"
@@ -71,6 +68,16 @@ const MODES = [
   { key: "edit", label: "Edit", icon: Pencil },
 ]
 
+const MODE_ITEMS = MODES.map(({ key, label, icon: Icon }) => ({
+  value: key,
+  label: (
+    <>
+      <Icon className="size-3.5" aria-hidden="true" />
+      {label}
+    </>
+  ),
+}))
+
 // Ask Birdy's quick starters on this page: one per kind of change it can make.
 const CHAT_STARTERS = [
   "Add a table of spend by client",
@@ -111,15 +118,15 @@ export default function DashboardWorkspace({ id }) {
     <WorkspaceLayout
       board={
         failed ? (
-          <div className="px-6 py-[22px]">
-            <PdCard>
-              <p className="text-[13px] text-pd-muted">
+          <div className="px-6 py-6">
+            <Surface>
+              <p className="text-sm text-muted-foreground">
                 Couldn&apos;t load this dashboard.{" "}
-                <Link href="/dashboards" className="font-semibold text-pd-primary underline-offset-2 hover:underline">
+                <Link href="/dashboards" className="font-semibold text-primary underline-offset-2 hover:underline">
                   Back to My dashboards
                 </Link>
               </p>
-            </PdCard>
+            </Surface>
           </div>
         ) : (
           <BoardSkeleton />
@@ -127,7 +134,7 @@ export default function DashboardWorkspace({ id }) {
       }
       chat={
         failed ? (
-          <p className="p-5 text-[13px] text-pd-muted">Birdy can help once this dashboard loads.</p>
+          <p className="p-5 text-sm text-muted-foreground">Birdy can help once this dashboard loads.</p>
         ) : (
           <div className="space-y-3 p-5" aria-hidden="true">
             <Skeleton className="h-4 w-2/3" />
@@ -402,12 +409,12 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
           )}
           {/* The editor has its palette; the view gets the same grid here. */}
           {mode === "view" && <HeaderButton icon={Plus} label="Add widget" onClick={() => setPickerOpen(true)} />}
-          <PdSegmented
-            label="Dashboard mode"
-            options={MODES}
+          <SegmentedTabs
+            ariaLabel="Dashboard mode"
+            size="sm"
+            items={MODE_ITEMS}
             value={mode}
-            onChange={changeMode}
-            itemClassName="px-3 py-[5px] text-[12px]"
+            onValueChange={changeMode}
           />
         </div>
       ),
@@ -471,7 +478,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
         </ComponentsProvider>
       </DashboardDataProvider>
     ) : (
-      <div className="px-6 py-[22px]">
+      <div className="px-6 py-6">
         <DashboardDataProvider dataSource={dataSource} registry={registry}>
           <ComponentsProvider value={components}>
             <DashboardRenderer doc={editor.doc} registry={registry} catalog={catalog} mode="view" />
@@ -540,7 +547,7 @@ function useElementWidth() {
 }
 
 const ASIDE_BASE =
-  "flex h-[560px] min-h-0 w-full shrink-0 flex-col border-t border-pd-border bg-pd-surface lg:h-auto lg:border-l lg:border-t-0"
+  "flex h-[560px] min-h-0 w-full shrink-0 flex-col border-t border-border bg-background lg:h-auto lg:border-l lg:border-t-0"
 
 /**
  * The dashboard on the left, Ask Birdy on the right.
@@ -576,7 +583,7 @@ function WorkspaceLayout({ board, chat, railed = false }) {
   let panelClass = "flex min-h-0 flex-1 flex-col"
   if (railed) {
     panelClass +=
-      " lg:absolute lg:inset-y-0 lg:right-14 lg:z-30 lg:w-[380px] lg:border-l lg:border-pd-border lg:bg-pd-surface lg:shadow-pd-popover"
+      " lg:absolute lg:inset-y-0 lg:right-14 lg:z-30 lg:w-[380px] lg:border-l lg:border-border lg:bg-background lg:shadow-floating"
     if (!open) panelClass += " lg:hidden"
   }
 
@@ -584,7 +591,7 @@ function WorkspaceLayout({ board, chat, railed = false }) {
     // Bleeds off the layout's padding like SalesHubShell, but the height is
     // bounded here so the dashboard (or the editor's palette, canvas and
     // property panel) and the chat each scroll on their own.
-    <div className={`${pdFontClass} -m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden`}>
+    <div className={`-m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden`}>
       {/* Stacked below lg: the page scrolls and the board takes its natural
           height, rather than flex-shrinking to nothing above the chat. */}
       <section aria-label="Dashboard" className="min-w-0 shrink-0 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto">
@@ -611,7 +618,7 @@ function WorkspaceLayout({ board, chat, railed = false }) {
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setDrawerOpen((was) => !was)}
-            className="hidden cursor-pointer flex-col items-center gap-1 rounded-xl px-1 py-2 text-[10.5px] font-semibold leading-tight text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary aria-expanded:bg-pd-primary-tint aria-expanded:text-pd-primary lg:flex"
+            className="hidden cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2 text-xs font-semibold leading-tight text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-expanded:bg-primary-soft aria-expanded:text-primary lg:flex"
           >
             <MessageCircle className="size-[18px]" aria-hidden="true" />
             Ask Birdy
@@ -624,10 +631,10 @@ function WorkspaceLayout({ board, chat, railed = false }) {
           data-state={railed ? (open ? "open" : "closed") : undefined}
           className={panelClass}
         >
-          <div className="flex shrink-0 items-start gap-3 border-b border-pd-divider px-5 py-4">
+          <div className="flex shrink-0 items-start gap-3 border-b border-border px-5 py-4">
             <div className="min-w-0 flex-1">
-              <div className="font-pd-display text-[15px] font-semibold text-pd-ink">Ask Birdy</div>
-              <div className="mt-0.5 text-[12px] text-pd-faint">Describe a change and Birdy makes it on the dashboard.</div>
+              <div className="text-base font-semibold text-foreground">Ask Birdy</div>
+              <div className="mt-0.5 text-xs text-muted-foreground">Describe a change and Birdy makes it on the dashboard.</div>
             </div>
             {railed && (
               <button
@@ -635,7 +642,7 @@ function WorkspaceLayout({ board, chat, railed = false }) {
                 type="button"
                 aria-label="Close Ask Birdy"
                 onClick={closeDrawer}
-                className="-mr-1.5 hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary lg:inline-flex"
+                className="-mr-1.5 hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:inline-flex"
               >
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -658,18 +665,18 @@ function WorkspaceLayout({ board, chat, railed = false }) {
  */
 function DashboardBreadcrumb({ title }) {
   return (
-    <nav aria-label="Breadcrumb" className={`${pdFontClass} min-w-0`}>
-      <p className="flex min-w-0 items-baseline gap-0 whitespace-pre font-pd-display text-[15px] font-semibold leading-none">
+    <nav aria-label="Breadcrumb" className={`min-w-0`}>
+      <p className="flex min-w-0 items-baseline gap-0 whitespace-pre text-base font-semibold leading-none">
         <Link
           href="/dashboards"
-          className="shrink-0 text-pd-faint transition-colors hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           My dashboards
         </Link>
         {title && (
           <>
-            <span className="shrink-0 text-pd-faint">{" / "}</span>
-            <span aria-current="page" className="min-w-0 truncate text-pd-ink">
+            <span className="shrink-0 text-muted-foreground">{" / "}</span>
+            <span aria-current="page" className="min-w-0 truncate text-foreground">
               {title}
             </span>
           </>
@@ -685,7 +692,7 @@ function HeaderButton({ icon: Icon, label, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-[12px] font-medium text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+      className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
     >
       <Icon className="size-3.5" aria-hidden="true" />
       {label}
@@ -695,9 +702,9 @@ function HeaderButton({ icon: Icon, label, onClick }) {
 
 function BoardSkeleton() {
   return (
-    <div className="grid gap-4 px-6 py-[22px] sm:grid-cols-2" aria-busy="true" aria-label="Loading dashboard">
+    <div className="grid gap-4 px-6 py-6 sm:grid-cols-2" aria-busy="true" aria-label="Loading dashboard">
       {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-[140px] rounded-2xl" />
+        <Skeleton key={i} className="h-[140px] rounded-surface" />
       ))}
     </div>
   )
@@ -710,19 +717,19 @@ function BoardSkeleton() {
 function SaveStatus({ state, onRetry }) {
   if (state === "idle") return <span aria-live="polite" />
   const { Icon, label, tone } = {
-    saving: { Icon: Loader2, label: "Saving…", tone: "text-pd-faint" },
-    saved: { Icon: Check, label: "Saved", tone: "text-pd-faint" },
-    error: { Icon: AlertTriangle, label: "Save failed", tone: "text-pd-danger" },
+    saving: { Icon: Loader2, label: "Saving…", tone: "text-muted-foreground" },
+    saved: { Icon: Check, label: "Saved", tone: "text-muted-foreground" },
+    error: { Icon: AlertTriangle, label: "Save failed", tone: "text-danger" },
   }[state]
   return (
-    <span aria-live="polite" className={`inline-flex items-center gap-1.5 text-[12px] font-medium ${tone}`}>
+    <span aria-live="polite" className={`inline-flex items-center gap-1.5 text-xs font-medium ${tone}`}>
       <Icon className={`size-3.5 ${state === "saving" ? "animate-spin" : ""}`} aria-hidden="true" />
       {label}
       {state === "error" && (
         <button
           type="button"
           onClick={onRetry}
-          className="ml-1 inline-flex cursor-pointer items-center gap-1 rounded-full bg-pd-divider px-2 py-0.5 text-[11.5px] font-semibold text-pd-ink transition-colors hover:bg-pd-primary-tint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          className="ml-1 inline-flex cursor-pointer items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <RotateCw className="size-3" aria-hidden="true" />
           Retry

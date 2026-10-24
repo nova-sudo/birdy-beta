@@ -6,9 +6,7 @@ import { toast } from "sonner"
 import { LayoutDashboard, Plus } from "lucide-react"
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
-import { PdCard } from "@/components/portfolio/PdCard"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, EmptyState, ErrorState, Skeleton, Surface } from "@/components/ds"
 import { DashboardCard } from "@/components/dashboards/DashboardCard"
 import { NewDashboardDialog } from "@/components/dashboards/NewDashboardDialog"
 import { useDashboards } from "./useDashboards"
@@ -20,7 +18,7 @@ import { useDashboards } from "./useDashboards"
 
 export default function DashboardsPage() {
   const router = useRouter()
-  const { items, isLoading, error, create, remove } = useDashboards()
+  const { items, isLoading, error, create, remove, retry } = useDashboards()
   const [creating, setCreating] = useState(false)
 
   // Memoised because publishing sets state on the provider above: a fresh
@@ -60,31 +58,35 @@ export default function DashboardsPage() {
     body = (
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading dashboards">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-[88px] rounded-2xl" />
+          <Skeleton key={i} className="h-22 rounded-surface" />
         ))}
       </div>
     )
   } else if (error && items.length === 0) {
     body = (
-      <PdCard>
-        <p className="text-[13px] text-pd-muted">Couldn&apos;t load your dashboards. Refresh to try again.</p>
-      </PdCard>
+      <Surface>
+        <ErrorState
+          title="Couldn't load your dashboards"
+          description="Refresh to try again."
+          onRetry={retry}
+        />
+      </Surface>
     )
   } else if (items.length === 0) {
     body = (
-      <PdCard className="flex flex-col items-center gap-3 py-12 text-center">
-        <span className="flex size-10 items-center justify-center rounded-2xl bg-muted text-pd-muted">
-          <LayoutDashboard className="size-5" aria-hidden="true" />
-        </span>
-        <h2 className="font-pd-display text-[15px] font-semibold text-pd-ink">No dashboards yet</h2>
-        <p className="max-w-sm text-[13px] text-pd-muted">
-          Describe the numbers you care about and Birdy will lay them out for you.
-        </p>
-        <Button onClick={() => setCreating(true)}>
-          <Plus aria-hidden="true" />
-          New dashboard
-        </Button>
-      </PdCard>
+      <Surface>
+        <EmptyState
+          icon={LayoutDashboard}
+          title="No dashboards yet"
+          description="Describe the numbers you care about and Birdy will lay them out for you."
+          action={
+            <Button onClick={() => setCreating(true)}>
+              <Plus aria-hidden="true" />
+              New dashboard
+            </Button>
+          }
+        />
+      </Surface>
     )
   } else {
     body = (

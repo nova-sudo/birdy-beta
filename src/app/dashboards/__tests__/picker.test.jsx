@@ -155,7 +155,7 @@ describe("Dashboard discoverability", () => {
 
     // Edit mode, with the new widget on the canvas and selected.
     await waitFor(() => expect(container.querySelector('[data-dk="canvas"]')).not.toBeNull())
-    expect(screen.getByRole("radio", { name: /Edit/ })).toBeChecked()
+    expect(screen.getByRole("tab", { name: /Edit/ })).toHaveAttribute("aria-selected", "true")
     expect(screen.queryByRole("dialog", { name: "Add a widget" })).toBeNull()
     // The canvas grid mounts once it has measured its width.
     await waitFor(() => expect(canvasWidgets(container)).toHaveLength(1))
@@ -167,7 +167,7 @@ describe("Dashboard discoverability", () => {
 
     // Edit mode keeps it unsaved until the user saves or leaves the editor.
     expect(puts()).toHaveLength(0)
-    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await user.click(screen.getByRole("tab", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
     const saved = JSON.parse(puts()[0][1].body)
     expect(saved.version).toBe(3)
@@ -187,7 +187,7 @@ describe("Dashboard discoverability", () => {
     // The canvas grid mounts once it has measured its width.
     await waitFor(() => expect(canvasWidgets(container)).toHaveLength(3))
     expect(selectedHandle()).toHaveAccessibleName(/^Select Table/)
-    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await user.click(screen.getByRole("tab", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
     const saved = JSON.parse(puts()[0][1].body)
     expect(saved.widgets.map((w) => [w.id === "s1" || w.id === "w1" ? w.id : w.type, w.layout.y])).toEqual([
@@ -204,7 +204,7 @@ describe("Dashboard discoverability", () => {
     await screen.findByText("Hello there")
     expect(screen.getByRole("button", { name: "Add widget" })).toBeInTheDocument()
 
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
     // The editor has its own palette for that.
     expect(screen.queryByRole("button", { name: "Add widget" })).toBeNull()
   })
@@ -251,7 +251,7 @@ describe("Dashboard discoverability", () => {
       },
     })
     // Still in view, the starters gone now there is a widget, and one Undo away.
-    expect(screen.getByRole("radio", { name: /View/ })).toBeChecked()
+    expect(screen.getByRole("tab", { name: /View/ })).toHaveAttribute("aria-selected", "true")
     expect(screen.queryByRole("region", { name: "Start with" })).toBeNull()
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument()
   })

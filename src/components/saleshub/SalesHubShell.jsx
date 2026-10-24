@@ -1,8 +1,6 @@
-import { pdFontClass } from "@/lib/fonts";
-
 // ─── Sales Hub shell ────────────────────────────────────────────────────────
-// The page-level frame the Sales Hub composes into: the design system's two
-// typefaces scoped to this subtree, the canvas, and one scroll region at the
+// The page-level frame the Sales Hub composes into: the sans typeface
+// scoped to this subtree, the canvas, and one scroll region at the
 // design's 22/24 padding.
 //
 // The handoff draws a full 1600×1040 app frame — a 68px icon rail and a 64px
@@ -20,8 +18,8 @@ export function SalesHubShell({ children }) {
   return (
     // The layout's own p-4/md:p-6 is bled off so this screen controls its own
     // padding, the way the design specs it — one region, 22px 24px.
-    <div className={`${pdFontClass} -m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-6`}>
-      <div className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">{children}</div>
+    <div className="-m-4 flex min-h-0 flex-1 flex-col overflow-hidden font-sans md:-m-6">
+      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">{children}</div>
     </div>
   );
 }
@@ -29,16 +27,16 @@ export function SalesHubShell({ children }) {
 /**
  * The title block, as it appears in the global top bar.
  *
- * It carries the pd font variables itself: the page subtree that normally
- * provides them is below the header, not around it.
+ * It sets the sans face itself: the page subtree that normally provides it
+ * is below the header, not around it.
  */
 export function SalesHubHeaderTitle({ title, subtitle }) {
   return (
-    <div className={`${pdFontClass} min-w-0`}>
-      <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
+    <div className="min-w-0 font-sans">
+      <h1 className="truncate text-xl font-semibold leading-none text-foreground">
         {title}
       </h1>
-      <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">{subtitle}</p>
+      <p className="mt-1 truncate text-xs leading-none text-muted-foreground">{subtitle}</p>
     </div>
   );
 }
