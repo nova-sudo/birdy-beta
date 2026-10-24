@@ -19,100 +19,42 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
 import getSymbolFromCurrency from "currency-symbol-map"
-import {
-  AlertCircle,
-  ChevronLeft,
-  ExternalLink,
-  Eye,
-  EyeOff,
-  Home,
-  PhoneOff,
-  Phone,
-  RotateCcw,
-} from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import { apiRequest } from "@/lib/api"
-import { STORAGE_KEYS } from "@/lib/constants"
 import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
 import { pdFontClass } from "@/lib/fonts"
-import BirdyAvatar from "@/components/birdy/BirdyAvatar"
-import { EASE_OUT, EASE_SPRING, Pop, Stagger, StaggerItem } from "@/components/motion"
+import { EASE_OUT, EASE_SPRING } from "@/components/motion"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useBirdy } from "@/components/birdy/use-birdy"
-import {
-  FacebookGlyph,
-  FakeProgressBar,
-  IconChip,
-  InitialsAvatar,
-  PickList,
-  PrimaryButton,
-  ProgressBar,
-  SearchInput,
-  SecondaryButton,
-  SlackGlyph,
-  SlackPreviewCard,
-  SpinnerRing,
-  STEP_COL,
-  STEP_COL_WIDE,
-  StepHeading,
-  SuccessRow,
-  UnderlineInput,
-} from "./parts"
+import { PrimaryButton } from "./parts"
+import BackgroundBadge from "./BackgroundBadge"
 import ReviewStep from "./ReviewStep"
 import BillingStep from "./BillingStep"
-import ReportDesigner from "@/components/report-designer/ReportDesigner"
-
-const STEPS = [
-  "welcome", "welcome_name", "agency", "connect_ghl",
-  "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
-  "client_confirm", "client_currency", "sync_prompt",
-  "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
-  "report_copilot", "sub_accounts_review", "billing", "completion",
-]
-
-// The list before the report copilot replaced the frequency and brief-content
-// steps. A saved step is an index, so a wizard paused under the old list is
-// translated through its step *name* on resume (see the boot effect) — read
-// against the new list directly, everyone past the Slack steps would land one
-// step further on than they were, which skips the sub-account review.
-const STEPS_V1 = [
-  "welcome", "welcome_name", "agency", "connect_ghl",
-  "client_picker", "connect_meta", "meta_ad_picker", "sales_tool", "hp_key",
-  "client_confirm", "client_currency", "sync_prompt",
-  "kpi_targets", "kpi_default", "slack_connect", "slack_channel",
-  "slack_frequency", "brief_content", "sub_accounts_review", "billing", "completion",
-]
-const STEPS_VERSION = 2
-
-function visibleFor(list, salesTool) {
-  return list.filter((s) => (s === "hp_key" ? salesTool === "hp" : true))
-}
-
-/** Where a saved step index points in today's wizard. */
-function resumeIndex(savedStep, data) {
-  const visible = visibleFor(STEPS, data.sales_tool)
-  const step = savedStep || 0
-  if (data.steps_version === STEPS_VERSION) return Math.min(step, visible.length - 1)
-  const oldVisible = visibleFor(STEPS_V1, data.sales_tool)
-  let key = oldVisible[Math.min(step, oldVisible.length - 1)]
-  if (key === "slack_frequency" || key === "brief_content") key = "report_copilot"
-  const idx = visible.indexOf(key)
-  return idx === -1 ? Math.min(step, visible.length - 1) : idx
-}
-
-const PHASE_OF = {
-  welcome: 1, welcome_name: 1, agency: 1,
-  connect_ghl: 2, connect_meta: 2,
-  sales_tool: 3, hp_key: 3,
-  client_picker: 4, client_confirm: 4, client_currency: 4, meta_ad_picker: 4, sync_prompt: 4,
-  kpi_targets: 5, kpi_default: 5,
-  slack_connect: 6, slack_channel: 6, report_copilot: 6,
-  sub_accounts_review: 7, billing: 8, completion: 9,
-}
-
-const PHASE_LABEL = {
-  1: "Welcome", 2: "Core connections", 3: "Sales stack", 4: "First client",
-  5: "KPI targets", 6: "Notifications", 7: "Sub-accounts", 8: "Billing", 9: "Finished",
-}
+import { WelcomeStep, WelcomeNameStep, AgencyStep } from "./steps/WelcomeSteps"
+import ConnectGhlStep from "./steps/ConnectGhlStep"
+import ClientPickerStep from "./steps/ClientPickerStep"
+import ConnectMetaStep from "./steps/ConnectMetaStep"
+import MetaAdPickerStep from "./steps/MetaAdPickerStep"
+import { SalesToolStep, HpKeyStep } from "./steps/SalesToolSteps"
+import ClientConfirmStep from "./steps/ClientConfirmStep"
+import ClientCurrencyStep from "./steps/ClientCurrencyStep"
+import SyncPromptStep from "./steps/SyncPromptStep"
+import { KpiTargetsStep, KpiDefaultStep } from "./steps/KpiSteps"
+import { SlackConnectStep, SlackChannelStep } from "./steps/SlackSteps"
+import ReportCopilotStep from "./steps/ReportCopilotStep"
+import CompletionStep from "./steps/CompletionStep"
+import { useStepData } from "./hooks/useStepData"
+import { useReviewPolling } from "./hooks/useReviewPolling"
+import { useSyncProgress } from "./hooks/useSyncProgress"
+import { useFirstClient } from "./hooks/useFirstClient"
+import {
+  PHASE_LABEL,
+  PHASE_OF,
+  STEPS,
+  STEPS_VERSION,
+  buildTargetsPayload,
+  resumeIndex,
+} from "./wizard"
 
 // How a step arrives and leaves. `custom` is the direction of travel (+1
 // forward, -1 back): going forward a step slides in from the right and the
@@ -123,90 +65,6 @@ const STEP_VARIANTS = {
   enter: (direction) => ({ opacity: 0, x: 40 * direction, scale: 0.98 }),
   center: { opacity: 1, x: 0, scale: 1, transition: { duration: 0.45, ease: EASE_SPRING } },
   exit: (direction) => ({ opacity: 0, x: -40 * direction, transition: { duration: 0.2, ease: EASE_OUT } }),
-}
-
-// The twelve the sign-up form used to offer, before currency moved in here.
-// Mirrored server-side by SUPPORTED_CURRENCIES in routers/onboarding.py, which
-// is what actually guards users.default_currency.
-const CURRENCY_OPTIONS = [
-  { code: "GBP", label: "British Pound" },
-  { code: "USD", label: "US Dollar" },
-  { code: "EUR", label: "Euro" },
-  { code: "CAD", label: "Canadian Dollar" },
-  { code: "AUD", label: "Australian Dollar" },
-  { code: "AED", label: "UAE Dirham" },
-  { code: "SAR", label: "Saudi Riyal" },
-  { code: "CHF", label: "Swiss Franc" },
-  { code: "INR", label: "Indian Rupee" },
-  { code: "MXN", label: "Mexican Peso" },
-  { code: "JPY", label: "Japanese Yen" },
-  { code: "CNY", label: "Chinese Yuan" },
-]
-
-const CONFETTI_COLORS = ["#5B3FD6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#9F8BEA"]
-
-/**
- * The three answers from the KPI step, as PUT /api/client-groups/{id}/targets
- * actually stores them. Returns null when nothing was filled in, so the caller
- * can skip the request rather than send an empty one.
- *
- * The names the wizard sends have to be the stored ones, and twice they were
- * not:
- *
- *   · the cost box went out as `cpa` when no `cpa` target existed, and the
- *     unknown field took the whole PUT down with it — so `monthly_wins`, the
- *     one name that was right and the one the weekly health pass measures
- *     against, was lost along with it. The fix at the time was to send the
- *     answer as `cpl`, which made the request succeed and stored the wrong
- *     thing: the step asks for a cost per *acquisition* and the client then
- *     reported it on the dashboard as its cost per *lead*, a number the
- *     agency never gave and which is smaller by the width of the funnel.
- *     `cpa` is a real stored target now (see ClientTargetsForm's FIELDS and
- *     client-goals.js), so the box goes out under its own name.
- *   · `conversion_rate` is held as a fraction, because what it is compared
- *     against is closes ÷ leads. Typed under a "%" suffix, 15 means 0.15.
- *
- * Empty boxes are omitted rather than sent as null: the endpoint merges, so an
- * omitted field keeps whatever is already stored instead of blanking it.
- */
-function buildTargetsPayload({ cpa, wins, convRate, saveAsDefault }) {
-  const num = (raw) => {
-    const trimmed = String(raw ?? "").trim()
-    if (trimmed === "") return null
-    const n = Number(trimmed)
-    return Number.isFinite(n) ? n : null
-  }
-
-  const targets = {}
-  const costPerAcquisition = num(cpa)
-  const monthlyWins = num(wins)
-  const rate = num(convRate)
-  if (costPerAcquisition !== null) targets.cpa = costPerAcquisition
-  if (monthlyWins !== null) targets.monthly_wins = monthlyWins
-  if (rate !== null) targets.conversion_rate = rate / 100
-
-  if (Object.keys(targets).length === 0) return null
-  return { ...targets, save_as_default: saveAsDefault }
-}
-
-// The monthly targets a client group stores, as named by the Targets tab in
-// components/clients/ClientTargetsForm.jsx. Listed rather than read off the
-// object so an unrelated field arriving on `targets` one day cannot be
-// mistaken for someone having set a goal — which also means this list has to
-// gain a field whenever that form does, or a client whose only target is the
-// new one reads here as having none.
-const TARGET_FIELDS = [
-  "cpa", "cpl", "cost_per_appointment", "monthly_wins", "monthly_revenue",
-  "conversion_rate", "monthly_spend", "aov",
-]
-
-/** Has anyone given this client a target yet? */
-function hasAnyTarget(targets) {
-  if (!targets) return false
-  return TARGET_FIELDS.some((field) => {
-    const value = targets[field]
-    return value !== null && value !== undefined && value !== ""
-  })
 }
 
 export default function OnboardingPage() {
@@ -241,14 +99,10 @@ export default function OnboardingPage() {
 
   const [salesTool, setSalesTool] = useState(null)
 
-  const [locations, setLocations] = useState(null)
-  const [locationsError, setLocationsError] = useState(null)
   const [clientSearch, setClientSearch] = useState("")
   const [selectedClient, setSelectedClient] = useState(null)
   const [clientNameConfirm, setClientNameConfirm] = useState("")
 
-  const [adAccounts, setAdAccounts] = useState(null)
-  const [adError, setAdError] = useState(null)
   const [adSearch, setAdSearch] = useState("")
   const [selectedAd, setSelectedAd] = useState(null)
 
@@ -259,14 +113,8 @@ export default function OnboardingPage() {
   const [currency, setCurrency] = useState("")
 
   const [firstGroupId, setFirstGroupId] = useState(null)
-  const [creationError, setCreationError] = useState(null)
-  // idle | creating | done | error. The wizard no longer waits on this: see
-  // startFirstClientCreation.
-  const [creationState, setCreationState] = useState("idle")
 
   const [syncing, setSyncing] = useState(false)
-  const [syncGhlPct, setSyncGhlPct] = useState(0)
-  const [syncMetaPct, setSyncMetaPct] = useState(0)
 
   const [cpa, setCpa] = useState("")
   const [wins, setWins] = useState("")
@@ -275,11 +123,6 @@ export default function OnboardingPage() {
   // decides whether the sub-accounts imported later get these targets too.
   const [kpiSaveDefault, setKpiSaveDefault] = useState(false)
 
-  const [channels, setChannels] = useState(null)
-  // Why the channel list is empty, when the reason was ours rather than the
-  // workspace's. Null means "no failure" — an empty list is then genuinely an
-  // empty list.
-  const [channelsError, setChannelsError] = useState(null)
   // What the server said when an OAuth hop could not even be started, which
   // the step's own error copy would otherwise talk over.
   const [oauthError, setOAuthError] = useState(null)
@@ -288,8 +131,6 @@ export default function OnboardingPage() {
   const [savingReport, setSavingReport] = useState(false)
   const [reportError, setReportError] = useState(null)
 
-  const [review, setReview] = useState(null)
-  const [reviewSettled, setReviewSettled] = useState(false)
   const [importing, setImporting] = useState(false)
   // How many sub-accounts the running import is for. Held separately from
   // pendingImportRef because that ref is deliberately emptied the moment the
@@ -297,7 +138,6 @@ export default function OnboardingPage() {
   const [importingCount, setImportingCount] = useState(0)
   const [completing, setCompleting] = useState(false)
 
-  const pendingTargetsRef = useRef(null)
   // Selected sub-accounts payload from ReviewStep, held here while the
   // mandatory billing step runs — runImport actually fires only after
   // BillingStep confirms an active subscription.
@@ -352,6 +192,25 @@ export default function OnboardingPage() {
     (key, dataPatch) => goToIndex(visibleSteps.indexOf(key), dataPatch),
     [visibleSteps, goToIndex]
   )
+
+  const {
+    creationState,
+    creationError,
+    pendingTargetsRef,
+    applyTargets,
+    startFirstClientCreation,
+    flushPendingTargets,
+    applyTargetsToAllClients,
+  } = useFirstClient({
+    firstGroupId,
+    setFirstGroupId,
+    selectedClient,
+    selectedAd,
+    clientNameConfirm,
+    salesTool,
+    currency,
+    persistState,
+  })
 
   // ── Boot: resume server-side state + probe integrations ─────────────────
 
@@ -488,94 +347,12 @@ export default function OnboardingPage() {
     return () => { cancelled = true }
   }, [router])
 
-  // ── Lazy data per step ──────────────────────────────────────────────────
+  // ── Per-step data and background work ──────────────────────────────────
 
-  useEffect(() => {
-    if (booting) return
-    if (currentKey === "client_picker" && locations === null && ghlStatus === "success") {
-      apiRequest("/api/subaccount/locations")
-        .then(async (res) => {
-          if (!res.ok) throw new Error((await res.json())?.detail || `status ${res.status}`)
-          const d = await res.json()
-          setLocations(d.locations || [])
-        })
-        .catch((e) => setLocationsError(String(e.message || e)))
-    }
-    if (currentKey === "meta_ad_picker" && adAccounts === null && metaStatus === "success") {
-      apiRequest("/api/facebook/adaccounts")
-        .then(async (res) => {
-          if (!res.ok) throw new Error((await res.json())?.detail || `status ${res.status}`)
-          const d = await res.json()
-          setAdAccounts(d?.data?.data || [])
-        })
-        .catch((e) => setAdError(String(e.message || e)))
-    }
-    if (currentKey === "slack_channel" && channels === null && slackStatus === "success") {
-      // A failed lookup and a workspace with no channels are different
-      // answers and used to arrive here as the same one — the catch turned
-      // any error into an empty list, so the step told people to "invite the
-      // Birdy app to a channel" when what the server actually said was that
-      // it could not list channels at all and Slack needed reconnecting.
-      // They would go and do the thing it suggested, and it would still be
-      // empty.
-      setChannelsError(null)
-      apiRequest("/api/integrations/slack/channels")
-        .then(async (res) => {
-          const d = await res.json().catch(() => ({}))
-          if (!res.ok) {
-            // 409 is the server saying Slack refused the token or withheld a
-            // scope: retrying cannot fix either, so the step offers the hop
-            // that can instead of a button that will fail again.
-            const err = new Error(d.detail || "Couldn't load your Slack channels.")
-            err.needsReconnect = res.status === 409
-            throw err
-          }
-          setChannels(d.channels || [])
-        })
-        .catch((e) => {
-          setChannelsError({
-            message: String(e.message || e),
-            needsReconnect: Boolean(e.needsReconnect),
-          })
-          setChannels([])
-        })
-    }
-  }, [booting, currentKey, locations, adAccounts, channels, ghlStatus, metaStatus, slackStatus])
-
-  // Review step: poll while the background prep job (kicked off at
-  // acceptSync) is still checking sub-accounts, so the table opens with real
-  // 90/30-day activity flags. Gives up after ~100s and shows what's known.
-  useEffect(() => {
-    if (booting || currentKey !== "sub_accounts_review") return
-    let cancelled = false
-    let ticks = 0
-    let timer
-    const tick = async () => {
-      ticks += 1
-      let settled = true
-      try {
-        const res = await apiRequest("/api/onboarding/subaccounts-review")
-        if (cancelled) return
-        if (!res.ok) throw new Error("review")
-        const d = await res.json()
-        setReview(d)
-        settled = d?.prep?.status !== "running"
-      } catch {
-        if (!cancelled) {
-          setReview((prev) => prev || { accounts: [], fb_accounts: [], prep: {}, stats: {} })
-        }
-      }
-      if (cancelled) return
-      if (!settled && ticks < 25) {
-        timer = setTimeout(tick, 4000)
-      } else {
-        setReviewSettled(true)
-      }
-    }
-    setReviewSettled(false)
-    tick()
-    return () => { cancelled = true; clearTimeout(timer) }
-  }, [booting, currentKey])
+  const { locations, locationsError, adAccounts, adError, channels, setChannels, channelsError } =
+    useStepData({ booting, currentKey, ghlStatus, metaStatus, slackStatus })
+  const { review, reviewSettled } = useReviewPolling({ booting, currentKey })
+  const { syncGhlPct, syncMetaPct } = useSyncProgress({ syncing, firstGroupId, selectedAd })
 
   // ── OAuth hops ──────────────────────────────────────────────────────────
 
@@ -623,169 +400,7 @@ export default function OnboardingPage() {
     }
   }, [hpUid, hpKey])
 
-  // ── First client creation (fires on Confirm; not awaited) ───────────────
-
-  const applyTargets = useCallback(
-    async (groupId, targets) => {
-      try {
-        const res = await apiRequest(`/api/client-groups/${groupId}/targets`, {
-          method: "PUT",
-          body: JSON.stringify(targets),
-        })
-        // A rejected PUT used to be indistinguishable from a saved one here:
-        // nothing read the status, so a payload the server would not accept
-        // failed in complete silence and the user reached a client that said
-        // it had no targets, having just been told "Targets applied".
-        if (!res.ok) {
-          const detail = await res.json().catch(() => ({}))
-          console.error("Failed to apply targets:", res.status, detail)
-        }
-      } catch (e) {
-        console.error("Failed to apply targets:", e)
-      }
-    },
-    []
-  )
-
-  // Creates the first client group. The request blocks server-side on a full
-  // GHL history fetch, so it is slow — see startFirstClientCreation, which is
-  // what the wizard actually calls and which does not wait for it.
-  //
-  // The first client group is free (billing_middleware allows a
-  // subscription-less user's very first one), so a failure here is a real
-  // problem — GHL, network, a 500 — not an expected payment wall, which is why
-  // the caller surfaces it rather than swallowing it.
-  // `chosenCurrency` is passed in rather than read off state because the
-  // client_currency step starts creation in the same handler that sets it, and
-  // a state update isn't visible to a callback created in that render.
-  const createFirstClient = useCallback(async (chosenCurrency) => {
-    if (firstGroupId) return true
-    if (!selectedClient) return false
-    setCreationError(null)
-    const groupCurrency = chosenCurrency || currency || selectedAd?.currency || null
-    const clientName = clientNameConfirm.trim() || selectedClient.name
-    const payload = {
-      name: clientName,
-      ghl_location_id: selectedClient.id,
-      meta_ad_account_id: selectedAd?.id || null,
-      hotprospector_group_id: null,
-      // The user's explicit answer on client_currency wins over the ad
-      // account's own currency: they may report in a different one than Meta
-      // bills them in, and the whole point of asking was to stop guessing.
-      ad_account_currency: groupCurrency,
-      // "none" is a real, persisted answer — "I don't currently call my
-      // leads" — not a missing value. The Sales Hub and every call-centre
-      // metric read it to render "not available" instead of a misleading 0.
-      call_log_provider:
-        salesTool === "hp" ? "hotprospector" : salesTool === "none" ? "none" : "ghl",
-      notes: "",
-    }
-    try {
-      const res = await apiRequest("/api/client-groups", { method: "POST", body: JSON.stringify(payload) })
-      const d = await res.json().catch(() => ({}))
-      let groupId = d?.client_group?.id || null
-      if (!res.ok && res.status !== 409) {
-        const detail = d?.detail
-        setCreationError(
-          typeof detail === "string" ? detail : detail?.message || "Client creation failed"
-        )
-        return false
-      }
-      if (res.status === 409 || !groupId) {
-        // Duplicate (e.g. wizard re-run) — find the existing group instead.
-        try {
-          const listRes = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-          if (listRes.ok) {
-            const list = await listRes.json()
-            const match = (list?.client_groups || []).find(
-              (g) => g.ghl_location_id === selectedClient.id
-            )
-            if (match) groupId = match.id
-          }
-        } catch { /* ignore — targets fall back to onboarding state */ }
-      }
-      if (!groupId) {
-        setCreationError("Client creation failed — please try again.")
-        return false
-      }
-      setFirstGroupId(groupId)
-      persistState({ data: { first_client: {
-        group_id: groupId,
-        name: clientName,
-        ghl_location_id: selectedClient.id,
-        meta_ad_account_id: selectedAd?.id || null,
-        currency: groupCurrency,
-      } } })
-      if (pendingTargetsRef.current) {
-        applyTargets(groupId, pendingTargetsRef.current)
-        pendingTargetsRef.current = null
-      }
-      return true
-    } catch (e) {
-      console.error("Client creation failed:", e)
-      setCreationError("Client creation failed — check your connection and try again.")
-      return false
-    }
-  }, [selectedClient, selectedAd, clientNameConfirm, salesTool, currency, firstGroupId, persistState, applyTargets])
-
-  // Fire-and-forget wrapper. The creation request blocks on a full GHL history
-  // fetch and routinely takes tens of seconds; making the user watch a
-  // "Creating client…" spinner for that long, before they have seen a single
-  // thing Birdy does, was the worst dead spot in the wizard.
-  //
-  // Nothing between here and the completion step needs the group id: the KPI
-  // step already parks its targets in pendingTargetsRef and createFirstClient
-  // applies them the moment the id lands, and the sync badge already has a
-  // branch for "creation still running". So the wizard carries on and the
-  // result is reported asynchronously — as a badge while it runs, and as a
-  // blocking error on the completion step if it fails, which is the last
-  // point at which we can still do something about it.
-  const startFirstClientCreation = useCallback((chosenCurrency) => {
-    if (firstGroupId || creationState === "creating") return
-    setCreationState("creating")
-    setCreationError(null)
-    createFirstClient(chosenCurrency).then(
-      (ok) => setCreationState(ok ? "done" : "error"),
-      () => setCreationState("error")
-    )
-  }, [createFirstClient, firstGroupId, creationState])
-
   // ── Background sync badge ───────────────────────────────────────────────
-
-  useEffect(() => {
-    if (!syncing) return
-    let cancelled = false
-    const poll = async () => {
-      if (cancelled) return
-      if (!firstGroupId) {
-        // Creation request still running server-side (it blocks on the GHL
-        // fetch) — show honest-but-approximate movement until it resolves.
-        setSyncGhlPct((p) => Math.min(90, p + 3 + Math.round(Math.random() * 5)))
-        setSyncMetaPct((p) => Math.min(25, p + 1 + Math.round(Math.random() * 3)))
-        return
-      }
-      try {
-        const res = await apiRequest(`/api/client-groups/${firstGroupId}/refresh-status`)
-        if (!res.ok) return
-        const d = await res.json()
-        // The creation endpoint awaits the GHL fetch, so once the group id
-        // exists GHL history is in unless a refresh is actively running.
-        setSyncGhlPct(d.ghl_refresh_status === "running" ? 60 : 100)
-        const p = d.meta_refresh_progress
-        if (!p) {
-          setSyncMetaPct(selectedAd ? 30 : 100)
-        } else if (p.status === "success" || p.current_step === "done") {
-          setSyncMetaPct(100)
-        } else {
-          const presetPct = p.presets_total ? Math.round((p.presets_done / p.presets_total) * 85) : 10
-          setSyncMetaPct(Math.min(95, presetPct + (p.leads_status === "success" ? 10 : 0)))
-        }
-      } catch { /* transient — keep last values */ }
-    }
-    const timer = setInterval(poll, firstGroupId ? 4000 : 900)
-    poll()
-    return () => { cancelled = true; clearInterval(timer) }
-  }, [syncing, firstGroupId, selectedAd])
 
   const showSyncBadge =
     syncing && (syncGhlPct < 100 || syncMetaPct < 100) && currentKey !== "sync_prompt"
@@ -800,64 +415,6 @@ export default function OnboardingPage() {
     apiRequest("/api/onboarding/prepare-review", { method: "POST" }).catch(() => {})
     goToKey("kpi_targets", { wants_sync: true })
   }, [goToKey])
-
-  // The first client's group id, found wherever it actually is. This is also
-  // where "Take a look at Birdy" gets its destination — the point of the
-  // wizard is the client they just set up, not the hub.
-  //
-  // firstGroupId is the in-memory answer, but it is not a reliable one on its
-  // own: it is set when the background creation resolves, and the OAuth hops,
-  // a Whop checkout redirect and a plain refresh all wipe React state between
-  // then and here. boot() restores it, so usually it is there — but "usually"
-  // is how someone ends up on the hub wondering where their client went. So
-  // the server-side copy is the fallback, and the group list after that.
-  const resolveFirstGroupId = useCallback(async () => {
-    if (firstGroupId) return firstGroupId
-
-    try {
-      const res = await apiRequest("/api/onboarding/status")
-      if (res.ok) {
-        const state = await res.json()
-        const saved = state?.data?.first_client?.group_id
-        if (saved) return saved
-      }
-    } catch { /* fall through to the list */ }
-
-    // Last resort: the group exists, we just never learned its id — creation
-    // succeeded while the tab was away, or the persist that followed it failed.
-    // Matching on the GHL location is exact, so this is a lookup, not a guess.
-    if (selectedClient?.id) {
-      try {
-        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-        if (res.ok) {
-          const list = await res.json()
-          const match = (list?.client_groups || []).find(
-            (g) => g.ghl_location_id === selectedClient.id
-          )
-          if (match?.id) return match.id
-        }
-      } catch { /* no id to be had */ }
-    }
-
-    return null
-  }, [firstGroupId, selectedClient])
-
-  /**
-   * Send any targets still waiting on a client group, and report which group
-   * they went to. Safe to call twice: the payload is taken out of the ref
-   * before the request, so a second caller finds nothing left to send.
-   */
-  const flushPendingTargets = useCallback(async () => {
-    const groupId = await resolveFirstGroupId()
-    if (!groupId) return null
-    setFirstGroupId(groupId)
-    const payload = pendingTargetsRef.current
-    if (payload) {
-      pendingTargetsRef.current = null
-      await applyTargets(groupId, payload)
-    }
-    return groupId
-  }, [resolveFirstGroupId, applyTargets])
 
   const applyKpiTargets = useCallback(
     (saveAsDefault) => {
@@ -924,45 +481,6 @@ export default function OnboardingPage() {
       setSavingReport(false)
     }
   }, [selectedChannel, next])
-
-  // "Yes, set as default" is a promise about every client, and only the first
-  // one was ever getting targets — import-subaccounts carries a name, an ad
-  // account, a currency and a status, and nothing else. So a user who set
-  // targets for everyone still arrived at a hub full of clients each reporting
-  // "no monthly targets set for this client yet".
-  //
-  // Every client the account has, not only the ones this run imported: a
-  // second pass through the wizard is exactly when someone notices the earlier
-  // batch has no targets on it, and "all clients" has to mean all of them or
-  // it just moves the same complaint to a different set.
-  //
-  // Called from finish(), where the first client and the freshly imported ones
-  // both already exist, so one sweep covers the lot.
-  const applyTargetsToAllClients = useCallback(
-    async (targets) => {
-      try {
-        const res = await apiRequest("/api/client-groups?date_preset=today&include_daily=false")
-        if (!res.ok) return
-        const list = await res.json()
-        // Only the ones with nothing set. A client someone has already given a
-        // number to has been thought about, and these are defaults — a default
-        // that overwrites a deliberate answer is not a default. The endpoint
-        // merges per field, so without this a wizard run would replace exactly
-        // the fields it has an opinion on and leave the rest, which is the
-        // most confusing half of both worlds.
-        const ids = (list?.client_groups || [])
-          .filter((g) => g.id && !hasAnyTarget(g.targets))
-          .map((g) => g.id)
-        // save_as_default stays off here: the account-level default was already
-        // written by the first client's PUT, and re-sending it once per client
-        // would just store the same thing again for every one of them.
-        await Promise.all(ids.map((id) => applyTargets(id, targets)))
-      } catch (e) {
-        console.error("Failed to apply targets to all clients:", e)
-      }
-    },
-    [applyTargets]
-  )
 
   const runImport = useCallback(
     async (accounts) => {
@@ -1055,51 +573,6 @@ export default function OnboardingPage() {
 
   // ── Derived lists ───────────────────────────────────────────────────────
 
-  const clientQuery = clientSearch.toLowerCase()
-  const clientItems = (locations || [])
-    .filter((l) => (l.name || "").toLowerCase().includes(clientQuery))
-    .map((l) => {
-      // GHL's location shape varies by which upstream endpoint answered
-      // (see fetch_locations in integrations/gohighlevel.py) — some only
-      // carry `locationId`, not `id`/`_id`. Missing this fallback left every
-      // row's id `undefined`, so every row compared equal to the (also
-      // undefined) unselected state and all looked selected at once.
-      const id = l.id || l._id || l.locationId
-      return {
-        id,
-        title: l.name || "Unknown",
-        sub: [l.city, l.state].filter(Boolean).join(", ") || l.address || "GHL sub-account",
-        leading: <InitialsAvatar name={l.name} />,
-        raw: { id, name: l.name },
-      }
-    })
-
-  const adQuery = adSearch.toLowerCase()
-  const adItems = (adAccounts || [])
-    .filter((a) => (a.name || "").toLowerCase().includes(adQuery))
-    .map((a) => ({
-      id: a.id,
-      title: a.name || a.id,
-      sub: a.id,
-      leading: (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-info-bg text-pd-info">
-          <FacebookGlyph size={15} />
-        </div>
-      ),
-      raw: a,
-    }))
-
-  const channelQuery = channelSearch.toLowerCase()
-  const channelItems = (channels || [])
-    .filter((c) => (c.name || "").toLowerCase().includes(channelQuery))
-    .map((c) => ({
-      id: c.id,
-      title: c.name,
-      sub: null,
-      leading: <span className="text-[14px] text-pd-faint">#</span>,
-      raw: c,
-    }))
-
   const clientDisplayName = clientNameConfirm.trim() || selectedClient?.name || "your first client"
 
   // The targets step asks for a cost-per-acquisition and a Slack preview
@@ -1111,56 +584,6 @@ export default function OnboardingPage() {
   // consistent symbol.
   const currencySymbol =
     getSymbolFromCurrency(currency || selectedAd?.currency || "GBP") || "£"
-
-  // ── Render helpers ──────────────────────────────────────────────────────
-
-  const renderConnectStates = ({ status, onConnect, onRetry, onContinue, connectLabel, connectingLabel, successLabel, errorTitle, errorBody, connectDisabled }) => (
-    <>
-      {/* Boot hasn't finished asking whether this is already connected. Show
-          the wait rather than a Connect button we may be about to replace —
-          the button was live and pressable for the whole round-trip, so
-          returning from an OAuth hop invited a second, pointless one. */}
-      {status === "checking" && (
-        <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-faint">
-          <SpinnerRing />
-          Checking connection…
-        </div>
-      )}
-      {status === "idle" && (
-        <PrimaryButton onClick={onConnect} disabled={connectDisabled} arrow={false}>
-          {connectLabel}
-          <ExternalLink className="h-[15px] w-[15px]" strokeWidth={2.4} />
-        </PrimaryButton>
-      )}
-      {status === "connecting" && (
-        <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-primary">
-          <SpinnerRing />
-          {connectingLabel}
-        </div>
-      )}
-      {status === "error" && (
-        <>
-          <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[18px] py-4 text-left">
-            <div className="mb-[6px] flex items-center gap-2">
-              <AlertCircle className="h-[15px] w-[15px] text-pd-danger" strokeWidth={2.2} />
-              <span className="font-pd-display text-[13.5px] font-semibold text-pd-danger">{errorTitle}</span>
-            </div>
-            <div className="text-[12.5px] leading-normal text-pd-body">{oauthError || errorBody}</div>
-          </div>
-          <PrimaryButton onClick={onRetry || onConnect} arrow={false}>
-            Try again
-            <RotateCcw className="h-[15px] w-[15px]" strokeWidth={2} />
-          </PrimaryButton>
-        </>
-      )}
-      {status === "success" && (
-        <>
-          <SuccessRow>{successLabel}</SuccessRow>
-          <PrimaryButton onClick={onContinue || (() => next())}>Continue</PrimaryButton>
-        </>
-      )}
-    </>
-  )
 
   // ── Layout ──────────────────────────────────────────────────────────────
 
@@ -1254,53 +677,15 @@ export default function OnboardingPage() {
           </div>
         )}
 
-        {/* Background-work corner badge. Since client creation stopped
-            blocking the wizard, this is the only place the user can see that
-            it is happening — and the only place a failure surfaces before the
-            completion step, so the error branch has to be actionable. */}
-        {creationState === "error" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-            <div className="mb-[2px] flex items-center gap-[7px]">
-              <AlertCircle className="h-[13px] w-[13px] shrink-0 text-pd-danger" strokeWidth={2.4} />
-              <span className="text-[11.5px] font-semibold text-pd-danger">
-                Couldn&apos;t add {clientDisplayName}
-              </span>
-            </div>
-            <div className="mb-[7px] text-[10.5px] leading-normal text-pd-body">
-              {creationError || "We'll ask you to retry before you finish."}
-            </div>
-            <button
-              type="button"
-              onClick={startFirstClientCreation}
-              className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-pd-primary underline"
-            >
-              Try again
-            </button>
-          </div>
-        ) : creationState === "creating" ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-            <div className="mb-[7px] flex items-center gap-[9px]">
-              <SpinnerRing />
-              <span className="text-[11.5px] font-semibold text-pd-ink">Adding {clientDisplayName}</span>
-            </div>
-            <FakeProgressBar expectedMs={18000} />
-          </div>
-        ) : showSyncBadge ? (
-          <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-            <div className="mb-[8px] flex items-center gap-[9px]">
-              <SpinnerRing />
-              <span className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</span>
-            </div>
-            <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
-              <span>GHL</span><span>{Math.round(syncGhlPct)}%</span>
-            </div>
-            <ProgressBar value={syncGhlPct} className="mb-[7px]" />
-            <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
-              <span>Meta</span><span>{Math.round(syncMetaPct)}%</span>
-            </div>
-            <ProgressBar value={syncMetaPct} />
-          </div>
-        ) : null}
+        <BackgroundBadge
+          creationState={creationState}
+          creationError={creationError}
+          clientDisplayName={clientDisplayName}
+          startFirstClientCreation={startFirstClientCreation}
+          showSyncBadge={showSyncBadge}
+          syncGhlPct={syncGhlPct}
+          syncMetaPct={syncMetaPct}
+        />
 
         {/* content */}
         <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
@@ -1324,667 +709,164 @@ export default function OnboardingPage() {
               exit="exit"
             >
 
-          {currentKey === "welcome" && (
-            <Stagger className={STEP_COL} gap={0.06}>
-              <Pop delay={0.1} className="mx-auto mb-[26px] w-fit">
-                <BirdyAvatar size={80} tone="white" state={birdyState} />
-              </Pop>
-              <StaggerItem className="mb-3"><StepHeading>Welcome to Birdy!</StepHeading></StaggerItem>
-              <StaggerItem className="mb-[30px] text-[15px] leading-relaxed text-pd-body">
-                We&apos;ll get you set up with your first client in under 10 minutes.
-              </StaggerItem>
-              <StaggerItem>
-                <PrimaryButton onClick={() => next()}>Get started</PrimaryButton>
-              </StaggerItem>
-            </Stagger>
-          )}
+          {currentKey === "welcome" && <WelcomeStep next={next} birdyState={birdyState} />}
 
-          {currentKey === "welcome_name" && (
-            <Stagger className={STEP_COL} gap={0.06}>
-              <StaggerItem className="mb-3"><StepHeading>What should we call you?</StepHeading></StaggerItem>
-              <StaggerItem>
-                <UnderlineInput
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Your first name"
-                  autoFocus
-                />
-              </StaggerItem>
-              <StaggerItem>
-                <PrimaryButton disabled={!name.trim()} onClick={() => next({ name: name.trim() })}>
-                  Continue
-                </PrimaryButton>
-              </StaggerItem>
-            </Stagger>
-          )}
+          {currentKey === "welcome_name" && <WelcomeNameStep name={name} setName={setName} next={next} />}
 
           {currentKey === "agency" && (
-            <Stagger className={STEP_COL} gap={0.06}>
-              <StaggerItem className="mb-2"><StepHeading>What&apos;s your agency called?</StepHeading></StaggerItem>
-              <StaggerItem className="mb-[26px] text-[14px] text-pd-faint">
-                This is how it&apos;ll show up across Birdy, {name || "friend"}.
-              </StaggerItem>
-              <StaggerItem>
-                <UnderlineInput
-                  value={agency}
-                  onChange={(e) => setAgency(e.target.value)}
-                  placeholder="Agency name"
-                />
-              </StaggerItem>
-              <StaggerItem>
-                <PrimaryButton disabled={!agency.trim()} onClick={() => next({ agency: agency.trim() })}>
-                  Continue
-                </PrimaryButton>
-              </StaggerItem>
-            </Stagger>
+            <AgencyStep name={name} agency={agency} setAgency={setAgency} next={next} />
           )}
 
           {currentKey === "connect_ghl" && (
-            <div className={STEP_COL}>
-              <IconChip className="bg-pd-primary-tint text-pd-primary"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
-              <div className="mb-[10px]">
-                <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
-              </div>
-              <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
-                Birdy will read your sub-accounts, contacts, and opportunity pipelines so it can
-                track leads and conversions. We never modify your GHL data.
-              </div>
-              {renderConnectStates({
-                status: ghlStatus,
-                onConnect: () => startOAuth("/api/connect", setGhlStatus),
-                connectLabel: "Connect GHL",
-                connectingLabel: "Connecting to GHL…",
-                successLabel: "GHL connected",
-                errorTitle: "Connection failed",
-                errorBody: "GHL didn't authorize the request — this usually means the popup was closed early. Let's try again.",
-              })}
-            </div>
+            <ConnectGhlStep
+              name={name}
+              ghlStatus={ghlStatus}
+              setGhlStatus={setGhlStatus}
+              startOAuth={startOAuth}
+              oauthError={oauthError}
+              next={next}
+            />
           )}
 
           {currentKey === "client_picker" && (
-            <div className={`${STEP_COL_WIDE} text-left`}>
-              <div className="mb-4 text-center">
-                <StepHeading small>Let&apos;s choose your first client to onboard!</StepHeading>
-              </div>
-              {ghlStatus === "checking" ? (
-                <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your GHL connection…" /></div>
-              ) : ghlStatus !== "success" ? (
-                <div className="py-6 text-center text-[13px] text-pd-faint">
-                  Connect GHL first and your sub-accounts will show up here.
-                </div>
-              ) : locationsError ? (
-                <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-center text-[12.5px] text-pd-body">
-                  {locationsError}
-                </div>
-              ) : locations === null ? (
-                // A large agency's location list is genuinely slow — hundreds
-                // of sub-accounts, paged out of GHL. A bare spinner here reads
-                // as "hung" and people reload mid-fetch.
-                <div className="py-10">
-                  <FakeProgressBar expectedMs={9000} caption="Fetching your GHL sub-accounts…" />
-                </div>
-              ) : (
-                <>
-                  <SearchInput
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    placeholder={`Search ${locations.length} sub-account${locations.length === 1 ? "" : "s"}…`}
-                  />
-                  <PickList
-                    items={clientItems}
-                    selectedId={selectedClient?.id}
-                    onPick={(item) => {
-                      setSelectedClient(item.raw)
-                      setClientNameConfirm(item.raw.name || "")
-                      // connect_meta (the very next step) does a full OAuth
-                      // redirect away and back, which wipes any React state
-                      // that isn't persisted — save the pick immediately so
-                      // it survives that round-trip (restored in boot() via
-                      // data.first_client).
-                      persistState({ data: { first_client: {
-                        ghl_location_id: item.raw.id,
-                        name: item.raw.name,
-                      } } })
-                    }}
-                    emptyText="No sub-accounts match that search"
-                  />
-                </>
-              )}
-              <div className="text-center">
-                <PrimaryButton disabled={!selectedClient} onClick={() => next()}>Continue</PrimaryButton>
-              </div>
-            </div>
+            <ClientPickerStep
+              ghlStatus={ghlStatus}
+              locations={locations}
+              locationsError={locationsError}
+              clientSearch={clientSearch}
+              setClientSearch={setClientSearch}
+              selectedClient={selectedClient}
+              setSelectedClient={setSelectedClient}
+              setClientNameConfirm={setClientNameConfirm}
+              persistState={persistState}
+              next={next}
+            />
           )}
 
           {currentKey === "connect_meta" && (
-            <div className={STEP_COL}>
-              <IconChip className="bg-pd-info-bg text-pd-info"><FacebookGlyph /></IconChip>
-              <div className="mb-[10px]"><StepHeading>Next up, let&apos;s connect Meta.</StepHeading></div>
-              <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
-                Birdy reads ad spend, impressions and results from your ad accounts so it can
-                calculate cost-per-lead and flag underperforming ads. We can&apos;t post or spend
-                on your behalf.
-              </div>
-              {renderConnectStates({
-                status: metaStatus,
-                onConnect: () => startOAuth("/api/connect/facebook", setMetaStatus),
-                connectLabel: "Connect Meta",
-                connectingLabel: "Connecting to Meta…",
-                successLabel: "Meta connected",
-                errorTitle: "Connection failed",
-                errorBody: "Meta didn't authorize the request — this usually means the popup was closed early. Let's try again.",
-              })}
-            </div>
+            <ConnectMetaStep
+              metaStatus={metaStatus}
+              setMetaStatus={setMetaStatus}
+              startOAuth={startOAuth}
+              oauthError={oauthError}
+              next={next}
+            />
           )}
 
           {currentKey === "meta_ad_picker" && (
-            <div className={`${STEP_COL_WIDE} text-left`}>
-              <div className="mb-4 text-center">
-                <StepHeading small>Which Meta ad account is {clientDisplayName}?</StepHeading>
-              </div>
-              {metaStatus === "checking" ? (
-                <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your Meta connection…" /></div>
-              ) : metaStatus !== "success" ? (
-                <div className="py-6 text-center text-[13px] text-pd-faint">
-                  Connect Meta first and your ad accounts will show up here.
-                </div>
-              ) : adError ? (
-                <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-center text-[12.5px] text-pd-body">
-                  {adError}
-                </div>
-              ) : adAccounts === null ? (
-                <div className="py-10">
-                  <FakeProgressBar expectedMs={6000} caption="Fetching your Meta ad accounts…" />
-                </div>
-              ) : (
-                <>
-                  <SearchInput
-                    value={adSearch}
-                    onChange={(e) => setAdSearch(e.target.value)}
-                    placeholder="Search ad accounts…"
-                  />
-                  <PickList
-                    items={adItems}
-                    selectedId={selectedAd?.id}
-                    onPick={(item) => {
-                      setSelectedAd(item.raw)
-                      // Same reasoning as client_picker's onPick — persist the
-                      // full draft (not just the ad account) since $set on
-                      // onboarding.data.first_client replaces the whole field
-                      // rather than merging into what client_picker saved.
-                      persistState({ data: { first_client: {
-                        ghl_location_id: selectedClient?.id,
-                        name: clientNameConfirm || selectedClient?.name,
-                        meta_ad_account_id: item.raw.id,
-                        currency: item.raw.currency || null,
-                      } } })
-                    }}
-                    emptyText="No ad accounts match that search"
-                  />
-                </>
-              )}
-              <div className="text-center">
-                <PrimaryButton disabled={!selectedAd} onClick={() => next()}>Continue</PrimaryButton>
-              </div>
-            </div>
+            <MetaAdPickerStep
+              clientDisplayName={clientDisplayName}
+              metaStatus={metaStatus}
+              adAccounts={adAccounts}
+              adError={adError}
+              adSearch={adSearch}
+              setAdSearch={setAdSearch}
+              selectedAd={selectedAd}
+              setSelectedAd={setSelectedAd}
+              selectedClient={selectedClient}
+              clientNameConfirm={clientNameConfirm}
+              persistState={persistState}
+              next={next}
+            />
           )}
 
           {currentKey === "sales_tool" && (
-            <div className={STEP_COL_WIDE}>
-              <div className="mb-2"><StepHeading>What do you use for sales?</StepHeading></div>
-              <div className="mb-7 text-[14px] text-pd-faint">
-                This decides where Birdy pulls call and close data from.
-              </div>
-              <div className="flex flex-col gap-[14px] sm:flex-row">
-                {[
-                  {
-                    id: "ghl",
-                    label: "GHL",
-                    desc: ghlStatus === "success" ? "Already connected" : "Uses your GHL connection",
-                    icon: <Home className="h-[18px] w-[18px]" strokeWidth={2} />,
-                    chip: "bg-pd-primary-tint text-pd-primary",
-                  },
-                  {
-                    id: "hp",
-                    label: "Hot Prospector",
-                    desc: "Connect with an API key",
-                    icon: <Phone className="h-[18px] w-[18px]" strokeWidth={2} />,
-                    chip: "bg-pd-warning-bg text-pd-warning",
-                  },
-                  // The honest third answer. Without it, an agency that doesn't
-                  // call its leads had to claim a dialler it doesn't use, and
-                  // then every call-centre metric in the product reported a
-                  // confident 0 — indistinguishable from "you made no calls".
-                  // Answering "none" makes those read "not available" instead,
-                  // with a route to connect a tool later.
-                  {
-                    id: "none",
-                    label: "I don't call my leads",
-                    desc: "Skip call tracking for now",
-                    icon: <PhoneOff className="h-[18px] w-[18px]" strokeWidth={2} />,
-                    chip: "bg-pd-table-head text-pd-subtle",
-                  },
-                ].map((opt) => (
-                  <div
-                    key={opt.id}
-                    onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
-                    className={`flex-1 cursor-pointer rounded-xl border-2 px-4 py-[22px] transition-colors ${
-                      salesTool === opt.id ? "border-pd-primary bg-pd-primary-tint" : "border-pd-border bg-white"
-                    }`}
-                  >
-                    <div className={`mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-xl ${opt.chip}`}>
-                      {opt.icon}
-                    </div>
-                    <div className="mb-1 font-pd-display text-[14.5px] font-semibold text-pd-ink">{opt.label}</div>
-                    <div className="text-[11.5px] text-pd-faint">{opt.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <SalesToolStep ghlStatus={ghlStatus} salesTool={salesTool} setSalesTool={setSalesTool} next={next} />
           )}
 
           {currentKey === "hp_key" && (
-            <div className={STEP_COL}>
-              <div className="mb-2"><StepHeading>Connect your Hot Prospector account.</StepHeading></div>
-              <div className="mb-[22px] text-[14px] leading-normal text-pd-body">
-                Paste your API UID and key below — both are in your Hot Prospector settings.
-              </div>
-              {hpStatus !== "success" && hpStatus !== "checking" && (
-                <>
-                  <input
-                    value={hpUid}
-                    onChange={(e) => setHpUid(e.target.value)}
-                    placeholder="API UID"
-                    className="mb-2 w-full rounded-full border-[1.5px] border-pd-border px-[14px] py-[13px] font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
-                  />
-                  <div className="relative mb-[14px]">
-                    <input
-                      value={hpKey}
-                      onChange={(e) => setHpKey(e.target.value)}
-                      type={hpVisible ? "text" : "password"}
-                      placeholder="API key"
-                      className="w-full rounded-full border-[1.5px] border-pd-border py-[13px] pl-[14px] pr-11 font-mono text-[14px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setHpVisible((v) => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent text-pd-faint"
-                    >
-                      {hpVisible ? <EyeOff className="h-[17px] w-[17px]" /> : <Eye className="h-[17px] w-[17px]" />}
-                    </button>
-                  </div>
-                </>
-              )}
-              {/* Same reason as the OAuth steps: don't offer the key form
-                  before we know whether a key is already on file. */}
-              {hpStatus === "checking" && (
-                <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-faint">
-                  <SpinnerRing />
-                  Checking connection…
-                </div>
-              )}
-              {hpStatus === "idle" && (
-                <PrimaryButton disabled={!hpUid.trim() || !hpKey.trim()} onClick={connectHp} arrow={false}>
-                  Connect Hot Prospector
-                  <ExternalLink className="h-[15px] w-[15px]" strokeWidth={2.4} />
-                </PrimaryButton>
-              )}
-              {hpStatus === "connecting" && (
-                <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-primary">
-                  <SpinnerRing />
-                  Verifying key…
-                </div>
-              )}
-              {hpStatus === "error" && (
-                <>
-                  <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-[14px] text-left text-[12.5px] leading-normal text-pd-body">
-                    <strong className="text-pd-danger">That key was rejected.</strong>{" "}
-                    {hpError || "Double check you copied the full UID and key from Hot Prospector settings, then try again."}
-                  </div>
-                  <PrimaryButton onClick={connectHp} arrow={false}>
-                    Try again
-                    <RotateCcw className="h-[15px] w-[15px]" strokeWidth={2} />
-                  </PrimaryButton>
-                </>
-              )}
-              {hpStatus === "success" && (
-                <>
-                  <SuccessRow>Hot Prospector connected</SuccessRow>
-                  <PrimaryButton onClick={() => next()}>Continue</PrimaryButton>
-                </>
-              )}
-            </div>
+            <HpKeyStep
+              hpStatus={hpStatus}
+              hpUid={hpUid}
+              setHpUid={setHpUid}
+              hpKey={hpKey}
+              setHpKey={setHpKey}
+              hpVisible={hpVisible}
+              setHpVisible={setHpVisible}
+              hpError={hpError}
+              connectHp={connectHp}
+              next={next}
+            />
           )}
 
           {currentKey === "client_confirm" && (
-            <div className={STEP_COL}>
-              <div className="mb-2"><StepHeading>Want to change the client name?</StepHeading></div>
-              <div className="mb-[22px] text-[13.5px] text-pd-faint">
-                Pulled from their GHL sub-account. Edit it if you&apos;d like something different.
-              </div>
-              <UnderlineInput
-                value={clientNameConfirm}
-                onChange={(e) => setClientNameConfirm(e.target.value)}
-                placeholder="Client name"
-              />
-              {/* Creation used to fire here and be awaited. It now happens on
-                  the next step (client_currency), because the currency is part
-                  of the payload and because nothing about naming a client
-                  needs a network round-trip. */}
-              <PrimaryButton
-                disabled={!clientNameConfirm.trim() || !selectedClient}
-                // $set on onboarding.data.first_client replaces the whole
-                // field, so the draft has to be re-sent complete — including
-                // a group_id if creation already succeeded and the user came
-                // back to rename. Dropping it would strand the group.
-                onClick={() => next({ first_client: {
-                  ...(firstGroupId ? { group_id: firstGroupId } : {}),
-                  ghl_location_id: selectedClient?.id,
-                  name: clientNameConfirm.trim(),
-                  meta_ad_account_id: selectedAd?.id || null,
-                  currency: currency || selectedAd?.currency || null,
-                } })}
-              >
-                Confirm
-              </PrimaryButton>
-            </div>
+            <ClientConfirmStep
+              clientNameConfirm={clientNameConfirm}
+              setClientNameConfirm={setClientNameConfirm}
+              selectedClient={selectedClient}
+              selectedAd={selectedAd}
+              firstGroupId={firstGroupId}
+              currency={currency}
+              next={next}
+            />
           )}
 
           {currentKey === "client_currency" && (
-            <div className={STEP_COL}>
-              <div className="mb-2">
-                <StepHeading small>What currency does {clientDisplayName} report in?</StepHeading>
-              </div>
-              <div className="mb-[26px] text-[13.5px] leading-normal text-pd-body">
-                Every spend, cost and revenue figure for this client is shown in this currency.
-                {selectedAd?.currency
-                  ? ` We've pre-filled it from their Meta ad account.`
-                  : ""}
-              </div>
-              <select
-                value={currency || selectedAd?.currency || "GBP"}
-                onChange={(e) => setCurrency(e.target.value)}
-                className="mb-[30px] w-full rounded-full border-[1.5px] border-pd-border bg-white px-[14px] py-[13px] text-[15px] text-pd-ink outline-none transition-colors focus:border-pd-primary"
-              >
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} — {c.label} ({getSymbolFromCurrency(c.code) || c.code})
-                  </option>
-                ))}
-              </select>
-              <PrimaryButton
-                onClick={() => {
-                  const chosen = currency || selectedAd?.currency || "GBP"
-                  setCurrency(chosen)
-                  // Also the account-wide default. The sign-up form used to ask
-                  // for this; now this step is the only place it gets set, and
-                  // useCurrency reads the localStorage copy synchronously on
-                  // first render, so writing it here stops the rest of the app
-                  // rendering "$" for a user who just said GBP.
-                  try {
-                    localStorage.setItem(STORAGE_KEYS.DEFAULT_CURRENCY, chosen)
-                  } catch { /* private mode — the server copy still wins on next login */ }
-                  startFirstClientCreation(chosen)
-                  next({ currency: chosen })
-                }}
-              >
-                Continue
-              </PrimaryButton>
-            </div>
+            <ClientCurrencyStep
+              clientDisplayName={clientDisplayName}
+              selectedAd={selectedAd}
+              currency={currency}
+              setCurrency={setCurrency}
+              startFirstClientCreation={startFirstClientCreation}
+              next={next}
+            />
           )}
 
           {currentKey === "sync_prompt" && (
-            <>
-              {/* confetti */}
-              <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                {Array.from({ length: 24 }, (_, i) => (
-                  <div
-                    key={i}
-                    className="absolute top-0"
-                    style={{
-                      left: `${(i * 41 + 7) % 100}%`,
-                      width: 6 + (i % 3) * 3,
-                      height: 6 + (i % 3) * 3,
-                      background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-                      borderRadius: i % 2 ? 2 : "50%",
-                      animation: `ob-confetti ${(1.6 + (i % 5) * 0.25).toFixed(2)}s ease-in ${((i % 7) * 0.09).toFixed(2)}s 1 both`,
-                    }}
-                  />
-                ))}
-              </div>
-              <div className={STEP_COL}>
-                <SuccessRow>{clientDisplayName} connected</SuccessRow>
-                <div className="mb-3"><StepHeading>Congratulations! You connected your first client.</StepHeading></div>
-                <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
-                  Whilst we finish onboarding, Birdy can add the rest of your clients for you in
-                  the background.
-                </div>
-                <PrimaryButton onClick={acceptSync}>Continue onboarding</PrimaryButton>
-              </div>
-            </>
+            <SyncPromptStep clientDisplayName={clientDisplayName} acceptSync={acceptSync} />
           )}
 
           {currentKey === "kpi_targets" && (
-            <div className={`${STEP_COL} text-left`}>
-              <div className="mb-[10px] text-center">
-                <StepHeading small>Now, let&apos;s set some targets for {clientDisplayName}.</StepHeading>
-              </div>
-              <div className="mb-[26px] text-center text-[14px] leading-normal text-pd-body">
-                What are your KPI targets for {clientDisplayName}? Birdy uses these to flag when
-                something needs attention.
-              </div>
-              <div className="mb-[18px]">
-                <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Cost per acquisition target</div>
-                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
-                  <span className="mr-[6px] text-[14px] text-pd-faint">{currencySymbol}</span>
-                  <input
-                    value={cpa}
-                    onChange={(e) => setCpa(e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="45"
-                    inputMode="numeric"
-                    className="flex-1 border-0 py-3 text-[15px] text-pd-ink outline-none placeholder:text-pd-faint"
-                  />
-                </div>
-                <div className="mt-[5px] text-[11px] text-pd-faint">Most agencies in your niche target {currencySymbol}30–60.</div>
-              </div>
-              <div className="mb-[18px]">
-                <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Monthly wins target</div>
-                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
-                  <input
-                    value={wins}
-                    onChange={(e) => setWins(e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="20"
-                    inputMode="numeric"
-                    className="flex-1 border-0 py-3 text-[15px] text-pd-ink outline-none placeholder:text-pd-faint"
-                  />
-                  <span className="text-[14px] text-pd-faint">clients closed</span>
-                </div>
-              </div>
-              <div className="mb-[26px]">
-                <div className="mb-[7px] text-[12.5px] font-semibold text-pd-body">Conversion rate target</div>
-                <div className="flex items-center rounded-full border-[1.5px] border-pd-border px-[14px] focus-within:border-pd-primary">
-                  <input
-                    value={convRate}
-                    onChange={(e) => setConvRate(e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="15"
-                    inputMode="numeric"
-                    className="flex-1 border-0 py-3 text-[15px] text-pd-ink outline-none placeholder:text-pd-faint"
-                  />
-                  <span className="text-[14px] text-pd-faint">%</span>
-                </div>
-              </div>
-              <div className="text-center">
-                <PrimaryButton onClick={() => next({ kpi: { cpa, wins, conv_rate: convRate } })}>
-                  Apply targets
-                </PrimaryButton>
-              </div>
-            </div>
+            <KpiTargetsStep
+              clientDisplayName={clientDisplayName}
+              currencySymbol={currencySymbol}
+              cpa={cpa}
+              setCpa={setCpa}
+              wins={wins}
+              setWins={setWins}
+              convRate={convRate}
+              setConvRate={setConvRate}
+              next={next}
+            />
           )}
 
-          {currentKey === "kpi_default" && (
-            <div className={STEP_COL}>
-              <SuccessRow>Targets applied</SuccessRow>
-              <div className="mb-3"><StepHeading>Save these as your defaults?</StepHeading></div>
-              <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
-                We&apos;ll pre-fill every new client with these numbers — you can always adjust per
-                client later.
-              </div>
-              <div className="flex justify-center gap-3">
-                <SecondaryButton onClick={() => applyKpiTargets(false)}>Just this client</SecondaryButton>
-                <PrimaryButton onClick={() => applyKpiTargets(true)} className="px-6 py-3">
-                  Yes, set as default
-                </PrimaryButton>
-              </div>
-            </div>
-          )}
+          {currentKey === "kpi_default" && <KpiDefaultStep applyKpiTargets={applyKpiTargets} />}
 
           {currentKey === "slack_connect" && (
-            <div className={STEP_COL}>
-              <IconChip className="bg-pd-warning-bg text-pd-warning"><SlackGlyph /></IconChip>
-              <div className="mb-[10px]"><StepHeading>Let&apos;s connect Birdy to your Slack for notifications.</StepHeading></div>
-              <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
-                Birdy will post alerts and daily summaries to a channel you choose. It only ever
-                posts — it can&apos;t read your other messages.
-              </div>
-              {renderConnectStates({
-                status: slackStatus,
-                onConnect: () => startOAuth("/api/connect/slack", setSlackStatus),
-                onContinue: () => next(),
-                connectLabel: "Connect Slack",
-                connectingLabel: "Connecting to Slack…",
-                successLabel: "Slack connected",
-                errorTitle: "Connection failed",
-                errorBody: "Slack didn't authorize the request — this usually means the popup was closed early. Let's try again.",
-              })}
-            </div>
+            <SlackConnectStep
+              slackStatus={slackStatus}
+              setSlackStatus={setSlackStatus}
+              startOAuth={startOAuth}
+              oauthError={oauthError}
+              next={next}
+            />
           )}
 
           {currentKey === "slack_channel" && (
-            <div className={STEP_COL_WIDE}>
-              <div className="mb-[22px] text-center">
-                <StepHeading small>Where should Birdy briefs go on Slack?</StepHeading>
-              </div>
-              <div className="flex flex-col items-start gap-6 text-left sm:flex-row">
-                <div className="w-full flex-1">
-                  {channels === null ? (
-                    <div className="mb-[22px] overflow-hidden rounded-xl border border-pd-border">
-                      {[0, 1, 2, 3].map((i) => (
-                        <div key={i} className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-3 last:border-b-0">
-                          <Skeleton className="h-4 w-4 rounded-full" />
-                          <Skeleton className="h-3.5 w-1/2" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : channelsError ? (
-                    // Our failure, not their setup. Say what actually went
-                    // wrong, offer the retry that used to require reloading
-                    // the wizard, and let them past — see the Continue button
-                    // below for why this cannot be a wall.
-                    <div className="rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[14px] py-3 text-left">
-                      <div className="mb-[6px] flex items-center gap-[7px]">
-                        <AlertCircle className="h-[14px] w-[14px] shrink-0 text-pd-danger" strokeWidth={2.4} />
-                        <span className="text-[12.5px] font-semibold text-pd-danger">
-                          Couldn&apos;t load your channels
-                        </span>
-                      </div>
-                      <div className="mb-[9px] text-[12px] leading-normal text-pd-body">
-                        {channelsError.message}
-                      </div>
-                      {channelsError.needsReconnect ? (
-                        <button
-                          type="button"
-                          onClick={() => startOAuth("/api/connect/slack", setSlackStatus)}
-                          className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
-                        >
-                          Reconnect Slack
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setChannels(null)}
-                          className="cursor-pointer border-0 bg-transparent p-0 text-[12px] font-semibold text-pd-primary underline"
-                        >
-                          Try again
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <SearchInput
-                        value={channelSearch}
-                        onChange={(e) => setChannelSearch(e.target.value)}
-                        placeholder="Search channels…"
-                      />
-                      <PickList
-                        items={channelItems}
-                        selectedId={selectedChannel?.id}
-                        onPick={(item) => setSelectedChannel(item.raw)}
-                        maxHeight={220}
-                        emptyText="No channels found — invite the Birdy app to a channel in Slack"
-                      />
-                    </>
-                  )}
-                </div>
-                <div className="w-full flex-1">
-                  <div className="mb-[9px] text-[11px] font-bold tracking-[0.05em] text-pd-faint">PREVIEW</div>
-                  <SlackPreviewCard time="9:02 AM">
-                    CPA for {clientDisplayName} is {currencySymbol}{cpa || "45"} — right on target. Yesterday&apos;s
-                    spend was {currencySymbol}142 across 3 ad sets.
-                  </SlackPreviewCard>
-                  {/* Requiring Slack means requiring the connection, not
-                      holding someone hostage to a call of ours that failed.
-                      With the "I don't use Slack" escape gone, gating this on
-                      a channel the list could not even load is a dead end
-                      with no way out but abandoning setup — and it caught
-                      exactly the accounts least deserving of it: one with
-                      Slack installed and a brief channel already configured
-                      was locked out of its own onboarding, because the
-                      endpoint that lists channels wanted a scope the install
-                      predated. So a failed lookup lets them through with
-                      whatever channel is already set, and the brief step
-                      after this can be revisited from Settings. A workspace
-                      that genuinely has no channels still has to pick one. */}
-                  <div className="mt-5 text-center">
-                    <PrimaryButton
-                      disabled={!selectedChannel && !channelsError}
-                      onClick={saveChannel}
-                    >
-                      Continue
-                    </PrimaryButton>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SlackChannelStep
+              clientDisplayName={clientDisplayName}
+              currencySymbol={currencySymbol}
+              cpa={cpa}
+              channels={channels}
+              setChannels={setChannels}
+              channelsError={channelsError}
+              channelSearch={channelSearch}
+              setChannelSearch={setChannelSearch}
+              selectedChannel={selectedChannel}
+              setSelectedChannel={setSelectedChannel}
+              setSlackStatus={setSlackStatus}
+              startOAuth={startOAuth}
+              saveChannel={saveChannel}
+            />
           )}
 
           {currentKey === "report_copilot" && (
-            <div className="w-full max-w-[1120px]">
-              <div className="mb-5 text-center">
-                <StepHeading small>Let&apos;s design your Slack report.</StepHeading>
-                <div className="mt-1.5 text-[13.5px] text-pd-faint">
-                  Birdy will post it to #{selectedChannel?.name || "your channel"}. Chat it through and watch it take shape.
-                </div>
-              </div>
-              <ReportDesigner
-                sessionKey="birdy_onboarding_report"
-                ignoreCreditsGate
-                onUse={saveReport}
-                saving={savingReport}
-                secondaryAction={
-                  <>
-                    {reportError && <div className="text-center text-[12px] text-pd-danger">{reportError}</div>}
-                    <button
-                      type="button"
-                      onClick={() => saveReport(null)}
-                      disabled={savingReport}
-                      className="cursor-pointer border-0 bg-transparent p-1 text-center text-[12.5px] font-medium text-pd-subtle underline-offset-2 hover:text-pd-ink hover:underline disabled:opacity-40"
-                    >
-                      Skip, use the standard daily report
-                    </button>
-                  </>
-                }
-              />
-            </div>
+            <ReportCopilotStep
+              selectedChannel={selectedChannel}
+              saveReport={saveReport}
+              savingReport={savingReport}
+              reportError={reportError}
+            />
           )}
 
           {currentKey === "sub_accounts_review" && (
@@ -2005,60 +887,18 @@ export default function OnboardingPage() {
           )}
 
           {currentKey === "completion" && (
-            <Stagger className={STEP_COL} gap={0.06}>
-              <Pop delay={0.1} className="mx-auto mb-[22px] w-fit">
-                <BirdyAvatar size={136} tone="white" state={birdyState} />
-              </Pop>
-              <StaggerItem className="mb-2"><StepHeading>You&apos;re all set{name ? `, ${name}` : ""}.</StepHeading></StaggerItem>
-              <StaggerItem className="mb-[26px] text-[14px] text-pd-faint">
-                Here&apos;s everything Birdy just connected{agency ? ` for ${agency}` : ""}. We&apos;ll
-                keep importing the rest in the background.
-              </StaggerItem>
-
-              {/* Last chance to notice that the background creation failed.
-                  Everything after client_currency ran without needing the
-                  group, so this is the first point where "you have no first
-                  client" actually costs the user something — they'd land on an
-                  empty Clients page with no idea why. Offered as a retry, not
-                  a wall: if GHL is down, trapping them in the wizard helps
-                  nobody, so they can still go in without it. */}
-              {creationState === "error" && (
-                <div className="mb-5 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[18px] py-4 text-left">
-                  <div className="mb-[6px] flex items-center gap-2">
-                    <AlertCircle className="h-[15px] w-[15px] text-pd-danger" strokeWidth={2.2} />
-                    <span className="font-pd-display text-[13.5px] font-semibold text-pd-danger">
-                      {clientDisplayName} wasn&apos;t added
-                    </span>
-                  </div>
-                  <div className="mb-[14px] text-[12.5px] leading-normal text-pd-body">
-                    {creationError || "Something went wrong setting up your first client."}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <PrimaryButton onClick={() => startFirstClientCreation()} arrow={false}>
-                      Try again
-                      <RotateCcw className="h-[15px] w-[15px]" strokeWidth={2} />
-                    </PrimaryButton>
-                    <SecondaryButton onClick={finish}>Continue without it</SecondaryButton>
-                  </div>
-                </div>
-              )}
-
-              {creationState === "creating" && (
-                <div className="mb-5">
-                  <FakeProgressBar expectedMs={18000} caption={`Still adding ${clientDisplayName} — you can go on in.`} />
-                </div>
-              )}
-
-              {creationState !== "error" && (
-                <StaggerItem>
-                  <PrimaryButton onClick={finish} disabled={completing}>
-                    {completing ? "Opening Birdy…" : "Take a look at Birdy"}
-                  </PrimaryButton>
-                </StaggerItem>
-              )}
-            </Stagger>
+            <CompletionStep
+              name={name}
+              agency={agency}
+              birdyState={birdyState}
+              clientDisplayName={clientDisplayName}
+              creationState={creationState}
+              creationError={creationError}
+              startFirstClientCreation={startFirstClientCreation}
+              finish={finish}
+              completing={completing}
+            />
           )}
-
             </motion.div>
           </AnimatePresence>
 
