@@ -1,9 +1,12 @@
-import { AlertCircle, ExternalLink, RotateCcw } from "lucide-react"
-import { PrimaryButton, SpinnerRing, SuccessRow } from "../parts"
+import { ExternalLink, RotateCcw } from "lucide-react"
+import { Button, Notice, Spinner } from "@/components/ds"
+import { SuccessRow, WizardFooter } from "../parts"
 
 /**
  * The connect / checking / connecting / error / success states shared by the OAuth
  * steps. `oauthError`, when set, is what the server said and replaces `errorBody`.
+ * The Connect button stays in the body (it leaves the page); once connected the
+ * Continue goes to the wizard footer.
  */
 export default function ConnectStates({
   status,
@@ -25,42 +28,38 @@ export default function ConnectStates({
           the button was live and pressable for the whole round-trip, so
           returning from an OAuth hop invited a second, pointless one. */}
       {status === "checking" && (
-        <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-faint">
-          <SpinnerRing />
+        <div className="inline-flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
+          <Spinner />
           Checking connection…
         </div>
       )}
       {status === "idle" && (
-        <PrimaryButton onClick={onConnect} disabled={connectDisabled} arrow={false}>
+        <Button variant="primary" size="lg" onClick={onConnect} disabled={connectDisabled}>
           {connectLabel}
-          <ExternalLink className="h-[15px] w-[15px]" strokeWidth={2.4} />
-        </PrimaryButton>
+          <ExternalLink aria-hidden="true" />
+        </Button>
       )}
       {status === "connecting" && (
-        <div className="inline-flex items-center gap-[10px] text-[14px] font-semibold text-pd-primary">
-          <SpinnerRing />
+        <div className="inline-flex items-center gap-2.5 text-sm font-medium text-primary">
+          <Spinner />
           {connectingLabel}
         </div>
       )}
       {status === "error" && (
-        <>
-          <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[18px] py-4 text-left">
-            <div className="mb-[6px] flex items-center gap-2">
-              <AlertCircle className="h-[15px] w-[15px] text-pd-danger" strokeWidth={2.2} />
-              <span className="font-pd-display text-[13.5px] font-semibold text-pd-danger">{errorTitle}</span>
-            </div>
-            <div className="text-[12.5px] leading-normal text-pd-body">{oauthError || errorBody}</div>
-          </div>
-          <PrimaryButton onClick={onRetry || onConnect} arrow={false}>
+        <div className="flex flex-col items-start gap-4">
+          <Notice tone="danger" title={errorTitle} className="w-full">
+            {oauthError || errorBody}
+          </Notice>
+          <Button variant="primary" size="lg" onClick={onRetry || onConnect}>
             Try again
-            <RotateCcw className="h-[15px] w-[15px]" strokeWidth={2} />
-          </PrimaryButton>
-        </>
+            <RotateCcw aria-hidden="true" />
+          </Button>
+        </div>
       )}
       {status === "success" && (
         <>
           <SuccessRow>{successLabel}</SuccessRow>
-          <PrimaryButton onClick={onContinue}>Continue</PrimaryButton>
+          <WizardFooter primary={{ label: "Continue", onClick: onContinue }} />
         </>
       )}
     </>

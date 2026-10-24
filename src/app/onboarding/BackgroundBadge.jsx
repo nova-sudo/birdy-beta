@@ -1,5 +1,8 @@
-import { AlertCircle } from "lucide-react"
-import { FakeProgressBar, ProgressBar, SpinnerRing } from "./parts"
+import { Button, ProgressBar, Spinner, Surface } from "@/components/ds"
+import { FakeProgressBar } from "./parts"
+
+// Same slot for all three: top-right, under the 64px top bar.
+const BADGE = "absolute right-4 top-[76px] z-10 w-[228px] rounded-surface p-3 text-left shadow-floating"
 
 export default function BackgroundBadge({
   creationState,
@@ -17,47 +20,38 @@ export default function BackgroundBadge({
           it is happening — and the only place a failure surfaces before the
           completion step, so the error branch has to be actionable. */}
       {creationState === "error" ? (
-        <div className="absolute right-4 top-[76px] z-10 w-[228px] rounded-xl border border-pd-danger-border bg-pd-danger-bg px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-          <div className="mb-[2px] flex items-center gap-[7px]">
-            <AlertCircle className="h-[13px] w-[13px] shrink-0 text-pd-danger" strokeWidth={2.4} />
-            <span className="text-[11.5px] font-semibold text-pd-danger">
-              Couldn&apos;t add {clientDisplayName}
-            </span>
-          </div>
-          <div className="mb-[7px] text-[10.5px] leading-normal text-pd-body">
+        <Surface className={`${BADGE} bg-danger-soft text-danger-ink`}>
+          <div className="mb-0.5 text-sm font-medium">Couldn&apos;t add {clientDisplayName}</div>
+          <div className="mb-1 text-xs leading-normal">
             {creationError || "We'll ask you to retry before you finish."}
           </div>
-          <button
-            type="button"
-            onClick={startFirstClientCreation}
-            className="cursor-pointer border-0 bg-transparent p-0 text-[11px] font-semibold text-pd-primary underline"
-          >
+          <Button variant="link" size="sm" onClick={startFirstClientCreation} className="h-auto px-0 text-xs text-danger-ink">
             Try again
-          </button>
-        </div>
+          </Button>
+        </Surface>
       ) : creationState === "creating" ? (
-        <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-          <div className="mb-[7px] flex items-center gap-[9px]">
-            <SpinnerRing />
-            <span className="text-[11.5px] font-semibold text-pd-ink">Adding {clientDisplayName}</span>
+        <Surface className={BADGE}>
+          <div className="mb-2 flex items-center gap-2">
+            <Spinner />
+            <span className="text-sm font-medium text-foreground">Adding {clientDisplayName}</span>
           </div>
           <FakeProgressBar expectedMs={18000} />
-        </div>
+        </Surface>
       ) : showSyncBadge ? (
-        <div className="absolute right-4 top-[76px] z-10 w-[210px] rounded-xl border border-pd-border bg-white px-[13px] py-[10px] text-left shadow-[0_10px_24px_-10px_rgba(30,25,60,0.25)] sm:top-[88px]">
-          <div className="mb-[8px] flex items-center gap-[9px]">
-            <SpinnerRing />
-            <span className="text-[11.5px] font-semibold text-pd-ink">Syncing historical data</span>
+        <Surface className={BADGE}>
+          <div className="mb-2 flex items-center gap-2">
+            <Spinner />
+            <span className="text-sm font-medium text-foreground">Syncing historical data</span>
           </div>
-          <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
-            <span>GHL</span><span>{Math.round(syncGhlPct)}%</span>
+          <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>GHL</span><span className="num">{Math.round(syncGhlPct)}%</span>
           </div>
-          <ProgressBar value={syncGhlPct} className="mb-[7px]" />
-          <div className="mb-[3px] flex items-center justify-between text-[10.5px] text-pd-faint">
-            <span>Meta</span><span>{Math.round(syncMetaPct)}%</span>
+          <ProgressBar value={syncGhlPct} tone="primary" label="GHL sync" className="mb-2" />
+          <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Meta</span><span className="num">{Math.round(syncMetaPct)}%</span>
           </div>
-          <ProgressBar value={syncMetaPct} />
-        </div>
+          <ProgressBar value={syncMetaPct} tone="primary" label="Meta sync" />
+        </Surface>
       ) : null}
     </>
   )

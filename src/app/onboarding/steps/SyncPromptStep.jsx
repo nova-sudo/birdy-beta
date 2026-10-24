@@ -1,10 +1,11 @@
-import { PrimaryButton, STEP_COL, StepHeading, SuccessRow } from "../parts"
+import { STEP_COL, StepHeading, SuccessRow, WizardFooter } from "../parts"
 import { CONFETTI_COLORS } from "../wizard"
 
 export default function SyncPromptStep({ clientDisplayName, acceptSync }) {
   return (
     <>
-      {/* confetti */}
+      {/* confetti — the keyframes are switched off under prefers-reduced-motion
+          in globals.css */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {Array.from({ length: 24 }, (_, i) => (
           <div
@@ -23,12 +24,12 @@ export default function SyncPromptStep({ clientDisplayName, acceptSync }) {
       </div>
       <div className={STEP_COL}>
         <SuccessRow>{clientDisplayName} connected</SuccessRow>
-        <div className="mb-3"><StepHeading>Congratulations! You connected your first client.</StepHeading></div>
-        <div className="mb-[30px] text-[14.5px] leading-relaxed text-pd-body">
-          Whilst we finish onboarding, Birdy can add the rest of your clients for you in
-          the background.
-        </div>
-        <PrimaryButton onClick={acceptSync}>Continue onboarding</PrimaryButton>
+        <StepHeading
+          description="Whilst we finish onboarding, Birdy can add the rest of your clients for you in the background."
+        >
+          Congratulations! You connected your first client.
+        </StepHeading>
+        <WizardFooter primary={{ label: "Continue onboarding", onClick: acceptSync }} />
       </div>
     </>
   )

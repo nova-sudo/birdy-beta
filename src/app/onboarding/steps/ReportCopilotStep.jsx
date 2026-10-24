@@ -1,32 +1,38 @@
+import { useState } from "react"
+import { Button, Notice } from "@/components/ds"
 import ReportDesigner from "@/components/report-designer/ReportDesigner"
-import { StepHeading } from "../parts"
+import { STEP_COL_FULL, StepHeading, WizardFooter } from "../parts"
 
 export default function ReportCopilotStep({ selectedChannel, saveReport, savingReport, reportError }) {
+  // The designer owns the preview; the footer needs its template to know
+  // whether "Use this report" has anything to save.
+  const [template, setTemplate] = useState(null)
+
   return (
-    <div className="w-full max-w-[1120px]">
-      <div className="mb-5 text-center">
-        <StepHeading small>Let&apos;s design your Slack report.</StepHeading>
-        <div className="mt-1.5 text-[13.5px] text-pd-faint">
-          Birdy will post it to #{selectedChannel?.name || "your channel"}. Chat it through and watch it take shape.
-        </div>
-      </div>
+    <div className={STEP_COL_FULL}>
+      <StepHeading
+        eyebrow="Notifications"
+        description={`Birdy will post it to #${selectedChannel?.name || "your channel"}. Chat it through and watch it take shape.`}
+      >
+        Let&apos;s design your Slack report
+      </StepHeading>
+      {reportError && <Notice tone="danger" className="mb-4">{reportError}</Notice>}
       <ReportDesigner
         sessionKey="birdy_onboarding_report"
         ignoreCreditsGate
-        onUse={saveReport}
-        saving={savingReport}
-        secondaryAction={
-          <>
-            {reportError && <div className="text-center text-[12px] text-pd-danger">{reportError}</div>}
-            <button
-              type="button"
-              onClick={() => saveReport(null)}
-              disabled={savingReport}
-              className="cursor-pointer border-0 bg-transparent p-1 text-center text-[12.5px] font-medium text-pd-subtle underline-offset-2 hover:text-pd-ink hover:underline disabled:opacity-40"
-            >
-              Skip, use the standard daily report
-            </button>
-          </>
+        hideActions
+        onTemplateChange={setTemplate}
+      />
+      <WizardFooter
+        primary={{
+          label: savingReport ? "Saving…" : "Use this report",
+          onClick: () => saveReport(template),
+          disabled: savingReport || !template,
+        }}
+        secondary={
+          <Button variant="ghost" size="lg" onClick={() => saveReport(null)} disabled={savingReport}>
+            Skip, use the standard daily report
+          </Button>
         }
       />
     </div>

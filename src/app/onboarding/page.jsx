@@ -2,8 +2,8 @@
 
 // First-run onboarding wizard. Full-screen, one step at a time, shown to a
 // user the first time they log in (gated by /api/onboarding/status — see
-// LoginForm + ProtectedLayout). Design: design_handoff_onboarding bundle;
-// same pd-* token palette as the Portfolio Dashboard.
+// LoginForm + ProtectedLayout). Design: Paper's onboarding flow (top bar,
+// scrolling body, pinned footer), built from the ds kit and token utilities.
 //
 // The wizard deliberately keeps the user busy while real work runs behind it:
 // the first client's historical sync starts as soon as they confirm the
@@ -17,16 +17,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { AnimatePresence, motion } from "framer-motion"
+import { AnimatePresence, MotionConfig, motion } from "framer-motion"
 import getSymbolFromCurrency from "currency-symbol-map"
-import { ChevronLeft } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
-import { pdFontClass } from "@/lib/fonts"
 import { EASE_OUT, EASE_SPRING } from "@/components/motion"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, Notice, Skeleton, Surface } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import { useBirdy } from "@/components/birdy/use-birdy"
-import { PrimaryButton } from "./parts"
+import { WizardFooterContext } from "./parts"
 import BackgroundBadge from "./BackgroundBadge"
 import ReviewStep from "./ReviewStep"
 import BillingStep from "./BillingStep"
@@ -76,6 +75,9 @@ export default function OnboardingPage() {
   // Which way the last step change went, for STEP_VARIANTS. Updated alongside
   // stepIndex in goToIndex; the boot-time restore leaves it at forward.
   const [direction, setDirection] = useState(1)
+  // The footer's right-hand slot, handed to steps through WizardFooterContext
+  // so each can portal its own actions into the pinned footer.
+  const [footerNode, setFooterNode] = useState(null)
 
   const [name, setName] = useState("")
   const [agency, setAgency] = useState("")
@@ -589,12 +591,12 @@ export default function OnboardingPage() {
 
   if (booting) {
     return (
-      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white`}>
-        <div className="flex w-full max-w-[600px] flex-col items-center px-5">
-          <Skeleton className="mb-[26px] h-20 w-20 rounded-full" />
+      <div className="flex min-h-svh items-center justify-center bg-background">
+        <div className="flex w-full max-w-[560px] flex-col items-center px-5">
+          <Skeleton className="mb-6 size-20 rounded-full" />
           <Skeleton className="mb-3 h-7 w-3/5" />
-          <Skeleton className="mb-[30px] h-4 w-4/5" />
-          <Skeleton className="h-12 w-40 rounded-full" />
+          <Skeleton className="mb-8 h-4 w-4/5" />
+          <Skeleton className="h-11 w-40" />
         </div>
       </div>
     )
@@ -602,18 +604,24 @@ export default function OnboardingPage() {
 
   if (bootError) {
     return (
-      <div className={`${pdFontClass} flex min-h-svh items-center justify-center bg-white px-6`}>
-        <div className="max-w-md rounded-xl border border-pd-border-strong bg-white p-8 text-center shadow-[0_20px_60px_-24px_rgba(30,25,60,0.3)]">
-          <div className="mb-3 font-pd-display text-lg font-bold text-pd-ink">Something went wrong</div>
-          <div className="mb-6 text-[13.5px] text-pd-body">{bootError}</div>
-          <PrimaryButton onClick={() => window.location.reload()} arrow={false}>Reload</PrimaryButton>
-        </div>
+      <div className="flex min-h-svh items-center justify-center bg-background px-6">
+        <Surface className="flex max-w-md flex-col items-start gap-4 p-8 shadow-floating">
+          <div className="text-lg font-semibold text-foreground">Something went wrong</div>
+          <Notice tone="danger" className="w-full">{bootError}</Notice>
+          <Button variant="primary" size="lg" onClick={() => window.location.reload()}>Reload</Button>
+        </Surface>
       </div>
     )
   }
 
   const stepNum = Math.max(stepIndex, 1)
   const stepTotal = visibleSteps.length - 1
+  // How far through its own phase the current step is, for the half-filled
+  // segment: the fourth of five "First client" steps fills it four fifths.
+  const inPhase = visibleSteps.filter((key) => PHASE_OF[key] === phase)
+  const phaseFraction = (inPhase.indexOf(currentKey) + 1) / (inPhase.length || 1)
+  // The two centred hero screens; every other step is a left-aligned column.
+  const hero = currentKey === "welcome" || currentKey === "completion"
 
   return (
     // The wizard owns the whole viewport rather than floating as a card on a
@@ -622,58 +630,51 @@ export default function OnboardingPage() {
     // were framing emptiness. Full-bleed also stops the taller steps (the
     // sub-accounts table, the billing tiers) scrolling inside a box that is
     // itself shorter than the screen.
-    <div className={`${pdFontClass} flex h-svh flex-col bg-white`}>
+    <MotionConfig reducedMotion="user">
+    <WizardFooterContext.Provider value={footerNode}>
+    <div className="flex h-svh flex-col bg-background">
       <div className="relative flex h-full w-full flex-col overflow-hidden">
 
         {/* top bar */}
         {currentKey !== "welcome" && (
-          <div className="shrink-0 border-b border-pd-divider px-[18px] pb-[14px] pt-4 sm:px-8 sm:pb-4 sm:pt-5">
-            {/* The bar spans the window, its contents do not: a progress bar
-                stretched across an ultrawide monitor reads as a loading screen
-                rather than a step indicator. */}
-            <div className="mx-auto flex w-full max-w-[1080px] items-center gap-[14px]">
-            <button
-              type="button"
-              onClick={back}
-              className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-pd-border text-pd-body transition-colors hover:border-pd-chevron"
+          <div className="flex h-16 shrink-0 items-center gap-4 border-b border-border/60 px-4 sm:px-6">
+            <span className="shrink-0 text-xs font-medium text-primary">{PHASE_LABEL[phase]}</span>
+            {/* Each segment is a track with a fill that grows from the
+                left as its phase is reached, and empties again if the
+                user backs out of it. Done phases are full, the current one
+                is as far along as the step is within it, the rest empty. */}
+            <div
+              className="flex min-w-0 flex-1 justify-center gap-1.5"
+              role="progressbar"
+              aria-label="Onboarding progress"
+              aria-valuemin={1}
+              aria-valuemax={stepTotal}
+              aria-valuenow={stepNum}
             >
-              <ChevronLeft className="h-4 w-4" strokeWidth={2} />
-            </button>
-            <div className="min-w-0 flex-1">
-              <div className="mb-[7px] flex items-center justify-between">
-                <span className="font-pd-display text-[11px] font-semibold text-pd-primary sm:text-xs">
-                  {PHASE_LABEL[phase]}
-                </span>
-                <span className="text-[11.5px] text-pd-faint">Step {stepNum} of {stepTotal}</span>
-              </div>
-              <div className="flex gap-1">
-                {/* Each segment is a track with a fill that grows from the
-                    left as its phase is reached, and empties again if the
-                    user backs out of it. The fill's colour is the old
-                    three-way split: done, current, not yet. */}
-                {[1, 2, 3, 4, 5, 6, 7].map((p) => (
-                  <div key={p} className="h-1 flex-1 overflow-hidden rounded-full bg-pd-divider">
-                    <motion.div
-                      className={`h-full w-full origin-left rounded-full transition-colors duration-500 ${
-                        p < phase ? "bg-pd-primary" : "bg-pd-primary-light"
-                      }`}
-                      initial={false}
-                      animate={{ scaleX: p <= phase ? 1 : 0 }}
-                      transition={{ duration: 0.6, ease: EASE_OUT }}
-                    />
-                  </div>
-                ))}
-              </div>
+              {[1, 2, 3, 4, 5, 6, 7].map((p) => (
+                <div key={p} className="h-1.5 min-w-2 max-w-12 flex-1 overflow-hidden rounded-[3px] bg-border">
+                  <motion.div
+                    className="h-full w-full origin-left rounded-[3px] bg-primary"
+                    initial={false}
+                    animate={{ scaleX: p < phase ? 1 : p === phase ? phaseFraction : 0 }}
+                    transition={{ duration: 0.6, ease: EASE_OUT }}
+                  />
+                </div>
+              ))}
             </div>
-            {/* "Skip for now" used to live here. It was removed deliberately:
-                every step it let people past — the first client, the KPI
-                targets, the sales tool — is something the product cannot work
-                without, so skipping produced an account that looked set up and
-                showed nothing. Steps that genuinely are optional now say so in
-                their own words ("I don't currently call my leads", "I don't
-                use Slack") rather than being bypassed by a generic escape
-                hatch that also skipped the things that weren't optional. */}
-            </div>
+            <span className="num shrink-0 text-right text-xs tabular-nums text-muted-foreground">
+              Step {stepNum} of {stepTotal}
+            </span>
+            {/* There is no Exit here, and "Skip for now" used to live in its
+                place. Both were removed deliberately: onboarding gates the
+                app, so there is nowhere to exit to, and every step a skip let
+                people past — the first client, the KPI targets, the sales
+                tool — is something the product cannot work without, so
+                skipping produced an account that looked set up and showed
+                nothing. Steps that genuinely are optional now say so in their
+                own words ("I don't currently call my leads", "I don't use
+                Slack") rather than being bypassed by a generic escape hatch
+                that also skipped the things that weren't optional. */}
           </div>
         )}
 
@@ -688,20 +689,20 @@ export default function OnboardingPage() {
         />
 
         {/* content */}
-        <div className="pd-scrolly relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-5 py-7 text-center sm:p-10">
+        <div className={cn("relative min-h-0 flex-1 overflow-y-auto px-4 sm:px-6", hero ? "py-8" : "pb-10 pt-8 sm:pt-16")}>
 
           {/* One step on screen at a time, keyed so a change of step is a
               change of element: the old one plays its exit, the new one its
               entrance (STEP_VARIANTS). initial={false} keeps the step the
               wizard boots onto from sliding in from nowhere on a reload.
-              The wrapper fills the content area and re-centres its child so
-              the step columns sit exactly where they did before — and, being
+              The wrapper fills the content area and centres its child
+              horizontally (the hero steps vertically too), and, being
               transformed, it is what sync_prompt's inset-0 confetti layer is
-              now positioned against, so it has to be the full area. */}
+              positioned against, so it has to be the full area. */}
           <AnimatePresence mode="wait" initial={false} custom={direction}>
             <motion.div
               key={currentKey}
-              className="relative flex min-h-full w-full flex-col items-center justify-center"
+              className={cn("relative flex min-h-full w-full flex-col items-center", hero && "justify-center")}
               custom={direction}
               variants={STEP_VARIANTS}
               initial="enter"
@@ -903,7 +904,22 @@ export default function OnboardingPage() {
           </AnimatePresence>
 
         </div>
+
+        {/* footer — pinned, never scrolls. Back lives here; the step's own
+            actions arrive in the right-hand slot through WizardFooter. */}
+        {currentKey !== "welcome" && (
+          <div className="flex h-[72px] shrink-0 items-center justify-between gap-3 border-t border-border/60 bg-background px-4 sm:px-6">
+            <div>
+              {stepIndex > 0 && (
+                <Button variant="outline" size="lg" onClick={back}>Back</Button>
+              )}
+            </div>
+            <div ref={setFooterNode} className="flex items-center gap-3" />
+          </div>
+        )}
       </div>
     </div>
+    </WizardFooterContext.Provider>
+    </MotionConfig>
   )
 }

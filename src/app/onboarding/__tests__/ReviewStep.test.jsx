@@ -1,10 +1,26 @@
+import { useState } from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { act, render, screen } from "@testing-library/react"
+import { act, render as rtlRender, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "", poppins: { variable: "" }, inter: { variable: "" } }))
-
 import ReviewStep from "../ReviewStep"
+import { WizardFooterContext } from "../parts"
+
+// The step puts its Import button in the wizard footer, so it needs a slot to
+// portal into — the same one page.jsx provides.
+function FooterHost({ children }) {
+  const [node, setNode] = useState(null)
+  return (
+    <WizardFooterContext.Provider value={node}>
+      {children}
+      <div ref={setNode} />
+    </WizardFooterContext.Provider>
+  )
+}
+const render = (ui) => rtlRender(<FooterHost>{ui}</FooterHost>)
+
+// The import checkbox of the row with this Birdy name.
+const tickBoxFor = (name) => screen.getByRole("checkbox", { name: `Import ${name}` })
 
 const onImport = vi.fn()
 
@@ -127,11 +143,6 @@ describe("sub-accounts review ordering", () => {
   // search box is the only other text input and it is empty until typed into,
   // so a "has any value at all" match picks out the rows and nothing else.
   const rowNames = () => screen.getAllByDisplayValue(/./).map((el) => el.value)
-
-  // The checkbox is a click-handling span, not an <input>, so it is reached
-  // through the row rather than by role.
-  const tickBoxFor = (name) =>
-    screen.getByDisplayValue(name).parentElement.querySelector("span")
 
   it("puts the pre-selected sub-accounts on top and sorts the rest alphabetically", () => {
     renderStep()
@@ -359,7 +370,7 @@ describe("hiding inactive sub-accounts", () => {
     renderMixed()
 
     await user.click(screen.getByRole("button", { name: /show them/i }))
-    const tick = screen.getByDisplayValue("Dormant Clinic").parentElement.querySelector("span")
+    const tick = tickBoxFor("Dormant Clinic")
     await user.click(tick)
     await user.click(screen.getByRole("button", { name: /hide inactive/i }))
 
@@ -381,7 +392,7 @@ describe("hiding inactive sub-accounts", () => {
     const user = userEvent.setup()
     renderMixed()
 
-    const tick = screen.getByDisplayValue("Live Clinic").parentElement.querySelector("span")
+    const tick = tickBoxFor("Live Clinic")
     await user.click(tick)
     await user.click(screen.getByRole("button", { name: /import 1 sub-account/i }))
 

@@ -6,17 +6,18 @@
 // status dropdown, and an import checkbox per row.
 
 import { useMemo, useState } from "react"
-import { ChevronDown } from "lucide-react"
+import { Check, ChevronDown } from "lucide-react"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, Checkbox, Input, ProgressBar, Skeleton, Surface } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import { Stagger, StaggerItem } from "@/components/motion"
 import {
   CyclingCaption,
   FakeProgressBar,
-  PrimaryButton,
-  ProgressBar,
   SearchInput,
+  STEP_COL,
   StepHeading,
+  WizardFooter,
 } from "./parts"
 
 const NO_MATCH = "No matching ad account found"
@@ -52,9 +53,9 @@ const LEAD_SOURCES = [{ ...LEAD_SOURCE_UNKNOWN, short: "Ask later" }, ...LEAD_SO
 }))
 
 const LEAD_SOURCE_STYLE = {
-  muted: "border-pd-border bg-pd-divider text-pd-subtle",
-  meta: "border-pd-info-bg bg-pd-info-bg text-pd-info",
-  primary: "border-pd-primary-pale bg-pd-primary-tint text-pd-primary",
+  muted: "bg-neutral-soft text-neutral-ink",
+  meta: "bg-info-soft text-info-ink",
+  primary: "bg-primary-soft text-primary",
 }
 
 // The largest plan (Scale) supports 25 client groups — pre-selecting or
@@ -197,14 +198,14 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
   }
 
   const stats = [
-    { label: "Accounts found", value: unimported.length, color: "text-pd-ink" },
+    { label: "Accounts found", value: unimported.length, color: "text-foreground" },
     {
       label: "With leads in 90 days",
       value: hasRecency ? unimported.filter((a) => a.leads_recent_90 === true).length : "—",
-      color: "text-pd-ink",
+      color: "text-foreground",
     },
-    { label: "Active", value: activeCount, color: "text-pd-success" },
-    { label: "Inactive", value: inactiveCount, color: "text-pd-faint" },
+    { label: "Active", value: activeCount, color: "text-success-ink" },
+    { label: "Inactive", value: inactiveCount, color: "text-muted-foreground" },
   ]
 
   if (review === null || !settled) {
@@ -217,43 +218,39 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
     // between "working" and "frozen", which is what people reload out of.
     const hasRealProgress = prep?.status === "running" && prep?.total > 0
     return (
-      <div className="flex w-full max-w-[460px] flex-col items-center py-14">
+      <div className={STEP_COL}>
         {/* Saying what this is and why it takes a while. The step used to
             open on a spinner and a bar with no title at all, so the one
             genuinely slow stage in onboarding gave no account of itself — and
             a wait you cannot explain is a wait people assume has broken. */}
-        <div className="mb-[10px] text-center">
-          <StepHeading small>Analysing your sub-accounts</StepHeading>
-        </div>
-        <div className="mb-[26px] text-center text-[13.5px] leading-normal text-pd-body">
-          We&apos;re going through every sub-account in your GoHighLevel agency, checking
-          which ones are still bringing in leads and matching them to your Meta ad
-          accounts. Agencies with a lot of clients can take a minute or two — you only
-          have to do this once.
-        </div>
+        <StepHeading
+          description="We're going through every sub-account in your GoHighLevel agency, checking which ones are still bringing in leads and matching them to your Meta ad accounts. Agencies with a lot of clients can take a minute or two — you only have to do this once."
+        >
+          Analysing your sub-accounts
+        </StepHeading>
 
-        <div className="w-full overflow-hidden rounded-xl border border-pd-border">
+        <Surface padded={false} className="overflow-hidden">
           {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[10px] last:border-b-0">
-              <Skeleton className="h-[19px] w-[19px] rounded-full" />
+            <div key={i} className="flex items-center gap-3 border-t border-border/60 px-4 py-2.5 first:border-t-0">
+              <Skeleton className="size-4 rounded-full" />
               <Skeleton className="h-4 flex-[1.2]" />
               <Skeleton className="hidden h-4 flex-1 sm:block" />
               <Skeleton className="h-4 w-[76px]" />
             </div>
           ))}
-        </div>
+        </Surface>
         <div className="mt-4 w-full">
           {hasRealProgress ? (
             <>
-              <ProgressBar value={(prep.done / prep.total) * 100} />
-              <div className="mt-[9px] text-center text-[13px] text-pd-faint">
+              <ProgressBar value={(prep.done / prep.total) * 100} tone="primary" label="Sub-accounts checked" />
+              <div className="mt-2 text-center text-sm text-muted-foreground">
                 {prep.done} of {prep.total} sub-accounts checked
               </div>
             </>
           ) : (
             <FakeProgressBar className="w-full" expectedMs={15000} />
           )}
-          <CyclingCaption className="mt-[9px]" messages={PREP_MESSAGES} />
+          <CyclingCaption className="mt-2" messages={PREP_MESSAGES} />
         </div>
       </div>
     )
@@ -263,31 +260,33 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
     // Widest step in the wizard, and the only one that is a table rather than
     // a column of prose. 860px had it pairing two account names, a status and
     // a lead source inside six truncating columns; the activity count added
-    // here needs room that was not there. Capped at the same 1080px as the
-    // progress bar in the top bar so the two line up on a wide monitor
-    // instead of the table sitting visibly narrower than the chrome above it.
+    // here needs room that was not there, so it keeps a tier of its own above
+    // STEP_COL_WIDE rather than squeezing seven columns into 720.
     // Heading, copy and the stat banner land one after another; the table
     // below arrives with the step itself, since a row-by-row entrance on 25
     // rows would be a wait, not a flourish.
     <Stagger className="w-full max-w-[1080px]" gap={0.06}>
-      <StaggerItem className="mb-2 text-center">
-        <StepHeading small>Here&apos;s what we found in your GHL account</StepHeading>
-      </StaggerItem>
-      <StaggerItem className="mb-5 text-center text-[13.5px] text-pd-faint">
-        {hasRecency
-          ? `We've pre-selected sub-accounts with a lead in the last 7 days (up to ${MAX_IMPORT_SELECTION}) and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in.`
-          : "These are the sub-accounts you haven't imported yet. Review the names, Facebook matches and status, untick any you don't want, then bring them in."}
+      <StaggerItem>
+        <StepHeading
+          description={
+            hasRecency
+              ? `We've pre-selected sub-accounts with a lead in the last 7 days (up to ${MAX_IMPORT_SELECTION}) and flagged any with no leads in the last 30 days as inactive. Review and adjust before we bring them in.`
+              : "These are the sub-accounts you haven't imported yet. Review the names, Facebook matches and status, untick any you don't want, then bring them in."
+          }
+        >
+          Here&apos;s what we found in your GHL account
+        </StepHeading>
       </StaggerItem>
 
       {/* stat banner */}
-      <StaggerItem className="mb-[18px] flex gap-3 text-left">
+      <StaggerItem className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
-            className="flex flex-1 items-baseline gap-2 rounded-xl border border-pd-border bg-pd-table-head px-[14px] py-3"
+            className="flex items-baseline gap-2 rounded-control bg-muted px-3.5 py-3"
           >
-            <div className={`shrink-0 font-pd-display text-xl font-bold ${stat.color}`}>{stat.value}</div>
-            <div className="truncate text-xs text-pd-subtle">{stat.label}</div>
+            <div className={cn("num shrink-0 text-xl font-semibold", stat.color)}>{stat.value}</div>
+            <div className="truncate text-xs text-muted-foreground">{stat.label}</div>
           </div>
         ))}
       </StaggerItem>
@@ -297,7 +296,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           one you care about meant scrolling for it. Matches either side of the
           pairing, GHL name or ad-account name, because the job on this step is
           checking that the two line up. */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <SearchInput
             value={search}
@@ -309,29 +308,32 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
             than a bare label so the number it is keeping off screen is on
             screen — "Hide inactive" alone tells you a rule is in force but not
             what it costs. */}
-        <button
-          type="button"
+        <Button
+          variant="outline"
+          aria-pressed={hideInactive}
           onClick={() => setHideInactive((v) => !v)}
-          className="flex shrink-0 cursor-pointer items-center gap-[7px] rounded-full border-[1.5px] border-pd-border bg-white px-[11px] py-[9px] text-[12.5px] text-pd-body transition-colors hover:border-pd-primary-pale"
+          className="shrink-0"
         >
           <span
-            className={`flex h-[15px] w-[15px] items-center justify-center rounded-full border-[1.5px] text-[10px] text-white ${
-              hideInactive ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"
-            }`}
+            aria-hidden="true"
+            className={cn(
+              "flex size-4 items-center justify-center rounded-sm",
+              hideInactive ? "bg-primary text-primary-foreground" : "bg-background shadow-control"
+            )}
           >
-            {hideInactive ? "✓" : ""}
+            {hideInactive && <Check className="size-3" strokeWidth={3} />}
           </span>
           Hide inactive
           {inactiveCount > 0 && (
-            <span className="text-pd-faint">({inactiveCount})</span>
+            <span className="text-muted-foreground">({inactiveCount})</span>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* table */}
-      <div className="overflow-hidden rounded-xl border border-pd-border text-left">
-        <div className="flex items-center gap-[11px] border-b border-pd-border bg-pd-table-head px-[14px] py-[10px] text-[11px] font-bold tracking-[0.03em] text-pd-faint">
-          <span className="w-[19px] shrink-0" />
+      <Surface padded={false} className="overflow-hidden text-left">
+        <div className="flex items-center gap-3 bg-muted px-4 py-2.5 text-xs font-medium text-muted-foreground">
+          <span className="w-4 shrink-0" />
           <span className="flex-[1.2]">NAME IN BIRDY</span>
           <span className="hidden flex-1 sm:block">GHL SUB-ACCOUNT</span>
           <span className="w-[76px] shrink-0 text-right">NEW (30D)</span>
@@ -339,46 +341,43 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
           <span className="w-[118px] shrink-0 text-right">STATUS</span>
           <span className="w-[132px] shrink-0 text-right">LEADS FROM</span>
         </div>
-        <div className="pd-scrolly max-h-[360px] overflow-y-auto">
+        <div className="max-h-[360px] overflow-y-auto">
           {resolved.length === 0 && (
-            <div className="px-[14px] py-8 text-center text-[12.5px] text-pd-faint">
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
               Every sub-account with a Birdy import is already in — nothing left to review.
             </div>
           )}
           {resolved.length > 0 && visible.length === 0 && (
-            <div className="px-[14px] py-8 text-center text-[12.5px] text-pd-faint">
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
               No sub-account or ad account matches &ldquo;{search.trim()}&rdquo;.
             </div>
           )}
           {visible.map((row) => (
             <div
               key={row.location_id}
-              className="flex items-center gap-[11px] border-b border-pd-row-border px-[14px] py-[10px] last:border-b-0"
-              style={{ opacity: row.importChecked ? 1 : 0.5 }}
+              className={cn(
+                "flex items-center gap-3 border-t border-border/60 px-4 py-2.5 first:border-t-0",
+                !row.importChecked && "opacity-50"
+              )}
             >
               {/* import checkbox — unchecking is always allowed; checking a
                   new one is blocked once MAX_IMPORT_SELECTION is reached. */}
-              <span
-                onClick={() => {
-                  if (!row.importChecked && atSelectionCap) return
-                  patch(row.location_id, { import: !row.importChecked })
-                }}
-                className={`flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-full border-[1.5px] text-xs text-white ${
-                  !row.importChecked && atSelectionCap ? "cursor-not-allowed" : "cursor-pointer"
-                } ${row.importChecked ? "border-pd-primary bg-pd-primary" : "border-pd-border-strong bg-white"}`}
-              >
-                {row.importChecked ? "✓" : ""}
-              </span>
+              <Checkbox
+                checked={row.importChecked}
+                disabled={!row.importChecked && atSelectionCap}
+                onCheckedChange={() => patch(row.location_id, { import: !row.importChecked })}
+                aria-label={`Import ${row.birdyName}`}
+              />
 
               {/* editable birdy name */}
-              <input
+              <Input
                 value={row.birdyName}
                 onChange={(e) => patch(row.location_id, { birdyName: e.target.value })}
-                className="min-w-0 flex-[1.2] rounded-full border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[13.5px] font-semibold text-pd-ink outline-none transition-colors hover:border-pd-primary-pale focus:border-pd-primary"
+                className="h-control-sm flex-[1.2] font-medium"
               />
 
               {/* read-only ghl name */}
-              <span className="hidden flex-1 truncate text-[12.5px] text-pd-faint sm:block">{row.name}</span>
+              <span className="hidden flex-1 truncate text-xs text-muted-foreground sm:block">{row.name}</span>
 
               {/* New leads in the last 30 days. The fastest way to tell a live
                   client from a dormant one — which is the question this whole
@@ -386,9 +385,10 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   only answers yes/no. Dashes while the prep job has not
                   reached this row yet; never a 0 it has not earned. */}
               <span
-                className={`w-[76px] shrink-0 text-right text-[12.5px] tabular-nums ${
-                  row.leads30dKnown ? (row.leads_30d > 0 ? "text-pd-success" : "text-pd-faint") : "text-pd-chevron"
-                }`}
+                className={cn(
+                  "w-[76px] shrink-0 text-right text-xs tabular-nums",
+                  row.leads30dKnown ? (row.leads_30d > 0 ? "text-success-ink" : "text-muted-foreground") : "text-muted-foreground/60"
+                )}
                 title={row.leads_30d_capped ? `More than ${row.leads_30d} new leads in the last 30 days` : undefined}
               >
                 {row.leads30dKnown ? `${row.leads_30d}${row.leads_30d_capped ? "+" : ""}` : "—"}
@@ -396,20 +396,25 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
               {/* facebook dropdown */}
               <div className="relative min-w-0 flex-[1.5]">
-                <div
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={fbMenuOpen === row.location_id}
                   onClick={(e) => {
                     e.stopPropagation()
                     setStatusMenuOpen(null)
+                    setLeadMenuOpen(null)
                     setFbSearch("")
                     setFbMenuOpen(fbMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className={`flex cursor-pointer items-center justify-between gap-[6px] rounded-full border-[1.5px] border-pd-border bg-white px-[10px] py-[7px] text-[12.5px] transition-colors hover:border-pd-primary-pale ${
-                    row.fb ? "text-pd-body" : "text-pd-amber"
-                  }`}
+                  className={cn(
+                    "flex h-control-sm w-full items-center justify-between gap-1.5 rounded-control bg-background px-2.5 text-left text-xs shadow-control outline-none transition-shadow hover:bg-muted focus-visible:shadow-control-focus",
+                    row.fb ? "text-body" : "text-warning-ink"
+                  )}
                 >
                   <span className="truncate">{row.fb ? row.fb.name : NO_MATCH}</span>
-                  <ChevronDown className="h-[11px] w-[11px] shrink-0 text-pd-faint" strokeWidth={2.4} />
-                </div>
+                  <ChevronDown className="size-3 shrink-0 text-muted-foreground" strokeWidth={2.4} />
+                </button>
 
                 {/* A pairing the server was not confident enough to fill in.
                     It is offered here rather than pre-selected: a wrong ad
@@ -425,26 +430,26 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                       e.stopPropagation()
                       patch(row.location_id, { fb: row.suggestion })
                     }}
-                    className="mt-[3px] block max-w-full cursor-pointer truncate border-0 bg-transparent p-0 text-left text-[11px] text-pd-primary underline"
+                    className="mt-1 block max-w-full truncate text-left text-xs text-primary underline underline-offset-2"
                   >
                     Did you mean {row.suggestion.name}?
                   </button>
                 )}
                 {fbMenuOpen === row.location_id && (
-                  <div className="absolute left-0 top-[38px] z-20 w-[290px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
+                  <div className="absolute left-0 top-10 z-20 w-[290px] overflow-hidden rounded-control bg-background shadow-floating">
                     <div className="p-2">
-                      <input
+                      <Input
                         value={fbSearch}
                         onChange={(e) => setFbSearch(e.target.value)}
                         onClick={(e) => e.stopPropagation()}
                         autoFocus
                         placeholder="Search ad accounts…"
-                        className="w-full rounded-full border-[1.5px] border-pd-border px-[9px] py-[7px] text-[12.5px] text-pd-ink outline-none focus:border-pd-primary"
+                        className="h-control-sm"
                       />
                     </div>
-                    <div className="pd-scrolly max-h-[180px] overflow-y-auto border-t border-pd-row-border">
+                    <div className="max-h-[180px] overflow-y-auto border-t border-border/60">
                       {fbOptions.length === 0 && (
-                        <div className="px-3 py-[9px] text-[12.5px] text-pd-faint">No ad accounts found</div>
+                        <div className="px-3 py-2 text-xs text-muted-foreground">No ad accounts found</div>
                       )}
                       {fbOptions.map((option) => (
                         <div
@@ -454,10 +459,10 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                             patch(row.location_id, { fb: option })
                             closeMenus()
                           }}
-                          className="cursor-pointer border-b border-pd-row-border px-3 py-[9px] text-[12.5px] text-pd-ink last:border-b-0 hover:bg-pd-primary-tint"
+                          className="cursor-pointer border-t border-border/60 px-3 py-2 text-xs text-foreground first:border-t-0 hover:bg-primary-soft"
                         >
                           {option.name}
-                          <span className="ml-[6px] text-[11px] text-pd-faint">{option.id}</span>
+                          <span className="ml-1.5 text-muted-foreground">{option.id}</span>
                         </div>
                       ))}
                     </div>
@@ -467,30 +472,33 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
               {/* status dropdown */}
               <div className="relative w-[118px] shrink-0">
-                <div
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={statusMenuOpen === row.location_id}
                   onClick={(e) => {
                     e.stopPropagation()
                     setFbMenuOpen(null)
+                    setLeadMenuOpen(null)
                     setStatusMenuOpen(statusMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className={`flex cursor-pointer items-center justify-between gap-[5px] rounded-full border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold ${
-                    row.status === "active"
-                      ? "border-pd-success bg-pd-success-bg text-pd-success"
-                      : "border-gray-600 bg-pd-divider text-pd-body"
-                  }`}
+                  className={cn(
+                    "flex h-control-sm w-full items-center justify-between gap-1 rounded-control px-2.5 text-xs font-medium outline-none focus-visible:shadow-control-focus",
+                    row.status === "active" ? "bg-success-soft text-success-ink" : "bg-neutral-soft text-neutral-ink"
+                  )}
                 >
                   {row.status === "active" ? "Active" : "Inactive"}
-                  <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
-                </div>
+                  <ChevronDown className="size-3 shrink-0" strokeWidth={2.6} />
+                </button>
                 {statusMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[118px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
+                  <div className="absolute right-0 top-10 z-20 w-[118px] overflow-hidden rounded-control bg-background shadow-floating">
                     <div
                       onClick={(e) => {
                         e.stopPropagation()
                         patch(row.location_id, { status: "active" })
                         closeMenus()
                       }}
-                      className="cursor-pointer px-[11px] py-2 text-[11.5px] font-semibold text-pd-success hover:bg-pd-success-bg"
+                      className="cursor-pointer px-3 py-2 text-xs font-medium text-success-ink hover:bg-success-soft"
                     >
                       Active
                     </div>
@@ -500,7 +508,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                         patch(row.location_id, { status: "inactive" })
                         closeMenus()
                       }}
-                      className="cursor-pointer border-t border-pd-row-border px-[11px] py-2 text-[11.5px] font-semibold text-pd-faint hover:bg-pd-canvas"
+                      className="cursor-pointer border-t border-border/60 px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-muted"
                     >
                       Inactive
                     </div>
@@ -510,24 +518,28 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
 
               {/* lead source dropdown */}
               <div className="relative w-[132px] shrink-0">
-                <div
+                <button
+                  type="button"
+                  aria-haspopup="listbox"
+                  aria-expanded={leadMenuOpen === row.location_id}
                   onClick={(e) => {
                     e.stopPropagation()
                     setFbMenuOpen(null)
                     setStatusMenuOpen(null)
                     setLeadMenuOpen(leadMenuOpen === row.location_id ? null : row.location_id)
                   }}
-                  className={`flex cursor-pointer items-center justify-between gap-[5px] rounded-full border-[1.5px] px-[9px] py-[6px] text-[11px] font-bold ${
+                  className={cn(
+                    "flex h-control-sm w-full items-center justify-between gap-1 rounded-control px-2.5 text-xs font-medium outline-none focus-visible:shadow-control-focus",
                     LEAD_SOURCE_STYLE[
                       (LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).tone
                     ]
-                  }`}
+                  )}
                 >
                   {(LEAD_SOURCES.find((o) => o.key === row.leadSource) || LEAD_SOURCES[0]).short}
-                  <ChevronDown className="h-[10px] w-[10px] shrink-0" strokeWidth={2.6} />
-                </div>
+                  <ChevronDown className="size-3 shrink-0" strokeWidth={2.6} />
+                </button>
                 {leadMenuOpen === row.location_id && (
-                  <div className="absolute right-0 top-9 z-20 w-[280px] overflow-hidden rounded-xl border border-pd-border bg-white shadow-pd-popover">
+                  <div className="absolute right-0 top-10 z-20 w-[280px] overflow-hidden rounded-control bg-background shadow-floating">
                     {LEAD_SOURCES.map((option) => (
                       <div
                         key={option.key}
@@ -536,10 +548,10 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                           patch(row.location_id, { leadSource: option.key })
                           closeMenus()
                         }}
-                        className="cursor-pointer border-b border-pd-row-border px-[11px] py-2 text-[11.5px] text-pd-ink last:border-b-0 hover:bg-pd-primary-tint"
+                        className="cursor-pointer border-t border-border/60 px-3 py-2 text-xs text-foreground first:border-t-0 hover:bg-primary-soft"
                       >
-                        <div className="font-semibold">{option.label}</div>
-                        <div className="mt-0.5 text-[10.5px] text-pd-faint">{option.brief}</div>
+                        <div className="font-medium">{option.label}</div>
+                        <div className="mt-0.5 text-muted-foreground">{option.brief}</div>
                       </div>
                     ))}
                   </div>
@@ -548,7 +560,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
             </div>
           ))}
         </div>
-      </div>
+      </Surface>
 
       {/* click-catcher for open dropdowns */}
       {(fbMenuOpen || statusMenuOpen || leadMenuOpen) && (
@@ -556,7 +568,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       )}
 
       {(query || hiddenInactive > 0) && visible.length > 0 && (
-        <div className="mt-[14px] text-center text-[12.5px] text-pd-faint">
+        <div className="mt-3.5 text-xs text-muted-foreground">
           {query && <>Showing {visible.length} of {resolved.length}</>}
           {/* Said out loud because the Import button counts every ticked row,
               including the ones this search is hiding — without this the count
@@ -570,7 +582,7 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
               <button
                 type="button"
                 onClick={() => setHideInactive(false)}
-                className="cursor-pointer border-0 bg-transparent p-0 text-[12.5px] font-semibold text-pd-primary underline"
+                className="font-medium text-primary underline underline-offset-2"
               >
                 show them
               </button>
@@ -580,15 +592,16 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
       )}
 
       {atSelectionCap && (
-        <div className="mt-[14px] text-center text-[12.5px] text-pd-faint">
+        <div className="mt-3.5 text-xs text-muted-foreground">
           You&apos;ve selected the maximum of {MAX_IMPORT_SELECTION} sub-accounts for this import — untick one to pick another.
         </div>
       )}
 
-      <div className="relative z-[6] mt-[26px] text-center">
-        <PrimaryButton
-          disabled={importing || importCount === 0}
-          onClick={() =>
+      <WizardFooter
+        primary={{
+          label: importing ? "Importing…" : `Import ${importCount} sub-account${importCount === 1 ? "" : "s"}`,
+          disabled: importing || importCount === 0,
+          onClick: () =>
             onImport(
               resolved
                 .filter((r) => r.importChecked)
@@ -600,12 +613,9 @@ export default function ReviewStep({ review, settled, importing, onImport }) {
                   client_status: r.status === "active" ? "Active" : "Inactive",
                   lead_collection_method: r.leadSource,
                 }))
-            )
-          }
-        >
-          {importing ? "Importing…" : `Import ${importCount} sub-account${importCount === 1 ? "" : "s"}`}
-        </PrimaryButton>
-      </div>
+            ),
+        }}
+      />
     </Stagger>
   )
 }

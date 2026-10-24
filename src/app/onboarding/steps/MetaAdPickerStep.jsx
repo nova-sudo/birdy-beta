@@ -1,11 +1,12 @@
+import { Notice } from "@/components/ds"
 import {
   FacebookGlyph,
   FakeProgressBar,
   PickList,
-  PrimaryButton,
   SearchInput,
   STEP_COL_WIDE,
   StepHeading,
+  WizardFooter,
 } from "../parts"
 
 export default function MetaAdPickerStep({
@@ -30,7 +31,7 @@ export default function MetaAdPickerStep({
       title: a.name || a.id,
       sub: a.id,
       leading: (
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-info-bg text-pd-info">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-info-soft text-info-ink">
           <FacebookGlyph size={15} />
         </div>
       ),
@@ -38,20 +39,16 @@ export default function MetaAdPickerStep({
     }))
 
   return (
-    <div className={`${STEP_COL_WIDE} text-left`}>
-      <div className="mb-4 text-center">
-        <StepHeading small>Which Meta ad account is {clientDisplayName}?</StepHeading>
-      </div>
+    <div className={STEP_COL_WIDE}>
+      <StepHeading>Which Meta ad account is {clientDisplayName}?</StepHeading>
       {metaStatus === "checking" ? (
         <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your Meta connection…" /></div>
       ) : metaStatus !== "success" ? (
-        <div className="py-6 text-center text-[13px] text-pd-faint">
+        <div className="py-6 text-sm text-muted-foreground">
           Connect Meta first and your ad accounts will show up here.
         </div>
       ) : adError ? (
-        <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-center text-[12.5px] text-pd-body">
-          {adError}
-        </div>
+        <Notice tone="danger" className="mb-4">{adError}</Notice>
       ) : adAccounts === null ? (
         <div className="py-10">
           <FakeProgressBar expectedMs={6000} caption="Fetching your Meta ad accounts…" />
@@ -83,9 +80,7 @@ export default function MetaAdPickerStep({
           />
         </>
       )}
-      <div className="text-center">
-        <PrimaryButton disabled={!selectedAd} onClick={() => next()}>Continue</PrimaryButton>
-      </div>
+      <WizardFooter primary={{ label: "Continue", disabled: !selectedAd, onClick: () => next() }} />
     </div>
   )
 }

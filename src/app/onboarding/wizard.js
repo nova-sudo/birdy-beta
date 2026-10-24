@@ -72,7 +72,14 @@ export const CURRENCY_OPTIONS = [
   { code: "CNY", label: "Chinese Yuan" },
 ]
 
-export const CONFETTI_COLORS = ["#5B3FD6", "#3B7DD6", "#25A55F", "#E0920A", "#E5484D", "#9F8BEA"]
+export const CONFETTI_COLORS = [
+  "var(--color-primary)",
+  "var(--color-info)",
+  "var(--color-success)",
+  "var(--color-warning)",
+  "var(--color-danger)",
+  "var(--color-primary-soft)",
+]
 
 /**
  * The three answers from the KPI step, as PUT /api/client-groups/{id}/targets

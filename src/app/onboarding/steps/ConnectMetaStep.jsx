@@ -4,13 +4,12 @@ import ConnectStates from "./ConnectStates"
 export default function ConnectMetaStep({ metaStatus, setMetaStatus, startOAuth, oauthError, next }) {
   return (
     <div className={STEP_COL}>
-      <IconChip className="bg-pd-info-bg text-pd-info"><FacebookGlyph /></IconChip>
-      <div className="mb-[10px]"><StepHeading>Next up, let&apos;s connect Meta.</StepHeading></div>
-      <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
-        Birdy reads ad spend, impressions and results from your ad accounts so it can
-        calculate cost-per-lead and flag underperforming ads. We can&apos;t post or spend
-        on your behalf.
-      </div>
+      <IconChip tone="info"><FacebookGlyph /></IconChip>
+      <StepHeading
+        description="Birdy reads ad spend, impressions and results from your ad accounts so it can calculate cost-per-lead and flag underperforming ads. We can't post or spend on your behalf."
+      >
+        Next up, let&apos;s connect Meta.
+      </StepHeading>
       <ConnectStates
         status={metaStatus}
         onConnect={() => startOAuth("/api/connect/facebook", setMetaStatus)}

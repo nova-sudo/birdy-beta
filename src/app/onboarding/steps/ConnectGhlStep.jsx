@@ -5,14 +5,12 @@ import ConnectStates from "./ConnectStates"
 export default function ConnectGhlStep({ name, ghlStatus, setGhlStatus, startOAuth, oauthError, next }) {
   return (
     <div className={STEP_COL}>
-      <IconChip className="bg-pd-primary-tint text-pd-primary"><Home className="h-[26px] w-[26px]" strokeWidth={2} /></IconChip>
-      <div className="mb-[10px]">
-        <StepHeading>Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.</StepHeading>
-      </div>
-      <div className="mb-7 text-[14px] leading-relaxed text-pd-body">
-        Birdy will read your sub-accounts, contacts, and opportunity pipelines so it can
-        track leads and conversions. We never modify your GHL data.
-      </div>
+      <IconChip tone="primary"><Home className="size-6" strokeWidth={2} /></IconChip>
+      <StepHeading
+        description="Birdy will read your sub-accounts, contacts, and opportunity pipelines so it can track leads and conversions. We never modify your GHL data."
+      >
+        Great{name ? `, ${name}` : ""} — let&apos;s get you connected to GHL.
+      </StepHeading>
       <ConnectStates
         status={ghlStatus}
         onConnect={() => startOAuth("/api/connect", setGhlStatus)}

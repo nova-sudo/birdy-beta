@@ -1,11 +1,12 @@
+import { Notice } from "@/components/ds"
 import {
   FakeProgressBar,
   InitialsAvatar,
   PickList,
-  PrimaryButton,
   SearchInput,
   STEP_COL_WIDE,
   StepHeading,
+  WizardFooter,
 } from "../parts"
 
 export default function ClientPickerStep({
@@ -40,20 +41,16 @@ export default function ClientPickerStep({
     })
 
   return (
-    <div className={`${STEP_COL_WIDE} text-left`}>
-      <div className="mb-4 text-center">
-        <StepHeading small>Let&apos;s choose your first client to onboard!</StepHeading>
-      </div>
+    <div className={STEP_COL_WIDE}>
+      <StepHeading>Let&apos;s choose your first client to onboard!</StepHeading>
       {ghlStatus === "checking" ? (
         <div className="py-10"><FakeProgressBar expectedMs={2500} caption="Checking your GHL connection…" /></div>
       ) : ghlStatus !== "success" ? (
-        <div className="py-6 text-center text-[13px] text-pd-faint">
+        <div className="py-6 text-sm text-muted-foreground">
           Connect GHL first and your sub-accounts will show up here.
         </div>
       ) : locationsError ? (
-        <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-center text-[12.5px] text-pd-body">
-          {locationsError}
-        </div>
+        <Notice tone="danger" className="mb-4">{locationsError}</Notice>
       ) : locations === null ? (
         // A large agency's location list is genuinely slow — hundreds
         // of sub-accounts, paged out of GHL. A bare spinner here reads
@@ -88,9 +85,7 @@ export default function ClientPickerStep({
           />
         </>
       )}
-      <div className="text-center">
-        <PrimaryButton disabled={!selectedClient} onClick={() => next()}>Continue</PrimaryButton>
-      </div>
+      <WizardFooter primary={{ label: "Continue", disabled: !selectedClient, onClick: () => next() }} />
     </div>
   )
 }
