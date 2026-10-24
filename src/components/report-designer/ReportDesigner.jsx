@@ -39,6 +39,11 @@ export default function ReportDesigner({
   // Onboarding runs before billing and the server lets this page through
   // while onboarding is incomplete; everywhere else the usual gate applies.
   ignoreCreditsGate = false,
+  // The caller draws its own actions (the onboarding wizard puts them in its
+  // footer): hide the button stack here and report the template through
+  // onTemplateChange instead.
+  hideActions = false,
+  onTemplateChange,
 }) {
   const [ready, setReady] = useState(false)
   const [chatGen, setChatGen] = useState(0)
@@ -111,6 +116,12 @@ export default function ReportDesigner({
 
   const template = preview?.template
 
+  const templateChange = useRef(onTemplateChange)
+  templateChange.current = onTemplateChange
+  useEffect(() => {
+    templateChange.current?.(template ?? null)
+  }, [template])
+
   return (
     <div className={`grid w-full grid-cols-1 gap-5 text-left lg:grid-cols-[minmax(0,1fr)_400px] ${heightClass}`}>
       {/* Conversation */}
@@ -151,7 +162,7 @@ export default function ReportDesigner({
       {/* Live preview */}
       <div className="flex min-h-0 flex-col">
         <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-bold tracking-[0.05em] text-muted-foreground">LIVE PREVIEW</span>
+          <span className="text-xs font-medium text-muted-foreground">Live preview</span>
           {template && (
             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <CalendarClock className="size-3.5" aria-hidden="true" />
@@ -175,24 +186,26 @@ export default function ReportDesigner({
             />
           )}
         </div>
-        <div className="mt-4 flex flex-col items-stretch gap-2">
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            onClick={() => {
-              if (!template) {
-                toast.error("The preview hasn't loaded yet")
-                return
-              }
-              use()
-            }}
-            disabled={saving || !template}
-          >
-            {saving ? "Saving…" : primaryLabel}
-          </Button>
-          {secondaryAction}
-        </div>
+        {!hideActions && (
+          <div className="mt-4 flex flex-col items-stretch gap-2">
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              onClick={() => {
+                if (!template) {
+                  toast.error("The preview hasn't loaded yet")
+                  return
+                }
+                use()
+              }}
+              disabled={saving || !template}
+            >
+              {saving ? "Saving…" : primaryLabel}
+            </Button>
+            {secondaryAction}
+          </div>
+        )}
       </div>
     </div>
   )

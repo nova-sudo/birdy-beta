@@ -87,6 +87,20 @@ describe("ReportDesigner", () => {
 
     await waitFor(() => expect(onUse).toHaveBeenCalledWith(TEMPLATE))
   })
+
+  it("with hideActions drops the button stack and reports the template instead", async () => {
+    const onTemplateChange = vi.fn()
+    apiRequest.mockImplementation((url) =>
+      url === "/api/report-designer/draft" ? json({}) : previewWith("Ready"))
+    render(<ReportDesigner sessionKey="t5" hideActions secondaryAction={<button>skip</button>} onTemplateChange={onTemplateChange} />)
+    await screen.findByText("Ready")
+
+    expect(screen.queryByRole("button", { name: /use this report/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /skip/i })).toBeNull()
+    expect(onTemplateChange).toHaveBeenCalledWith(null)
+    expect(onTemplateChange).toHaveBeenLastCalledWith(TEMPLATE)
+    expect(screen.getByText("Live preview")).toBeTruthy()
+  })
 })
 
 import { firstChange } from "../ReportDesigner"

@@ -33,4 +33,9 @@ describe("ProgressBar", () => {
     rerender(<ProgressBar value={10} triggered />)
     expect(fill()).toHaveClass("bg-danger")
   })
+
+  it("holds a fixed tone regardless of the value", () => {
+    render(<ProgressBar value={100} tone="primary" />)
+    expect(fill()).toHaveClass("bg-primary")
+  })
 })

@@ -23,8 +23,9 @@ function progressTone(value, triggered = false) {
  * @param {number} props.value Percent of the way to the threshold (may exceed 100)
  * @param {boolean} [props.triggered] Forces the crossed (red) tone
  * @param {string} [props.label] Accessible name, e.g. "Progress to trigger"
+ * @param {"primary"|"warning"|"danger"} [props.tone] Fixes the fill colour, for progress that is not measured against a threshold (a sync, an import)
  */
-function ProgressBar({ value = 0, triggered = false, label = "Progress", className, ...props }) {
+function ProgressBar({ value = 0, triggered = false, tone, label = "Progress", className, ...props }) {
   const pct = Number.isFinite(value) ? value : 0
   const clamped = Math.min(100, Math.max(0, pct))
   return (
@@ -40,7 +41,7 @@ function ProgressBar({ value = 0, triggered = false, label = "Progress", classNa
     >
       <div
         data-slot="progress-fill"
-        className={cn("h-full rounded-full transition-[width] duration-300 ease-edge motion-reduce:transition-none", FILL[progressTone(pct, triggered)])}
+        className={cn("h-full rounded-full transition-[width] duration-300 ease-edge motion-reduce:transition-none", FILL[tone ?? progressTone(pct, triggered)])}
         style={{ width: `${clamped}%` }}
       />
     </div>
