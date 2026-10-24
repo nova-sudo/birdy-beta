@@ -41,7 +41,7 @@ export function PlanCard({ plan, billingStatus, onCheckout, onManage, loadingMan
         ) : null}
       </div>
       <div className="flex items-baseline gap-1">
-        <span className={cn("num text-2xl font-semibold leading-none", dark ? "text-primary-foreground" : "text-foreground")}>${plan.price}</span>
+        <span className={cn("num text-figure font-semibold leading-none", dark ? "text-primary-foreground" : "text-foreground")}>${plan.price}</span>
         <span className={cn("text-xs", dark ? "text-primary-foreground/70" : "text-muted-foreground")}>/mo</span>
       </div>
       <ul className="flex flex-1 flex-col gap-2">

@@ -8,13 +8,18 @@ import PrivacyPolicy from "../privacy-policy/page"
 import RefundPolicy from "../refund-policy/page"
 import TermsOfService from "../terms-of-service/page"
 
-const LEGACY = /(?:^|[\s:])(?:gray|purple|slate|zinc)-\d|(?:^|[\s:-])pd-/
+const LEGACY = /\b(?:gray|purple|slate|zinc)-\d|\bpd-/
 
 describe.each([
-  ["Privacy Policy", PrivacyPolicy],
-  ["Refund Policy", RefundPolicy],
-  ["Terms of Service", TermsOfService],
-])("%s page", (title, Page) => {
+  ["Privacy Policy", PrivacyPolicy, "We do not sell, rent, or trade your personal information."],
+  ["Refund Policy", RefundPolicy, "we will issue a full refund of the erroneous charge."],
+  ["Terms of Service", TermsOfService, "These Terms are governed by and construed in accordance with applicable law."],
+])("%s page", (title, Page, sentinel) => {
+  it("keeps its legal copy", () => {
+    const { container } = render(<Page />)
+    expect(container.textContent).toContain(sentinel)
+  })
+
   it("renders its headings", () => {
     render(<Page />)
     expect(screen.getByRole("heading", { level: 1, name: title })).toBeTruthy()

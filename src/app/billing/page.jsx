@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import {
   Check, Plus, ExternalLink, AlertCircle, Loader2, Users,
 } from "lucide-react";
@@ -165,6 +165,15 @@ function PlanSummaryCard({ billingStatus, onPortal, loadingPortal, onUpgrade, on
         </div>
       </div>
 
+      {billingStatus.cancel_at_period_end && (
+        <SystemBanner tone="warning" className="mt-3 rounded-control">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            Your subscription will cancel at the end of this billing period.
+          </span>
+        </SystemBanner>
+      )}
+
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
         {next && (
           <Button variant="primary" onClick={() => onUpgrade(next)} disabled={loadingPortal}>Upgrade to {next.name}</Button>
@@ -227,6 +236,7 @@ export default function BillingPage() {
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const loadedRef = useRef(false);
   const [successMsg, setSuccessMsg] = useState(null);
   const [checkoutPlan, setCheckoutPlan] = useState(null);
   const [storedEmail, setStoredEmail] = useState("");
@@ -242,8 +252,12 @@ export default function BillingPage() {
       if (!res.ok) throw new Error("Failed to load billing status");
       setBillingStatus(await res.json());
       setLoadError(null);
+      loadedRef.current = true;
     } catch (e) {
       setLoadError(e.message);
+      // A status is already on screen (a post-checkout poll failed): say so,
+      // as the page always did, rather than leave a stale plan unexplained.
+      if (loadedRef.current) setError(e.message);
     } finally {
       setLoading(false);
     }
@@ -322,14 +336,6 @@ export default function BillingPage() {
       <PageHeader title="Billing" description="Your plan, client slots and AI credits" />
       <SuccessBanner message={successMsg} onDismiss={() => setSuccessMsg(null)} />
       <SuccessBanner message={credits.successMsg} onDismiss={() => credits.setSuccessMsg(null)} />
-      {billingStatus?.cancel_at_period_end && (
-        <SystemBanner tone="warning" className="rounded-control">
-          <span className="flex items-center gap-2">
-            <AlertCircle className="size-4 shrink-0" />
-            Your subscription will cancel at the end of this billing period.
-          </span>
-        </SystemBanner>
-      )}
       {error && (
         <SystemBanner tone="danger" className="rounded-control font-medium" onDismiss={() => setError(null)}>
           <span className="flex items-center gap-2">

@@ -2,10 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+vi.hoisted(() => { process.env.NEXT_PUBLIC_WHOP_PLAN_GROWTH = "plan_growth_test" })
 vi.mock("next/link", () => ({ default: ({ children, ...props }) => <a {...props}>{children}</a> }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("@/components/page-header", () => ({ usePageHeader: vi.fn() }))
-vi.mock("@whop/checkout/react", () => ({ WhopCheckoutEmbed: () => <div data-testid="whop-embed" /> }))
+const whop = vi.hoisted(() => ({ props: null }))
+vi.mock("@whop/checkout/react", () => ({
+  WhopCheckoutEmbed: (props) => {
+    whop.props = props
+    return <div data-testid="whop-embed" />
+  },
+}))
 const credits = vi.hoisted(() => ({ setCheckoutPack: vi.fn() }))
 vi.mock("@/components/settings/CreditsPanel", () => ({
   useCreditsData: () => ({
@@ -144,5 +151,49 @@ describe("/billing", () => {
     mockStatus(growth())
     await userEvent.setup().click(screen.getByRole("button", { name: /try again/i }))
     await waitFor(() => expect(container.querySelector('[data-plan="growth"]')).toBeTruthy())
+  })
+
+  it("opens checkout on Get started and prefills the stored email", async () => {
+    localStorage.setItem("user", JSON.stringify({ email: "owner@agency.test" }))
+    mockStatus({ subscribed: false })
+    const { container } = render(<BillingPage />)
+    const user = userEvent.setup()
+
+    await screen.findByText("No plan yet")
+    const growthCard = container.querySelector('[data-plan="growth"]')
+    await user.click(growthCard.querySelector("button"))
+
+    expect(await screen.findByTestId("whop-embed")).toBeTruthy()
+    expect(whop.props.planId).toBe("plan_growth_test")
+    expect(whop.props.prefill).toEqual({ email: "owner@agency.test" })
+    localStorage.removeItem("user")
+  })
+
+  it("surfaces a failed post-checkout poll when a status is already loaded", async () => {
+    window.history.pushState({}, "", "/billing?checkout=success")
+    let calls = 0
+    apiRequest.mockImplementation(async () => {
+      calls += 1
+      return calls === 1 ? json(growth()) : json({}, false)
+    })
+    const { container } = render(<BillingPage />)
+
+    await waitFor(() => expect(container.querySelector('[data-plan="growth"]')).toBeTruthy())
+    await waitFor(
+      () => expect(container.querySelector('[data-ds="system-banner"]')?.textContent).toMatch(/Failed to load billing status/),
+      { timeout: 4000 }
+    )
+    // The loaded page stays; no full-page ErrorState replaces it.
+    expect(container.querySelector('[data-ds="error-state"]')).toBeNull()
+    expect(container.querySelector('[data-plan="growth"]')).toBeTruthy()
+    window.history.pushState({}, "", "/")
+  })
+
+  it("keeps the cancel warning inside the plan summary card", async () => {
+    mockStatus(growth({ cancel_at_period_end: true }))
+    const { container } = render(<BillingPage />)
+
+    await waitFor(() => expect(container.querySelector('[data-ds="system-banner"]')).toBeTruthy())
+    expect(container.querySelector('[data-ds="system-banner"]').closest('[data-ds="surface"]')).toBeTruthy()
   })
 })
