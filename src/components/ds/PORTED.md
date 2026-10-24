@@ -16,3 +16,10 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | primitives/tabs.jsx | ui/tabs.tsx | none (Bytes file is the Radix wrapper) | Underline style: hairline list, primary bar on active trigger. Same four exports |
 | primitives/segmented-tabs.jsx | composed/segmented-tabs.tsx | tooltip per option, remix info icon, `badge` string | Rebuilt: muted track, white `shadow-control` thumb sliding via framer-motion `layoutId` spring (damping 22, stiffness 260). Props `value/onValueChange/items[{value,label,count}]/size` replace `value/onChange/options` |
 | primitives/kbd.jsx | ui/coss/kbd.tsx | none | `rounded-sm`, token colours. Exports Kbd and KbdGroup |
+| surfaces/frame.jsx | ui/frame.tsx | border/description/href/footer/tone props, FrameAction, remix icon, useId | Rebuilt to Paper: `bg-muted rounded-frame`, header row with title 16/600 (h2, `titleAs`), `meta`, `actions`, children below |
+| surfaces/surface.jsx | ui/card.tsx | auth gate, tooltip import, Card sub-parts (header/title/content/footer/action) | Single `Surface`: `bg-background rounded-surface shadow-surface`, `as`, `padded` |
+| surfaces/notice.jsx | composed/notice.tsx | none | Tones info/success/warning/danger/neutral on soft + ink tokens, `title`, `role="status"`, action trailing right |
+| surfaces/empty-state.jsx | ui/empty-state.tsx | `ui/empty.tsx` parts, size prop | Flattened to one component; `icon` takes a lucide component or node. `ui/empty.tsx` not ported |
+| surfaces/error-state.jsx | composed/error-state.tsx | clientConfig dev-only error detail, remix icon, `error`/`message` props | Layout and copy from `portfolio/LoadError` (defaults "Couldn't load this" / "The request failed."); retry uses ds Button; `description` replaces `message` |
+| surfaces/skeleton.jsx | ui/skeleton.tsx | none | `bg-muted rounded-control`, pulse off under reduced motion |
+| surfaces/spinner.jsx | ui/spinner.tsx (re-export from the shared ui package) | the shared-package import | Written locally: lucide `Loader2`, `size` px, `label` gives role="status" + sr-only text, else aria-hidden |
