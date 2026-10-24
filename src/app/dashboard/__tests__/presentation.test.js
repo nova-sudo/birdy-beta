@@ -75,6 +75,20 @@ describe("toFindings", () => {
     expect(onApply).toHaveBeenCalledWith(s);
   });
 
+  it("wires onDismiss to suggestions only", () => {
+    const onDismiss = vi.fn();
+    const s = suggestion();
+    const rows = toFindings(
+      { findings: [{ tone: "info", parts: [{ text: "Note", strong: true }] }] },
+      [s],
+      { onDismiss }
+    );
+    const sug = rows.find((r) => r.id === "suggestion-s1");
+    sug.onDismiss();
+    expect(onDismiss).toHaveBeenCalledWith(s);
+    expect(rows.find((r) => r.id === "briefing-0").onDismiss).toBeUndefined();
+  });
+
   it("offers no action without an onApply handler", () => {
     expect(toFindings({}, [suggestion()])[0].action).toBeUndefined();
   });
@@ -207,5 +221,9 @@ describe("portfolioSummary and greeting", () => {
     expect(greeting(8, "Sam")).toBe("Good morning, Sam");
     expect(greeting(13)).toBe("Good afternoon");
     expect(greeting(21, "Sam")).toBe("Good evening, Sam");
+  });
+  it("is a neutral hello until the hour is known, so server and first client render agree", () => {
+    expect(greeting(null, "Sam")).toBe("Hello, Sam");
+    expect(greeting(undefined)).toBe("Hello");
   });
 });

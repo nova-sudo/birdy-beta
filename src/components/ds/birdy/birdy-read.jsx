@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { AlertCircleIcon, CheckIcon, ClockIcon, InfoIcon, MinusIcon } from "lucide-react"
+import { AlertCircleIcon, CheckIcon, ClockIcon, InfoIcon, MinusIcon, XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { askBirdy } from "@/lib/ask-birdy"
@@ -43,18 +43,36 @@ function Action({ action }) {
   )
 }
 
+// Icon-only dismiss, in a fixed slot so rows line up whether or not they have one.
+function Dismiss({ title, onDismiss }) {
+  if (!onDismiss) return <span className="size-8 shrink-0" aria-hidden="true" />
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="shrink-0 text-muted-foreground"
+      aria-label={`Dismiss ${typeof title === "string" ? title : "finding"}`}
+      onClick={onDismiss}
+    >
+      <XIcon />
+    </Button>
+  )
+}
+
 /**
  * Birdy's short list of what needs attention: a muted `Frame` with the framed
  * mascot, a count and a white `Surface` of actionable rows (at most 5).
  *
  * @param {object} props
  * @param {React.ReactNode} [props.title="Birdy's read"]
- * @param {{id: string, tone: "danger"|"warning"|"success"|"info"|"neutral", title: React.ReactNode, detail?: React.ReactNode, action?: {label: string, onClick?: () => void, href?: string}}[]} props.findings
+ * @param {{id: string, tone: "danger"|"warning"|"success"|"info"|"neutral", title: React.ReactNode, detail?: React.ReactNode, action?: {label: string, onClick?: () => void, href?: string}, onDismiss?: () => void}[]} props.findings
+ *   `onDismiss` adds an icon-only dismiss button after the action
  * @param {string} [props.prompt] Seeds the "Ask Birdy about this" footer link
  * @param {React.ReactNode} [props.empty] Shown with no findings; defaults to "Nothing needs you right now."
  */
 function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, className, ...props }) {
   const rows = findings.slice(0, MAX_ROWS)
+  const canDismiss = rows.some((f) => f.onDismiss)
 
   return (
     <Frame
@@ -98,10 +116,11 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, empty, class
                     <Icon className="size-4" strokeWidth={2.5} />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-[15px] font-medium text-foreground">{f.title}</span>
+                    <span className="truncate text-base font-medium text-foreground">{f.title}</span>
                     {f.detail && <span className="truncate text-xs text-muted-foreground">{f.detail}</span>}
                   </div>
                   <Action action={f.action} />
+                  {canDismiss && <Dismiss title={f.title} onDismiss={f.onDismiss} />}
                 </li>
               )
             })}

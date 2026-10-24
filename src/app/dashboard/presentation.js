@@ -12,8 +12,13 @@ const TONE_ORDER = ["danger", "warning", "info", "success", "neutral"];
 
 const SEVERITY_TONE = { HIGH: "danger", MEDIUM: "warning", OPPORTUNITY: "success" };
 
-/** "Good morning" / "Good afternoon" / "Good evening" for an hour 0-23. */
+/**
+ * "Good morning" / "Good afternoon" / "Good evening" for an hour 0-23. With no
+ * hour yet (server render, first client render) it is a neutral "Hello", so
+ * the markup is the same on both sides and hydration has nothing to correct.
+ */
 export function greeting(hour, name) {
+  if (hour == null) return name ? `Hello, ${name}` : "Hello";
   const part = hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
   return name ? `Good ${part}, ${name}` : `Good ${part}`;
 }
@@ -141,20 +146,21 @@ const partsText = (parts, strong) =>
  * Turns the briefing's findings and the pending suggestions into BirdyRead
  * rows: worst tone first, at most five.
  *
- * A suggestion's "Do it" becomes the row's action; briefing findings are
- * observations and carry none.
+ * A suggestion's "Do it" becomes the row's action and it can be dismissed;
+ * briefing findings are observations and carry neither.
  *
  * @param {{findings?: {tone?: string, parts: {text: string, strong?: boolean}[]}[]}} briefing
  * @param {{id: string, severity?: string, client?: string, title: string, why?: string}[]} suggestions
- * @param {{onApply?: (suggestion: object) => void}} [options]
+ * @param {{onApply?: (suggestion: object) => void, onDismiss?: (suggestion: object) => void}} [options]
  */
-export function toFindings(briefing, suggestions, { onApply } = {}) {
+export function toFindings(briefing, suggestions, { onApply, onDismiss } = {}) {
   const fromSuggestions = (suggestions ?? []).map((s) => ({
     id: `suggestion-${s.id}`,
     tone: SEVERITY_TONE[s.severity] ?? "warning",
     title: s.title,
     detail: [s.client, s.why].filter(Boolean).join(" · ") || undefined,
     action: onApply ? { label: "Do it", onClick: () => onApply(s) } : undefined,
+    onDismiss: onDismiss ? () => onDismiss(s) : undefined,
   }));
 
   const fromBriefing = (briefing?.findings ?? []).map((f, i) => ({

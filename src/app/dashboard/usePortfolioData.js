@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "@/lib/api";
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 import { useCurrency } from "@/hooks/useCurrency";
@@ -8,19 +8,14 @@ import { presetToDateRange } from "@/lib/date-utils";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
 import {
   aggregatePortfolio,
-  buildCallInsights,
   buildFunnel,
   buildKpis,
-  buildLeaderboards,
 } from "@/lib/portfolio-aggregate";
 import {
   PREVIOUS_PERIOD,
   bucketSeries,
-  callTimestamps,
-  scaleSeriesToTotal,
   subtractPeriods,
 } from "@/lib/portfolio-series";
-import { MAX_LEADS_TO_FETCH } from "@/constants/sales-hub-constants";
 import { isChangeActivity } from "@/lib/activity";
 import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 
@@ -29,15 +24,12 @@ import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 // Everything on this screen is real, from endpoints that already exist:
 //
 //   /api/client-groups?date_preset=      per-client Meta / GHL / HotProspector
-//                                        caches → KPIs, leaderboards, funnel,
-//                                        call insights
+//                                        caches → KPIs, per-client rows,
+//                                        funnel
 //   /api/client-groups?date_preset=<prev> the preceding period, for deltas
 //   /api/facebook-leads/series           per-day lead and close counts across
 //                                        the whole range → the leads and
 //                                        closes trend series
-//   /api/hotprospector/call-center       leads with nested call logs →
-//                                        the calls series, fetched only when
-//                                        that tab is opened
 //   /api/dashboard/summary               Birdy suggestions and activity
 //
 // Two things the design asks for that no endpoint provides, and which are
@@ -58,11 +50,10 @@ import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 // Deltas appear only for presets whose previous period is expressible as
 // another preset (see PREVIOUS_PERIOD). Elsewhere the pills are simply absent.
 
-export function usePortfolioData({
-  preset = DEFAULT_DATE_PRESET,
-  granularity = "Daily",
-  chartMetric = "leads",
-} = {}) {
+// The chart buckets by day; the page has no control for it.
+const GRANULARITY = "Daily";
+
+export function usePortfolioData({ preset = DEFAULT_DATE_PRESET } = {}) {
   // useClientGroups takes its argument as an *initial* value — it holds the
   // preset in its own state and expects callers to move it with setDatePreset.
   // Passing a new one on re-render does nothing, so the date range has to be
@@ -106,12 +97,6 @@ export function usePortfolioData({
     wins: [],
   });
   const [seriesLoading, setSeriesLoading] = useState(true);
-  // Call logs are only fetched once the Calls tab is opened — it is a second
-  // heavyweight request, and most visits never look at it.
-  const [callRows, setCallRows] = useState(null);
-  const [callsLoading, setCallsLoading] = useState(false);
-  const callsFetchedFor = useRef(null);
-
   const formatMoney = useCallback(
     (value, decimals = 0) =>
       `${currencySymbol}${Number(value || 0).toLocaleString(undefined, {
@@ -190,53 +175,6 @@ export function usePortfolioData({
     };
   }, [groupIds, groupsLoading, presetSyncing, preset]);
 
-  // ── Call logs, for the calls series ─────────────────────────────────────
-  useEffect(() => {
-    if (chartMetric !== "calls") return;
-    if (groupsLoading || presetSyncing) return;
-    if (callsFetchedFor.current === preset) return;
-
-    let cancelled = false;
-    const controller = new AbortController();
-    callsFetchedFor.current = preset;
-
-    (async () => {
-      setCallsLoading(true);
-      try {
-        const { start_date, end_date } = presetToDateRange(preset);
-        const params = new URLSearchParams({ skip: "0", limit: String(MAX_LEADS_TO_FETCH) });
-        if (start_date) params.set("start_date", start_date);
-        if (end_date) params.set("end_date", end_date);
-
-        const res = await apiRequest(`/api/hotprospector/call-center?${params}`, {
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`call-center → ${res.status}`);
-        const data = await res.json();
-        if (!cancelled) setCallRows(data.data ?? []);
-      } catch (err) {
-        if (err.name === "AbortError") return;
-        if (!cancelled) {
-          setCallRows([]);
-          // Let a later visit retry rather than caching the failure.
-          callsFetchedFor.current = null;
-        }
-      } finally {
-        if (!cancelled) setCallsLoading(false);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [chartMetric, preset, groupsLoading, presetSyncing]);
-
-  // A new window invalidates whatever calls we hold.
-  useEffect(() => {
-    if (callsFetchedFor.current !== preset) setCallRows(null);
-  }, [preset]);
-
   // ── Suggestions and activity ────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -295,18 +233,9 @@ export function usePortfolioData({
 
   const current = useMemo(() => aggregatePortfolio(clientGroups), [clientGroups]);
 
-  // Does anybody in this portfolio actually dial? The call figures below are
-  // sums over `hotprospector.call_stats`, and a client whose
-  // `call_log_provider` is "none" contributes nothing to them — which sums to
-  // a clean 0 and reads as "a very quiet week" rather than "we have no source
-  // for this". Where no active client has a call centre, the screen renders
-  // the placeholder instead of that 0.
-  //
-  // A *mixed* portfolio keeps its real numbers: the sums are still true, just
-  // of fewer clients. The one ratio that needed telling which clients count is
-  // calls-per-close, whose denominator is a GHL figure rather than a
-  // HotProspector one — it now divides by `callCentreCloses`, summed only over
-  // clients that could have contributed a call. See buildCallInsights.
+  // Does anybody in this portfolio actually dial? A client whose
+  // `call_log_provider` is "none" has no Called stage to report, so the funnel
+  // verdict must not read a movement into it. See comparableFunnel.
   const hasCallCentre = useMemo(() => portfolioHasCallCentre(clientGroups), [clientGroups]);
 
   const previous = useMemo(() => {
@@ -321,11 +250,11 @@ export function usePortfolioData({
     // there is no sample to scale — the days roll straight up into whichever
     // granularity is selected.
     const leadSeries = {
-      ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.leads),
+      ...bucketSeries(leadDays, (d) => d.date, GRANULARITY, (d) => d.leads),
       estimated: false,
     };
     const closeSeries = {
-      ...bucketSeries(leadDays, (d) => d.date, granularity, (d) => d.closes),
+      ...bucketSeries(leadDays, (d) => d.date, GRANULARITY, (d) => d.closes),
       estimated: false,
     };
 
@@ -340,17 +269,9 @@ export function usePortfolioData({
       (d) => (!start_date || d.date >= start_date) && (!end_date || d.date <= end_date)
     );
     const spendSeries = {
-      ...bucketSeries(spendDays, (d) => d.date, granularity, (d) => d.spend),
+      ...bucketSeries(spendDays, (d) => d.date, GRANULARITY, (d) => d.spend),
       estimated: false,
     };
-
-    const calls = callTimestamps(callRows);
-    const callsCapped = (callRows?.length ?? 0) >= MAX_LEADS_TO_FETCH;
-    const callSeries = scaleSeriesToTotal(
-      bucketSeries(calls, (c) => c.at, granularity),
-      current.totalCalls,
-      callsCapped
-    );
 
     return {
       leads: {
@@ -374,16 +295,6 @@ export function usePortfolioData({
         // time_increment=1 rows, so each day is what that day cost.
         ...spendSeries,
       },
-      calls: {
-        tab: "Calls",
-        title: "Total calls",
-        subtitle: "Call volume across client call centres",
-        total: Math.round(current.totalCalls).toLocaleString(),
-        loading: callsLoading,
-        // Distinguishes "not fetched yet" from "fetched and there were none".
-        pending: callRows === null,
-        ...callSeries,
-      },
       closes: {
         tab: "Closes",
         title: "Total closes",
@@ -394,14 +305,10 @@ export function usePortfolioData({
     };
   }, [
     leadDays,
-    callRows,
-    callsLoading,
-    granularity,
     formatMoney,
     currencySymbol,
     current.leads,
     current.closes,
-    current.totalCalls,
     current.spend,
     current.dailySpend,
     preset,
@@ -418,16 +325,13 @@ export function usePortfolioData({
     dateRangeLabel,
 
     kpis: buildKpis(current, previous, formatMoney),
-    callInsights: buildCallInsights(current),
     funnel: buildFunnel(current, previous),
-    leaderboards: buildLeaderboards(current, formatMoney),
     chartMetrics,
 
     ...rail,
 
     loading: groupsLoading || presetSyncing,
     seriesLoading: seriesLoading || presetSyncing,
-    callsLoading,
     error: groupsError,
     hasClients: current.clientCount > 0,
     hasComparison: previous != null,

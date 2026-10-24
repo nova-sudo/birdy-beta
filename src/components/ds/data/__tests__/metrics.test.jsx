@@ -160,6 +160,27 @@ describe("Breakdown / BarList", () => {
     expect(screen.getByText("£6")).toHaveClass("num")
     expect(screen.getByText("60%")).toHaveClass("num")
   })
+  it("sizes the share bar by proportion inside a shrinkable track, so it cannot overflow narrow screens", () => {
+    // jsdom has no layout, so this pins the constraints that keep it in bounds:
+    // no fixed or percentage widths on segments, and a clipped, min-w-0 track.
+    const { container } = render(
+      <Breakdown
+        title="By client"
+        rows={[
+          { key: "a", label: "A", color: "red", value: "6", share: 60 },
+          { key: "b", label: "B", color: "blue", value: "4", share: 40 },
+        ]}
+      />
+    )
+    const root = container.querySelector('[data-ds="breakdown"]')
+    const track = root.querySelector('[aria-hidden="true"]')
+    expect(root).toHaveClass("min-w-0")
+    expect(track).toHaveClass("min-w-0", "w-full", "overflow-hidden")
+    const [a, b] = track.children
+    expect(a.style.flex).toBe("60 1 0%")
+    expect(b.style.flex).toBe("40 1 0%")
+    expect(a.style.width).toBe("")
+  })
   it("BarList scales bars to the largest value", () => {
     const { container } = render(
       <BarList

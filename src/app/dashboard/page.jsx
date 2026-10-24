@@ -9,12 +9,12 @@ import {
   ErrorState,
   MetricTabsChart,
   PageHeader,
-  SegmentedTabs,
   Skeleton,
   fromPortfolioTabs,
 } from "@/components/ds";
 import { useDashboardControls } from "@/components/dashboard-controls";
 import { usePageHeader } from "@/components/page-header";
+import { PeriodControl } from "./PeriodControl";
 import { diagnoseFunnel } from "@/lib/portfolio-metrics";
 import {
   briefingFromDiagnosis,
@@ -27,6 +27,7 @@ import {
 } from "./presentation";
 import {
   applySuggestionRequest,
+  dismissSuggestionRequest,
   usePortfolioData,
 } from "./usePortfolioData";
 
@@ -39,16 +40,10 @@ import {
 // usePortfolioData, the arithmetic in @/lib/portfolio-*, and the wording and
 // shaping into component props in ./presentation.
 
-const PERIODS = [
-  { value: "today", label: "Today" },
-  { value: "last_7d", label: "7 days" },
-  { value: "last_30d", label: "30 days" },
-];
-
-// Booked calls are the won opportunities the CRM reports as closes.
+// Closes are the leads that reached a won opportunity in the CRM.
 const METRIC_TABS = [
   { key: "leads", label: "Leads", kpi: "leads" },
-  { key: "closes", label: "Booked calls", kpi: "closes" },
+  { key: "closes", label: "Closes", kpi: "closes" },
   { key: "cpl", label: "Cost per lead", kpi: "cpl" },
   { key: "spend", label: "Ad spend", kpi: "spend" },
 ];
@@ -70,23 +65,35 @@ const toSeries = (s) =>
     tooltipLabel: s.tooltipLabels?.[i],
   }));
 
-// The signed-in user's first name, as stored at login; null until known.
-function useFirstName() {
-  const [name, setName] = useState(null);
+// A trend needs at least two points; one bucket (Today) is a figure, not a line.
+const MIN_TREND_POINTS = 2;
+
+// grid-cols-1 keeps the single column shrinkable below lg; the implicit column
+// would size to its widest content and push the Breakdown past the screen.
+const BODY_GRID = "grid grid-cols-1 items-start gap-10 lg:grid-cols-[1.35fr_1fr]";
+
+// What the greeting needs from the browser: the signed-in user's first name
+// (as stored at login) and the local hour. Both are null on the server and on
+// the first client render, so the prerendered markup and the first hydrated
+// render agree; the effect fills them in straight after.
+function useGreetingParts() {
+  const [parts, setParts] = useState({ firstName: null, hour: null });
   useEffect(() => {
+    let firstName = null;
     try {
       const full = JSON.parse(localStorage.getItem("user") || "null")?.name;
-      setName(full ? String(full).trim().split(/\s+/)[0] : null);
+      firstName = full ? String(full).trim().split(/\s+/)[0] : null;
     } catch {
-      setName(null);
+      firstName = null;
     }
+    setParts({ firstName, hour: new Date().getHours() });
   }, []);
-  return name;
+  return parts;
 }
 
 function LoadingBody() {
   return (
-    <div className="grid items-start gap-10 lg:grid-cols-[1.35fr_1fr]">
+    <div className={BODY_GRID}>
       <Skeleton className="h-64 rounded-surface" />
       <Skeleton className="h-64 rounded-frame" />
     </div>
@@ -96,7 +103,7 @@ function LoadingBody() {
 export default function PortfolioDashboardPage() {
   const { preset, setPreset } = useDashboardControls();
   const [chartMetric, setChartMetric] = useState("leads");
-  const firstName = useFirstName();
+  const { firstName, hour } = useGreetingParts();
 
   const {
     clientCount,
@@ -137,14 +144,33 @@ export default function PortfolioDashboardPage() {
     });
   }, []);
 
+  const handleDismiss = useCallback(async (suggestion) => {
+    setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
+    const ok = await dismissSuggestionRequest(suggestion.id);
+    if (!ok) {
+      setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
+      toast.error("Couldn't dismiss that", { description: suggestion.title });
+      return;
+    }
+    toast("Suggestion dismissed", { description: suggestion.title });
+  }, []);
+
   const metrics = useMemo(() => {
     const symbol = chartMetrics.spend.valuePrefix ?? "£";
-    const series = {
+    const raw = {
       leads: toSeries(chartMetrics.leads),
       closes: toSeries(chartMetrics.closes),
       cpl: costPerLeadSeries(chartMetrics.leads, chartMetrics.spend),
       spend: toSeries(chartMetrics.spend),
     };
+    // Too short to draw is withheld, but counted, so the empty message can say
+    // "too short" rather than "nothing".
+    const series = Object.fromEntries(
+      Object.entries(raw).map(([key, points]) => [
+        key,
+        points.length >= MIN_TREND_POINTS ? points : [],
+      ])
+    );
     const tabs = METRIC_TABS.map(({ key, label, kpi }) => ({
       ...kpis.find((k) => k.key === kpi),
       key,
@@ -154,6 +180,7 @@ export default function PortfolioDashboardPage() {
     return fromPortfolioTabs({ tabs, activeKey: chartMetric, chart: null }).map((m) => ({
       ...m,
       series: series[m.key],
+      points: raw[m.key].length,
       caption: m.delta !== undefined ? "vs previous period" : undefined,
       symbol,
     }));
@@ -177,9 +204,9 @@ export default function PortfolioDashboardPage() {
     return toFindings(
       briefingFromDiagnosis(diagnosis, { hasComparison }),
       suggestions.filter((s) => !removed[s.id]),
-      { onApply: handleApply }
+      { onApply: handleApply, onDismiss: handleDismiss }
     );
-  }, [funnel, hasCallCentre, hasComparison, suggestions, removed, handleApply]);
+  }, [funnel, hasCallCentre, hasComparison, suggestions, removed, handleApply, handleDismiss]);
 
   const showData = !loading && !error && hasClients;
   const summary = showData ? portfolioSummary({ clientCount, kpis }) : null;
@@ -188,22 +215,17 @@ export default function PortfolioDashboardPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        title={greeting(new Date().getHours(), firstName)}
+        title={greeting(hour, firstName)}
         description={summary ?? "Portfolio-level performance"}
         period={
-          <SegmentedTabs
-            ariaLabel="Period"
-            value={preset}
-            onValueChange={setPreset}
-            items={PERIODS}
-          />
+          <PeriodControl value={preset} onChange={setPreset} />
         }
       />
 
       {error ? (
         <ErrorState
           title="Couldn't load your portfolio"
-          description={`${error}. Nothing here is out of date — we just couldn't reach your client data.`}
+          description={`${String(error).replace(/\.+$/, "")}. Nothing here is out of date — we just couldn't reach your client data.`}
           onRetry={() => window.location.reload()}
         />
       ) : !loading && !hasClients ? (
@@ -222,16 +244,18 @@ export default function PortfolioDashboardPage() {
             loading={loading}
             plotLoading={seriesLoading}
             emptyMessage={
-              chartMetric === "spend"
-                ? "No daily spend in this window yet."
-                : "No dated leads in this window yet."
+              activeMetric?.points === 1
+                ? "Pick 7 days or longer to see a trend."
+                : chartMetric === "spend"
+                  ? "No daily spend in this window yet."
+                  : "No dated leads in this window yet."
             }
           />
 
           {loading ? (
             <LoadingBody />
           ) : (
-            <div className="grid items-start gap-10 lg:grid-cols-[1.35fr_1fr]">
+            <div className={BODY_GRID}>
               {breakdown.rows.length > 0 ? (
                 <Breakdown
                   title="By client"

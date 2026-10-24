@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
 import userEvent from "@testing-library/user-event";
 import PortfolioDashboardPage from "../page";
 import { DashboardControlsProvider } from "@/components/dashboard-controls";
@@ -203,7 +204,7 @@ function renderDashboard() {
 
 async function renderPage() {
   renderDashboard();
-  await waitFor(() => expect(screen.getByRole("tab", { name: /Booked calls/ })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole("tab", { name: /^Closes/ })).toBeInTheDocument());
 }
 
 const tab = (name) => screen.getByRole("tab", { name });
@@ -223,6 +224,16 @@ describe("Portfolio Dashboard", () => {
     expect(within(header).getByRole("tab", { name: "7 days" })).toHaveAttribute("aria-selected", "true");
   });
 
+  it("greets neutrally in server-rendered markup, so hydration has nothing to correct", () => {
+    const html = renderToString(
+      <DashboardControlsProvider>
+        <PortfolioDashboardPage />
+      </DashboardControlsProvider>
+    );
+    expect(html).toContain(">Hello<");
+    expect(html).not.toMatch(/Good (morning|afternoon|evening)/);
+  });
+
   it("publishes its title to the top bar", async () => {
     await renderPage();
     expect(screen.getByTestId("top-bar")).toHaveTextContent("Dashboard");
@@ -235,12 +246,12 @@ describe("Portfolio Dashboard", () => {
     const tabs = within(chart).getAllByRole("tab");
     expect(tabs.map((t) => t.querySelector("span").textContent)).toEqual([
       "Leads",
-      "Booked calls",
+      "Closes",
       "Cost per lead",
       "Ad spend",
     ]);
     expect(tab(/^Leads/)).toHaveTextContent("200");
-    expect(tab(/Booked calls/)).toHaveTextContent("16");
+    expect(tab(/^Closes/)).toHaveTextContent("16");
     expect(tab(/Cost per lead/)).toHaveTextContent("£2.00");
     expect(tab(/Ad spend/)).toHaveTextContent("£400");
 
@@ -301,9 +312,55 @@ describe("Portfolio Dashboard", () => {
 
     await waitFor(() => expect(tab(/Ad spend/)).toHaveTextContent("£1,000"));
     expect(tab(/^Leads/)).toHaveTextContent("500");
-    expect(tab(/Booked calls/)).toHaveTextContent("40");
+    expect(tab(/^Closes/)).toHaveTextContent("40");
     expect(ds("page-header")).toHaveTextContent("1 client brought in 500 leads");
     expect(within(ds("breakdown")).getAllByRole("listitem")).toHaveLength(1);
+  });
+
+  it("offers every other preset under More, and shows the active one on the button", async () => {
+    const user = userEvent.setup();
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({
+        last_7d: GROUPS,
+        this_month: [
+          group({ id: "c", name: "Aura", spend: 50, results: 50, won: 9, revenue: 700, contacts: 40 }),
+        ],
+      })
+    );
+    await renderPage();
+
+    const header = ds("page-header");
+    await user.click(within(header).getByRole("button", { name: "More periods" }));
+    // The quick picks are not repeated in the menu.
+    expect(screen.queryByRole("menuitemradio", { name: "Today" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("menuitemradio", { name: "This Month" }));
+
+    await waitFor(() => expect(tab(/Ad spend/)).toHaveTextContent("£50"));
+    expect(within(header).getByRole("button", { name: "More periods: This Month" })).toHaveTextContent(
+      "This Month"
+    );
+    for (const t of within(header).getAllByRole("tab")) {
+      expect(t).toHaveAttribute("aria-selected", "false");
+    }
+  });
+
+  it("says a trend needs a longer period when the window has a single bucket", async () => {
+    const user = userEvent.setup();
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS, today: GROUPS })
+    );
+    mockEndpoints({ leadDays: [LEAD_DAYS[0]] });
+    await renderPage();
+
+    await user.click(within(ds("page-header")).getByRole("tab", { name: "Today" }));
+
+    await waitFor(() =>
+      expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).toHaveTextContent(
+        "Pick 7 days or longer to see a trend."
+      )
+    );
+    // The figures still show.
+    expect(tab(/^Leads/)).toHaveTextContent("200");
   });
 
   it("never shows one window's figures under another window's label", async () => {
@@ -384,6 +441,37 @@ describe("Birdy's read on the dashboard", () => {
     expect(screen.getByText("Raise daily budget")).toBeInTheDocument();
   });
 
+  it("dismisses a suggestion through the existing endpoint", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+    await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Dismiss Pause 2 underperforming ads" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Pause 2 underperforming ads")).not.toBeInTheDocument()
+    );
+    expect(apiRequest).toHaveBeenCalledWith("/api/dashboard/suggestions/s1", { method: "DELETE" });
+    expect(toast).toHaveBeenCalledWith("Suggestion dismissed", expect.anything());
+  });
+
+  it("puts a suggestion back when dismissing fails", async () => {
+    const user = userEvent.setup();
+    apiRequest.mockImplementation((url, opts) => {
+      if (opts?.method === "DELETE") return Promise.resolve({ ok: false, status: 500 });
+      if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
+      if (url.startsWith("/api/facebook-leads/series")) return Promise.resolve({ ok: true, json: async () => ({ series: LEAD_DAYS }) });
+      return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
+    });
+    await renderPage();
+    await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: "Dismiss Raise daily budget" }));
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    expect(screen.getByText("Raise daily budget")).toBeInTheDocument();
+  });
+
   it("says nothing needs you when there are no suggestions", async () => {
     mockEndpoints({ summary: { suggestions: [], wins: [], activity: [] } });
     await renderPage();
@@ -416,11 +504,12 @@ describe("Dashboard states", () => {
   });
 
   it("distinguishes a failed load from an empty portfolio, with a retry", async () => {
-    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
+    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503." }));
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText("Couldn't load your portfolio")).toBeInTheDocument());
-    expect(ds("error-state")).toHaveTextContent("HTTP 503");
+    expect(ds("error-state")).toHaveTextContent("HTTP 503. Nothing here");
+    expect(ds("error-state")).not.toHaveTextContent("..");
     expect(within(ds("error-state")).getByRole("button", { name: /try again/i })).toBeInTheDocument();
     expect(screen.queryByText("No active clients yet")).not.toBeInTheDocument();
   });

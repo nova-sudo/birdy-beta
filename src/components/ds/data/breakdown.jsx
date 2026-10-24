@@ -16,16 +16,17 @@ function Breakdown({ title, total, rows, className, ...props }) {
   return (
     <div
       data-ds="breakdown"
-      className={cn("flex flex-col gap-3 rounded-surface bg-background p-4 shadow-surface", className)}
+      className={cn("flex min-w-0 flex-col gap-3 rounded-surface bg-background p-4 shadow-surface", className)}
       {...props}
     >
       <div className="flex items-baseline justify-between gap-3">
         <h3 className="truncate text-sm font-medium text-body">{title}</h3>
         {total != null && <span className="num text-lg font-medium text-foreground">{total}</span>}
       </div>
-      <div className="flex h-2 gap-0.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+      <div className="flex h-2 w-full min-w-0 gap-0.5 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+        {/* Grow by share from a zero basis, so segments always fit the track. */}
         {rows.map((r, i) => (
-          <span key={r.key ?? i} className="h-full" style={{ width: `${r.share}%`, background: r.color }} />
+          <span key={r.key ?? i} className="h-full min-w-0" style={{ flex: `${r.share} 1 0%`, background: r.color }} />
         ))}
       </div>
       <ul className="flex flex-col gap-2">

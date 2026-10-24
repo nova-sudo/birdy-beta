@@ -40,6 +40,23 @@ describe("BirdyRead", () => {
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 
+  it("adds an icon-only dismiss button that names its finding and fires onDismiss", () => {
+    const onDismiss = vi.fn()
+    render(<BirdyRead findings={[finding(1, { onDismiss }), finding(2)]} />)
+    const btn = screen.getByRole("button", { name: "Dismiss Finding 1" })
+    expect(btn.textContent).toBe("")
+    fireEvent.click(btn)
+    expect(onDismiss).toHaveBeenCalledTimes(1)
+    // The row without one keeps the slot so actions line up.
+    expect(screen.queryByRole("button", { name: "Dismiss Finding 2" })).toBeNull()
+    expect(screen.getAllByRole("listitem")[1].querySelectorAll("span.size-8")).toHaveLength(1)
+  })
+
+  it("renders no dismiss slot when no finding can be dismissed", () => {
+    render(<BirdyRead findings={[finding(1)]} />)
+    expect(document.querySelector("li span.size-8")).toBeNull()
+  })
+
   it("renders an href action as a link", () => {
     render(<BirdyRead findings={[finding(1, { action: { label: "Open", href: "/clients/1" } })]} />)
     expect(screen.getByRole("link", { name: "Open" }).getAttribute("href")).toBe("/clients/1")
