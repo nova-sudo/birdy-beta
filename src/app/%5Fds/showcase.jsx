@@ -207,7 +207,7 @@ export default function Showcase() {
         <Row label="Radius">
           {RADII.map(([name, cls]) => (
             <div key={name} className="flex flex-col gap-1.5">
-              <span className={`size-20 bg-muted ${cls}`} />
+              <span className={`size-20 border border-border bg-background ${cls}`} />
               <span className="font-mono text-xs text-muted-foreground">{name}</span>
             </div>
           ))}

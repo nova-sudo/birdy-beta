@@ -17,7 +17,7 @@ function Frame({ title, meta, actions, titleAs: Title = "h2", children, classNam
     <section
       data-ds="frame"
       data-slot="frame"
-      className={cn("flex flex-col gap-3 rounded-frame bg-muted p-3", className)}
+      className={cn("flex min-w-0 flex-col gap-3 rounded-frame bg-muted p-3", className)}
       {...props}
     >
       <header className="flex min-h-control-sm items-center justify-between gap-3 px-1">
