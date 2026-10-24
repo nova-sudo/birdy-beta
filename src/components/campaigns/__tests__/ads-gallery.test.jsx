@@ -1,7 +1,11 @@
-import { describe, it, expect, vi } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import AdsGallery, { AdsViewSwitch } from "@/components/campaigns/AdsGallery"
+import AdsGallery, { AdsViewSwitch, GALLERY_PAGE_SIZE } from "@/components/campaigns/AdsGallery"
+import { apiRequest } from "@/lib/api"
+
+vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
+beforeEach(() => vi.clearAllMocks())
 
 // The columns arrive exactly as MarketingContent's tableColumns: ordered,
 // visible-only, name first, each with a render closure.
@@ -29,7 +33,7 @@ describe("AdsGallery", () => {
 
   it("shows every column except the name as a metric row, in column order", () => {
     setup()
-    const card = screen.getByTitle("Summer Video").closest(".overflow-hidden")
+    const card = screen.getByTitle("Summer Video").closest("[data-slot=ads-gallery-card]")
     const labels = within(card).getAllByText(/^(Spend|CPL|Clicks)$/).map(el => el.textContent)
     expect(labels).toEqual(["Spend", "CPL", "Clicks"])
     expect(within(card).getByText("£100")).toBeInTheDocument()
@@ -74,7 +78,7 @@ describe("AdsGallery", () => {
     const onOrderChange = vi.fn()
     setup({ onOrderChange })
 
-    const card = screen.getByTitle("Summer Video").closest(".overflow-hidden")
+    const card = screen.getByTitle("Summer Video").closest("[data-slot=ads-gallery-card]")
     const spendRow = within(card).getByText("Spend").parentElement
     const clicksRow = within(card).getByText("Clicks").parentElement
 
@@ -91,12 +95,57 @@ describe("AdsGallery", () => {
     const onOrderChange = vi.fn()
     setup({ onOrderChange })
 
-    const card = screen.getByTitle("Summer Video").closest(".overflow-hidden")
+    const card = screen.getByTitle("Summer Video").closest("[data-slot=ads-gallery-card]")
     const spendRow = within(card).getByText("Spend").parentElement
 
     fireEvent.dragStart(spendRow)
     fireEvent.drop(spendRow)
     expect(onOrderChange).not.toHaveBeenCalled()
+  })
+
+  it("pages the gallery 24 to a page", async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: GALLERY_PAGE_SIZE + 6 }, (_, i) => ({
+      id: `m${i}`, name: `Ad ${i}`, status: "active", spend: 1000 - i, cpl: 1, clicks: 1,
+    }))
+    const { container } = render(<AdsGallery rows={many} columns={COLUMNS} />)
+
+    expect(container.querySelectorAll("[data-slot=ads-gallery-card]")).toHaveLength(24)
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled()
+
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+    expect(container.querySelectorAll("[data-slot=ads-gallery-card]")).toHaveLength(6)
+    expect(screen.getByTitle("Ad 29")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled()
+  })
+
+  it("keeps the first four metrics in the card's row and the rest behind More metrics", () => {
+    const cols = [
+      { id: "name", header: "Name" },
+      ...["m1", "m2", "m3", "m4", "m5"].map(id => ({ id, header: id.toUpperCase(), render: v => String(v) })),
+    ]
+    render(<AdsGallery rows={[{ id: "a", name: "A", status: "active", m1: 1, m2: 2, m3: 3, m4: 4, m5: 5 }]} columns={cols} />)
+    expect(screen.getByText("More metrics (1)")).toBeInTheDocument()
+  })
+
+  it("opens Meta's preview in a dialog for a video ad", async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiRequest).mockResolvedValue({
+      ok: true,
+      json: async () => ({ preview_url: "https://meta.example/preview", width: 500, height: 700 }),
+    })
+    render(
+      <AdsGallery
+        rows={[{ id: "v1", name: "Video Ad", status: "active", spend: 1, cpl: 1, clicks: 1, creative_video_id: "77" }]}
+        columns={COLUMNS}
+      />
+    )
+    await user.click(screen.getByRole("button", { name: "Play Video Ad preview" }))
+
+    const dialog = await screen.findByRole("dialog")
+    expect(apiRequest).toHaveBeenCalledWith("/api/facebook/ad-preview/v1")
+    expect(await within(dialog).findByTitle("Video Ad")).toHaveAttribute("src", "https://meta.example/preview")
   })
 
   it("says so when there are no ads", () => {
