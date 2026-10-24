@@ -1461,7 +1461,7 @@ export function MarketingContent({
           {error ? (
             <ErrorState
               title="Couldn't load this data"
-              description={`${error}. Nothing was lost — we just couldn't reach this data.`}
+              description={`${error}. Try again in a moment.`}
               onRetry={() => setReloadKey((k) => k + 1)}
             />
           ) : activeTab === "ads" && adsView === "gallery" ? (

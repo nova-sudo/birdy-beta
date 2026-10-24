@@ -88,7 +88,7 @@ function VideoPreviewDialog({ row, columns, onStatusToggle, toggling, onClose })
       .then(async (res) => {
         const d = await res.json().catch(() => ({}))
         if (cancelled) return
-        if (!res.ok) throw new Error(d?.detail || "Couldn't load this preview")
+        if (!res.ok) throw new Error("Meta won't show a preview for this ad. It may have been deleted, or this account can't access it.")
         if (!d.preview_url) throw new Error("No preview available for this ad")
         setState({ status: "ready", previewUrl: d.preview_url, width: d.width, height: d.height, error: null })
       })
