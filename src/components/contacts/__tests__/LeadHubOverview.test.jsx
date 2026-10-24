@@ -20,7 +20,9 @@ globalThis.ResizeObserver ??= class {
 const day = (offset) => {
   const d = new Date()
   d.setDate(d.getDate() - offset)
-  return d.toISOString().slice(0, 10)
+  // Local calendar date, like the window the component computes; toISOString is UTC
+  // and lands on the wrong day around local midnight.
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
 }
 
 const row = (offset, over = {}) => ({
