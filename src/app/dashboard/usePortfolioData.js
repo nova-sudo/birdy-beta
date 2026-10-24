@@ -229,7 +229,13 @@ export function usePortfolioData({
         const data = await res.json();
         if (!cancelled) setCallRows(data.data ?? []);
       } catch (err) {
-        if (err.name === "AbortError") return;
+        if (err.name === "AbortError") {
+          // Leaving the Calls tab mid-fetch aborts it. Forget that this window
+          // was fetched, or coming back would wait on rows that never arrive —
+          // unless a newer run has already claimed the ref for its own window.
+          if (callsFetchedFor.current === preset) callsFetchedFor.current = null;
+          return;
+        }
         if (!cancelled) {
           setCallRows([]);
           // Let a later visit retry rather than caching the failure.

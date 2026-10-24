@@ -15,7 +15,7 @@ vi.mock("@/components/birdy/BirdyAvatar", () => ({
   default: () => <span data-testid="birdy-avatar" />,
 }));
 
-import { format, subDays } from "date-fns";
+import { format, startOfISOWeek, subDays } from "date-fns";
 
 // recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
 globalThis.ResizeObserver ??= class {
@@ -617,6 +617,41 @@ describe("Calls tab", () => {
   });
 });
 
+describe("Calls fetch recovery", () => {
+  it("fetches again and leaves loading after the tab was left mid-fetch", async () => {
+    const user = userEvent.setup();
+    let calls = 0;
+    const base = apiRequest.getMockImplementation();
+    apiRequest.mockImplementation((url, opts) => {
+      if (url.startsWith("/api/hotprospector/call-center")) {
+        calls += 1;
+        if (calls === 1) {
+          // Never resolves on its own: it ends only when the page aborts it.
+          return new Promise((_, reject) => {
+            opts.signal.addEventListener("abort", () =>
+              reject(Object.assign(new Error("aborted"), { name: "AbortError" }))
+            );
+          });
+        }
+      }
+      return base(url, opts);
+    });
+    await renderPage();
+
+    await user.click(tab(/^Calls/));
+    await waitFor(() => expect(callFetches()).toHaveLength(1));
+    await user.click(tab(/^Leads/));
+    await user.click(tab(/^Calls/));
+
+    await waitFor(() => expect(callFetches()).toHaveLength(2));
+    await waitFor(() =>
+      expect(
+        ds("metric-tabs-chart").querySelector('[role=tabpanel] [data-ds="skeleton"]')
+      ).toBeNull()
+    );
+  });
+});
+
 describe("Call insights", () => {
   const group_ = () => within(document.querySelector('[data-ds="metric-group"]'));
 
@@ -660,6 +695,8 @@ describe("Call insights", () => {
     useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { loading: true }));
     renderDashboard();
     expect(document.querySelector('[data-ds="metric-group"]')).toBeNull();
+    // LoadingBody's placeholders, including the full-width one for the insights.
+    expect(document.querySelectorAll('[data-ds="skeleton"].lg\\:col-span-2')).toHaveLength(1);
   });
 });
 
@@ -707,15 +744,20 @@ describe("Granularity", () => {
     );
     await waitFor(() => expect(result.current.chartMetrics.leads.values.length).toBe(8));
     expect(result.current.chartMetrics.closes.values.length).toBe(8);
-    // Spend is dated relative to today, so it is bucketed by the same setting.
-    const dailySpend = result.current.chartMetrics.spend.values.length;
+    // Spend is dated relative to today (100, 200, 100 on the last three days).
+    expect(result.current.chartMetrics.spend.values).toEqual([100, 200, 100]);
+    const weeksOfSpend = new Set(
+      [3, 2, 1].map((n) => format(startOfISOWeek(subDays(new Date(), n)), "yyyy-MM-dd"))
+    ).size;
 
     rerender({ granularity: "Weekly" });
     const weekly = result.current.chartMetrics.leads.values;
     expect(weekly.length).toBe(2);
     expect(weekly.reduce((a, b) => a + b, 0)).toBe(8);
     expect(result.current.chartMetrics.closes.values.length).toBe(2);
-    expect(result.current.chartMetrics.spend.values.length).toBeLessThanOrEqual(dailySpend);
+    const weeklySpend = result.current.chartMetrics.spend.values;
+    expect(weeklySpend).toHaveLength(weeksOfSpend);
+    expect(weeklySpend.reduce((a, b) => a + b, 0)).toBe(400);
   });
 
   it("re-buckets the calls series too", async () => {
@@ -733,6 +775,26 @@ describe("Granularity", () => {
     );
     await waitFor(() => expect(result.current.chartMetrics.calls.values.length).toBe(8));
     rerender({ granularity: "Weekly" });
-    expect(result.current.chartMetrics.calls.values).toHaveLength(2);
+    // Mon 6 to Sun 12 Jul is seven calls, Mon 13 Jul is one. Uncapped, so unscaled.
+    expect(result.current.chartMetrics.calls.values).toEqual([7, 1]);
+  });
+
+  it("scales a capped calls sample onto the real total, per bucket", async () => {
+    // 2000 leads (the fetch cap) with one call each: 1000 on the first day and
+    // 1000 on the last. The groups report 200 calls in all.
+    const callRows = Array.from({ length: 2000 }, (_, i) => ({
+      id: `l${i}`,
+      call_logs: [{ call_time_iso: `${DAYS[i < 1000 ? 0 : 7].date}T10:00:00Z` }],
+    }));
+    mockEndpoints({ callRows });
+    const { result, rerender } = renderHook(
+      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity, chartMetric: "calls" }),
+      { initialProps: { granularity: "Weekly" } }
+    );
+    await waitFor(() => expect(result.current.chartMetrics.calls.values.length).toBe(2));
+    expect(result.current.chartMetrics.calls.values).toEqual([100, 100]);
+    expect(result.current.chartMetrics.calls.estimated).toBe(true);
+    rerender({ granularity: "Daily" });
+    expect(result.current.chartMetrics.calls.values.reduce((a, b) => a + b, 0)).toBeCloseTo(200);
   });
 });

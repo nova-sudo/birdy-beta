@@ -330,39 +330,39 @@ export default function PortfolioDashboardPage() {
             <LoadingBody />
           ) : (
             <>
-            <div className={BODY_GRID}>
-              {breakdown.rows.length > 0 ? (
-                <Breakdown
-                  title="By client"
-                  total={`${breakdown.total.toLocaleString()} leads`}
-                  rows={breakdown.rows}
-                />
-              ) : (
-                <EmptyState
-                  title="No leads in this window"
-                  description="Client figures appear here once leads come in."
-                />
-              )}
-              <BirdyRead findings={findings} prompt={BIRDY_PROMPT} />
-            </div>
+              <div className={BODY_GRID}>
+                {breakdown.rows.length > 0 ? (
+                  <Breakdown
+                    title="By client"
+                    total={`${breakdown.total.toLocaleString()} leads`}
+                    rows={breakdown.rows}
+                  />
+                ) : (
+                  <EmptyState
+                    title="No leads in this window"
+                    description="Client figures appear here once leads come in."
+                  />
+                )}
+                <BirdyRead findings={findings} prompt={BIRDY_PROMPT} />
+              </div>
 
-            {/* The cells stay even when none of them can be filled in — the
-                reader still needs to know which six figures Birdy tracks here,
-                and an empty group answers "what am I missing out on?" with
-                nothing at all. The note carries the reason and the way out. */}
-            <div className="flex flex-col gap-3">
-              {!hasCallCentre && (
-                <Notice tone="neutral" action={<LinkSalesToolLink />}>
-                  None of your clients use a call centre, so these figures have no source.
-                  Conversion rate is unaffected — it comes from your CRM.
-                </Notice>
-              )}
-              <MetricGroup
-                title="Call insights"
-                meta="Across all client call centres"
-                items={callCells}
-              />
-            </div>
+              {/* The cells stay even when none of them can be filled in — the
+                  reader still needs to know which six figures Birdy tracks here,
+                  and an empty group answers "what am I missing out on?" with
+                  nothing at all. The note carries the reason and the way out. */}
+              <div className="flex flex-col gap-3">
+                {!hasCallCentre && (
+                  <Notice tone="neutral" action={<LinkSalesToolLink />}>
+                    None of your clients use a call centre, so these figures have no source.
+                    Conversion rate is unaffected — it comes from your CRM.
+                  </Notice>
+                )}
+                <MetricGroup
+                  title="Call insights"
+                  meta="Across all client call centres"
+                  items={callCells}
+                />
+              </div>
             </>
           )}
         </>
