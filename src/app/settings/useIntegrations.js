@@ -95,6 +95,7 @@ export function useIntegrations({ router, searchParams, setPassingThrough }) {
       try {
         setIsLoading(true)
         setError(null)
+        setStatusError(null)
 
         const tokenData = searchParams.get("tokens")
         const status = searchParams.get("status")

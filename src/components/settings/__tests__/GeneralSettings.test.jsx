@@ -156,7 +156,7 @@ describe("password", () => {
     render(<GeneralSettings />)
     await fill(user)
     await user.click(screen.getByRole("button", { name: "Update password" }))
-    expect(await screen.findByText("Current password is wrong")).toBeInTheDocument()
+    expect(await screen.findByRole("alert")).toHaveTextContent("Current password is wrong")
   })
 })
 
@@ -213,6 +213,17 @@ describe("notification preferences", () => {
 })
 
 describe("layout", () => {
+  it("puts a Frame's description under its title, wrapping rather than truncated", async () => {
+    respond()
+    render(<GeneralSettings />)
+    await screen.findByDisplayValue("Ada")
+    const desc = screen.getByText("Manage your general application and account settings")
+    expect(desc.className).not.toMatch(/truncate/)
+    const title = screen.getByRole("heading", { name: "General settings" })
+    expect(title.compareDocumentPosition(desc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(title.parentElement.contains(desc)).toBe(false)
+  })
+
   it("builds each form as a ds Frame of label/control rows", async () => {
     respond()
     const { container } = render(<GeneralSettings />)

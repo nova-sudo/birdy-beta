@@ -5,10 +5,18 @@ import userEvent from "@testing-library/user-event"
 // ─── Settings → Billing → credits ───────────────────────────────────────────
 // Balance, top-up packs and the usage block, drawn from ds tokens.
 
-const credits = vi.hoisted(() => ({ value: null }))
-vi.mock("@/hooks/useCredits", () => ({ useCredits: () => credits.value, default: () => credits.value }))
+const credits = vi.hoisted(() => ({ value: null, onRender: null }))
+vi.mock("@/hooks/useCredits", () => {
+  const useCredits = () => {
+    credits.onRender?.()
+    return credits.value
+  }
+  return { useCredits, default: useCredits }
+})
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-vi.mock("@whop/checkout/react", () => ({ WhopCheckoutEmbed: () => <div data-testid="whop" /> }))
+vi.mock("@whop/checkout/react", () => ({
+  WhopCheckoutEmbed: ({ prefill }) => <div data-testid="whop" data-email={prefill?.email ?? ""} />,
+}))
 // recharts measures its container; jsdom has no layout, so stand in for it.
 vi.mock("recharts", () => {
   const Stub = ({ children }) => <div>{children}</div>
@@ -108,12 +116,22 @@ describe("CreditsPanel", () => {
     expect(await screen.findByText("No AI usage yet in this window.")).toBeInTheDocument()
   })
 
-  it("reads the stored email after mount, not while rendering", async () => {
+  it("reads the stored email after mount, not while rendering, and hands it to checkout", async () => {
     localStorage.setItem("user", JSON.stringify({ email: "ada@example.com" }))
     respond({ packs: [{ id: "a", credits: 500, price: 5, plan_id: "plan_a" }] })
     const getItem = vi.spyOn(Storage.prototype, "getItem")
+    const userReads = () => getItem.mock.calls.filter(([k]) => k === "user").length
+    // useCredits runs inside the panel's render; record how many reads had
+    // happened by each render.
+    const seenAtRender = []
+    credits.onRender = () => seenAtRender.push(userReads())
+    const user = userEvent.setup()
     render(<CreditsPanel />)
-    await waitFor(() => expect(getItem).toHaveBeenCalledWith("user"))
+    expect(seenAtRender[0]).toBe(0)
+    await waitFor(() => expect(userReads()).toBeGreaterThan(0))
+    await user.click(await screen.findByRole("button", { name: /500 credits/ }))
+    expect((await screen.findByTestId("whop")).dataset.email).toBe("ada@example.com")
     getItem.mockRestore()
+    credits.onRender = null
   })
 })

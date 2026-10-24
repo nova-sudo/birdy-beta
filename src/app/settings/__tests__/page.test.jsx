@@ -252,17 +252,32 @@ describe("rail", () => {
     expect(screen.getByRole("heading", { level: 2, name: "General" })).toBeInTheDocument()
   })
 
-  it("arrow keys move between sections", async () => {
+  it("arrows, Home and End move focus only; Enter or Space selects", async () => {
     nav.params = "tab=general"
     respond()
     const user = userEvent.setup()
     render(<Page />)
     screen.getByRole("tab", { name: "General" }).focus()
     await user.keyboard("{ArrowDown}")
-    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=tracking", { scroll: false })
     expect(screen.getByRole("tab", { name: "Tracking" })).toHaveFocus()
-    await user.keyboard("{ArrowUp}")
-    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=general", { scroll: false })
+    await user.keyboard("{ArrowDown}{ArrowDown}")
+    expect(screen.getByRole("tab", { name: "Billing" })).toHaveFocus()
+    await user.keyboard("{ArrowDown}")
+    expect(screen.getByRole("tab", { name: "General" })).toHaveFocus()
+    await user.keyboard("{End}")
+    expect(screen.getByRole("tab", { name: "Billing" })).toHaveFocus()
+    await user.keyboard("{Home}{ArrowUp}")
+    expect(screen.getByRole("tab", { name: "Billing" })).toHaveFocus()
+    // nothing was selected, so the URL was never written
+    expect(nav.replace).not.toHaveBeenCalled()
+    expect(screen.getByRole("tab", { name: "General" })).toHaveAttribute("aria-selected", "true")
+
+    await user.keyboard("{Enter}")
+    expect(nav.replace).toHaveBeenCalledTimes(1)
+    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=billing", { scroll: false })
+    screen.getByRole("tab", { name: "Tracking" }).focus()
+    await user.keyboard(" ")
+    expect(nav.replace).toHaveBeenLastCalledWith("/settings?tab=tracking", { scroll: false })
   })
 
   it("flags Integrations in the rail only when a token has expired", async () => {
@@ -347,6 +362,37 @@ describe("integrations: status loading", () => {
     await waitFor(() => expect(calls("/api/status")).toHaveLength(2))
   })
 
+  it("clears the failure once a retry succeeds", async () => {
+    respond({ "/api/status": { __status: 500 } })
+    const user = userEvent.setup()
+    render(<Page />)
+    await screen.findByText("Couldn't load your integrations")
+    respond()
+    await user.click(screen.getByRole("button", { name: /try again/i }))
+    await waitFor(() => expect(screen.queryByText("Couldn't load your integrations")).toBeNull())
+    await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
+  })
+
+  it("announces a connect failure assertively", async () => {
+    respond({ "/api/connect/slack": { __status: 400, detail: "Slack is not configured" } })
+    const user = userEvent.setup()
+    render(<Page />)
+    await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
+    const slack = screen.getByRole("heading", { name: "Slack" }).closest("section")
+    await user.click(within(slack).getByRole("button", { name: "Connect" }))
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed to connect: Slack is not configured")
+  })
+
+  it("names each integration with an h4 under the Frame's h3", async () => {
+    respond()
+    render(<Page />)
+    expect(screen.getByRole("heading", { level: 3, name: "Connected services" })).toBeInTheDocument()
+    for (const name of ["Slack", "GoHighLevel", "Meta", "Hot Prospector"]) {
+      expect(screen.getByRole("heading", { level: 4, name })).toBeInTheDocument()
+    }
+    await waitFor(() => expect(screen.getAllByText("Not connected")).toHaveLength(4))
+  })
+
   it("reacts to another tab changing an integration (storage event)", async () => {
     respond()
     render(<Page />)
@@ -389,9 +435,6 @@ describe("integrations: connect and remove", () => {
     })
     const user = userEvent.setup()
     render(<Page />)
-    // Wait for the whole probe: the remove button is redefined on every render
-    // of the page, so a late status update would close an open dialog.
-    await waitFor(() => expect(calls("/api/integrations/slack/status")).toHaveLength(1))
     await user.click(await screen.findByRole("button", { name: /^Remove$/ }))
     expect(await screen.findByText("Remove Meta (Facebook)?")).toBeInTheDocument()
     expect(calls("/api/integrations/facebook/remove")).toHaveLength(0)
@@ -405,6 +448,18 @@ describe("integrations: connect and remove", () => {
       })
     )
     expect(localStorage.getItem("facebookIntegration")).toBeNull()
+  })
+
+  it("cancelling the removal confirm sends no DELETE", async () => {
+    respond({ "/api/status": { facebook: { connected: true } } })
+    const user = userEvent.setup()
+    render(<Page />)
+    await user.click(await screen.findByRole("button", { name: /^Remove$/ }))
+    await screen.findByText("Remove Meta (Facebook)?")
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    await waitFor(() => expect(screen.queryByText("Remove Meta (Facebook)?")).toBeNull())
+    expect(vi.mocked(apiRequest).mock.calls.some(([, o]) => o?.method === "DELETE")).toBe(false)
+    expect(screen.getByRole("button", { name: /^Remove$/ })).toBeInTheDocument()
   })
 
   it("a failed removal shows the error and keeps the integration", async () => {

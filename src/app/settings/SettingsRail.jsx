@@ -59,14 +59,23 @@ export const SETTINGS_TABS = SETTINGS_GROUPS.flatMap((group) => group.items)
 export function SettingsRail({ value, onChange, chips = {} }) {
   const keys = SETTINGS_TABS.map((tab) => tab.key)
 
-  // Arrow keys move between sections, as a tab strip does.
+  // Manual activation: arrows, Home and End only move focus; Enter, Space or a
+  // click selects. Selecting writes the URL and re-probes the integrations, so
+  // it must not happen on every key press.
   const onKeyDown = (event) => {
-    const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key]
-    if (!step) return
+    const from = keys.indexOf(event.target.dataset?.key)
+    if (from === -1) return
+    const to = {
+      ArrowDown: (from + 1) % keys.length,
+      ArrowRight: (from + 1) % keys.length,
+      ArrowUp: (from - 1 + keys.length) % keys.length,
+      ArrowLeft: (from - 1 + keys.length) % keys.length,
+      Home: 0,
+      End: keys.length - 1,
+    }[event.key]
+    if (to === undefined) return
     event.preventDefault()
-    const next = keys[(keys.indexOf(value) + step + keys.length) % keys.length]
-    onChange(next)
-    document.getElementById(`settings-tab-${next}`)?.focus()
+    document.getElementById(`settings-tab-${keys[to]}`)?.focus()
   }
 
   return (
@@ -91,6 +100,7 @@ export function SettingsRail({ value, onChange, chips = {} }) {
                 type="button"
                 role="tab"
                 id={`settings-tab-${key}`}
+                data-key={key}
                 aria-selected={active}
                 aria-controls="settings-panel"
                 tabIndex={active ? 0 : -1}

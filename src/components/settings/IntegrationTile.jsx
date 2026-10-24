@@ -58,7 +58,7 @@ export function IntegrationTile({
             {icon}
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-base font-medium text-foreground">{name}</h3>
+            <h4 className="truncate text-base font-medium text-foreground">{name}</h4>
             <p className="text-xs text-muted-foreground">{description}</p>
             {meta && (
               <p className="mt-1 flex items-center gap-1.5 text-xs">

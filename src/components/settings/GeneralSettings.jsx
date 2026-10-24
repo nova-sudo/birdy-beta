@@ -306,7 +306,7 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
 
           {passwordError && (
             <SettingBlock>
-              <Notice tone="danger">{passwordError}</Notice>
+              <Notice tone="danger" role="alert">{passwordError}</Notice>
             </SettingBlock>
           )}
 

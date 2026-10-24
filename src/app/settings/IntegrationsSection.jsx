@@ -113,7 +113,7 @@ export function IntegrationsSection({
             onRetry={retryStatus}
           />
         ) : (
-          <Notice tone="danger">{error}</Notice>
+          <Notice tone="danger" role="alert">{error}</Notice>
         )
       )}
 

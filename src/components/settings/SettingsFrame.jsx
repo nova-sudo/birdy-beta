@@ -26,7 +26,10 @@ export function SectionHeader({ title, description }) {
  */
 export function SettingsFrame({ title, description, actions, children, className }) {
   return (
-    <Frame title={title} titleAs="h3" meta={description} actions={actions} className={className}>
+    <Frame title={title} titleAs="h3" actions={actions} className={className}>
+      {/* Under the title and free to wrap: the Frame head truncates a one-line
+          meta, which clipped the description on a phone. */}
+      {description && <p className="-mt-2 px-1 text-xs text-muted-foreground">{description}</p>}
       <Surface padded={false} className="divide-y divide-border/60">
         {children}
       </Surface>
