@@ -301,6 +301,12 @@ describe("Dashboard workspace", () => {
     const crumb = screen.getByRole("link", { name: "My dashboards" })
     expect(crumb).toHaveAttribute("href", "/dashboards")
     expect(crumb.parentElement).toHaveTextContent("My dashboards / Weekly spend")
+    // Narrow screens: the prefix hides and the mode tabs / Add widget go icon-only,
+    // each keeping its accessible name, so the header fits at 375px.
+    expect(crumb).toHaveClass("max-sm:hidden")
+    expect(screen.getByRole("tab", { name: /View/ }).querySelector(".max-sm\\:sr-only")).not.toBeNull()
+    expect(screen.getByRole("button", { name: "Add widget" }).querySelector(".max-sm\\:sr-only")).not.toBeNull()
+    expect(screen.getByRole("tabpanel", { name: "View" })).toHaveAttribute("aria-labelledby", "dashboard-board-tab-view")
     // The migrated section title is a heading widget on the board.
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument()
   })

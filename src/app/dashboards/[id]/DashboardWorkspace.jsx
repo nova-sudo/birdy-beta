@@ -76,7 +76,7 @@ const MODE_ITEMS = MODES.map(({ key, label, icon: Icon }) => ({
   label: (
     <>
       <Icon className="size-3.5" aria-hidden="true" />
-      {label}
+      <span className="max-sm:sr-only">{label}</span>
     </>
   ),
 }))
@@ -401,7 +401,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
     () => ({
       title: <DashboardBreadcrumb title={title} />,
       controls: (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 max-sm:gap-2">
           <SaveStatus state={saveState} onRetry={retrySave} />
           {/* The editor's toolbar has its own Undo / Redo. */}
           {mode === "view" && (canUndo || canRedo) && (
@@ -411,7 +411,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
             </div>
           )}
           {/* The editor has its palette; the view gets the same grid here. */}
-          {mode === "view" && <HeaderButton icon={Plus} label="Add widget" onClick={() => setPickerOpen(true)} />}
+          {mode === "view" && <HeaderButton icon={Plus} label="Add widget" iconOnlyOnMobile onClick={() => setPickerOpen(true)} />}
           <SegmentedTabs
             ariaLabel="Dashboard mode"
             panelId={BOARD_PANEL_ID}
@@ -500,6 +500,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
   return (
     <WorkspaceLayout
       board={<BriefingProvider onBriefing={fetchBriefing}>{board}</BriefingProvider>}
+      mode={mode}
       railed={mode === "edit"}
       tabPanel
       chat={
@@ -563,7 +564,7 @@ const ASIDE_BASE =
  * conversation (and a reply still streaming in) survives every toggle. Below
  * lg the page stacks, and the chat stays docked under the board.
  */
-function WorkspaceLayout({ board, chat, railed = false, tabPanel = false }) {
+function WorkspaceLayout({ board, chat, mode, railed = false, tabPanel = false }) {
   const panelId = useId()
   const railButtonRef = useRef(null)
   const closeButtonRef = useRef(null)
@@ -602,6 +603,7 @@ function WorkspaceLayout({ board, chat, railed = false, tabPanel = false }) {
       <section
         id={tabPanel ? BOARD_PANEL_ID : undefined}
         role={tabPanel ? "tabpanel" : undefined}
+        aria-labelledby={tabPanel ? `${BOARD_PANEL_ID}-tab-${mode}` : undefined}
         aria-label="Dashboard"
         className="min-w-0 shrink-0 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto">
         {board}
@@ -672,7 +674,8 @@ function WorkspaceLayout({ board, chat, railed = false, tabPanel = false }) {
  * The top bar's title: "My dashboards / <title>" on one line, the list as a
  * link back. Deliberately small and not a heading: a level-1 heading widget
  * on the board is the big title when the dashboard has one, and two h1s
- * would compete. `title` null (still loading) shows the link alone.
+ * would compete. `title` null (still loading) shows the link alone. Below sm the link and
+ * separator hide so the title keeps room beside the controls.
  */
 function DashboardBreadcrumb({ title }) {
   return (
@@ -680,13 +683,13 @@ function DashboardBreadcrumb({ title }) {
       <p className="flex min-w-0 items-baseline gap-0 whitespace-pre text-base font-semibold leading-none">
         <Link
           href="/dashboards"
-          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+          className={`${title ? "max-sm:hidden " : ""}shrink-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
         >
           My dashboards
         </Link>
         {title && (
           <>
-            <span className="shrink-0 text-muted-foreground">{" / "}</span>
+            <span className="shrink-0 text-muted-foreground max-sm:hidden">{" / "}</span>
             <span aria-current="page" className="min-w-0 truncate text-foreground">
               {title}
             </span>
@@ -698,11 +701,11 @@ function DashboardBreadcrumb({ title }) {
 }
 
 /** A quiet ghost button for the header bar (Undo / Redo in view mode). */
-function HeaderButton({ icon: Icon, label, onClick }) {
+function HeaderButton({ icon: Icon, label, onClick, iconOnlyOnMobile = false }) {
   return (
     <Button variant="ghost" size="sm" onClick={onClick} className="text-muted-foreground">
       <Icon aria-hidden="true" />
-      {label}
+      <span className={iconOnlyOnMobile ? "max-sm:sr-only" : undefined}>{label}</span>
     </Button>
   )
 }
