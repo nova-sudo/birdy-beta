@@ -26,6 +26,20 @@ describe("BirdyRead", () => {
     expect(screen.getByTestId("birdy-avatar").getAttribute("data-size")).toBe("28")
   })
 
+  it("keeps the mascot's face glyphs out of the heading's accessible name", async () => {
+    // Birdy draws ? ! z as SVG text; the frame is decorative, so none of it may
+    // leak into what a screen reader announces for the title.
+    vi.resetModules()
+    vi.doUnmock("@/components/birdy/BirdyAvatar")
+    window.matchMedia ??= () => ({ matches: false, addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {} })
+    const { BirdyRead: Real } = await import("../birdy-read")
+    render(<Real findings={[finding(1)]} />)
+    const heading = screen.getByRole("heading")
+    expect(heading).toHaveAccessibleName(/^Birdy's read/)
+    expect(heading).not.toHaveAccessibleName(/[?!]/)
+    expect(heading.querySelector("svg").parentElement).toHaveAttribute("aria-hidden", "true")
+  })
+
   it("shows the finding count in a primary badge", () => {
     render(<BirdyRead findings={[finding(1), finding(2), finding(3)]} />)
     const badge = document.querySelector('[data-slot="birdy-read-count"]')

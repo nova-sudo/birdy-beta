@@ -6,7 +6,7 @@
 // ui/table-container, which the Sales/Marketing hubs still use), so a column
 // reads the same number it always did.
 
-import { buildDynamicColumns, getTagCount } from "@/lib/enhanced-columns-config";
+import { buildDynamicColumns, getTagCount, columnMenuSource } from "@/lib/enhanced-columns-config";
 import { evaluateFormula } from "@/lib/metrics";
 import { applyDefaultMetrics, defaultMetricFormat } from "@/lib/default-metrics";
 import { formatMetric } from "@/lib/format-metric";
@@ -44,16 +44,16 @@ const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
  * formulas: the base catalogue, one column per GHL tag in use, and the
  * formulas shown on the Clients dashboard.
  *
- * @returns {{id: string, label: string, sortable: boolean, text: boolean, custom?: object}[]}
+ * @returns {{id: string, label: string, sortable: boolean, text: boolean, source: string, custom?: object}[]}
  */
 export function catalogueColumns(groups, customMetrics = []) {
   const base = buildDynamicColumns(groups ?? [])
     .filter((c) => !CURATED.has(c.id))
-    .map((c) => ({ id: c.id, label: c.label, sortable: c.sortable !== false, text: TEXT_COLUMNS.has(c.id), tag: c.tagName }));
+    .map((c) => ({ id: c.id, label: c.label, sortable: c.sortable !== false, text: TEXT_COLUMNS.has(c.id), source: columnMenuSource(c), tag: c.tagName }));
 
   const custom = (customMetrics ?? [])
     .filter((m) => m.enabled && (m.dashboards?.includes("clients") || m.dashboard === "Clients"))
-    .map((m) => ({ id: m.id, label: m.name, sortable: true, text: false, custom: m }));
+    .map((m) => ({ id: m.id, label: m.name, sortable: true, text: false, source: "custom", custom: m }));
 
   const seen = new Set();
   return [...base, ...custom].filter((c) => !seen.has(c.id) && seen.add(c.id));

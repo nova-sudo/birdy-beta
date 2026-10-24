@@ -16,9 +16,13 @@ import { FUNNEL_STAGES } from "@/lib/client-funnel"
 // What each stage is called when the bar is only a phone wide.
 const SHORT_LABELS = { in_crm: "CRM" }
 
+// The first stage is the CRM cohort (the leads that reached the CRM), not every
+// lead the ad accounts report, so it says so.
+const LABELS = { leads: "CRM leads" }
+
 const stepOf = (stage) => ({
   key: stage.id,
-  label: stage.label,
+  label: LABELS[stage.id] ?? stage.label,
   shortLabel: SHORT_LABELS[stage.id],
   // A stage the client has no data source for reads as a dash, not a bold 0 —
   // the Called stage for a client whose sales answer was "I don't call my

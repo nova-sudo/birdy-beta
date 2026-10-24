@@ -397,4 +397,19 @@ describe("/alerts", () => {
     const header = await waitFor(() => rowOf("CPL watch"))
     expect(within(header).getByText("Per Client")).toBeInTheDocument()
   })
+
+  it("still marks a group Per Client when its rule has no targets and is not in per-client mode", async () => {
+    // The group row is per-client by construction, whatever the rule it was
+    // built from says: an empty target list must not turn it into "Global (All)".
+    tab.value = "triggered"
+    mockApi({
+      ...LOADED,
+      triggered: [{ ...child("c1", "Acme Dental", 120), target_group_ids: [], target_group_names: [], tracking_mode: "total" }],
+      counts: { active: 1, triggered: 1, paused: 1 },
+    })
+    renderPage()
+    const header = await waitFor(() => rowOf("CPL watch"))
+    expect(within(header).getByText("Per Client")).toBeInTheDocument()
+    expect(within(header).queryByText("Global (All)")).toBeNull()
+  })
 })

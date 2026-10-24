@@ -73,6 +73,13 @@ describe("DiagnosticsFunnel", () => {
     expect(screen.queryByText(/No stage movement/)).toBeNull()
   })
 
+  it("labels the first stage CRM leads, because the cohort is the CRM's, not the ad account's", () => {
+    render(<DiagnosticsFunnel stages={buildFunnelStages(group)} />)
+    const bar = document.querySelector('[data-ds="funnel-bar"]')
+    expect(within(bar).getAllByText("CRM leads").length).toBeGreaterThan(0)
+    expect(within(bar).queryByText("Leads")).toBeNull()
+  })
+
   it("a stage with movement shows a delta, a falling one red", () => {
     const stages = buildFunnelStages(group, { leads: 1500, in_crm: 1000, called: 450, closes: 43 })
     render(<DiagnosticsFunnel stages={stages} hasComparison />)

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within, waitFor } from "@testing-library/react"
+import { render, screen, within, waitFor, act } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Client Hub ──────────────────────────────────────────────────────────────
@@ -16,6 +16,16 @@ vi.mock("@/lib/cache", () => ({ getCachedData: vi.fn(), clearCache: vi.fn() }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }))
 const views = vi.hoisted(() => ({ savedColumns: null, saveView: vi.fn(), viewsLoaded: true }))
 vi.mock("@/lib/useColumnViews", () => ({ useColumnViews: () => views }))
+// The named-views hook has its own tests; here it is the seam the page hands its
+// column-applying callback through.
+const pageViews = vi.hoisted(() => ({ page: null, opts: null }))
+vi.mock("@/lib/usePageViews", () => ({
+  usePageViews: (page, opts) => {
+    pageViews.page = page
+    pageViews.opts = opts
+    return { views: [], activeViewId: null, activeView: null, applyView: vi.fn(), createView: vi.fn(), updateView: vi.fn(), deleteView: vi.fn() }
+  },
+}))
 vi.mock("@/components/clients/BulkImportDialog", () => ({ default: () => null }))
 vi.mock("@/components/clients/MetaCampaignPicker", () => ({ MetaCampaignPicker: () => null }))
 vi.mock("@/components/clients/MetaCampaignsDialog", () => ({ MetaCampaignsDialog: () => null }))
@@ -205,7 +215,7 @@ describe("/clients", () => {
       })
     }
     const header = (name) => within(table()).queryByRole("columnheader", { name })
-    const openView = async (user) => user.click(screen.getByRole("button", { name: "Toggle columns" }))
+    const openView = async (user) => user.click(screen.getByRole("button", { name: /^columns/i }))
 
     it("opens on the five columns; the rest of the catalogue is one click away", async () => {
       withExtras()
@@ -218,7 +228,7 @@ describe("/clients", () => {
       const menu = screen.getByRole("dialog")
       expect(within(menu).getByText("Campaigns")).toBeInTheDocument()
       expect(within(menu).getByText("GHL Leads")).toBeInTheDocument()
-      // The name column cannot be hidden, and the curated columns are not offered twice.
+      // The curated columns are not offered twice.
       expect(within(menu).queryByText("Business Name")).toBeNull()
       expect(within(menu).queryByText("Meta Leads")).toBeNull()
 
@@ -270,12 +280,42 @@ describe("/clients", () => {
       expect(headers).toEqual(["Client", "Campaigns", "Ad spend"])
     })
 
-    it("a user with no saved layout gets the five columns, and Save columns writes the visible ids", async () => {
+    it("a user with no saved layout gets the five columns; Save columns appears once they change, and writes the visible ids", async () => {
       withExtras()
       const user = userEvent.setup()
       render(<ClientsPage />)
+      expect(screen.queryByRole("button", { name: "Save columns" })).toBeNull()
+      await openView(user)
+      await user.click(within(screen.getByRole("dialog")).getByText("Campaigns"))
       await user.click(screen.getByRole("button", { name: "Save columns" }))
-      expect(views.saveView).toHaveBeenCalledWith(["name", "status", "health", "leads", "cpl", "spend"])
+      expect(views.saveView).toHaveBeenCalledWith(["name", "status", "health", "leads", "cpl", "spend", "meta_campaigns"])
+    })
+
+    it("Save columns is not offered while the columns match the saved layout", () => {
+      withExtras()
+      views.savedColumns = ["name", "meta_campaigns"]
+      render(<ClientsPage />)
+      expect(screen.queryByRole("button", { name: "Save columns" })).toBeNull()
+    })
+
+    it("the Client column is locked on in the Columns menu", async () => {
+      withExtras()
+      const user = userEvent.setup()
+      render(<ClientsPage />)
+      await openView(user)
+      const lock = within(screen.getByRole("dialog")).getByRole("button", { name: /^Client/ })
+      expect(lock).toBeDisabled()
+      expect(header("Client")).not.toBeNull()
+    })
+
+    it("applying a saved view sets the visible columns, Client first", () => {
+      withExtras()
+      render(<ClientsPage />)
+      expect(pageViews.page).toBe("clients")
+      expect(pageViews.opts.ready).toBe(true)
+      act(() => pageViews.opts.onApply({ visibleColumns: ["meta_campaigns", "spend"] }))
+      const headers = within(table()).getAllByRole("columnheader").map((h) => h.textContent)
+      expect(headers).toEqual(["Client", "Campaigns", "Ad spend"])
     })
 
     it("waits for the saved layout before applying one", () => {

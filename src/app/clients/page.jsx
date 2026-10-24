@@ -39,6 +39,9 @@ import { usePageHeader } from "@/components/page-header"
 import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { useColumnViews } from "@/lib/useColumnViews"
+import { usePageViews } from "@/lib/usePageViews"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { COLUMN_MENU_SOURCES } from "@/lib/enhanced-columns-config"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest } from "@/lib/api"
@@ -53,6 +56,12 @@ import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 import { HEALTH_TONE, clientRows, statusOf } from "./presentation"
 import { DEFAULT_VISIBLE, catalogueColumns, catalogueValues, formatCell, readSavedView } from "./catalogue"
 import { usePreviousClientGroups } from "./usePreviousClientGroups"
+
+// The name column leads the table and stays on whatever the user picks.
+const LOCKED_COLUMNS = ["name"]
+const nameFirst = (ids) => ["name", ...ids.filter((id) => id !== "name")]
+// Where each curated column sits in the Columns menu; catalogue columns carry their own.
+const CURATED_SOURCES = { name: "birdy", status: "birdy", health: "birdy", leads: "meta", cpl: "meta", spend: "meta" }
 
 // The same question the bulk-import review step asks per row, kept in the same
 // order and wording so the two paths don't describe the same choice
@@ -171,11 +180,17 @@ export default function ClientsPage() {
   }, [])
 
   // The per-user column layout: a flat ordered list of ids, read here and
-  // written only when "Save columns" is pressed.
+  // written only when the Columns menu saves ("Save to existing") or the
+  // toolbar's "Save columns" is pressed.
   const { savedColumns, saveView, viewsLoaded } = useColumnViews("clients")
   const savedView = useMemo(() => (viewsLoaded ? readSavedView(savedColumns) : null), [viewsLoaded, savedColumns])
-  // Choices made since the page opened; they sit on top of the saved view or the default.
-  const [visibilityChoices, setVisibilityChoices] = useState({})
+  // The columns on screen, in order. Name leads and cannot be removed; choices
+  // sit on top of the saved view or the default until they are saved.
+  const [visibleIds, setVisibleIdsRaw] = useState(DEFAULT_VISIBLE)
+  const setVisibleIds = useCallback((ids) => setVisibleIdsRaw(nameFirst(ids)), [])
+  useEffect(() => {
+    if (savedView) setVisibleIds(savedView.order)
+  }, [savedView, setVisibleIds])
 
   // ── Filter groups by status ───────────────────────────────────────────────
   // The six tabs mix two axes — Active/Inactive are status, and
@@ -322,22 +337,51 @@ export default function ClientsPage() {
     [userCurrency, symbol, extraColumns],
   )
 
-  // Saved order first (the name column always leads), the rest as catalogued.
+  // Shown columns in their saved order (the name column always leads), then
+  // the rest as catalogued. The Columns menu owns visibility, so the table's
+  // own View picker has nothing to offer.
   const orderedColumns = useMemo(() => {
-    if (!savedView) return columns
-    const rank = new Map(["name", ...savedView.order].map((id, i) => [id, i]))
-    return [...columns].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity))
-  }, [columns, savedView])
+    const rank = new Map(visibleIds.map((id, i) => [id, i]))
+    return columns
+      .map((c) => ({ ...c, enableHiding: false }))
+      .sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity))
+  }, [columns, visibleIds])
 
   // Every column gets an explicit answer: the table would show an unknown one.
-  const columnVisibility = useMemo(() => {
-    const base = (id) => (savedView ? savedView.visible.has(id) : DEFAULT_VISIBLE.includes(id))
-    return Object.fromEntries(orderedColumns.map((c) => [c.id, c.id === "name" ? true : visibilityChoices[c.id] ?? base(c.id)]))
-  }, [orderedColumns, savedView, visibilityChoices])
+  const columnVisibility = useMemo(
+    () => Object.fromEntries(orderedColumns.map((c) => [c.id, visibleIds.includes(c.id)])),
+    [orderedColumns, visibleIds],
+  )
 
-  const saveColumns = useCallback(
-    () => saveView(orderedColumns.filter((c) => columnVisibility[c.id]).map((c) => c.id)),
-    [saveView, orderedColumns, columnVisibility],
+  const columnCatalogue = useMemo(() => {
+    const sources = new Map(extraColumns.map((c) => [c.id, c.source]))
+    return columns.map((c) => ({
+      id: c.id,
+      label: c.id === "name" ? "Client" : c.meta.label,
+      source: CURATED_SOURCES[c.id] ?? sources.get(c.id) ?? "birdy",
+    }))
+  }, [columns, extraColumns])
+
+  // "Save to existing" in the menu writes the page's own layout.
+  const saveColumns = useCallback(async (ids = visibleIds) => {
+    await saveView(nameFirst(ids))
+    return true
+  }, [saveView, visibleIds])
+
+  const applyColumnView = useCallback((s) => {
+    if (Array.isArray(s.visibleColumns)) setVisibleIds(s.visibleColumns)
+  }, [setVisibleIds])
+
+  const pageViews = usePageViews("clients", {
+    onApply: applyColumnView,
+    // Hold the default view until the saved layout has loaded and applied.
+    ready: viewsLoaded,
+  })
+
+  // Whether the columns on screen differ from what is saved (or the default).
+  const columnsChanged = useMemo(
+    () => visibleIds.join() !== nameFirst(savedView ? savedView.order : DEFAULT_VISIBLE).join(),
+    [visibleIds, savedView],
   )
 
   useEffect(() => {
@@ -1098,11 +1142,25 @@ export default function ClientsPage() {
             data={rows}
             stickyFirstColumn
             state={{ columnVisibility }}
-            onStateChange={(next) => setVisibilityChoices(next.columnVisibility)}
             toolbar={
-              <Button variant="ghost" size="sm" onClick={saveColumns}>
-                Save columns
-              </Button>
+              <>
+                <ColumnsMenu
+                  columns={columnCatalogue}
+                  visibleColumns={visibleIds}
+                  onChange={setVisibleIds}
+                  defaultColumns={DEFAULT_VISIBLE}
+                  views={pageViews}
+                  sources={COLUMN_MENU_SOURCES}
+                  onSaveDefault={saveColumns}
+                  lockedColumnIds={LOCKED_COLUMNS}
+                  buttonClassName="ml-auto"
+                />
+                {columnsChanged && (
+                  <Button variant="ghost" size="sm" onClick={() => saveColumns()}>
+                    Save columns
+                  </Button>
+                )}
+              </>
             }
             loading={loading}
             getRowId={(row) => row.id}

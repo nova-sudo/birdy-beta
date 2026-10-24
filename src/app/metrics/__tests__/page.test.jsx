@@ -245,3 +245,104 @@ describe("Metrics Hub", () => {
     expect(document.querySelector('[data-ds="empty-state"]')).toBeInTheDocument()
   })
 })
+
+describe("Metrics Hub: create, duplicate, paginate", () => {
+  const posts = () => apiRequest.mock.calls.filter(([url, o]) => url === "/api/custom-metrics" && o?.method === "POST")
+  const withCreate = () =>
+    apiRequest.mockImplementation((url, options) =>
+      url === "/api/custom-metrics" && options?.method === "POST" ? ok({ metric: { id: "new1" } }) : mockApi(url, options)
+    )
+
+  it("creates a formula by hand: the name, the dashboard and the formula go out in one POST, and the row appears", async () => {
+    withCreate()
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findAllByText("Meta Spend")
+
+    await user.click(screen.getByRole("button", { name: "Create metric" }))
+    const dialog = await screen.findByRole("dialog")
+    await user.click(within(dialog).getByRole("tab", { name: "Manual" }))
+    // Nothing to save until it has a name.
+    expect(within(dialog).getByRole("button", { name: "Save Metric" })).toBeDisabled()
+
+    await user.type(within(dialog).getByLabelText("Metric Name"), "Cost per booking")
+    await user.click(within(dialog).getByRole("checkbox", { name: "Client Groups" }))
+    await user.click(within(dialog).getByRole("button", { name: "Save Metric" }))
+
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    const body = JSON.parse(posts()[0][1].body)
+    expect(body).toMatchObject({ name: "Cost per booking", dashboards: ["clients"], format_type: "integer", aggregation: "total" })
+    expect(Array.isArray(body.formula_parts)).toBe(true)
+
+    // The dialog closes and the new formula is listed.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await user.click(screen.getByRole("tab", { name: "Custom Formulas" }))
+    expect(rowNames()).toContain("Cost per booking")
+  })
+
+  it("refuses a name an existing formula already has", async () => {
+    withCreate()
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findAllByText("Meta Spend")
+
+    await user.click(screen.getByRole("button", { name: "Create metric" }))
+    const dialog = await screen.findByRole("dialog")
+    await user.click(within(dialog).getByRole("tab", { name: "Manual" }))
+    await user.type(within(dialog).getByLabelText("Metric Name"), "cpa (soup)")
+
+    expect(within(dialog).getByText(/already exists/)).toBeInTheDocument()
+    expect(within(dialog).getByRole("button", { name: "Save Metric" })).toBeDisabled()
+    expect(posts()).toHaveLength(0)
+  })
+
+  it("duplicates a formula into a new row under a fresh name, leaving the source alone", async () => {
+    withCreate()
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findAllByText("Meta Spend")
+    await user.click(screen.getByRole("tab", { name: "Custom Formulas" }))
+
+    await user.click(within(table()).getByRole("button", { name: "Duplicate CPA (SOUP)" }))
+    const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("Duplicate Metric")).toBeInTheDocument()
+    // Pre-filled with a unique suggestion, the source's dashboards carried over.
+    expect(within(dialog).getByLabelText("Metric Name")).toHaveValue("CPA (SOUP) (copy)")
+
+    await user.click(within(dialog).getByRole("button", { name: "Save Duplicate" }))
+
+    await waitFor(() => expect(posts()).toHaveLength(1))
+    expect(JSON.parse(posts()[0][1].body)).toMatchObject({ name: "CPA (SOUP) (copy)", dashboards: ["clients"] })
+    expect(apiRequest.mock.calls.some(([, o]) => o?.method === "PATCH")).toBe(false)
+    await waitFor(() => expect(rowNames()).toEqual(["CPA (SOUP)", "CPA (SOUP) (copy)"]))
+  })
+
+  it("pages a long catalogue: 15 to a page, next and previous move between them", async () => {
+    const many = Array.from({ length: 20 }, (_, i) => ({
+      id: `meta_m${String(i).padStart(2, "0")}`,
+      label: `Meta Metric ${String(i).padStart(2, "0")}`,
+      category: "Meta Ads",
+      level: "group",
+    }))
+    apiRequest.mockImplementation((url, options) =>
+      url.includes("/available-fields") ? ok({ base_metrics: many, tags: [] }) : mockApi(url, options)
+    )
+    const user = userEvent.setup()
+    render(<Harness />)
+    await screen.findAllByText("Meta Metric 00")
+
+    // 20 + ROAS + the custom formula = 22 metrics.
+    expect(rowNames()).toHaveLength(15)
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Go to previous page" })).toBeDisabled()
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }))
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument()
+    expect(rowNames()).toHaveLength(7)
+    expect(screen.getByRole("button", { name: "Go to next page" })).toBeDisabled()
+
+    await user.click(screen.getByRole("button", { name: "Go to previous page" }))
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument()
+    expect(rowNames()).toHaveLength(15)
+  })
+})

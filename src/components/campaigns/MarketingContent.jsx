@@ -1258,6 +1258,7 @@ export function MarketingContent({
           defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
           views={pageViews}
           onSaveDefault={saveDefaultColumns}
+          lockedColumnIds={lockedColumns}
         />
       </div>
     </>

@@ -447,6 +447,7 @@ export function LeadsContent({
         defaultColumns={defaultColumnIds}
         views={pageViews}
         onSaveDefault={saveDefaultColumns}
+        lockedColumnIds={LOCKED_COLUMNS}
         buttonClassName="ml-auto"
       />
     </>

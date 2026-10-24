@@ -110,6 +110,9 @@ export default function ColumnsMenu({
   // existing" writes when no saved view is selected. Without it that button
   // has nothing to save to on Default.
   onSaveDefault,
+  // Ids the page keeps on whatever the user picks (the Name column). They show
+  // ticked and cannot be switched off, singly or by "select all".
+  lockedColumnIds = [],
   buttonClassName = "",
 }) {
   const [open, setOpen] = useState(false)
@@ -165,9 +168,11 @@ export default function ColumnsMenu({
     })
   }, [columns, source, search])
 
-  const allOn = shown.length > 0 && shown.every(c => visibleColumns.includes(c.id))
+  const toggleable = shown.filter(c => !lockedColumnIds.includes(c.id))
+  const allOn = toggleable.length > 0 && toggleable.every(c => visibleColumns.includes(c.id))
 
   const toggleColumn = (id) => {
+    if (lockedColumnIds.includes(id)) return
     onChange?.(
       visibleColumns.includes(id)
         ? visibleColumns.filter(c => c !== id)
@@ -177,7 +182,7 @@ export default function ColumnsMenu({
 
   // Acts on the filtered list only — "select all" means all of what you can see.
   const toggleAll = () => {
-    const ids = shown.map(c => c.id)
+    const ids = toggleable.map(c => c.id)
     onChange?.(
       allOn
         ? visibleColumns.filter(id => !ids.includes(id))
@@ -535,21 +540,25 @@ export default function ColumnsMenu({
                   No metrics match that search.
                 </p>
               ) : (
-                shown.map(col => (
+                shown.map(col => {
+                  const locked = lockedColumnIds.includes(col.id)
+                  return (
                   <button
                     key={col.id}
                     type="button"
                     onClick={() => toggleColumn(col.id)}
-                    aria-pressed={visibleColumns.includes(col.id)}
-                    className="flex w-full items-center gap-[10px] rounded-control px-[10px] py-[8px] text-left hover:bg-muted"
+                    aria-pressed={locked || visibleColumns.includes(col.id)}
+                    disabled={locked}
+                    className="flex w-full items-center gap-[10px] rounded-control px-[10px] py-[8px] text-left hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
                   >
-                    <Tick on={visibleColumns.includes(col.id)} />
+                    <Tick on={locked || visibleColumns.includes(col.id)} />
                     <span className="flex-1 truncate text-xs font-semibold text-foreground">
                       {col.label}
                     </span>
                     <SourceBadge source={col.source} />
                   </button>
-                ))
+                  )
+                })
               )}
             </div>
 
