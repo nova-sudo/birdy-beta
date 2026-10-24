@@ -156,17 +156,7 @@ export default function RootLayout({ children }) {
         <SWRProvider>
         <ProtectedLayout>
           <SidebarProvider open={false}>
-            {/* One child, not `{!hide && shell}{hide && bare}`. Two siblings
-                make a tree fork here, and the browser's first render dropped it
-                (Next's router renders around this layout), shifting every
-                Radix useId below by two bits: the account menu and search
-                dialog ids no longer matched the server's. A ternary leaves no
-                fork to drop. */}
-            {hideSidebar ? (
-              <div className="w-full">
-                {children}
-              </div>
-            ) : (
+            {!hideSidebar && (
               <CreditsProvider>
               <DashboardControlsProvider>
               <PageHeaderProvider>
@@ -215,6 +205,12 @@ export default function RootLayout({ children }) {
               </PageHeaderProvider>
               </DashboardControlsProvider>
               </CreditsProvider>
+            )}
+
+            {hideSidebar && (
+              <div className="w-full">
+                {children}
+              </div>
             )}
           </SidebarProvider>
         </ProtectedLayout>
