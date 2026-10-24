@@ -10,8 +10,9 @@ import { cn } from "@/lib/utils"
  * @param {React.ReactNode} props.title
  * @param {React.ReactNode} [props.description]
  * @param {React.ReactNode} [props.action] Usually a `Button`
+ * @param {React.ElementType} [props.titleAs] Element for the title, default `p`
  */
-function EmptyState({ icon: Icon, title, description, action, className, ...props }) {
+function EmptyState({ icon: Icon, title, titleAs: TitleTag = "p", description, action, className, ...props }) {
   // lucide icons are forwardRef objects, so a typeof-function check alone misses them.
   const isComponent = Icon && !React.isValidElement(Icon) && (typeof Icon === "function" || typeof Icon === "object")
   return (
@@ -27,7 +28,7 @@ function EmptyState({ icon: Icon, title, description, action, className, ...prop
         </span>
       )}
       <div className="flex flex-col gap-1">
-        <p className="text-base font-semibold text-foreground">{title}</p>
+        <TitleTag className="text-base font-semibold text-foreground">{title}</TitleTag>
         {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
       </div>
       {action}

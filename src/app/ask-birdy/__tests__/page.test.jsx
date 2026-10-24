@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the page uses.
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 
 const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({

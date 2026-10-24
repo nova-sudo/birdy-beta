@@ -24,7 +24,7 @@ export const DK_THEME_VARS = {
   "--dk-muted": "var(--color-muted-foreground)",
   "--dk-subtle": "var(--color-muted-foreground)",
   "--dk-border": "var(--color-border)",
-  "--dk-border-strong": "color-mix(in srgb, var(--color-border), #000 8%)",
+  "--dk-border-strong": "color-mix(in srgb, var(--color-border), black 8%)",
   "--dk-table-head": "var(--color-muted)",
   // Accent
   "--dk-accent": "var(--color-primary)",

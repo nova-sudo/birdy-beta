@@ -38,7 +38,7 @@ function SheetOverlay({
     <SheetPrimitive.Overlay
       data-slot="sheet-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-gray-900/40 backdrop-blur-sm",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-scrim backdrop-blur-sm",
         className
       )}
       {...props} />
@@ -71,7 +71,7 @@ function SheetContent({
         {...props}>
         {children}
         <SheetPrimitive.Close
-          className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 flex size-8 items-center justify-center rounded-full opacity-70 transition-[opacity,background-color] hover:bg-foreground/5 hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
+          className="ring-offset-background focus:ring-primary data-[state=open]:bg-muted absolute top-4 right-4 flex size-8 items-center justify-center rounded-full opacity-70 transition-[opacity,background-color] hover:bg-foreground/5 hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">
           <XIcon className="size-4" />
           <span className="sr-only">Close</span>
         </SheetPrimitive.Close>
@@ -111,7 +111,7 @@ function SheetTitle({
   return (
     <SheetPrimitive.Title
       data-slot="sheet-title"
-      className={cn("font-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink", className)}
+      className={cn("text-xl font-bold tracking-[-0.01em] text-foreground", className)}
       {...props} />
   );
 }

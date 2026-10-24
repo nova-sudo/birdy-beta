@@ -1,8 +1,6 @@
 import { Sparkles, Wand2, Wrench } from "lucide-react";
 import { RELEASES, APP_VERSION } from "@/lib/changelog";
-// Server component: import ds parts by file, since the barrel pulls in client-only code that breaks prerender.
-import { Badge } from "@/components/ds/primitives/badge";
-import { Surface } from "@/components/ds/surfaces/surface";
+import { Badge, Surface } from "@/components/ds";
 import { Stagger, StaggerItem } from "@/components/motion";
 
 // Deterministic date formatting so server and client render identically

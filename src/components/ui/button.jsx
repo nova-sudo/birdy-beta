@@ -5,22 +5,22 @@ import { cva } from "class-variance-authority";
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-[background-color,box-shadow,transform,color,border-color] duration-200 ease-[cubic-bezier(.2,.8,.2,1)] active:scale-[.96] active:duration-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:cursor-pointer motion-reduce:transform-none motion-reduce:transition-colors",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold transition-[background-color,box-shadow,transform,color,border-color] duration-200 ease-[cubic-bezier(.2,.8,.2,1)] active:scale-[.96] active:duration-100 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-primary/25 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:cursor-pointer motion-reduce:transform-none motion-reduce:transition-colors",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-[0_2px_8px_-2px_rgba(91,63,214,.45),inset_0_1px_0_rgba(255,255,255,.18)] hover:bg-purple-700 hover:-translate-y-px hover:shadow-[0_6px_16px_-4px_rgba(91,63,214,.5),inset_0_1px_0_rgba(255,255,255,.18)]",
+          "bg-primary text-primary-foreground shadow-control hover:bg-primary/90 hover:-translate-y-px hover:shadow-floating",
         destructive:
-          "bg-destructive text-destructive-foreground shadow-[0_2px_8px_-2px_rgba(229,72,77,.4)] hover:bg-destructive/90 hover:-translate-y-px",
+          "bg-danger text-primary-foreground shadow-control hover:bg-danger/90 hover:-translate-y-px",
         // Outlined red that fills on hover: for "remove"/"disconnect" actions
         // that sit on a page by the dozen, where a solid red would shout.
         "destructive-outline":
-          "border border-pd-danger-border bg-background text-pd-danger hover:bg-pd-danger hover:text-white hover:border-pd-danger",
+          "border border-danger/25 bg-background text-danger hover:bg-danger hover:text-primary-foreground hover:border-danger",
         outline:
-          "border border-border bg-background shadow-xs hover:bg-secondary hover:border-gray-300",
+          "border border-border bg-background shadow-xs hover:bg-muted hover:border-muted-foreground/40",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-accent",
+          "bg-muted text-foreground hover:bg-border",
         ghost:
           "hover:bg-foreground/5 hover:text-foreground",
         link: "text-primary underline-offset-4 hover:underline",

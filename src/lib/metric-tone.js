@@ -18,9 +18,9 @@ const GOOD_RATIO = 0.9
 const BAD_RATIO = 0.7
 
 export const TONE = {
-  good: "text-[#25A55F]",
-  warn: "text-[#E0920A]",
-  bad: "text-[#E5484D]",
+  good: "text-success",
+  warn: "text-warning",
+  bad: "text-danger",
   neutral: "",
 }
 

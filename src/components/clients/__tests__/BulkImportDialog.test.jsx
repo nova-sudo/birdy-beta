@@ -9,7 +9,7 @@ const apiRequest = vi.fn()
 vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 const toast = { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() }
 vi.mock("sonner", () => ({ toast }))
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 
 const ACCOUNTS = [
   { location_id: "loc1", name: "Acme" },

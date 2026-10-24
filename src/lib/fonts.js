@@ -20,10 +20,3 @@ export const geistMono = Geist_Mono({
 
 /** Both font variables, for the root element. */
 export const fontVariables = `${outfit.variable} ${geistMono.variable}`;
-
-/**
- * Legacy alias kept until the last migration phase removes it. Screens that
- * still apply it get the base sans (Outfit); the variables themselves live on
- * <html>, so it is harmless.
- */
-export const pdFontClass = "font-sans";

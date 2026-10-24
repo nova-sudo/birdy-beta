@@ -10,7 +10,7 @@ vi.mock("@/lib/api", () => ({
   API_BASE_URL: "http://api.test",
 }))
 // next/font hits the network at module load; the class names are all the shell uses.
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({

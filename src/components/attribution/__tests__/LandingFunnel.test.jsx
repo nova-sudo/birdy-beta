@@ -10,7 +10,7 @@ import { render, screen, within } from "@testing-library/react"
 
 // next/font can't run outside Next's build, and the card only wants the class
 // name it hands back — same stub the overview's own tests use.
-vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 
 const { LandingFunnel } = await import("@/components/attribution/LandingFunnel")
 

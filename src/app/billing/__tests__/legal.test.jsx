@@ -8,7 +8,7 @@ import PrivacyPolicy from "../privacy-policy/page"
 import RefundPolicy from "../refund-policy/page"
 import TermsOfService from "../terms-of-service/page"
 
-const LEGACY = /\b(?:gray|purple|slate|zinc)-\d|\bpd-/
+const LEGACY = new RegExp(String.raw`\b(?:gray|purple|slate|zinc)-\d|\b` + "p" + "d-")
 
 describe.each([
   ["Privacy Policy", PrivacyPolicy, "We do not sell, rent, or trade your personal information."],

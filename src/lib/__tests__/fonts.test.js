@@ -11,7 +11,7 @@ vi.mock("next/font/google", () => {
   return { Outfit: make("Outfit", "x-outfit"), Geist_Mono: make("Geist_Mono", "x-mono") }
 })
 
-import { fontVariables, pdFontClass } from "@/lib/fonts"
+import { fontVariables } from "@/lib/fonts"
 
 describe("fonts", () => {
   it("puts both families' variables on the root string", () => {
@@ -27,9 +27,5 @@ describe("fonts", () => {
   it("binds the CSS variable names the tokens reference", () => {
     expect(calls.Outfit.variable).toBe("--font-outfit")
     expect(calls.Geist_Mono.variable).toBe("--font-geist-mono")
-  })
-
-  it("keeps pdFontClass as a font-sans alias", () => {
-    expect(pdFontClass).toBe("font-sans")
   })
 })

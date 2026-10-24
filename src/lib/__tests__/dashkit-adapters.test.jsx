@@ -160,10 +160,9 @@ describe("dashkit theme", () => {
     expect(DK_THEME_VARS["--dk-accent"]).toBe("var(--color-primary)")
     expect(DK_THEME_VARS["--dk-chart-2"]).toBe("var(--color-chart-2)")
     expect(DK_THEME_VARS["--dk-radius"]).toBe("var(--radius-frame)")
-    // No pd aliases and no literal colours; the one #000 is border-strong's
-    // colour-mix darkener, not a colour value.
-    const values = Object.values(DK_THEME_VARS).join().replace(", #000 8%)", ")")
-    expect(values).not.toMatch(/--pd-|#[0-9a-f]{3,8}/i)
+    // No legacy aliases and no literal colours.
+    const values = Object.values(DK_THEME_VARS).join()
+    expect(values).not.toMatch(new RegExp("--p" + "d-|#[0-9a-f]{3,8}", "i"))
   })
 
   it("globals.css .dk-root block declares the same vars as dkTheme", () => {

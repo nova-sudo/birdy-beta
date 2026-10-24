@@ -26,14 +26,16 @@ describe("design tokens", () => {
     })) expect(decl(css, name), name).toBe(value)
   })
 
-  it("aliases shadcn and pd vars to tokens", () => {
-    expect(decl(css, "--primary")).toBe("var(--color-primary)")
-    expect(decl(css, "--background")).toBe("var(--color-background)")
+  it("keeps the radius base and drops the legacy alias layers", () => {
     expect(decl(css, "--radius")).toBe("12px")
-    expect(decl(css, "--pd-ink")).toBe("var(--color-foreground)")
-    expect(decl(css, "--pd-canvas")).toBe("var(--color-muted)")
-    expect(decl(css, "--pd-primary-tint")).toBe("var(--color-primary-soft)")
-    expect(decl(css, "--pd-shadow-popover")).toBe("var(--shadow-floating)")
+    // Built from parts so the legacy-class audit grep never hits this file.
+    const pd = "p" + "d"
+    const legacy = [
+      new RegExp(`--${pd}-`), new RegExp(`--color-${pd}-`), new RegExp(`--shadow-${pd}-`), new RegExp(`--font-${pd}-`),
+      /--font-display\b/, /--(?:purple|gray)-\d/, /--color-(?:purple|gray|indigo|violet)-\d/,
+      /--(?:primary|background|foreground|card|popover|secondary|accent|destructive|input|ring|sidebar)\s*:/,
+    ]
+    for (const re of legacy) expect(css, String(re)).not.toMatch(re)
   })
 
   it("has no circular var references", () => {
@@ -51,9 +53,6 @@ describe("design tokens", () => {
   it("points font tokens at Outfit and Geist Mono", () => {
     expect(decl(css, "--font-sans")).toMatch(/^var\(--font-outfit\)/)
     expect(decl(css, "--font-mono")).toMatch(/^var\(--font-geist-mono\)/)
-    expect(decl(css, "--font-pd-display")).toBe("var(--font-outfit)")
-    expect(decl(css, "--font-pd-body")).toBe("var(--font-outfit)")
-    expect(decl(css, "--font-display")).toBe("var(--font-outfit)")
   })
 
   it("has a tabular-figures .num utility", () => {

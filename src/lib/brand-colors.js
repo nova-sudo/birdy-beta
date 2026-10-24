@@ -39,3 +39,17 @@ export const SLACK_PREVIEW_VARS = Object.fromEntries(
  * two in step.
  */
 export const BIRDY_PRIMARY = "#5B3FD6"
+
+/** Silk's fallback `color` when a caller passes none (a neutral grey-violet). */
+export const SILK_DEFAULT_COLOR = "#7B7481"
+
+/**
+ * The Birdy mascot's artwork palette (see birdy-markup.js). It is raw SVG
+ * markup, so it cannot read CSS tokens; the colours are the mascot's own.
+ */
+export const BIRDY_ART = {
+  lid: "#D658EB",
+  ink: "#70127D",
+  coral: "#F0694C",
+  pink: "#FC60AC",
+}
