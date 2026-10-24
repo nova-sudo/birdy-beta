@@ -46,5 +46,13 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | data/data-table/skeleton.jsx | table/data-table-skeleton.tsx | Filter / view / pagination placeholders, ui/table | Plain table rows from `md`, card blocks below |
 | data/data-table/cells.jsx | table/cells/money-cell.tsx, two-line-cell.tsx, status-dot-cell.tsx | formatCurrency, CellTone colours, raw-colour dot | `MoneyCell` uses `Intl.NumberFormat("en-GB")` with `currency` (default GBP), `num` class; `StatusCell` is a Badge dot with `tone`; split-bar / money-split cells not ported |
 | birdy/birdy-read.jsx | Paper-only, no Bytes source | n/a | Frame + Surface of tone rows (fixed 28px icon slot, fixed-width action slot), count badge, `askBirdy` footer link; max 5 rows |
+| shell/nav-config.js | Paper-only, no Bytes source | n/a | `NAV_ITEMS` plain array (9 entries) plus `isActive` (href or sub-path, or per-item `match`); BirdyHub is one more entry |
+| shell/app-sidebar.jsx | Paper-only, no Bytes source (Bytes `features/dashboard` sidebar is feature-coupled; read for structure only) | n/a | Browse / Ask Birdy `SegmentedTabs` (Ask calls `openBirdyChat`), `Kbd` search, white control-shadow active pill, 99+ badge cap, `confirm()` logout, account `DropdownMenu`; keeps the legacy logout flow (`/api/logout`, `clearSession`) |
+| shell/top-bar.jsx | Paper-only, no Bytes source | n/a | Reads `PageHeaderTitle` / `DashboardHeaderTitle` / controls contexts; below md the menu, search and Ask Birdy collapse to icon buttons so it fits at 390px |
+| shell/page-header.jsx | Paper-only, no Bytes source | n/a | Eyebrow, `h1` `text-2xl`, `text-base` muted description, period + actions on the right; unrelated to legacy `src/components/page-header.jsx` (the title-slot context) |
+| shell/system-banner.jsx | Paper-only, no Bytes source | n/a | Full-width `role="status"` strip, soft status tones, optional action and dismiss |
+| shell/mobile-nav-sheet.jsx | Paper-only, no Bytes source | n/a | ds `Sheet side="left"` wrapping `AppSidebar`; `onNavigate` closes it |
+| shell/sidebar-credits.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarCredits.jsx`) | `useSidebar` collapsed-rail variant | Same `useCredits` data and copy; ds tokens. Legacy file untouched until Task 10 |
+| shell/sidebar-jobs.jsx | Paper-only, no Bytes source (ds-styled copy of `src/components/SidebarJobs.jsx`) | `useSidebar` menu primitives | Same `useJobs` data; ds `Popover`/`Tooltip` (`side="right"`). Legacy file untouched until Task 10 |
 
 Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.
