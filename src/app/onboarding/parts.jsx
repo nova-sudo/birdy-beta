@@ -312,7 +312,7 @@ export function OptionCard({ icon, label, hint, selected, onClick, mode = "selec
       <span className="flex items-start justify-between">
         <span
           className={cn(
-            "flex size-9 items-center justify-center rounded-[10px] [&_svg]:size-[18px]",
+            "flex size-9 items-center justify-center rounded-control [&_svg]:size-[18px]",
             selected ? "bg-muted text-foreground" : "bg-background text-muted-foreground shadow-control"
           )}
         >

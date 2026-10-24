@@ -304,13 +304,13 @@ export default function SlackMessagePreview({ blocks, time, loading = false, foc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.key, blocks])
   return (
-    <div ref={root} style={SLACK_PREVIEW_VARS} className="rounded-xl bg-(--slack-surface) px-4 py-[14px] text-left shadow-[0_14px_30px_-16px_rgba(20,14,50,0.55)]">
+    <div ref={root} style={SLACK_PREVIEW_VARS} className="rounded-xl bg-(--slack-surface) px-4 py-[14px] text-left shadow-floating">
       <div className="flex gap-[10px]">
         <BirdyAvatar size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-[7px]">
             <span className="text-sm font-bold text-white">Birdy</span>
-            <span className="rounded-[3px] bg-white/10 px-[4px] text-xs font-semibold uppercase tracking-wide text-white/60">App</span>
+            <span className="rounded-sm bg-white/10 px-[4px] text-xs font-semibold uppercase tracking-wide text-white/60">App</span>
             {time && <span className="text-xs text-white/50">{time}</span>}
           </div>
           <div className={`mt-1.5 space-y-2.5 text-xs leading-[1.6] text-white/85 transition-opacity duration-300 ${loading ? "opacity-40" : ""}`}>
@@ -320,7 +320,7 @@ export default function SlackMessagePreview({ blocks, time, loading = false, foc
                 data-block-index={i}
                 className={`scroll-my-3 rounded-lg transition-shadow duration-500 ${
                   flash && focus && i >= focus.index && i < focus.index + (focus.count || 1)
-                    ? "shadow-[0_0_0_2px_var(--slack-flash),0_0_0_6px_rgba(144,133,233,0.25)]" : ""}`}
+                    ? "shadow-[0_0_0_2px_var(--slack-flash),0_0_0_6px_color-mix(in_srgb,var(--slack-flash)_25%,transparent)]" : ""}`}
               >
                 <Block b={b} />
               </div>

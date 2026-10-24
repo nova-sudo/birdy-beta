@@ -23,7 +23,7 @@ const Silk = dynamic(() => import("@/components/Silk"), { ssr: false })
 export default function AuthSilkPanel({ headline, sub }) {
   return (
     <div data-ds="auth-silk-panel" className="relative h-full p-4">
-      <div className="relative h-full w-full overflow-hidden rounded-[24px] bg-primary">
+      <div className="relative h-full w-full overflow-hidden rounded-overlay bg-primary">
         <Silk speed={5} scale={1} color={BIRDY_PRIMARY} noiseIntensity={1.5} rotation={0} />
         <div className="pointer-events-none absolute inset-0 text-primary-foreground">
           {/* Top-left: wordmark */}

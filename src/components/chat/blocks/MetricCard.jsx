@@ -41,7 +41,7 @@ export default function MetricCard({ payload }) {
 
   return (
     <div
-      data-ds="metric-card"
+      data-chat-block="metric-card"
       className="not-prose my-3 flex max-w-[460px] items-end justify-between gap-4 rounded-surface bg-background p-4 shadow-surface"
     >
       <div className="min-w-0">
@@ -106,7 +106,7 @@ export function Delta({ delta }) {
   const good = delta.polarity === LOWER_IS_BETTER ? !up : up
   return (
     <span
-      data-ds="delta"
+      data-chat-block="delta"
       data-direction={delta.direction ?? "flat"}
       className={cn(
         "num inline-flex shrink-0 items-center gap-0.5 text-sm font-medium",

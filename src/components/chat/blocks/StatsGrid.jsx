@@ -22,7 +22,7 @@ export default function StatsGrid({ payload }) {
 
   return (
     <div
-      data-ds="metric-group"
+      data-chat-block="metric-group"
       className={`not-prose my-3 grid ${cols} gap-px overflow-hidden rounded-surface bg-border shadow-surface`}
     >
       {items.map((stat, i) => <Stat key={i} stat={stat || {}} />)}

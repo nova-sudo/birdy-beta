@@ -129,13 +129,13 @@ export default function ChatComposer({
       )}
 
       {/* One pill: field and send on a single centre line. It takes the
-          focus ring while you type in it. The 22/26px radii are the legacy
-          composer's, kept so the pill reads round at both heights (Paper p-6-0
+          focus ring while you type in it. `rounded-overlay` replaces the legacy
+          22/26px radii and stays rounded as the field grows (Paper p-6-0
           Composer v2 is a 52px full pill). */}
       <div
         className={cn(
-          "flex items-end gap-2 bg-background shadow-floating transition-shadow duration-150 focus-within:shadow-control-focus",
-          compact ? "rounded-[22px] p-1.5 pl-2" : "rounded-[26px] p-2 pl-3"
+          "flex items-end gap-2 rounded-overlay bg-background shadow-floating transition-shadow duration-150 focus-within:shadow-control-focus",
+          compact ? "p-1.5 pl-2" : "p-2 pl-3"
         )}
       >
         <Textarea

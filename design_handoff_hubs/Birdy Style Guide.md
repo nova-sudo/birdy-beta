@@ -174,8 +174,9 @@ are already tinted); `size` is the frame diameter in px.
 The previous `pd-*` Portfolio Dashboard layer, the purple and gray scales, the
 shadcn alias variables and `components/portfolio` no longer exist. A test
 (`src/app/__tests__/tokens.test.js`) asserts the legacy variables stay absent.
-A few shadcn-era files remain in `src/components/ui/` only because the
-dashboards feature and the root layout still import them (button, dialog,
-alert-dialog, sheet, sidebar, input, label, textarea, tooltip, skeleton,
-separator, MetricPicker). They are retokened and should not gain new users; use
-the ds equivalents.
+The shadcn `sidebar`, `sheet`, `separator` and `tooltip` wrappers and the root
+`SidebarProvider` are gone, along with its Ctrl/Cmd+B shortcut and
+`sidebar_state` cookie. A few shadcn-era files remain in `src/components/ui/`
+only because the dashboards feature still imports them (button, dialog,
+alert-dialog, input, label, textarea, skeleton, MetricPicker). They are
+retokened and should not gain new users; use the ds equivalents.

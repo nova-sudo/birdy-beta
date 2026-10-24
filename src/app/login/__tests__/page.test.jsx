@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 const push = vi.fn()
@@ -9,10 +9,17 @@ vi.mock("next/navigation", () => ({
 }))
 
 const publicRequest = vi.fn()
+const apiRequest = vi.fn()
 vi.mock("@/lib/api", () => ({
   publicRequest: (...args) => publicRequest(...args),
-  apiRequest: vi.fn(),
+  apiRequest: (...args) => apiRequest(...args),
 }))
+
+const checkAndRefreshExpiredTokens = vi.fn()
+vi.mock("@/lib/checkExpiredTokens", () => ({
+  checkAndRefreshExpiredTokens: (...args) => checkAndRefreshExpiredTokens(...args),
+}))
+vi.mock("@/lib/prefetch", () => ({ prefetchAfterLogin: vi.fn() }))
 
 // Stands in for the dynamically imported Silk, which needs a GL context.
 vi.mock("@/components/Silk", () => ({ default: () => <div data-testid="silk" /> }))
@@ -26,6 +33,8 @@ describe("login page", () => {
   beforeEach(() => {
     push.mockClear()
     publicRequest.mockReset()
+    apiRequest.mockReset()
+    checkAndRefreshExpiredTokens.mockReset()
     localStorage.clear()
   })
 
@@ -79,5 +88,23 @@ describe("login page", () => {
     expect(notice).toBe(container.querySelector('[data-ds="notice"]'))
     expect(notice.className).toMatch(/bg-danger-soft/)
     expect(push).not.toHaveBeenCalled()
+  })
+
+  it("signs in, stores the session and pushes to the dashboard", async () => {
+    publicRequest.mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: "Login successful", user: { role: "user", email: "a@b.com" } }),
+    })
+    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ completed: true }) })
+    checkAndRefreshExpiredTokens.mockImplementation(async (path) => path)
+    render(<LoginPage />)
+    await userEvent.type(await screen.findByLabelText(/email address/i), "a@b.com")
+    await userEvent.type(screen.getByLabelText("Password"), "hunter2hunter2")
+    await userEvent.click(screen.getByRole("button", { name: /sign in/i }))
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"))
+    expect(push).toHaveBeenCalledTimes(1)
+    expect(JSON.parse(localStorage.getItem("user")).email).toBe("a@b.com")
+    expect(screen.queryByRole("alert")).toBeNull()
   })
 })

@@ -663,9 +663,9 @@ export default function OnboardingPage() {
               aria-valuenow={stepNum}
             >
               {[1, 2, 3, 4, 5, 6, 7].map((p) => (
-                <div key={p} className="h-1.5 min-w-2 max-w-12 flex-1 overflow-hidden rounded-[3px] bg-border">
+                <div key={p} className="h-1.5 min-w-2 max-w-12 flex-1 overflow-hidden rounded-full bg-border">
                   <motion.div
-                    className="h-full w-full origin-left rounded-[3px] bg-primary"
+                    className="h-full w-full origin-left rounded-full bg-primary"
                     initial={false}
                     animate={{ scaleX: p < phase ? 1 : p === phase ? phaseFraction : 0 }}
                     transition={{ duration: 0.6, ease: EASE_OUT }}

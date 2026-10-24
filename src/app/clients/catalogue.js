@@ -2,9 +2,9 @@
 // the five columns the table opens on, so the old column picker keeps its
 // reach. Pure functions only; the page wires them to the ds DataTable.
 //
-// The values and formats here are the ones the previous table computed (see
-// ui/table-container, which the Sales/Marketing hubs still use), so a column
-// reads the same number it always did.
+// The values and formats here are the ones the previous clients table
+// computed (that table component has since been removed), so a column reads
+// the same number it always did.
 
 import { buildDynamicColumns, getTagCount, columnMenuSource } from "@/lib/enhanced-columns-config";
 import { evaluateFormula } from "@/lib/metrics";

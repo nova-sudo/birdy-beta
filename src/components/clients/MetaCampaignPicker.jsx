@@ -17,7 +17,7 @@ function statusLabel(status) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-const statusVariant = (status) =>
+const statusTone = (status) =>
   status === "ACTIVE" ? "success" : status === "PAUSED" ? "warning" : "neutral"
 
 function Tick({ checked }) {
@@ -180,7 +180,7 @@ export function MetaCampaignPicker({
                 onClick={() => toggle(c.id)}
                 title={c.name || "Unnamed campaign"}
                 subtitle={mine ? `ID: ${c.id}` : `Used by ${c.claimed_by.name}`}
-                badge={<Badge variant={statusVariant(c.effective_status)}>{statusLabel(c.effective_status)}</Badge>}
+                badge={<Badge tone={statusTone(c.effective_status)}>{statusLabel(c.effective_status)}</Badge>}
               />
             )
           })}

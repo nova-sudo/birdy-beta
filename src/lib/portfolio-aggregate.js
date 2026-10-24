@@ -5,9 +5,9 @@
 // call stats. Everything on this screen is either a sum across those, a ratio
 // of two sums, or a ranking by one of them.
 //
-// The field paths mirror what StyledTable already reads in
-// components/ui/table-container.jsx, so the dashboard and the clients table
-// can't drift into disagreeing about what "leads" means.
+// The field paths match the ones the clients catalogue (app/clients/catalogue.js)
+// reads, so the dashboard and the clients table can't drift into disagreeing
+// about what "leads" means.
 
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "./portfolio-metrics";
 import { activeGroups } from "./client-status";

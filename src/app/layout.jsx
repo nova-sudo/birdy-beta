@@ -3,7 +3,6 @@
 import "./globals.css";
 import { fontVariables } from "@/lib/fonts";
 import { MotionConfig } from "framer-motion";
-import { SidebarProvider } from "@/components/ui/sidebar";
 import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
 import { usePathname } from "next/navigation";
@@ -148,14 +147,14 @@ export default function RootLayout({ children }) {
   };
 
   return (
-    <html suppressHydrationWarning className={fontVariables}>
+    <html lang="en" suppressHydrationWarning className={fontVariables}>
       <head />
       <body suppressHydrationWarning className="antialiased">
         <BirdyDefs />
         <MotionConfig reducedMotion="user">
         <SWRProvider>
         <ProtectedLayout>
-          <SidebarProvider open={false}>
+          <>
             {!hideSidebar && (
               <CreditsProvider>
               <DashboardControlsProvider>
@@ -212,7 +211,7 @@ export default function RootLayout({ children }) {
                 {children}
               </div>
             )}
-          </SidebarProvider>
+          </>
         </ProtectedLayout>
         </SWRProvider>
         </MotionConfig>
