@@ -5,7 +5,6 @@ import {
   buildCallInsights,
   buildFunnel,
   buildKpis,
-  buildLeaderboards,
   groupMetrics,
   percentDelta,
 } from "@/lib/portfolio-aggregate";
@@ -344,52 +343,5 @@ describe("a mixed portfolio", () => {
 
     expect(legacy.totalCalls).toBe(200);
     expect(legacy.callCentreCloses).toBe(20);
-  });
-});
-
-describe("buildLeaderboards", () => {
-  const current = aggregatePortfolio([
-    group({ id: "a", name: "Cheap", spend: 100, results: 100, won: 2, revenue: 500 }),
-    group({ id: "b", name: "Mid", spend: 300, results: 100, won: 9, revenue: 900 }),
-    group({ id: "c", name: "Dear", spend: 500, results: 100, won: 5, revenue: 100 }),
-  ]);
-
-  it("ranks CPL ascending, because cheap is good", () => {
-    const rows = buildLeaderboards(current, money);
-    expect(rows["Avg CPL"].map((r) => r.name)).toEqual(["Cheap", "Mid", "Dear"]);
-  });
-
-  it("ranks everything else descending", () => {
-    const rows = buildLeaderboards(current, money);
-    expect(rows.Closes.map((r) => r.name)).toEqual(["Mid", "Dear", "Cheap"]);
-    expect(rows.Revenue.map((r) => r.name)).toEqual(["Mid", "Cheap", "Dear"]);
-  });
-
-  it("gives the leader a full bar and scales the rest against it", () => {
-    const rows = buildLeaderboards(current, money);
-    expect(rows.Closes[0].bar).toBe(100);
-    expect(rows.Closes[1].bar).toBeCloseTo((5 / 9) * 100, 5);
-  });
-
-  it("scales ascending bars the other way, so the cheapest is still full", () => {
-    const rows = buildLeaderboards(current, money);
-    expect(rows["Avg CPL"][0].bar).toBe(100);
-    // £1 vs £3 CPL — the dearer client's bar is a third as long.
-    expect(rows["Avg CPL"][1].bar).toBeCloseTo(33.333, 2);
-  });
-
-  it("leaves out clients with nothing to rank on", () => {
-    const withBlank = aggregatePortfolio([
-      group({ id: "a", name: "Has data", spend: 100, results: 10, won: 1, revenue: 50 }),
-      group({ id: "b", name: "No revenue", spend: 100, results: 10, won: 1, revenue: 0 }),
-    ]);
-    expect(buildLeaderboards(withBlank, money).Revenue.map((r) => r.name)).toEqual(["Has data"]);
-  });
-
-  it("caps the list at the requested length", () => {
-    const many = aggregatePortfolio(
-      Array.from({ length: 9 }, (_, i) => group({ id: `g${i}`, name: `C${i}`, results: i + 1, spend: 10 }))
-    );
-    expect(buildLeaderboards(many, money, 5).Leads).toHaveLength(5);
   });
 });

@@ -207,9 +207,7 @@
     --pd-success-bg: var(--color-success-soft);
     --pd-danger: var(--color-danger);
     --pd-danger-bg: var(--color-danger-soft);
-    --pd-danger-surface: #FEF6F6;
     --pd-danger-border: #F8DEDE;
-    --pd-danger-tint: #F1F8F4;
     --pd-warning: var(--color-warning);
     --pd-warning-bg: var(--color-warning-soft);
     --pd-amber: var(--color-warning-ink);
@@ -410,7 +408,6 @@
   --color-pd-success-bg: var(--pd-success-bg);
   --color-pd-danger: var(--pd-danger);
   --color-pd-danger-bg: var(--pd-danger-bg);
-  --color-pd-danger-surface: var(--pd-danger-surface);
   --color-pd-danger-border: var(--pd-danger-border);
   --color-pd-warning: var(--pd-warning);
   --color-pd-warning-bg: var(--pd-warning-bg);
@@ -425,7 +422,6 @@
   --shadow-pd-segment: var(--pd-shadow-segment);
   --shadow-pd-popover: var(--pd-shadow-popover);
   --shadow-pd-tooltip: var(--pd-shadow-tooltip);
-  --shadow-pd-glow: var(--pd-shadow-glow);
 
   /* Legacy font aliases: all point at Outfit until the last phase removes them. */
   --font-display: var(--font-outfit);

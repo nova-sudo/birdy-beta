@@ -9,7 +9,7 @@
 // centre splits group- from agent-level the same way. The badge answers "where
 // does this number come from", so both halves of each pair collapse into one.
 
-/** Badge palette, straight from the handoff. */
+/** Badge palette: one soft/ink pair per source, from the status tokens. */
 export const SOURCE_STYLES = {
   meta: { label: "Meta Ads", className: "bg-info-soft text-info-ink" },
   ghl: { label: "GoHighLevel", className: "bg-success-soft text-success-ink" },
