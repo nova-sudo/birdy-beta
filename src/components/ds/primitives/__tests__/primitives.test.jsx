@@ -28,6 +28,12 @@ describe("Button", () => {
     const btn = screen.getByRole("button", { name: "Save" })
     expect(btn.getAttribute("aria-busy")).toBe("true")
     expect(btn.disabled).toBe(true)
+    // jsdom applies no Tailwind CSS, so check the classes that would pull the
+    // label out of the accessibility tree in a real browser.
+    const label = screen.getByText("Save")
+    expect(label.className).toContain("opacity-0")
+    expect(label.className).not.toMatch(/(^|\s)(invisible|hidden)(\s|$)/)
+    expect(label.closest("[aria-hidden]")).toBeNull()
   })
 
   it("asChild renders the child element", () => {

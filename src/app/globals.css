@@ -299,6 +299,7 @@
 
   --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000F, 0 2px 4px -2px #0000000D;
   --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 60%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent), 0 1px 2px #0000000F;
+  --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
   --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
   --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
   --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;

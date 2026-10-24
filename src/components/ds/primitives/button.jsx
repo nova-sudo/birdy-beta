@@ -68,7 +68,7 @@ const Button = React.forwardRef(function Button(
     >
       {loading ? (
         <>
-          <span className="invisible inline-flex items-center justify-center gap-1.5">{children}</span>
+          <span className="opacity-0 inline-flex items-center justify-center gap-1.5">{children}</span>
           <Loader2Icon aria-hidden className="absolute size-4 animate-spin motion-reduce:animate-none" />
         </>
       ) : (

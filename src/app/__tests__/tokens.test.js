@@ -22,6 +22,7 @@ describe("design tokens", () => {
       "--radius-control": "12px", "--radius-frame": "16px", "--radius-overlay": "20px", "--text-base": "16px",
       "--color-body": "#404040", "--color-scrim": "#0A0A0A2E", "--color-chart-2": "#3B82F6",
       "--ease-edge": "cubic-bezier(.32, .72, 0, 1)",
+      "--shadow-control-invalid": "0 0 0 1px var(--color-danger), 0 1px 2px #0000000F",
     })) expect(decl(css, name), name).toBe(value)
   })
 
