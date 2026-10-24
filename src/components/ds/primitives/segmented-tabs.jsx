@@ -58,7 +58,7 @@ function SegmentedTabs({ value, onValueChange, items, size = "md", ariaLabel, pa
                 transition={THUMB_SPRING}
               />
             )}
-            <span className="relative">{item.label}</span>
+            <span className="relative inline-flex items-center gap-1.5">{item.label}</span>
             {item.count != null && (
               <span className="num relative text-xs text-muted-foreground">{item.count}</span>
             )}
