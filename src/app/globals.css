@@ -5,47 +5,48 @@
 @custom-variant shared (&:is(.shared *));
 
 /* ── dashkit theme ──────────────────────────────────────────────
-   Maps every dashkit variable (DK_VARS) onto a Birdy token. Same mapping as
-   src/lib/dashkit/theme.js (the tested source of truth): a stylesheet cannot
-   import a JS string, so it is written out here. Keep them in step.
+   Maps every dashkit variable (DK_VARS) onto a design-system token. Same
+   mapping as src/lib/dashkit/theme.js (the tested source of truth): a
+   stylesheet cannot import a JS string, so it is written out here. Keep them
+   in step.
    Unlayered and after dashkit's import on purpose: dashkit's defaults sit on
    :where(.dk-root), which this rule beats; inside @layer it would lose.
    Nothing else in this file restyles dashkit: its compiled, dk:-prefixed
    stylesheet is themed only through these variables. */
 .dk-root {
-  --dk-bg: var(--pd-canvas);
-  --dk-card: var(--pd-surface);
-  --dk-fg: var(--pd-ink);
-  --dk-body: var(--pd-body);
-  --dk-muted: var(--pd-muted);
-  --dk-subtle: var(--pd-subtle);
-  --dk-border: var(--pd-border);
-  --dk-border-strong: var(--pd-border-strong);
-  --dk-table-head: var(--pd-table-head);
-  --dk-accent: var(--pd-primary);
-  --dk-accent-tint: var(--pd-primary-tint);
-  --dk-accent-pale: var(--pd-primary-pale);
-  --dk-accent-fg: var(--primary-foreground);
-  --dk-success: var(--pd-success);
-  --dk-success-bg: var(--pd-success-bg);
-  --dk-danger: var(--pd-danger);
-  --dk-danger-bg: var(--pd-danger-bg);
-  --dk-warning: var(--pd-warning);
-  --dk-warning-bg: var(--pd-warning-bg);
-  --dk-info: var(--pd-info);
-  --dk-chart-1: var(--pd-primary);
-  --dk-chart-2: #2E9E8F;
-  --dk-chart-3: var(--pd-warning);
-  --dk-chart-4: var(--pd-faint);
-  --dk-chart-5: var(--pd-amber);
-  --dk-chart-6: #2F6FD0;
-  --dk-chart-7: #CF4A3A;
-  --dk-chart-8: #8F5FC2;
-  --dk-radius: calc(var(--radius) + 8px);
-  --dk-shadow: var(--shadow-sm);
-  --dk-shadow-pop: var(--pd-shadow-popover);
-  --dk-font: var(--font-inter);
-  --dk-font-display: var(--font-bricolage);
+  --dk-bg: var(--color-muted);
+  --dk-card: var(--color-background);
+  --dk-fg: var(--color-foreground);
+  --dk-body: var(--color-body);
+  --dk-muted: var(--color-muted-foreground);
+  --dk-subtle: var(--color-muted-foreground);
+  --dk-border: var(--color-border);
+  --dk-border-strong: color-mix(in srgb, var(--color-border), #000 8%);
+  --dk-table-head: var(--color-muted);
+  --dk-accent: var(--color-primary);
+  --dk-accent-tint: var(--color-primary-soft);
+  --dk-accent-pale: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --dk-accent-fg: var(--color-primary-foreground);
+  --dk-success: var(--color-success);
+  --dk-success-bg: var(--color-success-soft);
+  --dk-danger: var(--color-danger);
+  --dk-danger-bg: var(--color-danger-soft);
+  --dk-warning: var(--color-warning);
+  --dk-warning-bg: var(--color-warning-soft);
+  --dk-info: var(--color-info);
+  --dk-chart-1: var(--color-chart-1);
+  --dk-chart-2: var(--color-chart-2);
+  --dk-chart-3: var(--color-chart-3);
+  --dk-chart-4: var(--color-chart-4);
+  --dk-chart-5: var(--color-chart-5);
+  --dk-chart-6: var(--color-chart-6);
+  --dk-chart-7: var(--color-chart-7);
+  --dk-chart-8: var(--color-chart-8);
+  --dk-radius: var(--radius-frame);
+  --dk-shadow: var(--shadow-surface);
+  --dk-shadow-pop: var(--shadow-floating);
+  --dk-font: var(--font-outfit);
+  --dk-font-display: var(--font-outfit);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -84,58 +85,55 @@
 @layer base {
   :root {
     /* ── Core Semantic Tokens ─────────────────────────────────
-       Palette "Ink & violet": warm off-white canvas, near-black ink, one
-       deep violet used sparingly. The pd-* scale below carries the same
-       values, so stock shadcn components and the handoff screens agree. */
-    --background: #ffffff;
-    --foreground: #18181B;
+       Aliases only: every value points at a source-of-truth token in the
+       @theme block below (Paper's palette with Birdy's violet primary), so
+       stock shadcn components, the pd-* screens and dashkit all follow it.
+       Each migration phase deletes the aliases it no longer needs. */
+    --background: var(--color-background);
+    --foreground: var(--color-foreground);
 
-    --card: #ffffff;
-    --card-foreground: #18181B;
+    --card: var(--color-background);
+    --card-foreground: var(--color-foreground);
 
-    --popover: #ffffff;
-    --popover-foreground: #18181B;
+    --popover: var(--color-background);
+    --popover-foreground: var(--color-foreground);
 
-    --primary: #5B3FD6;
-    --primary-foreground: #ffffff;
+    --primary: var(--color-primary);
+    --primary-foreground: var(--color-primary-foreground);
     --primary-glow: #7A61E0;
     /* lighter companion for gradient washes (btn-gradient, headings) */
 
-    --secondary: #F4F4F2;
-    --secondary-foreground: #27272A;
+    --secondary: var(--color-muted);
+    --secondary-foreground: var(--color-foreground);
 
-    --muted: #F4F4F2;
-    --muted-foreground: #6B6B72;
+    --muted: var(--color-muted);
+    --muted-foreground: var(--color-muted-foreground);
 
-    --accent: #EFEEEB;
-    --accent-foreground: #18181B;
+    --accent: var(--color-muted);
+    --accent-foreground: var(--color-foreground);
 
-    --destructive: #E5484D;
+    --destructive: var(--color-danger);
     --destructive-foreground: #ffffff;
 
-    --success: #16794C;
+    --success: var(--color-success);
     --success-foreground: #ffffff;
 
-    --border: #E7E6E3;
-    --input: #E7E6E3;
-    --ring: #5B3FD6;
+    --border: var(--color-border);
+    --input: var(--color-border);
+    --ring: var(--color-primary);
 
-    /* Round corners: cards land at 22px (rounded-xl), controls go pill. */
-    --radius: 18px;
+    /* Controls and surfaces sit on 12px (see --radius-control in @theme). */
+    --radius: 12px;
 
     /* ── Sidebar Tokens ──────────────────────────────────────── */
-    /* Painted with the header's own surface rather than a shade off it, so the
-       rail and the bar above it read as one frame around the canvas instead of
-       two nearly-matching greys. Tracks --background by reference: change that
-       and the two stay together. */
-    --sidebar: var(--background);
-    --sidebar-foreground: #18181B;
-    --sidebar-primary: #5B3FD6;
-    --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #F4F4F2;
-    --sidebar-accent-foreground: #27272A;
-    --sidebar-border: #E7E6E3;
-    --sidebar-ring: #5B3FD6;
+    --sidebar: var(--color-background);
+    --sidebar-foreground: var(--color-foreground);
+    --sidebar-primary: var(--color-primary);
+    --sidebar-primary-foreground: var(--color-primary-foreground);
+    --sidebar-accent: var(--color-muted);
+    --sidebar-accent-foreground: var(--color-foreground);
+    --sidebar-border: var(--color-border);
+    --sidebar-ring: var(--color-primary);
 
     /* ── Shadows — tinted with the ink, never pure black ─────── */
     --shadow-2xs: 0 1px 2px rgba(24, 24, 27, 0.04);
@@ -178,55 +176,54 @@
     --gray-900: #18181B;
     --gray-950: #0C0C0E;
 
-    /* ── Portfolio Dashboard palette ─────────────────────────────
-       Handoff "Birdy — Portfolio Dashboard (variant 3e)". These are
-       literal hex from the design tokens table and deliberately sit
-       outside the semantic scale above: the screen is specced at high
-       fidelity, so its greys and tints are exact rather than derived.
-       Registered under @theme below as the pd-* colour scale.       */
-    --pd-primary: #5B3FD6;
-    --pd-primary-tint: #EFECFB;
-    --pd-primary-light: #9F8BEA;
-    --pd-primary-pale: #C3B7F2;
-    --pd-ink: #18181B;
-    --pd-body: #52525B;
-    --pd-muted: #63636B;
-    --pd-subtle: #85858C;
-    --pd-faint: #98989E;
-    --pd-divider: #EFEEEB;
-    --pd-border: #E7E6E3;
+    /* ── Portfolio Dashboard palette (legacy aliases) ────────────
+       Where a pd-* name has a design-system token it points there; the rest
+       (zebra rows, chevrons, healthy/danger surfaces, segment/glow shadows)
+       keep their old literals until their screens migrate. Registered under
+       @theme inline below as the pd-* colour scale.                  */
+    --pd-primary: var(--color-primary);
+    --pd-primary-tint: var(--color-primary-soft);
+    --pd-primary-light: color-mix(in srgb, var(--color-primary) 60%, transparent);
+    --pd-primary-pale: color-mix(in srgb, var(--color-primary) 35%, transparent);
+    --pd-ink: var(--color-foreground);
+    --pd-body: var(--color-body);
+    --pd-muted: var(--color-muted-foreground);
+    --pd-subtle: var(--color-muted-foreground);
+    --pd-faint: var(--color-muted-foreground);
+    --pd-divider: var(--color-border);
+    --pd-border: var(--color-border);
     --pd-border-strong: #DCDBD7;
     --pd-chevron: #CFCECA;
-    --pd-surface: #ffffff;
-    --pd-canvas: #F6F6F4;
+    --pd-surface: var(--color-background);
+    --pd-canvas: var(--color-muted);
     --pd-scroll: #DAD9D5;
     /* Table head and the alternate row. Both sit a hair off white on purpose:
        the stripe is meant to help the eye track a wide row across, not to
        divide the table into bands. */
-    --pd-table-head: #FAFAF8;
+    --pd-table-head: var(--color-muted);
     --pd-row-zebra: #FCFCFB;
     --pd-row-border: #F2F1EE;
-    --pd-success: #16794C;
-    --pd-success-bg: #E8F4EE;
-    --pd-danger: #E5484D;
-    --pd-danger-bg: #FEF1F1;
+    --pd-success: var(--color-success);
+    --pd-success-bg: var(--color-success-soft);
+    --pd-danger: var(--color-danger);
+    --pd-danger-bg: var(--color-danger-soft);
     --pd-danger-surface: #FEF6F6;
     --pd-danger-border: #F8DEDE;
     --pd-danger-tint: #F1F8F4;
-    --pd-warning: #E0920A;
-    --pd-warning-bg: #FDF6EC;
-    --pd-amber: #B4530A;
+    --pd-warning: var(--color-warning);
+    --pd-warning-bg: var(--color-warning-soft);
+    --pd-amber: var(--color-warning-ink);
     --pd-amber-bg: #FDF1E7;
-    --pd-info: #3B7DD6;
-    --pd-info-bg: #EAF1FD;
+    --pd-info: var(--color-info);
+    --pd-info-bg: var(--color-info-soft);
     --pd-healthy-surface: #F1F8F4;
     --pd-healthy-border: #D3E9DC;
     --pd-neutral-badge: #E7E6E3;
 
     /* Shadows — one per role in the design's shadow table. */
     --pd-shadow-segment: 0 2px 8px -2px rgba(91, 63, 214, 0.40);
-    --pd-shadow-popover: 0 14px 34px -12px rgba(24, 24, 27, 0.26);
-    --pd-shadow-tooltip: 0 6px 16px -6px rgba(24, 24, 27, 0.45);
+    --pd-shadow-popover: var(--shadow-floating);
+    --pd-shadow-tooltip: var(--shadow-floating);
     --pd-shadow-glow: 0 0 0 4px rgba(91, 63, 214, 0.18);
   }
 
@@ -234,30 +231,99 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   Design tokens — source of truth
+   Paper's values with Birdy's violet primary. `static` so every variable is
+   emitted even when no utility uses it: the alias layer above and
+   DK_THEME_VARS (src/lib/dashkit/theme.js) read them by name at runtime.
+   ═══════════════════════════════════════════════════════════════ */
+
+@theme static {
+  --color-background: #FFFFFF;
+  --color-foreground: #0A0A0A;
+  --color-body: #404040;
+  --color-muted: #F7F7F7;
+  --color-muted-foreground: #737373;
+  --color-border: #E5E5E5;
+  --color-primary: #5B3FD6;
+  --color-primary-soft: #EFECFB;
+  --color-primary-foreground: #FFFFFF;
+
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-success: #16A34A;
+  --color-info: #3B82F6;
+  --color-danger-soft: #FEF2F2;
+  --color-warning-soft: #FFFBEB;
+  --color-success-soft: #F0FDF4;
+  --color-info-soft: #EFF6FF;
+  --color-danger-ink: #991B1B;
+  --color-warning-ink: #92400E;
+  --color-success-ink: #166534;
+  --color-info-ink: #1E40AF;
+  --color-neutral-soft: #F4F4F5;
+  --color-neutral-ink: #52525B;
+
+  /* Chart series: Paper's Data series with the orange swapped for primary.
+     6-8 are the extra hues a trend split by client needs (dashkit draws up to
+     eight lines and no colour may repeat). */
+  --color-chart-1: var(--color-primary);
+  --color-chart-2: #3B82F6;
+  --color-chart-3: #14B8A6;
+  --color-chart-4: #F59E0B;
+  --color-chart-5: #A3A3A3;
+  --color-chart-6: #2F6FD0;
+  --color-chart-7: #CF4A3A;
+  --color-chart-8: #8F5FC2;
+
+  --color-scrim: #0A0A0A2E;
+
+  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --text-xs: 13px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 32px;
+
+  --spacing-control-sm: 32px;
+  --spacing-control: 40px;
+  --spacing-control-lg: 48px;
+
+  --radius-sm: 6px;
+  --radius-control: 12px;
+  --radius-surface: 12px;
+  --radius-frame: 16px;
+  --radius-overlay: 20px;
+
+  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000F, 0 2px 4px -2px #0000000D;
+  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 60%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent), 0 1px 2px #0000000F;
+  --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
+  --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
+  --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+
+  --ease-press: cubic-bezier(.2, 0, 0, 1);
+  --ease-edge: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════════
    Tailwind v4 Theme Registration
    ═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
   --color-primary-glow: var(--primary-glow);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
 
@@ -358,12 +424,11 @@
   --shadow-pd-tooltip: var(--pd-shadow-tooltip);
   --shadow-pd-glow: var(--pd-shadow-glow);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
-  --font-pd-display: var(--font-bricolage);
-  --font-pd-body: var(--font-inter);
+  /* Legacy font aliases: all point at Outfit until the last phase removes them. */
+  --font-display: var(--font-sans);
+  --font-pd-display: var(--font-sans);
+  --font-pd-body: var(--font-sans);
 
-  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
@@ -485,7 +550,7 @@
        so cards and rails read as raised surfaces everywhere, not just there.
        `--background` stays white — it is what those surfaces are painted with. */
     background-color: var(--pd-canvas);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-sans);
     transition: background-color 0.5s ease, color 0.5s ease;
   }
 

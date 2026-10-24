@@ -1,22 +1,14 @@
 import { createTheme } from "dashkit/react"
 
 /**
- * Every dashkit theme variable (`DK_VARS`), mapped onto a Birdy token, so
- * dashboards follow the product's colours, radius, shadows and fonts rather
- * than dashkit's built-in copy of them. References are `var(--…)` so a token
- * change flows through without touching this file. Five values are not tokens:
- * - `--dk-chart-2` is #2E9E8F, the teal of dashkit's checked chart palette;
- *   Birdy has no token for a second series colour.
- * - `--dk-chart-6..8` are dashkit's own defaults (blue, red, violet). A trend
- *   split by client draws up to eight lines and no hue may repeat; the pd
- *   palette's remaining hues are status colours (success green is the kpi's
- *   "up" colour, danger red and info blue sit next to dashkit's 7 and 6), so
- *   Birdy has nothing distinct to give them. `--dk-chart-5` is the one pd hue
- *   left that is distinct from all seven others: the burnt orange `--pd-amber`.
- * - `--dk-radius` is Birdy's card radius (PdCard's rounded-2xl), which only
- *   exists as a Tailwind theme value, so it is spelled out here.
- * The fonts point at the next/font variables on <html> (`--font-pd-*` are
- * Tailwind theme values, inlined at build time, not runtime variables).
+ * Every dashkit theme variable (`DK_VARS`), mapped onto a design-system token
+ * (the `--color-*`, `--radius-*`, `--shadow-*` vars declared in `@theme` in
+ * globals.css), so dashboards follow the product's colours, radius, shadows
+ * and fonts rather than dashkit's built-in copy of them. References are
+ * `var(--…)` so a token change flows through without touching this file, and
+ * no value is a literal: the extra series hues (`--dk-chart-6..8`) are tokens
+ * too, so a trend split by client can draw eight lines with no repeated hue.
+ * `--dk-font*` point at the next/font variable on <html>.
  *
  * globals.css carries the same declarations as plain CSS in an unlayered
  * `.dk-root` block after dashkit's stylesheet, because a stylesheet cannot
@@ -25,43 +17,43 @@ import { createTheme } from "dashkit/react"
  */
 export const DK_THEME_VARS = {
   // Surfaces and text
-  "--dk-bg": "var(--pd-canvas)",
-  "--dk-card": "var(--pd-surface)",
-  "--dk-fg": "var(--pd-ink)",
-  "--dk-body": "var(--pd-body)",
-  "--dk-muted": "var(--pd-muted)",
-  "--dk-subtle": "var(--pd-subtle)",
-  "--dk-border": "var(--pd-border)",
-  "--dk-border-strong": "var(--pd-border-strong)",
-  "--dk-table-head": "var(--pd-table-head)",
+  "--dk-bg": "var(--color-muted)",
+  "--dk-card": "var(--color-background)",
+  "--dk-fg": "var(--color-foreground)",
+  "--dk-body": "var(--color-body)",
+  "--dk-muted": "var(--color-muted-foreground)",
+  "--dk-subtle": "var(--color-muted-foreground)",
+  "--dk-border": "var(--color-border)",
+  "--dk-border-strong": "color-mix(in srgb, var(--color-border), #000 8%)",
+  "--dk-table-head": "var(--color-muted)",
   // Accent
-  "--dk-accent": "var(--pd-primary)",
-  "--dk-accent-tint": "var(--pd-primary-tint)",
-  "--dk-accent-pale": "var(--pd-primary-pale)",
-  "--dk-accent-fg": "var(--primary-foreground)",
+  "--dk-accent": "var(--color-primary)",
+  "--dk-accent-tint": "var(--color-primary-soft)",
+  "--dk-accent-pale": "color-mix(in srgb, var(--color-primary) 35%, transparent)",
+  "--dk-accent-fg": "var(--color-primary-foreground)",
   // Status
-  "--dk-success": "var(--pd-success)",
-  "--dk-success-bg": "var(--pd-success-bg)",
-  "--dk-danger": "var(--pd-danger)",
-  "--dk-danger-bg": "var(--pd-danger-bg)",
-  "--dk-warning": "var(--pd-warning)",
-  "--dk-warning-bg": "var(--pd-warning-bg)",
-  "--dk-info": "var(--pd-info)",
+  "--dk-success": "var(--color-success)",
+  "--dk-success-bg": "var(--color-success-soft)",
+  "--dk-danger": "var(--color-danger)",
+  "--dk-danger-bg": "var(--color-danger-soft)",
+  "--dk-warning": "var(--color-warning)",
+  "--dk-warning-bg": "var(--color-warning-soft)",
+  "--dk-info": "var(--color-info)",
   // Charts
-  "--dk-chart-1": "var(--pd-primary)",
-  "--dk-chart-2": "#2E9E8F",
-  "--dk-chart-3": "var(--pd-warning)",
-  "--dk-chart-4": "var(--pd-faint)",
-  "--dk-chart-5": "var(--pd-amber)",
-  "--dk-chart-6": "#2F6FD0",
-  "--dk-chart-7": "#CF4A3A",
-  "--dk-chart-8": "#8F5FC2",
+  "--dk-chart-1": "var(--color-chart-1)",
+  "--dk-chart-2": "var(--color-chart-2)",
+  "--dk-chart-3": "var(--color-chart-3)",
+  "--dk-chart-4": "var(--color-chart-4)",
+  "--dk-chart-5": "var(--color-chart-5)",
+  "--dk-chart-6": "var(--color-chart-6)",
+  "--dk-chart-7": "var(--color-chart-7)",
+  "--dk-chart-8": "var(--color-chart-8)",
   // Shape and type
-  "--dk-radius": "calc(var(--radius) + 8px)",
-  "--dk-shadow": "var(--shadow-sm)",
-  "--dk-shadow-pop": "var(--pd-shadow-popover)",
-  "--dk-font": "var(--font-inter)",
-  "--dk-font-display": "var(--font-bricolage)",
+  "--dk-radius": "var(--radius-frame)",
+  "--dk-shadow": "var(--shadow-surface)",
+  "--dk-shadow-pop": "var(--shadow-floating)",
+  "--dk-font": "var(--font-outfit)",
+  "--dk-font-display": "var(--font-outfit)",
 }
 
 export const dkTheme = createTheme(DK_THEME_VARS)

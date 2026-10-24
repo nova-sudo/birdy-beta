@@ -17,7 +17,7 @@ vi.mock("@/lib/api", () => ({
 import { apiRequest } from "@/lib/api"
 import { store } from "@/lib/dashkit/store"
 import { dataSource, QUERY_CHUNK_SIZE } from "@/lib/dashkit/data-source"
-import { dkTheme } from "@/lib/dashkit/theme"
+import { dkTheme, DK_THEME_VARS } from "@/lib/dashkit/theme"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
 import { DK_VARS } from "dashkit/react"
@@ -146,27 +146,24 @@ describe("dashkit theme", () => {
   it("theme maps every DK_VARS entry", () => {
     expect(DK_VARS.length).toBe(33)
     expect(Object.keys(themeVars)).toEqual([...DK_VARS])
-    // The series colours Birdy has no token for: the teal, and dashkit's own
-    // blue, red and violet for the 6th to 8th series.
-    const literals = { "--dk-chart-2": "#2E9E8F", "--dk-chart-6": "#2F6FD0", "--dk-chart-7": "#CF4A3A", "--dk-chart-8": "#8F5FC2" }
+    // Design-system tokens, not dashkit's defaults: every value is a var() or
+    // a colour-mix() of tokens, never a literal.
     for (const name of DK_VARS) {
-      if (Object.hasOwn(literals, name)) {
-        expect(themeVars[name], name).toBe(literals[name])
-        continue
-      }
-      // Birdy's tokens, not dashkit's defaults: every other value is a var()
-      // or the card radius.
-      expect(themeVars[name], name).toMatch(/^(var\(--[a-z0-9-]+\)|calc\(var\(--radius\) \+ 8px\))$/)
+      expect(themeVars[name], name).toMatch(/^(var\(--[a-z0-9-]+\)|color-mix\(.+\))$/)
     }
-    expect(themeVars["--dk-chart-5"]).toBe("var(--pd-amber)")
     // A trend split by client draws up to eight lines: no colour repeats.
     const series = Array.from({ length: 8 }, (_, i) => themeVars[`--dk-chart-${i + 1}`])
     expect(new Set(series).size).toBe(8)
-    expect(themeVars["--dk-font-display"]).toBe("var(--font-bricolage)")
-    expect(themeVars["--dk-font"]).toBe("var(--font-inter)")
-    expect(themeVars["--dk-accent"]).toBe("var(--pd-primary)")
-    expect(themeVars["--dk-bg"]).toBe("var(--pd-canvas)")
-    expect(themeVars["--dk-shadow-pop"]).toBe("var(--pd-shadow-popover)")
+  })
+
+  it("maps dashkit onto the new tokens", () => {
+    expect(DK_THEME_VARS["--dk-accent"]).toBe("var(--color-primary)")
+    expect(DK_THEME_VARS["--dk-chart-2"]).toBe("var(--color-chart-2)")
+    expect(DK_THEME_VARS["--dk-radius"]).toBe("var(--radius-frame)")
+    // No pd aliases and no literal colours; the one #000 is border-strong's
+    // colour-mix darkener, not a colour value.
+    const values = Object.values(DK_THEME_VARS).join().replace(", #000 8%)", ")")
+    expect(values).not.toMatch(/--pd-|#[0-9a-f]{3,8}/i)
   })
 
   it("globals.css .dk-root block declares the same vars as dkTheme", () => {
