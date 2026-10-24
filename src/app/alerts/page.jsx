@@ -370,7 +370,7 @@ function AlertsPageContent() {
             <ErrorState
               title="Couldn't load your alerts"
               description="Nothing here is out of date — we just couldn't reach your alerts."
-              onRetry={fetchAlerts}
+              onRetry={() => { setIsLoading(true); fetchAlerts() }}
             />
           ) : (
           <AlertsList
