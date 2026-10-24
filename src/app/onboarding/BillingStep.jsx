@@ -154,6 +154,9 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
                 <PlanCard
                   plan={plan}
                   billingStatus={null}
+                  // A plan with no Whop id yet cannot be bought; one badge per card.
+                  disabled={!plan.planId}
+                  hideBadge={plan.id === recommendedPlanId}
                   onCheckout={(picked) => picked.planId && setSelectedPlan(picked)}
                 />
               </div>

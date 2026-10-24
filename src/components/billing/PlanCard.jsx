@@ -11,10 +11,12 @@ const TOP_PLAN_ID = PLAN_ORDER[PLAN_ORDER.length - 1];
 /**
  * One subscription tier, as both /billing and Settings → Billing draw it:
  * the top tier is a dark card, the current one is ringed in the primary colour.
+ * `disabled` greys the checkout button (a plan with no Whop id yet); `hideBadge` drops the corner badge when the
+ * caller draws its own.
  * The one primary button on a view is the most popular plan's "Get started"
  * for someone with no plan; every other action is an outline button.
  */
-export function PlanCard({ plan, billingStatus, onCheckout, onManage, loadingManage }) {
+export function PlanCard({ plan, billingStatus, onCheckout, onManage, loadingManage, disabled = false, hideBadge = false }) {
   const isCurrent = billingStatus?.plan?.id === plan.id && billingStatus?.subscribed;
   const isDowngrade = billingStatus?.subscribed && PLAN_ORDER.indexOf(plan.id) < PLAN_ORDER.indexOf(billingStatus.plan?.id);
   const isTop = plan.id === TOP_PLAN_ID;
@@ -32,7 +34,7 @@ export function PlanCard({ plan, billingStatus, onCheckout, onManage, loadingMan
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className={cn("text-lg font-semibold", dark ? "text-primary-foreground" : "text-foreground")}>{plan.name}</h3>
-        {isCurrent ? (
+        {hideBadge ? null : isCurrent ? (
           <Badge tone="primary">Current</Badge>
         ) : isTop ? (
           <Badge tone="primary">Best value</Badge>
@@ -71,7 +73,7 @@ export function PlanCard({ plan, billingStatus, onCheckout, onManage, loadingMan
           <Button
             variant={startVariant}
             onClick={() => (billingStatus?.subscribed ? onManage() : onCheckout(plan))}
-            disabled={billingStatus?.subscribed && loadingManage}
+            disabled={disabled || (billingStatus?.subscribed && loadingManage)}
             className="w-full"
           >
             {billingStatus?.subscribed && loadingManage

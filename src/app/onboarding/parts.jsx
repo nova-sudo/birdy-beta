@@ -40,6 +40,9 @@ export const WizardFooterContext = createContext(null)
 export function WizardFooter({ primary, secondary }) {
   const node = useContext(WizardFooterContext)
   if (!node) return null
+  // shrink-0 on the buttons and min-w-0 on the slot (page.jsx) keep the row
+  // from overflowing at 390; a step with a long secondary label should shorten
+  // it below sm instead (see ReportCopilotStep).
   return createPortal(
     <>
       {secondary}
@@ -47,6 +50,7 @@ export function WizardFooter({ primary, secondary }) {
         <Button
           variant="primary"
           size="lg"
+          className="shrink-0"
           onClick={primary.onClick}
           disabled={primary.disabled}
           loading={primary.loading}
@@ -237,15 +241,22 @@ function RadioMark({ selected, className }) {
 }
 
 /**
- * Single-select group of option cards on a muted well (Paper: Option cards).
- * Children are OptionCards.
+ * Group of option cards on a muted well (Paper: Option cards). Children are
+ * OptionCards. `mode="select"` is a true single-select radiogroup; `"action"`
+ * is for cards that act on click (and advance the wizard), so it is a plain
+ * group of buttons. `density="compact"` is a 2-then-3 column grid of slim cards
+ * for long lists.
  */
-export function OptionGrid({ children, className, label }) {
+export function OptionGrid({ children, className, label, mode = "select", density = "default" }) {
   return (
     <div
-      role="radiogroup"
+      role={mode === "select" ? "radiogroup" : "group"}
       aria-label={label}
-      className={cn("grid grid-cols-1 gap-1 rounded-frame bg-muted p-1 sm:grid-cols-2", className)}
+      className={cn(
+        "grid gap-1 rounded-frame bg-muted p-1",
+        density === "compact" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2",
+        className
+      )}
     >
       {children}
     </div>
@@ -262,18 +273,41 @@ export function OptionGrid({ children, className, label }) {
  * @param {string} [props.hint]
  * @param {boolean} props.selected
  * @param {() => void} props.onClick
+ * @param {"select"|"action"} [props.mode="select"] "action" renders a plain button: no radio, no aria-checked
+ * @param {"default"|"compact"} [props.density="default"] compact drops the icon tile: the icon sits inline before the label
  */
-export function OptionCard({ icon, label, hint, selected, onClick }) {
+export function OptionCard({ icon, label, hint, selected, onClick, mode = "select", density = "default" }) {
+  const isSelect = mode === "select"
+  const surface = selected ? "bg-background shadow-floating" : "hover:bg-background/60"
+  const base =
+    "rounded-frame text-left outline-none transition-[background-color,box-shadow] duration-150 ease-press focus-visible:shadow-control-focus"
+
+  if (density === "compact") {
+    return (
+      <button
+        type="button"
+        role={isSelect ? "radio" : undefined}
+        aria-checked={isSelect ? selected : undefined}
+        onClick={onClick}
+        className={cn("flex items-center gap-2 px-3 py-2.5", base, surface)}
+      >
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          <span className="num mr-1.5 text-muted-foreground">{icon}</span>
+          {label}
+          {hint && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{hint}</span>}
+        </span>
+        {isSelect && <RadioMark selected={selected} className="size-[22px]" />}
+      </button>
+    )
+  }
+
   return (
     <button
       type="button"
-      role="radio"
-      aria-checked={selected}
+      role={isSelect ? "radio" : undefined}
+      aria-checked={isSelect ? selected : undefined}
       onClick={onClick}
-      className={cn(
-        "flex flex-col gap-3.5 rounded-frame p-4 text-left outline-none transition-[background-color,box-shadow] duration-150 ease-press focus-visible:shadow-control-focus",
-        selected ? "bg-background shadow-floating" : "hover:bg-background/60"
-      )}
+      className={cn("flex flex-col gap-3.5 p-4", base, surface)}
     >
       <span className="flex items-start justify-between">
         <span
@@ -284,7 +318,7 @@ export function OptionCard({ icon, label, hint, selected, onClick }) {
         >
           {icon}
         </span>
-        <RadioMark selected={selected} className="size-[22px]" />
+        {isSelect && <RadioMark selected={selected} className="size-[22px]" />}
       </span>
       <span>
         <span className="block text-sm font-medium text-foreground">{label}</span>

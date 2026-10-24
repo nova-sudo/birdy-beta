@@ -66,6 +66,12 @@ const STEP_VARIANTS = {
   exit: (direction) => ({ opacity: 0, x: -40 * direction, transition: { duration: 0.2, ease: EASE_OUT } }),
 }
 
+/** Reports when a step's body has mounted (after the previous step's exit). */
+function StepMounted({ onMount }) {
+  useEffect(() => { onMount() }, [])
+  return null
+}
+
 export default function OnboardingPage() {
   const router = useRouter()
 
@@ -78,6 +84,11 @@ export default function OnboardingPage() {
   // The footer's right-hand slot, handed to steps through WizardFooterContext
   // so each can portal its own actions into the pinned footer.
   const [footerNode, setFooterNode] = useState(null)
+  // The step whose body is actually mounted. AnimatePresence keeps the old step
+  // (and so its live WizardFooter buttons, portaled into the footer) on screen
+  // while it plays its exit, so for that stretch currentKey runs ahead of this
+  // and the footer slot is made inert.
+  const [mountedKey, setMountedKey] = useState(null)
 
   const [name, setName] = useState("")
   const [agency, setAgency] = useState("")
@@ -709,6 +720,7 @@ export default function OnboardingPage() {
               animate="center"
               exit="exit"
             >
+              <StepMounted onMount={() => setMountedKey(currentKey)} />
 
           {currentKey === "welcome" && <WelcomeStep next={next} birdyState={birdyState} />}
 
@@ -910,11 +922,15 @@ export default function OnboardingPage() {
         {currentKey !== "welcome" && (
           <div className="flex h-[72px] shrink-0 items-center justify-between gap-3 border-t border-border/60 bg-background px-4 sm:px-6">
             <div>
-              {stepIndex > 0 && (
+              {stepIndex > 0 && currentKey !== "completion" && (
                 <Button variant="outline" size="lg" onClick={back}>Back</Button>
               )}
             </div>
-            <div ref={setFooterNode} className="flex items-center gap-3" />
+            <div
+              ref={setFooterNode}
+              inert={mountedKey !== currentKey}
+              className="flex min-w-0 items-center justify-end gap-2"
+            />
           </div>
         )}
       </div>

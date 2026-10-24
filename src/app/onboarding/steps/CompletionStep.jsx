@@ -2,7 +2,7 @@ import { RotateCcw } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Button, Notice } from "@/components/ds"
 import { Pop, Stagger, StaggerItem } from "@/components/motion"
-import { FakeProgressBar, STEP_COL, StepHeading } from "../parts"
+import { FakeProgressBar, STEP_COL, StepHeading, WizardFooter } from "../parts"
 
 export default function CompletionStep({
   name,
@@ -56,12 +56,15 @@ export default function CompletionStep({
         </div>
       )}
 
+      {/* The call to action lives in the footer, as on Paper's success screen. */}
       {creationState !== "error" && (
-        <StaggerItem>
-          <Button variant="primary" size="lg" onClick={finish} disabled={completing}>
-            {completing ? "Opening Birdy…" : "Take a look at Birdy"}
-          </Button>
-        </StaggerItem>
+        <WizardFooter
+          primary={{
+            label: completing ? "Opening Birdy…" : "Take a look at Birdy",
+            onClick: finish,
+            disabled: completing,
+          }}
+        />
       )}
     </Stagger>
   )

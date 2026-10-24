@@ -44,13 +44,14 @@ export function SalesToolStep({ ghlStatus, salesTool, setSalesTool, next }) {
       <StepHeading description="This decides where Birdy pulls call and close data from.">
         What do you use for sales?
       </StepHeading>
-      <OptionGrid label="Sales tool">
+      <OptionGrid label="Sales tool" mode="action">
         {options.map((opt) => (
           <OptionCard
             key={opt.id}
             icon={opt.icon}
             label={opt.label}
             hint={opt.desc}
+            mode="action"
             selected={salesTool === opt.id}
             onClick={() => { setSalesTool(opt.id); next({ sales_tool: opt.id }) }}
           />

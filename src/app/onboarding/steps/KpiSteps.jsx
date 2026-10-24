@@ -97,16 +97,18 @@ export function KpiDefaultStep({ applyKpiTargets }) {
       <StepHeading description="We'll pre-fill every new client with these numbers — you can always adjust per client later.">
         Save these as your defaults?
       </StepHeading>
-      <OptionGrid label="Save as defaults">
+      <OptionGrid label="Save as defaults" mode="action">
         <OptionCard
           icon={<User strokeWidth={2} />}
           label="Just this client"
+          mode="action"
           selected={false}
           onClick={() => applyKpiTargets(false)}
         />
         <OptionCard
           icon={<Users strokeWidth={2} />}
           label="Yes, set as default"
+          mode="action"
           selected={false}
           onClick={() => applyKpiTargets(true)}
         />

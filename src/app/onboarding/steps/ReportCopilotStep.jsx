@@ -11,7 +11,6 @@ export default function ReportCopilotStep({ selectedChannel, saveReport, savingR
   return (
     <div className={STEP_COL_FULL}>
       <StepHeading
-        eyebrow="Notifications"
         description={`Birdy will post it to #${selectedChannel?.name || "your channel"}. Chat it through and watch it take shape.`}
       >
         Let&apos;s design your Slack report
@@ -31,7 +30,9 @@ export default function ReportCopilotStep({ selectedChannel, saveReport, savingR
         }}
         secondary={
           <Button variant="ghost" size="lg" onClick={() => saveReport(null)} disabled={savingReport}>
-            Skip, use the standard daily report
+            {/* Below sm the full label would push the primary off a 390 footer. */}
+            <span aria-hidden="true" className="sm:hidden">Skip</span>
+            <span className="sr-only sm:not-sr-only">Skip, use the standard daily report</span>
           </Button>
         }
       />

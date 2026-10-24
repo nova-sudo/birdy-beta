@@ -547,7 +547,7 @@ describe("onboarding wizard", () => {
     })
 
     await screen.findByText(/save these as your defaults/i)
-    await user.click(screen.getByRole("radio", { name: /just this client/i }))
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
 
     await waitFor(() => expect(lastTargetsBody()).toEqual({
       cpa: 45,
@@ -565,7 +565,7 @@ describe("onboarding wizard", () => {
     })
 
     await screen.findByText(/save these as your defaults/i)
-    await user.click(screen.getByRole("radio", { name: /set as default/i }))
+    await user.click(screen.getByRole("button", { name: /set as default/i }))
 
     await waitFor(() => expect(lastTargetsBody()?.save_as_default).toBe(true))
   })
@@ -578,7 +578,7 @@ describe("onboarding wizard", () => {
     })
 
     await screen.findByText(/save these as your defaults/i)
-    await user.click(screen.getByRole("radio", { name: /just this client/i }))
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
 
     await waitFor(() => expect(lastTargetsBody()).toEqual({
       monthly_wins: 20,
@@ -607,7 +607,7 @@ describe("onboarding wizard", () => {
     })
 
     await screen.findByText(/save these as your defaults/i)
-    await user.click(screen.getByRole("radio", { name: /just this client/i }))
+    await user.click(screen.getByRole("button", { name: /just this client/i }))
 
     await waitFor(() => expect(lastTargetsBody()).toEqual({
       cpa: 45,
@@ -874,7 +874,34 @@ describe("onboarding wizard", () => {
 
     expect(screen.getByRole("button", { name: /^back$/i })).toBeTruthy()
     expect(screen.queryByRole("button", { name: /continue/i })).toBeNull()
-    expect(screen.getAllByRole("radio").length).toBe(3)
+    expect(screen.queryAllByRole("radio").length).toBe(0)
+    expect(screen.getByRole("button", { name: /hot prospector/i })).toBeTruthy()
+  })
+
+  it("puts the completion call to action in the footer and drops Back there", async () => {
+    bootAt(19, { data: {} })
+    await screen.findByText(/you're all set/i)
+
+    expect(screen.queryByRole("button", { name: /^back$/i })).toBeNull()
+    const cta = screen.getByRole("button", { name: /take a look at birdy/i })
+    expect(cta.closest("[inert]")).toBeNull()
+  })
+
+  it("makes the footer inert while the old step plays its exit", async () => {
+    const user = userEvent.setup()
+    bootAt(1)
+    await screen.findByText(/what should we call you/i)
+    await user.type(screen.getByPlaceholderText("Your first name"), "Sam")
+    const footer = screen.getByRole("button", { name: /continue/i }).parentElement
+    expect(footer.hasAttribute("inert")).toBe(false)
+
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    // The old step is still mounted during its exit, with a live Continue in the
+    // slot; the slot is inert until the next step has mounted.
+    expect(footer.hasAttribute("inert")).toBe(true)
+    await screen.findByText(/what's your agency called/i)
+    await waitFor(() => expect(footer.hasAttribute("inert")).toBe(false))
   })
 
   // ── The report copilot footer ──────────────────────────────────────────
