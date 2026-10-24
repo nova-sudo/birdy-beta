@@ -7,13 +7,11 @@ import {
 import { motion } from "framer-motion";
 import { WhopCheckoutEmbed } from "@whop/checkout/react";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
-} from "@/components/ui/dialog";
+  Badge, Button, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  ErrorState, PageHeader, Skeleton, Surface, SystemBanner,
+} from "@/components/ds";
 import { apiRequest } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePageHeader } from "@/components/page-header";
-import { pdFontClass } from "@/lib/fonts";
 import { Stagger, StaggerItem, EASE_OUT } from "@/components/motion";
 import { cn } from "@/lib/utils";
 import {
@@ -33,14 +31,14 @@ const EXTRA_CLIENT_PRICE = 10;
 
 // Tiers, order and palette are shared with the Settings Billing tab, which
 // shows the same three plans.
-import { PLANS, PLAN_ORDER, STATUS_LABELS, STATUS_STYLES } from "@/components/billing/plans";
+import { PLANS, PLAN_ORDER, STATUS_LABELS, STATUS_TONES } from "@/components/billing/plans";
 import { PlanCard } from "@/components/billing/PlanCard";
 
 // Best-effort read of the signed-in user's email so we can prefill the Whop
 // checkout form. In this app the account id (user_id) *is* the email, so this
-// is also what the backend webhook uses to reconcile the purchase.
+// is also what the backend webhook uses to reconcile the purchase. Browser-only
+// state, so it is read in an effect, never during render.
 function getStoredEmail() {
-  if (typeof window === "undefined") return "";
   try {
     return JSON.parse(localStorage.getItem("user"))?.email ?? "";
   } catch {
@@ -59,15 +57,15 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
-        <DialogHeader className="px-5 py-4 border-b border-pd-border text-left">
-          <DialogTitle className="font-pd-display text-[18px]">Subscribe to {plan.name}</DialogTitle>
+        <DialogHeader className="px-5 py-4 border-b border-border text-left">
+          <DialogTitle className="text-lg">Subscribe to {plan.name}</DialogTitle>
           <DialogDescription>
             ${plan.price}/mo · Secure checkout powered by Whop
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[70vh] overflow-y-auto p-4">
           {appliedPromo && (
-            <div className="mb-3 flex items-center gap-2 rounded-2xl bg-pd-success-bg px-3 py-2 text-sm text-pd-success">
+            <div className="mb-3 flex items-center gap-2 rounded-control bg-success-soft px-3 py-2 text-sm text-success-ink">
               <Check className="w-4 h-4 shrink-0" />
               <span>
                 <span className="font-semibold">{appliedPromo.code}</span> applied —{" "}
@@ -102,9 +100,9 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
 
 function StatusBadge({ status }) {
   return (
-    <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-[11.5px] font-bold", STATUS_STYLES[status] ?? STATUS_STYLES.inactive)}>
+    <Badge tone={STATUS_TONES[status] ?? STATUS_TONES.inactive}>
       {STATUS_LABELS[status] ?? status}
-    </span>
+    </Badge>
   );
 }
 
@@ -114,13 +112,13 @@ function PlanSummaryCard({ billingStatus, onPortal, loadingPortal, onUpgrade, on
 
   if (!plan) {
     return (
-      <div className="flex flex-col justify-between gap-4 rounded-xl border border-pd-border bg-pd-surface p-5 shadow-sm">
+      <Surface className="flex flex-col justify-between gap-4 p-5">
         <div>
-          <span className="text-[12.5px] font-medium text-pd-subtle">Your plan</span>
-          <div className="mt-1 font-pd-display text-[28px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">No plan yet</div>
-          <p className="mt-1 text-[13px] text-pd-subtle">Pick a plan below to connect your clients.</p>
+          <span className="text-xs font-medium text-muted-foreground">Your plan</span>
+          <div className="mt-1 text-2xl font-semibold leading-tight text-foreground">No plan yet</div>
+          <p className="mt-1 text-xs text-muted-foreground">Pick a plan below to connect your clients.</p>
         </div>
-      </div>
+      </Surface>
     );
   }
 
@@ -131,35 +129,35 @@ function PlanSummaryCard({ billingStatus, onPortal, loadingPortal, onUpgrade, on
   const canBuyExtraSlots = plan.supportsExtraSlots && !!EXTRA_CLIENT_PLAN_ID;
 
   return (
-    <div className="flex flex-col rounded-xl border border-pd-border bg-pd-surface p-5 shadow-sm">
+    <Surface className="flex flex-col p-5">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-[12.5px] font-medium text-pd-subtle">Your plan</span>
+        <span className="text-xs font-medium text-muted-foreground">Your plan</span>
         <StatusBadge status={billingStatus.status} />
       </div>
       <div className="mt-1 flex items-baseline gap-2">
-        <span className="font-pd-display text-[30px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">{plan.name}</span>
-        <span className="text-[14px] font-medium text-pd-subtle">${plan.price}/mo</span>
+        <span className="text-2xl font-semibold leading-tight text-foreground">{plan.name}</span>
+        <span className="num text-sm font-medium text-muted-foreground">${plan.price}/mo</span>
       </div>
       {billingStatus.current_period_end && (
-        <p className="text-[12.5px] text-pd-subtle">
+        <p className="text-xs text-muted-foreground">
           {billingStatus.cancel_at_period_end ? "Cancels" : "Renews"}{" "}
           {new Date(billingStatus.current_period_end).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
         </p>
       )}
 
       <div className="mt-4">
-        <div className="flex items-center justify-between text-[12.5px] text-pd-subtle">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5"><Users className="size-3.5" /> Client groups</span>
-          <span className="font-semibold text-pd-ink">
+          <span className="num font-semibold text-foreground">
             {used} of {limit}
             {billingStatus.extra_clients_paid > 0 && (
-              <span className="ml-1 font-medium text-pd-success">(+{billingStatus.extra_clients_paid} extra)</span>
+              <span className="ml-1 font-medium text-success-ink">(+{billingStatus.extra_clients_paid} extra)</span>
             )}
           </span>
         </div>
-        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-pd-divider">
+        <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-muted">
           <motion.div
-            className={cn("h-full rounded-full", usagePct >= 90 ? "bg-pd-danger" : "bg-pd-primary")}
+            className={cn("h-full rounded-full", usagePct >= 90 ? "bg-danger" : "bg-primary")}
             initial={{ width: 0 }}
             animate={{ width: `${usagePct}%` }}
             transition={{ duration: 1.1, ease: EASE_OUT, delay: 0.2 }}
@@ -167,19 +165,12 @@ function PlanSummaryCard({ billingStatus, onPortal, loadingPortal, onUpgrade, on
         </div>
       </div>
 
-      {billingStatus.cancel_at_period_end && (
-        <div className="mt-3 flex items-center gap-2 rounded-2xl bg-pd-warning-bg px-3 py-2 text-[12.5px] text-pd-amber">
-          <AlertCircle className="size-4 shrink-0" />
-          Your subscription will cancel at the end of this billing period.
-        </div>
-      )}
-
       <div className="mt-auto flex flex-wrap gap-2 pt-5">
         {next && (
-          <Button onClick={() => onUpgrade(next)} disabled={loadingPortal}>Upgrade to {next.name}</Button>
+          <Button variant="primary" onClick={() => onUpgrade(next)} disabled={loadingPortal}>Upgrade to {next.name}</Button>
         )}
         {canBuyExtraSlots && (
-          <Button onClick={onAddExtraSlots} className="gap-1.5">
+          <Button variant="outline" onClick={onAddExtraSlots} className="gap-1.5">
             <Plus className="size-4" /> Extra client slot (+${EXTRA_CLIENT_PRICE}/mo)
           </Button>
         )}
@@ -188,7 +179,7 @@ function PlanSummaryCard({ billingStatus, onPortal, loadingPortal, onUpgrade, on
           Manage billing
         </Button>
       </div>
-    </div>
+    </Surface>
   );
 }
 
@@ -202,17 +193,17 @@ const FAQ = [
 
 function Faq() {
   return (
-    <div className="overflow-hidden rounded-xl border border-pd-border bg-pd-surface shadow-sm">
+    <Surface padded={false} className="overflow-hidden">
       {FAQ.map(({ q, a }, i) => (
-        <details key={q} open={i === 0} className="group border-t border-pd-divider px-5 py-4 first:border-t-0">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[14px] font-semibold text-pd-ink [&::-webkit-details-marker]:hidden">
+        <details key={q} open={i === 0} className="group border-t border-border px-5 py-4 first:border-t-0">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-foreground [&::-webkit-details-marker]:hidden">
             {q}
-            <Plus className="size-4 shrink-0 text-pd-subtle transition-transform duration-300 ease-[cubic-bezier(.34,1.56,.64,1)] group-open:rotate-45" />
+            <Plus className="size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-press group-open:rotate-45" />
           </summary>
-          <p className="mt-2 max-w-[75ch] text-[13.5px] leading-relaxed text-pd-body">{a}</p>
+          <p className="mt-2 max-w-[75ch] text-sm leading-relaxed text-body">{a}</p>
         </details>
       ))}
-    </div>
+    </Surface>
   );
 }
 
@@ -220,11 +211,11 @@ function BillingSkeleton() {
   return (
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
-        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[230px] w-full rounded-xl" />)}
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[230px] w-full rounded-surface" />)}
       </div>
       <Skeleton className="h-6 w-40" />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[280px] w-full rounded-xl" />)}
+        {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[280px] w-full rounded-surface" />)}
       </div>
     </div>
   );
@@ -235,22 +226,14 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [loadingPortal, setLoadingPortal] = useState(false);
   const [error, setError] = useState(null);
+  const [loadError, setLoadError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
   const [checkoutPlan, setCheckoutPlan] = useState(null);
-  const [storedEmail] = useState(getStoredEmail);
+  const [storedEmail, setStoredEmail] = useState("");
   const credits = useCreditsData();
 
-  const header = useMemo(
-    () => ({
-      title: (
-        <div className={`${pdFontClass} min-w-0`}>
-          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">Billing</h1>
-          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">Your plan, client slots and AI credits</p>
-        </div>
-      ),
-    }),
-    []
-  );
+  // The page's own title is in the PageHeader below; the top bar only names the page.
+  const header = useMemo(() => ({ title: "Billing" }), []);
   usePageHeader(header);
 
   const fetchStatus = useCallback(async () => {
@@ -258,8 +241,9 @@ export default function BillingPage() {
       const res = await apiRequest("/api/billing/status");
       if (!res.ok) throw new Error("Failed to load billing status");
       setBillingStatus(await res.json());
+      setLoadError(null);
     } catch (e) {
-      setError(e.message);
+      setLoadError(e.message);
     } finally {
       setLoading(false);
     }
@@ -275,6 +259,7 @@ export default function BillingPage() {
   }, [fetchStatus]);
 
   useEffect(() => {
+    setStoredEmail(getStoredEmail());
     void fetchStatus();
     const params = new URLSearchParams(window.location.search);
     // Fallback path: Whop may redirect back here (returnUrl) for payment
@@ -333,19 +318,37 @@ export default function BillingPage() {
   const handleUpgrade = (plan) => (billingStatus?.subscribed ? handlePortal() : handleCheckout(plan));
 
   return (
-    <div className={`${pdFontClass} mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10`}>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
+      <PageHeader title="Billing" description="Your plan, client slots and AI credits" />
       <SuccessBanner message={successMsg} onDismiss={() => setSuccessMsg(null)} />
       <SuccessBanner message={credits.successMsg} onDismiss={() => credits.setSuccessMsg(null)} />
+      {billingStatus?.cancel_at_period_end && (
+        <SystemBanner tone="warning" className="rounded-control">
+          <span className="flex items-center gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            Your subscription will cancel at the end of this billing period.
+          </span>
+        </SystemBanner>
+      )}
       {error && (
-        <div className="flex items-center gap-3 rounded-2xl bg-pd-danger px-4 py-3 text-white shadow-sm">
-          <AlertCircle className="size-5 shrink-0" />
-          <p className="text-sm font-semibold">{error}</p>
-          <button type="button" onClick={() => setError(null)} className="ml-auto rounded-full px-2 text-white/80 hover:bg-white/15 hover:text-white" aria-label="Dismiss">✕</button>
-        </div>
+        <SystemBanner tone="danger" className="rounded-control font-medium" onDismiss={() => setError(null)}>
+          <span className="flex items-center gap-2">
+            <AlertCircle className="size-4 shrink-0" />
+            {error}
+          </span>
+        </SystemBanner>
       )}
 
       {loading ? (
         <BillingSkeleton />
+      ) : loadError && !billingStatus ? (
+        <Surface>
+          <ErrorState
+            title="Couldn't load billing"
+            description={loadError}
+            onRetry={() => { setLoading(true); void fetchStatus(); }}
+          />
+        </Surface>
       ) : (
         <>
           <Stagger className="grid grid-cols-1 gap-4 lg:grid-cols-[1.3fr_1fr_1fr]">
@@ -367,7 +370,7 @@ export default function BillingPage() {
           </Stagger>
 
           <section className="flex flex-col gap-3">
-            <h2 className="font-pd-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink">
+            <h2 className="text-xl font-semibold text-foreground">
               {billingStatus?.subscribed ? "Compare plans" : "Choose a plan"}
             </h2>
             <Stagger className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-3" delay={0.25}>
@@ -388,7 +391,7 @@ export default function BillingPage() {
           <CreditUsageCard usage={credits.usage} />
 
           <section className="flex flex-col gap-3">
-            <h2 className="font-pd-display text-[20px] font-bold tracking-[-0.01em] text-pd-ink">Questions</h2>
+            <h2 className="text-xl font-semibold text-foreground">Questions</h2>
             <Faq />
           </section>
         </>

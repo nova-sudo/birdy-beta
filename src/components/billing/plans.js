@@ -46,14 +46,14 @@ export const PLANS = [
 // downgrade.
 export const PLAN_ORDER = ["starter", "growth", "scale"];
 
-// Solid status pills: a filled colour with white text.
-export const STATUS_STYLES = {
-  active: "bg-pd-success-bg text-pd-success",
-  trialing: "bg-pd-info-bg text-pd-info",
-  past_due: "bg-pd-warning-bg text-pd-amber",
-  canceling: "bg-pd-warning-bg text-pd-amber",
-  canceled: "bg-pd-danger-bg text-pd-danger",
-  inactive: "bg-pd-divider text-pd-body",
+// Badge tone per subscription status.
+export const STATUS_TONES = {
+  active: "success",
+  trialing: "info",
+  past_due: "warning",
+  canceling: "warning",
+  canceled: "danger",
+  inactive: "neutral",
 };
 
 export const STATUS_LABELS = {
