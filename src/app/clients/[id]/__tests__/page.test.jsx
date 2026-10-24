@@ -128,7 +128,7 @@ describe("/clients/[id]", () => {
     expect(read).not.toBeNull()
     // £240 over 20 leads is £12 against a £10 target: at risk.
     expect(within(read).getByText("Cost per lead is at risk")).toBeInTheDocument()
-    expect(within(read).getByText("100 leads from £240 of ad spend")).toBeInTheDocument()
+    expect(within(read).getByText("20 leads from £240 of ad spend")).toBeInTheDocument()
     expect(document.querySelector("input[aria-label='Add a note']")).not.toBeNull()
   })
 
@@ -182,6 +182,15 @@ describe("/clients/[id]", () => {
 
   it("an unknown client shows a not-found EmptyState with a way back", async () => {
     vi.mocked(apiRequest).mockImplementation(async () => ({ ok: false, status: 404, json: async () => ({}) }))
+    vi.mocked(useClientGroupsWithSeries).mockImplementation(() => ({
+      clientGroups: [],
+      loading: false,
+      error: null,
+      refresh: vi.fn(),
+      invalidate: vi.fn(),
+      datePreset: "last_30d",
+      setDatePreset: groups,
+    }))
     const user = userEvent.setup()
     render(<ClientDetailsPage />)
     expect(await screen.findByText("Client not found")).toBeInTheDocument()
@@ -206,5 +215,38 @@ describe("/clients/[id]", () => {
     render(<ClientDetailsPage />)
     expect(document.querySelector('[data-ds="page-header"]')).not.toBeNull()
     expect(document.querySelectorAll('[data-ds="skeleton"]').length).toBeGreaterThan(0)
+  })
+
+  describe("while the client's own document is still loading", () => {
+    // /api/client-groups/<id> is the slow request. The name, health and history
+    // do not wait for it: they come from the list row and the notes request.
+    const slowDetail = () => {
+      vi.mocked(apiRequest).mockImplementation((url) => {
+        if (url === "/api/client-groups/g1") return new Promise(() => {})
+        if (String(url).endsWith("/notes")) {
+          return Promise.resolve({ ok: true, json: async () => ({ notes: [{ id: "n1", body: "Paused for a refit", author: "Emma T.", created_at: new Date().toISOString() }] }) })
+        }
+        return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) })
+      })
+    }
+
+    it("shows the client's name and health from the list", async () => {
+      slowDetail()
+      vi.mocked(useClientGroupsWithSeries).mockImplementation(() => ({
+        clientGroups: [{ ...GROUP, health: "Critical", created_at: "2025-03-04T00:00:00Z" }],
+        loading: false, error: null, refresh: vi.fn(), invalidate: vi.fn(), datePreset: "last_30d", setDatePreset: groups,
+      }))
+      render(<ClientDetailsPage />)
+      expect(await screen.findByRole("heading", { level: 1, name: "Glow Clinic" })).toBeInTheDocument()
+      const header = document.querySelector('[data-ds="page-header"]')
+      expect(within(header).getByText("Critical")).toBeInTheDocument()
+      expect(header).toHaveTextContent("Client since Mar 2025")
+    })
+
+    it("the history book shows its notes once they return", async () => {
+      slowDetail()
+      render(<ClientDetailsPage />)
+      expect(await screen.findByText("Paused for a refit")).toBeInTheDocument()
+    })
   })
 })

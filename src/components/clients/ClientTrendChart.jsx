@@ -94,6 +94,7 @@ export function ClientTrendChart({
     const insights = group.facebook?.metrics?.insights ?? {}
     const accountSpend = num(insights.spend)
     const accountLeads = num(insights.results) || num(insights.total_leads)
+    const crmCloses = num(group.gohighlevel?.metrics?.funnel?.closes)
 
     return CLIENT_CHART_METRICS.reduce((acc, metric) => {
       const s = series[metric.key]
@@ -109,6 +110,16 @@ export function ClientTrendChart({
         // headline; a preset whose cache spans the whole window renders no
         // note at all.
         coverage = coverageNote(windowed.facebook.daily_spend, plottedTotal, accountSpend)
+      } else if (metric.key === "leads" && accountLeads > 0) {
+        // Meta's results, the same figure CPL divides by and the goals strip
+        // shows as "Number of leads". The GHL daily rows count contacts the CRM
+        // classified as leads, which can be none for a client whose daily series
+        // is empty or whose contacts are unclassified, under a CPL that says
+        // otherwise.
+        headline = accountLeads
+      } else if (metric.key === "closes" && plottedTotal === 0 && crmCloses > 0) {
+        // No dated closes in the window's rows: the cohort funnel still knows.
+        headline = crmCloses
       } else if (metric.key === "cpl") {
         // CPL is a rate, so its headline is the blended figure over the
         // window, not the sum of per-bucket rates — adding costs per lead
@@ -137,6 +148,8 @@ export function ClientTrendChart({
         // last known value instead.
         values: carryForward(s.values),
         total: formatValue(metric.key, headline, currencySymbol),
+        // The headline stands even where the daily rows do not.
+        hasTotal: Number.isFinite(headline) && headline > 0,
         // Required by TrendChart's tooltips and its screen-reader summary,
         // which indexes into it directly.
         pointValues: s.values.map((v) =>
@@ -157,6 +170,8 @@ export function ClientTrendChart({
       x: m.labels?.[i] ?? "",
       current,
       tooltipLabel: m.tooltipLabels?.[i],
+      // A bucket with no reading says so, rather than repeating the carried value.
+      display: m.pointValues?.[i] === "—" ? "—" : undefined,
     }))
     return {
       key: metric.key,
@@ -166,6 +181,7 @@ export function ClientTrendChart({
       plottable: Boolean(group),
       // One bucket is a figure but not a trend; say so rather than "no data".
       points: points.length,
+      hasTotal: Boolean(m?.hasTotal),
     }
   })
   const active = metrics.find((m) => m.key === activeMetric)
@@ -182,7 +198,9 @@ export function ClientTrendChart({
         emptyMessage={
           active?.points === 1
             ? "Pick 7 days or longer to see a trend."
-            : "No daily data for this client in this window yet."
+            : active?.hasTotal
+              ? "No daily breakdown for this client in this window yet."
+              : "No daily data for this client in this window yet."
         }
       />
       {!loading && chart?.coverage && (

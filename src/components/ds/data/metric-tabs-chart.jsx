@@ -19,7 +19,7 @@ function ChartTooltip({ active, payload, label, formatValue, metric }) {
       className="rounded-control bg-foreground px-3 py-2 text-background shadow-floating"
     >
       <div className="font-mono text-xs opacity-70">{row.tooltipLabel ?? label}</div>
-      <div className="num text-sm font-medium">{formatValue(row.current, metric)}</div>
+      <div className="num text-sm font-medium">{row.display ?? formatValue(row.current, metric)}</div>
       {row.previous != null && (
         <div className="num text-xs opacity-70">Previous {formatValue(row.previous, metric)}</div>
       )}
@@ -37,7 +37,8 @@ function ChartTooltip({ active, payload, label, formatValue, metric }) {
  * to turn that into this component's `metrics`; only the active metric gets a series there.
  *
  * @param {object} props
- * @param {{key: string, label: React.ReactNode, value: React.ReactNode, delta?: number|null, invert?: boolean, caption?: React.ReactNode, series?: {x: string, current: number, previous?: number|null, tooltipLabel?: string}[]}[]} props.metrics
+ * @param {{key: string, label: React.ReactNode, value: React.ReactNode, delta?: number|null, invert?: boolean, caption?: React.ReactNode, series?: {x: string, current: number, previous?: number|null, tooltipLabel?: string, display?: string}[]}[]} props.metrics
+ *   A point's `display`, when given, stands in for the formatted `current` in its tooltip ("—" for a bucket with no reading that is plotted at a carried value).
  * @param {string} props.value Active metric key
  * @param {(key: string) => void} props.onValueChange
  * @param {(n: number, metric: object) => React.ReactNode} [props.formatValue] Tooltip number formatter
@@ -225,4 +226,4 @@ function fromPortfolioTabs({ tabs, activeKey, chart }) {
   })
 }
 
-export { MetricTabsChart, fromPortfolioTabs }
+export { MetricTabsChart, fromPortfolioTabs, ChartTooltip }

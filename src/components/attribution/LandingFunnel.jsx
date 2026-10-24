@@ -45,7 +45,7 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
 
   const frame = (children) => (
     <Frame
-      data-ds="landing-funnel"
+      data-slot="landing-funnel"
       title="Landing page funnel"
       meta="shares are of landing views"
       className={className}

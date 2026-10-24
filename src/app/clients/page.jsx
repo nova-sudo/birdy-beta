@@ -37,6 +37,8 @@ import {
 } from "@/lib/client-status"
 import { usePageHeader } from "@/components/page-header"
 import { useCurrency } from "@/hooks/useCurrency"
+import getSymbolFromCurrency from "currency-symbol-map"
+import { useColumnViews } from "@/lib/useColumnViews"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest } from "@/lib/api"
@@ -49,6 +51,7 @@ import { MetaCampaignsDialog } from "@/components/clients/MetaCampaignsDialog"
 import { sharesMetaAccount, remainderOwner, unassignedText } from "@/lib/meta-scope"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
 import { HEALTH_TONE, clientRows, statusOf } from "./presentation"
+import { DEFAULT_VISIBLE, catalogueColumns, catalogueValues, formatCell, readSavedView } from "./catalogue"
 import { usePreviousClientGroups } from "./usePreviousClientGroups"
 
 // The same question the bulk-import review step asks per row, kept in the same
@@ -151,19 +154,41 @@ export default function ClientsPage() {
   const [duplicateGroupName, setDuplicateGroupName] = useState("")
   const { currency: userCurrency } = useCurrency("GBP")
 
+  // The agency's own formulas (shown on the Clients dashboard) are extra columns.
+  const [customMetrics, setCustomMetrics] = useState([])
+  useEffect(() => {
+    apiRequest("/api/custom-metrics").then(async res => {
+      if (!res.ok) return
+      const data = await res.json()
+      const metrics = (data.custom_metrics || []).map(m => ({
+        id: m.id, name: m.name, dashboards: m.dashboards || [],
+        formulaParts: m.formula_parts || [], formatType: m.format_type || "integer",
+        enabled: true,
+      }))
+      // Nothing to add is not a change: a new empty array would rebuild the columns.
+      if (metrics.length > 0) setCustomMetrics(metrics)
+    }).catch(() => {})
+  }, [])
+
+  // The per-user column layout: a flat ordered list of ids, read here and
+  // written only when "Save columns" is pressed.
+  const { savedColumns, saveView, viewsLoaded } = useColumnViews("clients")
+  const savedView = useMemo(() => (viewsLoaded ? readSavedView(savedColumns) : null), [viewsLoaded, savedColumns])
+  // Choices made since the page opened; they sit on top of the saved view or the default.
+  const [visibilityChoices, setVisibilityChoices] = useState({})
+
   // ── Filter groups by status ───────────────────────────────────────────────
   // The six tabs mix two axes — Active/Inactive are status, and
   // Healthy/Warning/Critical are health — so one selection resolves against
   // whichever axis the chosen tab belongs to. The health tabs read as a
   // breakdown of the Active tab, so they only ever consider active clients:
   // an inactive client's health says nothing about a live account.
-  const filteredByStatus = useMemo(
-    () => clientGroups.filter(g =>
+  const inTab = useCallback(
+    (g) =>
       HEALTH_VALUES.includes(statusFilter)
         ? isActive(g) && matchesHealthFilter(g, statusFilter)
-        : matchesStatusFilter(g, statusFilter)
-    ),
-    [clientGroups, statusFilter],
+        : matchesStatusFilter(g, statusFilter),
+    [statusFilter],
   )
 
   // ── Status counts for filter badges ───────────────────────────────────────
@@ -175,11 +200,21 @@ export default function ClientsPage() {
 
   // ── Table rows ────────────────────────────────────────────────────────────
   const { groups: previousGroups, comparison } = usePreviousClientGroups(selectedDateRange)
-  const rows = useMemo(() => {
-    const built = clientRows(filteredByStatus, previousGroups, comparison)
-    // Biggest spenders first, which is how the table has always opened.
-    return built.sort((a, b) => (b.spend ?? -1) - (a.spend ?? -1))
-  }, [filteredByStatus, previousGroups, comparison])
+  // Extra columns on offer: the catalogue, a column per GHL tag, the agency's formulas.
+  const extraColumns = useMemo(() => catalogueColumns(clientGroups, customMetrics), [clientGroups, customMetrics])
+  const symbol = getSymbolFromCurrency(userCurrency) || "$"
+
+  // Every client, once; the tab only decides which of them show. Keeping the
+  // data (and so the columns) stable across tabs keeps sort and paging intact.
+  const allRows = useMemo(
+    () =>
+      clientRows(clientGroups, previousGroups, comparison)
+        // Biggest spenders first, which is how the table has always opened.
+        .sort((a, b) => (b.spend ?? -1) - (a.spend ?? -1))
+        .map((row) => ({ ...row, values: catalogueValues(row.group, extraColumns) })),
+    [clientGroups, previousGroups, comparison, extraColumns],
+  )
+  const rows = useMemo(() => allRows.filter((row) => inTab(row.group)), [allRows, inTab])
 
   const columns = useMemo(
     () => [
@@ -187,6 +222,7 @@ export default function ClientsPage() {
         id: "name",
         accessorKey: "name",
         header: "Client",
+        enableHiding: false,
         meta: { label: "Clients", variant: "text" },
         cell: ({ row }) => {
           const { name, group } = row.original
@@ -268,8 +304,40 @@ export default function ClientsPage() {
             <MoneyCell value={row.original.spend} currency={row.original.currency || userCurrency} />
           ),
       },
+      ...extraColumns.map((col) => {
+        const numeric = !col.text
+        return {
+          id: col.id,
+          accessorFn: (row) => row.values?.[col.id] ?? undefined,
+          header: numeric ? numericHeader(col.label) : col.label,
+          meta: { label: col.label },
+          enableSorting: col.sortable,
+          cell: ({ row }) => {
+            const text = formatCell(col.id, row.original.values?.[col.id], { symbol, custom: col.custom })
+            return numeric ? <span className="num block text-right text-sm text-foreground">{text}</span> : <span className="text-sm text-foreground">{text}</span>
+          },
+        }
+      }),
     ],
-    [userCurrency],
+    [userCurrency, symbol, extraColumns],
+  )
+
+  // Saved order first (the name column always leads), the rest as catalogued.
+  const orderedColumns = useMemo(() => {
+    if (!savedView) return columns
+    const rank = new Map(["name", ...savedView.order].map((id, i) => [id, i]))
+    return [...columns].sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity))
+  }, [columns, savedView])
+
+  // Every column gets an explicit answer: the table would show an unknown one.
+  const columnVisibility = useMemo(() => {
+    const base = (id) => (savedView ? savedView.visible.has(id) : DEFAULT_VISIBLE.includes(id))
+    return Object.fromEntries(orderedColumns.map((c) => [c.id, c.id === "name" ? true : visibilityChoices[c.id] ?? base(c.id)]))
+  }, [orderedColumns, savedView, visibilityChoices])
+
+  const saveColumns = useCallback(
+    () => saveView(orderedColumns.filter((c) => columnVisibility[c.id]).map((c) => c.id)),
+    [saveView, orderedColumns, columnVisibility],
   )
 
   useEffect(() => {
@@ -1026,8 +1094,15 @@ export default function ClientsPage() {
           </div>
 
           <DataTable
-            columns={columns}
+            columns={orderedColumns}
             data={rows}
+            state={{ columnVisibility }}
+            onStateChange={(next) => setVisibilityChoices(next.columnVisibility)}
+            toolbar={
+              <Button variant="ghost" size="sm" onClick={saveColumns}>
+                Save columns
+              </Button>
+            }
             loading={loading}
             getRowId={(row) => row.id}
             onRowClick={handleClientGroupClick}

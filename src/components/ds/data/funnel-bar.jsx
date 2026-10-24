@@ -19,9 +19,9 @@ const present = (v) => v != null && Number.isFinite(v)
 // Above 100% the step is not downstream of the one before it (a slice, not a
 // narrowing), so there is no conversion to state.
 const conversion = (current, previous) => {
-  if (!present(current) || !present(previous) || previous <= 0 || current > previous) return "—"
+  if (!present(current) || !present(previous) || previous <= 0 || current > previous) return null
   const pct = (current / previous) * 100
-  return `→ ${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`
+  return `${pct < 10 ? pct.toFixed(1) : Math.round(pct)}%`
 }
 
 const wide = (fraction) => `${(fraction * 100).toFixed(1)}%`
@@ -70,6 +70,7 @@ function FunnelBar({ steps = [], loading = false, className, ...props }) {
   const n = steps.length
   const grid = { gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }
   const first = steps[0].value
+  const rate = (i) => conversion(steps[i].value, steps[i - 1].value)
 
   if (loading) {
     return (
@@ -97,10 +98,20 @@ function FunnelBar({ steps = [], loading = false, className, ...props }) {
       >
         {steps.map((s, i) => (
           <span key={s.key} className="truncate font-mono">
-            {i === 0 ? "" : conversion(s.value, steps[i - 1].value)}
+            {i === 0 ? "" : rate(i) ? `→ ${rate(i)}` : "—"}
           </span>
         ))}
       </div>
+      {/* The visible row is decorative; screen readers get the same rates in words. */}
+      <ul data-slot="funnel-conversions-sr" className="sr-only">
+        {steps.map((s, i) =>
+          i > 0 && rate(i) ? (
+            <li key={s.key}>
+              {steps[i - 1].label} to {s.label}: {rate(i)}
+            </li>
+          ) : null
+        )}
+      </ul>
 
       <div data-slot="funnel-segments" className="grid gap-0.5" style={grid}>
         {steps.map((s, i) => (

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from "vitest"
 import { clientFindings } from "../presentation"
 
-const group = (funnel, spend = 0) => ({
+const group = (funnel, spend = 0, results = 0) => ({
   name: "Glow Clinic",
   gohighlevel: { metrics: { funnel } },
-  facebook: { metrics: { insights: { spend } } },
+  facebook: { metrics: { insights: { spend, results } } },
 })
 
 const goal = (over) => ({ id: "cpl", label: "Cost per lead", value: 12, target: 10, format: "currency", state: "Behind", ...over })
@@ -17,6 +17,13 @@ describe("clientFindings", () => {
   it("summarises the window from the funnel and spend", () => {
     const [row] = clientFindings({ group: group({ leads: 1562, closes: 29 }, 4200), currencySymbol: "£" })
     expect(row).toMatchObject({ tone: "info", title: "1,562 leads from £4,200 of ad spend", detail: "29 have closed" })
+  })
+
+  it("counts leads as Meta does, and names the smaller CRM cohort so the two agree", () => {
+    // Meta reports 22 form submissions; the CRM cohort holds the 4 that became contacts.
+    const [row] = clientFindings({ group: group({ leads: 4, closes: 0 }, 177, 22), currencySymbol: "£" })
+    expect(row.title).toBe("22 leads from £177 of ad spend")
+    expect(row.detail).toBe("4 reached the CRM · none closed yet")
   })
 
   it("says so when nothing has come in", () => {

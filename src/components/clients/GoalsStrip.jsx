@@ -79,8 +79,8 @@ const GRID = "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
 export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false, className }) {
   if (loading) {
     return (
-      <Frame data-ds="goals-strip" title="Goals" meta="This month" className={className} aria-busy="true">
-        <div className={GRID}>
+      <Frame title="Goals" meta="This month" className={className}>
+        <div data-ds="goals-strip" aria-busy="true" className={GRID}>
           {Array.from({ length: 5 }).map((_, i) => (
             <Surface key={i} className="flex flex-col gap-2">
               <Skeleton className="h-4 w-20" />
@@ -96,8 +96,8 @@ export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false, 
   const anyTarget = goals.some((g) => g.target != null)
 
   return (
-    <Frame data-ds="goals-strip" title="Goals" meta="This month" className={className}>
-      <div className={GRID}>
+    <Frame title="Goals" meta="This month" className={className}>
+      <div data-ds="goals-strip" className={GRID}>
         {goals.map((goal) => (
           <GoalCell key={goal.id} goal={goal} currencySymbol={currencySymbol} />
         ))}

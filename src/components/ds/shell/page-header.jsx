@@ -25,7 +25,8 @@ function PageHeader({ eyebrow, title, description, actions, period, className })
         {description && <p className="mt-1 text-base text-muted-foreground">{description}</p>}
       </div>
       {(period || actions) && (
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
+        // max-w-full lets the controls wrap onto further lines on a phone instead of pushing the page wider.
+        <div data-slot="page-header-actions" className="flex max-w-full flex-wrap items-center gap-2">
           {period}
           {actions}
         </div>

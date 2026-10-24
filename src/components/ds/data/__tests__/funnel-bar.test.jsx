@@ -30,6 +30,19 @@ describe("FunnelBar", () => {
     expect(conv).toHaveClass("hidden", "sm:grid")
   })
 
+  it("says the conversions in words for screen readers", () => {
+    render(<FunnelBar steps={STEPS} />)
+    const sr = root().querySelector('[data-slot="funnel-conversions-sr"]')
+    expect(sr).toHaveClass("sr-only")
+    expect([...sr.children].map((li) => li.textContent)).toEqual([
+      "Leads to In CRM: 67%",
+      "In CRM to Called: 44%",
+      "Called to Closes: 6.3%",
+    ])
+    // The visible row stays decorative.
+    expect(root().querySelector('[data-slot="funnel-conversions"]')).toHaveAttribute("aria-hidden", "true")
+  })
+
   it("shows a dash where the previous step is zero", () => {
     render(<FunnelBar steps={[{ key: "a", label: "A", value: 0 }, { key: "b", label: "B", value: 5 }]} />)
     const conv = root().querySelector('[data-slot="funnel-conversions"]')

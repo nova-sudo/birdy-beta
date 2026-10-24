@@ -12,15 +12,21 @@ const TONE_ORDER = ["danger", "warning", "info", "success", "neutral"];
 const count = (n) => Math.round(n ?? 0).toLocaleString();
 
 /**
- * The window in one row: what the client brought in, and how many of those
- * leads were closed. States figures only: it claims no trend and no cause,
- * because this page holds no comparison to back one.
+ * The window in one row. Leads are Meta's results, the figure CPL and the goals
+ * strip use; the CRM cohort (what the funnel counts) is named as such in the
+ * detail, so the two numbers explain each other instead of contradicting. States
+ * figures only: no trend and no cause, because this page holds no comparison to
+ * back one.
  */
 function summaryFinding(group, currencySymbol) {
   const funnel = group?.gohighlevel?.metrics?.funnel;
-  const spend = Number(group?.facebook?.metrics?.insights?.spend) || 0;
+  const insights = group?.facebook?.metrics?.insights ?? {};
+  const spend = Number(insights.spend) || 0;
+  const metaLeads = Number(insights.results) || Number(insights.total_leads) || 0;
+  const crmLeads = Number(funnel?.leads) || 0;
+  const leads = metaLeads || crmLeads;
 
-  if (!funnel || !funnel.leads) {
+  if (!leads) {
     return {
       id: "summary",
       tone: "neutral",
@@ -29,11 +35,16 @@ function summaryFinding(group, currencySymbol) {
     };
   }
 
+  const detail = [];
+  if (metaLeads && funnel) detail.push(`${count(crmLeads)} reached the CRM`);
+  const closes = Number(funnel?.closes) || 0;
+  detail.push(closes > 0 ? `${count(closes)} ${closes === 1 ? "has" : "have"} closed` : "none closed yet");
+
   return {
     id: "summary",
     tone: "info",
-    title: spend > 0 ? `${count(funnel.leads)} leads from ${currencySymbol}${count(spend)} of ad spend` : `${count(funnel.leads)} leads`,
-    detail: funnel.closes > 0 ? `${count(funnel.closes)} ${funnel.closes === 1 ? "has" : "have"} closed` : "None closed yet",
+    title: spend > 0 ? `${count(leads)} leads from ${currencySymbol}${count(spend)} of ad spend` : `${count(leads)} leads`,
+    detail: detail.join(" · "),
   };
 }
 

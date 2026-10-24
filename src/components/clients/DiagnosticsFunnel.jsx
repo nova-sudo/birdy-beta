@@ -40,12 +40,11 @@ export function DiagnosticsFunnel({
 }) {
   return (
     <Frame
-      data-ds="diagnostics-funnel"
       title="Performance funnel"
-      meta={hasComparison ? "vs previous period" : undefined}
+      meta={hasComparison ? "CRM cohort · vs previous period" : "CRM cohort"}
       className={className}
     >
-      <Surface>
+      <Surface data-slot="diagnostics-funnel">
         {!loading && !stages ? (
           // No funnel cached for this window. Saying so beats drawing four
           // zeroes, which reads as "no results" when it means "not measured".

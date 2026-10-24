@@ -126,11 +126,6 @@ export default function ClientDetailsPage() {
 
   // ── History Book: dashboard activity feed, filtered to this client ────────
   const { activity, loading: activityLoading } = useDashboardData()
-  const groupNameForActivity = clientData?.group_info?.name
-  const clientActivity = useMemo(
-    () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
-    [activity, groupNameForActivity]
-  )
 
   // ── History book: hand-written notes, alongside the generated activity ────
   const [notes, setNotes] = useState([])
@@ -341,7 +336,17 @@ export default function ClientDetailsPage() {
     }
   }
 
-  const groupName = clientData?.group_info?.name || "Client"
+  // The client's own document is a slow request. Everything the header and the
+  // history book need is already on the list row, so they paint from that and
+  // the detail fills in the rest (settings, health reason) when it lands.
+  const groupName = clientData?.group_info?.name || matchingGroup?.name || "Client"
+  const headerLoading = clientLoading && !matchingGroup
+  const shownHealth = clientData ? clientHealth : matchingGroup?.health || DEFAULT_CLIENT_HEALTH
+
+  const clientActivity = useMemo(
+    () => activity.filter((a) => a.client === groupName && isFeedActivity(a)),
+    [activity, groupName]
+  )
 
   // Meta campaign scope. A group sharing an ad account owns only some of its
   // campaigns; right after a change its Meta cache is empty while it re-syncs.
@@ -374,12 +379,12 @@ export default function ClientDetailsPage() {
   // primary-contact field on a client group, so only the half that exists is
   // rendered rather than inventing a name.
   const clientSubline = useMemo(() => {
-    const since = clientData?.group_info?.created_at
+    const since = clientData?.group_info?.created_at ?? matchingGroup?.created_at
     if (!since) return null
     const d = new Date(since)
     if (Number.isNaN(d.getTime())) return null
     return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
-  }, [clientData])
+  }, [clientData, matchingGroup])
 
   // The top bar names the page; the client's own name is the PageHeader's title.
   const topBar = useMemo(() => ({ title: "Clients" }), [])
@@ -420,7 +425,7 @@ export default function ClientDetailsPage() {
   )
 
   // ── Error state (only shown if client data fails entirely) ─────────────────
-  if (!clientLoading && !clientData) {
+  if (!clientLoading && !clientData && !groupsLoading && !matchingGroup) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader eyebrow={backToClients} title="Client" />
@@ -441,12 +446,12 @@ export default function ClientDetailsPage() {
     <div className="flex min-w-0 flex-col gap-6">
       <PageHeader
         eyebrow={backToClients}
-        title={clientLoading ? "…" : groupName}
+        title={headerLoading ? "…" : groupName}
         description={
-          !clientLoading && (clientSubline || metaChip || clientHealth) ? (
+          !headerLoading ? (
             <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
               {clientSubline}
-              <HealthPill health={clientHealth} />
+              <HealthPill health={shownHealth} />
               {metaChip && <Badge tone="neutral">{metaChip}</Badge>}
             </span>
           ) : undefined
@@ -519,7 +524,7 @@ export default function ClientDetailsPage() {
               clientName={groupName}
               notes={notes}
               activity={clientActivity}
-              loading={clientLoading || activityLoading || notesLoading}
+              loading={activityLoading || notesLoading}
               onAddNote={handleAddNote}
               onDeleteNote={handleDeleteNote}
             />

@@ -185,6 +185,14 @@ describe("PageHeader", () => {
     expect(screen.getByText("Portfolio")).toBeTruthy()
     expect(screen.getByRole("button", { name: "New" })).toBeTruthy()
   })
+
+  it("lets the period and actions wrap instead of widening the page on a phone", () => {
+    render(<PageHeader title="Clients" period={<span>Period</span>} actions={<button>New</button>} />)
+    const row = document.querySelector('[data-slot="page-header-actions"]')
+    // flex-wrap with a width cap, not shrink-0: a fixed-width row overflowed 390px by 110px.
+    expect(row).toHaveClass("flex-wrap", "max-w-full")
+    expect(row).not.toHaveClass("shrink-0")
+  })
 })
 
 describe("SystemBanner", () => {
