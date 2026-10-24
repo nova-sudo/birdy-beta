@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alerts options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF; --fg: #0A0A0A; --muted: #F7F7F7; --muted-fg: #737373; --border: #E5E5E5;
+    --primary: #5B3FD6; --primary-soft: #EFECFB;
+    --success-base: #16A34A; --success-soft: #DCFCE7; --success-ink: #166534;
+    --danger-base: #DC2626; --danger-soft: #FEE2E2; --danger-ink: #991B1B;
+    --warning-base: #D97706; --warning-soft: #FEF3C7; --warning-ink: #92400E;
+    --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
+    --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+    --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000F, 0 2px 4px -2px #0000000D;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--muted); color: var(--fg); font: 16px/1.5 Outfit, system-ui, sans-serif; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 32px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted-fg); margin: 0 0 32px; max-width: 680px; }
+  h2 { font-size: 20px; font-weight: 600; margin: 48px 0 4px; padding-top: 24px; border-top: 1px solid var(--border); }
+  .g-lede { color: var(--muted-fg); font-size: 14px; margin: 0 0 24px; max-width: 680px; }
+  .option { margin-bottom: 40px; }
+  .opt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 12px; }
+  .opt-head b { font-size: 18px; font-weight: 600; }
+  .opt-head span { color: var(--muted-fg); font-size: 14px; }
+  .rec { font-size: 13px; font-weight: 500; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 999px; }
+  .frame { background: var(--muted); border-radius: 16px; padding: 12px; box-shadow: 0 0 0 1px #0000000A; overflow-x: auto; }
+  .surface { background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-surface); }
+  .note { font-size: 14px; color: var(--muted-fg); margin-top: 10px; max-width: 760px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted-fg); }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .badge i { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+  .b-success { background: var(--success-soft); color: var(--success-ink); }
+  .b-danger { background: var(--danger-soft); color: var(--danger-ink); }
+  .b-warning { background: var(--warning-soft); color: var(--warning-ink); }
+  .b-muted { background: var(--muted); color: var(--muted-fg); }
+  .b-primary { background: var(--primary-soft); color: var(--primary); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 12px; border: 0; font: 500 13px Outfit, sans-serif; background: var(--primary); color: #fff; white-space: nowrap; }
+  .btn.out { background: var(--bg); color: var(--fg); box-shadow: var(--shadow-control); }
+  .btn.ghost { background: transparent; color: var(--muted-fg); }
+  .btn.icon { width: 32px; padding: 0; }
+  .sw { width: 34px; height: 20px; border-radius: 999px; background: #D4D4D4; padding: 2px; display: flex; flex-shrink: 0; }
+  .sw::after { content: ""; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px #0000003D; }
+  .sw.on { background: var(--primary); justify-content: flex-end; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 820px; }
+  th { text-align: left; font-weight: 500; color: var(--muted-fg); font-size: 13px; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr.child td { background: #FCFCFC; }
+  tr.child td:first-child { padding-left: 40px; }
+  .chev { display: inline-grid; place-items: center; width: 20px; height: 20px; color: var(--muted-fg); margin-right: 4px; }
+
+  /* progress-to-trigger bar — the proposed small ds primitive */
+  .prog { min-width: 140px; }
+  .prog .v { font-weight: 600; }
+  .bar { height: 6px; border-radius: 999px; background: var(--muted); box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; margin: 4px 0 2px; }
+  .bar > span { display: block; height: 100%; border-radius: 999px; background: var(--primary); }
+  .bar.warn > span { background: var(--warning-base); }
+  .bar.hit > span { background: var(--danger-base); }
+  .prog small { font-size: 13px; color: var(--muted-fg); }
+
+  .row2 { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; }
+  @media (max-width: 900px) { .row2 { grid-template-columns: 1fr; } }
+  .sheet { background: var(--bg); border-radius: 20px; box-shadow: var(--shadow-overlay); overflow: hidden; }
+  .sheet-hd { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); gap: 12px; }
+  .sheet-hd b { font-size: 18px; font-weight: 600; }
+  .sheet-ft { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border); }
+  .list-row { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .list-row:last-child { border-bottom: 0; }
+
+  .page { position: relative; height: 560px; border-radius: 12px; background: #fff; box-shadow: var(--shadow-surface); overflow: hidden; }
+  .page .ghost-table { padding: 20px; opacity: .35; }
+  .scrim { position: absolute; inset: 0; background: #0A0A0A2E; }
+  .overlay-right { position: absolute; top: 8px; right: 8px; bottom: 8px; border-radius: 20px; background: #fff; box-shadow: var(--shadow-overlay); display: flex; flex-direction: column; overflow: hidden; }
+  .overlay-center { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); bottom: 24px; border-radius: 20px; background: #fff; box-shadow: var(--shadow-overlay); display: flex; flex-direction: column; overflow: hidden; }
+  .body { flex: 1; overflow: hidden; padding: 16px 20px; display: grid; gap: 12px; align-content: start; }
+  .seg { display: inline-flex; gap: 2px; padding: 3px; background: var(--muted); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--border); font-size: 13px; }
+  .seg span { padding: 4px 10px; border-radius: 9px; color: var(--muted-fg); }
+  .seg span.on { background: #fff; color: var(--fg); box-shadow: var(--shadow-surface); }
+  .fs { border-radius: 12px; box-shadow: var(--shadow-surface); padding: 12px 14px; display: grid; gap: 10px; }
+  .fs b { font-size: 14px; }
+  .fields { display: grid; gap: 8px; }
+  .f { display: grid; gap: 4px; font-size: 13px; color: var(--muted-fg); }
+  .inp { height: 32px; border-radius: 12px; box-shadow: var(--shadow-control); background: #fff; padding: 0 10px; display: flex; align-items: center; color: var(--fg); font-size: 13px; }
+  .preview { border-radius: 12px; background: var(--muted); padding: 14px; display: grid; gap: 6px; font-size: 13px; }
+  .preview .t { font-size: 16px; font-weight: 600; }
+  .kv { display: flex; justify-content: space-between; }
+  .kv span:first-child { color: var(--muted-fg); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Alerts: options</h1>
+  <p class="lede">Two parts of /alerts don't map onto an existing ds component. Pick one option in each group. Every field, channel, action and the Ask Birdy tab stay; only the layout changes.</p>
+
+  <!-- ===================== GROUP 1 ===================== -->
+  <h2>Group 1 · Triggered tab: per-client alerts</h2>
+  <p class="g-lede">A "Per client" rule can fire for several clients at once. Today the rule shows as one row that expands in place into one row per client, each with Evaluate, Snooze client and Dismiss. All three options use the new progress bar (purple, amber within 20% of the threshold, red once crossed).</p>
+
+  <div class="option">
+    <div class="opt-head"><b>A · Expandable rows in the table</b><span>Same behaviour as today, in ds styling. DataTable gains row expansion.</span><span class="rec">Recommended</span></div>
+    <div class="frame"><div class="surface">
+      <table>
+        <thead><tr><th>Alert</th><th>Metric</th><th>Condition</th><th>Progress</th><th>Status</th><th>Last triggered</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><span class="chev">▾</span><b>High CPL</b> <span class="badge b-primary">Per client</span></td><td>Cost per lead</td><td class="num">&gt; £6.00 · week</td>
+            <td class="prog"><span class="v num">2 of 5 clients</span><div class="bar hit"><span style="width:40%"></span></div></td>
+            <td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">2 hours ago</td><td><button class="btn icon ghost" aria-label="More">⋯</button></td></tr>
+          <tr class="child"><td>Aura</td><td></td><td></td>
+            <td class="prog"><span class="v num">£7.42</span><div class="bar hit"><span style="width:100%"></span></div><small class="num">24% over £6.00</small></td>
+            <td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">2 hours ago</td>
+            <td style="white-space:nowrap"><button class="btn out">Evaluate</button> <button class="btn out">Snooze</button> <button class="btn ghost">Dismiss</button></td></tr>
+          <tr class="child"><td>Autumn Rose Hair &amp; Beauty</td><td></td><td></td>
+            <td class="prog"><span class="v num">£6.10</span><div class="bar hit"><span style="width:100%"></span></div><small class="num">2% over £6.00</small></td>
+            <td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">5 hours ago</td>
+            <td style="white-space:nowrap"><button class="btn out">Evaluate</button> <button class="btn out">Snooze</button> <button class="btn ghost">Dismiss</button></td></tr>
+          <tr><td><span class="chev">▸</span><b>Spend pacing</b></td><td>Total spend</td><td class="num">&gt; £2,500 · month</td>
+            <td class="prog"><span class="v num">£2,610</span><div class="bar hit"><span style="width:100%"></span></div><small class="num">4% over £2,500</small></td>
+            <td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">Yesterday</td><td><button class="btn icon ghost" aria-label="More">⋯</button></td></tr>
+        </tbody>
+      </table>
+    </div></div>
+    <p class="note">On a phone the client rows stack under the rule as cards with the three actions below. Cost: one small DataTable extension (TanStack's expanded-row model), reusable elsewhere.</p>
+  </div>
+
+  <div class="option">
+    <div class="opt-head"><b>B · Rule row opens a side sheet with its clients</b><span>Table stays flat; client actions live in a sheet.</span></div>
+    <div class="row2">
+      <div class="frame"><div class="surface">
+        <table style="min-width:520px">
+          <thead><tr><th>Alert</th><th>Progress</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><b>High CPL</b> <span class="badge b-primary">Per client</span></td>
+              <td class="prog"><span class="v num">2 of 5 clients</span><div class="bar hit"><span style="width:40%"></span></div></td>
+              <td><span class="badge b-danger"><i></i>Triggered</span></td><td><button class="btn out">View clients</button></td></tr>
+            <tr><td><b>Spend pacing</b></td>
+              <td class="prog"><span class="v num">£2,610</span><div class="bar hit"><span style="width:100%"></span></div></td>
+              <td><span class="badge b-danger"><i></i>Triggered</span></td><td><button class="btn icon ghost">⋯</button></td></tr>
+          </tbody>
+        </table>
+      </div></div>
+      <div class="sheet">
+        <div class="sheet-hd"><div><b>High CPL</b><div class="muted" style="font-size:13px">Cost per lead &gt; £6.00 · week</div></div><span class="muted">✕</span></div>
+        <div class="list-row"><div style="flex:1"><b>Aura</b><div class="prog"><div class="bar hit"><span style="width:100%"></span></div><small class="num">£7.42 · 24% over</small></div></div><button class="btn out">Evaluate</button><button class="btn icon ghost">⋯</button></div>
+        <div class="list-row"><div style="flex:1"><b>Autumn Rose</b><div class="prog"><div class="bar hit"><span style="width:100%"></span></div><small class="num">£6.10 · 2% over</small></div></div><button class="btn out">Evaluate</button><button class="btn icon ghost">⋯</button></div>
+        <div class="list-row"><div style="flex:1"><b>Beaudea Clinic</b><div class="prog"><div class="bar warn"><span style="width:88%"></span></div><small class="num">£5.30 · 12% to go</small></div></div><span class="badge b-muted">Not triggered</span></div>
+      </div>
+    </div>
+    <p class="note">Snooze and Dismiss sit in each client's ⋯ menu. The sheet can also show clients that haven't fired yet. Cost: one extra click to see which clients fired.</p>
+  </div>
+
+  <div class="option">
+    <div class="opt-head"><b>C · One row per client</b><span>Flat table; the rule name repeats on each client row.</span></div>
+    <div class="frame"><div class="surface">
+      <table>
+        <thead><tr><th>Alert</th><th>Client</th><th>Progress</th><th>Status</th><th>Last triggered</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>High CPL</b></td><td>Aura</td><td class="prog"><span class="v num">£7.42</span><div class="bar hit"><span style="width:100%"></span></div></td><td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">2 hours ago</td><td><button class="btn out">Evaluate</button> <button class="btn icon ghost">⋯</button></td></tr>
+          <tr><td><b>High CPL</b></td><td>Autumn Rose Hair &amp; Beauty</td><td class="prog"><span class="v num">£6.10</span><div class="bar hit"><span style="width:100%"></span></div></td><td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">5 hours ago</td><td><button class="btn out">Evaluate</button> <button class="btn icon ghost">⋯</button></td></tr>
+          <tr><td><b>Spend pacing</b></td><td class="muted">All selected</td><td class="prog"><span class="v num">£2,610</span><div class="bar hit"><span style="width:100%"></span></div></td><td><span class="badge b-danger"><i></i>Triggered</span></td><td class="muted">Yesterday</td><td><button class="btn icon ghost">⋯</button></td></tr>
+        </tbody>
+      </table>
+    </div></div>
+    <p class="note">Simplest to build and sorts or filters by client easily. Cost: a rule firing for 20 clients takes 20 rows, and rule-level actions (edit, pause) repeat on each one.</p>
+  </div>
+
+  <!-- ===================== GROUP 2 ===================== -->
+  <h2>Group 2 · Create / edit alert</h2>
+  <p class="g-lede">Today it's a 1120px two-column dialog: the form (name, condition, target clients with Total / Per client, channels) on the left, a live preview card and frequency on the right, plus the Ask Birdy / Manual switch at the top.</p>
+
+  <div class="option">
+    <div class="opt-head"><b>A · Wide side sheet, two columns</b><span>~880px sheet from the right; form left, preview pinned right. Stacks to one column on a phone.</span><span class="rec">Recommended</span></div>
+    <div class="page">
+      <div class="ghost-table"><b>Alerts</b><div style="height:12px"></div><div class="surface" style="height:200px"></div></div>
+      <div class="scrim"></div>
+      <div class="overlay-right" style="width:min(880px, calc(100% - 16px))">
+        <div class="sheet-hd"><div><b>Create alert</b><div class="muted" style="font-size:13px">Fill in the form, or ask Birdy to set it up.</div></div><span class="seg"><span>Ask Birdy</span><span class="on">Manual</span></span></div>
+        <div class="body" style="grid-template-columns:minmax(0,1fr) 260px">
+          <div style="display:grid;gap:12px;align-content:start">
+            <div class="fs"><b>Details</b><div class="fields" style="grid-template-columns:1fr 1fr 140px"><div class="f">Name<div class="inp muted">e.g. Low ROI alert</div></div><div class="f">Description<div class="inp muted">When this fires…</div></div><div class="f">Type<div class="inp">Warning ▾</div></div></div></div>
+            <div class="fs"><b>Condition</b><div class="fields" style="grid-template-columns:1.4fr 1fr .8fr 1fr"><div class="f">Metric<div class="inp">Total spend ▾</div></div><div class="f">When it<div class="inp">Greater than ▾</div></div><div class="f">Value<div class="inp">0</div></div><div class="f">Over<div class="inp">Yesterday ▾</div></div></div></div>
+            <div class="fs"><div style="display:flex;justify-content:space-between;align-items:center"><b>Target clients</b><span class="seg"><span class="on">Total</span><span>Per client</span></span></div><div class="inp muted">Search clients…</div><div class="muted" style="font-size:13px">☐ All client groups · ☐ Aura · ☐ Autumn Rose…</div></div>
+          </div>
+          <div style="display:grid;gap:12px;align-content:start">
+            <div class="preview"><span class="t">Unnamed alert</span><div class="kv"><span>Metric</span><span>Total spend</span></div><div class="kv"><span>Scope</span><span>Total</span></div><div class="kv"><span>Frequency</span><span>Daily ▾</span></div></div>
+            <div class="fs"><b>Channels</b><div class="kv" style="font-size:13px"><span>Internal</span><span class="sw on"></span></div><div class="kv" style="font-size:13px"><span>Slack <span class="badge b-muted">Soon</span></span><span class="sw"></span></div><div class="kv" style="font-size:13px"><span>Email <span class="badge b-muted">Soon</span></span><span class="sw"></span></div></div>
+          </div>
+        </div>
+        <div class="sheet-ft"><button class="btn out">Cancel</button><button class="btn">Create alert</button></div>
+      </div>
+    </div>
+    <p class="note">Keeps the side-by-side preview you have today, slides in from the right like the call analysis sheet, and leaves the list visible behind it.</p>
+  </div>
+
+  <div class="option">
+    <div class="opt-head"><b>B · Narrow side sheet, one column</b><span>~560px; preview card on top, form sections below, scrolls.</span></div>
+    <div class="page">
+      <div class="ghost-table"><b>Alerts</b><div style="height:12px"></div><div class="surface" style="height:200px"></div></div>
+      <div class="scrim"></div>
+      <div class="overlay-right" style="width:min(560px, calc(100% - 16px))">
+        <div class="sheet-hd"><b>Create alert</b><span class="seg"><span>Ask Birdy</span><span class="on">Manual</span></span></div>
+        <div class="body">
+          <div class="preview"><span class="t">Unnamed alert</span><div class="kv"><span>Total spend · Total · Daily</span><span class="badge b-success"><i></i>1 channel</span></div></div>
+          <div class="fs"><b>Details</b><div class="fields" style="grid-template-columns:1fr 1fr"><div class="f">Name<div class="inp muted">e.g. Low ROI alert</div></div><div class="f">Type<div class="inp">Warning ▾</div></div></div></div>
+          <div class="fs"><b>Condition</b><div class="fields" style="grid-template-columns:1fr 1fr"><div class="f">Metric<div class="inp">Total spend ▾</div></div><div class="f">When it<div class="inp">Greater than ▾</div></div><div class="f">Value<div class="inp">0</div></div><div class="f">Over<div class="inp">Yesterday ▾</div></div></div></div>
+          <div class="fs"><b>Target clients</b><div class="inp muted">Search clients…</div></div>
+        </div>
+        <div class="sheet-ft"><button class="btn out">Cancel</button><button class="btn">Create alert</button></div>
+      </div>
+    </div>
+    <p class="note">Same layout on desktop and phone. Cost: the preview becomes a summary strip, and channels and frequency sit below the fold.</p>
+  </div>
+
+  <div class="option">
+    <div class="opt-head"><b>C · Keep a centred dialog, ds styling</b><span>Today's layout, rebuilt on ds Dialog.</span></div>
+    <div class="page">
+      <div class="ghost-table"><b>Alerts</b><div style="height:12px"></div><div class="surface" style="height:200px"></div></div>
+      <div class="scrim"></div>
+      <div class="overlay-center" style="width:min(820px, calc(100% - 32px))">
+        <div class="sheet-hd"><div><b>Create alert</b><div class="muted" style="font-size:13px">Fill in the form, or ask Birdy to set it up.</div></div><span class="seg"><span>Ask Birdy</span><span class="on">Manual</span></span></div>
+        <div class="body" style="grid-template-columns:minmax(0,1fr) 240px">
+          <div style="display:grid;gap:12px;align-content:start">
+            <div class="fs"><b>Details</b><div class="fields" style="grid-template-columns:1fr 1fr"><div class="f">Name<div class="inp muted">e.g. Low ROI alert</div></div><div class="f">Type<div class="inp">Warning ▾</div></div></div></div>
+            <div class="fs"><b>Condition</b><div class="fields" style="grid-template-columns:1fr 1fr"><div class="f">Metric<div class="inp">Total spend ▾</div></div><div class="f">When it<div class="inp">Greater than ▾</div></div></div></div>
+          </div>
+          <div class="preview"><span class="t">Unnamed alert</span><div class="kv"><span>Scope</span><span>Total</span></div><div class="kv"><span>Frequency</span><span>Daily ▾</span></div></div>
+        </div>
+        <div class="sheet-ft"><button class="btn out">Cancel</button><button class="btn">Create alert</button></div>
+      </div>
+    </div>
+    <p class="note">Least change for people who know the current editor. Cost: departs from the plan, which moves editors to side sheets, and hides the list behind it.</p>
+  </div>
+</div>
+</body>
+</html>
