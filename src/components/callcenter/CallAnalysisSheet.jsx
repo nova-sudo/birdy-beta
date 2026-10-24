@@ -108,7 +108,7 @@ export function CallAnalysisButton({ row }) {
     setOpen(true)
     const who = row.caller_name && row.caller_name !== "—" ? row.caller_name : row.to_number
     const jobId = startJob(`Analyzing call — ${who}`, {
-      detail: "Transcribing and reviewing the recording.",
+      detail: "Analysing the recording.",
     })
     try {
       const res = await apiRequest("/api/call_logs/analyze", {
