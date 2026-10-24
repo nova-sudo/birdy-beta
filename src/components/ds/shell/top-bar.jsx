@@ -6,7 +6,6 @@ import { Menu, Search, Sparkles } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { openBirdyChat } from "@/lib/ask-birdy"
 import NotificationsDropdown from "@/components/NotificationsDropdown"
-import { DashboardHeaderControls, DashboardHeaderTitle } from "@/components/dashboard-controls"
 import { PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { Button } from "../primitives/button"
 import { Kbd } from "../primitives/kbd"
@@ -16,8 +15,7 @@ import { useModKey } from "./use-mod-key"
  * Global header: menu button (below md), the page's title, Ask Birdy, the
  * notifications bell, and the page's own controls.
  *
- * Pages publish their title and controls through PageHeader / dashboard-controls
- * context; the `title` and `actions` props override those when given.
+ * Pages publish their title and controls through the page-header context; the `title` and `actions` props override those when given.
  *
  * Fits at 390px: the title truncates, the search pill collapses to an icon
  * button and Ask Birdy to an icon below md.
@@ -49,16 +47,10 @@ function TopBar({ title, actions, onMenuClick, onSearch, className }) {
       </Button>
 
       <div className="min-w-0 flex-1 truncate text-base font-semibold">
-        {title ?? (
-          <>
-            <DashboardHeaderTitle />
-            <PageHeaderTitle />
-          </>
-        )}
+        {title ?? <PageHeaderTitle />}
       </div>
 
       <div className="flex shrink-0 items-center gap-1.5">
-        <DashboardHeaderControls />
         <PageHeaderControls />
         {actions}
         <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={onSearch}>

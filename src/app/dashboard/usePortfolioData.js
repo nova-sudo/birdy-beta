@@ -414,6 +414,7 @@ export function usePortfolioData({
 
   return {
     clientCount: current.clientCount,
+    clientRows: current.rows ?? [],
     dateRangeLabel,
 
     kpis: buildKpis(current, previous, formatMoney),

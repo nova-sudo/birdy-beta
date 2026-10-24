@@ -64,16 +64,11 @@ function BirdyWordmark() {
 
 /** TopBar, with the wordmark as its title on pages that publish none. */
 function ShellTopBar({ onMenuClick, onSearch }) {
-  const pathname = usePathname();
   const hasPageHeader = useHasPageHeader();
-
-  // /dashboard publishes its title the older way (a route check in
-  // dashboard-controls), so it is named here rather than detected.
-  const showWordmark = pathname !== "/dashboard" && !hasPageHeader;
 
   return (
     <TopBar
-      title={showWordmark ? <BirdyWordmark /> : undefined}
+      title={hasPageHeader ? undefined : <BirdyWordmark />}
       onMenuClick={onMenuClick}
       onSearch={onSearch}
     />

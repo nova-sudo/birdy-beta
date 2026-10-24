@@ -31,8 +31,6 @@ vi.mock("@/hooks/useCredits", () => ({
 vi.mock("@/lib/jobs-store", () => ({ useJobs: () => [] }))
 vi.mock("@/components/dashboard-controls", () => ({
   DashboardControlsProvider: ({ children }) => <>{children}</>,
-  DashboardHeaderTitle: () => null,
-  DashboardHeaderControls: () => null,
 }))
 
 import RootLayout from "../layout"

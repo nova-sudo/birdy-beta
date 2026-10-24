@@ -25,10 +25,6 @@ vi.mock("@/components/birdy/BirdyAvatar", () => ({
 vi.mock("@/components/NotificationsDropdown", () => ({
   default: () => <button type="button" aria-label="Notifications" />,
 }))
-vi.mock("@/components/dashboard-controls", () => ({
-  DashboardHeaderTitle: () => null,
-  DashboardHeaderControls: () => null,
-}))
 
 import { PageHeaderProvider, usePageHeader } from "@/components/page-header"
 import {
