@@ -37,3 +37,5 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | data/metric-tabs-chart.jsx | charts/board-trend-chart.tsx, charts/chart-tooltip.tsx, ui/chart.tsx | `ChartContainer` config layer, i18n, board data types | Tablist of figures rising into a white recharts panel; current chart-1 with 14% fill, previous dashed `4 5`; 800ms draw, 120ms tooltip; `fromPortfolioTabs` adapter for `portfolio/MetricTabsChart` props |
 | data/breakdown.jsx | Paper-only, no Bytes source | n/a | Segmented share bar plus rows (colour dot, Delta, value, share) |
 | data/bar-list.jsx | charts/bar-list.tsx | Links, i18n | Capsule bars scaled to the max; `primary-soft` fill. Replaces `Leaderboard` (rank badges dropped) |
+
+Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.

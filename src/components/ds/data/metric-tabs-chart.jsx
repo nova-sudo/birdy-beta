@@ -4,6 +4,7 @@ import * as React from "react"
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts"
 
 import { cn } from "@/lib/utils"
+import { Skeleton } from "../surfaces/skeleton"
 import { Delta } from "./delta"
 
 const DRAW_MS = 800
@@ -41,6 +42,12 @@ function ChartTooltip({ active, payload, label, formatValue, metric }) {
  * @param {(key: string) => void} props.onValueChange
  * @param {(n: number, metric: object) => React.ReactNode} [props.formatValue] Tooltip number formatter
  * @param {string} [props.xLabel] Accessible name for the x axis
+ * @param {boolean} [props.loading] Figures not yet available: skeleton tabs and plot
+ * @param {boolean} [props.plotLoading] Series still counting: skeleton plot only
+ * @param {React.ReactNode} [props.emptyMessage] Shown in the plot when the active metric has no series
+ *
+ * A metric is selectable when `plottable` is not false, even with no `series` yet:
+ * the panel shows the empty state until the hub supplies the series for the new tab.
  */
 function MetricTabsChart({
   metrics,
@@ -48,6 +55,9 @@ function MetricTabsChart({
   onValueChange,
   formatValue = (n) => n.toLocaleString("en-GB"),
   xLabel,
+  loading = false,
+  plotLoading = false,
+  emptyMessage = "Nothing to plot for this window yet.",
   className,
   ...props
 }) {
@@ -55,6 +65,8 @@ function MetricTabsChart({
   const gradientId = `${panelId.replace(/:/g, "")}-fill`
   const active = metrics.find((m) => m.key === value) ?? metrics[0]
   const series = active?.series
+  const columns = metrics.length
+  const smallColumns = columns >= 6 ? 3 : 2
 
   return (
     <div
@@ -63,14 +75,22 @@ function MetricTabsChart({
       {...props}
     >
       <div
-        role="tablist"
-        aria-label="Chart metric"
-        className="grid gap-1 [grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
-        style={{ "--cols": metrics.length }}
+        role={loading ? undefined : "tablist"}
+        aria-label={loading ? undefined : "Chart metric"}
+        // Two or three across below lg (as the portfolio chart did), the full row from lg up.
+        className="grid gap-1 [grid-template-columns:repeat(var(--cols-sm),minmax(0,1fr))] lg:[grid-template-columns:repeat(var(--cols),minmax(0,1fr))]"
+        style={{ "--cols": columns, "--cols-sm": smallColumns }}
       >
-        {metrics.map((m) => {
+        {loading
+          ? metrics.map((m) => (
+              <div key={m.key} className="flex flex-col items-start gap-2 px-4 pt-3 pb-3">
+                <Skeleton className="h-3 w-20 rounded-full" />
+                <Skeleton className="h-7 w-24 rounded-sm" />
+              </div>
+            ))
+          : metrics.map((m) => {
           const selected = m.key === active?.key
-          const plottable = m.series?.length > 0
+          const plottable = m.plottable ?? m.series?.length > 0
           return (
             <button
               key={m.key}
@@ -107,7 +127,9 @@ function MetricTabsChart({
         aria-labelledby={active ? `${panelId}-tab-${active.key}` : undefined}
         className="rounded-b-frame bg-background px-4 pt-4 pb-3 shadow-surface"
       >
-        {series?.length > 0 ? (
+        {loading || plotLoading ? (
+          <Skeleton className="h-56 w-full rounded-surface" />
+        ) : series?.length > 0 ? (
           <div className="h-56" aria-label={xLabel}>
             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
               <AreaChart data={series} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
@@ -161,7 +183,7 @@ function MetricTabsChart({
         ) : (
           <div className="flex h-56 items-center justify-center">
             <p className="max-w-[40ch] text-center text-sm text-muted-foreground">
-              Nothing to plot for this window yet.
+              {emptyMessage}
             </p>
           </div>
         )}
@@ -174,8 +196,9 @@ function MetricTabsChart({
  * Adapter from `portfolio/MetricTabsChart` props to this component's `metrics`.
  * `tabs[].delta` is a pre-formatted string and `direction`/`polarity` carry the sign
  * and meaning, so they are folded back into a signed number plus `invert`.
- * Only the active tab receives a series (the portfolio chart only has that one);
- * pass `series` per tab on the hub to make the others selectable.
+ * Only the active tab receives a series (the portfolio chart only has that one); the others
+ * stay selectable via `plottable` and the hub re-derives `chart` when the active key changes.
+ * Spread `loading`, `plotLoading`, `emptyMessage` onto MetricTabsChart directly (same names).
  *
  * @param {{tabs: object[], activeKey: string, chart?: {values: number[], labels: string[], tooltipLabels?: string[]}|null}} input
  */
@@ -188,6 +211,7 @@ function fromPortfolioTabs({ tabs, activeKey, chart }) {
       key: tab.key,
       label: tab.label,
       value: tab.value,
+      plottable: tab.plottable !== false,
       delta,
       invert: tab.polarity === "lower-is-better",
       series: plotted

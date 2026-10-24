@@ -13,7 +13,9 @@ import { cn } from "@/lib/utils"
  * @param {string} [props.suffix] Appended after the figure
  */
 function Delta({ value, format = "percent", invert = false, suffix, className, ...props }) {
-  const neutral = value == null || value === 0 || Number.isNaN(value)
+  // A percent that rounds to 0.0 reads as flat, so it carries no arrow either.
+  const missing = value == null || Number.isNaN(value)
+  const neutral = missing || value === 0 || (format === "percent" && Number(Math.abs(value).toFixed(1)) === 0)
   const up = !neutral && value > 0
   const good = invert ? !up : up
   const abs = neutral ? 0 : Math.abs(value)

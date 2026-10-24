@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { Delta, MetricCard, MetricGroup, MetricTabsChart, Breakdown, BarList } from "@/components/ds"
+import { fromPortfolioTabs, Delta, MetricCard, MetricGroup, MetricTabsChart, Breakdown, BarList } from "@/components/ds"
 
 // recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
 globalThis.ResizeObserver ??= class {
@@ -28,6 +28,15 @@ describe("Delta", () => {
     render(<Delta value={0} />)
     expect(screen.getByText(/0%/)).toHaveClass("text-muted-foreground")
     expect(screen.queryByText(/[↑↓]/)).toBeNull()
+  })
+  it("values rounding to 0.0 are neutral", () => {
+    render(<Delta value={0.04} />)
+    expect(screen.getByText("0%")).toHaveClass("text-muted-foreground")
+    expect(screen.queryByText(/[↑↓]/)).toBeNull()
+  })
+  it("number format with null renders 0", () => {
+    render(<Delta value={null} format="number" />)
+    expect(screen.getByText("0")).toHaveClass("text-muted-foreground")
   })
   it("null is neutral", () => {
     render(<Delta value={null} />)
@@ -96,6 +105,46 @@ describe("MetricTabsChart", () => {
     expect(z).toBeDisabled()
     fireEvent.click(z)
     expect(onValueChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("MetricTabsChart states and adapter", () => {
+  it("adapter keeps inactive plottable tabs enabled and clickable", () => {
+    const onValueChange = vi.fn()
+    const adapted = fromPortfolioTabs({
+      tabs: [
+        { key: "a", label: "A", value: "1", direction: "down", delta: "2.0%", polarity: "lower-is-better" },
+        { key: "b", label: "B", value: "2" },
+        { key: "c", label: "C", value: "3", plottable: false },
+      ],
+      activeKey: "a",
+      chart: { values: [1, 2], labels: ["x", "y"] },
+    })
+    expect(adapted[0]).toMatchObject({ delta: -2, invert: true })
+    render(<MetricTabsChart metrics={adapted} value="a" onValueChange={onValueChange} />)
+    const b = screen.getByRole("tab", { name: /B/ })
+    expect(b).toBeEnabled()
+    fireEvent.click(b)
+    expect(onValueChange).toHaveBeenCalledWith("b")
+    expect(screen.getByRole("tab", { name: /C/ })).toBeDisabled()
+  })
+  it("loading shows skeleton tabs and no tablist", () => {
+    const { container } = render(<MetricTabsChart metrics={metrics} value="a" loading />)
+    expect(screen.queryByRole("tablist")).toBeNull()
+    expect(container.querySelectorAll('[data-ds="skeleton"]').length).toBeGreaterThan(4)
+  })
+  it("plotLoading keeps tabs but skeletons the plot", () => {
+    const { container } = render(<MetricTabsChart metrics={metrics} value="a" plotLoading />)
+    expect(screen.getAllByRole("tab")).toHaveLength(4)
+    expect(container.querySelector('[role="tabpanel"] [data-ds="skeleton"]')).not.toBeNull()
+  })
+  it("emptyMessage replaces the default copy", () => {
+    const m = [{ key: "a", label: "A", value: "1", plottable: true }]
+    const { rerender } = render(<MetricTabsChart metrics={m} value="a" />)
+    expect(screen.getByText("Nothing to plot for this window yet.")).toBeInTheDocument()
+    rerender(<MetricTabsChart metrics={m} value="a" emptyMessage="No data" className="extra" />)
+    expect(screen.getByText("No data")).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="metric-tabs-chart"]')).toHaveClass("extra")
   })
 })
 
