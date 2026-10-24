@@ -68,6 +68,7 @@ describe("My dashboards list page", () => {
     expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
     expect(screen.getByText("Lead sources")).toBeInTheDocument()
     expect(screen.getAllByText(/^Updated /)).toHaveLength(2)
+    expect(document.querySelectorAll('[data-ds="surface"]')).toHaveLength(2)
     expect(screen.getByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/dashboards/d1")
   })
 
@@ -88,12 +89,16 @@ describe("My dashboards list page", () => {
     )
     renderPage()
 
-    expect(await screen.findByText("Couldn't load your dashboards")).toBeInTheDocument()
+    expect(await screen.findByText("Couldn't load your dashboards.")).toBeInTheDocument()
     expect(document.querySelector('[data-ds="error-state"]')).not.toBeNull()
 
     vi.mocked(apiRequest).mockImplementation(mockApi)
     await user.click(screen.getByRole("button", { name: /Try again/ }))
     expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
+    const listCalls = vi.mocked(apiRequest).mock.calls.filter(
+      ([path, init]) => path === "/api/dashboards" && (init?.method ?? "GET") === "GET",
+    )
+    expect(listCalls).toHaveLength(2)
   })
 
   it("create blank saves and navigates", async () => {

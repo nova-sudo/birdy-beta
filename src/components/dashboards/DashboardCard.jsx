@@ -4,8 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { LayoutDashboard, Trash2 } from "lucide-react"
-import { PdCard } from "@/components/portfolio/PdCard"
-import { Button } from "@/components/ui/button"
+import { Button, Surface } from "@/components/ds"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,24 +30,24 @@ export function DashboardCard({ dashboard, onRemove }) {
 
   return (
     <div className="group relative">
-      <PdCard className="transition-[border-color,box-shadow] duration-200 group-hover:border-pd-border-strong group-hover:shadow-md motion-reduce:transition-none">
+      <Surface className="transition-shadow duration-200 group-hover:shadow-floating motion-reduce:transition-none">
         <Link
           href={`/dashboards/${dashboard.id}`}
-          className="flex items-start gap-3 rounded-lg outline-none focus-visible:ring-4 focus-visible:ring-ring/25"
+          className="flex items-start gap-3 rounded-control outline-none focus-visible:shadow-control-focus"
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-pd-muted">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">
             <LayoutDashboard className="size-4" aria-hidden="true" />
           </span>
           <span className="min-w-0 pr-8">
-            <span className="block truncate font-pd-display text-[15px] font-semibold text-pd-ink">
+            <span className="block truncate text-base font-semibold text-foreground">
               {dashboard.title}
             </span>
-            <span className="mt-1 block text-[12px] text-pd-faint">
+            <span className="mt-1 block text-xs text-muted-foreground">
               {hasDate ? `Updated ${formatDistanceToNow(updated, { addSuffix: true })}` : "Not yet saved"}
             </span>
           </span>
         </Link>
-      </PdCard>
+      </Surface>
 
       <Button
         type="button"
@@ -56,7 +55,7 @@ export function DashboardCard({ dashboard, onRemove }) {
         size="icon-sm"
         aria-label={`Delete ${dashboard.title}`}
         onClick={() => setConfirming(true)}
-        className="absolute right-3 top-3 text-pd-faint opacity-0 focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
+        className="absolute right-3 top-3 text-muted-foreground opacity-0 focus-visible:opacity-100 group-hover:opacity-100 max-md:opacity-100"
       >
         <Trash2 aria-hidden="true" />
       </Button>

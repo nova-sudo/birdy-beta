@@ -42,7 +42,7 @@ export function WidgetPicker({ open, onOpenChange, onPick }) {
         <div className="grid max-h-[60vh] gap-5 overflow-y-auto">
           {groups.map(([category, defs]) => (
             <div key={category}>
-              <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-[0.04em] text-pd-faint">
+              <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {titleCase(category)}
               </h3>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
@@ -53,10 +53,10 @@ export function WidgetPicker({ open, onOpenChange, onPick }) {
                     aria-label={`Add ${def.label}`}
                     title={def.description || undefined}
                     onClick={() => pick(def.type)}
-                    className="flex h-[72px] min-w-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border border-pd-border bg-pd-surface px-1.5 text-center transition-colors hover:bg-pd-divider focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+                    className="flex h-[72px] min-w-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-control border border-border bg-background px-1.5 text-center transition-colors hover:bg-muted focus-visible:shadow-control-focus focus-visible:outline-none"
                   >
-                    <WidgetIcon name={def.icon} className="size-[18px] text-pd-muted" />
-                    <span className="max-w-full truncate text-[12px] font-medium text-pd-ink">{def.label}</span>
+                    <WidgetIcon name={def.icon} className="size-[18px] text-muted-foreground" />
+                    <span className="max-w-full truncate text-xs font-medium text-foreground">{def.label}</span>
                   </button>
                 ))}
               </div>

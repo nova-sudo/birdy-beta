@@ -22,7 +22,7 @@ import {
   useDashboardEditor,
 } from "dashkit/react"
 import { usePageHeader } from "@/components/page-header"
-import { SegmentedTabs, Skeleton, Surface } from "@/components/ds"
+import { Button, SegmentedTabs, Skeleton, Surface } from "@/components/ds"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { EmptyStarters } from "@/components/dashboards/EmptyStarters"
 import { WidgetPicker } from "@/components/dashboards/WidgetPicker"
@@ -67,6 +67,9 @@ const MODES = [
   { key: "view", label: "View", icon: Eye },
   { key: "edit", label: "Edit", icon: Pencil },
 ]
+
+// The board section is the panel the view/edit tabs swap.
+const BOARD_PANEL_ID = "dashboard-board"
 
 const MODE_ITEMS = MODES.map(({ key, label, icon: Icon }) => ({
   value: key,
@@ -411,6 +414,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
           {mode === "view" && <HeaderButton icon={Plus} label="Add widget" onClick={() => setPickerOpen(true)} />}
           <SegmentedTabs
             ariaLabel="Dashboard mode"
+            panelId={BOARD_PANEL_ID}
             size="sm"
             items={MODE_ITEMS}
             value={mode}
@@ -497,6 +501,7 @@ function LoadedWorkspace({ id, initialDoc, catalog, save, brief }) {
     <WorkspaceLayout
       board={<BriefingProvider onBriefing={fetchBriefing}>{board}</BriefingProvider>}
       railed={mode === "edit"}
+      tabPanel
       chat={
         <ChatConversation
           page="dashboards"
@@ -558,7 +563,7 @@ const ASIDE_BASE =
  * conversation (and a reply still streaming in) survives every toggle. Below
  * lg the page stacks, and the chat stays docked under the board.
  */
-function WorkspaceLayout({ board, chat, railed = false }) {
+function WorkspaceLayout({ board, chat, railed = false, tabPanel = false }) {
   const panelId = useId()
   const railButtonRef = useRef(null)
   const closeButtonRef = useRef(null)
@@ -591,10 +596,14 @@ function WorkspaceLayout({ board, chat, railed = false }) {
     // Bleeds off the layout's padding like SalesHubShell, but the height is
     // bounded here so the dashboard (or the editor's palette, canvas and
     // property panel) and the chat each scroll on their own.
-    <div className={`-m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden`}>
+    <div className="-m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden">
       {/* Stacked below lg: the page scrolls and the board takes its natural
           height, rather than flex-shrinking to nothing above the chat. */}
-      <section aria-label="Dashboard" className="min-w-0 shrink-0 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto">
+      <section
+        id={tabPanel ? BOARD_PANEL_ID : undefined}
+        role={tabPanel ? "tabpanel" : undefined}
+        aria-label="Dashboard"
+        className="min-w-0 shrink-0 lg:min-h-0 lg:flex-1 lg:shrink lg:overflow-auto">
         {board}
       </section>
 
@@ -612,17 +621,18 @@ function WorkspaceLayout({ board, chat, railed = false }) {
         className={`${ASIDE_BASE} ${railed ? "overflow-auto lg:w-14 lg:items-center lg:overflow-visible lg:py-3" : "overflow-auto lg:w-[380px]"}`}
       >
         {railed && (
-          <button
+          <Button
             ref={railButtonRef}
-            type="button"
+            variant="ghost"
+            size="sm"
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setDrawerOpen((was) => !was)}
-            className="hidden cursor-pointer flex-col items-center gap-1 rounded-control px-1 py-2 text-xs font-semibold leading-tight text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary aria-expanded:bg-primary-soft aria-expanded:text-primary lg:flex"
+            className="hidden h-auto flex-col gap-1 px-1 py-2 text-xs leading-tight text-muted-foreground aria-expanded:bg-primary-soft aria-expanded:text-primary lg:flex"
           >
-            <MessageCircle className="size-[18px]" aria-hidden="true" />
+            <MessageCircle aria-hidden="true" />
             Ask Birdy
-          </button>
+          </Button>
         )}
         {/* Always rendered in this slot, whatever the mode: moving or
             unmounting it would restart the chat. */}
@@ -637,15 +647,16 @@ function WorkspaceLayout({ board, chat, railed = false }) {
               <div className="mt-0.5 text-xs text-muted-foreground">Describe a change and Birdy makes it on the dashboard.</div>
             </div>
             {railed && (
-              <button
+              <Button
                 ref={closeButtonRef}
-                type="button"
+                variant="ghost"
+                size="icon-sm"
                 aria-label="Close Ask Birdy"
                 onClick={closeDrawer}
-                className="-mr-1.5 hidden size-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary lg:inline-flex"
+                className="-mr-1.5 hidden shrink-0 text-muted-foreground lg:inline-flex"
               >
-                <X className="size-4" aria-hidden="true" />
-              </button>
+                <X aria-hidden="true" />
+              </Button>
             )}
           </div>
           {/* The chat mounts with the workspace, once the doc is here, so the
@@ -665,7 +676,7 @@ function WorkspaceLayout({ board, chat, railed = false }) {
  */
 function DashboardBreadcrumb({ title }) {
   return (
-    <nav aria-label="Breadcrumb" className={`min-w-0`}>
+    <nav aria-label="Breadcrumb" className="min-w-0">
       <p className="flex min-w-0 items-baseline gap-0 whitespace-pre text-base font-semibold leading-none">
         <Link
           href="/dashboards"
@@ -686,17 +697,13 @@ function DashboardBreadcrumb({ title }) {
   )
 }
 
-/** A quiet pill button for the header bar (Undo / Redo in view mode). */
+/** A quiet ghost button for the header bar (Undo / Redo in view mode). */
 function HeaderButton({ icon: Icon, label, onClick }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex cursor-pointer items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-    >
-      <Icon className="size-3.5" aria-hidden="true" />
+    <Button variant="ghost" size="sm" onClick={onClick} className="text-muted-foreground">
+      <Icon aria-hidden="true" />
       {label}
-    </button>
+    </Button>
   )
 }
 
@@ -726,14 +733,10 @@ function SaveStatus({ state, onRetry }) {
       <Icon className={`size-3.5 ${state === "saving" ? "animate-spin" : ""}`} aria-hidden="true" />
       {label}
       {state === "error" && (
-        <button
-          type="button"
-          onClick={onRetry}
-          className="ml-1 inline-flex cursor-pointer items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-foreground transition-colors hover:bg-primary-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-        >
-          <RotateCw className="size-3" aria-hidden="true" />
+        <Button variant="outline" size="sm" onClick={onRetry} className="ml-1">
+          <RotateCw aria-hidden="true" />
           Retry
-        </button>
+        </Button>
       )}
     </span>
   )

@@ -29,7 +29,7 @@ export default function DashboardsPage() {
         <SalesHubHeaderTitle title="My dashboards" subtitle="Dashboards you and Birdy have built" />
       ),
       controls: (
-        <Button size="sm" onClick={() => setCreating(true)}>
+        <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
           <Plus aria-hidden="true" />
           New dashboard
         </Button>
@@ -66,8 +66,8 @@ export default function DashboardsPage() {
     body = (
       <Surface>
         <ErrorState
-          title="Couldn't load your dashboards"
-          description="Refresh to try again."
+          title="Couldn't load your dashboards."
+          description="Try again."
           onRetry={retry}
         />
       </Surface>
@@ -80,7 +80,7 @@ export default function DashboardsPage() {
           title="No dashboards yet"
           description="Describe the numbers you care about and Birdy will lay them out for you."
           action={
-            <Button onClick={() => setCreating(true)}>
+            <Button variant="outline" onClick={() => setCreating(true)}>
               <Plus aria-hidden="true" />
               New dashboard
             </Button>
