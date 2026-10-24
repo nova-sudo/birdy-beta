@@ -12,12 +12,18 @@ function walk(dir) {
   })
 }
 
-const files = walk(DS_ROOT)
+// Source files only: PORTED.md must be free to name what was stripped (PermissionGate, @bytes/ui).
+const files = walk(DS_ROOT).filter((f) => /\.(js|jsx|css)$/.test(f))
 const rel = (f) => path.relative(DS_ROOT, f)
 
 describe("ds hygiene", () => {
   it("finds files to scan", () => {
     expect(files.length).toBeGreaterThan(0)
+  })
+
+  it("does not scan markdown docs", () => {
+    expect(files.filter((f) => f.endsWith(".md"))).toEqual([])
+    expect(fs.existsSync(path.join(DS_ROOT, "PORTED.md"))).toBe(true)
   })
 
   it.each([
