@@ -17,7 +17,7 @@ function MoneyCell({ value, currency = "GBP", sub, className }) {
   const formatted = new Intl.NumberFormat("en-GB", { style: "currency", currency }).format(value ?? 0)
   return (
     <div
-      data-ds="money-cell"
+      data-ds="cells"
       data-slot="money-cell"
       className={cn("flex flex-col items-end gap-1 text-right", className)}
     >
@@ -38,7 +38,7 @@ function MoneyCell({ value, currency = "GBP", sub, className }) {
  */
 function StatusCell({ tone = "neutral", label, className }) {
   return (
-    <Badge data-ds="status-cell" variant="dot" tone={tone} className={className}>
+    <Badge data-ds="cells" data-slot="status-cell" variant="dot" tone={tone} className={className}>
       {label}
     </Badge>
   )
@@ -54,7 +54,7 @@ function StatusCell({ tone = "neutral", label, className }) {
 function TwoLineCell({ primary, secondary, className }) {
   return (
     <div
-      data-ds="two-line-cell"
+      data-ds="cells"
       data-slot="two-line-cell"
       className={cn("flex min-w-0 flex-col gap-1", className)}
     >

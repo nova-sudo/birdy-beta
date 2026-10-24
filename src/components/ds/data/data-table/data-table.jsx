@@ -11,6 +11,8 @@ import {
 } from "@tanstack/react-table"
 
 import { cn } from "@/lib/utils"
+import { Button } from "../../primitives/button"
+import { EmptyState } from "../../surfaces/empty-state"
 import { DataTableColumnHeader } from "./column-header"
 import { DataTablePagination } from "./pagination"
 import { DataTableSkeleton } from "./skeleton"
@@ -19,8 +21,8 @@ import { DataTableToolbar } from "./toolbar"
 const FACET_VARIANTS = ["select", "multiSelect"]
 
 // A facet filter value is the list of accepted cell values.
-const facetFilterFn = (row, columnId, values) => values.includes(row.getValue(columnId))
-facetFilterFn.autoRemove = (values) => !values || values.length === 0
+const facetFilterFn = (row, columnId, values) => [].concat(values).includes(row.getValue(columnId))
+facetFilterFn.autoRemove = (values) => values == null || values === "" || values.length === 0
 
 const headerLabel = (column) =>
   column.columnDef.meta?.label ?? (typeof column.columnDef.header === "string" ? column.columnDef.header : column.id)
@@ -31,6 +33,9 @@ const headerLabel = (column) =>
  *
  * Columns are TanStack `ColumnDef`s. `meta` opts a column into the toolbar:
  * `{ label, variant: "text" | "select" | "multiSelect", options: [{ value, label }], cardHidden }`.
+ * Keep `columns` and `data` referentially stable (memoise them): a new array each render re-runs the table.
+ * Table and cards both exist in the DOM, so tests should scope to `role=table` or `data-slot=data-table-card`.
+ *
  * State lives here unless the page passes `state` / `onStateChange` (`sorting`,
  * `columnFilters`, `columnVisibility`, `pagination`), which is how a page syncs to a URL.
  *
@@ -38,7 +43,8 @@ const headerLabel = (column) =>
  * @param {import("@tanstack/react-table").ColumnDef[]} props.columns
  * @param {object[]} props.data
  * @param {boolean} [props.loading] Shows skeleton rows in place of the body
- * @param {React.ReactNode} [props.empty] Shown when there are no rows
+ * @param {React.ReactNode} [props.empty] Shown when `data` itself is empty
+ * @param {React.ReactNode} [props.emptyFiltered] Shown when filters leave no rows; defaults to "No results" with a clear-filters action
  * @param {React.ReactNode|((table: import("@tanstack/react-table").Table) => React.ReactNode)} [props.toolbar] Extra toolbar controls
  * @param {number} [props.pageSize=25]
  * @param {(row: object) => void} [props.onRowClick]
@@ -51,6 +57,7 @@ function DataTable({
   data,
   loading = false,
   empty,
+  emptyFiltered,
   toolbar,
   pageSize = 25,
   onRowClick,
@@ -107,7 +114,15 @@ function DataTable({
   const rows = table.getRowModel().rows
   const visibleColumns = table.getVisibleLeafColumns()
   const showToolbar = toolbar != null || columns.some((c) => c.meta?.variant)
-  const isEmpty = !loading && rows.length === 0
+  const totalRows = table.getPrePaginationRowModel().rows.length
+  const isEmpty = !loading && totalRows === 0
+  const pageIndex = state.pagination.pageIndex
+  const pageCount = table.getPageCount()
+
+  // Data can shrink under the current page (refetch, narrower filter); pull back to the last page.
+  React.useEffect(() => {
+    if (pageIndex > 0 && pageIndex >= pageCount) table.setPageIndex(Math.max(0, pageCount - 1))
+  })
 
   const rowProps = (row) =>
     onRowClick
@@ -130,7 +145,27 @@ function DataTable({
         {loading ? (
           <DataTableSkeleton columnCount={visibleColumns.length} rowCount={Math.min(pageSize, 8)} />
         ) : isEmpty ? (
-          <div data-slot="data-table-empty">{empty}</div>
+          <div data-slot="data-table-empty">
+            {data.length === 0
+              ? empty
+              : (emptyFiltered ?? (
+                  <EmptyState
+                    title="No results"
+                    description="Nothing matches the current filters."
+                    action={
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          table.resetColumnFilters()
+                          table.resetGlobalFilter()
+                        }}
+                      >
+                        Clear filters
+                      </Button>
+                    }
+                  />
+                ))}
+          </div>
         ) : (
           <>
             <table className="w-full text-sm max-md:hidden">

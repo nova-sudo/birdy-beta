@@ -99,6 +99,43 @@ describe("DataTable", () => {
     fireEvent.click(screen.getByRole("button", { name: "Go to next page" }))
     expect(within(table()).getByText("Charlie")).toBeInTheDocument()
   })
+
+  it("pulls back to the last page when data shrinks under the current page", () => {
+    const { rerender } = render(<DataTable columns={columns} data={data} pageSize={2} empty={<p>Nothing yet</p>} />)
+    fireEvent.click(screen.getByRole("button", { name: "Go to next page" }))
+    expect(within(table()).getByText("Charlie")).toBeInTheDocument()
+    rerender(<DataTable columns={columns} data={data.slice(0, 1)} pageSize={2} empty={<p>Nothing yet</p>} />)
+    expect(within(table()).getByText("Alpha")).toBeInTheDocument()
+    expect(screen.queryByText("Nothing yet")).toBeNull()
+  })
+
+  it("filtered-to-zero shows No results with a working Clear filters, not the empty node", () => {
+    render(<DataTable columns={columns} data={data} empty={<p>Nothing yet</p>} />)
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzz" } })
+    expect(screen.getByText("No results")).toBeInTheDocument()
+    expect(screen.queryByText("Nothing yet")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Clear filters" }))
+    expect(within(table()).getByText("Alpha")).toBeInTheDocument()
+  })
+
+  it("emptyFiltered overrides the default filtered-empty node", () => {
+    render(<DataTable columns={columns} data={data} emptyFiltered={<p>Custom none</p>} />)
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzz" } })
+    expect(screen.getByText("Custom none")).toBeInTheDocument()
+  })
+
+  it("accepts a string facet filter value", () => {
+    render(
+      <DataTable
+        columns={columns}
+        data={data}
+        state={{ columnFilters: [{ id: "status", value: "paused" }] }}
+        onStateChange={() => {}}
+      />
+    )
+    expect(within(table()).getByText("Bravo")).toBeInTheDocument()
+    expect(within(table()).queryByText("Alpha")).toBeNull()
+  })
 })
 
 describe("cells", () => {

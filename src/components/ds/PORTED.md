@@ -37,8 +37,6 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | data/metric-tabs-chart.jsx | charts/board-trend-chart.tsx, charts/chart-tooltip.tsx, ui/chart.tsx | `ChartContainer` config layer, i18n, board data types | Tablist of figures rising into a white recharts panel; current chart-1 with 14% fill, previous dashed `4 5`; 800ms draw, 120ms tooltip; `fromPortfolioTabs` adapter for `portfolio/MetricTabsChart` props |
 | data/breakdown.jsx | Paper-only, no Bytes source | n/a | Segmented share bar plus rows (colour dot, Delta, value, share) |
 | data/bar-list.jsx | charts/bar-list.tsx | Links, i18n | Capsule bars scaled to the max; `primary-soft` fill. Replaces `Leaderboard` (rank badges dropped) |
-
-Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.
 | data/data-table/data-table.jsx | table/data-table.tsx | Advanced toolbar, cursor pagination, virtualisation, nuqs URL sync, i18n | Local `useState` for sorting, filters, visibility and pagination; a page syncs a URL by passing `state` / `onStateChange`. Renders a table from `md` and stacked cards below (Paper "Table · 390"); facet columns get a value-list filter fn |
 | data/data-table/toolbar.jsx | table/data-table-toolbar.tsx | Expandable filter panel, date / slider / range filters, filter slot | Search input from the `text` column, one faceted filter per `select` / `multiSelect` column, reset, view options |
 | data/data-table/faceted-filter.jsx | table/data-table-faceted-filter.tsx | remixicon, dropdown-menu + motion indicator, Separator | Popover checklist with `checkbox` / `radio` roles; search field from 8 options |
@@ -47,3 +45,5 @@ Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row de
 | data/data-table/view-options.jsx | table/data-table-view-options.tsx | remixicon, `enableHiding` gate | Popover + Command column picker; hidden below `md`; renders nothing with no hideable columns |
 | data/data-table/skeleton.jsx | table/data-table-skeleton.tsx | Filter / view / pagination placeholders, ui/table | Plain table rows from `md`, card blocks below |
 | data/data-table/cells.jsx | table/cells/money-cell.tsx, two-line-cell.tsx, status-dot-cell.tsx | formatCurrency, CellTone colours, raw-colour dot | `MoneyCell` uses `Intl.NumberFormat("en-GB")` with `currency` (default GBP), `num` class; `StatusCell` is a Badge dot with `tone`; split-bar / money-split cells not ported |
+
+Note (data/bar-list, data/breakdown): `Leaderboard` callers that need per-row deltas move to `Breakdown`; `BarList` drops the rank badge, row meta and delta.
