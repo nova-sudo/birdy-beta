@@ -32,3 +32,10 @@ export const SLACK_CHART_EXTRA = "#8b8d91"
 export const SLACK_PREVIEW_VARS = Object.fromEntries(
   Object.entries(SLACK_PREVIEW).map(([key, value]) => [`--slack-${key}`, value])
 )
+
+/**
+ * Silk's `color` prop is a hex string fed to a shader, so it cannot read a CSS
+ * variable. This mirrors the `--color-primary` token in globals.css; keep the
+ * two in step.
+ */
+export const BIRDY_PRIMARY = "#5B3FD6"

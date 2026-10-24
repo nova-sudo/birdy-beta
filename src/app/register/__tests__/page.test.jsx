@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({
 // Silk is a WebGL wallpaper and Birdy an animated SVG mascot — neither has
 // anything to do with what the form submits, and Silk needs a GL context jsdom
 // does not have.
-vi.mock("@/components/Silk", () => ({ default: () => null }))
+vi.mock("@/components/Silk", () => ({ default: () => <div data-testid="silk" /> }))
 vi.mock("@/components/birdy/Birdy", () => ({ default: () => null }))
 
 import RegisterPage from "@/app/register/page"
@@ -102,5 +102,26 @@ describe("register page", () => {
     expect(await screen.findByText("Email already registered")).toBeInTheDocument()
     expect(push).not.toHaveBeenCalled()
     expect(localStorage.getItem("user_authenticated")).toBeNull()
+  })
+
+  it("shows the failure in a danger notice", async () => {
+    publicRequest.mockResolvedValue({ ok: false, json: async () => ({ detail: "Email already registered" }) })
+    const { container } = render(<RegisterPage />)
+    await signUp()
+    await screen.findByText("Email already registered")
+    expect(container.querySelector('[data-ds="notice"]').className).toMatch(/bg-danger-soft/)
+  })
+
+  it("uses ds widgets, links to sign in, and keeps Silk", async () => {
+    const { container } = render(<RegisterPage />)
+    expect(screen.getByLabelText(/email address/i)).toHaveAttribute("data-ds", "input")
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login")
+    expect(screen.getAllByRole("link", { name: /privacy/i }).length).toBeGreaterThan(0)
+    expect(await screen.findByTestId("silk")).toBeInTheDocument()
+
+    const classes = [...container.querySelectorAll("[class]")].map((e) => e.getAttribute("class")).join(" ")
+    expect(classes).not.toMatch(/\bpd-|text-\[\d/)
+    const styles = [...container.querySelectorAll("[style]")].map((e) => e.getAttribute("style")).join(" ")
+    expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i)
   })
 })
