@@ -37,9 +37,9 @@ import { usePageHeader } from "@/components/page-header"
 
 // The Marketing Hub is drawn on the design system in
 // design_handoff_hubs/Birdy Style Guide.md, on the --pd-* tokens in
-// globals.css. Fonts (Bricolage Grotesque display, Inter body) come from the
-// root layout; pdFontClass only sets Inter as the base.
-import { pdFontClass } from "@/lib/pd-fonts"
+// globals.css. Fonts (Outfit, Geist Mono) come from the
+// root layout; pdFontClass is a legacy font-sans alias.
+import { pdFontClass } from "@/lib/fonts"
 import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart, PageTabPanel, PageTabs } from "@/components/portfolio"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"

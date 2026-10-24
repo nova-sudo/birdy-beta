@@ -12,7 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/ui/switch"
 import { useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import { PageTabs } from "@/components/portfolio"
 import {
   Dialog,

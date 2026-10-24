@@ -1,4 +1,4 @@
-import { pdFontClass } from "@/lib/pd-fonts";
+import { pdFontClass } from "@/lib/fonts";
 
 // ─── Sales Hub shell ────────────────────────────────────────────────────────
 // The page-level frame the Sales Hub composes into: the design system's two

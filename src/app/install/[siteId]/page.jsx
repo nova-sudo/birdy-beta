@@ -23,7 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import { publicRequest } from "@/lib/api"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
 
 export default function InstallPage() {

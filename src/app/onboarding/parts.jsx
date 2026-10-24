@@ -3,8 +3,8 @@
 // Shared primitives for the first-run onboarding wizard. Everything here is
 // presentational; state lives in page.jsx. Styling follows the onboarding
 // design handoff exactly — it shares the pd-* token palette with the
-// Portfolio Dashboard / Sales Hub screens (globals.css), Bricolage
-// Grotesque for headings, Inter for body (lib/pd-fonts).
+// Portfolio Dashboard / Sales Hub screens (globals.css), Outfit
+// throughout (lib/fonts).
 
 import { useEffect, useRef, useState } from "react"
 import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"

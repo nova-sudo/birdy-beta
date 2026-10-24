@@ -13,7 +13,7 @@ import { apiRequest } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePageHeader } from "@/components/page-header";
-import { pdFontClass } from "@/lib/pd-fonts";
+import { pdFontClass } from "@/lib/fonts";
 import { Stagger, StaggerItem, EASE_OUT } from "@/components/motion";
 import { cn } from "@/lib/utils";
 import {

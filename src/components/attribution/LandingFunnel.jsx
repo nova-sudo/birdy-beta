@@ -21,7 +21,7 @@ import Link from "next/link"
 
 import { DiagnosticBanner, FunnelStepper, PdCard } from "@/components/portfolio"
 import { Skeleton } from "@/components/ui/skeleton"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import {
   buildExitSplit,
   buildLandingStages,

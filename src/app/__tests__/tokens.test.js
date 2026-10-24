@@ -47,5 +47,17 @@ describe("design tokens", () => {
     for (const name of values.keys()) walk(name, [])
   })
 
+  it("points font tokens at Outfit and Geist Mono", () => {
+    expect(decl(css, "--font-sans")).toMatch(/^var\(--font-outfit\)/)
+    expect(decl(css, "--font-mono")).toMatch(/^var\(--font-geist-mono\)/)
+    expect(decl(css, "--font-pd-display")).toBe("var(--font-outfit)")
+    expect(decl(css, "--font-pd-body")).toBe("var(--font-outfit)")
+    expect(decl(css, "--font-display")).toBe("var(--font-outfit)")
+  })
+
+  it("has a tabular-figures .num utility", () => {
+    expect(css).toMatch(/@utility num\s*\{[^}]*font-feature-settings:\s*"tnum"/)
+  })
+
   it("ships no dark mode", () => expect(css).not.toMatch(/\.dark\b|prefers-color-scheme/))
 })

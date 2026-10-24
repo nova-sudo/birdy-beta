@@ -50,7 +50,7 @@ vi.mock("@/components/report-designer/ReportDesigner", () => ({
 }))
 // next/font runs at build time and throws when called outside the Next
 // compiler; the wizard only wants the class name off it.
-vi.mock("@/lib/pd-fonts", () => ({
+vi.mock("@/lib/fonts", () => ({
   pdFontClass: "font-pd-body",
   poppins: { variable: "" },
   inter: { variable: "" },

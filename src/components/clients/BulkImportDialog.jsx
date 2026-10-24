@@ -37,7 +37,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import ReviewStep from "@/app/onboarding/ReviewStep"
 
 const POLL_MS = 2500

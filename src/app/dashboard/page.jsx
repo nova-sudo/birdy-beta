@@ -34,7 +34,7 @@ import {
   withUnavailable,
 } from "@/components/callcenter/CallCentreUnavailable";
 import { Stagger, StaggerItem } from "@/components/motion";
-import { pdFontClass } from "@/lib/pd-fonts";
+import { pdFontClass } from "@/lib/fonts";
 import {
   applySuggestionRequest,
   dismissSuggestionRequest,

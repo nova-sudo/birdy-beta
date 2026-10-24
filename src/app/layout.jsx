@@ -1,7 +1,7 @@
 "use client";
 
 import "./globals.css";
-import { fontVariables } from "@/lib/pd-fonts";
+import { fontVariables } from "@/lib/fonts";
 import { MotionConfig } from "framer-motion";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";

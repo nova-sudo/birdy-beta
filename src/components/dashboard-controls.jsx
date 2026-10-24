@@ -6,7 +6,7 @@ import { Calendar } from "lucide-react";
 import { GranularitySelect } from "@/components/GranularitySelect";
 import { PdMenu } from "@/components/portfolio/PdMenu";
 import { DATE_PRESETS, DEFAULT_DATE_PRESET } from "@/lib/constants";
-import { pdFontClass } from "@/lib/pd-fonts";
+import { pdFontClass } from "@/lib/fonts";
 
 // The dashboard's date range and chart granularity live in the global top bar,
 // beside the notifications bell and profile menu, rather than on the page.

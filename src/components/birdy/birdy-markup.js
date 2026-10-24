@@ -19,12 +19,12 @@ export const BIRDY_INNER_MARKUP = `
       <use href="#brd-cheeks"></use>
     </g>
   </g>
-  <text data-p="q" x="1770" y="470" text-anchor="middle" font-size="440" font-weight="700" fill="#70127D" style="opacity:0;font-family:var(--font-bricolage),sans-serif;transform-box:fill-box;transform-origin:50% 50%">?</text>
-  <text data-p="bang" x="1780" y="470" text-anchor="middle" font-size="440" font-weight="700" fill="#F0694C" style="opacity:0;font-family:var(--font-bricolage),sans-serif;transform-box:fill-box;transform-origin:50% 50%">!</text>
+  <text data-p="q" x="1770" y="470" text-anchor="middle" font-size="440" font-weight="700" fill="#70127D" style="opacity:0;font-family:var(--font-outfit),sans-serif;transform-box:fill-box;transform-origin:50% 50%">?</text>
+  <text data-p="bang" x="1780" y="470" text-anchor="middle" font-size="440" font-weight="700" fill="#F0694C" style="opacity:0;font-family:var(--font-outfit),sans-serif;transform-box:fill-box;transform-origin:50% 50%">!</text>
   <path data-p="check" d="M1622 372L1730 490L1930 214" fill="none" stroke="#70127D" stroke-width="92" stroke-linecap="round" stroke-linejoin="round" style="opacity:0;transform-box:fill-box;transform-origin:50% 50%"></path>
-  <text data-p="z1" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-bricolage),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
-  <text data-p="z2" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-bricolage),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
-  <text data-p="z3" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-bricolage),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
+  <text data-p="z1" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-outfit),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
+  <text data-p="z2" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-outfit),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
+  <text data-p="z3" x="1520" y="900" font-size="290" font-weight="600" fill="#70127D" style="opacity:0;font-family:var(--font-outfit),sans-serif;transform-box:fill-box;transform-origin:50% 50%">z</text>
   <g transform="translate(1740,430)"><circle data-p="ring" r="150" fill="none" stroke="#F0694C" stroke-width="44" style="opacity:0;transform-box:fill-box;transform-origin:50% 50%"></circle><circle data-p="dot" r="58" fill="#F0694C" style="opacity:0;transform-box:fill-box;transform-origin:50% 50%"></circle></g>
   <g transform="translate(1730,700) scale(1.5)"><g data-p="hrt1" style="opacity:0;transform-box:fill-box;transform-origin:50% 50%"><path d="M0 92C-120 8-96-84-40-84C-14-84 0-64 0-52C0-64 14-84 40-84C96-84 120 8 0 92Z" fill="#FC60AC"></path></g></g>
   <g transform="translate(280,780) scale(1.5)"><g data-p="hrt2" style="opacity:0;transform-box:fill-box;transform-origin:50% 50%"><path d="M0 70C-92 6-73-64-30-64C-11-64 0-49 0-40C0-49 11-64 30-64C73-64 92 6 0 70Z" fill="#F0694C"></path></g></g>

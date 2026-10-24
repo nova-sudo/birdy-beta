@@ -25,7 +25,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { apiRequest } from "@/lib/api"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import { cn } from "@/lib/utils"
 import { LEAD_SOURCE_OPTIONS, normalizeLeadSource } from "@/lib/lead-sources"
 

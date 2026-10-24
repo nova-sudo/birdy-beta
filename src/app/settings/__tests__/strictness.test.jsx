@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 vi.mock("@/components/page-header", () => ({ usePageHeader: () => {} }))
 vi.mock("@/components/settings/GeneralSettings", () => ({ GeneralSettings: () => null }))
 vi.mock("@/components/settings/CreditsPanel", () => ({ CreditsPanel: () => null }))

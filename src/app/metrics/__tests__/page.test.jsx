@@ -5,7 +5,7 @@ import MetricsHub from "../page"
 import { PageHeaderControls, PageHeaderProvider, PageHeaderTitle } from "@/components/page-header"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 // The create dialog mounts a live chat; the catalog table is what's under test.
 vi.mock("@/components/chat/ChatConversation", () => ({ default: () => null }))
 

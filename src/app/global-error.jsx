@@ -1,7 +1,7 @@
 "use client"
 
 import "./globals.css"
-import { fontVariables } from "@/lib/pd-fonts"
+import { fontVariables } from "@/lib/fonts"
 import { Button } from "@/components/ui/button"
 
 // Last resort for a crash in the root layout itself (the shell, sidebar or

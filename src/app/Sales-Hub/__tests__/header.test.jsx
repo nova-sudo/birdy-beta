@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 
 import { apiRequest } from "@/lib/api"
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"

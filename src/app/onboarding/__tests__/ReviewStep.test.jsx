@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import { act, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "", poppins: { variable: "" }, inter: { variable: "" } }))
+vi.mock("@/lib/fonts", () => ({ pdFontClass: "", poppins: { variable: "" }, inter: { variable: "" } }))
 
 import ReviewStep from "../ReviewStep"
 

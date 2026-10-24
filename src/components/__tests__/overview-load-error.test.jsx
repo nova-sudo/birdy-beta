@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(() => Promise.resolve({ ok: false })) }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ pdFontClass: "" }))
 
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"

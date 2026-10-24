@@ -425,9 +425,9 @@
   --shadow-pd-glow: var(--pd-shadow-glow);
 
   /* Legacy font aliases: all point at Outfit until the last phase removes them. */
-  --font-display: var(--font-sans);
-  --font-pd-display: var(--font-sans);
-  --font-pd-body: var(--font-sans);
+  --font-display: var(--font-outfit);
+  --font-pd-display: var(--font-outfit);
+  --font-pd-body: var(--font-outfit);
 
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -517,6 +517,12 @@
    Custom Utilities
    ═══════════════════════════════════════════════════════════════ */
 
+/* Tabular figures for numerals that must line up in columns. */
+@utility num {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
+}
+
 @utility text-foreground {
   color: var(--foreground);
 }
@@ -550,7 +556,7 @@
        so cards and rails read as raised surfaces everywhere, not just there.
        `--background` stays white — it is what those surfaces are painted with. */
     background-color: var(--pd-canvas);
-    font-family: var(--font-sans);
+    font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
     transition: background-color 0.5s ease, color 0.5s ease;
   }
 

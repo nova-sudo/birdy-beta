@@ -33,7 +33,7 @@ import {
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { setOAuthHandoff, takeOAuthHandoff } from "@/lib/oauth-handoff"
-import { pdFontClass } from "@/lib/pd-fonts"
+import { pdFontClass } from "@/lib/fonts"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_OUT, EASE_SPRING, Pop, Stagger, StaggerItem } from "@/components/motion"
 import { Skeleton } from "@/components/ui/skeleton"
