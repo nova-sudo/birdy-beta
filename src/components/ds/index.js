@@ -94,3 +94,13 @@ export {
   CommandSeparator,
 } from "./overlays/command"
 export { Toaster, toast } from "./overlays/toaster"
+
+// Data table
+export { DataTable } from "./data/data-table/data-table"
+export { DataTableToolbar } from "./data/data-table/toolbar"
+export { DataTableFacetedFilter } from "./data/data-table/faceted-filter"
+export { DataTablePagination } from "./data/data-table/pagination"
+export { DataTableColumnHeader } from "./data/data-table/column-header"
+export { DataTableViewOptions } from "./data/data-table/view-options"
+export { DataTableSkeleton } from "./data/data-table/skeleton"
+export { MoneyCell, StatusCell, TwoLineCell } from "./data/data-table/cells"
