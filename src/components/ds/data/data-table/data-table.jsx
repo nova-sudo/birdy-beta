@@ -66,7 +66,7 @@ const headerLabel = (column) =>
  * @param {(fromId: string, toId: string) => void} [props.onColumnReorder] Makes headers draggable; called with the dragged column id and the one it was dropped on
  * @param {(row: object) => object[]|undefined} [props.getSubRows] Opts into row expansion: returns a row's child rows. Child rows render under an expanded parent with a muted background and an indented first cell; a column's `cell` toggles with `row.getToggleExpandedHandler()`. Paging counts parent rows only
  * @param {(row: object) => void} [props.onRowClick]
- * @param {(row: object, index: number) => string} [props.getRowId]
+ * @param {(row: object, index: number, parent?: import("@tanstack/react-table").Row) => string} [props.getRowId]
  * @param {object} [props.state] Controlled slice of table state
  * @param {(state: object) => void} [props.onStateChange] Called with the full state on every change
  */

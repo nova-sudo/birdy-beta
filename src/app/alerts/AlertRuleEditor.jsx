@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import Image from "next/image"
 import { Bell, Clock, Layers, Mail, Slack, Sparkles, Target, User, Users } from "lucide-react"
 import {
@@ -24,8 +24,10 @@ import {
   Surface,
   Switch,
 } from "@/components/ds"
+import { cn } from "@/lib/utils"
+import { useCurrency } from "@/hooks/useCurrency"
 import MetricPicker from "@/components/ui/MetricPicker"
-import { OPERATOR_OPTIONS, PERIOD_OPTIONS, TYPE_OPTIONS, FREQUENCY_OPTIONS } from "@/lib/alert-helpers"
+import { localiseMetricLabel, OPERATOR_OPTIONS, PERIOD_OPTIONS, TYPE_OPTIONS, FREQUENCY_OPTIONS } from "@/lib/alert-helpers"
 import ChatConversation from "@/components/chat/ChatConversation"
 
 const MODES = [
@@ -66,9 +68,9 @@ const QUICK_STARTERS = [
   { label: "Calls alert", prompt: "Alert me on call center metrics" },
 ]
 
-function Field({ id, label, children }) {
+function Field({ id, label, wide = false, children }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className={cn("flex min-w-0 flex-col gap-1.5", wide && "sm:col-span-2")}>
       <Label htmlFor={id}>{label}</Label>
       {children}
     </div>
@@ -137,6 +139,7 @@ export default function AlertRuleEditor({
   chatKey, onAlertsChanged, onSave, saving, clientGroups, metricOptions,
 }) {
   const [clientSearch, setClientSearch] = useState("")
+  const { currencySymbol } = useCurrency("GBP")
 
   // Each open starts with an empty client search.
   useEffect(() => {
@@ -156,7 +159,12 @@ export default function AlertRuleEditor({
   }
 
   const showForm = mode === "manual" || !!editingAlert
-  const selectedMetric = metricOptions.find((m) => m.id === form.metric)
+  // The shared labels hard-code "($)"; show the user's own currency here.
+  const localisedMetrics = useMemo(
+    () => metricOptions.map((m) => ({ ...m, label: localiseMetricLabel(m.label, currencySymbol) })),
+    [metricOptions, currencySymbol]
+  )
+  const selectedMetric = localisedMetrics.find((m) => m.id === form.metric)
   const perClient = form.tracking_mode === "per_client"
 
   const description = editingAlert
@@ -221,17 +229,9 @@ export default function AlertRuleEditor({
               {/* Left column */}
               <div className="flex min-w-0 flex-col gap-4">
                 <Section title="Details">
-                  <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field id="alert-name" label="Name">
                       <Input id="alert-name" placeholder="e.g. Low ROI Alert" value={form.name} onChange={setField("name")} />
-                    </Field>
-                    <Field id="alert-description" label="Description">
-                      <Input
-                        id="alert-description"
-                        placeholder="Describe when this alert fires..."
-                        value={form.description}
-                        onChange={setField("description")}
-                      />
                     </Field>
                     <Field id="alert-type" label="Type">
                       <Select value={form.type} onValueChange={set("type")}>
@@ -245,14 +245,22 @@ export default function AlertRuleEditor({
                         </SelectContent>
                       </Select>
                     </Field>
+                    <Field id="alert-description" label="Description" wide>
+                      <Input
+                        id="alert-description"
+                        placeholder="Describe when this alert fires..."
+                        value={form.description}
+                        onChange={setField("description")}
+                      />
+                    </Field>
                   </div>
                 </Section>
 
                 <Section title="Condition">
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-[1.4fr_1fr_.8fr_1fr]">
+                  <div className="grid gap-4 sm:grid-cols-2">
                     <Field id="alert-metric" label="Metric">
                       <MetricPicker
-                        metrics={metricOptions}
+                        metrics={localisedMetrics}
                         value={form.metric}
                         onChange={set("metric")}
                         placeholder="Select metric..."

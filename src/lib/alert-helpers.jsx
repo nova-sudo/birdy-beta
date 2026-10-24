@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Clock, Zap } from "lucide-react"
+import { useCurrency } from "@/hooks/useCurrency"
 import { Badge } from "@/components/ds/primitives/badge"
 import { ProgressBar } from "@/components/ds/data/progress-bar"
 import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
@@ -128,7 +129,7 @@ export function conditionSummary(alert) {
  * @param {string|Date|null} props.value
  */
 export function RelativeTime({ value }) {
-  const [label, setLabel] = useState("")
+  const [label, setLabel] = useState("—")
   useEffect(() => {
     setLabel(value ? formatRelative(new Date(value)) : "—")
   }, [value])
@@ -154,7 +155,16 @@ export function statusBadge(status, snoozedUntil) {
   return <Badge variant="dot" className="capitalize">{status}</Badge>
 }
 
+/**
+ * A metric's label with its hard-coded "($)" shown in the user's own currency.
+ * The shared METRIC_OPTIONS labels stay as they are (the dashboard reads them).
+ */
+export function localiseMetricLabel(label, symbol) {
+  return typeof label === "string" ? label.replace("($)", `(${symbol})`) : label
+}
+
 export function ProgressToTrigger({ alert }) {
+  const { currencySymbol } = useCurrency("GBP")
   const pct = alert.progress_pct ?? 0
   const current = alert.current_value ?? null
   const threshold = alert.condition?.value
@@ -171,7 +181,7 @@ export function ProgressToTrigger({ alert }) {
   const fmt = (v, forceType) => {
     // For pct operators: current_value is always a % change, threshold is always a %
     if (forceType === "pct" || isPct) return `${Number(v).toFixed(1)}%`
-    if (forceType === "currency" || isCurrency) return `£${Number(v).toFixed(2)}`
+    if (forceType === "currency" || isCurrency) return `${currencySymbol}${Number(v).toFixed(2)}`
     return Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })
   }
   // For pct operators the threshold is a percentage, but display it as %

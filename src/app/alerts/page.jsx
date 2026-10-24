@@ -13,6 +13,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  ErrorState,
   Label,
   PageHeader,
   SegmentedTabs,
@@ -49,6 +50,7 @@ function AlertsPageContent() {
   const [alerts, setAlerts] = useState({ active: [], triggered: [], paused: [], counts: {} })
   const [clientGroups, setClientGroups] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [customMetrics, setCustomMetrics] = useState([])
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingAlert, setEditingAlert] = useState(null)
@@ -88,12 +90,14 @@ function AlertsPageContent() {
   // ── Data fetching ────────────────────────────────────────────
 
   const fetchAlerts = useCallback(async () => {
+    setLoadFailed(false)
     try {
       const res = await apiRequest("/api/alerts")
       if (!res.ok) throw new Error("Failed to load alerts")
       const data = await res.json()
       setAlerts(data)
     } catch (e) {
+      setLoadFailed(true)
       toast.error("Could not load alerts")
     } finally {
       setIsLoading(false)
@@ -362,6 +366,13 @@ function AlertsPageContent() {
           />
         </div>
         <div id="alerts-panel" role="tabpanel" aria-labelledby={`alerts-panel-tab-${activeTab}`}>
+          {loadFailed && !isLoading ? (
+            <ErrorState
+              title="Couldn't load your alerts"
+              description="Nothing here is out of date — we just couldn't reach your alerts."
+              onRetry={fetchAlerts}
+            />
+          ) : (
           <AlertsList
             key={activeTab}
             rows={alerts[activeTab] || []}
@@ -375,6 +386,7 @@ function AlertsPageContent() {
             onDelete={handleDelete}
             onDeleteSub={handleDeleteSub}
           />
+          )}
         </div>
       </div>
 

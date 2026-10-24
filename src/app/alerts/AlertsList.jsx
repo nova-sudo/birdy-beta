@@ -13,7 +13,8 @@ import {
   DropdownMenuTrigger,
   EmptyState,
 } from "@/components/ds"
-import { METRIC_OPTIONS, RelativeTime, conditionSummary, statusBadge, ProgressToTrigger, metricIcon } from "@/lib/alert-helpers"
+import { useCurrency } from "@/hooks/useCurrency"
+import { METRIC_OPTIONS, RelativeTime, localiseMetricLabel, conditionSummary, statusBadge, ProgressToTrigger, metricIcon } from "@/lib/alert-helpers"
 import {
   ClientActions,
   ClientNameCell,
@@ -29,8 +30,11 @@ const EMPTY_HINTS = {
   paused: "Alerts you snooze or pause wait here.",
 }
 
-const metricLabel = (alert) =>
-  METRIC_OPTIONS.find((m) => m.value === alert.condition?.metric)?.label || alert.condition?.metric
+const metricLabel = (alert, symbol) =>
+  localiseMetricLabel(
+    METRIC_OPTIONS.find((m) => m.value === alert.condition?.metric)?.label || alert.condition?.metric,
+    symbol
+  )
 
 function NameCell({ alert }) {
   return (
@@ -58,7 +62,9 @@ function ConditionCell({ alert }) {
 }
 
 function TargetsCell({ alert }) {
-  if (!alert.target_group_ids?.length) {
+  // A group row is a per-client rule by construction.
+  const perClient = alert._isGroup || alert.tracking_mode === "per_client"
+  if (!alert.target_group_ids?.length && !alert._isGroup) {
     return (
       <div className="flex flex-col gap-1">
         <Badge>
@@ -68,10 +74,10 @@ function TargetsCell({ alert }) {
       </div>
     )
   }
-  const names = alert.target_group_names?.length ? alert.target_group_names : alert.target_group_ids
+  const names = alert.target_group_names?.length ? alert.target_group_names : alert.target_group_ids || []
   return (
     <div className="flex max-w-[180px] flex-col gap-1">
-      {alert.tracking_mode === "per_client" ? (
+      {perClient ? (
         <Badge tone="primary">
           <User /> Per Client
         </Badge>
@@ -85,7 +91,7 @@ function TargetsCell({ alert }) {
           {name}
         </span>
       ))}
-      {alert.target_group_ids.length > 2 && (
+      {(alert.target_group_ids?.length ?? 0) > 2 && (
         <span className="text-xs text-muted-foreground">+{alert.target_group_ids.length - 2} more</span>
       )}
     </div>
@@ -174,6 +180,7 @@ export default function AlertsList({
   rows, tab, loading = false, evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete, onDeleteSub,
 }) {
   const [expanded, setExpanded] = useState({})
+  const { currencySymbol } = useCurrency("GBP")
 
   const data = useMemo(
     () => (tab === "triggered" ? groupTriggeredRows(rows) : rows.map((a) => ({ ...a, _rowKey: String(a.id) }))),
@@ -199,14 +206,14 @@ export default function AlertsList({
       {
         id: "metric",
         header: "Metric",
-        accessorFn: (a) => (a._virtual ? undefined : metricLabel(a)),
+        accessorFn: (a) => (a._virtual ? undefined : metricLabel(a, currencySymbol)),
         meta: { label: "Metric" },
         // A client row inherits the rule's metric, condition and targets; it leaves those cells blank.
         cell: ({ row }) =>
           row.depth > 0 ? null : (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">{metricIcon(row.original.condition?.metric)}</span>
-              {metricLabel(row.original)}
+              {metricLabel(row.original, currencySymbol)}
             </div>
           ),
       },
@@ -285,7 +292,7 @@ export default function AlertsList({
           ),
       },
     ],
-    [evaluating, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete, onDeleteSub]
+    [evaluating, currencySymbol, onEdit, onEvaluate, onTogglePause, onSnooze, onDelete, onDeleteSub]
   )
 
   const hasGroups = data.some((a) => a._isGroup)

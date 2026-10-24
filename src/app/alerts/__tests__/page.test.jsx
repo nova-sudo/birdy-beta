@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
 import { usePageHeader } from "@/components/page-header"
 import { ConfirmHost } from "@/components/ds"
+import { STORAGE_KEYS } from "@/lib/constants"
 import AlertsPage from "../page"
 
 globalThis.ResizeObserver ??= class {
@@ -113,6 +114,7 @@ const sheet = () => screen.getByRole("dialog")
 beforeEach(() => {
   vi.clearAllMocks()
   tab.value = "active"
+  localStorage.clear()
   mockApi()
 })
 
@@ -345,5 +347,54 @@ describe("/alerts", () => {
     await loaded("Spend cap")
     const trash = within(rowOf("Spend cap")).getByRole("button", { name: "Delete Spend cap" })
     expect(trash).toHaveTextContent("")
+  })
+
+  it("shows an error with a retry, not an empty list, when the alerts fail to load", async () => {
+    vi.mocked(apiRequest).mockImplementation(async (url) => {
+      if (url === "/api/alerts") return { ok: false, text: async () => "boom" }
+      return { ok: true, json: async () => ({}) }
+    })
+    const user = userEvent.setup()
+    renderPage()
+    expect(await screen.findByText("Couldn't load your alerts")).toBeInTheDocument()
+    expect(screen.queryByText("No active alerts")).toBeNull()
+    expect(document.querySelector('[data-ds="data-table"]')).toBeNull()
+
+    mockApi()
+    await user.click(screen.getByRole("button", { name: /try again/i }))
+    await loaded("Spend cap")
+    expect(screen.queryByText("Couldn't load your alerts")).toBeNull()
+  })
+
+  it("writes money in the user's currency, never a hard-coded sign", async () => {
+    localStorage.setItem(STORAGE_KEYS.DEFAULT_CURRENCY, "EUR")
+    mockApi({
+      ...LOADED,
+      active: [rule("a1", "CPL cap", { condition: { metric: "cpl", operator: "gt", value: 6, period: "day" }, current_value: 7.4 })],
+    })
+    renderPage()
+    await loaded("CPL cap")
+    const row = rowOf("CPL cap")
+    await waitFor(() => expect(within(row).getByText("€7.40")).toBeInTheDocument())
+    expect(within(row).getByText("Cost Per Lead (€)")).toBeInTheDocument()
+    expect(row.textContent).not.toMatch(/[$£]/)
+  })
+
+  it("defaults to pounds when no currency is stored", async () => {
+    mockApi({
+      ...LOADED,
+      active: [rule("a1", "CPL cap", { condition: { metric: "cpl", operator: "gt", value: 6, period: "day" }, current_value: 7.4 })],
+    })
+    renderPage()
+    await loaded("CPL cap")
+    expect(within(rowOf("CPL cap")).getByText("£7.40")).toBeInTheDocument()
+    expect(within(rowOf("CPL cap")).getByText("Cost Per Lead (£)")).toBeInTheDocument()
+  })
+
+  it("marks a triggered group as Per Client", async () => {
+    mockGroup()
+    renderPage()
+    const header = await waitFor(() => rowOf("CPL watch"))
+    expect(within(header).getByText("Per Client")).toBeInTheDocument()
   })
 })
