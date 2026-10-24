@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within, waitFor } from "@testing-library/react"
+import { render, screen, within, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Marketing Hub ───────────────────────────────────────────────────────────
@@ -237,5 +237,73 @@ describe("MarketingContent", () => {
     const { container } = renderHub({ showHeader: false, showGroupFilter: false })
     expect(screen.queryByRole("heading", { name: "Marketing Hub" })).not.toBeInTheDocument()
     expect(container.querySelector('[data-ds="page-header"]')).not.toBeInTheDocument()
+  })
+
+  it("reverts the optimistic status change and toasts when the toggle fails", async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiRequest).mockImplementation(async (url) => {
+      const u = String(url)
+      if (u.startsWith("/api/facebook/update-status")) return { ok: false, json: async () => ({ detail: "Meta said no" }) }
+      if (u.startsWith("/api/facebook-leads/filtered")) return { ok: true, json: async () => ({ leads: [] }) }
+      return { ok: true, json: async () => ({ custom_metrics: [] }) }
+    })
+    renderHub()
+    await waitFor(() => expect(inTable().getByText("Alpha Campaign")).toBeInTheDocument())
+
+    await user.click(inTable().getByRole("switch", { name: /Pause Alpha campaign/ }))
+
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Meta said no"))
+    expect(inTable().getByRole("switch", { name: /Pause Alpha campaign/ })).toHaveAttribute("aria-checked", "true")
+  })
+
+  it("header select-all selects every filtered row, and reads mixed when only some are", async () => {
+    const user = userEvent.setup()
+    renderHub()
+    await waitFor(() => expect(inTable().getByText("Beta Campaign")).toBeInTheDocument())
+    const all = () => inTable().getByRole("checkbox", { name: "Select all rows" })
+
+    await user.click(inTable().getByRole("checkbox", { name: "Select Alpha campaign" }))
+    expect(all()).toHaveAttribute("aria-checked", "mixed")
+
+    await user.click(all())
+    expect(inTable().getByRole("checkbox", { name: "Select Alpha campaign" })).toHaveAttribute("aria-checked", "true")
+    expect(inTable().getByRole("checkbox", { name: "Select Beta campaign" })).toHaveAttribute("aria-checked", "true")
+    expect(all()).toHaveAttribute("aria-checked", "true")
+
+    await user.click(screen.getByRole("tab", { name: /Ad Sets/ }))
+    expect(inTable().getByText("Alpha Set")).toBeInTheDocument()
+    expect(inTable().getByText("Beta Set")).toBeInTheDocument()
+  })
+
+  it("keeps Name first when a saved view has it elsewhere and when a header is dragged onto it", async () => {
+    views.savedColumns = ["spend", "name", "cpl"]
+    renderHub()
+    await waitFor(() => expect(inTable().getByText("Alpha Campaign")).toBeInTheDocument())
+
+    const headers = () => inTable().getAllByRole("columnheader").map((h) => h.textContent)
+    expect(headers()[0]).toMatch(/Name/)
+
+    const [name, spend] = inTable().getAllByRole("columnheader")
+    const dataTransfer = { data: {}, setData(k, v) { this.data[k] = v }, getData(k) { return this.data[k] }, effectAllowed: "" }
+    fireEvent.dragStart(spend, { dataTransfer })
+    fireEvent.drop(name, { dataTransfer })
+
+    expect(views.saveViewDebounced).not.toHaveBeenCalled()
+    expect(headers()[0]).toMatch(/Name/)
+  })
+
+  it("returns to page 1 when the search changes", async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: 30 }, (_, i) => ({
+      id: `c${i}`, name: `Camp ${i}`, status: "ACTIVE", spend: 1000 - i, results: 1,
+    }))
+    renderHub({ clientGroups: [{ ...GROUPS[0], facebook: { ...GROUPS[0].facebook, campaigns: many } }] })
+    await waitFor(() => expect(inTable().getByText("Camp 0")).toBeInTheDocument())
+
+    await user.click(screen.getByRole("button", { name: /next page/i }))
+    expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument()
+
+    await user.type(screen.getByRole("searchbox", { name: "Search campaigns" }), "Camp")
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument()
   })
 })

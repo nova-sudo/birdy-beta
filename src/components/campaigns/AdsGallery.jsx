@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, LayoutGrid, Play, Table } from "lucide-react"
 import {
+  Badge,
   Button,
   Dialog,
   DialogContent,
@@ -65,13 +66,19 @@ export function AdsViewSwitch({ value, onChange }) {
   )
 }
 
+const headerText = (col) => (typeof col.header === "function" ? col.header() : col.header)
+
 // Video ad previews: Meta blocks the raw video `source` URL for a lot of ad
 // creatives (download-protected, still processing, licensed audio, ...) even
 // with full ads_read access, so this renders Meta's own ad-preview iframe
 // (GET /{ad_id}/previews) instead of pulling the asset directly — that's
 // Meta serving its own render rather than handing back the raw file, so it
 // works for every ad regardless of those restrictions.
-function VideoPreviewDialog({ adId, title, onClose }) {
+function VideoPreviewDialog({ row, columns, onStatusToggle, toggling, onClose }) {
+  const adId = row.id
+  const title = row.creative_title || row.name
+  const isActive = String(row.status).toLowerCase() === "active"
+  const stats = columns.filter(c => c.id !== "name").slice(0, STRIP_METRICS)
   const [state, setState] = useState({ status: "loading", previewUrl: null, width: null, height: null, error: null })
 
   useEffect(() => {
@@ -98,12 +105,13 @@ function VideoPreviewDialog({ adId, title, onClose }) {
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
+      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl">
         <DialogHeader className="border-b border-border px-4 py-3 pr-14 text-left">
           <DialogTitle className="truncate">{title || "Ad preview"}</DialogTitle>
           <DialogDescription className="text-xs">Preview rendered by Meta</DialogDescription>
         </DialogHeader>
-        <div className="flex min-h-60 items-center justify-center overflow-auto bg-muted p-4">
+        <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+        <div className="flex min-h-60 items-center justify-center overflow-auto rounded-surface bg-muted p-4">
           {state.status === "loading" && (
             <Skeleton className="h-[420px] w-full max-w-[500px]" aria-hidden="true" />
           )}
@@ -122,14 +130,35 @@ function VideoPreviewDialog({ adId, title, onClose }) {
             />
           )}
         </div>
+          {/* Status and the headline numbers beside the player; below it on a phone. */}
+          <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <Badge tone={isActive ? "success" : "neutral"}>{isActive ? "Active" : "Paused"}</Badge>
+              <Switch
+                checked={isActive}
+                disabled={toggling}
+                aria-label={`${isActive ? "Pause" : "Activate"} ${row.name || row.id}`}
+                onCheckedChange={() => onStatusToggle?.(row.id, row.status)}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              {stats.map(col => (
+                <div key={col.id} className="flex min-w-0 flex-col gap-0.5 rounded-control bg-muted px-3 py-2">
+                  <span className="num text-base font-medium text-foreground">
+                    {col.render ? col.render(row[col.id], row) : (row[col.id] ?? "–")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{headerText(col)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   )
 }
 
 const CARD_SKELETON_COUNT = 8
-
-const headerText = (col) => (typeof col.header === "function" ? col.header() : col.header)
 
 export default function AdsGallery({
   rows = [],
@@ -138,6 +167,7 @@ export default function AdsGallery({
   onStatusToggle,
   togglingRows = new Set(),
   isLoading = false,
+  resetKey,
 }) {
   // One drag at a time, scoped to the card it started in — the drop-target
   // outline only lights up on that card, not on every card showing the same row.
@@ -148,8 +178,11 @@ export default function AdsGallery({
   // the browser's broken-image glyph.
   const [failedImages, setFailedImages] = useState(() => new Set())
   // Which video ad's preview dialog is open, if any.
-  const [previewRow, setPreviewRow] = useState(null)
+  const [previewId, setPreviewId] = useState(null)
   const [page, setPage] = useState(0)
+
+  // A new search, tab or drill-down starts again from the first page.
+  useEffect(() => { setPage(0) }, [resetKey])
 
   // The name lives in the card's header; everything else becomes a metric, in
   // the shared order.
@@ -161,6 +194,9 @@ export default function AdsGallery({
     () => [...rows].sort((a, b) => (Number(b.spend) || 0) - (Number(a.spend) || 0)),
     [rows]
   )
+
+  // Looked up live so the dialog's switch follows a toggle.
+  const previewRow = previewId != null ? rows.find(r => r.id === previewId) : null
 
   const pageCount = Math.max(1, Math.ceil(sortedRows.length / GALLERY_PAGE_SIZE))
   // A narrower filter can leave the current page past the end.
@@ -227,13 +263,13 @@ export default function AdsGallery({
         onDrop={(e) => { e.preventDefault(); handleDrop(col.id) }}
         onDragEnd={clearDrag}
         className={cn(
-          "flex min-w-0 cursor-grab flex-col gap-0.5 rounded-sm px-1.5 py-1 active:cursor-grabbing",
+          "flex cursor-grab items-center justify-between gap-3 rounded-sm px-1.5 py-1 active:cursor-grabbing",
           isDragging && "bg-primary-soft",
           isDropTarget && "shadow-control-focus"
         )}
       >
-        <span className="truncate text-xs text-muted-foreground">{headerText(col)}</span>
-        <span className="num truncate text-sm font-medium text-foreground">
+        <span className="text-sm text-muted-foreground">{headerText(col)}</span>
+        <span className="num shrink-0 text-sm font-medium text-foreground">
           {col.render ? col.render(row[col.id], row) : (row[col.id] ?? "–")}
         </span>
       </div>
@@ -267,8 +303,8 @@ export default function AdsGallery({
                 role={isVideo ? "button" : undefined}
                 tabIndex={isVideo ? 0 : undefined}
                 aria-label={isVideo ? `Play ${row.name || "ad"} preview` : undefined}
-                onClick={isVideo ? () => setPreviewRow(row) : undefined}
-                onKeyDown={isVideo ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreviewRow(row) } } : undefined}
+                onClick={isVideo ? () => setPreviewId(row.id) : undefined}
+                onKeyDown={isVideo ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreviewId(row.id) } } : undefined}
                 className={cn(
                   "relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-muted outline-none focus-visible:shadow-control-focus",
                   isVideo && "cursor-pointer"
@@ -312,19 +348,16 @@ export default function AdsGallery({
                   />
                 </div>
 
-                {/* The same columns the table draws, each individually
-                    draggable. One row of the first four; the rest on request. */}
-                {strip.length > 0 && (
-                  <div className="grid grid-cols-4 gap-1">
-                    {strip.map(col => metricCell(col, row, cardIdx))}
-                  </div>
-                )}
+                {/* The same columns the table draws, one label-left / value-right
+                    row each, individually draggable. The first four; the rest
+                    on request. */}
+                {strip.map(col => metricCell(col, row, cardIdx))}
                 {more.length > 0 && (
                   <details>
                     <summary className="cursor-pointer list-none text-xs font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus">
                       More metrics ({more.length})
                     </summary>
-                    <div className="mt-1 grid grid-cols-4 gap-1">
+                    <div className="mt-1 flex flex-col">
                       {more.map(col => metricCell(col, row, cardIdx))}
                     </div>
                   </details>
@@ -353,9 +386,11 @@ export default function AdsGallery({
 
       {previewRow && (
         <VideoPreviewDialog
-          adId={previewRow.id}
-          title={previewRow.creative_title || previewRow.name}
-          onClose={() => setPreviewRow(null)}
+          row={previewRow}
+          columns={columns}
+          onStatusToggle={onStatusToggle}
+          toggling={togglingRows.has(previewRow.id)}
+          onClose={() => setPreviewId(null)}
         />
       )}
     </div>

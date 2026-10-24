@@ -839,7 +839,6 @@ export function MarketingContent({
   })
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
-  const columnVisibility = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
 
   // ── Columns menu plumbing ──────────────────────────────────────────────
   // `type` is already meta/ghl/tags/custom, which is exactly the menu's source.
@@ -1109,9 +1108,20 @@ export function MarketingContent({
   const [sortingByTab, setSortingByTab] = useState({
     campaigns: SPEND_FIRST, adsets: SPEND_FIRST, ads: SPEND_FIRST, leads: [],
   })
+  // Paging is held here so a new search, level tab or drill-down can send the
+  // table back to page 1 without remounting it (which would drop the search box's focus).
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: TABLE_PAGE_SIZE })
+  const resetKey = [
+    activeTab, searchTerm, selectedCampaign?.id, selectedAdSet?.id, selectedAd?.id,
+    [...selectedCampaignIds].join(), [...selectedAdSetIds].join(), [...selectedAdIds].join(),
+  ].join("|")
+  useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }))
+  }, [resetKey])
+
   const tableState = useMemo(
-    () => ({ sorting: sortingByTab[activeTab], columnOrder: tableColumnOrder }),
-    [sortingByTab, activeTab, tableColumnOrder]
+    () => ({ sorting: sortingByTab[activeTab], columnOrder: tableColumnOrder, pagination }),
+    [sortingByTab, activeTab, tableColumnOrder, pagination]
   )
 
   // ── Hero row: metric tabs over the chart, and Birdy's read ───────────────
@@ -1427,13 +1437,14 @@ export function MarketingContent({
             value={activeTab}
             onValueChange={setActiveTab}
             items={sectionTabs}
+            panelId={TABLE_PANEL_ID}
           />
         </div>
 
         <div
           role="tabpanel"
           id={TABLE_PANEL_ID}
-          aria-label="Marketing Hub table"
+          aria-labelledby={`${TABLE_PANEL_ID}-tab-${activeTab}`}
           className="flex min-w-0 flex-col gap-3"
         >
           {/* Drill-down breadcrumb */}
@@ -1449,8 +1460,8 @@ export function MarketingContent({
 
           {error ? (
             <ErrorState
-              title="Couldn't load your leads"
-              description={`${error}. Your campaigns are fine — we just couldn't reach this data.`}
+              title="Couldn't load this data"
+              description={`${error}. Nothing was lost — we just couldn't reach this data.`}
               onRetry={() => setReloadKey((k) => k + 1)}
             />
           ) : activeTab === "ads" && adsView === "gallery" ? (
@@ -1463,6 +1474,7 @@ export function MarketingContent({
                 onStatusToggle={handleStatusToggle}
                 togglingRows={togglingRows}
                 isLoading={isLoading || groupsLoading}
+                resetKey={resetKey}
               />
             </>
           ) : (
@@ -1473,7 +1485,10 @@ export function MarketingContent({
               loading={isLoading}
               toolbar={toolbar}
               state={tableState}
-              onStateChange={(next) => setSortingByTab((prev) => ({ ...prev, [activeTab]: next.sorting }))}
+              onStateChange={(next) => {
+                setSortingByTab((prev) => ({ ...prev, [activeTab]: next.sorting }))
+                setPagination(next.pagination)
+              }}
               onColumnReorder={reorderColumn}
               lockedColumnIds={lockedColumns}
               stickyFirstColumn

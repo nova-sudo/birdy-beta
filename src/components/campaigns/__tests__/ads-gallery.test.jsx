@@ -86,7 +86,7 @@ describe("AdsGallery", () => {
     fireEvent.dragOver(clicksRow)
     fireEvent.drop(clicksRow)
 
-    // Same shape StyledTable emits: ordered visible ids, dragged one respliced
+    // Same shape the table's reorder emits: ordered visible ids, dragged one respliced
     // in front of the target — this is what both layouts persist.
     expect(onOrderChange).toHaveBeenCalledWith(["name", "cpl", "spend", "clicks"])
   })
@@ -120,17 +120,45 @@ describe("AdsGallery", () => {
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled()
   })
 
-  it("keeps the first four metrics in the card's row and the rest behind More metrics", () => {
+  it("keeps the first four metrics in the card's row and the rest behind More metrics", async () => {
+    const user = userEvent.setup()
     const cols = [
       { id: "name", header: "Name" },
       ...["m1", "m2", "m3", "m4", "m5"].map(id => ({ id, header: id.toUpperCase(), render: v => String(v) })),
     ]
     render(<AdsGallery rows={[{ id: "a", name: "A", status: "active", m1: 1, m2: 2, m3: 3, m4: 4, m5: 5 }]} columns={cols} />)
     expect(screen.getByText("More metrics (1)")).toBeInTheDocument()
+    // The fifth metric stays out of sight until the section opens.
+    expect(screen.getByText("M5")).not.toBeVisible()
+    await user.click(screen.getByText("More metrics (1)"))
+    expect(screen.getByText("M5")).toBeVisible()
+    expect(screen.getByText("5")).toBeVisible()
+  })
+
+  it("lays each metric out as a label-left, value-right row", () => {
+    setup()
+    const card = screen.getByTitle("Summer Video").closest("[data-slot=ads-gallery-card]")
+    const row = within(card).getByText("Spend").parentElement
+    expect(row.children[0]).toHaveTextContent("Spend")
+    expect(row.children[1]).toHaveTextContent("£100")
+  })
+
+  it("goes back to the first page when resetKey changes", async () => {
+    const user = userEvent.setup()
+    const many = Array.from({ length: GALLERY_PAGE_SIZE + 6 }, (_, i) => ({
+      id: `m${i}`, name: `Ad ${i}`, status: "active", spend: 1000 - i, cpl: 1, clicks: 1,
+    }))
+    const { rerender } = render(<AdsGallery rows={many} columns={COLUMNS} resetKey="a" />)
+    await user.click(screen.getByRole("button", { name: "Next page" }))
+    expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument()
+
+    rerender(<AdsGallery rows={many} columns={COLUMNS} resetKey="b" />)
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument()
   })
 
   it("opens Meta's preview in a dialog for a video ad", async () => {
     const user = userEvent.setup()
+    const onStatusToggle = vi.fn()
     vi.mocked(apiRequest).mockResolvedValue({
       ok: true,
       json: async () => ({ preview_url: "https://meta.example/preview", width: 500, height: 700 }),
@@ -139,11 +167,17 @@ describe("AdsGallery", () => {
       <AdsGallery
         rows={[{ id: "v1", name: "Video Ad", status: "active", spend: 1, cpl: 1, clicks: 1, creative_video_id: "77" }]}
         columns={COLUMNS}
+        onStatusToggle={onStatusToggle}
       />
     )
     await user.click(screen.getByRole("button", { name: "Play Video Ad preview" }))
 
     const dialog = await screen.findByRole("dialog")
+    expect(within(dialog).getByText("Active")).toBeInTheDocument()
+    expect(within(dialog).getByRole("switch", { name: /Pause Video Ad/ })).toBeInTheDocument()
+    expect(within(dialog).getAllByText("£1")).toHaveLength(2)
+    await user.click(within(dialog).getByRole("switch", { name: /Pause Video Ad/ }))
+    expect(onStatusToggle).toHaveBeenCalledWith("v1", "active")
     expect(apiRequest).toHaveBeenCalledWith("/api/facebook/ad-preview/v1")
     expect(await within(dialog).findByTitle("Video Ad")).toHaveAttribute("src", "https://meta.example/preview")
   })

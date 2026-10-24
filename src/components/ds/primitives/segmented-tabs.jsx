@@ -18,8 +18,9 @@ const THUMB_SPRING = { type: "spring", damping: 22, stiffness: 260 }
  * @param {{ value: string, label: React.ReactNode, count?: React.ReactNode }[]} props.items
  * @param {"sm"|"md"} [props.size="md"]
  * @param {string} [props.ariaLabel]
+ * @param {string} [props.panelId] Id of the panel the tabs swap; tabs get `aria-controls` and an id of `${panelId}-tab-${value}` for the panel's `aria-labelledby`
  */
-function SegmentedTabs({ value, onValueChange, items, size = "md", ariaLabel, className }) {
+function SegmentedTabs({ value, onValueChange, items, size = "md", ariaLabel, panelId, className }) {
   const thumbId = React.useId()
 
   return (
@@ -39,6 +40,8 @@ function SegmentedTabs({ value, onValueChange, items, size = "md", ariaLabel, cl
             key={item.value}
             type="button"
             role="tab"
+            id={panelId ? `${panelId}-tab-${item.value}` : undefined}
+            aria-controls={panelId}
             aria-selected={selected}
             onClick={() => onValueChange?.(item.value)}
             className={cn(
