@@ -31,6 +31,14 @@ export { ErrorState } from "./surfaces/error-state"
 export { Skeleton } from "./surfaces/skeleton"
 export { Spinner } from "./surfaces/spinner"
 
+// Data
+export { Delta } from "./data/delta"
+export { MetricCard } from "./data/metric-card"
+export { MetricGroup } from "./data/metric-group"
+export { MetricTabsChart, fromPortfolioTabs } from "./data/metric-tabs-chart"
+export { Breakdown } from "./data/breakdown"
+export { BarList } from "./data/bar-list"
+
 // Overlays
 export {
   Dialog,

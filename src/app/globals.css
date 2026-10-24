@@ -286,6 +286,8 @@
   --text-lg: 18px;
   --text-xl: 20px;
   --text-2xl: 32px;
+  --text-figure: 28px;
+  --text-figure--line-height: 34px;
 
   --spacing-control-sm: 32px;
   --spacing-control: 40px;

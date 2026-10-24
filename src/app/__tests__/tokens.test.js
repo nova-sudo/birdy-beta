@@ -60,5 +60,10 @@ describe("design tokens", () => {
     expect(css).toMatch(/@utility num\s*\{[^}]*font-feature-settings:\s*"tnum"/)
   })
 
+  it("declares the 28px figure size for metric values", () => {
+    expect(decl(css, "--text-figure")).toBe("28px")
+    expect(decl(css, "--text-figure--line-height")).toBe("34px")
+  })
+
   it("ships no dark mode", () => expect(css).not.toMatch(/\.dark\b|prefers-color-scheme/))
 })

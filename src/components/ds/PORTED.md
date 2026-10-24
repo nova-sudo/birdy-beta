@@ -31,3 +31,9 @@ Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide 
 | overlays/tooltip.jsx | ui/tooltip.tsx | `animate-ui/` wrapper, framer-motion | Flattened to plain Radix. `bg-foreground text-background shadow-floating`, default side top. Same four exports as `components/ui/tooltip` |
 | overlays/command.jsx | ui/command.tsx | @remixicon/react icons | cmdk wrapper on tokens; `CommandDialog` uses the ds Dialog. Same nine exports as `components/ui/command` |
 | overlays/toaster.jsx | ui/sonner.tsx | next-themes `useTheme` (light only) | Sonner with token classes (`shadow-floating`, `rounded-surface`, `font-sans`). Re-exports `toast` from sonner |
+| data/delta.jsx | charts/comparison-delta.tsx | `MetricComparison` object, lucide arrow icons | Takes a signed `value`; literal ↑/↓ spans, `invert`, `format`, `suffix`; success-ink / danger-ink / muted. Replaces portfolio `DeltaPill` |
+| data/metric-card.jsx | charts/metric-card.tsx | Link/tooltip chrome, date-fns, `DailyMetricPoint` data | Label, `text-figure` value, Delta, caption, recharts sparkline in chart-1 |
+| data/metric-group.jsx | charts/metric-card-group.tsx | Skeleton wiring | Muted frame with title/meta/action over an auto-fit grid of MetricCard. Replaces `StatStrip`/`StatTile` |
+| data/metric-tabs-chart.jsx | charts/board-trend-chart.tsx, charts/chart-tooltip.tsx, ui/chart.tsx | `ChartContainer` config layer, i18n, board data types | Tablist of figures rising into a white recharts panel; current chart-1 with 14% fill, previous dashed `4 5`; 800ms draw, 120ms tooltip; `fromPortfolioTabs` adapter for `portfolio/MetricTabsChart` props |
+| data/breakdown.jsx | Paper-only, no Bytes source | n/a | Segmented share bar plus rows (colour dot, Delta, value, share) |
+| data/bar-list.jsx | charts/bar-list.tsx | Links, i18n | Capsule bars scaled to the max; `primary-soft` fill. Replaces `Leaderboard` (rank badges dropped) |
