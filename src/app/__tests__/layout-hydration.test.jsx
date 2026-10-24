@@ -3,10 +3,23 @@ import { renderToString } from "react-dom/server"
 import { hydrateRoot } from "react-dom/client"
 import { act } from "react"
 
+const mocks = vi.hoisted(() => ({ pathname: "/dashboard", sidebarChildren: undefined }))
+
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/dashboard",
+  usePathname: () => mocks.pathname,
   useRouter: () => ({ push: vi.fn() }),
 }))
+// Spy on what the layout hands SidebarProvider; the real provider still renders.
+vi.mock("@/components/ui/sidebar", async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    SidebarProvider: (props) => {
+      mocks.sidebarChildren = props.children
+      return actual.SidebarProvider(props)
+    },
+  }
+})
 vi.mock("next/dynamic", () => ({ default: () => () => null }))
 vi.mock("@/components/birdy/BirdyDefs", () => ({ default: () => null }))
 vi.mock("@/lib/admin-api", () => ({ fetchMe: async () => null, stopImpersonation: vi.fn() }))
@@ -45,5 +58,21 @@ describe("RootLayout hydration", () => {
     const mismatches = errors.mock.calls.filter((c) => /hydrat|didn't match|did not match/i.test(c.join(" ")))
     expect(mismatches).toEqual([])
     expect(ids()).toEqual(serverIds)
+  })
+
+  // In the browser the client's first render dropped the fork that two
+  // conditional siblings under SidebarProvider create (`{!hide && shell}` plus
+  // `{hide && bare}`), so every Radix useId below it came out 2 bits short of
+  // the server's: sidebar "_R_3h9alb_" vs "_R_saalb_", search dialog
+  // "_R_halbH1_" vs "_R_4albH1_". jsdom cannot reproduce the drop (it needs
+  // Next's router around the layout), so this pins the cause: the layout hands
+  // SidebarProvider ONE child, leaving no fork there for the client to lose.
+  it.each(["/dashboard", "/login"])("gives SidebarProvider a single child at %s", (path) => {
+    mocks.pathname = path
+    mocks.sidebarChildren = undefined
+    renderToString(<RootLayout><p>page body</p></RootLayout>)
+    mocks.pathname = "/dashboard"
+    expect(mocks.sidebarChildren).toBeDefined()
+    expect(Array.isArray(mocks.sidebarChildren)).toBe(false)
   })
 })
