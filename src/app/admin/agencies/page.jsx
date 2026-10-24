@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { useAgencies, usePlatformStats } from "@/lib/admin-api";
-import { Input } from "@/components/ui/input";
+import { ErrorState, Input, Surface } from "@/components/ds";
+import AdminHeader from "@/components/admin/AdminHeader";
 import AdminStatStrip from "@/components/admin/AdminStatStrip";
 import AgenciesTable from "@/components/admin/AgenciesTable";
 import ConversationViewer from "@/components/admin/ConversationViewer";
@@ -21,6 +22,7 @@ export default function AdminAgenciesPage() {
 
   const {
     data: agenciesData,
+    error: agenciesError,
     isLoading: agenciesLoading,
     mutate: refetchAgencies,
   } = useAgencies(search);
@@ -32,34 +34,41 @@ export default function AdminAgenciesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-pd-display text-xl font-bold text-pd-ink">Agency owners</h2>
-          <p className="text-sm text-pd-subtle">
-            Every agency on Birdy, with impersonation and conversation review.
-          </p>
-        </div>
-
-        <div className="relative w-full sm:w-72">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-pd-faint" />
-          <Input
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="Search agencies or owners…"
-            aria-label="Search agencies or owners"
-            className="pl-9"
-          />
-        </div>
-      </div>
+      <AdminHeader
+        title="Agency owners"
+        description="Every agency on Birdy, with impersonation and conversation review."
+      />
 
       <AdminStatStrip kpis={statsData?.kpis} loading={statsLoading} />
 
-      <AgenciesTable
-        agencies={agenciesData?.agencies}
-        loading={agenciesLoading}
-        onViewChats={setChatsAgency}
-        onDeleted={refetchAgencies}
-      />
+      {agenciesError && !agenciesData ? (
+        <Surface>
+          <ErrorState
+            title="Couldn't load agencies"
+            description="The request failed. The figures above may still be right."
+            onRetry={() => refetchAgencies()}
+          />
+        </Surface>
+      ) : (
+        <AgenciesTable
+          agencies={agenciesData?.agencies}
+          loading={agenciesLoading}
+          onViewChats={setChatsAgency}
+          onDeleted={refetchAgencies}
+          toolbar={
+            <div className="relative w-full sm:w-64">
+              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Search agencies or owners…"
+                aria-label="Search agencies or owners"
+                className="h-control-sm pl-9"
+              />
+            </div>
+          }
+        />
+      )}
 
       <UserConversationsDialog
         agency={chatsAgency}

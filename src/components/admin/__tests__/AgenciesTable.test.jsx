@@ -21,6 +21,16 @@ vi.mock("sonner", () => ({ toast }))
 
 const AgenciesTable = (await import("@/components/admin/AgenciesTable")).default
 
+// Radix menus and selects lean on pointer-capture and scroll APIs jsdom lacks.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.scrollIntoView ??= () => {}
+
 const owner = (over = {}) => ({
   email: "owner@agency.com",
   owner: "SOUP Marketing",
@@ -39,8 +49,16 @@ function setup(agencies = [owner()]) {
   return { user: userEvent.setup(), onDeleted }
 }
 
-const openDialog = async (user, email = "owner@agency.com") =>
-  user.click(screen.getByRole("button", { name: `Delete ${email}` }))
+// The table and its mobile cards are both in the DOM, so scope to the table.
+const table = () => within(screen.getByRole("table"))
+
+const openMenu = async (user, email = "owner@agency.com") =>
+  user.click(table().getByRole("button", { name: `More actions for ${email}` }))
+
+const openDialog = async (user, email = "owner@agency.com") => {
+  await openMenu(user, email)
+  await user.click(await screen.findByRole("menuitem", { name: /delete account/i }))
+}
 
 const confirmButton = () => screen.getByRole("button", { name: /delete this account/i })
 
@@ -56,7 +74,7 @@ describe("the confirmation", () => {
     const { user } = setup()
     await openDialog(user)
 
-    const dialog = within(screen.getByRole("alertdialog"))
+    const dialog = within(await screen.findByRole("dialog"))
     expect(dialog.getByText(/delete soup marketing's account\?/i)).toBeInTheDocument()
     expect(dialog.getByText("owner@agency.com")).toBeInTheDocument()
     expect(dialog.getByText(/no backup and no undo/i)).toBeInTheDocument()
@@ -117,9 +135,52 @@ describe("deleting", () => {
   })
 })
 
+describe("row actions", () => {
+  it("renders on the ds table with the Admin badge and plan badge", () => {
+    const { container } = render(
+      <AgenciesTable agencies={[owner({ role: "admin" })]} loading={false} />
+    )
+    expect(container.querySelector('[data-ds="data-table"]')).not.toBeNull()
+    expect(table().getByText("Admin").closest('[data-ds="badge"]')).not.toBeNull()
+    expect(table().getByText("Growth").closest('[data-ds="badge"]')).not.toBeNull()
+  })
+
+  it("keeps Impersonate visible and puts the rest in the ⋯ menu", async () => {
+    const { user } = setup()
+    expect(table().getByRole("button", { name: /impersonate/i })).toBeEnabled()
+    expect(table().queryByRole("button", { name: /delete/i })).toBeNull()
+
+    await openMenu(user)
+    expect(await screen.findByRole("menuitem", { name: /view chats/i })).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: /set client limit/i })).toBeInTheDocument()
+    expect(screen.getByRole("menuitem", { name: /delete account/i })).toBeInTheDocument()
+  })
+
+  it("hands the row to onViewChats from the menu", async () => {
+    const onViewChats = vi.fn()
+    const user = userEvent.setup()
+    render(<AgenciesTable agencies={[owner()]} loading={false} onViewChats={onViewChats} />)
+    await openMenu(user)
+    await user.click(await screen.findByRole("menuitem", { name: /view chats/i }))
+    expect(onViewChats).toHaveBeenCalledWith(expect.objectContaining({ email: "owner@agency.com" }))
+  })
+})
+
 describe("admin rows", () => {
-  it("cannot be deleted from the table", () => {
+  it("cannot be impersonated or deleted from the table", () => {
     setup([owner({ email: "admin@birdy.ai", owner: "Support", role: "admin" })])
-    expect(screen.getByRole("button", { name: "Delete admin@birdy.ai" })).toBeDisabled()
+    expect(table().getByRole("button", { name: /impersonate/i })).toBeDisabled()
+    expect(table().getByRole("button", { name: "More actions for admin@birdy.ai" })).toBeDisabled()
+  })
+})
+
+describe("hygiene", () => {
+  it("has no legacy classes or inline hex", () => {
+    const { container } = render(<AgenciesTable agencies={[owner()]} loading={false} />)
+    const legacy = new RegExp(["p", "d-"].join("") + "|font-" + ["p", "d"].join("") + "-display")
+    const bad = [...container.querySelectorAll("*")].filter(
+      (el) => legacy.test(el.getAttribute("class") || "") || /#[0-9a-f]{3,8}\b/i.test(el.getAttribute("style") || "")
+    )
+    expect(bad).toEqual([])
   })
 })
