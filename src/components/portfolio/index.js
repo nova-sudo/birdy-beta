@@ -3,5 +3,4 @@
 // src/components/ds instead.
 
 export { PdMenu } from "./PdMenu";
-export { PdSegmented } from "./PdSegmented";
 export { TONES, toneClass } from "./tones";
