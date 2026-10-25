@@ -1,6 +1,7 @@
 // Primitives
 export { Button, buttonVariants } from "./primitives/button"
 export { Input } from "./primitives/input"
+export { fieldVariants, triggerVariants, FIELD_SIZES } from "./primitives/field-variants"
 export { Textarea } from "./primitives/textarea"
 export {
   Select,
@@ -20,7 +21,7 @@ export { Label } from "./primitives/label"
 export { Badge, badgeVariants } from "./primitives/badge"
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./primitives/tabs"
 export { SegmentedTabs } from "./primitives/segmented-tabs"
-export { Kbd, KbdGroup } from "./primitives/kbd"
+export { Kbd, KbdGroup, KbdShortcut, KbdThen, keyLabel, useIsMac } from "./primitives/kbd"
 
 // Surfaces
 export { Frame } from "./surfaces/frame"

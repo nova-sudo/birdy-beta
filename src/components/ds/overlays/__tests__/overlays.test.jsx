@@ -225,7 +225,7 @@ describe("confirm()", () => {
       confirm({ title: "A", confirmLabel: "Go" })
     })
     const btn = await screen.findByRole("button", { name: "Go" })
-    expect(btn.className).toContain("bg-danger")
+    expect(btn.className).toContain("bg-destructive")
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }))
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull())
     act(() => {

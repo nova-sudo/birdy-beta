@@ -228,7 +228,7 @@ export default function Showcase() {
         <Row label="Button · variants">
           <Button variant="primary">Primary</Button>
           <Button>Outline</Button>
-          <Button variant="secondary">Secondary</Button>
+          <Button variant="dashed">Dashed</Button>
           <Button variant="ghost">Ghost</Button>
           <Button variant="destructive">Destructive</Button>
           <Button variant="link">Link</Button>

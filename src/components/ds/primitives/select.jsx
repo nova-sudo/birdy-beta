@@ -5,6 +5,7 @@ import * as SelectPrimitive from "@radix-ui/react-select"
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { triggerVariants } from "./field-variants"
 
 function Select({ ...props }) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
@@ -18,7 +19,9 @@ function SelectValue({ ...props }) {
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
-/** @param {{ size?: "default"|"sm" }} props `sm` drops to the 32px control height. */
+/**
+ * @param {{ size?: "default"|"md"|"sm"|"lg" }} props `default` is `md` (40). `sm` is 32 and `lg` is 48, matching the Button heights.
+ */
 function SelectTrigger({ className, size = "default", children, ...props }) {
   return (
     <SelectPrimitive.Trigger
@@ -26,14 +29,15 @@ function SelectTrigger({ className, size = "default", children, ...props }) {
       data-slot="select-trigger"
       data-size={size}
       className={cn(
-        "flex w-fit items-center justify-between gap-2 rounded-control bg-background px-3 text-sm whitespace-nowrap text-foreground shadow-control outline-none transition-shadow duration-150 data-[size=default]:h-control data-[size=sm]:h-control-sm data-[placeholder]:text-muted-foreground focus-visible:shadow-control-focus aria-invalid:shadow-control-invalid disabled:cursor-not-allowed disabled:opacity-50 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='text-'])]:text-muted-foreground [&_svg:not([class*='size-'])]:size-4",
+        triggerVariants({ size: size === "default" ? "md" : size }),
+        "w-fit *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-2",
         className
       )}
       {...props}
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="size-4" />
+        <ChevronDownIcon />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )

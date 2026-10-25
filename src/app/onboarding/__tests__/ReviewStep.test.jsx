@@ -220,7 +220,7 @@ describe("new leads in the last 30 days", () => {
   // Read off the row itself, not the page: the stat banner above the table
   // renders bare numbers too, and "0" would match both.
   const leadCell = () =>
-    screen.getByDisplayValue("Aura").closest("div").querySelector(".tabular-nums").textContent
+    screen.getByDisplayValue("Aura").closest("div").querySelector(".tabular-nums:not(input)").textContent
 
   const withLeads = (extra) =>
     render(

@@ -1,21 +1,22 @@
 # Ported from Bytes
 
-Source: `apps/dashboard/src/components/` at `aaefe2dd08` (read-only reference kit).
+Source: `apps/dashboard/src/components/`. Rows marked @d5bed4a4dd come from Bytes main; the rest are still at `aaefe2dd08` until re-ported.
 Common to every row: TS to JS with JSDoc props, `cn` from `@/lib/utils`, lucide icons, token utilities only, `data-ds` on the root.
 
 | File | Source @ aaefe2dd08 | Stripped | Local changes |
 | --- | --- | --- | --- |
-| primitives/button.jsx | ui/button.tsx | `permissions` prop and PermissionGate wrapper, Next Link href handling, icon/effect/badge props, ten extra variants and sizes, @remixicon/react icons | Bytes cva structure kept. Variants primary/outline/ghost/secondary/destructive/link (primary replaces Bytes `default`, no alias). Sizes sm/md/lg/icon-sm/icon on control heights. CSS press (90ms down, 160ms ease-press release). `loading` overlays a spinner and sets aria-busy. `asChild` via Radix Slot |
-| primitives/input.jsx | ui/input.tsx | none | Control height and `shadow-control`, focus `shadow-control-focus`, invalid ring in danger. API unchanged |
-| primitives/textarea.jsx | ui/textarea.tsx | none | Same re-skin as input. API unchanged |
-| primitives/select.jsx | ui/select.tsx | @remixicon/react icons, `description` prop on SelectItem | Lucide icons. `size` default/sm maps to control heights. Content uses `shadow-floating`. Same export names as the former `ui/select` (removed in the cleanup) |
+| primitives/button.jsx | ui/button.tsx@d5bed4a4dd | `permissions` prop and PermissionGate, Next Link `href`/`blank`, `icon`/`iconPlacement` props, Spinner import | Variants primary/outline/secondary/ghost/destructive/dashed/link. `outline` is the Bytes `secondary` look and stays the default; `secondary` aliases it (Birdy's old muted-fill `secondary` callers moved to `ghost`). Sizes sm/md/lg/icon-sm/icon/icon-lg. Lucide spinner. Loading label keeps a real box (`opacity-0`, not `invisible`) so it stays in the a11y tree. `data-variant` on root so Kbd can tint inside primary |
+| primitives/input.jsx | ui/input.tsx@d5bed4a4dd | `readOnly` paragraph branch, `inputClassName` export | `size` sm/md/lg via `fieldVariants` |
+| primitives/textarea.jsx | ui/textarea.tsx@d5bed4a4dd | debounce, markdown view, expandable overlay | `fieldVariants` surface with `field-sizing-content` auto-grow kept |
+| primitives/select.jsx | ui/select.tsx@d5bed4a4dd (trigger only) | @remixicon/react icons, `description` prop on SelectItem, size/open contexts, phone sheet | Trigger uses `triggerVariants`; `size` prop (default/md/sm/lg) instead of a Root context. Lucide chevron. Content and items unchanged until R8 |
+| primitives/field-variants.js | ui/field-variants.ts@d5bed4a4dd | `FIELD_BOX`, `FIELD_GROUP`, `FIELD_IN_GROUP` (no callers yet) | `fieldVariants`, `triggerVariants`, `FIELD_SIZES` |
 | primitives/checkbox.jsx | ui/checkbox.tsx | @remixicon/react icons, framer-motion check animation | Lucide check. Primary fill when checked, `shadow-control` ring |
 | primitives/switch.jsx | ui/switch.tsx | none | Primary track when on, border-colour track when off, `shadow-control` thumb |
 | primitives/label.jsx | ui/label.tsx | none | Token colours only |
 | primitives/badge.jsx | ui/badge.tsx | PermissionGate, `permissions` prop, tooltip prop, asChild, 20 status-named variants | Replaced by `tone` (neutral/primary/success/warning/danger/info) x `variant` (soft/dot). Soft is `-soft` fill with `-ink` text |
 | primitives/tabs.jsx | ui/tabs.tsx | none (Bytes file is the Radix wrapper) | Underline style: hairline list, primary bar on active trigger. Same four exports |
 | primitives/segmented-tabs.jsx | composed/segmented-tabs.tsx | tooltip per option, @remixicon/react info icon, `badge` string | Rebuilt: muted track, white `shadow-control` thumb sliding via framer-motion `layoutId` spring (damping 22, stiffness 260). Props `value/onValueChange/items[{value,label,count}]/size` replace `value/onChange/options` |
-| primitives/kbd.jsx | ui/coss/kbd.tsx | none | `rounded-sm`, token colours. Exports Kbd and KbdGroup |
+| primitives/kbd.jsx | ui/kbd.tsx@d5bed4a4dd | none | TS to JS. Adds KbdGroup (span), KbdThen, KbdShortcut, keyLabel, useIsMac |
 | surfaces/frame.jsx | ui/frame.tsx | border/description/href/footer/tone props, FrameAction, @remixicon/react icon, useId | Rebuilt to Paper: `bg-frame rounded-frame`, header row with title 16/600 (h2, `titleAs`), `meta`, `actions`, children below |
 | surfaces/surface.jsx | ui/card.tsx | PermissionGate, `permissions` prop, tooltip import, Card sub-parts (header/title/content/footer/action) | Single `Surface`: `bg-background rounded-surface shadow-surface`, `as`, `padded` |
 | surfaces/notice.jsx | composed/notice.tsx | none | Tones info/success/warning/danger/neutral on soft + ink tokens, `title`, `role="status"`, action trailing right |

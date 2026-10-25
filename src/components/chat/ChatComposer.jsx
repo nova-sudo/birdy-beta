@@ -147,14 +147,14 @@ export default function ChatComposer({
           disabled={disabled}
           rows={1}
           className={cn(
-            "max-h-40 min-h-7 flex-1 resize-none rounded-none bg-transparent leading-relaxed shadow-none! field-sizing-fixed focus-visible:shadow-none!",
+            "max-h-40 min-h-7 flex-1 resize-none rounded-none bg-transparent hover:bg-transparent focus-visible:bg-transparent leading-relaxed shadow-none! hover:shadow-none! field-sizing-fixed focus-visible:shadow-none!",
             compact ? "px-2 py-1.5" : "px-2 py-2"
           )}
         />
         <Button
           onClick={onSend}
           disabled={!canSend}
-          variant={canSend ? "primary" : "secondary"}
+          variant={canSend ? "primary" : "ghost"}
           size={compact ? "icon-sm" : "icon"}
           className="shrink-0 rounded-full"
           aria-label="Send message"

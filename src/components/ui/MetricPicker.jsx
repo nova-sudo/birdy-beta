@@ -105,7 +105,7 @@ export default function MetricPicker({
           {categories.map(cat => (
             <Button
               key={cat.id}
-              variant={activeCategory === cat.id ? "primary" : "secondary"}
+              variant={activeCategory === cat.id ? "primary" : "ghost"}
               size="sm"
               onClick={() => {
                 setActiveCategory(cat.id)

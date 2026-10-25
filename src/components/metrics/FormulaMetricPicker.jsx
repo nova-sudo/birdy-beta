@@ -66,7 +66,7 @@ export function FormulaMetricPicker({ metrics = [], value, onChange, placeholder
             <Button
               key={c.id}
               size="sm"
-              variant={category === c.id ? "primary" : "secondary"}
+              variant={category === c.id ? "primary" : "ghost"}
               className="shrink-0"
               onClick={() => {
                 setCategory(c.id)
