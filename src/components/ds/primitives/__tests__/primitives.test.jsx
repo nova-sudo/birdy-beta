@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { Button, Badge, SegmentedTabs, Input, Kbd, KbdShortcut, Select, SelectTrigger, SelectValue, fieldVariants } from "@/components/ds"
+import { Button, Badge, SegmentedTabs, Tabs, TabsList, TabsTrigger, Input, Kbd, KbdShortcut, Select, SelectTrigger, SelectValue, fieldVariants } from "@/components/ds"
 
 describe("Button", () => {
   it("defaults to the outline variant at control height", () => {
@@ -106,6 +106,74 @@ describe("SegmentedTabs", () => {
     expect(screen.getByRole("tab", { name: /Beta/ }).getAttribute("aria-selected")).toBe("false")
     fireEvent.click(screen.getByRole("tab", { name: /Beta/ }))
     expect(onValueChange).toHaveBeenCalledWith("b")
+  })
+})
+
+describe("Tabs", () => {
+  const renderTabs = (listProps = {}, triggerProps = {}) =>
+    render(
+      <Tabs defaultValue="a">
+        <TabsList aria-label="t" {...listProps}>
+          <TabsTrigger value="a">Alpha</TabsTrigger>
+          <TabsTrigger value="b" {...triggerProps}>Beta</TabsTrigger>
+        </TabsList>
+      </Tabs>
+    )
+
+  it("framed renders a measured thumb on the rail, with the surface choosing the track", () => {
+    const { container, rerender } = renderTabs()
+    const list = screen.getByRole("tablist")
+    expect(list.className).toContain("bg-rail")
+    expect(list.className).not.toContain("bg-rail-frame")
+    expect(container.querySelector("[data-slot=tabs-thumb]")).not.toBeNull()
+    rerender(
+      <Tabs defaultValue="a">
+        <TabsList aria-label="t" surface="frame" size="sm" fill>
+          <TabsTrigger value="a">Alpha</TabsTrigger>
+        </TabsList>
+      </Tabs>
+    )
+    const frame = screen.getByRole("tablist")
+    expect(frame.className).toContain("bg-rail-frame")
+    expect(frame.className).toContain("auto-cols-fr")
+    expect(frame.getAttribute("data-size")).toBe("sm")
+  })
+
+  it("thumb motion respects reduced motion", () => {
+    const { container } = renderTabs()
+    const thumb = container.querySelector("[data-slot=tabs-thumb]")
+    expect(thumb.className).toContain("motion-safe:data-[landing]:animate-tab-land")
+    expect(thumb.className).not.toMatch(/(^|\s)(transition|duration-280)/)
+  })
+
+  it("underline has a bar thumb and chips have none", () => {
+    const { container, unmount } = renderTabs({ variant: "underline" })
+    expect(container.querySelector("[data-slot=tabs-thumb]").className).toContain("bg-foreground")
+    unmount()
+    const chips = renderTabs({ variant: "chips" })
+    expect(chips.container.querySelector("[data-slot=tabs-thumb]")).toBeNull()
+    expect(screen.getByRole("tab", { name: "Alpha" }).className).toContain("data-[state=active]:bg-foreground")
+  })
+
+  it("count renders a pill, tinted by attention", () => {
+    const { container, rerender } = renderTabs({}, { count: 4 })
+    const pill = container.querySelector("[data-slot=tabs-count]")
+    expect(pill.textContent).toBe("4")
+    expect(pill.className).toContain("bg-tab-count")
+    rerender(
+      <Tabs defaultValue="a">
+        <TabsList aria-label="t">
+          <TabsTrigger value="b" count={2} attention="danger">Beta</TabsTrigger>
+        </TabsList>
+      </Tabs>
+    )
+    expect(container.querySelector("[data-slot=tabs-count]").className).toContain("bg-destructive")
+  })
+
+  it("clicking a tab selects it", () => {
+    renderTabs()
+    fireEvent.click(screen.getByRole("tab", { name: "Beta" }))
+    expect(screen.getByRole("tab", { name: "Beta" }).getAttribute("data-state")).toBe("active")
   })
 })
 

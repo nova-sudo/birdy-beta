@@ -132,7 +132,9 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, minim
             value={mode}
             onValueChange={handleMode}
             items={MODES}
-            className="w-full [&>button]:flex-1"
+            surface="frame"
+            size="sm"
+            fill
           />
 
           <button

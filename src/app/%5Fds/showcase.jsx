@@ -280,12 +280,25 @@ export default function Showcase() {
           <Tabs defaultValue="overview" className="w-full max-w-md">
             <TabsList>
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
-              <TabsTrigger value="leads">Leads</TabsTrigger>
+              <TabsTrigger value="campaigns" count={3}>Campaigns</TabsTrigger>
+              <TabsTrigger value="leads" count={412} attention>Leads</TabsTrigger>
             </TabsList>
             <TabsContent value="overview" className="text-sm text-muted-foreground">Harbour Dental at a glance.</TabsContent>
             <TabsContent value="campaigns" className="text-sm text-muted-foreground">Three live campaigns.</TabsContent>
             <TabsContent value="leads" className="text-sm text-muted-foreground">412 leads this week.</TabsContent>
+          </Tabs>
+          <Tabs defaultValue="overview">
+            <TabsList variant="underline" size="sm">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="campaigns">Campaigns</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tabs defaultValue="all">
+            <TabsList variant="chips">
+              <TabsTrigger value="all">All</TabsTrigger>
+              <TabsTrigger value="open" count={8}>Open</TabsTrigger>
+              <TabsTrigger value="unset" warning>No location</TabsTrigger>
+            </TabsList>
           </Tabs>
           <SegmentedTabs
             value={segment}

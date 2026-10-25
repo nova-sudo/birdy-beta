@@ -109,7 +109,7 @@ describe("/clients/[id]", () => {
   it("has five underline tabs and opens on Overview", async () => {
     render(<ClientDetailsPage />)
     await screen.findByRole("heading", { level: 1, name: "Glow Clinic" })
-    const tabs = screen.getAllByRole("tab").filter((t) => t.getAttribute("data-slot") === "tabs-trigger")
+    const tabs = screen.getAllByRole("tab").filter((t) => t.closest('[aria-label="Client workspace"]'))
     expect(tabs.map((t) => t.textContent)).toEqual(["Overview", "Ask Birdy", "Marketing", "Call Centre", "Leads"])
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
     expect(document.querySelector('[data-ds="tabs"]')).not.toBeNull()

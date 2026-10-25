@@ -219,7 +219,7 @@ export default function AskBirdyPage() {
           value={scopeFilter}
           onValueChange={setScopeFilter}
           size="sm"
-          className="w-full [&>button]:flex-1"
+          fill
         />
       </div>
 

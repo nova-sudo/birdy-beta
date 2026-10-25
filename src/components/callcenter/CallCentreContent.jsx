@@ -954,7 +954,7 @@ export function CallCentreContent({
 
       {/* Radix mounts only the selected panel; each carries its own fetch. */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList aria-label="Sales Hub section">
+        <TabsList variant="underline" aria-label="Sales Hub section">
           {sectionTabs.map((t) => (
             <TabsTrigger key={t.key} value={t.key}>
               <t.icon aria-hidden="true" />

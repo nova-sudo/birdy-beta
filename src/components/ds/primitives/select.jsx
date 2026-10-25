@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SelectPrimitive from "@radix-ui/react-select"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { triggerVariants } from "./field-variants"
@@ -37,7 +37,7 @@ function SelectTrigger({ className, size = "default", children, ...props }) {
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon />
+        <ChevronsUpDownIcon />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )

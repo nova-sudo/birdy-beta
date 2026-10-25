@@ -465,7 +465,7 @@ export default function ClientDetailsPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-0">
-        <TabsList aria-label="Client workspace" className="overflow-x-auto">
+        <TabsList variant="underline" aria-label="Client workspace">
           {CLIENT_TABS.map(({ key, label, icon: Icon }) => (
             <TabsTrigger key={key} value={key}>
               <Icon aria-hidden="true" />

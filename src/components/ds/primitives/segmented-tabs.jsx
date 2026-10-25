@@ -1,71 +1,40 @@
 "use client"
 
 import * as React from "react"
-import { motion } from "framer-motion"
 
-import { cn } from "@/lib/utils"
-
-// Thumb spring from the design spec. The app wraps in MotionConfig reducedMotion="user",
-// which turns the layout slide into an instant swap.
-const THUMB_SPRING = { type: "spring", damping: 22, stiffness: 260 }
+import { Tabs, TabsList, TabsTrigger } from "./tabs"
 
 /**
- * Muted track with a white thumb that slides to the active item.
+ * The framed rail with a sliding thumb, driven by an items array. A thin wrapper over `Tabs`.
  *
  * @param {object} props
  * @param {string} props.value Active item value.
  * @param {(value: string) => void} props.onValueChange
- * @param {{ value: string, label: React.ReactNode, count?: React.ReactNode }[]} props.items
+ * @param {{ value: string, label: React.ReactNode, count?: React.ReactNode, attention?: boolean|"danger", tooltip?: React.ReactNode }[]} props.items
  * @param {"sm"|"md"} [props.size="md"]
+ * @param {"surface"|"frame"} [props.surface="surface"] What the rail sits on
+ * @param {boolean} [props.fill=false] The rail takes the full width, tabs share it equally
  * @param {string} [props.ariaLabel]
  * @param {string} [props.panelId] Id of the panel the tabs swap; tabs get `aria-controls` and an id of `${panelId}-tab-${value}` for the panel's `aria-labelledby`
  */
-function SegmentedTabs({ value, onValueChange, items, size = "md", ariaLabel, panelId, className }) {
-  const thumbId = React.useId()
-
+function SegmentedTabs({ value, onValueChange, items, size = "md", surface, fill, ariaLabel, panelId, className }) {
   return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      data-ds="segmented-tabs"
-      className={cn(
-        "inline-flex items-center gap-0.5 rounded-control bg-muted p-1",
-        className
-      )}
-    >
-      {items.map((item) => {
-        const selected = item.value === value
-        return (
-          <button
+    <Tabs value={value} onValueChange={onValueChange} data-ds="segmented-tabs" className="gap-0">
+      <TabsList aria-label={ariaLabel} size={size} surface={surface} fill={fill} className={className}>
+        {items.map((item) => (
+          <TabsTrigger
             key={item.value}
-            type="button"
-            role="tab"
-            id={panelId ? `${panelId}-tab-${item.value}` : undefined}
-            aria-controls={panelId}
-            aria-selected={selected}
-            onClick={() => onValueChange?.(item.value)}
-            className={cn(
-              "relative inline-flex items-center justify-center gap-1.5 rounded-sm font-medium whitespace-nowrap outline-none transition-colors duration-150 focus-visible:shadow-control-focus",
-              size === "sm" ? "h-6 px-2.5 text-xs" : "h-8 px-3 text-sm",
-              selected ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
+            value={item.value}
+            count={item.count}
+            attention={item.attention}
+            tooltip={item.tooltip}
+            {...(panelId ? { id: `${panelId}-tab-${item.value}`, "aria-controls": panelId } : {})}
           >
-            {selected && (
-              <motion.span
-                layoutId={thumbId}
-                aria-hidden
-                className="absolute inset-0 rounded-sm bg-background shadow-control"
-                transition={THUMB_SPRING}
-              />
-            )}
-            <span className="relative inline-flex items-center gap-1.5">{item.label}</span>
-            {item.count != null && (
-              <span className="num relative text-xs text-muted-foreground">{item.count}</span>
-            )}
-          </button>
-        )
-      })}
-    </div>
+            {item.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   )
 }
 
