@@ -172,7 +172,7 @@ export default function InstallPage() {
 
 function Shell({ children }) {
   return (
-    <div className="flex min-h-svh items-start justify-center bg-muted px-4 py-10">
+    <div className="flex min-h-svh items-start justify-center bg-frame px-4 py-10">
       <Surface className="flex w-full max-w-[480px] flex-col gap-6 p-6">{children}</Surface>
     </div>
   )

@@ -177,10 +177,10 @@ describe("SidebarJobs", () => {
 })
 
 describe("PageHeader", () => {
-  it("renders an h1 at text-2xl with description and actions", () => {
+  it("renders an h1 at 32px with description and actions", () => {
     render(<PageHeader eyebrow="Portfolio" title="Clients" description="All accounts" actions={<button>New</button>} />)
     const h1 = screen.getByRole("heading", { level: 1, name: "Clients" })
-    expect(h1.className).toContain("text-2xl")
+    expect(h1.className).toContain("text-[32px]")
     expect(screen.getByText("All accounts")).toBeTruthy()
     expect(screen.getByText("Portfolio")).toBeTruthy()
     expect(screen.getByRole("button", { name: "New" })).toBeTruthy()

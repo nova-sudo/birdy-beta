@@ -48,7 +48,7 @@ export default function AdminShell({ children }) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="grid h-[100dvh] w-full grid-cols-1 overflow-hidden bg-muted font-sans md:grid-cols-[236px_minmax(0,1fr)]">
+    <div className="grid h-[100dvh] w-full grid-cols-1 overflow-hidden bg-frame font-sans md:grid-cols-[236px_minmax(0,1fr)]">
       <AppSidebar {...SIDEBAR_PROPS} className="hidden w-full border-r-0 bg-transparent md:flex" />
       <div className="min-h-0 min-w-0 md:py-2 md:pr-2">
         <div className="flex h-full min-w-0 flex-col overflow-hidden bg-background md:rounded-frame md:shadow-surface">

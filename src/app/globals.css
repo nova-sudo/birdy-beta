@@ -84,9 +84,10 @@
 
 @layer base {
   :root {
-    /* Controls and surfaces sit on 12px (see --radius-control in @theme). The
-       radius-md..3xl steps in @theme inline are offsets from it. */
-    --radius: 12px;
+    /* Bytes' base: the radius-sm..3xl steps in @theme inline are offsets from
+       it (sm 6, md 8, lg 10, xl 12, 2xl 16, 3xl 24). Controls and surfaces use
+       the named radii in @theme. */
+    --radius: 10px;
 
     /* Shadows: tinted with the ink, never pure black. These override
        Tailwind's shadow-xs..2xl defaults (base layer beats the theme layer). */
@@ -112,13 +113,93 @@
 @theme static {
   --color-background: #FFFFFF;
   --color-foreground: #0A0A0A;
+  --color-card: #FFFFFF;
+  --color-card-foreground: #0A0A0A;
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: #0A0A0A;
   --color-body: #404040;
-  --color-muted: #F7F7F7;
+  --color-muted: #f4f4f5;
   --color-muted-foreground: #737373;
+  --color-secondary: #f4f4f5;
+  --color-secondary-foreground: #0A0A0A;
+  --color-accent: #f4f4f5;
+  --color-accent-foreground: #0A0A0A;
   --color-border: #E5E5E5;
+  --color-input: #E5E5E5;
+  --color-ring: var(--color-primary);
+
+  /* Primary family: Bytes' orange set with Birdy's violet. hover is lighter,
+     held darker, edge is the 1px ring, ink reads on primary-soft, soft-fg is
+     link text. */
   --color-primary: #5B3FD6;
+  --color-primary-hover: #6A50DC;
+  --color-primary-held: #5338CC;
+  --color-primary-edge: #4A30BC;
   --color-primary-soft: #EFECFB;
+  --color-primary-ink: #4A2FB5;
   --color-primary-foreground: #FFFFFF;
+  --color-soft-fg: #4F35C9;
+
+  /* Destructive buttons are a step stronger than the danger status colour. */
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-edge: #b91c1c;
+  --color-destructive-hover: #e53535;
+  --color-destructive-held: #c21f1f;
+  --color-menu-destructive: #dc2626;
+  --color-destructive-icon: #dc2626;
+
+  /* Greys. Frame is the app canvas and every Frame shell; muted is the menu
+     highlight and neutral fill; rail/rail-frame are tab tracks on a white
+     surface / on the frame; raised is controls, fields and the active nav row. */
+  --color-frame: #f7f7f8;
+  --color-rail: #f4f4f5;
+  --color-rail-frame: #ebebed;
+  --color-tab-thumb: #ffffff;
+  --color-tab-count: #0000000f;
+  --color-raised: #ffffff;
+  --color-raised-held: #f7f7f7;
+  --color-raised-hover: #ffffff;
+  --color-field-disabled: #fafafa;
+  --color-field-disabled-foreground: #a3a3a3;
+  --color-field-error: #b91c1c;
+  --color-ghost-hover: #f2f2f2;
+  --color-ghost-held: #eaeaea;
+  --color-dashed-edge: #00000038;
+  --color-dashed-edge-hover: #00000066;
+  --color-dashed-edge-held: #0000008c;
+  --color-dashed-foreground: #404040;
+  --color-hairline: #18181b14;
+  --color-surface-ring: #18181b12;
+  --color-divider: #f0f0f1;
+  --color-faint: #a3a3a3;
+  --color-ink-secondary: #3f3f46;
+  --color-metric-label: #525252;
+  --color-row-hover: #fafafa;
+  --color-row-selected: #f5f5f6;
+  --color-void-ink: #a3a3a3;
+  --color-skeleton: #f0f0f1;
+  --color-skeleton-shine: #f8f8f9;
+  --color-progress-track: #e4e4e7;
+  --color-kbd-edge: #e4e4e7;
+  --color-kbd-foreground: #52525b;
+  --color-kbd-on-primary: #ffffff33;
+  --color-day-outside: #d4d4d8;
+  --color-empty-frame: #fafafb;
+  --color-bezel: #ffffff47;
+
+  /* Tooltip: an ink pill; keycaps sit on it as a white wash. */
+  --color-tooltip: #0a0a0a;
+  --color-tooltip-foreground: #fafafa;
+  --color-tooltip-muted: #a1a1aa;
+  --color-tooltip-key: #ffffff24;
+
+  --color-sidebar: #f7f7f8;
+  --color-sidebar-foreground: #3f3f46;
+  --color-sidebar-accent: #ffffff;
+  --color-sidebar-accent-foreground: #0a0a0a;
+  --color-sidebar-border: #18181b14;
+  --color-sidebar-ring: var(--color-primary);
 
   --color-danger: #EF4444;
   --color-warning: #F59E0B;
@@ -132,8 +213,31 @@
   --color-warning-ink: #92400E;
   --color-success-ink: #166534;
   --color-info-ink: #1E40AF;
-  --color-neutral-soft: #F4F4F5;
-  --color-neutral-ink: #52525B;
+  --color-purple: #8b5cf6;
+  --color-purple-soft: #f5f3ff;
+  --color-purple-ink: #5b21b6;
+  --color-subdued: #a1a1aa;
+  --color-subdued-soft: #f4f4f5;
+  --color-subdued-ink: #52525b;
+  --color-neutral: #52525b;
+  --color-neutral-soft: #f4f4f5;
+  --color-neutral-ink: #27272a;
+  --color-alert-info: #eff6ff;
+  --color-alert-success: #f0fdf4;
+  --color-alert-warning: #fffbeb;
+  --color-alert-danger: #fef2f2;
+  --color-alert-neutral: #f4f4f5;
+  --color-alert-neutral-ink: #52525b;
+  --color-alert-neutral-icon: #71717a;
+
+  /* A delta is coloured by whether the change is good, not by its direction.
+     The arrow is the plain tone, the figure the darker ink. */
+  --color-delta-good: #16a34a;
+  --color-delta-good-ink: #15803d;
+  --color-delta-good-soft: #dcfce7;
+  --color-delta-bad: #dc2626;
+  --color-delta-bad-ink: #b91c1c;
+  --color-delta-bad-soft: #fee2e2;
 
   /* Chart series: Paper's Data series with the orange swapped for primary.
      6-8 are the extra hues a trend split by client needs (dashkit draws up to
@@ -146,18 +250,32 @@
   --color-chart-6: #2F6FD0;
   --color-chart-7: #CF4A3A;
   --color-chart-8: #8F5FC2;
+  /* Everything around the series: comparison line, grid, baseline, axis,
+     crosshair, tooltip, track, band and the row lift. */
+  --color-chart-comparison: #a1a1aa;
+  --color-chart-grid: #f0f0f1;
+  --color-chart-baseline: #e5e5e5;
+  --color-chart-axis: #a3a3a3;
+  --color-chart-crosshair: #0a0a0a33;
+  --color-chart-tooltip: #ffffff;
+  --color-chart-tooltip-edge: #0000001a;
+  --color-chart-track: #f4f4f5;
+  --color-chart-band: #0a0a0a0a;
+  --color-chart-row-hover: #f7f7f8;
 
-  --color-scrim: #0A0A0A2E;
+  --color-scrim: #0a0a0a66;
 
   --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   --text-xs: 13px;
+  --text-xs--line-height: 1rem;
   --text-sm: 14px;
   --text-base: 16px;
   --text-lg: 18px;
   --text-xl: 20px;
-  --text-2xl: 32px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 2rem;
   --text-figure: 28px;
   --text-figure--line-height: 34px;
 
@@ -165,21 +283,55 @@
   --spacing-control: 40px;
   --spacing-control-lg: 48px;
 
-  --radius-sm: 6px;
+  --radius-control-sm: 10px;
   --radius-control: 12px;
+  --radius-control-lg: 14px;
   --radius-surface: 12px;
   --radius-frame: 16px;
   --radius-overlay: 20px;
+  --radius-badge: 7px;
+  --radius-bezel: 27px;
 
-  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000F, 0 2px 4px -2px #0000000D;
-  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 60%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 14%, transparent), 0 1px 2px #0000000F;
+  /* Frames, surfaces, tables and cards are flat; only controls lift and only
+     overlays float. A bordered control is a 1px shadow ring, so hover and press
+     change ring and lift together without the box moving. Bytes' orange is the
+     violet primary here. */
+  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-held: 0 2px 5px #0000001a inset, 0 1px 1px #00000014 inset, 0 0 0 1px #00000021;
+  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent), 0 1px 2px #0000000F;
+  --shadow-focus-field: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --shadow-focus: 0 0 0 3px var(--color-background), 0 0 0 5px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-focus-inset: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
   --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
-  --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
+  --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
+  --shadow-field-disabled: 0 0 0 1px #0000000f;
+  --shadow-primary: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-primary-held: 0 2px 5px #00000047 inset, 0 0 0 1px var(--color-primary-edge);
+  --shadow-destructive: 0 1px 0 #ffffff2e inset, 0 0 0 1px #b91c1c, 0 1px 2px #0000001f, 0 2px 6px -2px #dc262659;
+  --shadow-destructive-held: 0 2px 5px #0000004d inset, 0 1px 1px #00000033 inset, 0 0 0 1px #a51a1a;
+  --shadow-rise: 0 0 0 1px #00000021, 0 1px 2px #0000000f, 0 4px 12px -4px #00000024;
+  --shadow-bubble: 0 0 0 1px var(--color-hairline), 0 1px 2px #0000000d;
+  --shadow-composer: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 6px 16px -6px #0000000f;
+  --shadow-frame: 0 0 0 1px var(--color-hairline);
+  --shadow-surface: 0 0 0 1px var(--color-surface-ring);
+  --shadow-empty-surface: 0 0 0 1px #18181b0f;
+  --shadow-kbd: inset 0 -1px 0 var(--color-kbd-edge);
   --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
   --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+  --shadow-bezel: 0 0 0 1px #ffffff66 inset, 0 24px 48px -16px #0000001f;
+  --shadow-overlay-frame: 0 0 0 1px #18181b14, 0 1px 2px #00000014;
+  --shadow-sheet: 0 0 0 1px #18181b14, -16px 0 40px -16px #0000001f;
+  --shadow-sheet-left: 0 0 0 1px #18181b14, 16px 0 40px -16px #0000001f;
+  --shadow-sheet-bottom: 0 0 0 1px #18181b14, 0 -8px 24px -8px #0000001f;
+  --shadow-sheet-top: 0 0 0 1px #18181b14, 0 8px 24px -8px #0000001f;
+  --shadow-toast: 0 0 0 1px #0000000f, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001f;
+  --shadow-tooltip: 0 4px 12px -2px #0000002e;
+  --shadow-tooltip-card: 0 0 0 1px #00000014, 0 8px 24px -6px #00000024;
 
   --ease-press: cubic-bezier(.2, 0, 0, 1);
   --ease-edge: cubic-bezier(.32, .72, 0, 1);
+  --ease-thumb: cubic-bezier(.3, 1.2, .5, 1);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -187,12 +339,12 @@
    ═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* Offsets from --radius, for the rounded-md..3xl utilities. */
+  /* Offsets from --radius (Bytes' ramp), for the rounded-sm..3xl utilities. */
+  --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  /* Tailwind's own 2xl/3xl are rem-based; on the round scale they sit above xl. */
-  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-xl: calc(var(--radius) + 2px);
+  --radius-2xl: calc(var(--radius) + 6px);
   --radius-3xl: calc(var(--radius) + 14px);
 
   /* Animations */
@@ -202,6 +354,8 @@
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-fade-out: fadeOut 0.3s ease-out;
   --animate-slide-in: slide-in 0.35s ease-out;
+  --animate-tab-land: tab-land 340ms cubic-bezier(0.2, 0, 0, 1);
+  --animate-skeleton: skeleton-sweep 1.4s linear infinite;
 
   @keyframes accordion-down {
     from {
@@ -259,6 +413,31 @@
     }
   }
 
+  /* The tab thumb's one bump as it lands: squashed, overshoots a hair, settles. */
+  @keyframes tab-land {
+    0% {
+      scale: 1 0.9;
+    }
+
+    45% {
+      scale: 1.03 1.02;
+    }
+
+    100% {
+      scale: 1 1;
+    }
+  }
+
+  @keyframes skeleton-sweep {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -100% 0;
+    }
+  }
+
   @keyframes slide-in {
     from {
       opacity: 0;
@@ -292,16 +471,14 @@
     border-color: var(--color-border);
   }
 
-  html {
-    font-size: 15.5px;
-  }
-
   body {
     @apply text-foreground;
-    /* The app sits on the muted canvas rather than flat white, so surfaces
+    /* The app sits on the frame canvas rather than flat white, so surfaces
        read as raised. Surfaces themselves are painted with --color-background. */
-    background-color: var(--color-muted);
+    background-color: var(--color-frame);
     font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+    /* Every number in tabular figures so money, counts and times line up. */
+    font-variant-numeric: tabular-nums;
     transition: background-color 0.5s ease, color 0.5s ease;
   }
 

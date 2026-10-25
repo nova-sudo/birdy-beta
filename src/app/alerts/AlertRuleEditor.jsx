@@ -224,7 +224,7 @@ export default function AlertRuleEditor({
                 e.preventDefault()
                 onSave()
               }}
-              className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto bg-muted p-4 md:grid-cols-[minmax(0,1fr)_280px]"
+              className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto bg-frame p-4 md:grid-cols-[minmax(0,1fr)_280px]"
             >
               {/* Left column */}
               <div className="flex min-w-0 flex-col gap-4">

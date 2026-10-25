@@ -130,7 +130,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-muted text-foreground">
+    <div className="flex min-h-screen w-full flex-col bg-frame text-foreground">
       {/* HEADER */}
       <header className="flex items-center justify-between px-6 py-5 md:px-10">
         <div className="flex items-center gap-2.5">

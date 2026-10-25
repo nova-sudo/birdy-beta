@@ -123,14 +123,14 @@ const FINDINGS = [
 ]
 
 const SWATCHES = [
-  ["background", "bg-background"], ["muted", "bg-muted"], ["foreground", "bg-foreground"], ["primary", "bg-primary"],
+  ["background", "bg-background"], ["frame", "bg-frame"], ["muted", "bg-muted"], ["foreground", "bg-foreground"], ["primary", "bg-primary"],
   ["primary-soft", "bg-primary-soft"], ["success", "bg-success"], ["warning", "bg-warning"], ["danger", "bg-danger"], ["info", "bg-info"],
   ["chart-1", "bg-chart-1"], ["chart-2", "bg-chart-2"], ["chart-3", "bg-chart-3"], ["chart-4", "bg-chart-4"],
 ]
 const TYPE = [
   ["text-xs", "text-xs", "13 · Captions and meta"], ["text-sm", "text-sm", "14 · Body and controls"], ["text-base", "text-base", "16 · Section titles"],
   ["text-lg", "text-lg", "18 · Card sub-figures"], ["text-xl", "text-xl", "20 · Page section headings"], ["text-figure", "text-figure", "28 · Metric figures"],
-  ["text-2xl", "text-2xl", "32 · Page titles and hero figures"],
+  ["text-2xl", "text-2xl", "24 · Card titles and hero figures"],
 ]
 const RADII = [["control", "rounded-control"], ["surface", "rounded-surface"], ["frame", "rounded-frame"], ["overlay", "rounded-overlay"]]
 const SHADOWS = [["control", "shadow-control"], ["surface", "shadow-surface"], ["floating", "shadow-floating"], ["overlay", "shadow-overlay"]]
@@ -213,7 +213,7 @@ export default function Showcase() {
           ))}
         </Row>
         <Row label="Shadow">
-          <div className="flex gap-6 rounded-frame bg-muted p-6">
+          <div className="flex gap-6 rounded-frame bg-frame p-6">
             {SHADOWS.map(([name, cls]) => (
               <div key={name} className="flex flex-col gap-1.5">
                 <span className={`size-20 rounded-surface bg-background ${cls}`} />

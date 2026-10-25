@@ -638,7 +638,7 @@ export default function MetricsHub() {
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) resetForm() }}>
         <DialogContent
-          className="flex h-[88vh] w-[min(1120px,94vw)] max-w-none flex-col gap-0 overflow-hidden bg-muted p-0 sm:max-w-none"
+          className="flex h-[88vh] w-[min(1120px,94vw)] max-w-none flex-col gap-0 overflow-hidden bg-frame p-0 sm:max-w-none"
           showCloseButton={false}
         >
           {/* Header */}
@@ -682,7 +682,7 @@ export default function MetricsHub() {
 
             {/* Body — Birdy AI mode */}
             {showBirdy && (
-              <div className="flex-1 min-h-0 flex flex-col bg-muted overflow-hidden">
+              <div className="flex-1 min-h-0 flex flex-col bg-frame overflow-hidden">
                 <div className="flex-1 min-h-0 h-full overflow-hidden">
                   <ChatConversation
                     key={birdyChatKey}

@@ -85,7 +85,7 @@ export function SettingsRail({ value, onChange, chips = {} }) {
       aria-orientation="vertical"
       data-slot="settings-rail"
       onKeyDown={onKeyDown}
-      className="flex max-w-full gap-1 overflow-x-auto rounded-frame bg-muted p-2 md:w-62 md:shrink-0 md:flex-col md:overflow-visible md:px-2.5 md:py-3"
+      className="flex max-w-full gap-1 overflow-x-auto rounded-frame bg-frame p-2 md:w-62 md:shrink-0 md:flex-col md:overflow-visible md:px-2.5 md:py-3"
     >
       {SETTINGS_GROUPS.map((group) => (
         <div key={group.label} role="presentation" className="flex gap-1 md:flex-col">

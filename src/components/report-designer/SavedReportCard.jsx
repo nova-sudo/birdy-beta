@@ -100,7 +100,7 @@ export default function SavedReportCard({ brief, onSaved }) {
       </div>
 
       <Dialog open={open} onOpenChange={(v) => !saving && setOpen(v)}>
-        <DialogContent className="w-[min(1160px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] max-w-none gap-0 overflow-y-auto bg-muted p-5 sm:max-w-none sm:p-6">
+        <DialogContent className="w-[min(1160px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] max-w-none gap-0 overflow-y-auto bg-frame p-5 sm:max-w-none sm:p-6">
           <DialogTitle className="text-lg font-semibold text-foreground">
             {mode === "editor" ? "Edit your Slack report" : "Redesign your Slack report"}
           </DialogTitle>

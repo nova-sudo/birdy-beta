@@ -4,7 +4,7 @@ import { Inbox } from "lucide-react"
 import { Frame, Surface, Notice, EmptyState, ErrorState, Skeleton, Spinner } from "@/components/ds"
 
 describe("Frame", () => {
-  it("renders the title as an h2 on a muted rounded-frame root", () => {
+  it("renders the title as an h2 on a frame rounded-frame root", () => {
     const { container } = render(
       <Frame title="Summary" meta="Last 7 days" actions={<button>Export</button>}>
         body
@@ -12,7 +12,7 @@ describe("Frame", () => {
     )
     expect(screen.getByRole("heading", { level: 2, name: "Summary" })).toBeTruthy()
     const root = container.firstChild
-    expect(root.className).toContain("bg-muted")
+    expect(root.className).toContain("bg-frame")
     expect(root.className).toContain("rounded-frame")
     expect(root.getAttribute("data-ds")).toBe("frame")
     expect(screen.getByText("Last 7 days").className).toContain("text-muted-foreground")

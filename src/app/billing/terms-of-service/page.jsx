@@ -84,7 +84,7 @@ export default function TermsOfService() {
         <meta name="description" content="Birdy AI Terms of Service" />
       </Head>
 
-      <div className="min-h-screen bg-muted font-sans text-base leading-[1.6] text-body">
+      <div className="min-h-screen bg-frame font-sans text-base leading-[1.6] text-body">
         <LegalHeader />
 
         <main className="max-w-4xl mx-auto px-8 py-16 pb-28">

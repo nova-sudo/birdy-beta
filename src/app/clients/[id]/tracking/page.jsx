@@ -146,7 +146,7 @@ export default function TrackingPortalPage() {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-32" />
         </div>
-        <div className="flex flex-col gap-3 rounded-frame bg-muted p-3">
+        <div className="flex flex-col gap-3 rounded-frame bg-frame p-3">
           <Skeleton className="h-6 w-56" />
           <Surface className="flex flex-col gap-3">
             <Skeleton className="h-4 w-full" />

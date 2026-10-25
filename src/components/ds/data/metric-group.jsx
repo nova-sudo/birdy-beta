@@ -16,7 +16,7 @@ function MetricGroup({ title, meta, action, items, className, ...props }) {
   return (
     <section
       data-ds="metric-group"
-      className={cn("flex flex-col gap-3 rounded-frame bg-muted p-3", className)}
+      className={cn("flex flex-col gap-3 rounded-frame bg-frame p-3", className)}
       {...props}
     >
       <header className="flex min-h-control-sm items-center justify-between gap-3 px-1">

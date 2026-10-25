@@ -159,7 +159,7 @@ export default function RootLayout({ children }) {
               <CreditsProvider>
               <DashboardControlsProvider>
               <PageHeaderProvider>
-              <div className="flex h-screen w-full flex-col overflow-hidden bg-muted font-sans">
+              <div className="flex h-screen w-full flex-col overflow-hidden bg-frame font-sans">
                 {/* Impersonation banner (shows only while an admin is impersonating) */}
                 <ImpersonationBar />
                 <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[236px_minmax(0,1fr)]">

@@ -21,7 +21,7 @@ function PageHeader({ eyebrow, title, description, actions, period, className })
     >
       <div className="min-w-0">
         {eyebrow && <p className="mb-1 text-xs font-medium text-muted-foreground">{eyebrow}</p>}
-        <h1 className="text-2xl font-semibold leading-tight text-foreground">{title}</h1>
+        <h1 className="text-[32px] font-semibold leading-9 text-foreground">{title}</h1>
         {description && <p className="mt-1 text-base text-muted-foreground">{description}</p>}
       </div>
       {(period || actions) && (

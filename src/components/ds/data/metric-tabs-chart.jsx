@@ -76,7 +76,7 @@ function MetricTabsChart({
   return (
     <div
       data-ds="metric-tabs-chart"
-      className={cn("flex min-w-0 flex-col rounded-frame bg-muted p-1 pb-0", className)}
+      className={cn("flex min-w-0 flex-col rounded-frame bg-frame p-1 pb-0", className)}
       {...props}
     >
       <div

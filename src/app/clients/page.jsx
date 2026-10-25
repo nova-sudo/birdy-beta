@@ -714,7 +714,7 @@ export default function ClientsPage() {
               </div>
 
               {/* ── Step content ──────────────────── */}
-              <div key={wizardStep} className="rounded-frame bg-muted text-foreground">
+              <div key={wizardStep} className="rounded-frame bg-frame text-foreground">
                 <div className="flex flex-col gap-6 p-6 md:p-8">
                   {/* === Step 1: Client name === */}
                   {wizardStep === 1 && (
