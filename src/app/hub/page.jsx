@@ -89,8 +89,9 @@ export default function HubPage() {
       <div className="flex flex-col gap-10">
         <section aria-labelledby="hub-agents" className="flex flex-col gap-4">
           <h2 id="hub-agents" className="text-lg font-semibold text-foreground">
-            Agents <small className="ml-1 text-sm font-normal text-muted-foreground">Birdy teammates you train on your strategy</small>
+            Agents
           </h2>
+          <p className="-mt-3 text-sm text-muted-foreground">Birdy teammates you train on your strategy</p>
           <div className="grid gap-4 md:grid-cols-2">
             <MediaBuyingAgentCard agent={mediaBuying} />
             <ComingSoonCard />
