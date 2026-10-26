@@ -253,7 +253,7 @@ export default function ColumnsMenu({
           type="button"
           variant="outline"
           aria-haspopup="dialog"
-          size="sm"
+          // It sits in table toolbars, whose controls are all md.
           className={buttonClassName}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

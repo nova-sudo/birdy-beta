@@ -417,7 +417,7 @@ export function LeadsContent({
         aria-label="Search leads"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="h-control-sm w-full sm:w-56"
+        className="w-full sm:w-72"
       />
 
       {facets.map((facet) => (
@@ -432,7 +432,7 @@ export function LeadsContent({
       ))}
 
       {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearAllFilters}>
+        <Button variant="ghost" onClick={clearAllFilters}>
           <XIcon aria-hidden />
           Clear
         </Button>

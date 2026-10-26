@@ -301,11 +301,7 @@ function PromoCodesTable({ codes, loading, onDelete }) {
       {
         id: "uses",
         accessorFn: (c) => c.uses,
-        header: ({ column }) => (
-          <div className="flex justify-end">
-            <DataTableColumnHeader column={column} title="Uses" className="ml-0 -mr-2" />
-          </div>
-        ),
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Uses" align="right" />,
         meta: { label: "Uses" },
         cell: ({ row }) => {
           const c = row.original;

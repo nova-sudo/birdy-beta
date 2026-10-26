@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
-import { DataTable, Frame, MoneyCell, StatusCell, TwoLineCell } from "@/components/ds"
+import { DataTable, DataTableColumnHeader, Frame, MoneyCell, StatusCell, TwoLineCell } from "@/components/ds"
 
 const data = [
   { id: "1", name: "Alpha", status: "live", spend: 1234.5 },
@@ -342,6 +342,27 @@ describe("Bytes shell and toolbar", () => {
     expect(trigger.className).toContain("w-20")
   })
 
+  it("right-aligns a number column's head: meta.align on a string header, or align on DataTableColumnHeader", () => {
+    const aligned = [
+      columns[0],
+      { ...columns[2], meta: { label: "Spend", align: "right" } },
+      {
+        id: "leads",
+        accessorFn: () => 3,
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Leads" align="right" />,
+      },
+    ]
+    render(<DataTable columns={aligned} data={data} />)
+    const [name, spend, leads] = within(table()).getAllByRole("columnheader")
+    expect(name.className).not.toContain("text-right")
+    expect(name.querySelector("[data-ds='column-header']").className).not.toContain("justify-end")
+    expect(spend.className).toContain("text-right")
+    expect(spend.querySelector("[data-ds='column-header']").className).toContain("justify-end")
+    expect(leads.querySelector("[data-ds='column-header']").className).toContain("justify-end")
+    // Still sortable.
+    expect(within(spend).getByRole("button", { name: "Spend" })).toBeInTheDocument()
+  })
+
   it("keeps the column heads while loading, with skeleton rows in the body", () => {
     render(<DataTable columns={columns} data={[]} loading />)
     expect(within(table()).getByRole("columnheader", { name: /Name/ })).toBeInTheDocument()
@@ -414,8 +435,22 @@ describe("DataTable row expansion", () => {
   it("gives child rows a muted background and an indented first cell", () => {
     render(<DataTable columns={cols} data={tree} {...expandable} state={{ expanded: { r1: true } }} />)
     const child = within(table()).getByText("Aura").closest("tr")
-    expect(child.className).toContain("bg-muted")
-    expect(within(table()).getByText("Aura").closest("td").className).toContain("pl-10")
+    expect(child.className).toContain("bg-row-child")
+    const cell = within(table()).getByText("Aura").closest("td")
+    // `first:` so it beats BODY_CELL's `first:pl-4`; a bare pl-10 loses to the variant.
+    expect(cell.className).toContain("first:pl-10")
+    expect(cell.className).not.toContain("first:pl-4")
+    const parentCell = within(table()).getByText("Rule one").closest("td")
+    expect(parentCell.className).toContain("first:pl-4")
+  })
+
+  it("a pinned child cell is opaque, so scrolled cells do not show through it", () => {
+    render(<DataTable columns={cols} data={tree} {...expandable} stickyFirstColumn state={{ expanded: { r1: true } }} />)
+    const cell = within(table()).getByText("Aura").closest("td")
+    expect(cell.className).toContain("sticky")
+    expect(cell.className).toContain("bg-row-child")
+    expect(cell.className).not.toMatch(/bg-[\w-]+\/\d+/)
+    expect(cell.className).not.toContain("bg-background")
   })
 
   it("pages the parent rows only: children do not count toward the page size", () => {

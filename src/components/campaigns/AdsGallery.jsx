@@ -55,7 +55,8 @@ export function AdsViewSwitch({ value, onChange }) {
             title={label}
             onClick={() => onChange(key)}
             className={cn(
-              "flex size-6 cursor-pointer items-center justify-center rounded-sm outline-none transition-colors focus-visible:shadow-control-focus",
+              // 32 squares in a 4 pad: 40 tall, the table toolbar's control height.
+              "flex size-8 cursor-pointer items-center justify-center rounded-sm outline-none transition-colors focus-visible:shadow-control-focus",
               selected ? "bg-background text-foreground shadow-control" : "text-muted-foreground hover:text-foreground"
             )}
           >

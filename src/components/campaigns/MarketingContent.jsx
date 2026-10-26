@@ -1240,10 +1240,10 @@ export function MarketingContent({
         aria-label={`Search ${activeTab}`}
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value)}
-        className="h-control-sm w-full sm:w-56"
+        className="w-full sm:w-72"
       />
       {hasSearch && (
-        <Button variant="ghost" size="sm" onClick={() => setSearchTerm("")}>
+        <Button variant="ghost" onClick={() => setSearchTerm("")}>
           <X aria-hidden />
           Clear
         </Button>

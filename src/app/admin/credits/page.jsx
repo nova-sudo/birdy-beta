@@ -299,11 +299,7 @@ function GrantCreditsDialog({ account, onClose, onGranted }) {
 // Right-aligned, sortable header for a number column.
 const numHeader = (title) =>
   function NumHeader({ column }) {
-    return (
-      <div className="flex justify-end">
-        <DataTableColumnHeader column={column} title={title} className="ml-0 -mr-2" />
-      </div>
-    );
+    return <DataTableColumnHeader column={column} title={title} align="right" />;
   };
 
 const subLine = (tone, children) => (
@@ -532,14 +528,14 @@ export default function AdminCreditsPage() {
             loading={accountsLoading}
             onGrant={setGrantAccount}
             toolbar={
-              <div className="relative w-full sm:w-64">
-                <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="relative w-full sm:w-72">
+                <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
                 <Input
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   placeholder="Search accounts…"
                   aria-label="Search accounts"
-                  className="h-control-sm pl-9"
+                  className="pl-10"
                 />
               </div>
             }

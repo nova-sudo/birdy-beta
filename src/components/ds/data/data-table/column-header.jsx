@@ -7,18 +7,23 @@ import { cn } from "@/lib/utils"
 
 /**
  * A column head: 14/500 muted. A sortable head is a button that cycles ascending, descending and
- * off; the sorted column turns ink with an arrow.
+ * off; the sorted column turns ink with an arrow. A right-aligned head (a number column) runs its
+ * label to the cell's right edge, where the figures end.
  *
  * @param {object} props
  * @param {import("@tanstack/react-table").Column} props.column
  * @param {React.ReactNode} props.title
+ * @param {"left"|"right"} [props.align] Defaults to the column's `meta.align`
  */
-function DataTableColumnHeader({ column, title, className }) {
+function DataTableColumnHeader({ column, title, align, className }) {
+  const right = (align ?? column.columnDef.meta?.align) === "right"
+  const root = cn(right ? "flex w-full items-center justify-end" : "inline-flex items-center", className)
+
   if (!column.getCanSort()) {
     return (
-      <div data-ds="column-header" className={cn("flex items-center", className)}>
+      <span data-ds="column-header" data-align={right ? "right" : undefined} className={root}>
         {title}
-      </div>
+      </span>
     )
   }
 
@@ -32,7 +37,7 @@ function DataTableColumnHeader({ column, title, className }) {
   }
 
   return (
-    <div data-ds="column-header" className={cn("flex items-center", className)}>
+    <span data-ds="column-header" data-align={right ? "right" : undefined} className={root}>
       <button
         type="button"
         onClick={toggle}
@@ -43,7 +48,7 @@ function DataTableColumnHeader({ column, title, className }) {
         {sorted === "asc" && <ArrowUpIcon aria-hidden className="size-3.5" />}
         {sorted === "desc" && <ArrowDownIcon aria-hidden className="size-3.5" />}
       </button>
-    </div>
+    </span>
   )
 }
 

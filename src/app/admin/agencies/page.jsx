@@ -56,14 +56,14 @@ export default function AdminAgenciesPage() {
           onViewChats={setChatsAgency}
           onDeleted={refetchAgencies}
           toolbar={
-            <div className="relative w-full sm:w-64">
-              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <div className="relative w-full sm:w-72">
+              <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search agencies or owners…"
                 aria-label="Search agencies or owners"
-                className="h-control-sm pl-9"
+                className="pl-10"
               />
             </div>
           }

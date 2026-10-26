@@ -291,6 +291,22 @@ describe("/clients", () => {
       expect(views.saveView).toHaveBeenCalledWith(["name", "status", "health", "leads", "cpl", "spend", "meta_campaigns"])
     })
 
+    it("every control in the table toolbar is md (40), the height of its search and Filter", async () => {
+      withExtras()
+      const user = userEvent.setup()
+      render(<ClientsPage />)
+      await openView(user)
+      await user.click(within(screen.getByRole("dialog")).getByText("Campaigns"))
+      const toolbar = screen.getByRole("toolbar")
+      for (const button of within(toolbar).getAllByRole("button")) {
+        if (button.closest("[data-ds='search-input']")) continue
+        expect(button.className).toContain("h-10")
+        expect(button.className).not.toContain("h-8")
+      }
+      expect(within(toolbar).getByRole("button", { name: "Save columns" })).toBeInTheDocument()
+      expect(within(toolbar).getByRole("searchbox").className).toContain("h-10")
+    })
+
     it("Save columns is not offered while the columns match the saved layout", () => {
       withExtras()
       views.savedColumns = ["name", "meta_campaigns"]
@@ -333,6 +349,19 @@ describe("/clients", () => {
       expect(heads().map((h) => h.textContent)).toEqual(["Client", "Leads", "Status", "Health", "Cost per lead", "Ad spend"])
       // Saved the way the pre-migration table did: debounced, the whole visible order.
       expect(views.saveViewDebounced).toHaveBeenCalledWith(["name", "leads", "status", "health", "cpl", "spend"])
+    })
+
+    it("a drag before the saved layout has loaded neither moves nor saves anything", () => {
+      withExtras()
+      views.viewsLoaded = false
+      views.savedColumns = ["name", "meta_campaigns", "leads"]
+      render(<ClientsPage />)
+      const heads = () => within(table()).getAllByRole("columnheader")
+      const before = heads().map((h) => h.textContent)
+      const target = heads().find((h) => h.textContent === "Status")
+      fireEvent.drop(target, { dataTransfer: { setData: vi.fn(), getData: () => "leads", effectAllowed: "" } })
+      expect(heads().map((h) => h.textContent)).toEqual(before)
+      expect(views.saveViewDebounced).not.toHaveBeenCalled()
     })
 
     it("a column cannot be dropped onto the locked Client column", () => {

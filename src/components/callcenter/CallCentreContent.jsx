@@ -175,7 +175,8 @@ function FilterButton({ count, children, width = "w-80" }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button size="sm">
+        {/* A table toolbar control: md, the toolbar's one height. */}
+        <Button>
           <SlidersHorizontalIcon />
           Filters
           {count > 0 && (
@@ -855,9 +856,9 @@ export function CallCentreContent({
   // filters, then the Columns menu.
   const toolbar = (filters) => (
     <>
-      <div className="relative w-full sm:w-56">
+      <div className="relative w-full sm:w-72">
         <SearchIcon
-          className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
         />
         <Input
@@ -866,7 +867,7 @@ export function CallCentreContent({
           aria-label="Search the table"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="h-control-sm pl-9"
+          className="pl-10"
         />
       </div>
       {filters}

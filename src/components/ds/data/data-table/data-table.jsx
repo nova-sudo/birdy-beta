@@ -72,7 +72,8 @@ const headerLabel = (column) =>
  * Both renderings are in the DOM; the container query hides the one that does not fit.
  *
  * Columns are TanStack `ColumnDef`s. `meta` opts a column into the toolbar:
- * `{ label, variant: "text" | "select" | "multiSelect", options: [{ value, label }], placeholder, cardHidden }`.
+ * `{ label, variant: "text" | "select" | "multiSelect", options: [{ value, label }], placeholder, cardHidden, align: "right" }`
+ * (`align: "right"` right-aligns the head, for a number column).
  * Keep `columns` and `data` referentially stable (memoise them): a new array each render re-runs the table.
  * Table and list both exist in the DOM, so tests should scope to `role=table` or `data-slot=data-table-card`.
  *
@@ -249,6 +250,7 @@ function DataTable({
                 style={minWidthStyle(column)}
                 className={cn(
                   HEAD_CELL,
+                  column.columnDef.meta?.align === "right" && "text-right",
                   onColumnReorder && !locked && "cursor-grab",
                   // A pinned head is opaque in whatever the heads sit on: the frame, or the surface when bare.
                   pinned && cn(STICKY, bare ? "bg-background" : "bg-frame"),
@@ -302,7 +304,7 @@ function DataTable({
           {...rowProps(row)}
           className={cn(
             "group/row outline-none focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-focus-inset",
-            row.depth > 0 && "bg-muted/40",
+            row.depth > 0 && "bg-row-child",
             rowProps(row).className
           )}
         >
@@ -314,9 +316,10 @@ function DataTable({
                 BODY_CELL,
                 rowHeight,
                 stickyFirstColumn && colIndex === 0 && STICKY,
-                // Child rows sit a step down: tinted, the first cell indented.
-                row.depth > 0 && "bg-muted/40",
-                row.depth > 0 && colIndex === 0 && "pl-10"
+                // Child rows sit a step down: tinted (opaque, so a pinned cell still hides what
+                // scrolls under it), the first cell indented past the parent's.
+                row.depth > 0 && "bg-row-child",
+                row.depth > 0 && colIndex === 0 && "first:pl-10"
               )}
             >
               {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -381,7 +384,7 @@ function DataTable({
                   data-slot="data-table-card"
                   data-depth={row.depth}
                   {...rowProps(row)}
-                  className={cn(MOBILE_ITEM, row.depth > 0 && "bg-muted/40 pl-8", rowProps(row).className)}
+                  className={cn(MOBILE_ITEM, row.depth > 0 && "bg-row-child pl-8", rowProps(row).className)}
                 >
                   {lead && (
                     <div className="mb-1.5 text-base font-medium">{flexRender(lead.column.columnDef.cell, lead.getContext())}</div>

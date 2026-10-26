@@ -87,11 +87,7 @@ const choiceClass = (selected) =>
 
 const numericHeader = (title) =>
   function NumericHeader({ column }) {
-    return (
-      <div className="flex justify-end">
-        <DataTableColumnHeader column={column} title={title} className="-mr-2" />
-      </div>
-    )
+    return <DataTableColumnHeader column={column} title={title} align="right" />
   }
 
 const dash = <span className="num block text-right text-sm text-muted-foreground">—</span>
@@ -372,6 +368,9 @@ export default function ClientsPage() {
   // list, so it auto-saves the way the pre-migration table saved a reorder
   // (debounced, so a flurry of drags is one request).
   const reorderColumn = useCallback((fromId, toId) => {
+    // Until the saved layout has loaded, the columns on screen are the default:
+    // saving them would overwrite the user's layout with it.
+    if (!viewsLoaded) return
     const from = visibleIds.indexOf(fromId)
     const to = visibleIds.indexOf(toId)
     if (from < 0 || to < 0 || LOCKED_COLUMNS.includes(fromId) || LOCKED_COLUMNS.includes(toId)) return
@@ -380,7 +379,7 @@ export default function ClientsPage() {
     const next = nameFirst(moved)
     setVisibleIds(next)
     saveViewDebounced(next)
-  }, [visibleIds, setVisibleIds, saveViewDebounced])
+  }, [viewsLoaded, visibleIds, setVisibleIds, saveViewDebounced])
 
   const applyColumnView = useCallback((s) => {
     if (Array.isArray(s.visibleColumns)) setVisibleIds(s.visibleColumns)
@@ -1172,7 +1171,7 @@ export default function ClientsPage() {
                   buttonClassName="ml-auto"
                 />
                 {columnsChanged && (
-                  <Button variant="ghost" size="sm" onClick={() => saveColumns()}>
+                  <Button variant="ghost" onClick={() => saveColumns()}>
                     Save columns
                   </Button>
                 )}

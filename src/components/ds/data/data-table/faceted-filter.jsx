@@ -131,7 +131,8 @@ function DataTableFacetedFilter({ column, title, options, multiple, value, onVal
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button data-ds="faceted-filter" variant="outline" size="sm" className="border-dashed">
+        {/* md: it sits in table toolbars beside the md search and Filter. */}
+        <Button data-ds="faceted-filter" variant="outline" className="border-dashed">
           <PlusCircleIcon aria-hidden />
           {title}
           {selected.size > 0 && (

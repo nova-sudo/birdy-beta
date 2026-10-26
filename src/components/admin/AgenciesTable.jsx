@@ -31,11 +31,7 @@ import { planTone, relative } from "@/components/admin/format"
 // Right-aligned, sortable header for a number column.
 const numHeader = (title) =>
   function NumHeader({ column }) {
-    return (
-      <div className="flex justify-end">
-        <DataTableColumnHeader column={column} title={title} className="ml-0 -mr-2" />
-      </div>
-    )
+    return <DataTableColumnHeader column={column} title={title} align="right" />
   }
 
 const numCell = (value) => <div className="num text-right text-sm text-body">{value}</div>
