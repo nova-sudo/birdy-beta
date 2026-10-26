@@ -5,6 +5,7 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"
 
 import { cn } from "@/lib/utils"
 import { Button } from "../primitives/button"
+import { DialogBezel, DialogFrame, OVERLAY_FOOTER, OVERLAY_MOTION, OVERLAY_SURFACE } from "./dialog"
 
 // Module-level store: confirm() pushes a request, <ConfirmHost/> renders the head of the queue.
 let queue = []
@@ -75,42 +76,49 @@ function ConfirmHost() {
       <AlertDialogPrimitive.Portal>
         <AlertDialogPrimitive.Overlay
           data-slot="confirm-overlay"
-          className="fixed inset-0 z-50 bg-scrim duration-200 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 motion-reduce:animate-none"
+          className={cn("fixed inset-0 z-50 bg-scrim", OVERLAY_MOTION)}
         />
-        <AlertDialogPrimitive.Content
-          data-ds="confirm"
-          data-slot="confirm-content"
-          className={cn(
-            "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-overlay bg-background p-6 font-sans text-foreground shadow-overlay outline-none duration-200 ease-edge sm:max-w-md data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 motion-reduce:animate-none"
-          )}
-        >
-          {request && (
-            <>
-              <div className="flex flex-col gap-2">
-                <AlertDialogPrimitive.Title className="text-lg font-semibold leading-tight">
-                  {request.title}
-                </AlertDialogPrimitive.Title>
-                <AlertDialogPrimitive.Description className="text-sm text-muted-foreground">
-                  {request.description}
-                </AlertDialogPrimitive.Description>
-              </div>
-              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-                <AlertDialogPrimitive.Cancel asChild>
-                  <Button variant="outline" onClick={() => settle(request, false)}>
-                    {request.cancelLabel}
-                  </Button>
-                </AlertDialogPrimitive.Cancel>
-                <AlertDialogPrimitive.Action asChild>
-                  <Button
-                    variant={request.tone === "danger" ? "destructive" : "primary"}
-                    onClick={() => settle(request, true)}
-                  >
-                    {request.confirmLabel}
-                  </Button>
-                </AlertDialogPrimitive.Action>
-              </div>
-            </>
-          )}
+        {/* The dialog's bezel and 400 frame: the question on the white surface, the answers in the footer strip. */}
+        <AlertDialogPrimitive.Content asChild>
+          <DialogBezel
+            data-ds="confirm"
+            data-slot="confirm-content"
+            className={cn(
+              "fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 outline-none",
+              OVERLAY_MOTION,
+              "data-[state=open]:zoom-in-[0.98] data-[state=closed]:zoom-out-[0.98]"
+            )}
+          >
+            <DialogFrame size="sm">
+              {request && (
+                <>
+                  <div data-slot="confirm-surface" className={cn(OVERLAY_SURFACE, "gap-1.5 p-6")}>
+                    <AlertDialogPrimitive.Title className="text-lg leading-6 font-semibold text-foreground">
+                      {request.title}
+                    </AlertDialogPrimitive.Title>
+                    <AlertDialogPrimitive.Description className="text-base leading-[22px] text-neutral">
+                      {request.description}
+                    </AlertDialogPrimitive.Description>
+                  </div>
+                  <div data-slot="confirm-footer" className={OVERLAY_FOOTER}>
+                    <AlertDialogPrimitive.Cancel asChild>
+                      <Button variant="outline" onClick={() => settle(request, false)}>
+                        {request.cancelLabel}
+                      </Button>
+                    </AlertDialogPrimitive.Cancel>
+                    <AlertDialogPrimitive.Action asChild>
+                      <Button
+                        variant={request.tone === "danger" ? "destructive" : "primary"}
+                        onClick={() => settle(request, true)}
+                      >
+                        {request.confirmLabel}
+                      </Button>
+                    </AlertDialogPrimitive.Action>
+                  </div>
+                </>
+              )}
+            </DialogFrame>
+          </DialogBezel>
         </AlertDialogPrimitive.Content>
       </AlertDialogPrimitive.Portal>
     </AlertDialogPrimitive.Root>

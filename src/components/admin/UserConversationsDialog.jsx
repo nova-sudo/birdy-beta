@@ -3,7 +3,7 @@
 import { formatDistanceToNow } from "date-fns"
 import { Slack, Globe, ChevronRight } from "lucide-react"
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
+  Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
 } from "@/components/ds"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { useUserConversations } from "@/lib/admin-api"
@@ -40,15 +40,16 @@ export default function UserConversationsDialog({ agency, onOpenSession, onClose
 
   return (
     <Dialog open={!!agency} onOpenChange={(o) => !o && onClose?.()}>
-      <DialogContent className="gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-border py-3.5 pl-5 pr-14">
+      <DialogContent>
+        <DialogHeader>
           <DialogDescription className="sr-only">Archived Birdy AI conversations for this account.</DialogDescription>
           <DialogTitle className="text-base">
             Conversations · <span className="text-primary">{agency?.owner}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[65vh] overflow-y-auto p-2">
+        {/* A list, so the body keeps only a list's 6 of padding. */}
+        <DialogBody className="gap-0 p-1.5">
           {isLoading && <ListSkeleton />}
           {!isLoading && sessions.length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">
@@ -81,7 +82,7 @@ export default function UserConversationsDialog({ agency, onOpenSession, onClose
               )
             })}
           </Stagger>
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

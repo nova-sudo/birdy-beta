@@ -38,12 +38,12 @@ export function TopupModal({ pack, email, onClose, onComplete }) {
     typeof window !== "undefined" ? `${window.location.origin}/billing?topup=success` : undefined;
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
-        <DialogHeader className="px-5 py-4 border-b border-border text-left">
-          <DialogTitle className="text-lg">{pack.credits.toLocaleString()} Birdy Credits</DialogTitle>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{pack.credits.toLocaleString()} Birdy Credits</DialogTitle>
           <DialogDescription>${pack.price} · Secure checkout powered by Whop</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[70vh] overflow-y-auto p-4">
+        <div>
           {appliedPromo && (
             <div className="mb-3 flex items-center gap-2 rounded-control bg-success-soft px-3 py-2 text-sm text-success-ink">
               <Check className="w-4 h-4 shrink-0" />

@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
   Sheet,
+  SheetBody,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -175,23 +176,22 @@ export default function AlertRuleEditor({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        className="gap-0 p-0 md:inset-y-2 md:right-2 md:h-auto md:w-[min(880px,calc(100%-16px))] md:max-w-none md:rounded-overlay"
-      >
-        <SheetHeader className="shrink-0 flex-row flex-wrap items-center justify-between gap-3 border-b border-border py-4 pr-14 pl-5">
-          <div className="min-w-0">
-            <SheetTitle>{editingAlert ? "Edit Alert" : "Create Alert"}</SheetTitle>
-            <SheetDescription>{description}</SheetDescription>
-          </div>
-          {!editingAlert && (
-            <SegmentedTabs ariaLabel="How to create the alert" value={mode} onValueChange={onModeChange} items={MODES} />
-          )}
+      <SheetContent size="lg" className="md:w-[min(880px,calc(100vw-1rem))]">
+        <SheetHeader
+          actions={
+            !editingAlert && (
+              <SegmentedTabs ariaLabel="How to create the alert" value={mode} onValueChange={onModeChange} items={MODES} />
+            )
+          }
+        >
+          <SheetTitle>{editingAlert ? "Edit Alert" : "Create Alert"}</SheetTitle>
+          <SheetDescription>{description}</SheetDescription>
         </SheetHeader>
 
         {/* Ask Birdy mode */}
         {mode === "birdy" && !editingAlert && (
           <>
-            <div className="min-h-0 flex-1 overflow-hidden">
+            <SheetBody className="gap-0 overflow-hidden p-0">
               <ChatConversation
                 key={chatKey}
                 page="alerts"
@@ -208,8 +208,8 @@ export default function AlertRuleEditor({
                   if (toolName === "create_alert") onAlertsChanged()
                 }}
               />
-            </div>
-            <SheetFooter className="shrink-0 flex-row justify-end border-t border-border px-5 py-3">
+            </SheetBody>
+            <SheetFooter>
               <Button onClick={() => onOpenChange(false)}>Close</Button>
             </SheetFooter>
           </>
@@ -218,13 +218,15 @@ export default function AlertRuleEditor({
         {/* Manual form mode */}
         {showForm && (
           <>
+            {/* Its own data-slot keeps the form on the sheet's frame: its sections are the white cards. */}
             <form
               id="create-alert-form"
+              data-slot="alert-rule-form"
               onSubmit={(e) => {
                 e.preventDefault()
                 onSave()
               }}
-              className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto bg-frame p-4 md:grid-cols-[minmax(0,1fr)_280px]"
+              className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-4 pb-1 md:grid-cols-[minmax(0,1fr)_280px]"
             >
               {/* Left column */}
               <div className="flex min-w-0 flex-col gap-4">
@@ -426,7 +428,7 @@ export default function AlertRuleEditor({
               </div>
             </form>
 
-            <SheetFooter className="shrink-0 flex-row justify-end border-t border-border px-5 py-3">
+            <SheetFooter>
               <Button onClick={() => onOpenChange(false)} disabled={saving}>
                 Cancel
               </Button>

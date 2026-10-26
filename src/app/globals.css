@@ -192,6 +192,9 @@
   --color-day-outside: #d4d4d8;
   --color-empty-frame: #fafafb;
   --color-bezel: #ffffff47;
+  /* Switch: the off track and the off thumb. */
+  --color-switch-off: #e5e5e5;
+  --color-switch-thumb-off: #ffffff;
 
   /* Tooltip: an ink pill; keycaps sit on it as a white wash. */
   --color-tooltip: #0a0a0a;
@@ -316,6 +319,12 @@
   --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
   --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
   --shadow-field-disabled: 0 0 0 1px #0000000f;
+  /* A checkbox is smaller than a field, so its ring is firmer to hold the same weight. On is the
+     primary edge plus a glow (Bytes' orange swapped for Birdy purple). */
+  --shadow-check: 0 0 0 1px #00000024, 0 1px 2px #00000014, 0 2px 4px -2px #0000000f;
+  --shadow-check-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000001a, 0 3px 6px -3px #0000001a;
+  --shadow-check-on: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 4px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-switch-thumb: 0 1px 3px #00000033, 0 0 0 0.5px #0000000f;
   --shadow-primary: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
   --shadow-primary-held: 0 2px 5px #00000047 inset, 0 0 0 1px var(--color-primary-edge);
   --shadow-destructive: 0 1px 0 #ffffff2e inset, 0 0 0 1px #b91c1c, 0 1px 2px #0000001f, 0 2px 6px -2px #dc262659;

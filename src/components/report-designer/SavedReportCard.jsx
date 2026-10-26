@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Pencil, Sparkles } from "lucide-react"
 import { toast } from "sonner"
-import { Button, Dialog, DialogContent, DialogDescription, DialogTitle, EmptyState, ErrorState } from "@/components/ds"
+import { Button, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, EmptyState, ErrorState } from "@/components/ds"
 import { reportApi, scheduleLabel } from "@/lib/report-designer"
 import ReportDesigner from "./ReportDesigner"
 import ReportEditor from "./ReportEditor"
@@ -100,15 +100,17 @@ export default function SavedReportCard({ brief, onSaved }) {
       </div>
 
       <Dialog open={open} onOpenChange={(v) => !saving && setOpen(v)}>
-        <DialogContent className="w-[min(1160px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] max-w-none gap-0 overflow-y-auto bg-frame p-5 sm:max-w-none sm:p-6">
-          <DialogTitle className="text-lg font-semibold text-foreground">
-            {mode === "editor" ? "Edit your Slack report" : "Redesign your Slack report"}
-          </DialogTitle>
-          <DialogDescription className="mb-4 mt-1 text-xs text-muted-foreground">
-            {mode === "editor"
-              ? "Build it from any Slack block: charts, tables, cards, buttons. Nothing changes until you press Save report."
-              : "Nothing changes until you press Save report."}
-          </DialogDescription>
+        <DialogContent size="2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {mode === "editor" ? "Edit your Slack report" : "Redesign your Slack report"}
+            </DialogTitle>
+            <DialogDescription>
+              {mode === "editor"
+                ? "Build it from any Slack block: charts, tables, cards, buttons. Nothing changes until you press Save report."
+                : "Nothing changes until you press Save report."}
+            </DialogDescription>
+          </DialogHeader>
           {mode === "editor" && (
             <ReportEditor
               brief={template || brief}

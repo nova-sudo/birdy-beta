@@ -369,7 +369,7 @@ export default function Showcase() {
           </Sheet>
           <Popover>
             <PopoverTrigger asChild><Button>Popover</Button></PopoverTrigger>
-            <PopoverContent className="text-sm">Spend is pacing to £28,400 of £30,000.</PopoverContent>
+            <PopoverContent className="p-4 text-sm">Spend is pacing to £28,400 of £30,000.</PopoverContent>
           </Popover>
           <DropdownMenu>
             <DropdownMenuTrigger asChild><Button>Dropdown</Button></DropdownMenuTrigger>

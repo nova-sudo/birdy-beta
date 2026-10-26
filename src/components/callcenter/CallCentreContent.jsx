@@ -187,7 +187,7 @@ function FilterButton({ count, children, width = "w-80" }) {
           <ChevronDownIcon />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className={`${width} flex flex-col gap-4`}>
+      <PopoverContent align="end" className={`${width} flex flex-col gap-4 p-4`}>
         {children}
       </PopoverContent>
     </Popover>

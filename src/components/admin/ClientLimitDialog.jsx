@@ -54,7 +54,7 @@ export default function ClientLimitDialog({ agency, onClose, onSaved }) {
 
   return (
     <Dialog open={!!agency} onOpenChange={(o) => !o && !saving && onClose?.()}>
-      <DialogContent className="sm:max-w-[440px]">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Client limit for {agency.owner}</DialogTitle>
           <DialogDescription>

@@ -408,7 +408,7 @@ function AlertsPageContent() {
 
       {/* ── Snooze Dialog ─────────────────────────────────────── */}
       <Dialog open={!!snoozeTarget} onOpenChange={open => !open && setSnoozeTarget(null)}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent size="sm">
           <DialogHeader>
             <DialogTitle>Snooze Alert</DialogTitle>
             <DialogDescription>
@@ -418,7 +418,7 @@ function AlertsPageContent() {
               }
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-2 py-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="snooze-hours">Snooze for</Label>
             <Select value={String(snoozeHours)} onValueChange={v => setSnoozeHours(Number(v))}>
               <SelectTrigger id="snooze-hours" className="w-full">

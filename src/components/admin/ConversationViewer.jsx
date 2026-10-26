@@ -2,7 +2,7 @@
 
 import { Slack, Globe } from "lucide-react"
 import {
-  Badge, Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
+  Badge, Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
 } from "@/components/ds"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import MessageBubble from "@/components/chat/MessageBubble"
@@ -36,9 +36,9 @@ export default function ConversationViewer({ sessionId, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose?.()}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-2xl">
-        {/* pr-14 keeps the source badge clear of the dialog's close button. */}
-        <DialogHeader className="border-b border-border py-3.5 pl-5 pr-14">
+      <DialogContent size="lg">
+        {/* The header strip's pr-14 keeps the source badge clear of the dialog's close button. */}
+        <DialogHeader>
           <DialogDescription className="sr-only">Read-only transcript of this conversation.</DialogDescription>
           <DialogTitle className="flex items-center gap-2 text-base">
             <BirdyAvatar size={28} />
@@ -54,7 +54,8 @@ export default function ConversationViewer({ sessionId, onClose }) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[70vh] space-y-4 overflow-y-auto bg-muted px-5 py-4">
+        {/* Muted under the bubbles so a white assistant bubble still reads as one. */}
+        <DialogBody className="bg-muted">
           {isLoading && <ThreadSkeleton />}
           {!isLoading && (data?.messages || [])
             .filter((m) => m.role === "user" || m.role === "assistant")
@@ -70,7 +71,7 @@ export default function ConversationViewer({ sessionId, onClose }) {
           {!isLoading && (data?.messages || []).length === 0 && (
             <p className="py-12 text-center text-sm text-muted-foreground">This conversation has no messages.</p>
           )}
-        </div>
+        </DialogBody>
       </DialogContent>
     </Dialog>
   )

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { Button, Badge, StateBadge, CheckDiscIcon, badgeStateOf, SegmentedTabs, Tabs, TabsList, TabsTrigger, Input, Kbd, KbdShortcut, Select, SelectTrigger, SelectValue, fieldVariants } from "@/components/ds"
+import { Button, Badge, StateBadge, CheckDiscIcon, badgeStateOf, SegmentedTabs, Tabs, TabsList, TabsTrigger, Input, Kbd, KbdShortcut, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, fieldVariants, Checkbox, Switch } from "@/components/ds"
 
 describe("Button", () => {
   it("defaults to the outline variant at control height", () => {
@@ -236,6 +236,45 @@ describe("Input / Kbd", () => {
     expect(el.className).toContain("data-[state=open]:shadow-focus-field")
   })
 
+  it("Select size on the root reaches the trigger", () => {
+    render(
+      <Select size="sm">
+        <SelectTrigger aria-label="pick"><SelectValue placeholder="x" /></SelectTrigger>
+      </Select>
+    )
+    expect(screen.getByLabelText("pick").className).toContain("h-8")
+    expect(screen.getByLabelText("pick").getAttribute("data-size")).toBe("sm")
+  })
+
+  it("an open Select lists rows on the list surface, sized by the root", () => {
+    Element.prototype.scrollIntoView ??= () => {}
+    Element.prototype.hasPointerCapture ??= () => false
+    const { rerender } = render(
+      <Select open value="a">
+        <SelectTrigger aria-label="pick"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="a">Alpha</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+    const content = document.querySelector("[data-slot=select-content]")
+    expect(content.className).toContain("rounded-control-lg")
+    expect(content.className).toContain("shadow-floating")
+    expect(content.className).toContain("motion-safe:data-[state=closed]:[animation-duration:140ms]")
+    const item = document.querySelector("[data-slot=select-item]")
+    expect(item.className).toContain("min-h-10")
+    expect(item.className).toContain("text-base")
+    rerender(
+      <Select open value="a" size="sm">
+        <SelectTrigger aria-label="pick"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="a">Alpha</SelectItem>
+        </SelectContent>
+      </Select>
+    )
+    expect(document.querySelector("[data-slot=select-item]").className).toContain("min-h-8")
+  })
+
   it("KbdShortcut labels keys for the platform", () => {
     render(<KbdShortcut keys={["mod", "i"]} />)
     const group = document.querySelector("[data-slot=kbd-group]")
@@ -246,6 +285,26 @@ describe("Input / Kbd", () => {
   it("Kbd renders children", () => {
     render(<Kbd>⌘K</Kbd>)
     expect(screen.getByText("⌘K").tagName).toBe("KBD")
+  })
+})
+
+describe("Checkbox / Switch", () => {
+  it("Checkbox rings with shadow-check and turns to shadow-check-on", () => {
+    render(<Checkbox aria-label="pick" defaultChecked />)
+    const el = screen.getByLabelText("pick")
+    expect(el.className).toContain("shadow-check")
+    expect(el.className).toContain("hover:shadow-check-hover")
+    expect(el.className).toContain("data-[state=checked]:shadow-check-on")
+    expect(el.className).not.toContain("shadow-control ")
+  })
+
+  it("Switch uses the off track and the thumb shadow", () => {
+    render(<Switch aria-label="toggle" />)
+    const el = screen.getByLabelText("toggle")
+    expect(el.className).toContain("data-[state=unchecked]:bg-switch-off")
+    const thumb = el.firstChild
+    expect(thumb.className).toContain("shadow-switch-thumb")
+    expect(thumb.className).toContain("bg-switch-thumb-off")
   })
 })
 

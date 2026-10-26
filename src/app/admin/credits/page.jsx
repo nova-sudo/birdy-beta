@@ -260,7 +260,7 @@ function GrantCreditsDialog({ account, onClose, onGranted }) {
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Grant free credits</DialogTitle>
           <DialogDescription>{account.email} — outside of any Whop purchase.</DialogDescription>

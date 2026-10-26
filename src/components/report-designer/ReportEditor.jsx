@@ -128,7 +128,7 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
           <Plus className="size-3.5" /> Insert live number
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] space-y-3">
+      <PopoverContent align="end" className="w-[340px] space-y-3 p-4">
         <Field label="What">
           <Pick value={kind} onChange={setKind}>
             {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}

@@ -147,9 +147,7 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[92vh] overflow-y-auto overflow-x-hidden p-5 sm:max-w-[920px] md:p-7"
-      >
+      <DialogContent size="xl">
         {/* sr-only so Radix has its accessible label without printing a second
             heading above ReviewStep's own — which already says what this is,
             and says it in the right typeface. Same pattern as the Add Client

@@ -107,12 +107,12 @@ function VideoPreviewDialog({ row, columns, onStatusToggle, toggling, onClose })
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b border-border px-4 py-3 pr-14 text-left">
+      <DialogContent size="lg">
+        <DialogHeader>
           <DialogTitle className="truncate">{title || "Ad preview"}</DialogTitle>
-          <DialogDescription className="text-xs">Preview rendered by Meta</DialogDescription>
+          <DialogDescription>Preview rendered by Meta</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_14rem]">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_14rem]">
         <div className="flex min-h-60 items-center justify-center overflow-auto rounded-surface bg-muted p-4">
           {state.status === "loading" && (
             <Skeleton className="h-[420px] w-full max-w-[500px]" aria-hidden="true" />

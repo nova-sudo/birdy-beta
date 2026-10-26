@@ -6,8 +6,11 @@ import {
   Checkbox,
   DataTable,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
   EmptyState,
   ErrorState,
@@ -637,18 +640,15 @@ export default function MetricsHub() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={(open) => { if (!open) resetForm() }}>
-        <DialogContent
-          className="flex h-[88vh] w-[min(1120px,94vw)] max-w-none flex-col gap-0 overflow-hidden bg-frame p-0 sm:max-w-none"
-          showCloseButton={false}
-        >
+        <DialogContent size="2xl" className="h-[88vh]" hideCloseButton>
           {/* Header */}
-          <div className="shrink-0 border-b border-border bg-background px-6 py-5">
+          <DialogHeader className="pr-5">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="min-w-0">
-                <DialogTitle className="text-xl font-semibold text-foreground">
+                <DialogTitle>
                   {editingMetric ? "Edit Metric" : duplicatingFrom ? "Duplicate Metric" : "Create Metric"}
                 </DialogTitle>
-                <DialogDescription className="mt-1 text-sm text-muted-foreground">
+                <DialogDescription className="mt-1">
                   {editingMetric
                     ? "Update the metric configuration."
                     : duplicatingFrom
@@ -678,11 +678,12 @@ export default function MetricsHub() {
                 />
               )}
             </div>
-          </div>
+          </DialogHeader>
 
             {/* Body — Birdy AI mode */}
             {showBirdy && (
-              <div className="flex-1 min-h-0 flex flex-col bg-frame overflow-hidden">
+              <>
+              <DialogBody className="gap-0 overflow-hidden p-0">
                 <div className="flex-1 min-h-0 h-full overflow-hidden">
                   <ChatConversation
                     key={birdyChatKey}
@@ -727,17 +728,16 @@ export default function MetricsHub() {
                     }}
                   />
                 </div>
-                <div className="shrink-0 px-7 py-3 border-t border-border bg-background flex justify-end">
-                  <Button variant="outline" size="sm" onClick={resetForm}>
-                    Close
-                  </Button>
-                </div>
-              </div>
+              </DialogBody>
+              <DialogFooter>
+                <Button onClick={resetForm}>Close</Button>
+              </DialogFooter>
+              </>
             )}
 
             {/* Body — Manual / Edit / Duplicate mode */}
             {showManual && (
-            <div className="px-7 py-6 overflow-y-auto flex-1">
+            <DialogBody>
               <div className="flex flex-col gap-6">
                 {/* Two-column layout */}
                 <div className="flex flex-col lg:flex-row gap-6 items-stretch">
@@ -1120,28 +1120,27 @@ export default function MetricsHub() {
                   </div>
                 </div>
               </div>
-            </div>
+            </DialogBody>
             )}
 
             {/* Footer — only shown in manual/edit/duplicate mode */}
             {showManual && (
-            <div className="bg-background px-7 py-4 border-t border-border flex-shrink-0">
-              <div className="flex flex-row justify-end gap-2">
-                <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
-                <Button
-                  onClick={handleCreateMetric}
-                  disabled={saving || isNameDuplicate || !_trimmedFormName}
-                >
-                  {saving
-                    ? "Saving..."
-                    : editingMetric
-                      ? "Update Metric"
-                      : duplicatingFrom
-                        ? "Save Duplicate"
-                        : "Save Metric"}
-                </Button>
-              </div>
-            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={resetForm} disabled={saving}>Cancel</Button>
+              <Button
+                variant="primary"
+                onClick={handleCreateMetric}
+                disabled={saving || isNameDuplicate || !_trimmedFormName}
+              >
+                {saving
+                  ? "Saving..."
+                  : editingMetric
+                    ? "Update Metric"
+                    : duplicatingFrom
+                      ? "Save Duplicate"
+                      : "Save Metric"}
+              </Button>
+            </DialogFooter>
             )}
         </DialogContent>
       </Dialog>

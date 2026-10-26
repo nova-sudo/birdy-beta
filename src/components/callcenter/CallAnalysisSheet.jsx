@@ -152,8 +152,8 @@ export function CallAnalysisButton({ row }) {
       </Button>
 
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="md:max-w-md">
-          <SheetHeader className="pr-14">
+        <SheetContent>
+          <SheetHeader>
             <SheetTitle className="truncate">Call analysis — {row.caller_name || row.to_number}</SheetTitle>
             <SheetDescription className="flex flex-wrap items-center gap-x-3 gap-y-1">
               {row.agent_name && (
@@ -165,9 +165,7 @@ export function CallAnalysisButton({ row }) {
               {row.call_time && <span>{new Date(row.call_time).toLocaleString()}</span>}
             </SheetDescription>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto px-4">
-            <CallAnalysisBody status={status} result={result} />
-          </div>
+          <CallAnalysisBody status={status} result={result} />
           <SheetFooter>
             <SheetClose asChild>
               <Button>Close</Button>

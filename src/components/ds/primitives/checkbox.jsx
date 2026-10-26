@@ -12,7 +12,8 @@ function Checkbox({ className, ...props }) {
       data-ds="checkbox"
       data-slot="checkbox"
       className={cn(
-        "peer size-4 shrink-0 rounded-sm bg-background shadow-control outline-none transition-[box-shadow,background-color] duration-150 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground focus-visible:shadow-control-focus aria-invalid:shadow-control-invalid disabled:cursor-not-allowed disabled:opacity-50",
+        // shadow-check is firmer than the field ring: a box this small needs it to hold the same weight.
+        "peer size-4 shrink-0 rounded-sm bg-raised shadow-check outline-none transition-[box-shadow,background-color] duration-150 hover:shadow-check-hover data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground data-[state=checked]:shadow-check-on focus-visible:shadow-control-focus aria-invalid:shadow-control-invalid disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}

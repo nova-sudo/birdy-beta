@@ -62,15 +62,20 @@ export { ProgressBar, progressTone } from "./data/progress-bar"
 // Overlays
 export {
   Dialog,
+  DialogBezel,
+  DialogBody,
   DialogClose,
+  DialogCloseButton,
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogFrame,
   DialogHeader,
   DialogOverlay,
   DialogPortal,
   DialogTitle,
   DialogTrigger,
+  dialogFrameVariants,
 } from "./overlays/dialog"
 export { confirm, ConfirmHost } from "./overlays/confirm"
 export {
@@ -79,10 +84,27 @@ export {
   SheetClose,
   SheetContent,
   SheetHeader,
+  SheetBody,
   SheetFooter,
   SheetTitle,
   SheetDescription,
+  sheetVariants,
 } from "./overlays/sheet"
+export {
+  LIST_CHECK_SIZE,
+  LIST_DESCRIPTION,
+  LIST_EMPTY,
+  LIST_ITEM_HOVER,
+  LIST_LABEL,
+  LIST_MOTION,
+  LIST_SEARCH,
+  LIST_SEPARATOR,
+  LIST_SURFACE,
+  ListSizeContext,
+  listItemVariants,
+  listSizeFor,
+  useListSize,
+} from "./overlays/list-variants"
 export { Popover, PopoverTrigger, PopoverContent, PopoverAnchor } from "./overlays/popover"
 export {
   DropdownMenu,

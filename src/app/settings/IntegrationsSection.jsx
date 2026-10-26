@@ -355,7 +355,7 @@ export function IntegrationsSection({
                       <DialogTitle>Connect HotProspector</DialogTitle>
                       <DialogDescription>Enter your HotProspector API credentials.</DialogDescription>
                     </DialogHeader>
-                    <div className="flex flex-col gap-4 py-2">
+                    <div className="flex flex-col gap-4">
                       <div className="flex flex-col gap-2">
                         <Label htmlFor="api_uid">API UID</Label>
                         <Input

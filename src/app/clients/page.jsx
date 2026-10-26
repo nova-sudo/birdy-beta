@@ -668,7 +668,7 @@ export default function ClientsPage() {
           }
         }}
       >
-        <DialogContent className="max-h-[95vh] overflow-y-auto overflow-x-hidden p-4 sm:max-w-2xl md:p-6">
+        <DialogContent size="lg">
           {/* sr-only title so Radix Dialog has accessible labelling */}
           <DialogHeader className="sr-only">
             <DialogTitle>Birdy Linking Wizard</DialogTitle>

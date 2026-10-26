@@ -126,7 +126,7 @@ function CreatePromoDialog({ open, onClose, targets, onCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) { setForm(EMPTY_FORM); onClose(); } }}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create promo code</DialogTitle>
           <DialogDescription>Discounts apply automatically at Whop checkout.</DialogDescription>

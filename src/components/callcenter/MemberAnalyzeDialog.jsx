@@ -38,8 +38,6 @@ import {
 // does anything) → Running (progress; closing keeps it running, see the run
 // store in analysis.js) → Results (stat tiles and a per-call list).
 
-const DIALOG_CLASS = "max-h-[85dvh] gap-0 overflow-hidden p-0 sm:max-w-xl grid-rows-[auto_minmax(0,1fr)_auto]"
-
 const batchSizes = (count) => {
   const sizes = []
   for (let left = count; left > 0; left -= MEMBER_ANALYSIS_BATCH) sizes.push(Math.min(MEMBER_ANALYSIS_BATCH, left))
@@ -256,13 +254,13 @@ export function MemberAnalyzeDialog({ member }) {
           {running ? `${run.done}/${run.total}` : "Analyze"}
         </Button>
       </DialogTrigger>
-      <DialogContent className={DIALOG_CLASS}>
-        <DialogHeader className="px-6 pt-6 pb-4 pr-14">
+      <DialogContent>
+        <DialogHeader>
           <DialogTitle>AI Call Analysis — {name}</DialogTitle>
           <DialogDescription>{subtitle}</DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-6 pb-4">
+        <div>
           {!run && (
             <EstimateStep
               id={`member-analysis-count-${member.id ?? name}`}
@@ -284,7 +282,7 @@ export function MemberAnalyzeDialog({ member }) {
           {run?.status === "done" && <ResultsStep run={run} analyzed={analyzed} outcomes={outcomes} />}
         </div>
 
-        <DialogFooter className="px-6 pt-2 pb-6">
+        <DialogFooter>
           {!run && (
             <>
               <DialogClose asChild>

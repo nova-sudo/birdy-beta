@@ -626,7 +626,7 @@ export default function ClientDetailsPage() {
 
       {/* ── Integrations & Settings Dialog ───────────────────────────────────── */}
       <Dialog open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-4xl">
+        <DialogContent size="xl">
           <DialogHeader>
             <DialogTitle>{groupName} settings</DialogTitle>
             <DialogDescription>
@@ -752,7 +752,7 @@ export default function ClientDetailsPage() {
 
       {/* ── Delete Confirmation Modal ─────────────────────────────────────────── */}
       <Dialog open={deleteModalOpen} onOpenChange={(v) => { if (!deleteLoading) setDeleteModalOpen(v) }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
             <div className="mb-1 flex items-center gap-3">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-ink">

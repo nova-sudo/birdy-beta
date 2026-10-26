@@ -140,6 +140,24 @@ describe("EmptyState", () => {
     expect(screen.getByText("Add a client")).toBeTruthy()
     expect(screen.getByRole("button", { name: "Add" })).toBeTruthy()
   })
+
+  it("draws the 40 icon tile as a raised control", () => {
+    const { container } = render(<EmptyState icon={Inbox} title="Nothing yet" />)
+    const tile = container.querySelector("svg").parentElement
+    expect(tile.className).toContain("size-10")
+    expect(tile.className).toContain("rounded-control")
+    expect(tile.className).toContain("bg-raised")
+    expect(tile.className).toContain("shadow-control")
+  })
+
+  it("is plain by default and takes the faint empty ring as a surface", () => {
+    const { container, rerender } = render(<EmptyState title="Nothing yet" />)
+    expect(container.firstChild.className).not.toContain("shadow-empty-surface")
+    rerender(<EmptyState title="Nothing yet" variant="surface" />)
+    expect(container.firstChild.className).toContain("rounded-control")
+    expect(container.firstChild.className).toContain("bg-background")
+    expect(container.firstChild.className).toContain("shadow-empty-surface")
+  })
 })
 
 describe("ErrorState", () => {
@@ -164,10 +182,13 @@ describe("ErrorState", () => {
 })
 
 describe("Skeleton and Spinner", () => {
-  it("Skeleton pulses, honouring reduced motion", () => {
+  it("Skeleton is the skeleton grey with the sweep only under motion-safe", () => {
     const { container } = render(<Skeleton className="h-4" />)
-    expect(container.firstChild.className).toContain("animate-pulse")
-    expect(container.firstChild.className).toContain("motion-reduce:animate-none")
+    const cls = container.firstChild.className
+    expect(cls).toContain("bg-skeleton")
+    expect(cls).toContain("motion-safe:animate-skeleton")
+    expect(cls).toContain("var(--color-skeleton-shine)")
+    expect(cls).not.toContain("animate-pulse")
     expect(container.firstChild.getAttribute("data-ds")).toBe("skeleton")
   })
 

@@ -76,8 +76,8 @@ export function CallLogsDialog({ lead }) {
           {callsLabel}
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[85dvh] grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="px-6 pt-6 pb-4 pr-14">
+      <DialogContent size="lg">
+        <DialogHeader>
           <div className="flex items-start justify-between gap-4">
             <DialogTitle className="truncate">{lead.name}</DialogTitle>
             <Badge tone="primary" className="shrink-0">
@@ -96,7 +96,7 @@ export function CallLogsDialog({ lead }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="min-h-0 overflow-y-auto px-6 pb-4">
+        <div>
           {logs.length === 0 ? (
             <EmptyState
               icon={PhoneIcon}
@@ -154,7 +154,7 @@ export function CallLogsDialog({ lead }) {
           )}
         </div>
 
-        <DialogFooter className="px-6 pt-2 pb-6">
+        <DialogFooter>
           <DialogClose asChild>
             <Button>Close</Button>
           </DialogClose>

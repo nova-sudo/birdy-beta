@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ds"
 import { registry } from "@/lib/dashkit/registry"
 import { WidgetIcon } from "./WidgetIcon"
 
@@ -33,13 +33,13 @@ export function WidgetPicker({ open, onOpenChange, onPick }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[560px]">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Add a widget</DialogTitle>
           <DialogDescription>It goes at the end of the dashboard, ready to set up in the editor.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[60vh] gap-5 overflow-y-auto">
+        <div className="grid gap-5">
           {groups.map(([category, defs]) => (
             <div key={category}>
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
