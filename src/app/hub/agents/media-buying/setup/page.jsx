@@ -310,8 +310,8 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
     setActivating(true)
     setActivateError(null)
     try {
-      await activateAgent(agent.id)
-      onActivated()
+      const activated = await activateAgent(agent.id)
+      await onActivated(activated)
     } catch (err) {
       setActivateError(activationMessage(err))
       setActivating(false)
@@ -405,9 +405,25 @@ function SetupWizard() {
           agent={agent}
           clients={clients}
           onBack={() => go(2)}
-          onActivated={() => {
-            mutateAgents()
+          onActivated={async (activated) => {
+            // Seed both caches with the activated agent before navigating, so the
+            // agent page never flashes the draft state; then revalidate behind it.
+            const next = activated?.id ? activated : { ...agent, status: "active" }
+            await Promise.all([
+              mutateAgent(next, { revalidate: false }),
+              mutateAgents(
+                (list) => {
+                  const rest = Array.isArray(list) ? list : []
+                  return rest.some((a) => a.id === next.id)
+                    ? rest.map((a) => (a.id === next.id ? next : a))
+                    : [...rest, next]
+                },
+                { revalidate: false }
+              ),
+            ])
             router.push(AGENT_PATH)
+            mutateAgent()
+            mutateAgents()
           }}
         />
       )}

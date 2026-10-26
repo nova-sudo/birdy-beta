@@ -23,6 +23,7 @@ vi.mock("@/components/chat/ChatConversation", () => ({
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import SetupPage from "../page"
+import { useAgent, useAgents } from "@/lib/agents-api"
 
 const res = (body, status = 200) => ({
   ok: status >= 200 && status < 300,
@@ -176,6 +177,39 @@ describe("Media Buying Agent setup", () => {
     expect(await screen.findByText("Couldn't load your agent")).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument()
     expect(posts("/api/agents")).toBe(0)
+  })
+
+  it("the agent page's caches read active right after activation, before any refetch", async () => {
+    agents = [AGENT]
+    search = "step=3"
+    let seen = null
+    function Probe() {
+      const { agent } = useAgent("ag1")
+      const { agents: list } = useAgents()
+      return <div data-testid="probe" data-agent={agent?.status} data-list={list[0]?.status} />
+    }
+    push.mockImplementation((url) => {
+      if (url === "/hub/agents/media-buying") {
+        const el = screen.getByTestId("probe")
+        seen = [el.dataset.agent, el.dataset.list]
+      }
+    })
+    // The server keeps answering "draft" on reads: only the activation response says active.
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/ag1/activate"
+        ? Promise.resolve(res({ ...AGENT, status: "active" }))
+        : mockApi(path, init)
+    )
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
+        <Probe />
+        <SetupPage />
+      </SWRConfig>
+    )
+    await screen.findByText("Pause ads over target")
+    await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
+    await waitFor(() => expect(seen).not.toBeNull())
+    expect(seen).toEqual(["active", "active"])
   })
 
   it("lists what is missing on a 409", async () => {
