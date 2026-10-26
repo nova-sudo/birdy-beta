@@ -184,6 +184,8 @@ describe("buildFunnel", () => {
     expect(stages.map((s) => s.key)).toEqual(["leads", "engaged", "called", "closes"]);
     expect(stages.map((s) => s.stage)).toEqual(["Leads", "In CRM", "Called", "Closes"]);
     expect(stages.map((s) => s.count)).toEqual(["1,000", "400", "650", "50"]);
+    // The raw figure too, for step-to-step conversion.
+    expect(stages.map((s) => s.value)).toEqual([1000, 400, 650, 50]);
   });
 
   it("shows each stage as a share of the cohort — Closes is the close rate", () => {

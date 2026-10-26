@@ -161,4 +161,4 @@ function FunnelBar({ steps = [], loading = false, className, ...props }) {
   )
 }
 
-export { FunnelBar }
+export { FunnelBar, conversion as stepConversion }

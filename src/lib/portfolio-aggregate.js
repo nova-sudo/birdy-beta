@@ -381,6 +381,8 @@ export function buildFunnel(current, previous) {
     return {
       key: s.key,
       stage: s.stage,
+      // The raw figure, for step-to-step conversion; `count` is for display.
+      value: Math.round(s.value),
       count: Math.round(s.value).toLocaleString(),
       // The first stage is the cohort itself; "100% of leads" is noise.
       share: s.key === "leads" ? null : share(s.value),

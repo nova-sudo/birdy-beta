@@ -681,7 +681,8 @@ describe("Call insights", () => {
     );
     await renderPage();
 
-    const notice = ds("notice");
+    // The funnel's diagnosis is a notice too; this is the one above the insights.
+    const notice = dsAll("notice").find((n) => n.textContent.includes("None of your clients use a call centre"));
     expect(notice).toHaveTextContent(
       "None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
     );
@@ -697,8 +698,81 @@ describe("Call insights", () => {
     useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { loading: true }));
     renderDashboard();
     expect(document.querySelector('[data-ds="metric-group"]')).toBeNull();
-    // LoadingBody's placeholders, including the full-width one for the insights.
-    expect(document.querySelectorAll('[data-ds="skeleton"].lg\\:col-span-2')).toHaveLength(1);
+    // LoadingBody's placeholders, including the full-width ones for the funnel
+    // and the insights.
+    expect(document.querySelectorAll('[data-ds="skeleton"].lg\\:col-span-2')).toHaveLength(2);
+  });
+});
+
+describe("Performance funnel", () => {
+  const funnel = () => ds("funnel-group");
+  const cells = () => Array.from(funnel().querySelectorAll('[data-slot="funnel-group-cell"]'));
+
+  it("shows the four stages, summed across clients, between By client and Call insights", async () => {
+    await renderPage();
+    expect(funnel()).toHaveTextContent("Performance funnel");
+    expect(funnel()).toHaveTextContent("From lead to close, across all clients");
+    expect(cells().map((c) => c.querySelector('[data-slot="metric-value"]').textContent)).toEqual([
+      "400",
+      "180",
+      "270",
+      "50",
+    ]);
+    expect(cells().map((c) => c.querySelector('[data-slot="funnel-group-label"]').textContent)).toEqual([
+      "Leads",
+      "Engaged",
+      "Called",
+      "Closes",
+    ]);
+    // 50 of 400 leads closed.
+    expect(cells()[3]).toHaveTextContent("12.5% of leads");
+
+    const order = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
+    expect(order(ds("breakdown"), funnel())).toBeTruthy();
+    expect(order(funnel(), ds("metric-group"))).toBeTruthy();
+  });
+
+  it("puts the step conversion between stages, skipping one above 100%", async () => {
+    await renderPage();
+    // 180/400 = 45%; Called (270) is not a subset of In CRM (180), so no pill;
+    // 50/270 = 18.5%.
+    const pills = Array.from(funnel().querySelectorAll('[data-slot="funnel-step"]')).map((p) => p.textContent);
+    expect(pills).toEqual(["Leads to Engaged: 45%", "Called to Closes: 19%"]);
+  });
+
+  it("shows Called as unavailable when no client dials", async () => {
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
+    );
+    await renderPage();
+    const called = cells()[2];
+    expect(called.querySelector("[title^='Not available']")).not.toBeNull();
+    expect(called.querySelector("[data-ds=delta]")).toBeNull();
+    // Neither pill touching it can be worked out.
+    expect(funnel().querySelectorAll('[data-slot="funnel-step"]')).toHaveLength(1);
+  });
+
+  it("sets the diagnosis in the frame footer", async () => {
+    await renderPage();
+    const notice = funnel().querySelector('[data-slot="frame-footer"] [data-ds="notice"]');
+    expect(notice).not.toBeNull();
+    expect(notice).toHaveTextContent(/Problem found|All looking good/);
+  });
+
+  it("asks for a comparable period when the window has none", async () => {
+    const user = userEvent.setup();
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
+    );
+    await renderPage();
+    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
+
+    await waitFor(() =>
+      expect(funnel().querySelector('[data-slot="frame-footer"]')).toHaveTextContent(
+        "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it."
+      )
+    );
+    expect(funnel().querySelector("[data-ds=delta]")).toBeNull();
   });
 });
 

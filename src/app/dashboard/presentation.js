@@ -2,8 +2,27 @@
 // wording and the shaping into ds component props live here so they can be
 // tested without rendering.
 
+import { CircleCheck, MessageCircle, PhoneCall, Users } from "lucide-react";
+
 /** Called is the one funnel stage a portfolio with no dialler cannot report. */
 export const CALL_CENTRE_FUNNEL_KEYS = ["called"];
+
+/**
+ * Each funnel stage's label, icon and chip tone. Tints run purple → blue →
+ * amber → green down the funnel. buildFunnel's own stage name for `engaged` is
+ * "In CRM"; the cell reads "Engaged", as in the design.
+ */
+export const FUNNEL_PRESENTATION = {
+  leads: { label: "Leads", icon: Users, tone: "primary" },
+  engaged: { label: "Engaged", icon: MessageCircle, tone: "info" },
+  called: { label: "Called", icon: PhoneCall, tone: "warning" },
+  closes: { label: "Closes", icon: CircleCheck, tone: "success" },
+};
+
+const FUNNEL_COMPARISON = "vs previous period";
+
+const NO_COMPARISON_PROMPT =
+  "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it.";
 
 /**
  * Which of the six call-insight figures a call centre has to report for.
@@ -131,6 +150,52 @@ export function comparableFunnel(funnel, hasCallCentre) {
     const { direction, delta, ...rest } = stage;
     return rest;
   });
+}
+
+/**
+ * buildFunnel's stages as FunnelGroup stages. The last stage is captioned with
+ * its share of leads (on Closes, the close rate). Where no client has a dialler
+ * Called is flagged `unavailable` with no value, delta or tone — the page puts
+ * its placeholder in — rather than the zero it sums to.
+ *
+ * @param {{key: string, stage: string, value: number, share: string|null, direction?: "up"|"down", delta?: number}[]} funnel
+ * @param {boolean} hasCallCentre
+ */
+export function funnelStageItems(funnel, hasCallCentre) {
+  const stages = funnel ?? [];
+  return stages.map((stage, i) => {
+    const look = FUNNEL_PRESENTATION[stage.key] ?? { label: stage.stage };
+    if (!hasCallCentre && CALL_CENTRE_FUNNEL_KEYS.includes(stage.key)) {
+      return { key: stage.key, ...look, tone: "neutral", value: null, unavailable: true };
+    }
+    const moved = (stage.direction === "up" || stage.direction === "down") && Number.isFinite(stage.delta);
+    const last = i === stages.length - 1;
+    return {
+      key: stage.key,
+      ...look,
+      value: stage.value,
+      delta: moved
+        ? { change: stage.direction === "down" ? -stage.delta : stage.delta, comparison: FUNNEL_COMPARISON }
+        : undefined,
+      caption: last && stage.share ? `${stage.share} of leads` : undefined,
+    };
+  });
+}
+
+/**
+ * The diagnosis notice under the funnel: a warning naming the problem, a
+ * success otherwise, and with no previous period a prompt to pick one.
+ *
+ * @param {{state: "problem"|"healthy", title: string, body: string}} diagnosis diagnoseFunnel's verdict
+ * @returns {{tone: "warning"|"success"|"info", title?: string, body: string}}
+ */
+export function funnelNotice(diagnosis, { hasComparison }) {
+  if (!hasComparison) return { tone: "info", body: NO_COMPARISON_PROMPT };
+  return {
+    tone: diagnosis?.state === "problem" ? "warning" : "success",
+    title: diagnosis?.title,
+    body: diagnosis?.body ?? "",
+  };
 }
 
 /**

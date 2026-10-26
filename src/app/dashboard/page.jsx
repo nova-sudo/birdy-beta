@@ -1,12 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import {
   BirdyRead,
   Breakdown,
   EmptyState,
   ErrorState,
+  FunnelGroup,
   MetricGroup,
   MetricTabsChart,
   Notice,
@@ -37,6 +39,8 @@ import {
   clientBreakdown,
   comparableFunnel,
   costPerLeadSeries,
+  funnelNotice,
+  funnelStageItems,
   greeting,
   portfolioSummary,
   toFindings,
@@ -50,8 +54,8 @@ import {
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
 // Agency-level view: across all clients, what is happening and where is the
 // problem? Hub layout, option A: a greeting and the period, five metrics that
-// rise into one chart, then "By client" beside Birdy's read, then the call
-// insights.
+// rise into one chart, then "By client" beside Birdy's read, then the
+// performance funnel with its diagnosis, then the call insights.
 //
 // This file is only composition and wiring. The fetching is in
 // usePortfolioData, the arithmetic in @/lib/portfolio-*, and the wording and
@@ -77,6 +81,8 @@ const CLIENT_COLORS = [
   "var(--color-chart-4)",
 ];
 const OTHER_COLOR = "var(--color-muted-foreground)";
+
+const NOTICE_ICONS = { warning: TriangleAlert, success: CircleCheck, info: Info };
 
 const BIRDY_PROMPT = "What should I focus on across my clients right now?";
 
@@ -118,6 +124,7 @@ function LoadingBody() {
     <div className={BODY_GRID}>
       <Skeleton className="h-64 rounded-surface" />
       <Skeleton className="h-64 rounded-frame" />
+      <Skeleton className="h-52 rounded-frame lg:col-span-2" />
       <Skeleton className="h-40 rounded-frame lg:col-span-2" />
     </div>
   );
@@ -234,15 +241,32 @@ export default function PortfolioDashboardPage() {
   );
 
   // Diagnosed from the funnel rows with the call-centre stage blanked where no
-  // client dials, so the verdict never names a stage the data cannot see.
-  const findings = useMemo(() => {
-    const diagnosis = diagnoseFunnel(comparableFunnel(funnel, hasCallCentre));
-    return toFindings(
-      briefingFromDiagnosis(diagnosis, { hasComparison }),
-      suggestions.filter((s) => !removed[s.id]),
-      { onApply: handleApply, onDismiss: handleDismiss }
-    );
-  }, [funnel, hasCallCentre, hasComparison, suggestions, removed, handleApply, handleDismiss]);
+  // client dials, so the verdict never names a stage the data cannot see. The
+  // one verdict feeds both Birdy's read and the funnel's own notice.
+  const diagnosis = useMemo(
+    () => diagnoseFunnel(comparableFunnel(funnel, hasCallCentre)),
+    [funnel, hasCallCentre]
+  );
+
+  const findings = useMemo(
+    () =>
+      toFindings(
+        briefingFromDiagnosis(diagnosis, { hasComparison }),
+        suggestions.filter((s) => !removed[s.id]),
+        { onApply: handleApply, onDismiss: handleDismiss }
+      ),
+    [diagnosis, hasComparison, suggestions, removed, handleApply, handleDismiss]
+  );
+
+  // Called goes to the placeholder where nobody dials, as the call cells do.
+  const funnelStages = useMemo(
+    () =>
+      funnelStageItems(funnel, hasCallCentre).map((stage) =>
+        stage.unavailable ? { ...stage, value: <UnavailableValue /> } : stage
+      ),
+    [funnel, hasCallCentre]
+  );
+  const verdict = funnelNotice(diagnosis, { hasComparison });
 
   // Where no client has a dialler, the call-centre figures show the placeholder
   // rather than the zeroes they sum to. Which cells that touches is enumerated
@@ -349,6 +373,22 @@ export default function PortfolioDashboardPage() {
                 )}
                 <BirdyRead findings={findings} prompt={BIRDY_PROMPT} />
               </div>
+
+              <FunnelGroup
+                title="Performance funnel"
+                description="From lead to close, across all clients"
+                stages={funnelStages}
+                footer={
+                  <Notice
+                    tone={verdict.tone}
+                    icon={NOTICE_ICONS[verdict.tone]}
+                    title={verdict.title}
+                    className="my-1 flex-1"
+                  >
+                    {verdict.body || undefined}
+                  </Notice>
+                }
+              />
 
               {/* The cells stay even when none of them can be filled in — the
                   reader still needs to know which six figures Birdy tracks here,

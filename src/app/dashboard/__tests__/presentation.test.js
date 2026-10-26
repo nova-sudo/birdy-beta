@@ -6,6 +6,9 @@ import {
   clientBreakdown,
   comparableFunnel,
   costPerLeadSeries,
+  FUNNEL_PRESENTATION,
+  funnelNotice,
+  funnelStageItems,
   greeting,
   portfolioSummary,
   toFindings,
@@ -246,5 +249,74 @@ describe("callInsightItems / callsTabValue", () => {
     const items = callInsightItems(insights, false);
     expect(items.map((i) => Boolean(i.unavailable))).toEqual([true, true, false]);
     expect(callsTabValue(insights, false)).toBe("—");
+  });
+});
+
+describe("funnelStageItems", () => {
+  // buildFunnel's shape: a raw value, the formatted count, a share string and a
+  // numeric delta with its direction.
+  const funnel = [
+    { key: "leads", stage: "Leads", value: 4726, count: "4,726", share: null, direction: "up", delta: 8 },
+    { key: "engaged", stage: "In CRM", value: 2930, count: "2,930", share: "62.0%", direction: "up", delta: 4 },
+    { key: "called", stage: "Called", value: 1204, count: "1,204", share: "25.5%", direction: "down", delta: 6 },
+    { key: "closes", stage: "Closes", value: 240, count: "240", share: "5.1%", direction: "down", delta: 12 },
+  ];
+
+  it("labels the four stages and gives each its icon and tone", () => {
+    const items = funnelStageItems(funnel, true);
+    expect(items.map((i) => i.label)).toEqual(["Leads", "Engaged", "Called", "Closes"]);
+    expect(items.map((i) => i.tone)).toEqual(["primary", "info", "warning", "success"]);
+    for (const item of items) expect(item.icon).toBe(FUNNEL_PRESENTATION[item.key].icon);
+  });
+
+  it("passes the raw value and a signed delta against the previous period", () => {
+    const items = funnelStageItems(funnel, true);
+    expect(items.map((i) => i.value)).toEqual([4726, 2930, 1204, 240]);
+    expect(items.map((i) => i.delta?.change)).toEqual([8, 4, -6, -12]);
+    expect(items[0].delta.comparison).toBe("vs previous period");
+  });
+
+  it("captions only the last stage, with its share of leads", () => {
+    const items = funnelStageItems(funnel, true);
+    expect(items.map((i) => i.caption)).toEqual([undefined, undefined, undefined, "5.1% of leads"]);
+  });
+
+  it("leaves a stage with no movement without a delta", () => {
+    const flat = funnel.map(({ direction, delta, ...rest }) => rest);
+    expect(funnelStageItems(flat, true).every((i) => i.delta === undefined)).toBe(true);
+  });
+
+  it("makes Called unavailable when no client dials: no value, delta or tone", () => {
+    const called = funnelStageItems(funnel, false).find((i) => i.key === "called");
+    expect(called).toMatchObject({ unavailable: true, tone: "neutral", value: null });
+    expect(called.delta).toBeUndefined();
+    // The other three stages are unaffected.
+    expect(funnelStageItems(funnel, false).filter((i) => i.unavailable)).toHaveLength(1);
+  });
+});
+
+describe("funnelNotice", () => {
+  it("is a warning naming the problem", () => {
+    const notice = funnelNotice(
+      { state: "problem", title: "Problem found: close rate", body: "Closes are down 12%." },
+      { hasComparison: true }
+    );
+    expect(notice).toEqual({ tone: "warning", title: "Problem found: close rate", body: "Closes are down 12%." });
+  });
+
+  it("is a success when the funnel is healthy", () => {
+    const notice = funnelNotice(
+      { state: "healthy", title: "All looking good", body: "Leads are up 8%." },
+      { hasComparison: true }
+    );
+    expect(notice).toEqual({ tone: "success", title: "All looking good", body: "Leads are up 8%." });
+  });
+
+  it("asks for a comparable period when there is none", () => {
+    const notice = funnelNotice({ state: "healthy", title: "All looking good", body: "" }, { hasComparison: false });
+    expect(notice).toEqual({
+      tone: "info",
+      body: "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it.",
+    });
   });
 });

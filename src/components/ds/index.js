@@ -56,6 +56,7 @@ export { MetricTabsChart, fromPortfolioTabs } from "./data/metric-tabs-chart"
 export { Breakdown } from "./data/breakdown"
 export { BarList } from "./data/bar-list"
 export { FunnelBar } from "./data/funnel-bar"
+export { FunnelGroup } from "./data/funnel-group"
 export { Sparkline } from "./data/sparkline"
 export { ProgressBar, progressTone } from "./data/progress-bar"
 
