@@ -14,7 +14,7 @@
    Nothing else in this file restyles dashkit: its compiled, dk:-prefixed
    stylesheet is themed only through these variables. */
 .dk-root {
-  --dk-bg: var(--color-muted);
+  --dk-bg: var(--color-frame);
   --dk-card: var(--color-background);
   --dk-fg: var(--color-foreground);
   --dk-body: var(--color-body);
@@ -22,7 +22,7 @@
   --dk-subtle: var(--color-muted-foreground);
   --dk-border: var(--color-border);
   --dk-border-strong: color-mix(in srgb, var(--color-border), black 8%);
-  --dk-table-head: var(--color-muted);
+  --dk-table-head: var(--color-frame);
   --dk-accent: var(--color-primary);
   --dk-accent-tint: var(--color-primary-soft);
   --dk-accent-pale: color-mix(in srgb, var(--color-primary) 35%, transparent);

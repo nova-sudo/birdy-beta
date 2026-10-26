@@ -17,7 +17,7 @@ import { createTheme } from "dashkit/react"
  */
 export const DK_THEME_VARS = {
   // Surfaces and text
-  "--dk-bg": "var(--color-muted)",
+  "--dk-bg": "var(--color-frame)",
   "--dk-card": "var(--color-background)",
   "--dk-fg": "var(--color-foreground)",
   "--dk-body": "var(--color-body)",
@@ -25,7 +25,7 @@ export const DK_THEME_VARS = {
   "--dk-subtle": "var(--color-muted-foreground)",
   "--dk-border": "var(--color-border)",
   "--dk-border-strong": "color-mix(in srgb, var(--color-border), black 8%)",
-  "--dk-table-head": "var(--color-muted)",
+  "--dk-table-head": "var(--color-frame)",
   // Accent
   "--dk-accent": "var(--color-primary)",
   "--dk-accent-tint": "var(--color-primary-soft)",

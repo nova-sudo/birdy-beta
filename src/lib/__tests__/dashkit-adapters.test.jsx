@@ -160,6 +160,10 @@ describe("dashkit theme", () => {
     expect(DK_THEME_VARS["--dk-accent"]).toBe("var(--color-primary)")
     expect(DK_THEME_VARS["--dk-chart-2"]).toBe("var(--color-chart-2)")
     expect(DK_THEME_VARS["--dk-radius"]).toBe("var(--radius-frame)")
+    // The canvas and table heads are the ds frame grey (as the app canvas and
+    // DataTable heads), not the darker muted fill.
+    expect(DK_THEME_VARS["--dk-bg"]).toBe("var(--color-frame)")
+    expect(DK_THEME_VARS["--dk-table-head"]).toBe("var(--color-frame)")
     // No legacy aliases and no literal colours.
     const values = Object.values(DK_THEME_VARS).join()
     expect(values).not.toMatch(new RegExp("--p" + "d-|#[0-9a-f]{3,8}", "i"))
