@@ -60,6 +60,29 @@ describe("LeadHubOverview", () => {
     expect(document.querySelector(`[class*='${LEGACY_PREFIX}']`)).toBeNull()
   })
 
+  it("colours fewer lost leads as good news and fewer leads as bad", () => {
+    // This week: 4 leads, 1 lost a day. The week before: 8 leads, 5 lost a day.
+    const groups = [
+      {
+        ...GROUPS[0],
+        gohighlevel: {
+          daily_leads: [
+            ...[1, 2, 3, 4].map((o) => row(o)),
+            ...[9, 10, 11, 12].map((o) => row(o, { new_leads: 8, lost: 5 })),
+          ],
+        },
+      },
+    ]
+    render(<LeadHubOverview {...base} clientGroups={groups} />)
+    const lost = screen.getByRole("tab", { name: /Lost leads/ }).querySelector('[data-ds="delta"]')
+    expect(lost).toHaveTextContent(/^Down/)
+    expect(lost).toHaveAttribute("data-tone", "good")
+    expect(lost).toHaveTextContent("vs previous period")
+    const leads = screen.getByRole("tab", { name: /Total leads/ }).querySelector('[data-ds="delta"]')
+    expect(leads).toHaveTextContent(/^Down/)
+    expect(leads).toHaveAttribute("data-tone", "bad")
+  })
+
   it("selects another figure's trend", async () => {
     const user = userEvent.setup()
     render(<LeadHubOverview {...base} />)

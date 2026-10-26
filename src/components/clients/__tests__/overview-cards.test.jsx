@@ -53,6 +53,12 @@ describe("GoalsStrip", () => {
   it("loading shows skeleton cells", () => {
     render(<GoalsStrip loading />)
     expect(document.querySelectorAll('[data-ds="goals-strip"] [data-ds="skeleton"]').length).toBeGreaterThan(5)
+    // The label skeleton stands in for the label; it is not nested in MetricLabel's span.
+    const cells = document.querySelectorAll('[data-slot="metric-group-cell"]')
+    expect(cells).toHaveLength(5)
+    expect(cells[0].firstChild).toHaveAttribute("data-ds", "skeleton")
+    expect(document.querySelector('[data-ds="metric-label"]')).toBeNull()
+    expect(document.querySelector('span [data-ds="skeleton"]')).toBeNull()
   })
 })
 

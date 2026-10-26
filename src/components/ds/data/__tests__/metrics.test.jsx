@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
 import { fromPortfolioTabs, Delta, MetricCard, MetricGroup, MetricTabsChart, Breakdown, BarList } from "@/components/ds"
+import { metricGroupColumns } from "@/components/ds/data/metric-group"
 
 // recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
 globalThis.ResizeObserver ??= class {
@@ -86,7 +87,7 @@ describe("MetricGroup", () => {
     expect(grid).toHaveClass("grid", "grid-cols-2", "@3xl/metric-group:grid-cols-4")
     const cells = grid.querySelectorAll('[data-slot="metric-group-cell"]')
     expect(cells).toHaveLength(4)
-    expect(cells[0]).toHaveClass("p-5", "gap-1.5", "shadow-[1px_0_0_var(--color-divider),0_1px_0_var(--color-divider)]")
+    expect(cells[0]).toHaveClass("p-5", "gap-1.5", "shadow-[-1px_0_0_var(--color-divider),0_-1px_0_var(--color-divider)]")
     expect(root.querySelectorAll('[data-ds="surface"], [data-ds="metric-card"]')).toHaveLength(0)
   })
 
@@ -103,6 +104,22 @@ describe("MetricGroup", () => {
   it("columns follow the count: three go one-up then three across", () => {
     const { container } = render(<MetricGroup title="T" items={items.slice(0, 3)} />)
     expect(container.querySelector('[data-slot="metric-group"]')).toHaveClass("grid-cols-1", "@lg/metric-group:grid-cols-3")
+  })
+
+  it("odd counts pick columns that leave the fewest holes", () => {
+    expect(metricGroupColumns(1)).toBe("grid-cols-1")
+    expect(metricGroupColumns(4)).toBe("grid-cols-2 @3xl/metric-group:grid-cols-4")
+    expect(metricGroupColumns(5)).toBe(
+      "grid-cols-2 @3xl/metric-group:grid-cols-3 @6xl/metric-group:grid-cols-5"
+    )
+    expect(metricGroupColumns(6)).toBe("grid-cols-2 @3xl/metric-group:grid-cols-3")
+    expect(metricGroupColumns(7)).toBe("grid-cols-2 @3xl/metric-group:grid-cols-4")
+    expect(metricGroupColumns(8)).toBe("grid-cols-2 @3xl/metric-group:grid-cols-4")
+    // Past eight the group still shows eight.
+    expect(metricGroupColumns(12)).toBe(metricGroupColumns(8))
+    const six = Array.from({ length: 6 }, (_, i) => ({ key: `k${i}`, label: `L${i}`, value: i }))
+    const { container } = render(<MetricGroup title="T" items={six} />)
+    expect(container.querySelector('[data-slot="metric-group"]')).toHaveClass("grid-cols-2", "@3xl/metric-group:grid-cols-3")
   })
 
   it("loading keeps the labels and skeletons the figures", () => {
@@ -215,6 +232,19 @@ describe("MetricTabsChart states and adapter", () => {
     expect(screen.getByRole("tab", { name: /C/ })).toBeDisabled()
     // A falling cost is good news.
     expect(screen.getByRole("tab", { name: /A/ }).querySelector('[data-ds="delta"]')).toHaveAttribute("data-tone", "good")
+  })
+  it("adapter reads a pts delta as points, and lower-is-better as goodWhen down", () => {
+    const [ctr, lost, leads] = fromPortfolioTabs({
+      tabs: [
+        { key: "ctr", label: "CTR", value: "1.4%", direction: "up", delta: "0.3pts", polarity: "higher-is-better" },
+        { key: "lost", label: "Lost leads", value: "9", direction: "down", delta: "71.9%", polarity: "lower-is-better" },
+        { key: "leads", label: "Leads", value: "40", direction: "down", delta: "5.0%" },
+      ],
+      activeKey: "ctr",
+    })
+    expect(ctr.delta).toMatchObject({ change: 0.3, format: "points" })
+    expect(lost).toMatchObject({ delta: { change: -71.9, format: "percent" }, goodWhen: "down" })
+    expect(leads.goodWhen).toBe("up")
   })
   it("loading shows skeleton figures and no tablist", () => {
     const { container } = render(<MetricTabsChart metrics={metrics} value="a" loading />)

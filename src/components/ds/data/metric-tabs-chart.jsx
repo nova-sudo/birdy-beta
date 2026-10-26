@@ -4,6 +4,7 @@ import * as React from "react"
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from "recharts"
 
 import { cn } from "@/lib/utils"
+import { LOWER_IS_BETTER } from "@/lib/portfolio-metrics"
 import { Skeleton } from "../surfaces/skeleton"
 import { Delta } from "./delta"
 
@@ -259,14 +260,16 @@ function fromPortfolioTabs({ tabs, activeKey, chart, comparison }) {
     const magnitude = parseFloat(String(tab.delta ?? ""))
     const change =
       tab.direction && Number.isFinite(magnitude) ? (tab.direction === "down" ? -magnitude : magnitude) : undefined
+    // "1.2pts" is a difference between two rates (CTR), not a relative change.
+    const format = /pts?$/.test(String(tab.delta ?? "").trim()) ? "points" : "percent"
     const plotted = tab.plottable !== false && tab.key === activeKey && chart?.values?.length > 0
     return {
       key: tab.key,
       label: tab.label,
       value: tab.value,
       plottable: tab.plottable !== false,
-      delta: change === undefined ? undefined : { change, format: "percent", comparison },
-      goodWhen: tab.polarity === "lower-is-better" ? "down" : "up",
+      delta: change === undefined ? undefined : { change, format, comparison },
+      goodWhen: tab.goodWhen ?? (tab.polarity === LOWER_IS_BETTER ? "down" : "up"),
       series: plotted
         ? chart.values.map((current, i) => ({
             x: chart.labels?.[i] ?? "",

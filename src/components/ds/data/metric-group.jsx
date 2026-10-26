@@ -14,7 +14,7 @@ import { MetricLabel } from "./metric-label"
 /**
  * @typedef {object} MetricGroupItem
  * @property {string} key
- * @property {React.ReactNode} label
+ * @property {React.ReactNode} [label] Omit only while the labels themselves are loading (a skeleton stands in)
  * @property {number|React.ReactNode} value A number is formatted by `format`; anything else is shown as given
  * @property {"number"|"percent"|"duration"|"currency"|"string"} [format]
  * @property {string} [currency] ISO code for `format: "currency"`
@@ -29,17 +29,32 @@ import { MetricLabel } from "./metric-label"
 
 const numberFormat = new Intl.NumberFormat("en-GB")
 
-/** Static class strings per item count so Tailwind can see them. Two across on a phone. */
+/**
+ * Static class strings per item count so Tailwind can see them. Two across on a phone.
+ * 1-4 are Bytes; 5-8 (Birdy) pick column counts that leave the fewest holes: five
+ * reach one row only on a wide container, six go three by two.
+ */
 const COLUMNS = {
   1: "grid-cols-1",
   2: "grid-cols-2",
   3: "grid-cols-1 @lg/metric-group:grid-cols-3",
   4: "grid-cols-2 @3xl/metric-group:grid-cols-4",
+  5: "grid-cols-2 @3xl/metric-group:grid-cols-3 @6xl/metric-group:grid-cols-5",
+  6: "grid-cols-2 @3xl/metric-group:grid-cols-3",
+  7: "grid-cols-2 @3xl/metric-group:grid-cols-4",
+  8: "grid-cols-2 @3xl/metric-group:grid-cols-4",
+}
+
+/** The grid classes for a group of `count` cells. */
+function metricGroupColumns(count) {
+  return COLUMNS[Math.min(8, Math.max(1, count))]
 }
 
 /**
  * One cell: label (with info), 24px value, delta line, caption. Hairline seams
- * on its right and bottom edges, drawn as shadows so the grid clips the outer ones.
+ * on its left and top edges, drawn as shadows so the grid clips the outer ones.
+ * (Bytes draws right and bottom; left and top leave no stray seam beside the
+ * hole in a short last row.)
  *
  * @param {{item: MetricGroupItem, loading?: boolean}} props
  */
@@ -52,7 +67,7 @@ function MetricGroupCell({ item, loading = false }) {
     <div
       data-slot="metric-group-cell"
       className={cn(
-        "flex min-w-0 flex-col gap-1.5 p-5 shadow-[1px_0_0_var(--color-divider),0_1px_0_var(--color-divider)]",
+        "flex min-w-0 flex-col gap-1.5 p-5 shadow-[-1px_0_0_var(--color-divider),0_-1px_0_var(--color-divider)]",
         href &&
           "group/cell relative transition-colors has-[a:focus-visible]:bg-muted/60 hover:bg-muted/60 [&_button]:relative [&_button]:z-10"
       )}
@@ -64,15 +79,20 @@ function MetricGroupCell({ item, loading = false }) {
           className="absolute inset-0 outline-none"
         />
       )}
-      <span className="flex items-center justify-between gap-2 text-sm leading-[18px] font-medium text-muted-foreground">
-        <MetricLabel label={item.label} description={item.description} />
-        {href && (
-          <ArrowUpRight
-            aria-hidden
-            className="size-4 shrink-0 text-faint transition-colors group-hover/cell:text-foreground"
-          />
-        )}
-      </span>
+      {item.label == null ? (
+        // No label yet (the labels themselves are still loading): a label-sized bar.
+        <Skeleton className="h-[18px] w-20 rounded-sm bg-skeleton" />
+      ) : (
+        <span className="flex items-center justify-between gap-2 text-sm leading-[18px] font-medium text-muted-foreground">
+          <MetricLabel label={item.label} description={item.description} />
+          {href && (
+            <ArrowUpRight
+              aria-hidden
+              className="size-4 shrink-0 text-faint transition-colors group-hover/cell:text-foreground"
+            />
+          )}
+        </span>
+      )}
       {loading ? (
         <>
           <Skeleton className="h-[30px] w-28 rounded-control-sm bg-skeleton" />
@@ -142,7 +162,7 @@ function MetricGroupCell({ item, loading = false }) {
  */
 function MetricGroup({ items, loading = false, className, ...frame }) {
   const shown = items.slice(0, 8)
-  const columns = COLUMNS[Math.min(4, Math.max(1, shown.length))]
+  const columns = metricGroupColumns(shown.length)
 
   return (
     <Frame data-ds="metric-group" aria-busy={loading || undefined} className={className} {...frame}>
@@ -157,4 +177,4 @@ function MetricGroup({ items, loading = false, className, ...frame }) {
   )
 }
 
-export { MetricGroup, MetricGroupCell }
+export { MetricGroup, MetricGroupCell, metricGroupColumns }

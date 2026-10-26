@@ -8,7 +8,7 @@
 // ratio-style metrics like cost per lead or close rate, where lower or
 // bounded-at-100% breaks the metaphor.
 
-import { Badge, MetricGroup, Skeleton } from "@/components/ds"
+import { Badge, MetricGroup } from "@/components/ds"
 import { formatGoal, ON_TRACK, AT_RISK, BEHIND } from "@/lib/client-goals"
 
 // State reads in the status tones: on track is good, at risk is a warning,
@@ -48,11 +48,9 @@ function goalItem(goal, currencySymbol) {
   }
 }
 
-const LOADING_ITEMS = Array.from({ length: 5 }, (_, i) => ({
-  key: `loading-${i}`,
-  label: <Skeleton className="h-4 w-20" />,
-  value: "",
-}))
+// The goals' labels come with the data, so while loading the cells have none
+// and MetricGroup draws a label-sized skeleton in its place.
+const LOADING_ITEMS = Array.from({ length: 5 }, (_, i) => ({ key: `loading-${i}`, value: "" }))
 
 export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false, className }) {
   const anyTarget = goals.some((g) => g.target != null)
