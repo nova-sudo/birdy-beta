@@ -32,6 +32,7 @@ import {
   CommandSearch,
   ConfirmHost,
   MobileNavSheet,
+  PageCard,
   Toaster,
   TopBar,
 } from "@/components/ds";
@@ -205,21 +206,7 @@ export default function RootLayout({ children }) {
                       onToggleSidebar={toggleSidebar}
                       onSearch={openSearch}
                     />
-                    <div
-                      data-slot="page-surface"
-                      className="relative mx-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[24px] bg-background shadow-surface md:mx-0 md:mr-2 md:mb-2 md:rounded-frame"
-                    >
-                      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-                        {/* A page whose root is marked data-main-fill (its own
-                            panes scroll inside it) is held to main's height
-                            instead of growing with its content; data-main-bleed
-                            does the same and also drops the gutters and the
-                            1360 cap, so the page takes the whole card. */}
-                        <div className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col gap-4 px-4 pt-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-9 md:pb-10 has-[[data-main-fill]]:min-h-0 has-[[data-main-bleed]]:min-h-0 has-[[data-main-bleed]]:max-w-none has-[[data-main-bleed]]:p-0">
-                          {children}
-                        </div>
-                      </main>
-                    </div>
+                    <PageCard>{children}</PageCard>
                   </div>
                 </div>
 

@@ -36,7 +36,9 @@ import {
   SystemBanner,
   MobileNavSheet,
   NAV_ITEMS,
+  PageCard,
 } from "@/components/ds"
+import AdminShell from "@/components/admin/AdminShell"
 
 beforeEach(() => {
   pathnameMock.value = "/dashboard"
@@ -182,6 +184,51 @@ describe("TopBar", () => {
     const ask = screen.getAllByRole("button", { name: /Ask Birdy/ }).find((b) => b.textContent.includes("Ask Birdy"))
     expect(ask).toHaveClass("h-8", "pr-1.5")
     expect(ask.querySelectorAll('[data-slot="kbd"]')).toHaveLength(2)
+  })
+})
+
+describe("TopBar minimal", () => {
+  it("keeps the title, actions and menu button but drops search, Ask Birdy, the bell and the toggle", () => {
+    const onMenu = vi.fn()
+    render(<TopBar minimal title="Admin" actions={<button>Back</button>} onMenuClick={onMenu} />)
+    expect(screen.getByText("Admin")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Back" })).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }))
+    expect(onMenu).toHaveBeenCalled()
+    for (const name of ["Search", /Ask Birdy/, "Notifications", "Toggle sidebar"]) {
+      expect(screen.queryByRole("button", { name })).toBeNull()
+    }
+  })
+})
+
+describe("PageCard", () => {
+  it("is the white page card under the top bar, with main in the 1360 column", () => {
+    render(<PageCard><p>page body</p></PageCard>)
+    const card = document.querySelector('[data-ds="page-card"]')
+    expect(card).toHaveAttribute("data-slot", "page-surface")
+    expect(card).toHaveClass("bg-background", "shadow-surface", "md:mr-2", "md:mb-2", "md:rounded-frame")
+    const main = screen.getByRole("main")
+    expect(card.contains(main)).toBe(true)
+    expect(screen.getByText("page body").parentElement).toHaveClass("max-w-[1360px]", "mx-auto", "px-4", "md:px-10", "md:pt-9")
+  })
+})
+
+describe("AdminShell", () => {
+  it("sits on the canvas like the main shell: borderless top bar over the page card", () => {
+    render(<AdminShell><p>admin body</p></AdminShell>)
+    const bar = document.querySelector('[data-ds="top-bar"]')
+    expect(bar).toHaveClass("h-[52px]")
+    expect(bar.className).not.toMatch(/border-b|bg-background/)
+    expect(screen.getByRole("heading", { level: 1, name: "Admin" })).toBeTruthy()
+    expect(screen.getByText("Internal")).toBeTruthy()
+    expect(screen.getByRole("link", { name: /Back to Birdy/ })).toHaveAttribute("href", "/dashboard")
+    // The admin console is its own tool: no assistant, search or bell up there.
+    expect(screen.queryByRole("button", { name: /Ask Birdy/ })).toBeNull()
+
+    const card = document.querySelector('[data-ds="page-card"]')
+    expect(card.contains(bar)).toBe(false)
+    expect(card).toHaveTextContent("admin body")
+    expect(screen.getByRole("navigation", { name: "Main" })).toBeTruthy()
   })
 })
 

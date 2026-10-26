@@ -20,14 +20,18 @@ import { KbdShortcut } from "../primitives/kbd"
  *
  * Fits at 390px: the title truncates, search and Ask Birdy collapse to icon buttons below md.
  *
+ * `minimal` is the admin console's bar: the menu button, title and `actions` only, with no
+ * sidebar toggle, search, Ask Birdy or bell.
+ *
  * @param {object} props
  * @param {React.ReactNode} [props.title] Defaults to the title the current page published.
  * @param {React.ReactNode} [props.actions] Rendered before the bell, in addition to published page controls.
  * @param {() => void} [props.onMenuClick] Opens MobileNavSheet; the menu button shows below md.
  * @param {() => void} [props.onToggleSidebar] Moves the desktop sidebar between panel and rail.
  * @param {() => void} [props.onSearch] Called by the search icon button (below md).
+ * @param {boolean} [props.minimal=false] Admin console: no sidebar toggle, search, Ask Birdy or bell.
  */
-function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, className }) {
+function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, minimal = false, className }) {
   return (
     <header
       data-ds="top-bar"
@@ -45,16 +49,20 @@ function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, classN
       >
         <Menu />
       </Button>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="hidden text-ink-secondary md:inline-flex"
-        aria-label="Toggle sidebar"
-        onClick={onToggleSidebar}
-      >
-        <PanelLeft />
-      </Button>
-      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-hairline md:block" />
+      {!minimal && (
+        <>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="hidden text-ink-secondary md:inline-flex"
+            aria-label="Toggle sidebar"
+            onClick={onToggleSidebar}
+          >
+            <PanelLeft />
+          </Button>
+          <span aria-hidden className="hidden h-4 w-px shrink-0 bg-hairline md:block" />
+        </>
+      )}
 
       <div className="min-w-0 flex-1 truncate text-base font-semibold">
         {title ?? <PageHeaderTitle />}
@@ -63,18 +71,22 @@ function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, classN
       <div className="flex shrink-0 items-center gap-1 md:gap-2">
         <PageHeaderControls />
         {actions}
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={onSearch}>
-          <Search />
-        </Button>
-        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Ask Birdy" onClick={openBirdyChat}>
-          <Sparkles className="text-primary" />
-        </Button>
-        <Button variant="outline" size="sm" className="hidden pr-1.5 md:inline-flex" onClick={openBirdyChat}>
-          <Sparkles className="text-primary" />
-          Ask Birdy
-          <KbdShortcut keys={["mod", "j"]} />
-        </Button>
-        <NotificationsDropdown />
+        {!minimal && (
+          <>
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={onSearch}>
+              <Search />
+            </Button>
+            <Button variant="ghost" size="icon" className="md:hidden" aria-label="Ask Birdy" onClick={openBirdyChat}>
+              <Sparkles className="text-primary" />
+            </Button>
+            <Button variant="outline" size="sm" className="hidden pr-1.5 md:inline-flex" onClick={openBirdyChat}>
+              <Sparkles className="text-primary" />
+              Ask Birdy
+              <KbdShortcut keys={["mod", "j"]} />
+            </Button>
+            <NotificationsDropdown />
+          </>
+        )}
       </div>
     </header>
   )
