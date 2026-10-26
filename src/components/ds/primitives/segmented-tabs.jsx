@@ -10,7 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from "./tabs"
  * @param {object} props
  * @param {string} props.value Active item value.
  * @param {(value: string) => void} props.onValueChange
- * @param {{ value: string, label: React.ReactNode, count?: React.ReactNode, attention?: boolean|"danger", tooltip?: React.ReactNode }[]} props.items
+ * @param {{ value: string, label: React.ReactNode, count?: React.ReactNode, attention?: boolean|"danger", tooltip?: React.ReactNode, disabled?: boolean }[]} props.items
+ *   A disabled item with a `tooltip` still shows it on hover and focus, to say why it is off
  * @param {"sm"|"md"} [props.size="md"]
  * @param {"surface"|"frame"} [props.surface="surface"] What the rail sits on
  * @param {boolean} [props.fill=false] The rail takes the full width, tabs share it equally
@@ -28,6 +29,7 @@ function SegmentedTabs({ value, onValueChange, items, size = "md", surface, fill
             count={item.count}
             attention={item.attention}
             tooltip={item.tooltip}
+            disabled={item.disabled}
             {...(panelId ? { id: `${panelId}-tab-${item.value}`, "aria-controls": panelId } : {})}
           >
             {item.label}

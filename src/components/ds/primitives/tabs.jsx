@@ -320,6 +320,43 @@ function TabsTrigger({
   )
 
   if (!tooltip) return trigger
+
+  // A disabled button gets no pointer or focus events, so its tooltip (usually the reason it is
+  // off) hangs on a focusable wrapper instead, and the button lets the pointer through to it.
+  if (props.disabled) {
+    const plain = (
+      <TabsPrimitive.Trigger
+        data-slot="tabs-trigger"
+        data-count={hasCount || undefined}
+        value={value}
+        className={cn(
+          "relative inline-flex items-center font-medium whitespace-nowrap tabular-nums outline-none select-none",
+          "pointer-events-none disabled:opacity-40",
+          TRIGGER_SIZE[variant][size],
+          TRIGGER_VARIANT[variant],
+          className
+        )}
+        {...props}
+      >
+        {content}
+      </TabsPrimitive.Trigger>
+    )
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span
+            data-slot="tabs-trigger-disabled"
+            tabIndex={0}
+            className="inline-flex cursor-not-allowed rounded-control-sm outline-none focus-visible:shadow-focus-inset"
+          >
+            {plain}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent className="max-w-[260px]">{tooltip}</TooltipContent>
+      </Tooltip>
+    )
+  }
+
   return (
     <Tooltip>
       {trigger}

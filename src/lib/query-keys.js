@@ -44,4 +44,14 @@ export const queryKeys = {
   dashboardCatalog: () => "/api/dashboards/catalog",
 
   callCenter: (params) => `/api/hotprospector/call-center?${params}`,
+
+  // BirdyHub agents. Mutations through lib/agents-api revalidate these.
+  agents: () => "/api/agents",
+  agent: (id) => `/api/agents/${id}`,
+  agentRules: (id) => `/api/agents/${id}/rules`,
+  agentWork: (id) => `/api/agents/${id}/work`,
+  agentActivity: (id) => `/api/agents/${id}/activity`,
+  agentConfidence: (id) => `/api/agents/${id}/confidence`,
+  agentMemory: (id) => `/api/agents/${id}/memory`,
+  agentJob: (id, jobId) => `/api/agents/${id}/jobs/${jobId}`,
 }

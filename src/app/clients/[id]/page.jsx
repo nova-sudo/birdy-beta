@@ -407,6 +407,15 @@ export default function ClientDetailsPage() {
     setIntegrationsOpen(true)
   }
 
+  // ?settings=integrations (the agent setup's Connect link) opens the settings dialog on that tab.
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("settings")
+    if (requested && SETTINGS_TABS.some((t) => t.value === requested)) {
+      setSettingsTab(requested)
+      setIntegrationsOpen(true)
+    }
+  }, [])
+
   const backToClients = (
     <button
       type="button"

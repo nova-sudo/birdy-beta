@@ -69,7 +69,7 @@ function ComingSoonCard() {
 export default function HubPage() {
   const { agents } = useAgents()
   const [creating, setCreating] = useState(false)
-  const mediaBuying = agents.find((a) => a.kind === "media_buying") ?? agents[0] ?? null
+  const mediaBuying = agents.find((a) => a.type === "media_buying") ?? agents[0] ?? null
 
   const header = useMemo(
     () => ({
