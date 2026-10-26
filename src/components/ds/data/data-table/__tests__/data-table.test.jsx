@@ -1,6 +1,15 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
-import { DataTable, DataTableColumnHeader, Frame, MoneyCell, StatusCell, TwoLineCell } from "@/components/ds"
+import {
+  Button,
+  DataTable,
+  DataTableColumnHeader,
+  Frame,
+  MoneyCell,
+  SearchInput,
+  StatusCell,
+  TwoLineCell,
+} from "@/components/ds"
 
 const data = [
   { id: "1", name: "Alpha", status: "live", spend: 1234.5 },
@@ -489,5 +498,28 @@ describe("DataTable row expansion", () => {
     const cards = container.querySelectorAll("[data-slot='data-table-card']")
     expect(cards).toHaveLength(4)
     expect(cards[1]).toHaveAttribute("data-depth", "1")
+  })
+})
+
+describe("toolbar", () => {
+  it("moves a caller's search to the left edge and keeps its other controls at the right", () => {
+    const { container } = render(
+      <DataTable
+        columns={[{ accessorKey: "name", header: "Name" }]}
+        data={data}
+        toolbar={
+          <>
+            <SearchInput aria-label="Search leads" value="" onChange={() => {}} />
+            <Button>Export</Button>
+          </>
+        }
+      />
+    )
+    const toolbar = screen.getByRole("toolbar", { name: "Table tools" })
+    const end = container.querySelector("[data-slot='data-table-toolbar-end']")
+    const search = screen.getByRole("searchbox", { name: "Search leads" })
+    expect(end).not.toContainElement(search)
+    expect(toolbar.firstElementChild).toContainElement(search)
+    expect(end).toContainElement(screen.getByRole("button", { name: "Export" }))
   })
 })
