@@ -30,9 +30,40 @@ export function useAgents() {
   return { agents: data ?? [], error, isLoading, mutate }
 }
 
-/** Number of open agent work items, for the nav badge. `null` until agents ship. */
+const WORK_COUNT_KEY = "agent-work-count"
+
+/** Whether an SWR key holds agent work: one agent's `/work`, or the badge's multi-agent key. */
+export function isAgentWorkKey(key) {
+  if (Array.isArray(key)) return key[0] === WORK_COUNT_KEY
+  return typeof key === "string" && key.startsWith(`${AGENTS_KEY}/`) && key.endsWith("/work")
+}
+
+/**
+ * Re-reads every cached work list and with them the nav badge. Pass the
+ * `mutate` from `useSWRConfig()` so it reaches the app's cache provider.
+ */
+export function revalidateAgentWork(mutate) {
+  return mutate(isAgentWorkKey)
+}
+
+const openCount = (work) => (Array.isArray(work?.open) ? work.open.length : 0)
+
+/**
+ * Open work items across this user's live agents, for the nav badge; `null`
+ * with no live agent (or before anything loaded), so the badge stays hidden.
+ * Phase 1 has one agent per user, so this reads the same SWR entry as
+ * `useAgentWork` and costs no extra request on the agent page.
+ */
 export function useAgentWorkCount() {
-  return null
+  const { agents } = useAgents()
+  const ids = agents.filter((a) => a.status === "active").map((a) => a.id)
+  const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher)
+  const many = useSWR(ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null, ([, ...list]) =>
+    Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id))))
+  )
+  if (ids.length === 0) return null
+  if (ids.length === 1) return one.data ? openCount(one.data) : null
+  return many.data ? many.data.reduce((n, w) => n + openCount(w), 0) : null
 }
 
 // ─── One agent ───────────────────────────────────────────────────────────────
@@ -151,4 +182,35 @@ export function resolvePractice(id, caseId, resolution) {
 /** Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not ready yet. */
 export function activateAgent(id) {
   return send(`${queryKeys.agent(id)}/activate`, "POST")
+}
+
+// ─── Work list decisions ─────────────────────────────────────────────────────
+// Agent work items are suggestions, so they share the dashboard's routes.
+
+const suggestionPath = (id) => `/api/dashboard/suggestions/${encodeURIComponent(id)}`
+
+/**
+ * Approves (or, for a flag item with nothing to write, marks handled) a work item.
+ * @returns {Promise<{ok: boolean, outcome: string, succeeded: object[], failed: object[], blocked_reason: {code: string, message: string}|null}>}
+ *   A guardrail block is `ok: false, outcome: "blocked"`; a Meta failure throws (502).
+ */
+export function applyWorkItem(id) {
+  return send(`${suggestionPath(id)}/apply`, "POST")
+}
+
+/** Declines a work item. `reason_code` is one of DENY_REASONS' codes. 409 while it is being applied. */
+export function denyWorkItem(id, { reason_code, note }) {
+  const body = { reason_code }
+  if (note && note.trim()) body.note = note.trim()
+  return send(`${suggestionPath(id)}/deny`, "POST", body)
+}
+
+/** Dismisses a work item without a reason. 409 while it is being applied. */
+export function dismissWorkItem(id) {
+  return send(suggestionPath(id), "DELETE")
+}
+
+/** Reverses an applied item. @returns {Promise<{ok: boolean, outcome: "undone"|"noop"}>} */
+export function undoWorkItem(id) {
+  return send(`${suggestionPath(id)}/undo`, "POST")
 }

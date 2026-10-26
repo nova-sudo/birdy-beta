@@ -69,6 +69,12 @@ describe("toFindings", () => {
     expect(row.action).toBeUndefined();
   });
 
+  it("tags a suggestion from the Media Buying Agent", () => {
+    const rows = toFindings({}, [suggestion({ id: "a", agent_id: "ag1" }), suggestion({ id: "b" })]);
+    expect(rows.find((r) => r.id === "suggestion-a").tag).toBe("Media Buying Agent");
+    expect(rows.find((r) => r.id === "suggestion-b").tag).toBeUndefined();
+  });
+
   it("gives a suggestion a Do it action that applies that suggestion", () => {
     const onApply = vi.fn();
     const s = suggestion();

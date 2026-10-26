@@ -35,7 +35,7 @@ export const NAV_ITEMS = [
   { key: "campaigns", label: "Campaigns", href: "/campaigns", icon: ChartNoAxesColumnIncreasing },
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
   { key: "settings", label: "Settings", href: "/settings", icon: Settings },
-  // Agents and dashboards live together. The badge counts open agent items (null until agents ship).
+  // Agents and dashboards live together. The badge counts open agent work items (hidden at 0 or with no live agent).
   { key: "hub", label: "BirdyHub", href: "/hub", icon: LayoutGrid, section: "bottom", badge: () => useAgentWorkCount() },
 ]
 

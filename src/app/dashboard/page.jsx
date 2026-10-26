@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
+import { useSWRConfig } from "swr";
+import { revalidateAgentWork } from "@/lib/agents-api";
 import {
   BirdyRead,
   Breakdown,
@@ -163,14 +165,23 @@ export default function PortfolioDashboardPage() {
   // Optimistic state layered over what the hook fetched, so acting on a
   // finding is immediate and a failed request puts it back.
   const [removed, setRemoved] = useState({});
+  // Agent items here are the agent's work list too: re-read it (and the nav badge) after a decision.
+  const { mutate: mutateCache } = useSWRConfig();
 
   const handleApply = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
 
     const result = await applySuggestionRequest(suggestion.id);
+    if (suggestion.agent_id) revalidateAgentWork(mutateCache);
     if (!result) {
       setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
       toast.error("Couldn't apply that", { description: suggestion.title });
+      return;
+    }
+    if (result.ok === false) {
+      // An agent guardrail stopped it: it stays open, with the reason.
+      setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
+      toast.warning("Not done", { description: result.blocked_reason?.message ?? suggestion.title });
       return;
     }
 
@@ -178,18 +189,19 @@ export default function PortfolioDashboardPage() {
     toast.success(count ? `Applied to ${count} ad${count === 1 ? "" : "s"}` : "Applied", {
       description: suggestion.title,
     });
-  }, []);
+  }, [mutateCache]);
 
   const handleDismiss = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
     const ok = await dismissSuggestionRequest(suggestion.id);
+    if (suggestion.agent_id) revalidateAgentWork(mutateCache);
     if (!ok) {
       setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
       toast.error("Couldn't dismiss that", { description: suggestion.title });
       return;
     }
     toast("Suggestion dismissed", { description: suggestion.title });
-  }, []);
+  }, [mutateCache]);
 
   const metrics = useMemo(() => {
     const symbol = chartMetrics.spend.valuePrefix ?? "£";
