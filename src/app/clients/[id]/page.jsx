@@ -636,7 +636,7 @@ export default function ClientDetailsPage() {
 
           {/* The design splits this modal into Details / Targets / Integrations
               rather than one long scroll. */}
-          <div className="max-w-full overflow-x-auto">
+          <div className="min-w-0 max-w-full">
             <SegmentedTabs
               ariaLabel="Client settings section"
               value={settingsTab}

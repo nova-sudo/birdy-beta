@@ -604,7 +604,7 @@ export default function MetricsHub() {
         }
       />
 
-      <div className="max-w-full overflow-x-auto">
+      <div className="min-w-0 max-w-full">
         <SegmentedTabs ariaLabel="Metric source" items={tabItems} value={activeTab} onValueChange={setActiveTab} />
       </div>
 

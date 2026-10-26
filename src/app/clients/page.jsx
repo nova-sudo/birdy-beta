@@ -1128,7 +1128,7 @@ export default function ClientsPage() {
       ) : (
         <div className="flex min-w-0 flex-col gap-3">
           {/* Status and health, with counts. Search and column choice sit in the table's own toolbar. */}
-          <div className="max-w-full overflow-x-auto">
+          <div className="min-w-0 max-w-full">
             <SegmentedTabs
               ariaLabel="Filter clients by status"
               value={statusFilter}

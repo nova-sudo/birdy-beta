@@ -465,7 +465,7 @@ export function LeadsContent({
         />
       ) : (
         <div className="flex min-w-0 flex-col gap-3">
-          <div className="max-w-full overflow-x-auto">
+          <div className="min-w-0 max-w-full">
             <SegmentedTabs
               ariaLabel="Pipeline stage"
               value={selectedOpportunityStatus}
