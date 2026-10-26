@@ -15,6 +15,11 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(search),
 }))
 
+// The training chat is exercised on its own; here it only has to mount.
+vi.mock("@/components/chat/ChatConversation", () => ({
+  default: (props) => <div data-testid="training-chat" data-page={props.page} />,
+}))
+
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import SetupPage from "../page"
@@ -49,6 +54,25 @@ const RULES = [
 
 let agents
 let activateStatus
+let confidence
+const conf = (score) => ({
+  score,
+  coverage: 40,
+  practice: score - 40,
+  parts: { targets: true, pause: true, revive: true, flags: true, practice_agreed: 5, practice_answered: 6 },
+  ready: score >= 80,
+  missing: score >= 80 ? [] : ["Get the score to 80"],
+})
+const CASE = {
+  case_id: "c1",
+  rule_kind: "pause_over_target",
+  client_name: "Tylaesthetics",
+  title: "Pause “Botox – Static 4”",
+  facts: [{ label: "CPL", value: "€71 vs €22 target" }],
+  options: ["Pause", "Leave it", "Flag"],
+  birdy_answer: "Pause",
+  why: "Over 1.5× target.",
+}
 function mockApi(path, init = {}) {
   const method = init.method ?? "GET"
   if (path === "/api/agents" && method === "GET") return Promise.resolve(res(agents))
@@ -64,6 +88,10 @@ function mockApi(path, init = {}) {
     return Promise.resolve(
       res({ status: "done", result: { actions: 0, by_rule: {}, spend_saved: 0, leads_at_risk: 0, examples: [] } })
     )
+  if (path === "/api/agents/ag1/confidence") return Promise.resolve(res(confidence))
+  if (path.startsWith("/api/agents/ag1/practice?")) return Promise.resolve(res([CASE]))
+  if (path === "/api/agents/ag1/practice/c1")
+    return Promise.resolve(res({ agreed: true, birdy_answer: "Pause", why: CASE.why }))
   if (path === "/api/agents/ag1/activate") return Promise.resolve(res({ detail: "Not Found" }, activateStatus))
   if (path.startsWith("/api/client-groups")) return Promise.resolve(res(GROUPS))
   return Promise.resolve(res({}, 404))
@@ -81,6 +109,7 @@ const renderPage = () =>
 beforeEach(() => {
   agents = []
   activateStatus = 404
+  confidence = conf(79)
   search = ""
   push.mockReset()
   vi.mocked(apiRequest).mockReset()
@@ -162,5 +191,40 @@ describe("Media Buying Agent setup", () => {
     await screen.findByText("Pause ads over target")
     await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
     expect(await screen.findByText(/Still needed: targets, practice/)).toBeInTheDocument()
+  })
+
+  it("Next disabled until ready", async () => {
+    agents = [AGENT]
+    search = "step=2"
+    renderPage()
+    expect(await screen.findByText("79%")).toBeInTheDocument()
+    expect(screen.getByText("1 points to go. Answer practice cases or keep chatting.")).toBeInTheDocument()
+    const next = screen.getByRole("button", { name: /Next: check the dry run/ })
+    expect(next).toBeDisabled()
+    expect(screen.getByTestId("training-chat")).toHaveAttribute("data-page", "agent_training")
+    expect(await screen.findByText("Pause ads over target")).toBeInTheDocument()
+
+    // Answering a practice case lifts the score to 80, and the meter refreshes.
+    confidence = conf(80)
+    await userEvent.click(await screen.findByRole("button", { name: "Pause" }))
+    expect(await screen.findByText("80%")).toBeInTheDocument()
+    expect(screen.getByText("Ready. More practice keeps raising it.")).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole("button", { name: /Next: check the dry run/ })).toBeEnabled())
+    await userEvent.click(screen.getByRole("button", { name: /Next: check the dry run/ }))
+    expect(push).toHaveBeenCalledWith("/hub/agents/media-buying/setup?step=3")
+  })
+
+  it("lists what is missing on a 409 with a top-level missing list", async () => {
+    agents = [AGENT]
+    search = "step=3"
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/ag1/activate"
+        ? Promise.resolve(res({ detail: "The agent isn't ready to switch on yet", missing: ["Set a CPL target for X"] }, 409))
+        : mockApi(path, init)
+    )
+    renderPage()
+    await screen.findByText("Pause ads over target")
+    await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
+    expect(await screen.findByText(/Still needed: Set a CPL target for X/)).toBeInTheDocument()
   })
 })

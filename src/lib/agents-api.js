@@ -90,6 +90,8 @@ async function send(endpoint, method, body) {
     const err = new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`)
     err.status = res.status
     err.detail = detail
+    // Activation's 409 carries `missing` beside `detail`, not inside it.
+    if (Array.isArray(data?.missing)) err.missing = data.missing
     throw err
   }
   return data
@@ -125,7 +127,28 @@ export function pollJob(id, jobId) {
   return send(queryKeys.agentJob(id, jobId), "GET")
 }
 
-/** Turns the agent on. 409 `{missing}` when it is not ready yet. */
+// ─── Practice cases ──────────────────────────────────────────────────────────
+
+/**
+ * Up to `k` practice cases; unanswered ones already served come first. Each is
+ * `{case_id, rule_kind, client_name, title, facts: [{label, value}], options,
+ * birdy_answer, why}`. The UI keeps birdy_answer and why hidden until answered.
+ */
+export function fetchPractice(id, k = 3) {
+  return send(`${queryKeys.agentPractice(id)}?k=${encodeURIComponent(k)}`, "GET")
+}
+
+/** Answers a case with one of its options. @returns {Promise<{agreed: boolean, birdy_answer: string, why: string}>} 409 if answered. */
+export function answerPractice(id, caseId, answer) {
+  return send(`${queryKeys.agentPractice(id)}/${encodeURIComponent(caseId)}`, "POST", { answer })
+}
+
+/** Settles a disagreement: "birdy_right" | "user_right". 409 unless the case is pending. */
+export function resolvePractice(id, caseId, resolution) {
+  return send(`${queryKeys.agentPractice(id)}/${encodeURIComponent(caseId)}/resolve`, "POST", { resolution })
+}
+
+/** Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not ready yet. */
 export function activateAgent(id) {
   return send(`${queryKeys.agent(id)}/activate`, "POST")
 }

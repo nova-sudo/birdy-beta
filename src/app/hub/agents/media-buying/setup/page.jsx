@@ -2,9 +2,10 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowLeft, ArrowRight, BookOpen, Lock, Zap } from "lucide-react"
+import { ArrowLeft, ArrowRight, Lock, RefreshCw, Target, Zap } from "lucide-react"
 
 import { usePageHeader } from "@/components/page-header"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
 
 import {
@@ -23,16 +24,20 @@ import {
   Skeleton,
 } from "@/components/ds"
 import { ClientScopeTable } from "@/components/agents/ClientScopeTable"
+import { ConfidenceMeter } from "@/components/agents/ConfidenceMeter"
 import { DryRunSummary } from "@/components/agents/DryRunSummary"
 import { GuardrailsForm } from "@/components/agents/GuardrailsForm"
-import { PlaybookRule } from "@/components/agents/PlaybookRule"
+import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
+import { PracticeCase, followUpMessage } from "@/components/agents/PracticeCase"
+import { TrainingChat } from "@/components/agents/TrainingChat"
 import { WizardSteps } from "@/components/agents/WizardSteps"
 import {
   activateAgent,
   createAgent,
+  fetchPractice,
   patchAgent,
-  patchRule,
   useAgent,
+  useAgentConfidence,
   useAgentRules,
   useAgents,
 } from "@/lib/agents-api"
@@ -42,7 +47,9 @@ import { useClientGroups } from "@/lib/useClientGroups"
 
 const SETUP_PATH = "/hub/agents/media-buying/setup"
 const AGENT_PATH = "/hub/agents/media-buying"
-const RULE_ORDER = ["pause_over_target", "revive_winner", "flag_no_spend", "flag_declining"]
+const READY_SCORE = 80
+const PRACTICE_BATCH = 3
+const TARGET_MISSING = "Set a CPL target for "
 
 const COMMON_TIMEZONES = [
   "Europe/London",
@@ -72,8 +79,9 @@ const HEADINGS = {
     description: "Choose what it watches and what it's allowed to touch. You can change all of this later.",
   },
   2: {
-    title: "Teach it your strategy",
-    description: "Birdy asks how you run your accounts and tests its rules on real past cases.",
+    title: "Teach it how you buy",
+    description:
+      "Answer like you'd brief a new media buyer, then practise on real past cases. Birdy can't be switched on until its confidence clears the bar.",
   },
   3: {
     title: "Here's what it would have done",
@@ -111,7 +119,8 @@ function scopeCurrency(clients, ids) {
 function activationMessage(err) {
   if (err?.status === 404) return "Turning the agent on isn't available yet. Your setup is saved, so you can come back to it."
   if (err?.status === 409) {
-    const missing = err.detail?.missing
+    // The route sends {detail, missing}; older shapes nested missing in detail.
+    const missing = err.missing ?? err.detail?.missing
     if (Array.isArray(missing) && missing.length) return `It isn't ready to turn on yet. Still needed: ${missing.join(", ")}.`
     return typeof err.detail === "string" ? err.detail : "It isn't ready to turn on yet."
   }
@@ -320,60 +329,189 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
   )
 }
 
-function TrainStep({ onBack, onNext }) {
+/** Whether the server says the agent can be switched on. */
+function isReady(confidence) {
+  if (!confidence) return false
+  if (typeof confidence.ready === "boolean") return confidence.ready
+  return (confidence.score ?? 0) >= READY_SCORE && !(confidence.missing?.length > 0)
+}
+
+/** The line beside Next: how far off the bar it is, or that it is clear. */
+function gateText(confidence) {
+  if (!confidence) return "Checking Birdy's confidence…"
+  if (isReady(confidence)) return "Ready. More practice keeps raising it."
+  const score = Math.round(confidence.score ?? 0)
+  if (score < READY_SCORE) return `${READY_SCORE - score} points to go. Answer practice cases or keep chatting.`
+  return confidence.missing?.length ? `Still needed: ${confidence.missing.join(", ")}.` : "Not ready yet."
+}
+
+/**
+ * Practice cases, served a few at a time. Kept in local state rather than SWR: a
+ * revalidation would swap answered cases for new ones and hide their results.
+ */
+function usePracticeCases(agentId) {
+  const [cases, setCases] = useState([])
+  const [answered, setAnswered] = useState(() => new Set())
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const started = useRef(false)
+
+  const load = useCallback(
+    async (k) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const batch = await fetchPractice(agentId, k)
+        setCases((prev) => {
+          const seen = new Set(prev.map((c) => c.case_id))
+          return [...prev, ...(batch ?? []).filter((c) => !seen.has(c.case_id))]
+        })
+      } catch (err) {
+        setError(err?.message || "Couldn't load practice cases")
+      } finally {
+        setLoading(false)
+      }
+    },
+    [agentId]
+  )
+
+  useEffect(() => {
+    if (started.current) return
+    started.current = true
+    load(PRACTICE_BATCH)
+  }, [load])
+
+  // Unanswered cases are served first, so ask for them plus a fresh batch.
+  const more = () => load(cases.filter((c) => !answered.has(c.case_id)).length + PRACTICE_BATCH)
+  const markAnswered = (id) => setAnswered((prev) => new Set(prev).add(id))
+
+  return { cases, loading, error, more, retry: () => load(PRACTICE_BATCH), markAnswered }
+}
+
+function TrainStep({ agent, clients, onBack, onNext }) {
+  const currency = scopeCurrency(clients, agent.scope?.client_group_ids ?? [])
+  const { confidence, mutate: mutateConfidence } = useAgentConfidence(agent.id)
+  const { mutate: mutateRules } = useAgentRules(agent.id)
+  const practice = usePracticeCases(agent.id)
+  const chatRef = useRef(null)
+
+  const refreshConfidence = useCallback(() => mutateConfidence(), [mutateConfidence])
+  // A training tool changed the playbook, a target or a topic: re-read both.
+  const onChatChanged = useCallback(() => {
+    mutateRules()
+    mutateConfidence()
+  }, [mutateRules, mutateConfidence])
+
+  const watched = agent.scope?.client_group_ids?.length ?? 0
+  const lacking = (confidence?.missing ?? []).filter((m) => m.startsWith(TARGET_MISSING)).length
+  const targets = watched ? { set: Math.max(0, watched - lacking), total: watched } : undefined
+  const ready = isReady(confidence)
+
   return (
-    <div className="flex max-w-2xl flex-col gap-6">
-      <Frame title="Training comes next" padded>
-        <p className="text-base leading-relaxed text-ink-secondary">
-          This is where Birdy will ask how you run your accounts and practise on real past cases until it&apos;s
-          confident. That step is on its way. For now, go on to the dry run to see what your playbook would have done.
-        </p>
+    <div className="flex min-w-0 flex-col gap-6">
+      {confidence ? (
+        <ConfidenceMeter
+          score={confidence.score}
+          parts={confidence.parts}
+          threshold={READY_SCORE}
+          targets={targets}
+          missing={confidence.missing}
+        />
+      ) : (
+        <Skeleton className="h-32 w-full rounded-frame" />
+      )}
+
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+        <Frame
+          title="Training chat"
+          leading={<BirdyAvatar size={24} />}
+          className="min-w-0"
+          contentClassName="h-[34rem]"
+        >
+          <TrainingChat ref={chatRef} agentId={agent.id} currency={currency} onChanged={onChatChanged} className="h-full" />
+        </Frame>
+        <PlaybookDraft
+          agentId={agent.id}
+          currency={currency}
+          title="Playbook draft"
+          description="Click any value to change it"
+          showMode={false}
+          onSaved={refreshConfidence}
+        />
+      </div>
+
+      <Frame
+        title="Practice round"
+        description="Real cases from your last 60 days. Decide first, then see what Birdy would have done."
+        leading={<Target aria-hidden className="size-4 text-primary" />}
+        action={
+          practice.cases.length > 0 && (
+            <Button size="sm" variant="ghost" loading={practice.loading} onClick={practice.more}>
+              <RefreshCw aria-hidden />
+              More cases
+            </Button>
+          )
+        }
+      >
+        {practice.error ? (
+          <ErrorState className="p-4" title="Couldn't load practice cases" onRetry={practice.retry} />
+        ) : practice.cases.length === 0 ? (
+          practice.loading ? (
+            <div className="flex flex-col gap-3 p-4">
+              {Array.from({ length: PRACTICE_BATCH }, (_, i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-control" />
+              ))}
+            </div>
+          ) : (
+            <p className="p-5 text-sm text-muted-foreground">
+              No past cases to practise on in the last 60 days. Keep chatting to raise the score.
+            </p>
+          )
+        ) : (
+          <div className="divide-y divide-divider">
+            {practice.cases.map((c) => (
+              <PracticeCase
+                key={c.case_id}
+                agentId={agent.id}
+                case={c}
+                onAnswered={() => {
+                  practice.markAnswered(c.case_id)
+                  refreshConfidence()
+                }}
+                onResolved={refreshConfidence}
+                onAskFollowUp={(pc, answer) => chatRef.current?.send(followUpMessage(pc, answer))}
+              />
+            ))}
+          </div>
+        )}
       </Frame>
-      <div className="flex items-center justify-end gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
-        <Button variant="ghost" onClick={onBack}>
-          <ArrowLeft aria-hidden />
-          Back
-        </Button>
-        <Button variant="primary" size="lg" onClick={onNext}>
-          Next: check the dry run
-          <ArrowRight aria-hidden />
-        </Button>
+
+      <div className="flex flex-wrap items-center justify-end gap-x-4 gap-y-2 max-sm:flex-col-reverse max-sm:items-stretch">
+        <p className="text-sm text-muted-foreground max-sm:text-center" aria-live="polite">
+          {gateText(confidence)}
+        </p>
+        <div className="flex items-center gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
+          <Button variant="ghost" onClick={onBack}>
+            <ArrowLeft aria-hidden />
+            Back
+          </Button>
+          <Button variant="primary" size="lg" disabled={!ready} onClick={onNext}>
+            Next: check the dry run
+            <ArrowRight aria-hidden />
+          </Button>
+        </div>
       </div>
     </div>
   )
 }
 
 function CheckStep({ agent, clients, onBack, onActivated }) {
-  const { rules, isLoading, error: rulesError, mutate: mutateRules } = useAgentRules(agent.id)
   const [runKey, setRunKey] = useState(0)
   const [result, setResult] = useState(null)
-  const [ruleError, setRuleError] = useState(null)
   const [activating, setActivating] = useState(false)
   const [activateError, setActivateError] = useState(null)
 
   const currency = scopeCurrency(clients, agent.scope?.client_group_ids ?? [])
-  const ordered = useMemo(
-    () => [...rules].sort((a, b) => RULE_ORDER.indexOf(a.kind) - RULE_ORDER.indexOf(b.kind)),
-    [rules]
-  )
-
-  const changeRule = async (rule, patch) => {
-    setRuleError(null)
-    const merged = { ...rule, ...patch, params: { ...rule.params, ...(patch.params ?? {}) } }
-    mutateRules(
-      rules.map((r) => (r.id === rule.id ? merged : r)),
-      { revalidate: false }
-    )
-    try {
-      const saved = await patchRule(agent.id, rule.id, patch)
-      mutateRules((list = []) => list.map((r) => (r.id === rule.id ? saved : r)), { revalidate: false })
-      // Any saved edit gets a fresh run: the server only rejoins a job for identical rules.
-      setRunKey((k) => k + 1)
-    } catch (err) {
-      setRuleError(`Couldn't save that change: ${err.message}`)
-      mutateRules()
-    }
-  }
 
   const turnOn = async () => {
     setActivating(true)
@@ -389,38 +527,14 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
 
   return (
     <div className="grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
-      <Frame
+      <PlaybookDraft
+        agentId={agent.id}
+        currency={currency}
         title="Playbook"
-        leading={<BookOpen aria-hidden className="size-4 text-primary" />}
-        className="min-w-0"
-      >
-        {rulesError ? (
-          <ErrorState className="p-4" title="Couldn't load the playbook" onRetry={() => mutateRules()} />
-        ) : isLoading ? (
-          <div className="flex flex-col gap-3 p-4">
-            {RULE_ORDER.map((k) => (
-              <Skeleton key={k} className="h-24 w-full rounded-control" />
-            ))}
-          </div>
-        ) : (
-          <div className="divide-y divide-divider">
-            {ruleError && (
-              <Notice tone="danger" className="m-3">
-                {ruleError}
-              </Notice>
-            )}
-            {ordered.map((rule) => (
-              <PlaybookRule
-                key={rule.id}
-                rule={rule}
-                currency={currency}
-                hits={result?.by_rule?.[rule.kind]}
-                onChange={(patch) => changeRule(rule, patch)}
-              />
-            ))}
-          </div>
-        )}
-      </Frame>
+        hitsByRule={result?.by_rule}
+        // Any saved edit gets a fresh run: the server only rejoins a job for identical rules.
+        onSaved={() => setRunKey((k) => k + 1)}
+      />
 
       <div className="flex min-w-0 flex-col gap-6">
         <DryRunSummary agentId={agent.id} currency={currency} runKey={runKey} onResult={setResult} />
@@ -492,7 +606,7 @@ function SetupWizard() {
           onCancel={() => router.push("/hub")}
         />
       ) : step === 2 ? (
-        <TrainStep onBack={() => go(1)} onNext={() => go(3)} />
+        <TrainStep agent={agent} clients={clients} onBack={() => go(1)} onNext={() => go(3)} />
       ) : (
         <CheckStep
           agent={agent}

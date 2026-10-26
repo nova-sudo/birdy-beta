@@ -6,6 +6,7 @@ const FILL = {
   primary: "bg-primary",
   warning: "bg-warning",
   danger: "bg-danger",
+  success: "bg-success",
 }
 
 /** Fill colour for a percentage of the way to a threshold: amber within 20% of it, red once crossed. */
@@ -23,7 +24,7 @@ function progressTone(value, triggered = false) {
  * @param {number} props.value Percent of the way to the threshold (may exceed 100)
  * @param {boolean} [props.triggered] Forces the crossed (red) tone
  * @param {string} [props.label] Accessible name, e.g. "Progress to trigger"
- * @param {"primary"|"warning"|"danger"} [props.tone] Fixes the fill colour, for progress that is not measured against a threshold (a sync, an import)
+ * @param {"primary"|"warning"|"danger"|"success"} [props.tone] Fixes the fill colour, for progress that is not measured against a threshold (a sync, an import), or that is good once full (a confidence score)
  */
 function ProgressBar({ value = 0, triggered = false, tone, label = "Progress", className, ...props }) {
   const pct = Number.isFinite(value) ? value : 0

@@ -48,6 +48,10 @@ import { startersFor } from "@/lib/chat-starters"
  *   onDashboardOps?         (ops, data) => { applied, diff, error } — applies the reply's ops
  *   onUndoDashboardOps?     () => boolean — takes back the latest applied reply's ops; offered
  *                           as an Undo on that reply only (true when it undid them)
+ *   renderAfterMessage?     (message, index) => node — extra content under one of Birdy's
+ *                           replies (the agent training chat's "rule updated" chips)
+ *   sendRef?                ref the surface's send(text) is written to, so the page can post
+ *                           a message through the same gates as the composer
  *
  * The three dashboard props only reach the store-owned (uncontrolled) send;
  * the dashboards page is uncontrolled, and /ask-birdy has no dashboard.
@@ -83,6 +87,8 @@ export default function ChatConversation({
   getDashboardSummary = null,
   onDashboardOps = null,
   onUndoDashboardOps = null,
+  renderAfterMessage = null,
+  sendRef = null,
 }) {
   // Controlled (/ask-birdy) keeps component-local state: its history is
   // server-side and the session comes from the conversation being opened.
@@ -263,6 +269,15 @@ export default function ChatConversation({
     }
   }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
+  // Expose send to the surface (the agent training page posts practice follow-ups).
+  useEffect(() => {
+    if (!sendRef) return
+    sendRef.current = sendMessage
+    return () => {
+      if (sendRef.current === sendMessage) sendRef.current = null
+    }
+  }, [sendRef, sendMessage])
+
   // Auto-send once — gated on `configured` so a header-search-seeded message
   // can't fire while the composer is hidden.
   useEffect(() => {
@@ -329,17 +344,27 @@ export default function ChatConversation({
           />
         ) : (
           <div className={`mx-auto max-w-3xl ${composerCompact ? "space-y-5 px-4 py-5" : "space-y-6 px-5 py-6"}`}>
-            {messages.map((m, i) => isHidden(m, i) ? null : (
-              <MessageBubble
-                key={i}
-                message={m}
-                messageIndex={i}
-                onUISubmit={handleUISubmit}
-                submittedUIs={submittedUIs}
-                widthClass={bubbleWidthClass}
-                onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}
-              />
-            ))}
+            {messages.map((m, i) => {
+              if (isHidden(m, i)) return null
+              const bubble = (
+                <MessageBubble
+                  key={i}
+                  message={m}
+                  messageIndex={i}
+                  onUISubmit={handleUISubmit}
+                  submittedUIs={submittedUIs}
+                  widthClass={bubbleWidthClass}
+                  onUndoDashboardOps={i === lastAppliedDashboardIndex ? onUndoDashboardOps : null}
+                />
+              )
+              const after = m.role !== "user" && renderAfterMessage ? renderAfterMessage(m, i) : null
+              return after ? (
+                <div key={i} className="space-y-2">
+                  {bubble}
+                  {after}
+                </div>
+              ) : bubble
+            })}
             {loading && <TypingIndicator />}
             {loading && slowNotice && showSlowNotice && (
               <p className="pl-9 text-xs text-muted-foreground">
