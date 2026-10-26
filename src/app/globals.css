@@ -318,6 +318,8 @@
   --shadow-focus-inset: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
   --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
   --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
+  /* Needs attention but is not wrong (an empty field that should be filled): the warning amber. */
+  --shadow-field-warning: 0 0 0 1.5px var(--color-warning), 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent), 0 1px 2px #0000000f;
   --shadow-field-disabled: 0 0 0 1px #0000000f;
   /* A checkbox is smaller than a field, so its ring is firmer to hold the same weight. On is the
      primary edge plus a glow (Bytes' orange swapped for Birdy purple). */

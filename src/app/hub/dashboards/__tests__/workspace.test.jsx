@@ -299,7 +299,7 @@ describe("Dashboard workspace", () => {
 
     expect(container.querySelector(".dk-hero")).toBeNull()
     const crumb = screen.getByRole("link", { name: "My dashboards" })
-    expect(crumb).toHaveAttribute("href", "/dashboards")
+    expect(crumb).toHaveAttribute("href", "/hub/dashboards")
     expect(crumb.parentElement).toHaveTextContent("My dashboards / Weekly spend")
     // Narrow screens: the prefix hides and the mode tabs / Add widget go icon-only,
     // each keeping its accessible name, so the header fits at 375px.
@@ -390,7 +390,7 @@ describe("Dashboard workspace", () => {
     expect(chatProps.current.page).toBe("dashboards")
     expect(chatProps.current.dashboardId).toBe("d1")
     expect(chatProps.current.sessionKey).toBe("birdy_dashboard_d1")
-    expect(replace).toHaveBeenCalledWith("/dashboards/d1")
+    expect(replace).toHaveBeenCalledWith("/hub/dashboards/d1")
     // The summary is the live doc's, read when the message is sent.
     expect(chatProps.current.getDashboardSummary()).toContain("[w1]")
   })

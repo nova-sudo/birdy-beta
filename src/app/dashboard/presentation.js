@@ -228,12 +228,18 @@ const partsText = (parts, strong) =>
     .join("")
     .trim();
 
+const AGENT_TAG = "Media Buying Agent";
+
+/** An agent item whose rule is on "flag": the server refuses to apply its action. */
+const isFlagOnly = (s) => Boolean(s.agent_id) && s.rule_mode === "flag" && Boolean(s.has_action);
+
 /**
  * Turns the briefing's findings and the pending suggestions into BirdyRead
  * rows: worst tone first, at most five.
  *
  * A suggestion's "Do it" becomes the row's action and it can be dismissed;
- * briefing findings are observations and carry neither.
+ * briefing findings are observations and carry neither. A suggestion raised by
+ * an agent (it has `agent_id`) is tagged with the agent's name.
  *
  * @param {{findings?: {tone?: string, parts: {text: string, strong?: boolean}[]}[]}} briefing
  * @param {{id: string, severity?: string, client?: string, title: string, why?: string}[]} suggestions
@@ -245,7 +251,9 @@ export function toFindings(briefing, suggestions, { onApply, onDismiss } = {}) {
     tone: SEVERITY_TONE[s.severity] ?? "warning",
     title: s.title,
     detail: [s.client, s.why].filter(Boolean).join(" · ") || undefined,
-    action: onApply ? { label: "Do it", onClick: () => onApply(s) } : undefined,
+    tag: s.agent_id ? AGENT_TAG : undefined,
+    // A flag-mode agent rule only flags: its action is never applied, so no "Do it".
+    action: onApply && !isFlagOnly(s) ? { label: "Do it", onClick: () => onApply(s) } : undefined,
     onDismiss: onDismiss ? () => onDismiss(s) : undefined,
   }));
 

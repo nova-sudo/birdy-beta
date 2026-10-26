@@ -38,6 +38,7 @@ import {
   NAV_ITEMS,
   PageCard,
 } from "@/components/ds"
+import { isActive } from "@/components/ds/shell/nav-config"
 import AdminShell from "@/components/admin/AdminShell"
 
 beforeEach(() => {
@@ -55,6 +56,22 @@ describe("AppSidebar", () => {
     const links = Array.from(nav.querySelectorAll("a"))
     expect(links).toHaveLength(9)
     expect(links.map((a) => a.getAttribute("href"))).toEqual(NAV_ITEMS.map((i) => i.href))
+  })
+
+  it("renders BirdyHub after a divider at the bottom", () => {
+    render(<AppSidebar />)
+    const nav = screen.getByRole("navigation", { name: "Main" })
+    const links = Array.from(nav.querySelectorAll("a"))
+    const last = links[links.length - 1]
+    expect(last.textContent).toContain("BirdyHub")
+    expect(last.getAttribute("href")).toBe("/hub")
+    expect(links.some((a) => a.textContent.trim() === "Dashboards")).toBe(false)
+    expect(nav.querySelector('[data-slot="nav-divider"]')).not.toBeNull()
+  })
+
+  it("BirdyHub is active on /hub/dashboards/abc", () => {
+    const hub = NAV_ITEMS.find((i) => i.key === "hub")
+    expect(isActive(hub, "/hub/dashboards/abc")).toBe(true)
   })
 
   it("marks the item whose path contains the current route as current", () => {

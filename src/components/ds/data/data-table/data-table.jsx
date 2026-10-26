@@ -133,6 +133,7 @@ const headerLabel = (column) =>
  * @param {boolean} [props.dense] 52 rows instead of 60
  * @param {number} [props.pageSize=25]
  * @param {number[]} [props.pageSizeOptions] Choices in the rows-per-page select
+ * @param {boolean} [props.paginate=true] false shows every row with no page footer, for a list the caller pages itself (a "Load more" cursor)
  * @param {boolean} [props.manualPagination] `data` is already the current page (server paging): rows are not sliced, `rowCount` sets the page count and `state.pagination` / `onStateChange` carry the page index
  * @param {number} [props.rowCount] Total rows across all pages; only with `manualPagination`
  * @param {boolean} [props.stickyFirstColumn] Pins the first column while the table scrolls sideways. Cells never wrap; `meta.minWidth` (px) sets a column's minimum width
@@ -154,6 +155,7 @@ function DataTable({
   bare: bareProp = false,
   dense = false,
   pageSize = 25,
+  paginate = true,
   pageSizeOptions,
   manualPagination = false,
   rowCount,
@@ -215,7 +217,7 @@ function DataTable({
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    ...(paginate ? { getPaginationRowModel: getPaginationRowModel() } : {}),
     ...(getSubRows ? { getExpandedRowModel: getExpandedRowModel(), paginateExpandedRows: false } : {}),
     manualPagination,
     rowCount: manualPagination ? rowCount : undefined,
@@ -229,7 +231,7 @@ function DataTable({
   const isEmpty = !loading && totalRows === 0
   const scrollRef = React.useRef(null)
   const scroll = useScrollOverflow(scrollRef)
-  const showFooter = !loading && !isEmpty
+  const showFooter = paginate && !loading && !isEmpty
   const pageIndex = state.pagination.pageIndex
   const pageCount = table.getPageCount()
   const [dragOver, setDragOver] = React.useState(null)

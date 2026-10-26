@@ -27,6 +27,7 @@ const BirdyChatModal = dynamic(() => import("@/components/chat/BirdyChatModal"),
 });
 import BirdyDefs from "@/components/birdy/BirdyDefs";
 import ImpersonationBar from "@/components/ImpersonationBar";
+import { AgentRunBanner } from "@/components/agents/AgentRunBanner";
 import {
   AppSidebar,
   CommandSearch,
@@ -191,6 +192,8 @@ export default function RootLayout({ children }) {
               <div className="flex h-screen w-full flex-col overflow-hidden bg-frame font-sans">
                 {/* Impersonation banner (shows only while an admin is impersonating) */}
                 <ImpersonationBar />
+                {/* An agent that couldn't run because Meta needs reconnecting */}
+                <AgentRunBanner />
                 <div className="flex min-h-0 flex-1">
                   <AppSidebar
                     onSearch={openSearch}

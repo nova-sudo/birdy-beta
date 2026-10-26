@@ -6,19 +6,22 @@ import {
   Phone,
   ChartNoAxesColumnIncreasing,
   Bell,
-  LayoutDashboard,
+  LayoutGrid,
   Settings,
 } from "lucide-react"
 
+import { useAgentWorkCount } from "@/lib/agents-api"
+
 /**
- * Sidebar destinations, in display order. A plain array so a new entry
- * (BirdyHub) is one line.
+ * Sidebar destinations, in display order. A plain array so a new entry is one line.
+ * `section` defaults to "main"; "bottom" items render after a divider below the list.
  *
  * @type {{
  *   key: string,
  *   label: string,
  *   href: string,
  *   icon: React.ComponentType<{ className?: string }>,
+ *   section?: "main" | "bottom",
  *   badge?: () => number | null,
  *   match?: (pathname: string) => boolean,
  * }[]}
@@ -31,8 +34,9 @@ export const NAV_ITEMS = [
   { key: "sales-hub", label: "Sales Hub", href: "/Sales-Hub", icon: Phone },
   { key: "campaigns", label: "Campaigns", href: "/campaigns", icon: ChartNoAxesColumnIncreasing },
   { key: "alerts", label: "Alerts", href: "/alerts", icon: Bell },
-  { key: "dashboards", label: "Dashboards", href: "/dashboards", icon: LayoutDashboard },
   { key: "settings", label: "Settings", href: "/settings", icon: Settings },
+  // Agents and dashboards live together. The badge counts open agent work items (hidden at 0 or with no live agent).
+  { key: "hub", label: "BirdyHub", href: "/hub", icon: LayoutGrid, section: "bottom", badge: () => useAgentWorkCount() },
 ]
 
 /** Whether `item` is the current page: its own `match`, else the href or any path under it. */

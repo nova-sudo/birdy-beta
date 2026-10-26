@@ -7,6 +7,7 @@ import { AlertCircleIcon, CheckIcon, ClockIcon, InfoIcon, MinusIcon, XIcon } fro
 import { cn } from "@/lib/utils"
 import { askBirdy } from "@/lib/ask-birdy"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { Badge } from "../primitives/badge"
 import { Button } from "../primitives/button"
 import { Frame } from "../surfaces/frame"
 
@@ -65,15 +66,19 @@ function Dismiss({ title, onDismiss }) {
  *
  * @param {object} props
  * @param {React.ReactNode} [props.title="Birdy's read"]
- * @param {{id: string, tone: "danger"|"warning"|"success"|"info"|"neutral", title: React.ReactNode, detail?: React.ReactNode, action?: {label: string, onClick?: () => void, href?: string}, onDismiss?: () => void}[]} props.findings
- *   `onDismiss` adds an icon-only dismiss button after the action
+ * @param {{id: string, tone: "danger"|"warning"|"success"|"info"|"neutral", title: React.ReactNode, detail?: React.ReactNode, tag?: string, action?: {label: string, onClick?: () => void, href?: string}, onDismiss?: () => void}[]} props.findings
+ *   `onDismiss` adds an icon-only dismiss button after the action; `tag` is a small label beside the title (where the finding came from)
+ * @param {number} [props.count] The header count when the rows are `children`; defaults to the number of findings
+ * @param {React.ReactNode} [props.children] Custom rows in place of `findings` (e.g. a work list with its own decisions); not capped at five
  * @param {string} [props.prompt] Seeds the "Ask Birdy about this" footer link
  * @param {(prompt: string) => void} [props.onAsk] Handles that link instead of opening the global assistant (a client page sends it to its own chat)
  * @param {React.ReactNode} [props.empty] Shown with no findings; defaults to "Nothing needs you right now."
  */
-function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty, className, ...props }) {
+function BirdyRead({ title = "Birdy's read", findings = [], count, prompt, onAsk, empty, className, children, ...props }) {
   const rows = findings.slice(0, MAX_ROWS)
   const canDismiss = rows.some((f) => f.onDismiss)
+  const custom = children != null && children !== false
+  const total = count ?? findings.length
 
   return (
     <Frame
@@ -83,16 +88,16 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty
         <span className="flex min-w-0 items-center gap-2">
           <BirdyAvatar size={28} tone="white" className="shrink-0" />
           <span className="truncate">{title}</span>
-          {findings.length > 0 && (
+          {total > 0 && (
             <>
               <span
                 data-slot="birdy-read-count"
                 aria-hidden="true"
                 className="num inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground"
               >
-                {findings.length}
+                {total}
               </span>
-              <span className="sr-only">{` \u2014 ${findings.length} ${findings.length === 1 ? "item" : "items"}`}</span>
+              <span className="sr-only">{` \u2014 ${total} ${total === 1 ? "item" : "items"}`}</span>
             </>
           )}
         </span>
@@ -110,7 +115,9 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty
       }
       {...props}
     >
-      {rows.length === 0 ? (
+      {custom ? (
+        children
+      ) : rows.length === 0 ? (
         <div className="px-4 py-6 text-center text-sm text-muted-foreground">
           {empty ?? "Nothing needs you right now."}
         </div>
@@ -128,6 +135,11 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="line-clamp-2 text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
+                  {f.tag && (
+                    <Badge data-slot="birdy-read-tag" tone="primary" size="sm" className="mt-1">
+                      {f.tag}
+                    </Badge>
+                  )}
                   {f.detail && (
                     <span className="line-clamp-2 text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
                       {f.detail}

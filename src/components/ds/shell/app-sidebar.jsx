@@ -74,6 +74,21 @@ function useStoredUserName() {
 }
 
 /**
+ * A nav item's count. Its own component because `useCount` is a hook (e.g.
+ * `useAgentWorkCount`): each badge keeps a stable hook order whatever list the
+ * sidebar is given. Hidden at 0 or null.
+ */
+function NavBadge({ useCount }) {
+  const count = useCount() ?? null
+  if (count == null || count <= 0) return null
+  return (
+    <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
+      {count > 99 ? "99+" : count}
+    </span>
+  )
+}
+
+/**
  * Primary navigation: the account switcher, Browse / Ask Birdy tabs, search, the nav list, then
  * background jobs and credits. 256 wide; `collapsed` makes it the 56 icon rail.
  *
@@ -123,6 +138,36 @@ function AppSidebar({
       confirmLabel: "Logout",
     })
     if (ok) await logout()
+  }
+
+  const mainItems = items.filter((i) => (i.section ?? "main") === "main")
+  const bottomItems = items.filter((i) => i.section === "bottom")
+
+  const renderItem = (item) => {
+    const active = isActive(item, pathname)
+    const Icon = item.icon
+    return (
+      <li key={item.key}>
+        <Link
+          href={item.href}
+          onClick={onNavigate}
+          aria-current={active ? "page" : undefined}
+          data-active={active}
+          title={collapsed ? item.label : undefined}
+          className={cn(SIDEBAR_ROW, collapsed && RAIL_ROW)}
+        >
+          <Icon aria-hidden />
+          {collapsed ? (
+            <span className="sr-only">{item.label}</span>
+          ) : (
+            <>
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {item.badge && <NavBadge useCount={item.badge} />}
+            </>
+          )}
+        </Link>
+      </li>
+    )
   }
 
   return (
@@ -227,38 +272,14 @@ function AppSidebar({
 
       <nav aria-label="Main" className="-m-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2">
         <ul className="flex w-full min-w-0 flex-col gap-0.5">
-          {items.map((item) => {
-            const active = isActive(item, pathname)
-            const count = item.badge?.() ?? null
-            const Icon = item.icon
-            return (
-              <li key={item.key}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  data-active={active}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(SIDEBAR_ROW, collapsed && RAIL_ROW)}
-                >
-                  <Icon aria-hidden />
-                  {collapsed ? (
-                    <span className="sr-only">{item.label}</span>
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {count != null && count > 0 && (
-                        <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
-                          {count > 99 ? "99+" : count}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Link>
-              </li>
-            )
-          })}
+          {mainItems.map(renderItem)}
         </ul>
+        {bottomItems.length > 0 && (
+          <>
+            <div data-slot="nav-divider" role="separator" className="my-2 h-px bg-border" />
+            <ul className="flex w-full min-w-0 flex-col gap-0.5">{bottomItems.map(renderItem)}</ul>
+          </>
+        )}
       </nav>
 
       {!minimal && !collapsed && (

@@ -69,7 +69,7 @@ describe("My dashboards list page", () => {
     expect(screen.getByText("Lead sources")).toBeInTheDocument()
     expect(screen.getAllByText(/^Updated /)).toHaveLength(2)
     expect(document.querySelectorAll('[data-ds="surface"]')).toHaveLength(2)
-    expect(screen.getByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/dashboards/d1")
+    expect(screen.getByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/hub/dashboards/d1")
   })
 
   it("shows an empty state when there are no dashboards", async () => {
@@ -120,7 +120,7 @@ describe("My dashboards list page", () => {
     expect(saved.version).toBe(3)
     expect(saved.widgets).toEqual([])
     expect(saved.sections).toBeUndefined()
-    expect(push).toHaveBeenCalledWith(`/dashboards/${saved.id}`)
+    expect(push).toHaveBeenCalledWith(`/hub/dashboards/${saved.id}`)
   })
 
   it("create with a brief carries it to the detail page", async () => {
@@ -137,7 +137,7 @@ describe("My dashboards list page", () => {
     await waitFor(() => expect(push).toHaveBeenCalledTimes(1))
     const put = vi.mocked(apiRequest).mock.calls.find(([, init]) => init?.method === "PUT")
     const { id } = JSON.parse(put[1].body)
-    expect(push).toHaveBeenCalledWith(`/dashboards/${id}?brief=${encodeURIComponent("spend by client & day")}`)
+    expect(push).toHaveBeenCalledWith(`/hub/dashboards/${id}?brief=${encodeURIComponent("spend by client & day")}`)
   })
 
   it("requires a title", async () => {

@@ -13,12 +13,12 @@ export const FIELD_SIZES = {
 // A field is a white surface on the outline button's ring and lift. The ring is a shadow, not a
 // border, so hover, focus and error change it without the box moving a pixel.
 const FIELD_SURFACE =
-  "bg-raised text-foreground shadow-control outline-none tabular-nums transition-[background-color,box-shadow,color,translate,scale] duration-160 ease-press placeholder:text-muted-foreground hover:bg-raised-hover hover:shadow-control-hover aria-invalid:shadow-field-error disabled:cursor-not-allowed disabled:bg-field-disabled disabled:text-field-disabled-foreground disabled:shadow-field-disabled disabled:placeholder:text-field-disabled-foreground"
+  "bg-raised text-foreground shadow-control outline-none tabular-nums transition-[background-color,box-shadow,color,translate,scale] duration-160 ease-press placeholder:text-muted-foreground hover:bg-raised-hover hover:shadow-control-hover aria-invalid:shadow-field-error data-[warning=true]:shadow-field-warning data-[warning=true]:hover:shadow-field-warning disabled:cursor-not-allowed disabled:bg-field-disabled disabled:text-field-disabled-foreground disabled:shadow-field-disabled disabled:placeholder:text-field-disabled-foreground"
 
 export const fieldVariants = cva(
   [
     FIELD_SURFACE,
-    "w-full min-w-0 focus-visible:bg-raised focus-visible:shadow-focus-field aria-invalid:focus-visible:shadow-field-error",
+    "w-full min-w-0 focus-visible:bg-raised focus-visible:shadow-focus-field aria-invalid:focus-visible:shadow-field-error data-[warning=true]:focus-visible:shadow-focus-field",
     "file:inline-flex file:h-6 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground",
     "selection:bg-primary selection:text-primary-foreground",
   ],

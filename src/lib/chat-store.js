@@ -170,6 +170,8 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       assistant.dashboard_applied = result?.applied ?? false
       assistant.dashboard_error = result?.error
     }
+    // The agent training tools echo what they changed; kept for the "rule updated" chips.
+    if (data.agent_changes?.length) assistant.agent_changes = data.agent_changes
     chat().messages = [...chat().messages, assistant]
     toolsUsed.forEach((t) => handlers.onToolUsed?.(t))
 

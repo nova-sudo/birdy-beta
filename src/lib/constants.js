@@ -78,5 +78,8 @@ export const PROTECTED_ROUTES = [
   "/contacts",
   "/admin",
   "/changelog",
-  "/dashboards",
+  "/hub",
+  "/hub/dashboards",
+  "/hub/agents/media-buying",
+  "/hub/agents/media-buying/setup",
 ]
