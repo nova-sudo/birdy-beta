@@ -21,7 +21,14 @@ function MobileNavSheet({ open, onOpenChange, sidebarProps }) {
         <SheetTitle className="sr-only">Navigation</SheetTitle>
         <SheetDescription className="sr-only">Primary navigation</SheetDescription>
         <div data-ds="mobile-nav-sheet" className="min-h-0 flex-1">
-          <AppSidebar {...sidebarProps} onNavigate={() => onOpenChange(false)} className="w-full" />
+          {/* pr-10 keeps the account trigger's chevron clear of the sheet's
+              close button (absolute top-4 right-4, 32 wide). */}
+          <AppSidebar
+            {...sidebarProps}
+            onNavigate={() => onOpenChange(false)}
+            headerClassName="pr-10"
+            className="w-full"
+          />
         </div>
       </SheetContent>
     </Sheet>

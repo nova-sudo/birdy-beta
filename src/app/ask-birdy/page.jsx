@@ -321,7 +321,9 @@ export default function AskBirdyPage() {
   usePageHeader(topBar)
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col gap-4">
+    // data-main-fill holds the layout column to main's height, so the
+    // conversation list and the message pane scroll inside, not the page.
+    <div data-main-fill className="flex min-h-0 w-full flex-1 flex-col gap-4">
       <PageHeader title="Ask Birdy" description="Your marketing co-pilot across every client" />
 
       <div className="flex min-h-0 w-full flex-1 gap-4">

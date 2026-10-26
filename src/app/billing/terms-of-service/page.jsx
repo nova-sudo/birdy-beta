@@ -16,21 +16,6 @@ const SECTIONS = [
   { id: "contact",      num: "12", title: "Contact" },
 ];
 
-function LegalHeader() {
-  return (
-    <header className="sticky top-0 z-10 bg-background border-b border-border">
-      <div className="max-w-4xl mx-auto px-8 py-6 flex items-center gap-3">
-        <Link href="/" className="text-xl font-semibold text-foreground">
-          Birdy<span className="text-primary">.</span>
-        </Link>
-        <span className="ml-auto text-xs font-medium text-muted-foreground border border-border rounded-full px-3 py-1">
-          Legal
-        </span>
-      </div>
-    </header>
-  );
-}
-
 function LegalFooter() {
   return (
     <footer className="text-center py-12 border-t border-border text-sm text-muted-foreground">
@@ -84,10 +69,9 @@ export default function TermsOfService() {
         <meta name="description" content="Birdy AI Terms of Service" />
       </Head>
 
-      <div className="min-h-screen bg-frame font-sans text-base leading-[1.6] text-body">
-        <LegalHeader />
+      <div data-legal className="mx-auto w-full max-w-4xl font-sans text-base leading-[1.6] text-body">
 
-        <main className="max-w-4xl mx-auto px-8 py-16 pb-28">
+        <article>
 
           {/* Hero */}
           <div className="mb-14 pb-12 border-b border-border">
@@ -226,7 +210,7 @@ export default function TermsOfService() {
               <span key="web"><strong className="font-medium">Website:</strong> <a href="https://birdy-beta.vercel.app" className="text-primary underline underline-offset-2">birdy-beta.vercel.app</a></span>,
             ]} />
           </section>
-        </main>
+        </article>
 
         <LegalFooter />
       </div>

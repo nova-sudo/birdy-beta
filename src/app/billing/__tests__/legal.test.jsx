@@ -28,11 +28,20 @@ describe.each([
 
   it("uses the body token at 16/1.6 and no legacy classes", () => {
     const { container } = render(<Page />)
-    const root = container.querySelector(".min-h-screen")
+    const root = container.querySelector("[data-legal]")
     expect(root.className).toMatch(/text-body/)
     expect(root.className).toMatch(/text-base/)
     expect(root.className).toMatch(/leading-\[1\.6\]/)
     const classes = [...container.querySelectorAll("[class]")].map((e) => e.getAttribute("class")).join(" ")
     expect(classes).not.toMatch(LEGACY)
+  })
+
+  it("sits in the shell's gutters: no page-height wrapper, fill or own padding", () => {
+    const { container } = render(<Page />)
+    expect(container.querySelector(".min-h-screen")).toBeNull()
+    expect(container.querySelector("main")).toBeNull()
+    const root = container.querySelector("[data-legal]")
+    expect(root.className).not.toMatch(/\b(bg-frame|px-8|py-16)\b/)
+    expect(root.querySelector(":scope > article").getAttribute("class")).toBeNull()
   })
 })

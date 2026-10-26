@@ -87,12 +87,27 @@ function useStoredUserName() {
  * @param {() => void} [props.onNavigate] Called after any link is chosen; the mobile sheet uses it to close.
  * @param {boolean} [props.minimal] Admin console: no Browse/Ask switch, search, credits or jobs.
  * @param {boolean} [props.collapsed=false] The 56 rail: icons only.
+ * @param {boolean} [props.animated=false] Animate the width between panel and rail; off until the user toggles, so a restored rail does not slide on load.
+ * @param {React.ReactNode} [props.caption] Under the name on the account trigger. Defaults to "Agency workspace", or none when `minimal`.
+ * @param {string} [props.headerClassName] On the account trigger's row, e.g. room for a sheet's close button.
  */
-function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, minimal = false, collapsed = false, className }) {
+function AppSidebar({
+  items = NAV_ITEMS,
+  agencyName,
+  onSearch,
+  onNavigate,
+  minimal = false,
+  collapsed = false,
+  animated = false,
+  caption,
+  headerClassName,
+  className,
+}) {
   const pathname = usePathname()
   const { isAdmin } = useRole()
   const userName = useStoredUserName()
   const name = agencyName ?? userName ?? "Birdy"
+  const triggerCaption = caption === undefined ? (minimal ? null : "Agency workspace") : caption
 
   const handleMode = (next) => {
     // Ask Birdy opens the chat modal; the tabs stay on Browse.
@@ -115,61 +130,66 @@ function AppSidebar({ items = NAV_ITEMS, agencyName, onSearch, onNavigate, minim
       data-ds="app-sidebar"
       data-state={collapsed ? "collapsed" : "expanded"}
       className={cn(
-        "flex h-full shrink-0 flex-col gap-3 py-2.5 font-sans text-sidebar-foreground motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-edge",
+        "flex h-full shrink-0 flex-col gap-3 py-2.5 font-sans text-sidebar-foreground",
+        animated && "motion-safe:transition-[width] motion-safe:duration-200 motion-safe:ease-edge",
         collapsed ? "w-14 items-center px-2" : "w-64 px-2.5",
         className
       )}
     >
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label="Account menu"
-            title={collapsed ? name : undefined}
-            className={cn(
-              "flex h-12 shrink-0 cursor-pointer items-center rounded-control outline-none transition-colors hover:bg-rail-frame focus-visible:shadow-focus data-[state=open]:bg-rail-frame",
-              collapsed ? "w-10 justify-center" : "w-full min-w-0 gap-2.5 px-2"
-            )}
-          >
-            {/* Bytes BrandTile: the 32 r9 tile, the agency's initial on primary. */}
-            <span
-              data-slot="brand-tile"
-              aria-hidden
-              className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-primary text-sm font-semibold text-primary-foreground"
+      <div data-slot="sidebar-header" className={cn("flex shrink-0", !collapsed && "w-full", headerClassName)}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-label="Account menu"
+              title={collapsed ? name : undefined}
+              className={cn(
+                "flex h-12 shrink-0 cursor-pointer items-center rounded-control outline-none transition-colors hover:bg-rail-frame focus-visible:shadow-focus data-[state=open]:bg-rail-frame",
+                collapsed ? "w-10 justify-center" : "w-full min-w-0 gap-2.5 px-2"
+              )}
             >
-              {name.charAt(0).toUpperCase()}
-            </span>
-            {!collapsed && (
-              <>
-                {/* Bytes SwitcherLabel: name 16/600 over a 13 muted caption. */}
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-base leading-5 font-semibold text-foreground">{name}</span>
-                  <span className="block truncate text-xs leading-4 text-muted-foreground">Agency workspace</span>
-                </span>
-                <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-              </>
+              {/* Bytes BrandTile: the 32 r9 tile, the agency's initial on primary. */}
+              <span
+                data-slot="brand-tile"
+                aria-hidden
+                className="flex size-8 shrink-0 items-center justify-center rounded-[9px] bg-primary text-sm font-semibold text-primary-foreground"
+              >
+                {name.charAt(0).toUpperCase()}
+              </span>
+              {!collapsed && (
+                <>
+                  {/* Bytes SwitcherLabel: name 16/600 over a 13 muted caption. */}
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block truncate text-base leading-5 font-semibold text-foreground">{name}</span>
+                    {triggerCaption && (
+                      <span className="block truncate text-xs leading-4 text-muted-foreground">{triggerCaption}</span>
+                    )}
+                  </span>
+                  <ChevronsUpDown aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                </>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side={collapsed ? "right" : "bottom"} align="start" sideOffset={6} className="w-56">
+            {isAdmin && (
+              <DropdownMenuItem asChild>
+                <Link href="/admin" onClick={onNavigate}>
+                  <Shield /> Admin console
+                </Link>
+              </DropdownMenuItem>
             )}
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side={collapsed ? "right" : "bottom"} align="start" sideOffset={6} className="w-56">
-          {isAdmin && (
             <DropdownMenuItem asChild>
-              <Link href="/admin" onClick={onNavigate}>
-                <Shield /> Admin console
+              <Link href="/settings" onClick={onNavigate}>
+                <Settings /> Settings
               </Link>
             </DropdownMenuItem>
-          )}
-          <DropdownMenuItem asChild>
-            <Link href="/settings" onClick={onNavigate}>
-              <Settings /> Settings
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
-            <LogOut /> Logout
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onSelect={handleLogout}>
+              <LogOut /> Logout
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
       {!minimal && !collapsed && (
         <div className="shrink-0">

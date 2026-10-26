@@ -75,6 +75,30 @@ describe("RootLayout shell", () => {
     expect(rail.getAttribute("data-state")).toBe("expanded")
   })
 
+  it("remembers the collapsed rail across reloads, without animating it in", () => {
+    localStorage.clear()
+    const first = renderLayout()
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }))
+    expect(localStorage.getItem("birdy.sidebarCollapsed")).toBe("1")
+    first.unmount()
+
+    renderLayout()
+    const rail = document.querySelector('[data-ds="app-sidebar"]')
+    expect(rail.getAttribute("data-state")).toBe("collapsed")
+    expect(rail.className).not.toContain("transition-[width]")
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }))
+    expect(localStorage.getItem("birdy.sidebarCollapsed")).toBe("0")
+    expect(rail.className).toContain("transition-[width]")
+    localStorage.clear()
+  })
+
+  it("holds a data-main-fill page to main's height", () => {
+    render(<RootLayout><div data-main-fill>chat</div></RootLayout>)
+    const column = screen.getByText("chat").parentElement
+    expect(column).toHaveClass("has-[[data-main-fill]]:min-h-0", "flex-1", "flex-col")
+  })
+
   it("renders no navigation on shell-less routes", () => {
     pathnameMock.value = "/login"
     renderLayout()

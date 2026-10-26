@@ -110,6 +110,27 @@ describe("AppSidebar", () => {
     expect(trigger.textContent).toContain("Northwind")
   })
 
+  it("captions the account trigger, but not on the minimal admin sidebar", () => {
+    const { unmount } = render(<AppSidebar agencyName="Northwind" />)
+    expect(screen.getByRole("button", { name: "Account menu" }).textContent).toContain("Agency workspace")
+    unmount()
+    render(<AppSidebar agencyName="Admin" minimal />)
+    expect(screen.getByRole("button", { name: "Account menu" }).textContent).toBe("A" + "Admin")
+  })
+
+  it("takes a caption override", () => {
+    render(<AppSidebar agencyName="Northwind" caption="3 clients" />)
+    expect(screen.getByRole("button", { name: "Account menu" }).textContent).toContain("3 clients")
+  })
+
+  it("animates its width only when asked", () => {
+    const { container, rerender } = render(<AppSidebar />)
+    const aside = () => container.querySelector('[data-ds="app-sidebar"]')
+    expect(aside().className).not.toContain("transition-[width]")
+    rerender(<AppSidebar animated />)
+    expect(aside().className).toContain("motion-safe:transition-[width]")
+  })
+
   it("collapses to the 56 rail: icons only, names kept for assistive tech", () => {
     const { container } = render(<AppSidebar collapsed />)
     const aside = container.querySelector('[data-ds="app-sidebar"]')
@@ -300,5 +321,13 @@ describe("MobileNavSheet", () => {
     const sheet = document.querySelector('[data-ds="sheet"]')
     expect(sheet.getAttribute("data-side")).toBe("left")
     expect(sheet.querySelector('[data-ds="app-sidebar"]')).toBeTruthy()
+  })
+
+  it("keeps the account trigger clear of the sheet's close button", () => {
+    render(<MobileNavSheet open onOpenChange={() => {}} />)
+    const sheet = document.querySelector('[data-ds="sheet"]')
+    const header = sheet.querySelector('[data-slot="sidebar-header"]')
+    expect(header).toHaveClass("pr-10")
+    expect(header.contains(screen.getByRole("button", { name: "Account menu" }))).toBe(true)
   })
 })

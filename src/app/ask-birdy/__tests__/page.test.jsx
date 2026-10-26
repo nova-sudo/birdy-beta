@@ -78,6 +78,16 @@ describe("page chrome", () => {
     expect(screen.getByRole("complementary")).toHaveTextContent("A chat")
     expect(container.querySelector('[data-ds="button"]')).toHaveTextContent("New Chat")
   })
+
+  it("asks the layout to hold it to main's height, so the panes scroll inside", async () => {
+    seed([convo("s1", "A chat")])
+    const { container } = render(<AskBirdyPage />)
+    await screen.findByText("A chat")
+    const root = container.firstElementChild
+    expect(root.hasAttribute("data-main-fill")).toBe(true)
+    expect(root).toHaveClass("flex-1", "min-h-0")
+    expect(root).not.toHaveClass("h-full")
+  })
 })
 
 describe("Chats sheet below md", () => {

@@ -32,7 +32,7 @@ function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, classN
     <header
       data-ds="top-bar"
       className={cn(
-        "sticky top-0 flex h-[52px] w-full min-w-0 shrink-0 items-center gap-2 px-1.5 font-sans md:pr-2.5",
+        "flex h-[52px] w-full min-w-0 shrink-0 items-center gap-2 px-1.5 font-sans md:pr-2.5",
         className
       )}
     >

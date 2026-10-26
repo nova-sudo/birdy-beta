@@ -175,7 +175,7 @@ export default function Showcase() {
     <div data-ds="showcase" className="mx-auto flex w-full max-w-5xl flex-col gap-12 pb-16">
       <ConfirmHost />
       <header className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold text-foreground">Birdy design system</h1>
+        <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-foreground md:text-title">Birdy design system</h1>
         <p className="text-sm text-muted-foreground">The ds kit in one place. Dev only, returns 404 in production.</p>
       </header>
 
