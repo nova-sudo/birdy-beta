@@ -48,11 +48,26 @@ describe("DataTable", () => {
     expect(cards[0].closest("ul").className).toContain("@max-xl/table:flex")
   })
 
-  it("draws the surface edges on the visible scroll box, not only at the table's ends", () => {
-    const { container, rerender } = render(<DataTable columns={columns} data={data} />)
-    expect(container.querySelectorAll("[data-slot='data-table-edges'] > span")).toHaveLength(6)
-    rerender(<DataTable columns={columns} data={data} bare />)
+  it("draws the surface edges on the visible scroll box only while the table scrolls sideways", () => {
+    const { container, unmount } = render(<DataTable columns={columns} data={data} />)
     expect(container.querySelector("[data-slot='data-table-edges']")).toBeNull()
+    unmount()
+
+    const box = (prop, value) => vi.spyOn(HTMLElement.prototype, prop, "get").mockImplementation(function () {
+      return this.dataset?.slot === "data-table-scroll" ? value : 0
+    })
+    const spies = [box("scrollWidth", 1200), box("clientWidth", 600), box("offsetHeight", 412), box("clientHeight", 400)]
+    try {
+      const wide = render(<DataTable columns={columns} data={data} />)
+      const edges = wide.container.querySelector("[data-slot='data-table-edges']")
+      expect(edges.querySelectorAll("span")).toHaveLength(6)
+      // It stops above the 12px horizontal scrollbar, at the last row.
+      expect(edges.style.bottom).toBe("12px")
+      wide.rerender(<DataTable columns={columns} data={data} bare />)
+      expect(wide.container.querySelector("[data-slot='data-table-edges']")).toBeNull()
+    } finally {
+      spies.forEach((spy) => spy.mockRestore())
+    }
   })
 
   it("loading shows skeleton rows instead of data", () => {

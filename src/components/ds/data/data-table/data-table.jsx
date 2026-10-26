@@ -50,24 +50,44 @@ const SURFACE_BODY = cn(
 
 // The cells round the surface at the table's own ends. A table wider than its frame scrolls those
 // ends out of view, so these pieces draw the corners and side outline on the visible edges
-// instead. They paint over the same spot as the cell corners when nothing scrolls. The head row is
-// h-9, so the surface starts 36px down.
+// instead, only while the table overflows. The head row is h-9, so the surface starts 36px down; it
+// ends above the horizontal scrollbar, whose height is measured.
 const EDGE_RADIUS = "calc(var(--radius-frame) + 1px)"
 const corner = (at) =>
   `radial-gradient(circle at ${at}, transparent calc(${EDGE_RADIUS} - 1px), var(--color-surface-ring) calc(${EDGE_RADIUS} - 1px), var(--color-surface-ring) ${EDGE_RADIUS}, var(--color-frame) ${EDGE_RADIUS})`
 
-function SurfaceEdges() {
+function SurfaceEdges({ bar }) {
   const piece = "pointer-events-none absolute z-20 size-[calc(var(--radius-frame)+1px)]"
   return (
-    <div aria-hidden data-slot="data-table-edges">
-      <span className={cn(piece, "top-9 left-0")} style={{ backgroundImage: corner("100% 100%") }} />
-      <span className={cn(piece, "top-9 right-0")} style={{ backgroundImage: corner("0 100%") }} />
+    <div aria-hidden data-slot="data-table-edges" className="pointer-events-none absolute inset-x-0 top-9" style={{ bottom: bar }}>
+      <span className={cn(piece, "top-0 left-0")} style={{ backgroundImage: corner("100% 100%") }} />
+      <span className={cn(piece, "top-0 right-0")} style={{ backgroundImage: corner("0 100%") }} />
       <span className={cn(piece, "bottom-0 left-0")} style={{ backgroundImage: corner("100% 0") }} />
       <span className={cn(piece, "right-0 bottom-0")} style={{ backgroundImage: corner("0 0") }} />
-      <span className="pointer-events-none absolute top-9 bottom-0 left-0 z-10 w-px bg-surface-ring" />
-      <span className="pointer-events-none absolute top-9 right-0 bottom-0 z-10 w-px bg-surface-ring" />
+      <span className="absolute inset-y-0 left-0 z-10 w-px bg-surface-ring" />
+      <span className="absolute inset-y-0 right-0 z-10 w-px bg-surface-ring" />
     </div>
   )
+}
+
+/** Whether the scroll box overflows sideways, and how tall its horizontal scrollbar is. */
+function useScrollOverflow(ref) {
+  const [state, setState] = React.useState({ overflow: false, bar: 0 })
+  React.useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const measure = () => {
+      const next = { overflow: el.scrollWidth > el.clientWidth + 1, bar: el.offsetHeight - el.clientHeight }
+      setState((prev) => (prev.overflow === next.overflow && prev.bar === next.bar ? prev : next))
+    }
+    measure()
+    if (typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    if (el.firstElementChild) observer.observe(el.firstElementChild)
+    return () => observer.disconnect()
+  }, [ref])
+  return state
 }
 
 const BARE_BODY = "[&>tr>*]:border-t [&>tr>*]:border-divider"
@@ -207,6 +227,8 @@ function DataTable({
   const showToolbar = toolbar != null || columns.some((c) => c.meta?.variant)
   const totalRows = table.getPrePaginationRowModel().rows.length
   const isEmpty = !loading && totalRows === 0
+  const scrollRef = React.useRef(null)
+  const scroll = useScrollOverflow(scrollRef)
   const showFooter = !loading && !isEmpty
   const pageIndex = state.pagination.pageIndex
   const pageCount = table.getPageCount()
@@ -370,13 +392,13 @@ function DataTable({
       <div
         className={cn("relative @max-xl/table:hidden", !bare && "-mx-px", !bare && !showFooter && !isEmpty && "-mb-px")}
       >
-        <div data-slot="data-table-scroll" className="relative overflow-x-auto">
+        <div ref={scrollRef} data-slot="data-table-scroll" className="relative overflow-x-auto">
           <table className="w-full border-separate border-spacing-0">
             {head}
             {!isEmpty && body}
           </table>
         </div>
-        {!bare && !isEmpty && <SurfaceEdges />}
+        {!bare && !isEmpty && scroll.overflow && <SurfaceEdges bar={scroll.bar} />}
       </div>
       {isEmpty ? (
         <div
