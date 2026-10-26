@@ -19,7 +19,7 @@ import { Tabs, TabsList, TabsTrigger } from "./tabs"
  */
 function SegmentedTabs({ value, onValueChange, items, size = "md", surface, fill, ariaLabel, panelId, className }) {
   return (
-    <Tabs value={value} onValueChange={onValueChange} data-ds="segmented-tabs" className={fill ? "gap-0" : "w-fit gap-0"}>
+    <Tabs value={value} onValueChange={onValueChange} data-ds="segmented-tabs" className={fill ? "gap-0" : "w-fit max-w-full gap-0"}>
       <TabsList aria-label={ariaLabel} size={size} surface={surface} fill={fill} className={className}>
         {items.map((item) => (
           <TabsTrigger
