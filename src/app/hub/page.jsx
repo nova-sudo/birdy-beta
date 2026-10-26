@@ -24,26 +24,29 @@ const MEDIA_BUYING_POINTS = [
 function MediaBuyingAgentCard({ agent }) {
   const hasAgent = Boolean(agent)
   return (
-    <Frame title="Media Buying Agent" action={<Badge tone="primary">Default</Badge>}>
-      <div className="flex flex-col gap-4">
-        <p className="text-sm leading-normal text-ink-secondary">
-          Watches your clients&apos; Meta ads every morning. Drafts a work list, you approve, it learns your strategy.
-        </p>
-        <ul className="flex flex-col gap-2">
-          {MEDIA_BUYING_POINTS.map(({ icon: Icon, text }) => (
-            <li key={text} className="flex items-center gap-2.5 text-sm text-foreground">
-              <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
-              {text}
-            </li>
-          ))}
-        </ul>
-        <Button asChild variant="primary" size="lg">
-          <Link href={hasAgent ? AGENT_HREF : SETUP_HREF}>
-            {hasAgent ? "Open agent" : "Set up agent"}
-            <ArrowRight aria-hidden />
-          </Link>
-        </Button>
-      </div>
+    <Frame
+      title="Media Buying Agent"
+      action={<Badge tone="primary">Default</Badge>}
+      padded
+      contentClassName="flex flex-col gap-4"
+    >
+      <p className="text-sm leading-normal text-ink-secondary">
+        Watches your clients&apos; Meta ads every morning. Drafts a work list, you approve, it learns your strategy.
+      </p>
+      <ul className="flex flex-col gap-2">
+        {MEDIA_BUYING_POINTS.map(({ icon: Icon, text }) => (
+          <li key={text} className="flex items-center gap-2.5 text-sm text-foreground">
+            <Icon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+            {text}
+          </li>
+        ))}
+      </ul>
+      <Button asChild variant="primary" size="lg">
+        <Link href={hasAgent ? AGENT_HREF : SETUP_HREF}>
+          {hasAgent ? "Open agent" : "Set up agent"}
+          <ArrowRight aria-hidden />
+        </Link>
+      </Button>
     </Frame>
   )
 }
