@@ -137,9 +137,11 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
     setDone("denied")
     setDenying(false)
     try {
-      await denyWorkItem(item.id, choice)
+      const res = await denyWorkItem(item.id, choice)
       setDenyDraft(null)
-      toast("Denied. Birdy will remember why.", { description: item.title })
+      const learned = res?.memory?.text
+      if (learned) toast(`Denied. Birdy will remember: ${learned}`, { description: item.title })
+      else toast("Denied. Birdy will remember why.", { description: item.title })
       onDecided?.(item, "denied")
     } catch (err) {
       setDone(null)

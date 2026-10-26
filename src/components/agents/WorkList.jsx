@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react"
 import { useSWRConfig } from "swr"
 
 import { BirdyRead, ErrorState, Skeleton } from "@/components/ds"
-import { revalidateAgentWork, useAgentWork } from "@/lib/agents-api"
+import { revalidateAgentLearning, useAgentWork } from "@/lib/agents-api"
 import { cn } from "@/lib/utils"
 import { AutoRunToday } from "./AutoRunToday"
 import { WorkItem } from "./WorkItem"
@@ -41,12 +41,13 @@ export function WorkList({ agentId, empty, className }) {
       mutate((cur) => (cur ? { ...cur, open: (cur.open ?? []).filter((i) => i.id !== item.id) } : cur), {
         revalidate: false,
       })
-      revalidateAgentWork(mutateCache)
+      // A decision moves the rule's streak, so offers, proposals and trust can change too.
+      revalidateAgentLearning(mutateCache, agentId)
     },
-    [open, mutate, mutateCache]
+    [agentId, open, mutate, mutateCache]
   )
 
-  const onUndone = useCallback(() => revalidateAgentWork(mutateCache), [mutateCache])
+  const onUndone = useCallback(() => revalidateAgentLearning(mutateCache, agentId), [agentId, mutateCache])
 
   const rows = useMemo(() => {
     const list = open.map((item) => ({ item, decision: settled.get(item.id)?.decision ?? null }))

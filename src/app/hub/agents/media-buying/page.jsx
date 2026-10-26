@@ -9,7 +9,11 @@ import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
 import { Badge, Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
 import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/AgentTraining"
+import { LearningOffers } from "@/components/agents/GraduationOffer"
+import { LearnedList } from "@/components/agents/LearnedList"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
+import { ProposalList } from "@/components/agents/ProposalDiff"
+import { TrustTable } from "@/components/agents/TrustTable"
 import { WorkList } from "@/components/agents/WorkList"
 import { useAgent, useAgents, useAgentWork } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
@@ -110,18 +114,32 @@ function AgentHome() {
         <SegmentedTabs value={tab} onValueChange={setTab} items={tabs} ariaLabel="Agent" panelId={PANEL_ID} />
         <div id={PANEL_ID} role="tabpanel" aria-labelledby={`${PANEL_ID}-tab-${tab}`} className="min-w-0">
           {tab === "work" && (
-            <WorkList
-              agentId={agent.id}
-              empty={`Nothing needs you right now. Birdy checks again tomorrow at ${clockTime(agent.scope?.schedule?.time ?? "07:00") ?? "its usual time"}.`}
-            />
+            <div className="flex min-w-0 flex-col gap-6">
+              <LearningOffers agentId={agent.id} />
+              <ProposalList agentId={agent.id} currency={currency} />
+              <WorkList
+                agentId={agent.id}
+                empty={`Nothing needs you right now. Birdy checks again tomorrow at ${clockTime(agent.scope?.schedule?.time ?? "07:00") ?? "its usual time"}.`}
+              />
+            </div>
           )}
           {tab === "playbook" && (
-            <PlaybookDraft
-              agentId={agent.id}
-              currency={currency}
-              title="Playbook"
-              description="Click any value to change it"
-            />
+            <div className="flex min-w-0 flex-col gap-6">
+              <PlaybookDraft
+                agentId={agent.id}
+                currency={currency}
+                title="Playbook"
+                description="Click any value to change it"
+              />
+              <ProposalList
+                agentId={agent.id}
+                currency={currency}
+                title="Suggested changes"
+                empty="Nothing to suggest yet. When the same denial reason comes up 3 times in 14 days, Birdy suggests a rule change here."
+              />
+              <TrustTable agentId={agent.id} />
+              <LearnedList agentId={agent.id} />
+            </div>
           )}
           {tab === "train" && <AgentTraining agent={agent} clients={clients} />}
           {tab === "activity" && (

@@ -99,6 +99,35 @@ export function useAgentMemory(id) {
   return { memory: data ?? [], error, isLoading, mutate }
 }
 
+/**
+ * Graduation offers (first) and brake notices. Empty while the route is not
+ * deployed, so the work list never fails on it.
+ */
+export function useAgentOffers(id) {
+  const { data, isLoading, mutate } = useSWR(id ? queryKeys.agentOffers(id) : null, optionalFetcher)
+  return { offers: Array.isArray(data) ? data : [], isLoading, mutate }
+}
+
+/** Open rule-change proposals, newest first. Empty while the route is not deployed. */
+export function useAgentProposals(id) {
+  const { data, isLoading, mutate } = useSWR(id ? queryKeys.agentProposals(id) : null, optionalFetcher)
+  return { proposals: Array.isArray(data) ? data : [], isLoading, mutate }
+}
+
+/**
+ * Re-reads everything a learning decision can change: the rules (mode, params,
+ * stats), offers, proposals and the work list (open items carry `rule_mode`).
+ * Pass the `mutate` from `useSWRConfig()`.
+ */
+export function revalidateAgentLearning(mutate, id) {
+  return Promise.all([
+    mutate(queryKeys.agentRules(id)),
+    mutate(queryKeys.agentOffers(id)),
+    mutate(queryKeys.agentProposals(id)),
+    revalidateAgentWork(mutate),
+  ])
+}
+
 // ─── Mutations ───────────────────────────────────────────────────────────────
 
 /**
@@ -213,4 +242,29 @@ export function dismissWorkItem(id) {
 /** Reverses an applied item. @returns {Promise<{ok: boolean, outcome: "undone"|"noop"}>} */
 export function undoWorkItem(id) {
   return send(`${suggestionPath(id)}/undo`, "POST")
+}
+
+// ─── Learning ────────────────────────────────────────────────────────────────
+
+/** Applies a proposal. @returns {Promise<{proposal: object, rule: object}>} 409 once decided, 400 if it no longer validates. */
+export function acceptProposal(id, proposalId) {
+  return send(`${queryKeys.agentProposals(id)}/${encodeURIComponent(proposalId)}/accept`, "POST")
+}
+
+/** Keeps the rule as it is. @returns {Promise<{proposal: object}>} */
+export function rejectProposal(id, proposalId) {
+  return send(`${queryKeys.agentProposals(id)}/${encodeURIComponent(proposalId)}/reject`, "POST")
+}
+
+/**
+ * Answers a graduation offer or brake notice: "auto_notify" | "auto_silent" | "keep_asking"
+ * (a brake notice alone takes only "keep_asking"). @returns {Promise<object>} the rule. 409 when nothing is pending.
+ */
+export function graduateRule(id, ruleId, choice) {
+  return send(`${queryKeys.agentRules(id)}/${encodeURIComponent(ruleId)}/graduate`, "POST", { choice })
+}
+
+/** Forgets one remembered item. */
+export function deleteMemory(id, memoryId) {
+  return send(`${queryKeys.agentMemory(id)}/${encodeURIComponent(memoryId)}`, "DELETE")
 }

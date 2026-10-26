@@ -54,5 +54,7 @@ export const queryKeys = {
   agentConfidence: (id) => `/api/agents/${id}/confidence`,
   agentPractice: (id) => `/api/agents/${id}/practice`,
   agentMemory: (id) => `/api/agents/${id}/memory`,
+  agentOffers: (id) => `/api/agents/${id}/offers`,
+  agentProposals: (id) => `/api/agents/${id}/proposals`,
   agentJob: (id, jobId) => `/api/agents/${id}/jobs/${jobId}`,
 }
