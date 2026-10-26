@@ -48,6 +48,28 @@ const SURFACE_BODY = cn(
   "[&>tr:last-child>*:first-child]:rounded-bl-[calc(var(--radius-frame)+1px)] [&>tr:last-child>*:last-child]:rounded-br-[calc(var(--radius-frame)+1px)]"
 )
 
+// The cells round the surface at the table's own ends. A table wider than its frame scrolls those
+// ends out of view, so these pieces draw the corners and side outline on the visible edges
+// instead. They paint over the same spot as the cell corners when nothing scrolls. The head row is
+// h-9, so the surface starts 36px down.
+const EDGE_RADIUS = "calc(var(--radius-frame) + 1px)"
+const corner = (at) =>
+  `radial-gradient(circle at ${at}, transparent calc(${EDGE_RADIUS} - 1px), var(--color-surface-ring) calc(${EDGE_RADIUS} - 1px), var(--color-surface-ring) ${EDGE_RADIUS}, var(--color-frame) ${EDGE_RADIUS})`
+
+function SurfaceEdges() {
+  const piece = "pointer-events-none absolute z-20 size-[calc(var(--radius-frame)+1px)]"
+  return (
+    <div aria-hidden data-slot="data-table-edges">
+      <span className={cn(piece, "top-9 left-0")} style={{ backgroundImage: corner("100% 100%") }} />
+      <span className={cn(piece, "top-9 right-0")} style={{ backgroundImage: corner("0 100%") }} />
+      <span className={cn(piece, "bottom-0 left-0")} style={{ backgroundImage: corner("100% 0") }} />
+      <span className={cn(piece, "right-0 bottom-0")} style={{ backgroundImage: corner("0 0") }} />
+      <span className="pointer-events-none absolute top-9 bottom-0 left-0 z-10 w-px bg-surface-ring" />
+      <span className="pointer-events-none absolute top-9 right-0 bottom-0 z-10 w-px bg-surface-ring" />
+    </div>
+  )
+}
+
 const BARE_BODY = "[&>tr>*]:border-t [&>tr>*]:border-divider"
 
 const MOBILE_ITEM =
@@ -346,13 +368,15 @@ function DataTable({
         <DataTableToolbar table={table}>{typeof toolbar === "function" ? toolbar(table) : toolbar}</DataTableToolbar>
       )}
       <div
-        data-slot="data-table-scroll"
-        className={cn("relative overflow-x-auto @max-xl/table:hidden", !bare && "-mx-px", !bare && !showFooter && !isEmpty && "-mb-px")}
+        className={cn("relative @max-xl/table:hidden", !bare && "-mx-px", !bare && !showFooter && !isEmpty && "-mb-px")}
       >
-        <table className="w-full border-separate border-spacing-0">
-          {head}
-          {!isEmpty && body}
-        </table>
+        <div data-slot="data-table-scroll" className="relative overflow-x-auto">
+          <table className="w-full border-separate border-spacing-0">
+            {head}
+            {!isEmpty && body}
+          </table>
+        </div>
+        {!bare && !isEmpty && <SurfaceEdges />}
       </div>
       {isEmpty ? (
         <div

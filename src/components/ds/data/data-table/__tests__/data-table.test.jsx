@@ -44,8 +44,15 @@ describe("DataTable", () => {
     expect(within(cards[0]).getByText("Alpha")).toBeInTheDocument()
     expect(within(cards[0]).getByText("Spend")).toBeInTheDocument()
     // The fold follows the table's own width (a container query at 576), not the viewport.
-    expect(table().closest("[data-slot='data-table-scroll']").className).toContain("@max-xl/table:hidden")
+    expect(table().closest("[data-slot='data-table-scroll']").parentElement.className).toContain("@max-xl/table:hidden")
     expect(cards[0].closest("ul").className).toContain("@max-xl/table:flex")
+  })
+
+  it("draws the surface edges on the visible scroll box, not only at the table's ends", () => {
+    const { container, rerender } = render(<DataTable columns={columns} data={data} />)
+    expect(container.querySelectorAll("[data-slot='data-table-edges'] > span")).toHaveLength(6)
+    rerender(<DataTable columns={columns} data={data} bare />)
+    expect(container.querySelector("[data-slot='data-table-edges']")).toBeNull()
   })
 
   it("loading shows skeleton rows instead of data", () => {
