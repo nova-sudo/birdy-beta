@@ -68,6 +68,8 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
   const [applyFailed, setApplyFailed] = useState(null)
   const [error, setError] = useState(null)
   const [blockedNow, setBlockedNow] = useState(null)
+  // The reason and note of a deny that failed, so the retry starts from them.
+  const [denyDraft, setDenyDraft] = useState(null)
 
   const { tone, Icon } = KIND[item.rule_kind] ?? { tone: "info", Icon: Sparkles }
   const flag = isFlagItem(item)
@@ -136,10 +138,12 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
     setDenying(false)
     try {
       await denyWorkItem(item.id, choice)
+      setDenyDraft(null)
       toast("Denied. Birdy will remember why.", { description: item.title })
       onDecided?.(item, "denied")
     } catch (err) {
       setDone(null)
+      setDenyDraft(choice)
       setDenying(true)
       fail(err, "Couldn't deny that")
     } finally {
@@ -223,6 +227,7 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
         <DenyReason
           className="border-t border-divider bg-muted/40 px-4 pt-3 pb-4 sm:pl-14"
           busy={busy === "deny"}
+          initial={denyDraft ?? undefined}
           onCancel={() => setDenying(false)}
           onConfirm={deny}
         />

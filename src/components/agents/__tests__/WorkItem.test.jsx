@@ -124,6 +124,41 @@ describe("WorkItem", () => {
     expect(await screen.findByText("Noted")).toBeInTheDocument()
   })
 
+  it("Got it on a flag-mode item with nothing to write applies it and settles as Noted", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(res({ ok: true, outcome: "applied", succeeded: [], failed: [] }))
+    const onDecided = vi.fn()
+    const item = { ...NO_SPEND, id: "s5", rule_mode: "flag", has_action: false }
+    render(<WorkItem item={item} onDecided={onDecided} />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Got it" }))
+
+    expect(calls("/api/dashboard/suggestions/s5/apply", "POST")).toHaveLength(1)
+    expect(await screen.findByText("Noted")).toBeInTheDocument()
+    await waitFor(() => expect(onDecided).toHaveBeenCalledWith(item, "handled"))
+  })
+
+  it("a failed deny keeps the reason and note for the retry", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(res({ detail: "Applying right now — try again in a moment" }, 409))
+    render(<WorkItem item={PAUSE} onDecided={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Deny" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Target is wrong" }))
+    await userEvent.type(screen.getByRole("textbox"), "Client moved the target")
+    await userEvent.click(screen.getByRole("button", { name: "Confirm" }))
+
+    expect(await screen.findByText(/Applying right now/)).toBeInTheDocument()
+    expect(screen.getByRole("radio", { name: "Target is wrong" })).toHaveAttribute("aria-checked", "true")
+    expect(screen.getByRole("textbox")).toHaveValue("Client moved the target")
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeEnabled()
+
+    vi.mocked(apiRequest).mockResolvedValue(res({ ok: true }))
+    await userEvent.click(screen.getByRole("button", { name: "Confirm" }))
+    const posts = calls("/api/dashboard/suggestions/s1/deny", "POST")
+    expect(posts).toHaveLength(2)
+    expect(JSON.parse(posts[1][1].body)).toEqual({ reason_code: "target_wrong", note: "Client moved the target" })
+    expect(await screen.findByText("Denied")).toBeInTheDocument()
+  })
+
   it("blocked item shows reason", async () => {
     const item = {
       ...PAUSE,

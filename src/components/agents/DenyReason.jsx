@@ -21,10 +21,11 @@ export const DENY_REASONS = [
  * @param {(choice: {reason_code: string, note: string}) => void} props.onConfirm
  * @param {() => void} props.onCancel
  * @param {boolean} [props.busy]
+ * @param {{reason_code?: string, note?: string}} [props.initial] Starts with this choice (e.g. after a failed deny)
  */
-export function DenyReason({ onConfirm, onCancel, busy = false, className }) {
-  const [reason, setReason] = useState(null)
-  const [note, setNote] = useState("")
+export function DenyReason({ onConfirm, onCancel, busy = false, initial, className }) {
+  const [reason, setReason] = useState(initial?.reason_code ?? null)
+  const [note, setNote] = useState(initial?.note ?? "")
   const labelId = useId()
   const noteId = useId()
 

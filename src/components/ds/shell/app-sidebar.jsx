@@ -74,6 +74,21 @@ function useStoredUserName() {
 }
 
 /**
+ * A nav item's count. Its own component because `useCount` is a hook (e.g.
+ * `useAgentWorkCount`): each badge keeps a stable hook order whatever list the
+ * sidebar is given. Hidden at 0 or null.
+ */
+function NavBadge({ useCount }) {
+  const count = useCount() ?? null
+  if (count == null || count <= 0) return null
+  return (
+    <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
+      {count > 99 ? "99+" : count}
+    </span>
+  )
+}
+
+/**
  * Primary navigation: the account switcher, Browse / Ask Birdy tabs, search, the nav list, then
  * background jobs and credits. 256 wide; `collapsed` makes it the 56 icon rail.
  *
@@ -130,7 +145,6 @@ function AppSidebar({
 
   const renderItem = (item) => {
     const active = isActive(item, pathname)
-    const count = item.badge?.() ?? null
     const Icon = item.icon
     return (
       <li key={item.key}>
@@ -148,11 +162,7 @@ function AppSidebar({
           ) : (
             <>
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              {count != null && count > 0 && (
-                <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
-                  {count > 99 ? "99+" : count}
-                </span>
-              )}
+              {item.badge && <NavBadge useCount={item.badge} />}
             </>
           )}
         </Link>

@@ -230,6 +230,9 @@ const partsText = (parts, strong) =>
 
 const AGENT_TAG = "Media Buying Agent";
 
+/** An agent item whose rule is on "flag": the server refuses to apply its action. */
+const isFlagOnly = (s) => Boolean(s.agent_id) && s.rule_mode === "flag" && Boolean(s.has_action);
+
 /**
  * Turns the briefing's findings and the pending suggestions into BirdyRead
  * rows: worst tone first, at most five.
@@ -249,7 +252,8 @@ export function toFindings(briefing, suggestions, { onApply, onDismiss } = {}) {
     title: s.title,
     detail: [s.client, s.why].filter(Boolean).join(" · ") || undefined,
     tag: s.agent_id ? AGENT_TAG : undefined,
-    action: onApply ? { label: "Do it", onClick: () => onApply(s) } : undefined,
+    // A flag-mode agent rule only flags: its action is never applied, so no "Do it".
+    action: onApply && !isFlagOnly(s) ? { label: "Do it", onClick: () => onApply(s) } : undefined,
     onDismiss: onDismiss ? () => onDismiss(s) : undefined,
   }));
 

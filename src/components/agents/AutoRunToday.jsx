@@ -5,6 +5,10 @@ import { Zap } from "lucide-react"
 
 import { Badge, Button, Frame, toast } from "@/components/ds"
 import { undoWorkItem } from "@/lib/agents-api"
+import { RelativeTime } from "@/lib/alert-helpers"
+
+// The API sends naive UTC datetimes ("2026-10-26T07:01:00"); read them as UTC, not local time.
+const asUtc = (v) => (typeof v === "string" && !/(z|[+-]\d\d:?\d\d)$/i.test(v) ? `${v}Z` : v)
 
 function AutoRunRow({ item, onUndone }) {
   const [undone, setUndone] = useState(Boolean(item.undone_at))
@@ -37,7 +41,13 @@ function AutoRunRow({ item, onUndone }) {
         <span className="truncate text-sm font-medium text-foreground" title={item.title}>
           {item.title}
         </span>
-        {item.client && <span className="truncate text-xs text-muted-foreground">{item.client}</span>}
+        {(item.client || item.applied_at) && (
+          <span className="truncate text-xs text-muted-foreground">
+            {item.client}
+            {item.client && item.applied_at && " · "}
+            {item.applied_at && <RelativeTime value={asUtc(item.applied_at)} />}
+          </span>
+        )}
       </div>
       {undone ? (
         <Badge tone="neutral" size="sm">

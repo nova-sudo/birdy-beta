@@ -38,7 +38,7 @@ const OPEN = [
 ]
 
 const AUTO = [
-  { ...base, id: "a1", status: "applied", rule_kind: "pause_over_target", rule_mode: "auto", title: "Paused “Botox – Static 4”" },
+  { ...base, id: "a1", status: "applied", rule_kind: "pause_over_target", rule_mode: "auto", title: "Paused “Botox – Static 4”", applied_at: new Date(Date.now() - 3 * 3600_000).toISOString().replace("Z", "") },
   { ...base, id: "a2", status: "applied", rule_kind: "pause_over_target", rule_mode: "auto", title: "Paused 2 ads", client: "The Contour Co", undone_at: "2026-10-26T08:00:00Z" },
 ]
 
@@ -90,6 +90,9 @@ describe("WorkList", () => {
     const frame = (await screen.findByText("Done on auto today")).closest("[data-ds='frame']")
     expect(within(frame).getByText("Paused “Botox – Static 4”")).toBeInTheDocument()
     expect(within(frame).getByText("Paused 2 ads")).toBeInTheDocument()
+
+    // When it ran, from the naive UTC applied_at.
+    expect(await within(frame).findByText("3 hours ago")).toBeInTheDocument()
 
     // Already undone: no button, says so.
     expect(within(frame).getAllByRole("button", { name: /^Undo/ })).toHaveLength(1)

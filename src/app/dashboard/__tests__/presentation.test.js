@@ -75,6 +75,16 @@ describe("toFindings", () => {
     expect(rows.find((r) => r.id === "suggestion-b").tag).toBeUndefined();
   });
 
+  it("offers no Do it on a flag-mode agent item with an action, only Dismiss", () => {
+    const opts = { onApply: vi.fn(), onDismiss: vi.fn() };
+    const [row] = toFindings({}, [suggestion({ agent_id: "ag1", rule_mode: "flag", has_action: true })], opts);
+    expect(row.action).toBeUndefined();
+    expect(row.onDismiss).toBeTypeOf("function");
+    expect(row.tag).toBe("Media Buying Agent");
+    const [ask] = toFindings({}, [suggestion({ agent_id: "ag1", rule_mode: "ask", has_action: true })], opts);
+    expect(ask.action.label).toBe("Do it");
+  });
+
   it("gives a suggestion a Do it action that applies that suggestion", () => {
     const onApply = vi.fn();
     const s = suggestion();
