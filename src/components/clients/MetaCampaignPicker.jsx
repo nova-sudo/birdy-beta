@@ -5,10 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Check, Search } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Button, Input, Skeleton, StateBadge, badgeStateOf } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 
 const STATUS_LABELS = { ACTIVE: "Active", PAUSED: "Paused", ARCHIVED: "Archived", DELETED: "Deleted" }
@@ -20,18 +17,27 @@ function statusLabel(status) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-const statusVariant = (status) =>
-  status === "ACTIVE" ? "success" : status === "PAUSED" ? "warning" : "secondary"
+// Meta statuses that have a shared-state equivalent; anything unlisted is "unknown".
+const META_STATE = {
+  DELETED: "removed",
+  DISAPPROVED: "rejected",
+  WITH_ISSUES: "needs_review",
+  PENDING_REVIEW: "pending",
+  IN_PROCESS: "processing",
+  CAMPAIGN_PAUSED: "paused",
+  ADSET_PAUSED: "paused",
+}
+const statusState = (status) => META_STATE[status] ?? badgeStateOf(status)
 
 function Tick({ checked }) {
   return (
     <div
       aria-hidden="true"
       className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${
-        checked ? "bg-pd-primary border-pd-primary" : "border-pd-border group-hover:border-pd-border-strong"
+        checked ? "bg-primary border-primary" : "border-border group-hover:border-muted-foreground"
       }`}
     >
-      {checked && <Check className="w-3 h-3 text-white" />}
+      {checked && <Check className="w-3 h-3 text-primary-foreground" />}
     </div>
   )
 }
@@ -44,27 +50,27 @@ function Row({ checked, disabled, onClick, title, subtitle, badge }) {
       aria-checked={checked}
       disabled={disabled}
       onClick={onClick}
-      className={`group relative w-full text-left p-4 rounded-xl border-2 transition-all duration-200 ${
+      className={`group relative w-full text-left p-4 rounded-surface border-2 transition-all duration-200 ${
         disabled
-          ? "border-pd-border bg-pd-surface opacity-60 cursor-not-allowed"
+          ? "border-border bg-background opacity-60 cursor-not-allowed"
           : checked
-            ? "border-pd-primary bg-pd-primary-tint cursor-pointer"
-            : "border-pd-border hover:border-pd-border-strong bg-pd-surface cursor-pointer"
+            ? "border-primary bg-primary-soft cursor-pointer"
+            : "border-border hover:border-muted-foreground bg-background cursor-pointer"
       }`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span
-              className={`font-pd-display font-semibold truncate ${
-                checked && !disabled ? "text-pd-primary" : disabled ? "text-pd-subtle" : "text-pd-ink"
+              className={`font-semibold truncate ${
+                checked && !disabled ? "text-primary" : disabled ? "text-muted-foreground" : "text-foreground"
               }`}
             >
               {title}
             </span>
             {badge}
           </div>
-          {subtitle && <p className="mt-1 text-xs text-pd-subtle truncate">{subtitle}</p>}
+          {subtitle && <p className="mt-1 text-xs text-muted-foreground truncate">{subtitle}</p>}
         </div>
         <Tick checked={checked} />
       </div>
@@ -132,9 +138,9 @@ export function MetaCampaignPicker({
   return (
     <div className="space-y-3">
       {/* Above the list: a long account would push it out of view. */}
-      {shareNote && <p className="text-xs text-pd-subtle">{shareNote}</p>}
+      {shareNote && <p className="text-xs text-muted-foreground">{shareNote}</p>}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-pd-faint w-4 h-4" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <Input
           type="text"
           placeholder="Search campaigns by name or ID..."
@@ -145,8 +151,8 @@ export function MetaCampaignPicker({
       </div>
 
       {error ? (
-        <div className="rounded-xl border border-pd-danger-border bg-pd-danger-bg p-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-pd-danger">{error}</p>
+        <div className="rounded-surface bg-danger-soft p-4 flex items-center justify-between gap-3">
+          <p className="text-sm text-danger-ink">{error}</p>
           <Button type="button" variant="outline" size="sm" onClick={load}>
             Retry
           </Button>
@@ -154,7 +160,7 @@ export function MetaCampaignPicker({
       ) : loading ? (
         <div className="space-y-2" aria-busy="true" aria-label="Loading campaigns">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-start justify-between rounded-xl border-2 border-pd-border p-4">
+            <div key={i} className="flex items-start justify-between rounded-surface border-2 border-border p-4">
               <div className="flex-1 space-y-2">
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-3 w-1/3" />
@@ -183,7 +189,7 @@ export function MetaCampaignPicker({
                 onClick={() => toggle(c.id)}
                 title={c.name || "Unnamed campaign"}
                 subtitle={mine ? `ID: ${c.id}` : `Used by ${c.claimed_by.name}`}
-                badge={<Badge variant={statusVariant(c.effective_status)}>{statusLabel(c.effective_status)}</Badge>}
+                badge={<StateBadge state={statusState(c.effective_status)}>{statusLabel(c.effective_status)}</StateBadge>}
               />
             )
           })}
@@ -197,7 +203,7 @@ export function MetaCampaignPicker({
             />
           ))}
           {visible.length === 0 && removed.length === 0 && (
-            <p className="py-4 text-center text-sm text-pd-subtle">
+            <p className="py-4 text-center text-sm text-muted-foreground">
               {q ? "No campaigns match your search." : "No campaigns in this ad account."}
             </p>
           )}
@@ -205,7 +211,7 @@ export function MetaCampaignPicker({
       )}
 
       {Array.isArray(value) && !loading && !error && (
-        <p className="text-xs text-pd-subtle">
+        <p className="text-xs text-muted-foreground">
           {selected.length} of {campaigns.length} selected
         </p>
       )}

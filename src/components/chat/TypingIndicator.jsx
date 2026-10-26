@@ -30,6 +30,7 @@ export default function TypingIndicator() {
 
   return (
     <motion.div
+      data-ds="typing-indicator"
       className="flex flex-col gap-2"
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
@@ -39,12 +40,12 @@ export default function TypingIndicator() {
       aria-label={`Birdy is working: ${STEPS[step]}`}
     >
       <div className="flex items-center gap-2">
-        <BirdyAvatar size={30} state="loading" />
-        <span className="font-pd-display text-[14px] font-bold text-pd-ink">Birdy</span>
-        <span className="text-[11px] text-pd-faint">usual steps</span>
+        <BirdyAvatar size={28} state="loading" />
+        <span className="text-sm font-semibold text-foreground">Birdy</span>
+        <span className="text-xs text-muted-foreground">usual steps</span>
       </div>
 
-      <ol className="flex flex-col gap-[5px] pl-[34px]" aria-hidden="true">
+      <ol className="flex flex-col gap-[5px] pl-9" aria-hidden="true">
         {STEPS.map((label, i) => {
           const done = i < step
           const running = i === step
@@ -52,17 +53,17 @@ export default function TypingIndicator() {
             <motion.li
               key={label}
               layout={!reduce}
-              className="flex items-center gap-2 text-[12.5px]"
+              className="flex items-center gap-2 text-xs"
               initial={false}
               animate={{ opacity: done || running ? 1 : 0.5 }}
             >
               <span
                 className={`flex size-[15px] shrink-0 items-center justify-center rounded-full ${
                   done
-                    ? "bg-pd-success text-white"
+                    ? "bg-success text-primary-foreground"
                     : running
-                      ? "bg-pd-primary motion-safe:animate-pulse"
-                      : "border border-pd-border"
+                      ? "bg-primary motion-safe:animate-pulse"
+                      : "border border-border"
                 }`}
               >
                 {done && <Check className="size-[9px]" strokeWidth={3} />}
@@ -70,7 +71,7 @@ export default function TypingIndicator() {
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span
                   key={`${label}-${running}`}
-                  className={running ? "chat-shimmer font-semibold" : done ? "text-pd-body" : "text-pd-faint"}
+                  className={running ? "chat-shimmer font-semibold" : done ? "text-body" : "text-muted-foreground"}
                   initial={reduce ? false : { opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.2 }}

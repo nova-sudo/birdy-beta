@@ -15,17 +15,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { ArrowLeft, ExternalLink, Mail, RefreshCw } from "lucide-react"
+import { ArrowLeft, Check, ExternalLink, Mail, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import SetupChecklist from "@/components/attribution/SetupChecklist"
-import { PdCard } from "@/components/portfolio"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
+import { Button, ErrorState, Frame, PageHeader, Skeleton } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
-import { pdFontClass } from "@/lib/pd-fonts"
 import { cn } from "@/lib/utils"
 import { LEAD_SOURCE_OPTIONS, normalizeLeadSource } from "@/lib/lead-sources"
 
@@ -132,11 +128,8 @@ export default function TrackingPortalPage() {
 
   if (error) {
     return (
-      <div className={cn(pdFontClass, "p-8")}>
-        <p className="text-[13px] text-pd-danger">{error}</p>
-        <Button variant="outline" size="sm" onClick={load} className="mt-3 text-[12.5px]">
-          Try again
-        </Button>
+      <div className="mx-auto w-full max-w-3xl">
+        <ErrorState title="Couldn't load tracking setup" description={error} onRetry={load} />
       </div>
     )
   }
@@ -144,23 +137,26 @@ export default function TrackingPortalPage() {
   if (!portal) {
     return (
       <div
-        className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}
+        className="mx-auto flex w-full max-w-3xl flex-col gap-6"
         aria-busy="true"
         aria-label="Loading tracking setup"
       >
-        <div className="flex items-center gap-3">
-          <Skeleton className="size-8 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-36" />
-            <Skeleton className="h-3 w-24" />
-          </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-32" />
         </div>
-        <div className="space-y-3 rounded-xl border border-pd-border bg-pd-surface p-5">
-          <Skeleton className="h-4 w-56" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
+        {/* The Frame's shape: header strip, then the flush white surface. */}
+        <div className="flex flex-col rounded-frame bg-frame shadow-frame">
+          <div className="flex min-h-12 items-center px-4 py-2">
+            <Skeleton className="h-5 w-56" />
+          </div>
+          <div className="flex flex-col gap-3 rounded-frame bg-background p-5 shadow-surface">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
+          </div>
         </div>
       </div>
     )
@@ -188,69 +184,75 @@ export default function TrackingPortalPage() {
         `Full instructions (no login needed): ${portal.install_page_url}\n\nThanks!`,
     )}`
 
+  const refreshButton = (spinning) => (
+    <Button variant="ghost" size="sm" onClick={load}>
+      <RefreshCw className={cn(spinning && "animate-spin")} />
+      Refresh
+    </Button>
+  )
+
   return (
-    <Stagger className={cn(pdFontClass, "mx-auto flex w-full max-w-[760px] flex-col gap-5 px-4 py-6")}>
-      <StaggerItem className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={() => router.push(`/clients/${clientId}`)}
-          className="text-pd-subtle hover:text-pd-ink"
-          aria-label="Back to client"
-        >
-          <ArrowLeft className="size-4" />
-        </Button>
-        <div>
-          <h1 className="font-pd-display text-[19px] font-semibold text-pd-ink">
-            Tracking setup
-          </h1>
-          <p className="text-[12.5px] text-pd-faint">{portal.group_name}</p>
-        </div>
-      </StaggerItem>
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+      <PageHeader
+        eyebrow={
+          <button
+            type="button"
+            onClick={() => router.push(`/clients/${clientId}`)}
+            aria-label="Back to client"
+            className="-ml-1 inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground outline-none hover:text-foreground focus-visible:shadow-control-focus"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            {portal.group_name}
+          </button>
+        }
+        title="Tracking setup"
+        description="Get this client's leads tied to the ads that produced them."
+      />
 
       {/* Step rail */}
       {visibleSteps.length > 1 && (
-        <StaggerItem className="flex items-center gap-1">
+        <ol className="flex items-start gap-1" aria-label="Setup steps">
           {STEP_LABELS.map((label, index) => (
-            <div key={label} className="flex flex-1 items-center gap-1">
+            <li key={label} className="flex flex-1 items-start gap-1">
               <button
+                type="button"
                 onClick={() => setStep(index)}
-                className="flex flex-col items-center gap-1.5"
+                aria-current={index === step ? "step" : undefined}
+                className="flex flex-col items-center gap-1.5 rounded-control p-1 outline-none focus-visible:shadow-control-focus"
               >
                 <span
                   className={cn(
-                    "flex size-7 items-center justify-center rounded-full text-[11.5px] font-semibold transition-all",
+                    "num flex size-8 items-center justify-center rounded-full text-sm font-medium transition-colors",
                     index === step
-                      ? "stepper-active"
+                      ? "bg-primary text-primary-foreground"
                       : index < step
-                        ? "stepper-completed"
-                        : "stepper-pending",
+                        ? "bg-success-soft text-success-ink"
+                        : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {index + 1}
+                  {index < step ? <Check className="size-4" aria-hidden="true" /> : index + 1}
                 </span>
                 <span
                   className={cn(
-                    "whitespace-nowrap text-[10.5px]",
-                    index === step ? "font-medium text-pd-ink" : "text-pd-faint",
+                    "whitespace-nowrap text-xs",
+                    index === step ? "font-medium text-foreground" : "text-muted-foreground",
                   )}
                 >
                   {label}
                 </span>
               </button>
               {index < STEP_LABELS.length - 1 && (
-                <span className="mb-4 h-px flex-1 bg-pd-border" />
+                <span className="mt-5 h-px flex-1 bg-border" aria-hidden="true" />
               )}
-            </div>
+            </li>
           ))}
-        </StaggerItem>
+        </ol>
       )}
 
-      <StaggerItem>
-      {/* 1 — how they collect leads */}
+      {/* 1 - how they collect leads */}
       {shownStep === 0 && (
-        <PdCard title="How does this client collect leads?">
-          <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
+        <Frame title="How does this client collect leads?" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
             This decides what has to be set up. Get it wrong and the rest of these
             steps ask for things that don&apos;t apply.
           </p>
@@ -258,34 +260,30 @@ export default function TrackingPortalPage() {
             {METHODS.map((option) => (
               <button
                 key={option.key}
+                type="button"
                 disabled={saving}
+                aria-pressed={method === option.key}
                 onClick={() => saveMethod(option.key)}
                 className={cn(
-                  "rounded-xl border px-3.5 py-3 text-left transition-colors",
+                  "rounded-control border-2 px-3.5 py-3 text-left outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
                   method === option.key
-                    ? "border-pd-primary bg-pd-primary-tint"
-                    : "border-pd-border bg-pd-surface hover:border-pd-border-strong",
+                    ? "border-primary bg-primary-soft"
+                    : "border-border bg-background hover:border-muted-foreground/40",
                 )}
               >
-                <span className="text-[13px] font-medium text-pd-ink">{option.label}</span>
-                <p className="mt-0.5 text-[12px] leading-[1.45] text-pd-body">
-                  {option.hint}
-                </p>
+                <span className="text-sm font-medium text-foreground">{option.label}</span>
+                <p className="mt-0.5 text-sm leading-snug text-body">{option.hint}</p>
               </button>
             ))}
           </div>
 
-          {isInstantForm && (
-            <div className="mt-4">
-              <SetupChecklist diagnostics={portal.diagnostics} />
-            </div>
-          )}
+          {isInstantForm && <SetupChecklist diagnostics={portal.diagnostics} />}
 
           {isFormToGhl && (
-            <div className="mt-4 flex flex-col gap-4">
-              <div className="rounded-xl border border-pd-border bg-pd-canvas p-3.5">
-                <p className="text-[12.5px] font-medium text-pd-ink">Nothing to install in Birdy</p>
-                <p className="mt-1 text-[12px] leading-[1.5] text-pd-body">
+            <div className="flex flex-col gap-4">
+              <div className="rounded-control bg-muted p-3.5">
+                <p className="text-sm font-medium text-foreground">Nothing to install in Birdy</p>
+                <p className="mt-1 text-sm leading-normal text-body">
                   The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
                   attributes it from GoHighLevel. This setting changes nothing on its own — it tells
                   Birdy where to look. Two things on the client&apos;s side make it work:
@@ -293,20 +291,22 @@ export default function TrackingPortalPage() {
               </div>
 
               <div>
-                <p className="text-[12.5px] font-medium text-pd-ink">
+                <p className="text-sm font-medium text-foreground">
                   1. Send attribution to GoHighLevel from the form tool
                 </p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                <div className="mt-2 flex flex-wrap gap-2">
                   {GHL_FORM_TOOLS.map((tool) => (
                     <button
                       key={tool.key}
+                      type="button"
                       disabled={saving}
+                      aria-pressed={config.form_provider === tool.key}
                       onClick={() => saveMethod(method, { form_provider: tool.key })}
                       className={cn(
-                        "rounded-full border px-3 py-1.5 text-[12px] transition-colors",
+                        "h-control-sm rounded-control border-2 px-3 text-sm outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
                         config.form_provider === tool.key
-                          ? "border-pd-primary bg-pd-primary-tint text-pd-primary"
-                          : "border-pd-border text-pd-body hover:border-pd-border-strong",
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border text-body hover:border-muted-foreground/40",
                       )}
                     >
                       {tool.label}
@@ -314,17 +314,17 @@ export default function TrackingPortalPage() {
                   ))}
                 </div>
                 {ghlGuide && (
-                  <p className="mt-2 text-[12px] leading-[1.5] text-pd-body">{ghlGuide}</p>
+                  <p className="mt-2 text-sm leading-normal text-body">{ghlGuide}</p>
                 )}
               </div>
 
               <div>
-                <p className="text-[12.5px] font-medium text-pd-ink">
+                <p className="text-sm font-medium text-foreground">
                   2. Tag the Meta ads, if they aren&apos;t already
                 </p>
-                <p className="mb-2 mt-1 text-[12px] leading-[1.5] text-pd-body">
+                <p className="mb-2 mt-1 text-sm leading-normal text-body">
                   In Ads Manager, at the ad level, paste this into the{" "}
-                  <span className="font-medium text-pd-ink">URL parameters</span> field. It is what
+                  <span className="font-medium text-foreground">URL parameters</span> field. It is what
                   gives the form tool an ad id to pass on.
                 </p>
                 <CodeSnippet value={portal.meta_url_parameters} label="URL parameters" />
@@ -332,14 +332,8 @@ export default function TrackingPortalPage() {
 
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <p className="text-[12.5px] font-medium text-pd-ink">Is it working?</p>
-                  <button
-                    onClick={load}
-                    className="flex items-center gap-1.5 text-[12px] text-pd-primary hover:underline"
-                  >
-                    <RefreshCw className="size-3.5" />
-                    Refresh
-                  </button>
+                  <p className="text-sm font-medium text-foreground">Is it working?</p>
+                  {refreshButton(false)}
                 </div>
                 <SetupChecklist diagnostics={portal.diagnostics} />
               </div>
@@ -347,19 +341,21 @@ export default function TrackingPortalPage() {
           )}
 
           {isLandingPage && (
-            <Button size="sm" onClick={() => setStep(1)} className="mt-4 text-[12.5px]">
-              Next: install the pixel
-            </Button>
+            <div>
+              <Button variant="primary" onClick={() => setStep(1)}>
+                Next: install the pixel
+              </Button>
+            </div>
           )}
-        </PdCard>
+        </Frame>
       )}
 
-      {/* 2 — the snippet */}
+      {/* 2 - the snippet */}
       {shownStep === 1 && (
-        <PdCard title="Install the Birdy pixel">
-          <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
+        <Frame title="Install the Birdy pixel" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
             One line, on every page the ads point at, just before the closing{" "}
-            <code className="rounded-full bg-pd-divider px-1.5 font-mono text-[11px]">
+            <code className="rounded-sm bg-muted px-1.5 font-mono text-xs">
               &lt;/head&gt;
             </code>{" "}
             tag. It works like a Meta pixel, does not slow the page down, and is how Birdy
@@ -368,46 +364,40 @@ export default function TrackingPortalPage() {
 
           <CodeSnippet value={portal.snippet} label="Snippet" />
 
-          <div className="mt-4 rounded-xl border border-pd-border bg-pd-canvas p-3.5">
-            <p className="text-[12.5px] font-medium text-pd-ink">
-              Not your website?
-            </p>
-            <p className="mt-1 text-[12px] leading-[1.5] text-pd-body">
+          <div className="rounded-control bg-muted p-3.5">
+            <p className="text-sm font-medium text-foreground">Not your website?</p>
+            <p className="mt-1 text-sm leading-normal text-body">
               Usually it isn&apos;t. Send this link to whoever looks after the site —
               it has the snippet and the instructions on it, and they don&apos;t need
               a Birdy login.
             </p>
-            <div className="mt-2.5">
+            <div className="mt-3">
               <CodeSnippet value={portal.install_page_url} label="Install link" />
             </div>
-            <div className="mt-2.5 flex items-center gap-3">
-              <a
-                href={mailto}
-                className="flex items-center gap-1.5 text-[12.5px] text-pd-primary hover:underline"
-              >
-                <Mail className="size-3.5" /> Email it
-              </a>
-              <a
-                href={portal.install_page_url}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center gap-1.5 text-[12.5px] text-pd-primary hover:underline"
-              >
-                <ExternalLink className="size-3.5" /> Preview the page
-              </a>
+            <div className="mt-3 flex items-center gap-2">
+              <Button asChild variant="link" size="sm">
+                <a href={mailto}>
+                  <Mail /> Email it
+                </a>
+              </Button>
+              <Button asChild variant="link" size="sm">
+                <a href={portal.install_page_url} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Preview the page
+                </a>
+              </Button>
             </div>
           </div>
 
           <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} nextLabel="Next: tag the ads" />
-        </PdCard>
+        </Frame>
       )}
 
-      {/* 3 — Meta URL parameters */}
+      {/* 3 - Meta URL parameters */}
       {shownStep === 2 && (
-        <PdCard title="Add tracking parameters to the Meta ads">
-          <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
+        <Frame title="Add tracking parameters to the Meta ads" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
             In Ads Manager, at the ad level, paste this into the{" "}
-            <span className="font-medium text-pd-ink">URL parameters</span> field.
+            <span className="font-medium text-foreground">URL parameters</span> field.
             Without it we can see that somebody visited but not which ad sent them —
             the visit is tracked, the lead is unattributed.
           </p>
@@ -419,46 +409,30 @@ export default function TrackingPortalPage() {
           />
 
           <StepNav onBack={() => setStep(1)} onNext={() => setStep(VERIFY_STEP)} nextLabel="Next: verify" />
-        </PdCard>
+        </Frame>
       )}
 
-      {/* 4 — verify */}
+      {/* 4 - verify */}
       {shownStep === VERIFY_STEP && (
-        <PdCard
-          title="Check it's working"
-          action={
-            <button
-              onClick={load}
-              className="flex items-center gap-1.5 text-[12px] text-pd-primary hover:underline"
-            >
-              <RefreshCw className={cn("size-3.5", polling && "animate-spin")} />
-              Refresh
-            </button>
-          }
-        >
-          <p className="mb-3 text-[12.5px] leading-[1.5] text-pd-body">
+        <Frame title="Check it's working" action={refreshButton(polling)} padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
             This updates by itself. The quickest test is to click one of the
             client&apos;s live ads yourself and submit the form.
           </p>
           <SetupChecklist diagnostics={portal.diagnostics} polling={polling} />
           <StepNav onBack={() => setStep(2)} />
-        </PdCard>
+        </Frame>
       )}
-      </StaggerItem>
-    </Stagger>
+    </div>
   )
 }
 
 function StepNav({ onBack, onNext, nextLabel }) {
   return (
-    <div className="mt-4 flex items-center gap-2">
-      {onBack && (
-        <Button variant="outline" size="sm" onClick={onBack} className="text-[12.5px] text-pd-body">
-          Back
-        </Button>
-      )}
+    <div className="flex items-center gap-2">
+      {onBack && <Button onClick={onBack}>Back</Button>}
       {onNext && (
-        <Button size="sm" onClick={onNext} className="text-[12.5px]">
+        <Button variant="primary" onClick={onNext}>
           {nextLabel}
         </Button>
       )}

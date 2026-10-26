@@ -2,18 +2,19 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
 import {
+  Button,
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+  Input,
+  Label,
+  Textarea,
+} from "@/components/ds"
 
 /**
  * Name a new dashboard and, optionally, tell the AI what to build in it.
@@ -56,7 +57,8 @@ export function NewDashboardDialog({ open, onOpenChange, onCreate }) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
-        <form onSubmit={submit} className="grid gap-4">
+        {/* The form is the frame's one child, so it lays out the header strip, body and footer strip. */}
+        <form onSubmit={submit}>
           <DialogHeader>
             <DialogTitle>New dashboard</DialogTitle>
             <DialogDescription>
@@ -64,35 +66,37 @@ export function NewDashboardDialog({ open, onOpenChange, onCreate }) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-2">
-            <Label htmlFor="new-dashboard-title">Title</Label>
-            <Input
-              id="new-dashboard-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Weekly client performance"
-              maxLength={120}
-              autoFocus
-              required
-            />
-          </div>
+          <DialogBody>
+            <div className="grid gap-2">
+              <Label htmlFor="new-dashboard-title">Title</Label>
+              <Input
+                id="new-dashboard-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Weekly client performance"
+                maxLength={120}
+                autoFocus
+                required
+              />
+            </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="new-dashboard-brief">Brief (optional)</Label>
-            <Textarea
-              id="new-dashboard-brief"
-              value={brief}
-              onChange={(e) => setBrief(e.target.value)}
-              placeholder="e.g. spend and leads by client for the last 7 days, and a trend of spend by day"
-              rows={4}
-            />
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="new-dashboard-brief">Brief (optional)</Label>
+              <Textarea
+                id="new-dashboard-brief"
+                value={brief}
+                onChange={(e) => setBrief(e.target.value)}
+                placeholder="e.g. spend and leads by client for the last 7 days, and a trend of spend by day"
+                rows={4}
+              />
+            </div>
+          </DialogBody>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!title.trim() || saving}>
+            <Button type="submit" variant="primary" disabled={!title.trim() || saving}>
               {saving ? "Creating..." : "Create"}
             </Button>
           </DialogFooter>

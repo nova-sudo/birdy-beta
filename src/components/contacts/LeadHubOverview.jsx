@@ -11,7 +11,6 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { apiRequest } from "@/lib/api"
-import { DATE_PRESETS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
 import { buildLeadFindings, buildLeadInsight, insightPrompt } from "@/lib/leadhub-insight"
 import {
@@ -21,12 +20,9 @@ import {
   windowLeadTotals,
 } from "@/lib/leadhub-totals"
 import { percentDelta } from "@/lib/portfolio-aggregate"
-import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart } from "@/components/portfolio"
-import { KPI_PRESENTATION } from "@/app/contacts/presentation"
+import { BirdyRead, ErrorState, MetricTabsChart, fromPortfolioTabs } from "@/components/ds"
+import { KPI_PRESENTATION, toLeadFindings, toTrendSeries } from "@/app/contacts/presentation"
 import { useLeadHubSeries } from "@/app/contacts/useLeadHubSeries"
-
-const presetLabel = (preset) =>
-  DATE_PRESETS.find((p) => p.value === preset)?.label ?? "Selected period"
 
 /**
  * @param {string} [granularity] Daily | Weekly | Monthly, from the hub's
@@ -114,52 +110,67 @@ export function LeadHubOverview({
     granularity,
   })
 
-  const tabs = useMemo(
-    () =>
-      KPI_PRESENTATION.map((tile) => ({
-        key: tile.key,
-        label: tile.label,
-        value: formatStat(tile.key, totals[tile.key]),
-        tone: tile.tone,
-        polarity: tile.polarity,
-        plottable: Boolean(tile.chartKey),
-        ...(deltas?.[tile.key] ?? {}),
-      })),
-    [totals, deltas]
-  )
+  // Every figure carries its own series, so switching tabs needs no refetch.
+  // Too short to draw is withheld, but counted, so the empty message can say
+  // "too short" rather than "nothing".
+  const metrics = useMemo(() => {
+    const tabs = KPI_PRESENTATION.map((tile) => ({
+      key: tile.key,
+      label: tile.label,
+      value: formatStat(tile.key, totals[tile.key]),
+      polarity: tile.polarity,
+      plottable: Boolean(tile.chartKey),
+      ...(deltas?.[tile.key] ?? {}),
+    }))
+    return fromPortfolioTabs({ tabs, activeKey, chart: null, comparison: "vs previous period" }).map((m) => {
+      const source = chartMetrics[KPI_PRESENTATION.find((t) => t.key === m.key)?.chartKey]
+      return {
+        ...m,
+        series: toTrendSeries(source),
+        points: source?.values?.length ?? 0,
+      }
+    })
+  }, [totals, deltas, chartMetrics, activeKey])
 
-  const activeTile = KPI_PRESENTATION.find((tile) => tile.key === activeKey)
-  const metric = activeTile?.chartKey ? chartMetrics[activeTile.chartKey] : null
-  const chart = metric && {
-    ...metric,
-    subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
-  }
+  const activeMetric = metrics.find((m) => m.key === activeKey)
+  const activeSource = chartMetrics[KPI_PRESENTATION.find((t) => t.key === activeKey)?.chartKey]
+  const hasCaptures = totals.lead_count + totals.contact_count > 0
+  const insightText = insight.map((p) => p.text).join("")
+  const readRows = useMemo(
+    () => toLeadFindings(insight, findings, { empty: !hasCaptures }),
+    [insight, findings, hasCaptures]
+  )
 
   // See CallCentreOverview: zeroes from an empty list are indistinguishable
   // from a genuinely quiet window unless the failure is stated.
   if (groupsError) {
-    return <LoadError className="mb-[18px]" error={groupsError} onRetry={onRetry} />
+    return (
+      <ErrorState
+        title="Couldn't load your client data"
+        description={`${String(groupsError).replace(/\.+$/, "")}. The figures here are missing, not zero.`}
+        onRetry={onRetry}
+      />
+    )
   }
 
   return (
-    <div className="mb-[18px] grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
       <MetricTabsChart
-        tabs={tabs}
-        activeKey={activeKey}
-        onChange={setActiveKey}
-        chart={chart}
+        metrics={metrics}
+        value={activeKey}
+        onValueChange={setActiveKey}
+        xLabel={`${activeMetric?.label ?? "Metric"} over the period`}
         loading={groupsLoading}
-        plotLoading={seriesLoading || Boolean(metric?.pending)}
-        loadingStatements={CHART_LOADING}
+        plotLoading={seriesLoading || Boolean(activeSource?.pending)}
         emptyMessage={
-          totals.lead_count + totals.contact_count > 0
-            ? "No dated leads in this window yet."
-            : "No leads captured in this window yet."
+          activeMetric?.points === 1
+            ? "Pick 7 days or longer to see a trend."
+            : hasCaptures
+              ? "No dated leads in this window yet."
+              : "No leads captured in this window yet."
         }
-        redrawKey={`${activeKey}-${datePreset}-${granularity}-${selectedClientGroup}`}
-        layoutId="lead-hub-hero"
       />
-      <BirdyBriefing parts={insight} findings={findings} prompt={insightPrompt(insight)} />
+      <BirdyRead findings={readRows} empty={insightText} prompt={insightPrompt(insight)} />
     </div>
   )
 }

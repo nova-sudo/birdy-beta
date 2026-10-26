@@ -2,10 +2,8 @@
 
 import { useState, useMemo } from "react"
 import Image from "next/image"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ChevronDown, Check } from "lucide-react"
+import { Button, Input, Popover, PopoverContent, PopoverTrigger, TriggerButton } from "@/components/ds"
+import { Check } from "lucide-react"
 
 /**
  * MetricPicker — Reusable tabbed/searchable metric selector.
@@ -69,13 +67,7 @@ export default function MetricPicker({
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={`justify-between h-10 ${triggerClassName}`}
-        >
+        <TriggerButton role="combobox" aria-expanded={open} disabled={disabled} className={triggerClassName}>
           {selectedMetric ? (
             <span className="flex items-center gap-2 truncate">
               {selectedMetric.icon && (
@@ -86,18 +78,17 @@ export default function MetricPicker({
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        </TriggerButton>
       </PopoverTrigger>
 
       <PopoverContent
-        className={`${width} p-0 bg-pd-surface`}
+        className={`${width} p-0`}
         align="start"
         onWheel={e => e.stopPropagation()}
       >
         {/* Category tabs */}
         <div
-          className="flex flex-nowrap gap-1 p-2 border-b border-pd-divider overflow-x-auto overscroll-x-contain"
+          className="flex flex-nowrap gap-1 p-2 border-b border-border overflow-x-auto overscroll-x-contain"
           style={{
             WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
@@ -107,7 +98,7 @@ export default function MetricPicker({
           {categories.map(cat => (
             <Button
               key={cat.id}
-              variant={activeCategory === cat.id ? "default" : "secondary"}
+              variant={activeCategory === cat.id ? "primary" : "ghost"}
               size="sm"
               onClick={() => {
                 setActiveCategory(cat.id)
@@ -137,7 +128,7 @@ export default function MetricPicker({
           style={{ WebkitOverflowScrolling: "touch" }}
         >
           {filtered.length === 0 ? (
-            <div className="text-center text-sm text-pd-subtle py-4">No metrics found</div>
+            <div className="text-center text-sm text-muted-foreground py-4">No metrics found</div>
           ) : (
             filtered.map(m => (
               <button
@@ -147,14 +138,14 @@ export default function MetricPicker({
                   onChange(m.id)
                   setOpen(false)
                 }}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-xl transition-colors text-left ${
+                className={`flex items-center gap-2 w-full px-3 py-1.5 text-sm rounded-control transition-colors text-left ${
                   m.id === value
-                    ? "bg-pd-primary-tint text-pd-primary font-medium"
-                    : "hover:bg-pd-divider"
+                    ? "bg-primary-soft text-primary font-medium"
+                    : "hover:bg-muted"
                 }`}
               >
                 {m.id === value ? (
-                  <Check className="h-3.5 w-3.5 shrink-0 text-pd-primary" />
+                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" />
                 ) : (
                   <span className="w-3.5 shrink-0" />
                 )}

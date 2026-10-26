@@ -27,14 +27,14 @@ export default function PageSkeleton({ tiles = 4, rows = 6 }) {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {Array.from({ length: tiles }).map((_, i) => (
-          <div key={i} className="rounded-xl border bg-card p-4">
+          <div key={i} className="rounded-xl border bg-background p-4">
             <Skeleton className="h-3 w-24" />
             <Skeleton className="mt-3 h-7 w-20" />
           </div>
         ))}
       </div>
 
-      <div className="rounded-xl border bg-card p-4">
+      <div className="rounded-xl border bg-background p-4">
         <Skeleton className="h-4 w-32" />
         <div className="mt-4 flex flex-col gap-3">
           {Array.from({ length: rows }).map((_, i) => (

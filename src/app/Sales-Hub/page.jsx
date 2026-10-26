@@ -4,13 +4,13 @@ import { useMemo, useState } from "react"
 
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { GRANULARITIES } from "@/lib/portfolio-series"
+import { useGranularity } from "@/lib/useGranularity"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { GranularitySelect } from "@/components/GranularitySelect"
-import { useGranularity } from "@/lib/useGranularity"
-import { ClientGroupPicker } from "@/components/saleshub/ClientGroupPicker"
-import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { ClientGroupSelect } from "@/components/contacts/ClientGroupSelect"
+import { PageHeader, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ds"
+import { PeriodControl } from "@/app/dashboard/PeriodControl"
 import { usePageHeader } from "@/components/page-header"
 
 // ─── Sales Hub ──────────────────────────────────────────────────────────────
@@ -24,9 +24,8 @@ import { usePageHeader } from "@/components/page-header"
 //   holds, shown exactly as /api/client-groups returned them. Nothing derived.
 //
 //   Trend chart — the one thing those aggregates cannot give, because they
-//   carry no time dimension. Its series is counted from the call logs of every
-//   lead in the window, paged through in full, and it reports the total it
-//   actually plotted rather than borrowing the tiles'.
+//   carry no time dimension. Its series is counted from the client groups'
+//   precomputed daily call series (see useSalesHubSeries).
 
 export default function SalesHubPage() {
   const {
@@ -36,37 +35,39 @@ export default function SalesHubPage() {
   const [selectedClientGroup, setSelectedClientGroup] = useState("all")
   const { granularity, setGranularity } = useGranularity(datePreset)
 
-  // Title and filters live in the global top bar, where the design puts them —
-  // in place of the Birdy wordmark, and beside the bell and profile menu.
-  // Memoised because publishing sets state on the provider above: a fresh
-  // object every render would republish every render. See usePageHeader.
-  const header = useMemo(
-    () => ({
-      title: (
-        <SalesHubHeaderTitle
-          title="Sales Hub"
-          subtitle="Call-centre performance across your Hot Prospector clients"
-        />
-      ),
-      controls: (
-        <div className="hidden items-center gap-2 md:flex">
-          <GranularitySelect value={granularity} onChange={setGranularity} />
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <ClientGroupPicker
-            clientGroups={clientGroups}
-            value={selectedClientGroup}
-            onChange={setSelectedClientGroup}
-          />
-        </div>
-      ),
-    }),
-    [granularity, setGranularity, datePreset, setDatePreset, clientGroups, selectedClientGroup]
-  )
-  usePageHeader(header)
-
+  // The page's own title is in the PageHeader below; the top bar only names the page.
+  const topBar = useMemo(() => ({ title: "Sales Hub" }), [])
+  usePageHeader(topBar)
 
   return (
-    <SalesHubShell>
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        title="Sales Hub"
+        description="Call-centre performance across your Hot Prospector clients"
+        period={<PeriodControl value={datePreset} onChange={setDatePreset} />}
+        actions={
+          <>
+            <Select value={granularity} onValueChange={setGranularity}>
+              <SelectTrigger aria-label="Chart granularity">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                {GRANULARITIES.map((g) => (
+                  <SelectItem key={g} value={g}>
+                    {g}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <ClientGroupSelect
+              clientGroups={clientGroups}
+              value={selectedClientGroup}
+              onChange={setSelectedClientGroup}
+            />
+          </>
+        }
+      />
+
       <CallCentreOverview
         clientGroups={clientGroups}
         groupsLoading={groupsLoading}
@@ -87,6 +88,6 @@ export default function SalesHubPage() {
         onSelectClientGroup={setSelectedClientGroup}
         onCallCentreChanged={refresh}
       />
-    </SalesHubShell>
+    </div>
   )
 }

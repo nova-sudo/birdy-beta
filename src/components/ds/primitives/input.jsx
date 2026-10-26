@@ -1,0 +1,24 @@
+import * as React from "react"
+
+import { cn } from "@/lib/utils"
+import { fieldVariants } from "./field-variants"
+
+/**
+ * Text input on the shared field surface.
+ * @param {object} props
+ * @param {"sm"|"md"|"lg"} [props.size="md"] `md` (40) matches a default Button. `sm` (32) is for toolbars and dense rows whose buttons are `sm`. `lg` (48) is for sheets and checkout forms.
+ */
+function Input({ className, type, size = "md", ...props }) {
+  return (
+    <input
+      type={type}
+      data-ds="input"
+      data-slot="input"
+      data-size={size}
+      className={cn(fieldVariants({ size }), className)}
+      {...props}
+    />
+  )
+}
+
+export { Input }

@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sales Hub and Campaigns options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF; --fg: #0A0A0A; --muted: #F7F7F7; --muted-fg: #737373; --border: #E5E5E5;
+    --primary: #5B3FD6; --primary-soft: #EFECFB;
+    --success-soft: #DCFCE7; --success-ink: #166534;
+    --danger-soft: #FEE2E2; --danger-ink: #991B1B;
+    --info-soft: #DBEAFE; --info-ink: #1E40AF;
+    --warning-soft: #FEF3C7; --warning-ink: #92400E;
+    --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
+    --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--muted); color: var(--fg); font: 16px/1.5 Outfit, system-ui, sans-serif; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 32px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted-fg); margin: 0 0 40px; max-width: 640px; }
+  .option { margin-bottom: 48px; }
+  .opt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 12px; }
+  .opt-head b { font-size: 18px; font-weight: 600; }
+  .opt-head span { color: var(--muted-fg); font-size: 14px; }
+  .opt-head .rec { font-size: 13px; font-weight: 500; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 999px; }
+  .frame { background: var(--muted); border-radius: 16px; padding: 12px; box-shadow: 0 0 0 1px #0000000A; }
+  .frame-title { display: flex; justify-content: space-between; align-items: center; padding: 2px 4px 10px; font-size: 14px; font-weight: 600; gap: 8px; }
+  .frame-title small { font-weight: 400; color: var(--muted-fg); font-size: 13px; }
+  .surface { background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-surface); padding: 20px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .note { font-size: 14px; color: var(--muted-fg); margin-top: 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 390px; gap: 24px; align-items: start; }
+  .label390 { font-size: 13px; color: var(--muted-fg); margin: 0 0 6px 4px; font-family: "Geist Mono", monospace; }
+  @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
+
+  .phone { width: 390px; max-width: 100%; }
+  .grid2 > * { min-width: 0; }
+  h2 { font-size: 20px; font-weight: 600; margin: 56px 0 4px; padding-top: 24px; border-top: 1px solid var(--border); }
+  .g-lede { color: var(--muted-fg); font-size: 14px; margin: 0 0 28px; max-width: 640px; }
+  .sub { font-size: 14px; font-weight: 600; margin: 22px 0 8px; }
+  .sub small { font-weight: 400; color: var(--muted-fg); font-size: 13px; margin-left: 6px; }
+  .ico { width: 16px; height: 16px; flex-shrink: 0; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 12px; border: 0; font: 500 14px Outfit, sans-serif; background: var(--primary); color: #fff; white-space: nowrap; }
+  .btn.out { background: var(--bg); color: var(--fg); box-shadow: inset 0 0 0 1px var(--border); }
+  .btn.sm { height: 32px; padding: 0 10px; font-size: 13px; }
+  .btn.icon { width: 32px; padding: 0; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 500; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+  .b-success { background: var(--success-soft); color: var(--success-ink); }
+  .b-info { background: var(--info-soft); color: var(--info-ink); }
+  .b-warning { background: var(--warning-soft); color: var(--warning-ink); }
+  .b-danger { background: var(--danger-soft); color: var(--danger-ink); }
+  .b-muted { background: var(--muted); color: var(--muted-fg); }
+  .b-primary { background: var(--primary-soft); color: var(--primary); }
+  .sw { width: 34px; height: 20px; border-radius: 999px; background: #D4D4D4; padding: 2px; display: flex; flex-shrink: 0; }
+  .sw::after { content: ""; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 1px 2px #0000003D; }
+  .sw.on { background: var(--primary); justify-content: flex-end; }
+  .muted { color: var(--muted-fg); }
+  .trunc { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .switch2 { display: flex; gap: 2px; padding: 3px; background: var(--muted); border-radius: 12px; box-shadow: inset 0 0 0 1px var(--border); }
+  .switch2 span { width: 28px; height: 28px; border-radius: 10px; display: grid; place-items: center; color: var(--muted-fg); }
+  .switch2 span.on { background: #fff; color: var(--fg); box-shadow: var(--shadow-surface); }
+  .th { position: relative; display: grid; place-items: center; background: linear-gradient(135deg, var(--g1), var(--g2)); overflow: hidden; }
+  .th .play { width: 40px; height: 40px; border-radius: 999px; background: #0A0A0A99; display: grid; place-items: center; color: #fff; }
+  .th .play svg { fill: #fff; width: 15px; height: 15px; }
+  .th .dur { position: absolute; right: 8px; bottom: 8px; font: 500 12px "Geist Mono", monospace; color: #fff; background: #0A0A0AAA; padding: 1px 6px; border-radius: 6px; }
+  .g0 { --g1: #C9BDF5; --g2: #8E7AE6; } .g1 { --g1: #FBD5C4; --g2: #F2A58B; } .g2 { --g1: #BFE3D6; --g2: #7DBFA8; } .g3 { --g1: #C7D9F7; --g2: #8DB0E8; } .g4 { --g1: #F6E3A8; --g2: #E5B84F; } .g5 { --g1: #E5C6E8; --g2: #C58BCB; }
+  .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .phone .cards { grid-template-columns: minmax(0, 1fr); }
+  .card { background: #fff; border-radius: 12px; box-shadow: var(--shadow-surface); overflow: hidden; min-width: 0; }
+  .card .th { height: 120px; }
+  .card .body { padding: 12px 14px 10px; }
+  .card .hd { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
+  .card .hd b { font-size: 14px; font-weight: 600; }
+  .mrow { display: flex; justify-content: space-between; padding: 4px 0; font-size: 13px; }
+  .mrow span:first-child { color: var(--muted-fg); } .mrow span:last-child { font-weight: 600; font-size: 14px; }
+  .hrow { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; gap: 14px; align-items: center; background: #fff; border-radius: 12px; box-shadow: var(--shadow-surface); padding: 10px; margin-bottom: 8px; }
+  .hrow .th { height: 72px; border-radius: 10px; }
+  .hrow .th .play { width: 28px; height: 28px; } .hrow .th .play svg { width: 11px; height: 11px; }
+  .hrow .nm { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .hmet { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .hmet div { font-size: 14px; font-weight: 600; } .hmet small { display: block; font-size: 12px; font-weight: 400; color: var(--muted-fg); }
+  .phone .hrow { grid-template-columns: 72px minmax(0, 1fr); gap: 10px; }
+  .phone .hrow .th { height: 64px; }
+  .phone .hrow .side { grid-column: 1 / -1; }
+  .phone .hmet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .phone .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tile { position: relative; aspect-ratio: 1; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-surface); }
+  .tile .th { position: absolute; inset: 0; }
+  .tile .th .play { width: 30px; height: 30px; } .tile .th .play svg { width: 12px; height: 12px; }
+  .tile .top { position: absolute; left: 8px; right: 8px; top: 8px; display: flex; justify-content: space-between; align-items: center; z-index: 2; gap: 6px; }
+  .tile .top .pill { font-size: 12px; font-weight: 500; background: #fff; border-radius: 999px; padding: 1px 8px; max-width: 70%; }
+  .tile .ov { position: absolute; inset: 0; background: #0A0A0AD9; color: #fff; padding: 36px 10px 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 8px; align-content: center; font-size: 13px; opacity: 0; z-index: 1; }
+  .tile.hov .ov { opacity: 1; }
+  .tile .ov small { display: block; font-size: 12px; color: #D4D4D4; }
+  .tile .ov b { font-weight: 600; font-size: 14px; }
+  .phone .tile .ov { opacity: 1; background: linear-gradient(transparent 30%, #0A0A0AE6); align-content: end; padding: 8px; font-size: 12px; }
+  .stage { position: relative; background: #0A0A0A52; border-radius: 12px; padding: 16px; overflow: hidden; display: flex; justify-content: center; }
+  .stage.sheet { justify-content: flex-end; padding: 0; min-height: 420px; }
+  .stage.sheet .ovl { border-radius: 20px 0 0 20px; width: min(420px, 100%); }
+  .stage.sheet .ovl.wide { width: min(460px, 100%); }
+  .ovl { background: #fff; border-radius: 20px; box-shadow: var(--shadow-overlay); width: 100%; max-width: 640px; overflow: hidden; min-width: 0; }
+  .ovl .oh { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+  .ovl .oh b { font-size: 18px; font-weight: 600; display: block; }
+  .ovl .oh small { font-size: 13px; color: var(--muted-fg); }
+  .ovl .ob { padding: 16px 20px; display: grid; gap: 12px; }
+  .ovl .of { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+  .phone .ovl .oh, .phone .ovl .ob, .phone .ovl .of { padding-left: 14px; padding-right: 14px; }
+  .phone .stage.sheet { justify-content: center; }
+  .phone .stage.sheet .ovl { border-radius: 20px 20px 0 0; align-self: flex-end; width: 100%; }
+  .player { height: 100%; min-height: 180px; border-radius: 12px; }
+  .vid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 16px; }
+  .phone .vid { grid-template-columns: minmax(0, 1fr); }
+  .phone .player { height: 200px; }
+  .ctrl { position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 8px; color: #fff; font: 12px "Geist Mono", monospace; }
+  .ctrl i { flex: 1; height: 4px; background: #ffffff66; border-radius: 4px; position: relative; } .ctrl i::after { content: ""; position: absolute; inset: 0 60% 0 0; background: #fff; border-radius: 4px; }
+  .sec { background: var(--muted); border-radius: 12px; padding: 10px 12px; }
+  .sec .eb { font-size: 13px; color: var(--muted-fg); font-weight: 500; }
+  .sec p { margin: 2px 0 0; font-size: 14px; }
+  .birdy { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .bav { width: 28px; height: 28px; border-radius: 999px; background: var(--primary); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 600; flex-shrink: 0; }
+  .birdy b { font-size: 14px; font-weight: 600; }
+  .shimmer { font-size: 13px; font-weight: 500; background: linear-gradient(90deg, #737373 30%, #0A0A0A 50%, #737373 70%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .skl { height: 10px; border-radius: 6px; background: #EDEDED; margin: 8px 0; }
+  .stepper { display: flex; align-items: center; gap: 6px; font-size: 13px; flex-wrap: wrap; }
+  .stepper .st { display: inline-flex; align-items: center; gap: 6px; color: var(--muted-fg); }
+  .stepper .st i { width: 20px; height: 20px; border-radius: 999px; display: grid; place-items: center; font: 500 12px Outfit; background: var(--muted); font-style: normal; }
+  .stepper .st.done { color: var(--success-ink); } .stepper .st.done i { background: var(--success-soft); }
+  .stepper .st.cur { color: var(--primary); font-weight: 500; } .stepper .st.cur i { background: var(--primary-soft); }
+  .stepper .ln { width: 14px; height: 1px; background: var(--border); }
+  .acc { border-radius: 12px; box-shadow: inset 0 0 0 1px var(--border); overflow: hidden; }
+  .acc > div { padding: 10px 12px; font-size: 14px; }
+  .acc > div + div { border-top: 1px solid var(--border); }
+  .acc .h { display: flex; justify-content: space-between; align-items: center; font-weight: 500; gap: 8px; }
+  .acc p { margin: 6px 0 0; color: var(--muted-fg); font-size: 14px; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tbl th { text-align: left; font-size: 13px; font-weight: 500; color: var(--muted-fg); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tbl td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .tbl tr.sel td { background: var(--primary-soft); border-bottom: 0; }
+  .tbl td.exp { padding: 12px; background: var(--primary-soft); }
+  .tscroll { overflow-x: auto; }
+  .clist .it { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .clist .it:last-child { border-bottom: 0; }
+  .clist .it > div:first-child { min-width: 0; }
+  .clist .it p { margin: 0; font-size: 13px; color: var(--muted-fg); }
+  .clist .it b { font-size: 14px; font-weight: 500; display: block; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .phone .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat { background: var(--muted); border-radius: 12px; padding: 10px 12px; }
+  .stat .v { font-size: 20px; font-weight: 600; line-height: 1.2; } .stat .l { font-size: 13px; color: var(--muted-fg); }
+  .prog { height: 8px; border-radius: 999px; background: var(--muted); overflow: hidden; }
+  .prog i { display: block; height: 100%; background: var(--primary); border-radius: 999px; }
+  .chipbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; padding: 4px 10px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); white-space: nowrap; }
+  .spin { animation: spin 1.2s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+  .states { display: grid; gap: 28px; }
+  .estrow { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; border-bottom: 1px solid var(--border); gap: 8px; }
+  .estrow:last-child { border-bottom: 0; }
+  .inp { height: 36px; min-width: 64px; padding: 0 12px; border-radius: 12px; box-shadow: inset 0 0 0 1px var(--border); display: inline-flex; align-items: center; font-size: 14px; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .help { font-size: 13px; color: var(--muted-fg); margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Sales Hub &amp; Campaigns: pick one per widget</h1>
+  <p class="lede">The ads gallery with its video preview, the single-call AI analysis and the agent batch analysis have no Paper equivalent. Each group below gives two or three ways to draw one with the new tokens. Data is sample UK clinic-agency data. Desktop on the left, 390px on the right.</p>
+
+  <!-- ===================== GROUP 1 ===================== -->
+  <h2>1 · Ads gallery (+ video preview)</h2>
+  <p class="g-lede">Campaigns → Ads tab. Table / gallery switch, then one card per ad: creative, status Switch, name, and the metrics in the shared column order (spend, leads, CPL, CTR). Video ads wear a play badge that opens the preview.</p>
+
+  <section class="option">
+    <div class="opt-head"><b>A · Media-top card</b><span>Today's card, restyled: 16:10 creative, name and Switch in the header, one metric row each.</span><span class="rec">Recommended</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Ads <small>Beaulea Clinic · last 7 days</small></div>
+        <div class="toolbar"><span class="muted" style="font-size:14px">24 ads · sorted by spend</span><div class="switch2" data-sw></div></div>
+        <div class="cards" data-cards="A" data-n="3"></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Ads</div>
+          <div class="toolbar"><span class="muted" style="font-size:14px">24 ads</span><div class="switch2" data-sw></div></div>
+          <div class="cards" data-cards="A" data-n="2"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Keeps the layout people know, so drag-to-reorder metric rows still works and the table/gallery order stays one shared array. One column at 390px. Recommended because it is the closest match to the live card and the only option that shows every column the table can show.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>B · Compact horizontal card</b><span>Thumbnail left, name and Switch top, four metrics in a single row.</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Ads <small>Beaulea Clinic · last 7 days</small></div>
+        <div class="toolbar"><span class="muted" style="font-size:14px">24 ads · sorted by spend</span><div class="switch2" data-sw></div></div>
+        <div data-cards="B" data-n="4"></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Ads</div>
+          <div class="toolbar"><span class="muted" style="font-size:14px">24 ads</span><div class="switch2" data-sw></div></div>
+          <div data-cards="B" data-n="3"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Densest readable layout and the best at 390px: metrics wrap to two by two. It shows only four metrics, so extra columns would need a "more" menu.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>C · Dense tile grid</b><span>Creative-first square tiles; metrics appear in a hover overlay.</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Ads <small>Beaulea Clinic · last 7 days</small></div>
+        <div class="toolbar"><span class="muted" style="font-size:14px">24 ads · sorted by spend</span><div class="switch2" data-sw></div></div>
+        <div class="tiles" data-cards="C" data-n="8"></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Ads</div>
+          <div class="toolbar"><span class="muted" style="font-size:14px">24 ads</span><div class="switch2" data-sw></div></div>
+          <div class="tiles" data-cards="C" data-n="4"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Best for judging creatives at a glance. The second tile on desktop shows the hover state. There is no hover on touch, so at 390px the metrics sit permanently along the bottom of each tile.</p>
+  </section>
+
+  <p class="sub">Video preview (used by A, B and C) <small>Overlay-radius Dialog · play badge on a video ad opens it</small></p>
+  <div class="grid2">
+    <div class="frame">
+      <div class="frame-title">Dialog <small>Lip filler — Oct offer</small></div>
+      <div class="stage"><div class="ovl" data-video="wide"></div></div>
+    </div>
+    <div class="phone">
+      <p class="label390">390px</p>
+      <div class="frame">
+        <div class="frame-title">Dialog</div>
+        <div class="stage" style="padding:12px"><div class="ovl" data-video="narrow"></div></div>
+      </div>
+    </div>
+  </div>
+  <p class="note">Meta's own preview iframe goes in the player area (a still-processing or download-protected video would show the muted error line there). Metrics sit beside the player on desktop and below it at 390px.</p>
+
+  <!-- ===================== GROUP 2 ===================== -->
+  <h2>2 · Single-call AI analysis</h2>
+  <p class="g-lede">Call Centre → Call Logs → sparkle button on a row with a recording. One recording goes through "Transcribing…" then "Reviewing…", then a verdict. The live sections are What happened, What went wrong and Coaching plus an outcome badge; Score is a proposed addition.</p>
+
+  <section class="option">
+    <div class="opt-head"><b>A · Right-side Sheet</b><span>Slides in over the table; the call list stays visible behind it. Section cards inside.</span><span class="rec">Recommended</span></div>
+    <p class="sub">In progress</p>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Call Logs <small>Sheet · transcribing</small></div>
+        <div class="stage sheet"><div class="ovl" data-sheet="a-run"></div></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Sheet · transcribing</div>
+          <div class="stage sheet" style="min-height:340px"><div class="ovl" data-sheet="a-run"></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="sub">Done</p>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Call Logs <small>Sheet · done</small></div>
+        <div class="stage sheet"><div class="ovl" data-sheet="a-done"></div></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Sheet · done</div>
+          <div class="stage sheet" style="min-height:380px"><div class="ovl" data-sheet="a-done"></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">You can read the analysis while still seeing which call it belongs to, and the user can click the next row without closing anything. Recommended for that; on a phone it becomes a bottom sheet.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>B · Centred Dialog with stepper</b><span>Closest to today. The header shows Transcribing → Reviewing → Done; sections are accordions.</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Dialog <small>Done, first section open</small></div>
+        <div class="stage"><div class="ovl" data-dlg="b"></div></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Dialog</div>
+          <div class="stage" style="padding:12px"><div class="ovl" data-dlg="b"></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">Makes the two waiting states explicit, and accordions keep long transcripts short. The page behind is blocked while it is open, and the stepper is wasted once the result is cached and instant.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>C · Inline expandable row</b><span>The analysis opens as a panel directly under the call row in the table.</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Call Logs <small>Row expanded</small></div>
+        <div class="surface" style="padding:0;overflow:hidden" data-inline="wide"></div>
+      </div>
+      <div class="phone">
+        <p class="label390">390px</p>
+        <div class="frame">
+          <div class="frame-title">Call Logs</div>
+          <div class="surface" style="padding:0;overflow:hidden" data-inline="narrow"></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">No overlay at all, and you can compare two calls by expanding two rows. It pushes rows down, which is awkward in a paginated table, and a long result gets cramped at 390px.</p>
+  </section>
+
+  <!-- ===================== GROUP 3 ===================== -->
+  <h2>3 · Member (agent) batch analysis</h2>
+  <p class="g-lede">Call Centre → Members → sparkle on an agent. Analyses their latest calls, up to 50, in batches of 15. It shows a cost estimate before confirming, can run in the background, then summarises outcomes and lists a result per call.</p>
+
+  <section class="option">
+    <div class="opt-head"><b>A · Three-step Dialog</b><span>Estimate → Running with a progress bar → Results with stat tiles and the per-call list.</span><span class="rec">Recommended</span></div>
+    <div class="states">
+      <div>
+        <p class="sub" style="margin-top:0">1 · Estimate</p>
+        <div class="grid2">
+          <div class="frame"><div class="frame-title">Dialog <small>Priya Shah</small></div><div class="stage"><div class="ovl" data-mem="est"></div></div></div>
+          <div class="phone"><p class="label390">390px</p><div class="frame"><div class="stage" style="padding:12px"><div class="ovl" data-mem="est"></div></div></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="sub" style="margin-top:0">2 · Running</p>
+        <div class="grid2">
+          <div class="frame"><div class="frame-title">Dialog <small>Batch 2 of 4</small></div><div class="stage"><div class="ovl" data-mem="run"></div></div></div>
+          <div class="phone"><p class="label390">390px</p><div class="frame"><div class="stage" style="padding:12px"><div class="ovl" data-mem="run"></div></div></div></div>
+        </div>
+      </div>
+      <div>
+        <p class="sub" style="margin-top:0">3 · Results</p>
+        <div class="grid2">
+          <div class="frame"><div class="frame-title">Dialog <small>Done</small></div><div class="stage"><div class="ovl" data-mem="done"></div></div></div>
+          <div class="phone"><p class="label390">390px</p><div class="frame"><div class="stage" style="padding:12px"><div class="ovl" data-mem="done"></div></div></div></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">One clear path with the cost visible before the click, and "Run in background" is just closing the dialog (a job chip in the sidebar tracks it). Recommended because it matches today's flow and keeps the confirm step unmissable.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>B · Sheet with progress card</b><span>A persistent progress card on top; call results stream in underneath as each batch finishes.</span></div>
+    <div class="grid2">
+      <div class="frame"><div class="frame-title">Sheet <small>Running, 2 batches done</small></div><div class="stage sheet"><div class="ovl wide" data-mem="sheet"></div></div></div>
+      <div class="phone"><p class="label390">390px</p><div class="frame"><div class="stage sheet" style="min-height:420px"><div class="ovl" data-mem="sheet"></div></div></div></div>
+    </div>
+    <p class="note">You see early results without waiting for all 50. The estimate and results no longer have separate screens, so the confirm step is easier to skip past.</p>
+  </section>
+
+  <section class="option">
+    <div class="opt-head"><b>C · Page section + background-job chip</b><span>Results live on the page as stat tiles and a table; a chip in the top bar tracks the running job.</span></div>
+    <div class="grid2">
+      <div class="frame">
+        <div class="frame-title">Members <small>Priya Shah · analysis</small> <span class="chipbtn" data-chip></span></div>
+        <div class="surface" data-pagesec="wide"></div>
+      </div>
+      <div class="phone"><p class="label390">390px</p><div class="frame">
+        <div class="frame-title">Members <span class="chipbtn" data-chip></span></div>
+        <div class="surface" style="padding:14px" data-pagesec="narrow"></div>
+      </div></div>
+    </div>
+    <p class="note">Results stay on the page and can be sorted and filtered like any table, and the job survives navigation. It is the most new surface to build, since the estimate still needs its own popover.</p>
+  </section>
+</div>
+
+<script>
+  const I = {
+    play: '<polygon points="6 3 20 12 6 21 6 3"/>',
+    table: '<path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/>',
+    grid: '<rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/>',
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    spark: '<path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/>',
+    loader: '<path d="M21 12a9 9 0 1 1-6.2-8.6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    chevd: '<path d="m6 9 6 6 6-6"/>',
+    chevu: '<path d="m18 15-6-6-6 6"/>',
+    cal: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+    phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.1 9.9a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/>',
+    timer: '<path d="M10 2h4"/><path d="M12 14l3-3"/><circle cx="12" cy="14" r="8"/>',
+    bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    vol: '<path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/>',
+  };
+  const ic = (n, cls = 'ico', extra = '') => `<svg class="${cls}" ${extra} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+  const $$ = (s) => [...document.querySelectorAll(s)];
+
+  /* ---- Group 1 ---- */
+  const ads = [
+    { n: 'Lip filler — Oct offer', v: 1, d: '0:24', on: 1, spend: '£1,284', leads: '86', cpl: '£14.93', ctr: '2.41%' },
+    { n: 'Skin booster — before/after', v: 0, on: 1, spend: '£962', leads: '61', cpl: '£15.77', ctr: '1.98%' },
+    { n: 'Anti-wrinkle — free consult', v: 1, d: '0:15', on: 0, spend: '£740', leads: '39', cpl: '£18.97', ctr: '1.62%' },
+    { n: 'Dermal fillers — Beaulea reel', v: 1, d: '0:31', on: 1, spend: '£655', leads: '47', cpl: '£13.94', ctr: '2.76%' },
+    { n: 'Laser hair removal — course', v: 0, on: 1, spend: '£512', leads: '28', cpl: '£18.29', ctr: '1.44%' },
+    { n: 'Winter glow facial — carousel', v: 0, on: 0, spend: '£388', leads: '19', cpl: '£20.42', ctr: '1.21%' },
+    { n: 'Botox testimonial — Sarah', v: 1, d: '0:42', on: 1, spend: '£341', leads: '24', cpl: '£14.21', ctr: '2.05%' },
+    { n: 'Consultation booking — static', v: 0, on: 1, spend: '£297', leads: '17', cpl: '£17.47', ctr: '1.35%' },
+  ];
+  const M = [['Spend', 'spend'], ['Leads', 'leads'], ['CPL', 'cpl'], ['CTR', 'ctr']];
+  const thumb = (a, i) => `<div class="th g${i % 6}">${a.v ? `<span class="play">${ic('play', '', 'style="width:15px;height:15px"')}</span><span class="dur">${a.d}</span>` : ''}</div>`;
+  const sw = (a) => `<span class="sw${a.on ? ' on' : ''}" role="switch" aria-checked="${!!a.on}"></span>`;
+  const cardA = (a, i) => `<div class="card">${thumb(a, i)}<div class="body"><div class="hd"><b class="trunc">${a.n}</b>${sw(a)}</div>${M.map(([l, k]) => `<div class="mrow"><span>${l}</span><span class="num">${a[k]}</span></div>`).join('')}</div></div>`;
+  const rowB = (a, i) => `<div class="hrow">${thumb(a, i)}<div style="min-width:0"><div class="nm trunc">${a.n}</div><div class="hmet">${M.map(([l, k]) => `<div class="num"><small>${l}</small>${a[k]}</div>`).join('')}</div></div><div class="side" style="display:flex;align-items:center;gap:8px">${sw(a)}<span class="muted" style="font-size:13px">${a.on ? 'Active' : 'Paused'}</span></div></div>`;
+  const tileC = (a, i, hov) => `<div class="tile${hov ? ' hov' : ''}">${thumb(a, i)}<div class="top"><span class="pill trunc">${a.n.split(' — ')[0]}</span>${sw(a)}</div><div class="ov">${M.map(([l, k]) => `<div class="num"><small>${l}</small><b>${a[k]}</b></div>`).join('')}</div></div>`;
+  $$('[data-cards]').forEach(el => {
+    const t = el.dataset.cards, n = +el.dataset.n, phone = !!el.closest('.phone');
+    el.innerHTML = ads.slice(0, n).map((a, i) => t === 'A' ? cardA(a, i) : t === 'B' ? rowB(a, i) : tileC(a, i, !phone && i === 1)).join('');
+  });
+  $$('[data-sw]').forEach(el => el.innerHTML = `<span>${ic('table')}</span><span class="on">${ic('grid')}</span>`);
+
+  const vidBody = (narrow) => {
+    const a = ads[0];
+    return `<div class="oh"><div style="min-width:0"><b class="trunc">${a.n}</b><small>Beaulea Clinic · Meta · video ${a.d}</small></div><span class="btn out sm icon" aria-label="Close">${ic('x')}</span></div>
+    <div class="ob"><div class="vid">
+      <div class="th g0 player"><span class="play" style="width:48px;height:48px">${ic('play', '', 'style="width:18px;height:18px;fill:#fff"')}</span><div class="ctrl">0:09<i></i>0:24${ic('vol')}</div></div>
+      <div style="display:grid;gap:8px;align-content:start;min-width:0">
+        <div class="row-between"><span class="badge b-success">Active</span><span class="sw on"></span></div>
+        <div class="stats" style="grid-template-columns:repeat(2,minmax(0,1fr))">${M.map(([l, k]) => `<div class="stat"><div class="v num">${a[k]}</div><div class="l">${l}</div></div>`).join('')}</div>
+        <p class="help">Preview rendered by Meta. Spend and leads are for the last 7 days.</p>
+      </div></div></div>`;
+  };
+  $$('[data-video]').forEach(el => el.innerHTML = vidBody(el.dataset.video === 'narrow'));
+
+  /* ---- Group 2 ---- */
+  const oc = (txt, cls = 'b-success') => `<span class="badge ${cls}">${txt}</span>`;
+  const birdy = (inner) => `<div class="birdy"><span class="bav" title="BirdyAvatar">B</span><b>Birdy</b>${inner}</div>`;
+  const secs = [
+    ['What happened', 'Priya booked a consultation for Thursday 14:30 after Sarah asked about lip filler pricing and downtime.'],
+    ['What went wrong', 'Price objection (£280 vs a competitor at £220) was met with a discount before any value was explained.'],
+    ['Coaching', 'Anchor on the practitioner and aftercare first; offer the Oct bundle only if the objection repeats.'],
+  ];
+  const secCards = secs.map(([l, t]) => `<div class="sec"><div class="eb">${l}</div><p>${t}</p></div>`).join('');
+  const score = `<div class="sec"><div class="row-between"><div class="eb">Score <small>(proposed)</small></div><b class="num" style="font-size:20px">7<span class="muted" style="font-size:14px;font-weight:400">/10</span></b></div><div class="prog" style="margin-top:6px"><i style="width:70%"></i></div></div>`;
+  const callMeta = `Agent: <b style="font-weight:600;color:var(--fg)">Priya Shah</b> · 4m 12s · 21 Oct, 14:32`;
+  const head = (sub) => `<div class="oh"><div style="min-width:0"><b class="trunc">Call analysis — Sarah Whitmore</b><small>${sub || callMeta}</small></div><span class="btn out sm icon" aria-label="Close">${ic('x')}</span></div>`;
+  const sheets = {
+    'a-run': head() + `<div class="ob"><div style="display:grid;gap:12px">${birdy(`<span class="shimmer">Transcribing…</span>`)}<div style="padding-left:36px"><div class="skl" style="width:100%"></div><div class="skl" style="width:84%"></div><div class="skl" style="width:60%"></div></div></div>
+      <div class="stepper"><span class="st cur"><i>${ic('loader', 'ico spin', 'style="width:12px;height:12px"')}</i>Transcribing</span><span class="ln"></span><span class="st"><i>2</i>Reviewing</span><span class="ln"></span><span class="st"><i>3</i>Done</span></div>
+      <p class="help">Feel free to close this panel. You'll be notified when it's ready.</p></div>`,
+    'a-done': head() + `<div class="ob">${birdy(oc('appointment set'))}${secCards}${score}</div><div class="of"><span class="btn out">Close</span></div>`,
+  };
+  $$('[data-sheet]').forEach(el => el.innerHTML = sheets[el.dataset.sheet]);
+
+  const accItem = (l, t, open) => `<div><div class="h"><span>${l}</span>${ic(open ? 'chevu' : 'chevd')}</div>${open ? `<p>${t}</p>` : ''}</div>`;
+  $$('[data-dlg]').forEach(el => el.innerHTML = head() + `<div class="ob">
+    <div class="stepper"><span class="st done"><i>${ic('check', 'ico', 'style="width:12px;height:12px"')}</i>Transcribed</span><span class="ln"></span><span class="st done"><i>${ic('check', 'ico', 'style="width:12px;height:12px"')}</i>Reviewed</span><span class="ln"></span><span class="st cur"><i>3</i>Done</span></div>
+    ${birdy(oc('appointment set'))}
+    <div class="acc">${accItem(secs[0][0], secs[0][1], true)}${accItem(secs[1][0], '', false)}${accItem(secs[2][0], '', false)}<div><div class="h"><span>Score</span><span class="num">7/10</span></div></div></div></div>
+    <div class="of"><span class="btn out">Close</span></div>`);
+
+  const callRows = [['Sarah Whitmore', 'Priya Shah', '4:12', 'Outbound'], ['James Okafor', 'Daniel Reid', '1:48', 'Inbound'], ['Amelia Hart', 'Priya Shah', '0:36', 'Outbound']];
+  const inlinePanel = `<div class="birdy" style="margin-bottom:10px"><span class="bav" title="BirdyAvatar">B</span><b>Birdy</b>${oc('appointment set')}</div><div style="display:grid;gap:8px">${secCards}</div>`;
+  $$('[data-inline]').forEach(el => {
+    const narrow = el.dataset.inline === 'narrow';
+    el.innerHTML = `<div class="tscroll"><table class="tbl"><thead><tr><th>Caller</th>${narrow ? '' : '<th>Agent</th><th>Duration</th><th>Direction</th>'}<th></th></tr></thead><tbody>
+      ${callRows.map((r, i) => `<tr class="${i === 0 ? 'sel' : ''}"><td>${r[0]}</td>${narrow ? '' : `<td>${r[1]}</td><td class="num">${r[2]}</td><td>${r[3]}</td>`}<td style="text-align:right"><span class="btn out sm icon" style="${i === 0 ? 'color:var(--primary)' : ''}">${ic(i === 0 ? 'chevu' : 'spark')}</span></td></tr>${i === 0 ? `<tr><td class="exp" colspan="${narrow ? 2 : 5}">${inlinePanel}</td></tr>` : ''}`).join('')}
+    </tbody></table></div>`;
+  });
+
+  /* ---- Group 3 ---- */
+  const mhead = (sub) => `<div class="oh"><div style="min-width:0"><b class="trunc">Analyze calls — Priya Shah</b><small>${sub}</small></div><span class="btn out sm icon" aria-label="Close">${ic('x')}</span></div>`;
+  const stat = (v, l) => `<div class="stat"><div class="v num">${v}</div><div class="l">${l}</div></div>`;
+  const results = [
+    ['Sarah Whitmore · 21 Oct · 4m 12s', 'Booked a Thursday consultation for lip filler.', 'appointment set', 'b-success'],
+    ['Amelia Hart · 21 Oct · 0m 36s', 'Asked to be called back after 5pm tomorrow.', 'callback promised', 'b-info'],
+    ['Tom Barlow · 20 Oct · 0m 22s', 'Rang out, voicemail left with clinic number.', 'voicemail', 'b-warning'],
+    ['Hannah Cole · 20 Oct · 1m 05s', 'Not looking for treatment right now.', 'not interested', 'b-danger'],
+  ];
+  const resList = (n) => `<div class="clist">${results.slice(0, n).map(r => `<div class="it"><div><p>${r[0]}</p><b style="font-weight:400;white-space:normal">${r[1]}</b></div><span class="badge ${r[3]}">${r[2]}</span></div>`).join('')}</div>`;
+  const outBadges = `<span class="badge b-success">appointment set: 9</span><span class="badge b-info">callback promised: 6</span><span class="badge b-warning">voicemail: 8</span><span class="badge b-muted">no answer: 11</span><span class="badge b-danger">not interested: 7</span>`;
+  const mem = {
+    est: mhead('Latest calls with a recording') + `<div class="ob">
+      <div class="row-between"><span style="font-size:14px">Calls to analyze <span class="muted">(max 50)</span></span><span class="inp num">50</span></div>
+      <div class="sec"><div class="estrow"><span>Calls</span><b class="num">50</b></div><div class="estrow"><span>Batches</span><b class="num">4 <span class="muted" style="font-weight:400">(15 · 15 · 15 · 5)</span></b></div><div class="estrow"><span>Estimated cost</span><b class="num">£3.40 <span class="muted" style="font-weight:400">· 34 credits</span></b></div></div>
+      <p class="help">You can close this window while it runs. You'll be notified when it's done.</p></div>
+      <div class="of"><span class="btn out">Cancel</span><span class="btn">${ic('spark')}Analyze 50 calls</span></div>`,
+    run: mhead('Batch 2 of 4') + `<div class="ob">${birdy(`<span class="shimmer">Analyzing calls… 27/50</span>`)}
+      <div><div class="prog"><i style="width:54%"></i></div><div class="row-between help" style="margin-top:6px"><span>Transcribing and reviewing recordings</span><span class="num">54%</span></div></div>
+      <div class="stepper"><span class="st done"><i>${ic('check', 'ico', 'style="width:12px;height:12px"')}</i>Batch 1</span><span class="ln"></span><span class="st cur"><i>2</i>Batch 2</span><span class="ln"></span><span class="st"><i>3</i>Batch 3</span><span class="ln"></span><span class="st"><i>4</i>Batch 4</span></div></div>
+      <div class="of"><span class="btn out">${ic('bell')}Run in background</span></div>`,
+    done: mhead('50 calls analyzed · 4 batches · £3.40') + `<div class="ob">
+      <div class="stats">${stat(50, 'Calls analyzed')}${stat(9, 'Appointments set')}${stat(6, 'Callbacks promised')}${stat(11, 'No answer')}</div>
+      <div class="birdy"><span class="bav" title="BirdyAvatar">B</span>${outBadges}<span class="badge b-danger">2 failed to transcribe</span></div>
+      ${resList(3)}<p class="help">Showing 3 of 50. Scroll for the rest.</p></div>
+      <div class="of"><span class="btn out">Close</span></div>`,
+    sheet: `<div class="oh"><div style="min-width:0"><b class="trunc">Analyze calls — Priya Shah</b><small>50 calls · est. £3.40</small></div><span class="btn out sm icon" aria-label="Close">${ic('x')}</span></div>
+      <div class="ob"><div class="sec"><div class="row-between"><span class="shimmer">Analyzing… 27/50</span><span class="btn out sm">${ic('bell')}Background</span></div><div class="prog" style="margin:8px 0"><i style="width:54%"></i></div><div class="row-between help"><span>Batch 2 of 4</span><span class="num">9 appts · 6 callbacks so far</span></div></div>
+      <div class="birdy"><span class="bav" title="BirdyAvatar">B</span>${oc('appointment set: 9')}${oc('callback promised: 6', 'b-info')}</div>
+      ${resList(3)}</div>`,
+  };
+  $$('[data-mem]').forEach(el => el.innerHTML = mem[el.dataset.mem]);
+  $$('[data-chip]').forEach(el => el.innerHTML = `${ic('loader', 'ico spin')}Analyzing 27/50`);
+  $$('[data-pagesec]').forEach(el => {
+    const narrow = el.dataset.pagesec === 'narrow';
+    el.innerHTML = `<div class="stats" style="margin-bottom:14px">${stat(50, 'Calls analyzed')}${stat(9, 'Appointments set')}${stat(6, 'Callbacks promised')}${stat(11, 'No answer')}</div>
+      <div class="tscroll"><table class="tbl"><thead><tr><th>Caller</th>${narrow ? '' : '<th>Date</th><th>Duration</th>'}<th>Outcome</th></tr></thead><tbody>
+      ${results.map(r => `<tr><td>${r[0].split(' · ')[0]}</td>${narrow ? '' : `<td class="muted">${r[0].split(' · ')[1]}</td><td class="num">${r[0].split(' · ')[2]}</td>`}<td><span class="badge ${r[3]}">${r[2]}</span></td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="help" style="margin-top:10px">Running in the background · cost estimate £3.40 · you'll be notified when it's done.</p>`;
+  });
+</script>
+</body>
+</html>

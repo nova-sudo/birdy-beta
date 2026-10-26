@@ -1,99 +1,93 @@
 "use client"
 
 // Shared primitives for the first-run onboarding wizard. Everything here is
-// presentational; state lives in page.jsx. Styling follows the onboarding
-// design handoff exactly — it shares the pd-* token palette with the
-// Portfolio Dashboard / Sales Hub screens (globals.css), Bricolage
-// Grotesque for headings, Inter for body (lib/pd-fonts).
+// presentational; state lives in page.jsx. The wizard is a full-screen frame
+// (top bar, scrolling body, pinned footer) built from ds components and token
+// utilities, following Paper's onboarding flow.
 
-import { useEffect, useRef, useState } from "react"
-import { ArrowRight, Check, ChevronLeft, Search } from "lucide-react"
-import { Button } from "@/components/ui/button"
-
-/**
- * The two content column widths the wizard's steps use. Every step is either a
- * narrow prose column (heading, a line of copy, one control) or a wide one (a
- * table, a scrollable list, a row of tiles). They live here rather than being
- * repeated per step so the column can be tuned in one place.
- *
- * 600 rather than the original 440 because at 440 two thirds of the step
- * headings wrapped, and they wrapped mid-phrase — "Want to change the client /
- * name?" — which reads as the box being too small rather than as a deliberate
- * break. Measured against the original Poppins Bold at 28px/23px (Bricolage
- * Grotesque, the display face now, sets narrower), the narrow
- * headings cluster below 560px and then jump to 673px, so 600 clears the whole
- * lower cluster with room to spare while staying a readable prose measure.
- * Going wider only pays off past 680, which is far too wide for a centred
- * column of copy — so the three longest headings ("Congratulations! You
- * connected your first client", the GHL and Slack intros) still take two
- * lines, which is fine: they are sentences, and they break at a clause.
- */
-export const STEP_COL = "w-full max-w-[600px]"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
+import { createPortal } from "react-dom"
+import { Check, Search } from "lucide-react"
+import { Button, Input, ProgressBar } from "@/components/ds"
+import { SLACK_PREVIEW_VARS } from "@/lib/brand-colors"
+import { cn } from "@/lib/utils"
 
 /**
- * The wide tier moves 620/640 -> 720 to stay visibly a tier above STEP_COL —
- * at 620 it would read as an accident next to a 600px narrow column — and to
- * give the sub-account table and the tile rows the headroom that was the other
- * half of the squeeze.
+ * The content column widths the wizard's steps use. Every step is a prose
+ * column (heading, a line of copy, one control), a wide one (a table, a
+ * scrollable list) or, for the report copilot, the full designer. They live
+ * here rather than being repeated per step so the column can be tuned in one
+ * place. Text in all of them is left-aligned; only the welcome and completion
+ * hero steps centre theirs.
  */
+export const STEP_COL = "w-full max-w-[560px]"
 export const STEP_COL_WIDE = "w-full max-w-[720px]"
-
-export function PrimaryButton({ children, onClick, disabled, arrow = true, className = "" }) {
-  return (
-    <Button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`h-auto px-[26px] py-[13px] text-[14.5px] disabled:opacity-40 ${className}`}
-    >
-      {children}
-      {arrow && <ArrowRight className="h-[15px] w-[15px]" strokeWidth={2.4} />}
-    </Button>
-  )
-}
-
-export function SecondaryButton({ children, onClick, className = "" }) {
-  return (
-    <Button
-      type="button"
-      variant="outline"
-      onClick={onClick}
-      className={`h-auto px-[22px] py-3 text-[14px] text-pd-body ${className}`}
-    >
-      {children}
-    </Button>
-  )
-}
-
-/** 16px spinning ring — matches the prototype's obSpin spinner. */
-export function SpinnerRing({ size = 16 }) {
-  return (
-    <div
-      className="animate-spin rounded-full border-2 border-pd-primary-tint border-t-pd-primary"
-      style={{ width: size, height: size }}
-    />
-  )
-}
+export const STEP_COL_FULL = "w-full max-w-[1120px]"
 
 /**
- * Determinate progress bar. `value` is 0–100; anything outside is clamped, so
- * a caller computing a percentage from a not-yet-known total can pass junk
- * without drawing a bar wider than its track.
+ * The footer's right-hand slot. page.jsx renders an empty node for it and
+ * provides that node here; a step renders <WizardFooter> wherever it likes and
+ * its actions are portaled into the pinned footer, so the step keeps owning
+ * its handlers while the frame owns the layout.
  */
-export function ProgressBar({ value, className = "" }) {
-  const pct = Math.max(0, Math.min(100, Number(value) || 0))
+export const WizardFooterContext = createContext(null)
+
+/**
+ * @param {object} props
+ * @param {{label: string, onClick: () => void, disabled?: boolean, loading?: boolean}} [props.primary]
+ * @param {React.ReactNode} [props.secondary] Rendered to the left of the primary button
+ */
+export function WizardFooter({ primary, secondary }) {
+  const node = useContext(WizardFooterContext)
+  if (!node) return null
+  // shrink-0 on the buttons and min-w-0 on the slot (page.jsx) keep the row
+  // from overflowing at 390; a step with a long secondary label should shorten
+  // it below sm instead (see ReportCopilotStep).
+  return createPortal(
+    <>
+      {secondary}
+      {primary && (
+        <Button
+          variant="primary"
+          size="lg"
+          className="shrink-0"
+          onClick={primary.onClick}
+          disabled={primary.disabled}
+          loading={primary.loading}
+        >
+          {primary.label}
+        </Button>
+      )}
+    </>,
+    node
+  )
+}
+
+/** Step head: an optional eyebrow, the title, an optional description. */
+export function StepHeading({ eyebrow, description, children, className }) {
   return (
-    <div
-      className={`h-[6px] w-full overflow-hidden rounded-full bg-pd-primary-tint ${className}`}
-      role="progressbar"
-      aria-valuenow={Math.round(pct)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-    >
-      <div
-        className="h-full rounded-full bg-pd-primary transition-[width] duration-500 ease-out"
-        style={{ width: `${pct}%` }}
+    <div className={cn("mb-8 flex flex-col gap-2", className)}>
+      {eyebrow && <div className="text-xs font-medium text-primary">{eyebrow}</div>}
+      <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance text-foreground md:text-title">{children}</h1>
+      {description && <p className="text-base text-muted-foreground">{description}</p>}
+    </div>
+  )
+}
+
+/** Large (44px) ds Input for the wizard's text steps. */
+export function StepInput({ className, ...props }) {
+  return <Input size="lg" className={className} {...props} />
+}
+
+/** Text input with a leading search icon. */
+export function SearchInput({ value, onChange, placeholder }) {
+  return (
+    <div className="relative mb-3.5">
+      <Search
+        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
       />
+      <Input value={value} onChange={onChange} placeholder={placeholder} className="pl-9" />
     </div>
   )
 }
@@ -149,8 +143,8 @@ export function FakeProgressBar({ active = true, done = false, expectedMs, capti
   const pct = useFakeProgress(active, { expectedMs, done })
   return (
     <div className={className}>
-      <ProgressBar value={pct} />
-      {caption && <div className="mt-[9px] text-center text-[12.5px] text-pd-faint">{caption}</div>}
+      <ProgressBar value={pct} tone="primary" label="Working" />
+      {caption && <div className="mt-2 text-center text-xs text-muted-foreground">{caption}</div>}
     </div>
   )
 }
@@ -189,7 +183,7 @@ export function CyclingCaption({ messages = [], everyMs = 3200, className = "" }
       // Keyed so each line fades in as its own element rather than the text
       // changing under a static node.
       key={index}
-      className={`animate-in fade-in duration-500 text-center text-[12.5px] text-pd-faint ${className}`}
+      className={cn("animate-in fade-in duration-500 text-center text-xs text-muted-foreground", className)}
     >
       {messages[index]}
     </div>
@@ -199,67 +193,138 @@ export function CyclingCaption({ messages = [], everyMs = 3200, className = "" }
 /** Green check circle + label ("GHL connected", "Targets applied"…). */
 export function SuccessRow({ children }) {
   return (
-    <div className="mb-[22px] flex items-center justify-center gap-[9px]">
-      <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-pd-success-bg text-pd-success">
-        <Check className="h-[14px] w-[14px]" strokeWidth={3} />
+    <div className="mb-6 flex items-center gap-2">
+      <span className="flex size-6 items-center justify-center rounded-full bg-success-soft text-success-ink">
+        <Check className="size-3.5" strokeWidth={3} />
       </span>
-      <span className="text-[14px] font-semibold text-pd-success">{children}</span>
+      <span className="text-sm font-semibold text-success-ink">{children}</span>
+    </div>
+  )
+}
+
+const CHIP_TONES = {
+  primary: "bg-primary-soft text-primary",
+  success: "bg-success-soft text-success-ink",
+  info: "bg-info-soft text-info-ink",
+  warning: "bg-warning-soft text-warning-ink",
+  danger: "bg-danger-soft text-danger-ink",
+  neutral: "bg-neutral-soft text-neutral-ink",
+}
+
+/**
+ * 56px tinted icon chip above connect-step headings.
+ *
+ * @param {object} props
+ * @param {"primary"|"success"|"info"|"warning"|"danger"|"neutral"} [props.tone="primary"]
+ */
+export function IconChip({ tone = "primary", className, children }) {
+  return (
+    <div className={cn("mb-6 flex size-14 items-center justify-center rounded-frame", CHIP_TONES[tone], className)}>
+      {children}
+    </div>
+  )
+}
+
+function RadioMark({ selected, className }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-full",
+        selected ? "bg-primary" : "border-2 border-border bg-background",
+        className
+      )}
+    >
+      {selected && <span className="size-2 rounded-full bg-background" />}
+    </span>
+  )
+}
+
+/**
+ * Group of option cards on a muted well (Paper: Option cards). Children are
+ * OptionCards. `mode="select"` is a true single-select radiogroup; `"action"`
+ * is for cards that act on click (and advance the wizard), so it is a plain
+ * group of buttons. `density="compact"` is a 2-then-3 column grid of slim cards
+ * for long lists.
+ */
+export function OptionGrid({ children, className, label, mode = "select", density = "default" }) {
+  return (
+    <div
+      role={mode === "select" ? "radiogroup" : "group"}
+      aria-label={label}
+      className={cn(
+        "grid gap-1 rounded-frame bg-muted p-1",
+        density === "compact" ? "grid-cols-2 sm:grid-cols-3" : "grid-cols-1 sm:grid-cols-2",
+        className
+      )}
+    >
+      {children}
     </div>
   )
 }
 
 /**
- * 56px tinted icon chip above connect-step headings. Tone comes in as token
- * classes ("bg-pd-info-bg text-pd-info"); `bg`/`color` remain for a caller
- * that still has a one-off colour.
+ * One option card: 36px icon tile and a radio on top, label and hint below.
+ * The selected card lifts off the well in white.
+ *
+ * @param {object} props
+ * @param {React.ReactNode} props.icon
+ * @param {string} props.label
+ * @param {string} [props.hint]
+ * @param {boolean} props.selected
+ * @param {() => void} props.onClick
+ * @param {"select"|"action"} [props.mode="select"] "action" renders a plain button: no radio, no aria-checked
+ * @param {"default"|"compact"} [props.density="default"] compact drops the icon tile: the icon sits inline before the label
  */
-export function IconChip({ bg, color, className = "", children }) {
+export function OptionCard({ icon, label, hint, selected, onClick, mode = "select", density = "default" }) {
+  const isSelect = mode === "select"
+  const surface = selected ? "bg-background shadow-floating" : "hover:bg-background/60"
+  const base =
+    "rounded-frame text-left outline-none transition-[background-color,box-shadow] duration-150 ease-press focus-visible:shadow-control-focus"
+
+  if (density === "compact") {
+    return (
+      <button
+        type="button"
+        role={isSelect ? "radio" : undefined}
+        aria-checked={isSelect ? selected : undefined}
+        onClick={onClick}
+        className={cn("flex items-center gap-2 px-3 py-2.5", base, surface)}
+      >
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          <span className="num mr-1.5 text-muted-foreground">{icon}</span>
+          {label}
+          {hint && <span className="ml-1.5 text-xs font-normal text-muted-foreground">{hint}</span>}
+        </span>
+        {isSelect && <RadioMark selected={selected} className="size-[22px]" />}
+      </button>
+    )
+  }
+
   return (
-    <div
-      className={`mx-auto mb-[22px] flex h-14 w-14 items-center justify-center rounded-xl ${className}`}
-      style={bg || color ? { background: bg, color } : undefined}
+    <button
+      type="button"
+      role={isSelect ? "radio" : undefined}
+      aria-checked={isSelect ? selected : undefined}
+      onClick={onClick}
+      className={cn("flex flex-col gap-3.5 p-4", base, surface)}
     >
-      {children}
-    </div>
-  )
-}
-
-export function StepHeading({ children, small = false }) {
-  return (
-    <div
-      className={`font-pd-display font-bold tracking-[-0.02em] text-pd-ink ${
-        small ? "text-[19px] sm:text-[23px]" : "text-[21px] sm:text-[28px]"
-      }`}
-    >
-      {children}
-    </div>
-  )
-}
-
-/** The underlined centre-aligned input unique to onboarding's name steps. */
-export function UnderlineInput({ value, onChange, placeholder, autoFocus }) {
-  return (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      autoFocus={autoFocus}
-      className="mb-[30px] w-full border-0 border-b-2 border-pd-border bg-transparent px-1 py-[10px] text-center text-[17px] text-pd-ink outline-none transition-colors placeholder:text-pd-faint focus:border-pd-primary"
-    />
-  )
-}
-
-export function SearchInput({ value, onChange, placeholder }) {
-  return (
-    <div className="mb-[14px] flex h-[42px] items-center gap-[9px] rounded-full border border-pd-border bg-pd-canvas px-[14px]">
-      <Search className="h-[15px] w-[15px] shrink-0 text-pd-faint" strokeWidth={2} />
-      <input
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        className="w-full flex-1 border-0 bg-transparent text-[13.5px] text-pd-ink outline-none placeholder:text-pd-faint"
-      />
-    </div>
+      <span className="flex items-start justify-between">
+        <span
+          className={cn(
+            "flex size-9 items-center justify-center rounded-control [&_svg]:size-[18px]",
+            selected ? "bg-muted text-foreground" : "bg-background text-muted-foreground shadow-control"
+          )}
+        >
+          {icon}
+        </span>
+        {isSelect && <RadioMark selected={selected} className="size-[22px]" />}
+      </span>
+      <span>
+        <span className="block text-sm font-medium text-foreground">{label}</span>
+        {hint && <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>}
+      </span>
+    </button>
   )
 }
 
@@ -270,30 +335,36 @@ export function SearchInput({ value, onChange, placeholder }) {
 export function PickList({ items, selectedId, onPick, maxHeight = 280, emptyText = "Nothing found" }) {
   return (
     <div
-      className="pd-scrolly mb-[22px] overflow-y-auto rounded-xl border border-pd-border"
+      role="radiogroup"
+      className="mb-6 overflow-y-auto rounded-surface bg-background shadow-surface"
       style={{ maxHeight }}
     >
       {items.length === 0 && (
-        <div className="px-[14px] py-5 text-center text-[12.5px] text-pd-faint">{emptyText}</div>
+        <div className="px-4 py-5 text-center text-xs text-muted-foreground">{emptyText}</div>
       )}
-      {items.map((item) => (
-        <div
-          key={item.id}
-          onClick={() => onPick(item)}
-          className={`flex cursor-pointer items-center gap-[11px] border-b border-pd-row-border px-[14px] py-3 transition-colors last:border-b-0 ${
-            selectedId === item.id ? "bg-pd-primary-tint" : "bg-white hover:bg-pd-canvas"
-          }`}
-        >
-          {item.leading}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13.5px] font-semibold text-pd-ink">{item.title}</div>
-            {item.sub && <div className="truncate text-[11.5px] text-pd-faint">{item.sub}</div>}
-          </div>
-          {selectedId === item.id && (
-            <Check className="h-[17px] w-[17px] shrink-0 text-pd-primary" strokeWidth={2.4} />
-          )}
-        </div>
-      ))}
+      {items.map((item) => {
+        const selected = selectedId === item.id
+        return (
+          <button
+            key={item.id}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onPick(item)}
+            className={cn(
+              "flex w-full items-center gap-3 border-t border-border/60 px-4 py-3 text-left outline-none transition-colors first:border-t-0 focus-visible:bg-muted",
+              selected ? "bg-primary-soft" : "hover:bg-muted"
+            )}
+          >
+            <RadioMark selected={selected} className="size-[18px]" />
+            {item.leading}
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-foreground">{item.title}</span>
+              {item.sub && <span className="block truncate text-xs text-muted-foreground">{item.sub}</span>}
+            </span>
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -307,7 +378,7 @@ export function InitialsAvatar({ name }) {
     .slice(0, 2)
     .toUpperCase()
   return (
-    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[12px] bg-pd-primary-tint font-pd-display text-[11px] font-bold text-pd-primary">
+    <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary-soft text-xs font-semibold text-primary">
       {initials}
     </div>
   )
@@ -331,20 +402,20 @@ export function SlackGlyph({ size = 26 }) {
   )
 }
 
-/** Slack-style dark preview card used on the channel + brief-content steps. */
+/** Slack-style dark preview card used on the channel step. */
 export function SlackPreviewCard({ time, children }) {
   return (
-    <div className="min-h-[80px] rounded-xl bg-[#3F0E40] px-4 py-[14px]">
-      <div className="flex gap-[9px]">
-        <div className="flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[12px] bg-pd-primary font-pd-display text-[13px] font-bold text-white">
+    <div className="min-h-20 rounded-surface bg-(--slack-surface) px-4 py-3.5" style={SLACK_PREVIEW_VARS}>
+      <div className="flex gap-2">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-control bg-primary text-sm font-semibold text-primary-foreground">
           B
         </div>
         <div className="min-w-0">
-          <div className="flex items-baseline gap-[7px]">
-            <span className="text-[13px] font-bold text-white">Birdy</span>
-            <span className="text-[10.5px] text-white/60">{time}</span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-sm font-semibold text-primary-foreground">Birdy</span>
+            <span className="text-xs text-primary-foreground/60">{time}</span>
           </div>
-          <div className="mt-1 text-[12.5px] leading-relaxed text-white/90">{children}</div>
+          <div className="mt-1 text-xs leading-relaxed text-primary-foreground/90">{children}</div>
         </div>
       </div>
     </div>

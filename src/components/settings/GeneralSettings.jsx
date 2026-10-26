@@ -7,21 +7,25 @@
 // This tab shipped as a literal placeholder — "General settings content goes
 // here" — because none of it had anywhere to save. The endpoints exist now
 // (GET/PATCH /api/user/profile, POST /api/user/password); this is the form.
+//
+// Each form saves on its own button, at the bottom-right of its Frame.
 
 import { useCallback, useEffect, useState } from "react"
+import { Bell } from "lucide-react"
 import { toast } from "sonner"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import {
+  Button,
+  EmptyState,
+  ErrorState,
+  Input,
+  Notice,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
-import { Stagger, StaggerItem } from "@/components/motion"
+} from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
+import { cn } from "@/lib/utils"
 import SavedReportCard from "@/components/report-designer/SavedReportCard"
+import { FrameFooter, SettingBlock, SettingRow, SettingsFrame } from "./SettingsFrame"
 
 // Kept short and ordered by likelihood rather than listing every ISO code —
 // the agencies on this product bill in a handful of currencies.
@@ -47,8 +51,12 @@ const BRIEF_TIMES = [
 ]
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
+// Controls sit at 360px on the right of a row, or fill it below md.
+const CONTROL = "w-full md:w-90"
+
 export function GeneralSettings({ slackConnected = false, brief, onBriefSaved }) {
   const [profile, setProfile] = useState(null)
+  const [profileFailed, setProfileFailed] = useState(false)
   const [name, setName] = useState("")
   const [currency, setCurrency] = useState("")
   const [timezone, setTimezone] = useState("")
@@ -65,20 +73,27 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
   const [briefDay, setBriefDay] = useState(brief?.day ?? "Monday")
   const [savingBrief, setSavingBrief] = useState(false)
 
-  useEffect(() => {
+  const loadProfile = useCallback(() => {
     let cancelled = false
+    setProfileFailed(false)
     apiRequest("/api/user/profile")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (cancelled || !data) return
+        if (cancelled) return
+        if (!data) {
+          setProfileFailed(true)
+          return
+        }
         setProfile(data)
         setName(data.name || "")
         setCurrency(data.default_currency || "USD")
         setTimezone(data.timezone || "")
       })
-      .catch(() => {})
+      .catch(() => { if (!cancelled) setProfileFailed(true) })
     return () => { cancelled = true }
   }, [])
+
+  useEffect(() => loadProfile(), [loadProfile])
 
   useEffect(() => {
     if (!brief) return
@@ -176,175 +191,150 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
     : TIMEZONES
 
   return (
-    <Stagger className="space-y-6">
-      {/* Account and password sit side by side, as the design draws them. The
-          StaggerItems are flex so each card still stretches to the row. */}
-      <div className="grid gap-[18px] lg:grid-cols-2">
-        <StaggerItem className="flex">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="font-pd-display text-base">General settings</CardTitle>
-            <CardDescription>
-              Manage your general application and account settings
-            </CardDescription>
-          </CardHeader>
-          <Separator />
-          <CardContent className="space-y-4 pt-4">
-            <div>
-              <Label htmlFor="account-name" className="text-xs font-semibold">Name</Label>
-              <Input
-                id="account-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={120}
-                className="mt-1.5 h-[38px] text-[13px]"
-              />
-            </div>
+    <div className="flex flex-col gap-4">
+      <SettingsFrame
+        title="General settings"
+        description="Manage your general application and account settings"
+      >
+        {profileFailed && (
+          <SettingBlock>
+            <ErrorState
+              title="Couldn't load your profile"
+              description="Your account details are unchanged; we just couldn't fetch them."
+              onRetry={loadProfile}
+            />
+          </SettingBlock>
+        )}
 
-            <div>
-              <Label htmlFor="account-email" className="text-xs font-semibold">Email</Label>
-              <Input
-                id="account-email"
-                value={profile?.email ?? ""}
-                readOnly
-                disabled
-                className="mt-1.5 h-[38px] text-[13px]"
-              />
-              {/* Not an oversight: the account id IS the email, so changing it
-                  would rekey every document that references the account. */}
-              <p className="mt-1 text-[11px] text-pd-subtle">
-                Your email is your account identifier and cannot be changed here.
-              </p>
-            </div>
+        <SettingRow label="Name" htmlFor="account-name">
+          <Input
+            id="account-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            maxLength={120}
+            className={CONTROL}
+          />
+        </SettingRow>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label className="text-xs font-semibold">Timezone</Label>
-                <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger className="mt-1.5 h-[38px] text-[13px]">
-                    <SelectValue placeholder="Select a timezone" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timezoneOptions.map((tz) => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Not an oversight: the account id IS the email, so changing it
+            would rekey every document that references the account. */}
+        <SettingRow
+          label="Email"
+          htmlFor="account-email"
+          description="Your email is your account identifier and cannot be changed here."
+        >
+          <Input
+            id="account-email"
+            value={profile?.email ?? ""}
+            readOnly
+            disabled
+            className={CONTROL}
+          />
+        </SettingRow>
 
-              <div>
-                <Label className="text-xs font-semibold">Currency</Label>
-                <Select value={currency} onValueChange={setCurrency}>
-                  <SelectTrigger className="mt-1.5 h-[38px] text-[13px]">
-                    <SelectValue placeholder="Select a currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        <SettingRow label="Timezone" htmlFor="account-timezone">
+          <Select value={timezone} onValueChange={setTimezone}>
+            <SelectTrigger id="account-timezone" className={CONTROL}>
+              <SelectValue placeholder="Select a timezone" />
+            </SelectTrigger>
+            <SelectContent>
+              {timezoneOptions.map((tz) => (
+                <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingRow>
 
+        <SettingRow label="Currency" htmlFor="account-currency">
+          <Select value={currency} onValueChange={setCurrency}>
+            <SelectTrigger id="account-currency" className={CONTROL}>
+              <SelectValue placeholder="Select a currency" />
+            </SelectTrigger>
+            <SelectContent>
+              {CURRENCIES.map((c) => (
+                <SelectItem key={c.code} value={c.code}>{c.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingRow>
+
+        <FrameFooter>
+          <Button variant="primary" onClick={saveProfile} disabled={!dirty || savingProfile}>
+            {savingProfile ? "Saving…" : "Save changes"}
+          </Button>
+        </FrameFooter>
+      </SettingsFrame>
+
+      <form onSubmit={savePassword}>
+        <SettingsFrame title="Password" description="Change your account password">
+          <SettingRow label="Current password" htmlFor="current-password">
+            <Input
+              id="current-password"
+              type="password"
+              autoComplete="current-password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              className={CONTROL}
+            />
+          </SettingRow>
+
+          <SettingRow
+            label="New password"
+            htmlFor="new-password"
+            description="At least 8 characters, and different from your current one."
+          >
+            <Input
+              id="new-password"
+              type="password"
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              className={CONTROL}
+            />
+          </SettingRow>
+
+          <SettingRow label="Confirm new password" htmlFor="confirm-password">
+            <Input
+              id="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              className={CONTROL}
+            />
+          </SettingRow>
+
+          {passwordError && (
+            <SettingBlock>
+              <Notice tone="danger" role="alert">{passwordError}</Notice>
+            </SettingBlock>
+          )}
+
+          <FrameFooter>
             <Button
-              onClick={saveProfile}
-              disabled={!dirty || savingProfile}
-              className="w-fit"
+              type="submit"
+              variant="primary"
+              disabled={!current || !next || !confirm || savingPassword}
             >
-              {savingProfile ? "Saving…" : "Save changes"}
+              {savingPassword ? "Updating…" : "Update password"}
             </Button>
-          </CardContent>
-        </Card>
-        </StaggerItem>
+          </FrameFooter>
+        </SettingsFrame>
+      </form>
 
-        <StaggerItem className="flex">
-        <Card className="w-full">
-          <CardHeader>
-            <CardTitle className="font-pd-display text-base">Password</CardTitle>
-            <CardDescription>Change your account password</CardDescription>
-          </CardHeader>
-          <Separator />
-          <CardContent className="pt-4">
-            <form onSubmit={savePassword} className="space-y-4">
-              <div>
-                <Label htmlFor="current-password" className="text-xs font-semibold">
-                  Current password
-                </Label>
-                <Input
-                  id="current-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={current}
-                  onChange={(e) => setCurrent(e.target.value)}
-                  className="mt-1.5 h-[38px] text-[13px]"
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="new-password" className="text-xs font-semibold">
-                    New password
-                  </Label>
-                  <Input
-                    id="new-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={next}
-                    onChange={(e) => setNext(e.target.value)}
-                    className="mt-1.5 h-[38px] text-[13px]"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="confirm-password" className="text-xs font-semibold">
-                    Confirm new password
-                  </Label>
-                  <Input
-                    id="confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    value={confirm}
-                    onChange={(e) => setConfirm(e.target.value)}
-                    className="mt-1.5 h-[38px] text-[13px]"
-                  />
-                </div>
-              </div>
-
-              {passwordError && (
-                <p className="text-[11px] text-pd-danger">{passwordError}</p>
-              )}
-              <p className="text-[11px] text-pd-subtle">
-                At least 8 characters, and different from your current one.
-              </p>
-
-              <Button
-                type="submit"
-                disabled={!current || !next || !confirm || savingPassword}
-                className="w-fit"
-              >
-                {savingPassword ? "Updating…" : "Update password"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-        </StaggerItem>
-      </div>
-
-      <StaggerItem>
-      <Card className="max-w-[900px]">
-        <CardHeader>
-          <CardTitle className="font-pd-display text-base">Notification preferences</CardTitle>
-          <CardDescription>When Birdy sends your Slack report, and what&apos;s in it</CardDescription>
-        </CardHeader>
-        <Separator />
-        <CardContent className="pt-4">
-          {!slackConnected ? (
-            <p className="text-sm text-pd-subtle">
-              Connect the Slack bot under Integrations to schedule a brief.
-            </p>
-          ) : (
-            <>
-              <div className="grid gap-4 sm:grid-cols-2">
+      <SettingsFrame
+        title="Notification preferences"
+        description="When Birdy sends your Slack report, and what's in it"
+      >
+        {!slackConnected ? (
+          <EmptyState
+            icon={Bell}
+            title="Connect the Slack bot under Integrations to schedule a brief."
+          />
+        ) : (
+          <>
+            <SettingBlock>
+              <div className="grid gap-3 sm:grid-cols-2">
                 {[
                   { key: "daily", title: "Daily", desc: "A summary every morning" },
                   { key: "weekly", title: "Weekly", desc: "One digest each Monday" },
@@ -356,63 +346,59 @@ export function GeneralSettings({ slackConnected = false, brief, onBriefSaved })
                       type="button"
                       onClick={() => setFrequency(option.key)}
                       aria-pressed={active}
-                      className={`rounded-xl border-2 p-4 text-left transition ${
+                      className={cn(
+                        "rounded-control p-3 text-left outline-none transition-shadow focus-visible:shadow-control-focus",
                         active
-                          ? "border-pd-primary bg-pd-primary-tint"
-                          : "border-pd-border hover:border-pd-border-strong"
-                      }`}
+                          ? "bg-primary-soft ring-2 ring-primary"
+                          : "bg-background shadow-control hover:bg-muted"
+                      )}
                     >
-                      <p className="text-sm font-semibold text-pd-ink">{option.title}</p>
-                      <p className="text-xs text-pd-subtle">{option.desc}</p>
+                      <p className="text-sm font-semibold text-foreground">{option.title}</p>
+                      <p className="text-xs text-muted-foreground">{option.desc}</p>
                     </button>
                   )
                 })}
               </div>
+            </SettingBlock>
 
-              {/* Revealed beneath, in the same card, as the design specifies —
-                  and deliberately not auto-advancing, so a mind can change
-                  before anything is saved. */}
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                {frequency === "weekly" && (
-                  <div>
-                    <Label className="text-xs font-semibold">Which day?</Label>
-                    <Select value={briefDay} onValueChange={setBriefDay}>
-                      <SelectTrigger className="mt-1.5 h-[38px] text-[13px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {WEEKDAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                <div className={frequency === "weekly" ? "" : "max-w-[220px]"}>
-                  <Label className="text-xs font-semibold">What time?</Label>
-                  <Select value={briefTime} onValueChange={setBriefTime}>
-                    <SelectTrigger className="mt-1.5 h-[38px] text-[13px]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BRIEF_TIMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            {/* Revealed beneath, in the same Frame, as the design specifies —
+                and deliberately not auto-advancing, so a mind can change
+                before anything is saved. */}
+            {frequency === "weekly" && (
+              <SettingRow label="Which day?" htmlFor="brief-day">
+                <Select value={briefDay} onValueChange={setBriefDay}>
+                  <SelectTrigger id="brief-day" className={CONTROL}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {WEEKDAYS.map((d) => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </SettingRow>
+            )}
+            <SettingRow label="What time?" htmlFor="brief-time">
+              <Select value={briefTime} onValueChange={setBriefTime}>
+                <SelectTrigger id="brief-time" className={CONTROL}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {BRIEF_TIMES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </SettingRow>
 
-              <Button
-                onClick={saveBrief}
-                disabled={savingBrief}
-                className="mt-4 w-fit"
-              >
+            <FrameFooter>
+              <Button variant="primary" onClick={saveBrief} disabled={savingBrief}>
                 {savingBrief ? "Saving…" : "Save schedule"}
               </Button>
+            </FrameFooter>
 
+            <SettingBlock>
               <SavedReportCard brief={brief} onSaved={onBriefSaved} />
-            </>
-          )}
-        </CardContent>
-      </Card>
-      </StaggerItem>
-    </Stagger>
+            </SettingBlock>
+          </>
+        )}
+      </SettingsFrame>
+    </div>
   )
 }

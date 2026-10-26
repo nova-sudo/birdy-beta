@@ -1,40 +1,50 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { CircleCheck, Info, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import {
-  ActivityRow,
-  DiagnosticBanner,
-  FunnelStepper,
-  Leaderboard,
-  LoadingPulse,
-  CHART_LOADING,
-  FUNNEL_LOADING,
-  PdCard,
-  PdMenu,
-  SidePanel,
-  StatStrip,
-  SuggestionCard,
-  TrendChart,
-} from "@/components/portfolio";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDashboardControls } from "@/components/dashboard-controls";
-import { diagnoseFunnel } from "@/lib/portfolio-metrics";
-import {
-  CALL_CENTRE_FUNNEL_KEYS,
-  CALL_CENTRE_STAT_KEYS,
-  CALL_PRESENTATION,
-  FUNNEL_PRESENTATION,
-  KPI_PRESENTATION,
-  withPresentation,
-} from "./presentation";
+  BirdyRead,
+  Breakdown,
+  EmptyState,
+  ErrorState,
+  FunnelGroup,
+  MetricGroup,
+  MetricTabsChart,
+  Notice,
+  PageHeader,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Skeleton,
+  fromPortfolioTabs,
+} from "@/components/ds";
 import {
   CallCentreUnavailable,
-  UnavailableNote,
-  withUnavailable,
+  LinkSalesToolLink,
+  UnavailableValue,
 } from "@/components/callcenter/CallCentreUnavailable";
-import { Stagger, StaggerItem } from "@/components/motion";
-import { pdFontClass } from "@/lib/pd-fonts";
+import { GRANULARITIES } from "@/lib/portfolio-series";
+import { useGranularity } from "@/lib/useGranularity";
+import { useDashboardControls } from "@/components/dashboard-controls";
+import { usePageHeader } from "@/components/page-header";
+import { PeriodControl } from "./PeriodControl";
+import { diagnoseFunnel } from "@/lib/portfolio-metrics";
+import {
+  briefingFromDiagnosis,
+  callInsightItems,
+  callsTabValue,
+  clientBreakdown,
+  comparableFunnel,
+  costPerLeadSeries,
+  funnelNotice,
+  funnelStageItems,
+  greeting,
+  portfolioSummary,
+  toFindings,
+} from "./presentation";
 import {
   applySuggestionRequest,
   dismissSuggestionRequest,
@@ -43,68 +53,100 @@ import {
 
 // ─── Portfolio Dashboard ────────────────────────────────────────────────────
 // Agency-level view: across all clients, what is happening and where is the
-// problem? Built from the "variant 3e" handoff, on Birdy's own data.
+// problem? Hub layout, option A: a greeting and the period, five metrics that
+// rise into one chart, then "By client" beside Birdy's read, then the
+// performance funnel with its diagnosis, then the call insights.
 //
-// The handoff draws a full 1600×1040 app frame — a 68px icon rail and a 64px
-// header with an avatar. Birdy already renders both globally from
-// src/app/layout.jsx (AppSidebar + the search header + UserMenu), so the rail
-// and the avatar are dropped here rather than duplicated, and the design's
-// title block and controls become a page-level header. What is kept is the
-// frame itself: canvas background, 1px border, 16px radius, with the content
-// column and right rail scrolling independently inside it.
-//
-// This file is only composition and wiring. What it renders comes from
-// @/components/portfolio, which knows nothing about where figures came from;
-// the fetching is in usePortfolioData and the arithmetic in @/lib/portfolio-*.
+// This file is only composition and wiring. The fetching is in
+// usePortfolioData, the arithmetic in @/lib/portfolio-*, and the wording and
+// shaping into component props in ./presentation.
 
-// The two panels that take real time to arrive say what they are waiting on;
-// the rest are plain skeletons, because a screen of competing progress bars is
-// harder to read than one that points at the slow parts.
-function LoadingColumn() {
-  return (
-    <div className="min-w-0 flex-1 px-6 py-[22px]">
-      <Skeleton className="mb-[18px] h-[74px] rounded-xl" />
-      <LoadingPulse className="mb-[18px] h-[340px]" statements={CHART_LOADING} />
-      <div className="mb-[18px] flex gap-[18px]">
-        <Skeleton className="h-[280px] flex-[0.85] rounded-xl" />
-        <LoadingPulse className="h-[280px] flex-[1.45]" statements={FUNNEL_LOADING} />
-      </div>
-      <Skeleton className="h-[150px] rounded-xl" />
-    </div>
-  );
+// Closes are the leads that reached a won opportunity in the CRM.
+const METRIC_TABS = [
+  { key: "leads", label: "Leads", kpi: "leads" },
+  { key: "closes", label: "Closes", kpi: "closes" },
+  // The Calls tab stays in the row rather than being hidden: the reader picked
+  // a metric and deserves an answer about it, and a tab that quietly
+  // disappears when a client is onboarded a certain way is harder to explain
+  // than one that says why. It has no KPI of its own; see callsTabValue.
+  { key: "calls", label: "Calls", kpi: "calls" },
+  { key: "cpl", label: "Cost per lead", kpi: "cpl" },
+  { key: "spend", label: "Ad spend", kpi: "spend" },
+];
+
+const CLIENT_COLORS = [
+  "var(--color-chart-1)",
+  "var(--color-chart-2)",
+  "var(--color-chart-3)",
+  "var(--color-chart-4)",
+];
+const OTHER_COLOR = "var(--color-muted-foreground)";
+
+const NOTICE_ICONS = { warning: TriangleAlert, success: CircleCheck, info: Info };
+
+const BIRDY_PROMPT = "What should I focus on across my clients right now?";
+
+const toSeries = (s) =>
+  (s?.values ?? []).map((current, i) => ({
+    x: s.labels?.[i] ?? "",
+    current,
+    tooltipLabel: s.tooltipLabels?.[i],
+  }));
+
+// A trend needs at least two points; one bucket (Today) is a figure, not a line.
+const MIN_TREND_POINTS = 2;
+
+// grid-cols-1 keeps the single column shrinkable below lg; the implicit column
+// would size to its widest content and push the Breakdown past the screen.
+const BODY_GRID = "grid grid-cols-1 items-start gap-10 lg:grid-cols-[1.35fr_1fr]";
+
+// What the greeting needs from the browser: the signed-in user's first name
+// (as stored at login) and the local hour. Both are null on the server and on
+// the first client render, so the prerendered markup and the first hydrated
+// render agree; the effect fills them in straight after.
+function useGreetingParts() {
+  const [parts, setParts] = useState({ firstName: null, hour: null });
+  useEffect(() => {
+    let firstName = null;
+    try {
+      const full = JSON.parse(localStorage.getItem("user") || "null")?.name;
+      firstName = full ? String(full).trim().split(/\s+/)[0] : null;
+    } catch {
+      firstName = null;
+    }
+    setParts({ firstName, hour: new Date().getHours() });
+  }, []);
+  return parts;
 }
 
-function EmptyState({ title, body }) {
+function LoadingBody() {
   return (
-    <div className="flex min-w-0 flex-1 items-center justify-center px-6 py-[22px]">
-      <div className="max-w-sm text-center">
-        <p className="font-pd-display text-[15px] font-semibold text-pd-ink">{title}</p>
-        <p className="mt-1.5 text-[12px] leading-[1.45] text-pd-body">{body}</p>
-      </div>
+    <div className={BODY_GRID}>
+      <Skeleton className="h-64 rounded-surface" />
+      <Skeleton className="h-64 rounded-frame" />
+      <Skeleton className="h-52 rounded-frame lg:col-span-2" />
+      <Skeleton className="h-40 rounded-frame lg:col-span-2" />
     </div>
   );
 }
 
 export default function PortfolioDashboardPage() {
-  // The date preset picks the window every figure covers; granularity only
-  // changes how finely the chart buckets that same window.
-  // The date range and granularity chips live in the global top bar, so their
-  // state sits above this page rather than in it.
-  const { preset, granularity, setClientCount } = useDashboardControls();
+  const { preset, setPreset } = useDashboardControls();
   const [chartMetric, setChartMetric] = useState("leads");
-  const [topMetric, setTopMetric] = useState(null);
-  const [panel, setPanel] = useState("suggestions");
+  // The date preset picks the window every figure covers; granularity only
+  // changes how finely the chart buckets that same window. Auto from the
+  // range until the reader picks one, as on the other hubs.
+  const { granularity, setGranularity } = useGranularity(preset);
+  const { firstName, hour } = useGreetingParts();
 
   const {
     clientCount,
+    clientRows,
     kpis,
     callInsights,
     funnel,
-    leaderboards,
     chartMetrics,
     suggestions,
-    activity,
-    activityCount,
     loading,
     seriesLoading,
     callsLoading,
@@ -114,32 +156,20 @@ export default function PortfolioDashboardPage() {
     hasCallCentre,
   } = usePortfolioData({ preset, granularity, chartMetric });
 
-  // Optimistic rail state layered over what the hook fetched, so acting on a
-  // card is immediate and a failed request puts it back.
-  const [removed, setRemoved] = useState({});
-  const [applied, setApplied] = useState([]);
+  // The top bar shows the page's name; the greeting below is the page's own.
+  const topBar = useMemo(() => ({ title: "Dashboard" }), []);
+  usePageHeader(topBar);
 
-  const visibleSuggestions = useMemo(
-    () => suggestions.filter((s) => !removed[s.id]),
-    [suggestions, removed]
-  );
-  const visibleActivity = useMemo(() => [...applied, ...activity], [applied, activity]);
+  // Optimistic state layered over what the hook fetched, so acting on a
+  // finding is immediate and a failed request puts it back.
+  const [removed, setRemoved] = useState({});
 
   const handleApply = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
-    const entry = {
-      id: `applied-${suggestion.id}`,
-      action: suggestion.title,
-      client: suggestion.client,
-      mode: "Approved",
-      time: "just now",
-    };
-    setApplied((prev) => [entry, ...prev]);
 
     const result = await applySuggestionRequest(suggestion.id);
     if (!result) {
       setRemoved((prev) => ({ ...prev, [suggestion.id]: false }));
-      setApplied((prev) => prev.filter((a) => a.id !== entry.id));
       toast.error("Couldn't apply that", { description: suggestion.title });
       return;
     }
@@ -161,246 +191,227 @@ export default function PortfolioDashboardPage() {
     toast("Suggestion dismissed", { description: suggestion.title });
   }, []);
 
-  // The title block lives in the top bar, which is above this page in the
-  // tree and has no other way to learn the count.
-  useEffect(() => {
-    setClientCount(clientCount);
-  }, [clientCount, setClientCount]);
+  const metrics = useMemo(() => {
+    const symbol = chartMetrics.spend.valuePrefix ?? "£";
+    const raw = {
+      leads: toSeries(chartMetrics.leads),
+      closes: toSeries(chartMetrics.closes),
+      cpl: costPerLeadSeries(chartMetrics.leads, chartMetrics.spend),
+      calls: toSeries(chartMetrics.calls),
+      spend: toSeries(chartMetrics.spend),
+    };
+    // Too short to draw is withheld, but counted, so the empty message can say
+    // "too short" rather than "nothing".
+    const series = Object.fromEntries(
+      Object.entries(raw).map(([key, points]) => [
+        key,
+        points.length >= MIN_TREND_POINTS ? points : [],
+      ])
+    );
+    const tabs = METRIC_TABS.map(({ key, label, kpi }) => ({
+      ...(kpi === "calls"
+        ? { value: callsTabValue(callInsights, hasCallCentre) }
+        : kpis.find((k) => k.key === kpi)),
+      key,
+      label,
+    }));
 
-  const kpiStats = useMemo(() => withPresentation(kpis, KPI_PRESENTATION), [kpis]);
+    return fromPortfolioTabs({
+      tabs,
+      activeKey: chartMetric,
+      chart: null,
+      comparison: "vs previous period",
+    }).map((m) => ({
+      ...m,
+      series: series[m.key],
+      points: raw[m.key].length,
+      symbol,
+    }));
+  }, [chartMetrics, kpis, callInsights, hasCallCentre, chartMetric]);
 
-  // Where no client in the portfolio has a dialler, the call-centre figures
-  // are replaced by the grey placeholder rather than drawn as the zeroes they
-  // sum to. Everything the placeholder touches is enumerated in
-  // presentation.js — notably NOT the whole card: conversion rate is closes
-  // over leads and stays real, and the funnel keeps three of its four stages.
-  const callStats = useMemo(
-    () =>
-      withUnavailable(withPresentation(callInsights, CALL_PRESENTATION), {
-        keys: CALL_CENTRE_STAT_KEYS,
-        when: !hasCallCentre,
-      }),
-    [callInsights, hasCallCentre]
+  const formatValue = useCallback((n, metric) => {
+    if (metric?.key === "cpl") return `${metric.symbol}${n.toFixed(2)}`;
+    const rounded = Math.round(n).toLocaleString("en-GB");
+    return metric?.key === "spend" ? `${metric.symbol}${rounded}` : rounded;
+  }, []);
+
+  const breakdown = useMemo(
+    () => clientBreakdown(clientRows, { colors: CLIENT_COLORS, otherColor: OTHER_COLOR }),
+    [clientRows]
   );
 
-  // Dimmed *after* the presentation table rather than before it: that table
-  // hands the Called stage its amber tone, and applying it second would paint
-  // the icon chip back in beside the grey dash.
-  const funnelStages = useMemo(
-    () =>
-      withUnavailable(withPresentation(funnel, FUNNEL_PRESENTATION), {
-        keys: CALL_CENTRE_FUNNEL_KEYS,
-        // FunnelStepper's figure lives in `count`, not `value`.
-        field: "count",
-        when: !hasCallCentre,
-      }),
+  // Diagnosed from the funnel rows with the call-centre stage blanked where no
+  // client dials, so the verdict never names a stage the data cannot see. The
+  // one verdict feeds both Birdy's read and the funnel's own notice.
+  const diagnosis = useMemo(
+    () => diagnoseFunnel(comparableFunnel(funnel, hasCallCentre)),
     [funnel, hasCallCentre]
   );
 
-  // Diagnosed from the very rows the funnel draws, so the verdict can never
-  // name a stage the screen has just admitted it cannot see. withUnavailable
-  // strips the deltas, and diagnoseFunnel only considers stages that carry
-  // one — "Problem found: call coverage" for a portfolio with no call centre
-  // would be a verdict about nothing.
-  const diagnosis = useMemo(() => diagnoseFunnel(funnelStages), [funnelStages]);
-
-  const chartTabs = useMemo(
-    () => Object.entries(chartMetrics).map(([key, m]) => ({ key, tab: m.tab })),
-    [chartMetrics]
+  const findings = useMemo(
+    () =>
+      toFindings(
+        briefingFromDiagnosis(diagnosis, { hasComparison }),
+        suggestions.filter((s) => !removed[s.id]),
+        { onApply: handleApply, onDismiss: handleDismiss }
+      ),
+    [diagnosis, hasComparison, suggestions, removed, handleApply, handleDismiss]
   );
 
-  const chart = useMemo(() => {
-    const metric = chartMetrics[chartMetric] ?? chartMetrics.leads;
-    if (!metric?.values?.length) return null;
-
-    // The chart's headline delta is the same period-over-period figure the KPI
-    // strip shows for that metric — one number, computed once.
-    const kpi = kpis.find((k) => k.key === chartMetric);
-
-    return {
-      ...metric,
-      subtitle: `${granularity} · ${metric.subtitle}`,
-      pointValues: metric.values.map(
-        (v) => `${metric.valuePrefix ?? ""}${Math.round(v).toLocaleString()}`
+  // Called goes to the placeholder where nobody dials, as the call cells do.
+  const funnelStages = useMemo(
+    () =>
+      funnelStageItems(funnel, hasCallCentre).map((stage) =>
+        stage.unavailable ? { ...stage, value: <UnavailableValue /> } : stage
       ),
-      direction: kpi?.direction,
-      delta: kpi?.delta,
-    };
-  }, [chartMetrics, chartMetric, granularity, kpis]);
+    [funnel, hasCallCentre]
+  );
+  const verdict = funnelNotice(diagnosis, { hasComparison });
 
-  const leaderboardMetrics = Object.keys(leaderboards);
-  const activeTopMetric =
-    topMetric && leaderboardMetrics.includes(topMetric) ? topMetric : leaderboardMetrics[0];
-
-  const panels = [
-    {
-      key: "suggestions",
-      label: "Suggestions",
-      badge: visibleSuggestions.length,
-      isEmpty: visibleSuggestions.length === 0,
-      emptyMessage: "No suggestions right now",
-      status: `${visibleSuggestions.length} suggestion${
-        visibleSuggestions.length === 1 ? "" : "s"
-      } outstanding`,
-      render: () =>
-        visibleSuggestions.map((suggestion) => (
-          <SuggestionCard
-            key={suggestion.id}
-            suggestion={suggestion}
-            onApply={handleApply}
-            onDismiss={handleDismiss}
-          />
-        )),
-    },
-    {
-      key: "activity",
-      label: "Activity",
-      badge: activityCount + applied.length,
-      isEmpty: visibleActivity.length === 0,
-      emptyMessage: "Nothing has happened yet",
-      render: () => (
-        <ul>
-          {visibleActivity.map((entry) => (
-            <ActivityRow key={entry.id} entry={entry} />
-          ))}
-        </ul>
+  // Where no client has a dialler, the call-centre figures show the placeholder
+  // rather than the zeroes they sum to. Which cells that touches is enumerated
+  // in presentation.js — notably not conversion rate, which comes from the CRM.
+  const callCells = useMemo(
+    () =>
+      callInsightItems(callInsights, hasCallCentre).map(({ unavailable, ...cell }) =>
+        unavailable ? { ...cell, value: <UnavailableValue /> } : cell
       ),
-    },
-  ];
+    [callInsights, hasCallCentre]
+  );
+
+  const callsSelected = chartMetric === "calls";
+  // The calls series is its own request, so it has its own loading state; the
+  // lead series' says nothing about it.
+  const plotLoading = callsSelected
+    ? hasCallCentre && (callsLoading || Boolean(chartMetrics.calls?.pending))
+    : seriesLoading;
+
+  const showData = !loading && !error && hasClients;
+  const summary = showData ? portfolioSummary({ clientCount, kpis }) : null;
+  const activeMetric = metrics.find((m) => m.key === chartMetric);
 
   return (
-    <div
-      className={`${pdFontClass} -m-4 flex min-h-0 flex-1 flex-col overflow-hidden md:-m-6`}
-    >
+    <div className="flex flex-col gap-8">
+      <PageHeader
+        title={greeting(hour, firstName)}
+        description={summary ?? "Portfolio-level performance"}
+        period={<PeriodControl value={preset} onChange={setPreset} />}
+        actions={
+          <Select value={granularity} onValueChange={setGranularity}>
+            <SelectTrigger aria-label="Chart granularity">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="end">
+              {GRANULARITIES.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        }
+      />
 
-      <div className="flex min-h-0 flex-1">
-        {loading ? (
-          <LoadingColumn />
-        ) : error ? (
-          <EmptyState
-            title="Couldn't load your portfolio"
-            body={`${error}. Nothing here is out of date — we just couldn't reach your client data.`}
-          />
-        ) : !hasClients ? (
-          <EmptyState
-            title="No active clients yet"
-            body="Once a client group is connected and has Meta or GoHighLevel data, its figures roll up here."
-          />
-        ) : (
-          <Stagger className="pd-scrolly min-w-0 flex-1 px-6 py-[22px]">
-            <StaggerItem><StatStrip stats={kpiStats} label="Portfolio KPIs" className="mb-[18px]" /></StaggerItem>
-
-            {/* The Calls tab stays in the strip rather than being hidden: the
-                reader picked a metric and deserves an answer about it, and a
-                tab that quietly disappears when a client is onboarded a
-                certain way is harder to explain than one that says why. */}
-            <StaggerItem>
-            {chartMetric === "calls" && !hasCallCentre ? (
-              <CallCentreUnavailable
-                className="mb-[18px] h-[340px]"
-                title="No call data across your clients"
-                body="None of your clients use a call centre, so there's no call volume to plot. Ad spend, leads and closes are unaffected."
-              />
-            ) : (chartMetric === "calls"
-              ? callsLoading || chartMetrics.calls?.pending
-              : seriesLoading) ? (
-              <LoadingPulse
-                className="mb-[18px] h-[340px]"
-                statements={CHART_LOADING}
-              />
-            ) : chart ? (
-              <TrendChart
-                className="mb-[18px]"
-                chart={chart}
-                metrics={chartTabs}
-                activeMetric={chartMetric}
-                onMetricChange={setChartMetric}
-                redrawKey={`${chartMetric}-${granularity}-${preset}`}
-              />
-            ) : (
-              <PdCard className="mb-[18px]" title="Trend">
-                <p className="py-8 text-center text-[12px] text-pd-faint">
-                  {chartMetric === "calls"
-                    ? "No dated calls in this window yet."
-                    : "No dated leads in this window yet."}
-                </p>
-              </PdCard>
-            )}
-
-            </StaggerItem>
-
-            <StaggerItem className="mb-[18px] flex gap-[18px]">
-              <PdCard
-                className="min-w-0 flex-[0.85]"
-                title="Top performing clients"
-                action={
-                  leaderboardMetrics.length > 0 && (
-                    <PdMenu
-                      size="sm"
-                      label="Rank clients by"
-                      value={activeTopMetric}
-                      options={leaderboardMetrics}
-                      onChange={setTopMetric}
-                    />
-                  )
-                }
-              >
-                <Leaderboard
-                  rows={leaderboards[activeTopMetric] ?? []}
-                  emptyMessage={`No client has ${activeTopMetric.toLowerCase()} data in this window`}
-                />
-              </PdCard>
-
-              <PdCard
-                className="min-w-0 flex-[1.45]"
-                title="Performance funnel"
-                headerClassName="mb-[18px]"
-              >
-                <FunnelStepper stages={funnelStages} />
-                <DiagnosticBanner
-                  className="mt-5"
-                  state={diagnosis.state}
-                  title={diagnosis.title}
-                  body={
-                    hasComparison
-                      ? diagnosis.body
-                      : "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it."
-                  }
-                />
-              </PdCard>
-            </StaggerItem>
-
-            {/* The cells stay even when none of them can be filled in — the
-                reader still needs to know which six figures Birdy tracks here,
-                and an empty card answers "what am I missing out on?" with
-                nothing at all. The heading note carries the reason and the way
-                out of it. */}
-            <StaggerItem>
-            <PdCard
-              title="Call insights"
-              action={
-                <span className="text-[12px] text-pd-faint">Across all client call centres</span>
-              }
-            >
-              {!hasCallCentre && (
-                <UnavailableNote
-                  className="mb-3.5"
-                  body="None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
-                />
-              )}
-              <StatStrip stats={callStats} variant="separate" label="Call insights" />
-            </PdCard>
-            </StaggerItem>
-          </Stagger>
-        )}
-
-        <SidePanel
-          panels={panels}
-          active={panel}
-          onChange={setPanel}
-          label="Rail panel"
+      {error ? (
+        <ErrorState
+          title="Couldn't load your portfolio"
+          description={`${String(error).replace(/\.+$/, "")}. Nothing here is out of date — we just couldn't reach your client data.`}
+          onRetry={() => window.location.reload()}
         />
-      </div>
+      ) : !loading && !hasClients ? (
+        <EmptyState
+          title="No active clients yet"
+          description="Once a client group is connected and has Meta or GoHighLevel data, its figures roll up here."
+        />
+      ) : (
+        <>
+          <MetricTabsChart
+            metrics={metrics}
+            value={chartMetric}
+            onValueChange={setChartMetric}
+            formatValue={formatValue}
+            xLabel={`${activeMetric?.label ?? "Metric"} over the period`}
+            loading={loading}
+            plotLoading={plotLoading}
+            redrawKey={`${granularity}-${preset}`}
+            plotFallback={
+              callsSelected && !hasCallCentre ? (
+                <CallCentreUnavailable
+                  className="bg-transparent shadow-none"
+                  title="No call data across your clients"
+                  body="None of your clients use a call centre, so there's no call volume to plot. Ad spend, leads and closes are unaffected."
+                />
+              ) : undefined
+            }
+            emptyMessage={
+              activeMetric?.points === 1
+                ? "Pick 7 days or longer to see a trend."
+                : chartMetric === "spend"
+                  ? "No daily spend in this window yet."
+                  : callsSelected
+                    ? "No dated calls in this window yet."
+                    : "No dated leads in this window yet."
+            }
+          />
+
+          {loading ? (
+            <LoadingBody />
+          ) : (
+            <>
+              <div className={BODY_GRID}>
+                {breakdown.rows.length > 0 ? (
+                  <Breakdown
+                    title="By client"
+                    total={`${breakdown.total.toLocaleString()} leads`}
+                    rows={breakdown.rows}
+                  />
+                ) : (
+                  <EmptyState
+                    title="No leads in this window"
+                    description="Client figures appear here once leads come in."
+                  />
+                )}
+                <BirdyRead findings={findings} prompt={BIRDY_PROMPT} />
+              </div>
+
+              <FunnelGroup
+                title="Performance funnel"
+                description="From lead to close, across all clients"
+                stages={funnelStages}
+                empty="Funnel data for this period isn't ready yet."
+                footer={
+                  <Notice
+                    tone={verdict.tone}
+                    icon={NOTICE_ICONS[verdict.tone]}
+                    title={verdict.title}
+                    className="my-1 flex-1"
+                  >
+                    {verdict.body || undefined}
+                  </Notice>
+                }
+              />
+
+              {/* The cells stay even when none of them can be filled in — the
+                  reader still needs to know which six figures Birdy tracks here,
+                  and an empty group answers "what am I missing out on?" with
+                  nothing at all. The note carries the reason and the way out. */}
+              <div className="flex flex-col gap-3">
+                {!hasCallCentre && (
+                  <Notice tone="neutral" action={<LinkSalesToolLink />}>
+                    None of your clients use a call centre, so these figures have no source.
+                    Conversion rate is unaffected — it comes from your CRM.
+                  </Notice>
+                )}
+                <MetricGroup
+                  title="Call insights"
+                  meta="Across all client call centres"
+                  items={callCells}
+                />
+              </div>
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }

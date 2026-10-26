@@ -13,6 +13,7 @@ import remarkGfm from "remark-gfm"
 import { ChevronLeft, ChevronRight, ArrowDownUp } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { parseMrkdwn } from "@/lib/report-designer"
+import { SLACK_PREVIEW_VARS } from "@/lib/brand-colors"
 import SlackChart from "./SlackChart"
 
 // ── Text ──────────────────────────────────────────────────────────────────────
@@ -21,8 +22,8 @@ function Seg({ s }) {
   if (s.bold) return <strong className="font-semibold text-white">{s.text}</strong>
   if (s.italic) return <em>{s.text}</em>
   if (s.strike) return <s>{s.text}</s>
-  if (s.code) return <code className="rounded bg-white/10 px-1 py-px font-mono text-[12px] text-[#E8912D]">{s.text}</code>
-  if (s.href) return <a href={s.href} target="_blank" rel="noreferrer" className="text-[#1D9BD1] hover:underline">{s.text}</a>
+  if (s.code) return <code className="rounded bg-white/10 px-1 py-px font-mono text-xs text-(--slack-code)">{s.text}</code>
+  if (s.href) return <a href={s.href} target="_blank" rel="noreferrer" className="text-(--slack-link) hover:underline">{s.text}</a>
   return s.text
 }
 
@@ -52,12 +53,12 @@ function Text({ obj }) {
 function RichInline({ el }) {
   const st = el.style || {}
   let node = el.type === "link" ? (
-    <a href={el.url} target="_blank" rel="noreferrer" className="text-[#1D9BD1] hover:underline">{el.text || el.url}</a>
+    <a href={el.url} target="_blank" rel="noreferrer" className="text-(--slack-link) hover:underline">{el.text || el.url}</a>
   ) : el.type === "emoji" ? (el.unicode ? String.fromCodePoint(...el.unicode.split("-").map((h) => parseInt(h, 16))) : `:${el.name}:`)
-    : el.type === "user" ? <span className="rounded bg-[#1D9BD1]/20 px-0.5 text-[#1D9BD1]">@user</span>
-    : el.type === "channel" ? <span className="rounded bg-[#1D9BD1]/20 px-0.5 text-[#1D9BD1]">#channel</span>
+    : el.type === "user" ? <span className="rounded bg-(--slack-link)/20 px-0.5 text-(--slack-link)">@user</span>
+    : el.type === "channel" ? <span className="rounded bg-(--slack-link)/20 px-0.5 text-(--slack-link)">#channel</span>
     : (el.text ?? "")
-  if (st.code) node = <code className="rounded bg-white/10 px-1 font-mono text-[12px] text-[#E8912D]">{node}</code>
+  if (st.code) node = <code className="rounded bg-white/10 px-1 font-mono text-xs text-(--slack-code)">{node}</code>
   if (st.bold) node = <strong className="font-semibold text-white">{node}</strong>
   if (st.italic) node = <em>{node}</em>
   if (st.strike) node = <s>{node}</s>
@@ -69,7 +70,7 @@ function RichElement({ el }) {
   if (el.type === "rich_text_section") return <div className="whitespace-pre-wrap">{inline(el.elements)}</div>
   if (el.type === "rich_text_quote") return <div className="whitespace-pre-wrap border-l-4 border-white/25 pl-2.5">{inline(el.elements)}</div>
   if (el.type === "rich_text_preformatted") {
-    return <pre className="whitespace-pre-wrap rounded border border-white/10 bg-black/30 p-2 font-mono text-[12px]">{inline(el.elements)}</pre>
+    return <pre className="whitespace-pre-wrap rounded border border-white/10 bg-black/30 p-2 font-mono text-xs">{inline(el.elements)}</pre>
   }
   if (el.type === "rich_text_list") {
     const List = el.style === "ordered" ? "ol" : "ul"
@@ -98,12 +99,12 @@ function Cell({ c }) {
 // ── Elements ──────────────────────────────────────────────────────────────────
 
 function Button({ el, small = false }) {
-  const style = el.style === "primary" ? "border-[#007a5a] bg-[#007a5a] text-white"
-    : el.style === "danger" ? "border-[#e01e5a] text-[#e01e5a]"
+  const style = el.style === "primary" ? "border-(--slack-primary) bg-(--slack-primary) text-white"
+    : el.style === "danger" ? "border-(--slack-danger) text-(--slack-danger)"
       : "border-white/30 text-white/90"
   return (
     <a href={el.url} target="_blank" rel="noreferrer"
-      className={`inline-flex items-center rounded-md border font-semibold transition-colors hover:bg-white/10 ${small ? "px-2 py-0.5 text-[12px]" : "px-3 py-1 text-[13px]"} ${style}`}>
+      className={`inline-flex items-center rounded-md border font-semibold transition-colors hover:bg-white/10 ${small ? "px-2 py-0.5 text-xs" : "px-3 py-1 text-xs"} ${style}`}>
       {el.text?.text}
     </a>
   )
@@ -123,13 +124,13 @@ function Card({ c, fixed = false }) {
           <div className="flex items-start gap-2">
             {c.icon && <Img el={c.icon} className="size-7 shrink-0 rounded" />}
             <div className="min-w-0">
-              {c.title && <div className="text-[13.5px] font-semibold text-white"><Text obj={c.title} /></div>}
-              {c.subtitle && <div className="text-[11.5px] text-white/55"><Text obj={c.subtitle} /></div>}
+              {c.title && <div className="text-sm font-semibold text-white"><Text obj={c.title} /></div>}
+              {c.subtitle && <div className="text-xs text-white/55"><Text obj={c.subtitle} /></div>}
             </div>
           </div>
         )}
-        {c.body && <div className="text-[12.5px] text-white/85"><Text obj={c.body} /></div>}
-        {c.subtext && <div className="text-[11px] text-white/50"><Text obj={c.subtext} /></div>}
+        {c.body && <div className="text-xs text-white/85"><Text obj={c.body} /></div>}
+        {c.subtext && <div className="text-xs text-white/50"><Text obj={c.subtext} /></div>}
         {c.actions?.length > 0 && (
           <div className="mt-auto flex flex-wrap justify-end gap-1.5 pt-2">
             {c.actions.map((a, i) => <Button key={i} el={a} small />)}
@@ -158,9 +159,9 @@ function DataTable({ b }) {
   const shown = sorted.slice(page * pageSize, page * pageSize + pageSize)
   return (
     <div className="overflow-hidden rounded-lg border border-white/12">
-      {b.caption && <div className="border-b border-white/10 px-3 py-2 text-[12.5px] font-semibold text-white">{b.caption}</div>}
+      {b.caption && <div className="border-b border-white/10 px-3 py-2 text-xs font-semibold text-white">{b.caption}</div>}
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-[12.5px]">
+        <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-white/10 bg-white/[0.04]">
               {(header || []).map((h, i) => (
@@ -185,7 +186,7 @@ function DataTable({ b }) {
         </table>
       </div>
       {pages > 1 && (
-        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-3 py-1.5 text-[11.5px] text-white/60">
+        <div className="flex items-center justify-end gap-2 border-t border-white/10 px-3 py-1.5 text-xs text-white/60">
           <button type="button" aria-label="Previous page" disabled={page === 0} onClick={() => setPage((p) => p - 1)} className="cursor-pointer disabled:opacity-30"><ChevronLeft className="size-4" /></button>
           {page + 1} / {pages}
           <button type="button" aria-label="Next page" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)} className="cursor-pointer disabled:opacity-30"><ChevronRight className="size-4" /></button>
@@ -199,7 +200,7 @@ function Table({ b }) {
   const settings = b.column_settings || []
   return (
     <div className="overflow-x-auto rounded-lg border border-white/12">
-      <table className="w-full text-[12.5px]">
+      <table className="w-full text-xs">
         <tbody>
           {(b.rows || []).map((r, i) => (
             <tr key={i} className={`border-b border-white/[0.08] last:border-0 ${i === 0 ? "bg-white/[0.04] font-semibold text-white" : "text-white/85"}`}>
@@ -222,7 +223,7 @@ function Table({ b }) {
 export function Block({ b }) {
   switch (b.type) {
     case "header":
-      return <div className="text-[17px] font-bold leading-snug text-white">{b.text?.text}</div>
+      return <div className="text-lg font-bold leading-snug text-white">{b.text?.text}</div>
     case "section":
       return (
         <div className="flex gap-3">
@@ -243,13 +244,13 @@ export function Block({ b }) {
     case "image":
       return (
         <figure>
-          {b.title && <figcaption className="mb-1 text-[12.5px] text-white/70">{b.title.text}</figcaption>}
+          {b.title && <figcaption className="mb-1 text-xs text-white/70">{b.title.text}</figcaption>}
           <Img el={b} className="max-h-[260px] max-w-full rounded-lg" />
         </figure>
       )
     case "context":
       return (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] text-white/55">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/55">
           {(b.elements || []).map((e, i) => e.type === "image"
             ? <Img key={i} el={e} className="size-4 rounded-sm" />
             : <span key={i} className="whitespace-pre-wrap"><Text obj={e} /></span>)}
@@ -261,7 +262,7 @@ export function Block({ b }) {
       return <div className="space-y-1">{(b.elements || []).map((el, i) => <RichElement key={i} el={el} />)}</div>
     case "markdown":
       return (
-        <div className="slack-md space-y-2 break-words [&_a]:text-[#1D9BD1] [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-2.5 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:text-[#E8912D] [&_h1]:font-bold [&_h1]:text-white [&_h2]:font-bold [&_h2]:text-white [&_h3]:font-bold [&_h3]:text-white [&_hr]:border-white/15 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-white [&_table]:w-full [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc [&_ul]:pl-5">
+        <div className="slack-md space-y-2 break-words [&_a]:text-(--slack-link) [&_blockquote]:border-l-4 [&_blockquote]:border-white/25 [&_blockquote]:pl-2.5 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:text-(--slack-code) [&_h1]:font-bold [&_h1]:text-white [&_h2]:font-bold [&_h2]:text-white [&_h3]:font-bold [&_h3]:text-white [&_hr]:border-white/15 [&_ol]:list-decimal [&_ol]:pl-5 [&_strong]:text-white [&_table]:w-full [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1 [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_ul]:list-disc [&_ul]:pl-5">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{b.text || ""}</ReactMarkdown>
         </div>
       )
@@ -275,7 +276,7 @@ export function Block({ b }) {
       return <div className="max-w-[360px]"><Card c={b} /></div>
     case "carousel":
       return (
-        <div className="pd-scrolly -mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+        <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
           {(b.elements || []).map((c, i) => <Card key={i} c={c} fixed />)}
         </div>
       )
@@ -303,23 +304,23 @@ export default function SlackMessagePreview({ blocks, time, loading = false, foc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus?.key, blocks])
   return (
-    <div ref={root} className="rounded-xl bg-[#1A1D21] px-4 py-[14px] text-left shadow-[0_14px_30px_-16px_rgba(20,14,50,0.55)]">
+    <div ref={root} style={SLACK_PREVIEW_VARS} className="rounded-xl bg-(--slack-surface) px-4 py-[14px] text-left shadow-floating">
       <div className="flex gap-[10px]">
         <BirdyAvatar size={34} className="shrink-0" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-[7px]">
-            <span className="text-[13.5px] font-bold text-white">Birdy</span>
-            <span className="rounded-[3px] bg-white/10 px-[4px] text-[9.5px] font-semibold uppercase tracking-wide text-white/60">App</span>
-            {time && <span className="text-[11px] text-white/50">{time}</span>}
+            <span className="text-sm font-bold text-white">Birdy</span>
+            <span className="rounded-sm bg-white/10 px-[4px] text-xs font-semibold uppercase tracking-wide text-white/60">App</span>
+            {time && <span className="text-xs text-white/50">{time}</span>}
           </div>
-          <div className={`mt-1.5 space-y-2.5 text-[13px] leading-[1.6] text-white/85 transition-opacity duration-300 ${loading ? "opacity-40" : ""}`}>
+          <div className={`mt-1.5 space-y-2.5 text-xs leading-[1.6] text-white/85 transition-opacity duration-300 ${loading ? "opacity-40" : ""}`}>
             {(blocks || []).map((b, i) => (
               <div
                 key={i}
                 data-block-index={i}
                 className={`scroll-my-3 rounded-lg transition-shadow duration-500 ${
                   flash && focus && i >= focus.index && i < focus.index + (focus.count || 1)
-                    ? "shadow-[0_0_0_2px_#9085e9,0_0_0_6px_rgba(144,133,233,0.25)]" : ""}`}
+                    ? "shadow-[0_0_0_2px_var(--slack-flash),0_0_0_6px_color-mix(in_srgb,var(--slack-flash)_25%,transparent)]" : ""}`}
               >
                 <Block b={b} />
               </div>

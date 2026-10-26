@@ -12,28 +12,27 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Copy, ExternalLink } from "lucide-react"
+import { Copy, ExternalLink, Users } from "lucide-react"
 import { toast } from "sonner"
 
 import { apiRequest } from "@/lib/api"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
+import { Badge, Button, EmptyState, ErrorState, Skeleton, Surface } from "@/components/ds"
 import { leadSourceOption, needsPixel, normalizeLeadSource } from "@/lib/lead-sources"
 
 const METHOD_TONE = {
-  instant_form: "bg-pd-info-bg text-pd-info",
-  form_to_ghl: "bg-pd-info-bg text-pd-info",
-  landing_page: "bg-pd-primary-tint text-pd-primary",
-  unknown: "bg-pd-divider text-pd-body",
+  instant_form: "info",
+  form_to_ghl: "info",
+  landing_page: "primary",
+  unknown: "neutral",
 }
 
-function relative(iso) {
+// `now` is taken when the data arrives, not while rendering, so a row's age is
+// stable between renders.
+function relative(iso, now) {
   if (!iso) return null
   const then = new Date(iso).getTime()
   if (Number.isNaN(then)) return null
-  const mins = Math.round((Date.now() - then) / 60000)
+  const mins = Math.round((now - then) / 60000)
   if (mins < 2) return "just now"
   if (mins < 60) return `${mins}m ago`
   const hours = Math.round(mins / 60)
@@ -44,6 +43,7 @@ function relative(iso) {
 export default function TrackingOverview() {
   const router = useRouter()
   const [clients, setClients] = useState(null)
+  const [loadedAt, setLoadedAt] = useState(0)
   const [error, setError] = useState(null)
 
   const load = useCallback(async () => {
@@ -51,6 +51,7 @@ export default function TrackingOverview() {
       const res = await apiRequest("/attribution/overview")
       if (!res.ok) throw new Error(`Couldn't load tracking status (${res.status})`)
       const data = await res.json()
+      setLoadedAt(Date.now())
       setClients(data.clients || [])
       setError(null)
     } catch (e) {
@@ -73,36 +74,25 @@ export default function TrackingOverview() {
   }
 
   if (error) {
-    return (
-      <div className="rounded-xl border border-pd-border bg-pd-surface p-5">
-        <p className="text-[13px] text-pd-danger">{error}</p>
-        <Button variant="outline" size="sm" onClick={load} className="mt-2 text-[12.5px]">
-          Try again
-        </Button>
-      </div>
-    )
+    return <ErrorState title="Couldn't load tracking" description={error} onRetry={load} />
   }
 
   if (clients === null) {
     return (
-      <div className="space-y-3" aria-busy="true" aria-label="Loading tracking status">
+      <div className="flex flex-col gap-3" aria-busy="true" aria-label="Loading tracking status">
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-3 w-80" />
-        <div className="space-y-2 rounded-xl border border-pd-border bg-pd-surface p-4">
+        <Surface className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-8 w-full" />
           ))}
-        </div>
+        </Surface>
       </div>
     )
   }
 
   if (clients.length === 0) {
-    return (
-      <div className="rounded-xl border border-pd-border bg-pd-surface p-5 text-[13px] text-pd-faint">
-        No clients yet.
-      </div>
-    )
+    return <EmptyState icon={Users} title="No clients yet." />
   }
 
   const unset = clients.filter((c) => c.method === "unknown").length
@@ -110,14 +100,14 @@ export default function TrackingOverview() {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <p className="font-pd-display text-[13px] font-semibold text-pd-ink">Lead tracking by client</p>
-        <p className="mt-0.5 text-[12.5px] leading-[1.5] text-pd-body">
+        <p className="text-sm font-semibold text-foreground">Lead tracking by client</p>
+        <p className="mt-0.5 text-sm leading-normal text-body">
           Where each client&apos;s leads come from, and whether the tracking behind it
           is live.
           {unset > 0 && (
             <>
               {" "}
-              <span className="font-medium text-pd-ink">
+              <span className="font-medium text-foreground">
                 {unset} {unset === 1 ? "client has" : "clients have"} no lead source set
               </span>{" "}
               — until one is chosen we can&apos;t tell a quiet month from a missing
@@ -127,10 +117,10 @@ export default function TrackingOverview() {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-pd-border bg-pd-surface">
+      <Surface padded={false} className="overflow-x-auto">
         <table className="w-full min-w-[680px] border-collapse text-left">
           <thead>
-            <tr className="border-b border-pd-row-border bg-pd-table-head text-[10.5px] font-semibold uppercase tracking-wide text-pd-faint">
+            <tr className="border-b border-border bg-muted text-xs font-medium text-muted-foreground">
               <th className="px-4 py-2.5">Client</th>
               <th className="px-3 py-2.5">Leads from</th>
               <th className="px-3 py-2.5">Script</th>
@@ -139,73 +129,65 @@ export default function TrackingOverview() {
               <th className="px-3 py-2.5" />
             </tr>
           </thead>
-          <Stagger as="tbody" gap={0.04}>
-            {clients.map((row, index) => {
+          <tbody>
+            {clients.map((row) => {
               const method = normalizeLeadSource(row.method)
               const needsScript = needsPixel(method)
               return (
-                <StaggerItem
-                  as="tr"
-                  key={row.group_id}
-                  className={cn(
-                    "border-b border-pd-row-border last:border-b-0 text-[12.5px]",
-                    index % 2 === 1 && "bg-pd-row-zebra",
-                  )}
-                >
-                  <td className="px-4 py-2.5 font-medium text-pd-ink">{row.group_name}</td>
+                <tr key={row.group_id} className="border-b border-border text-sm last:border-b-0">
+                  <td className="px-4 py-2.5 font-medium text-foreground">{row.group_name}</td>
                   <td className="px-3 py-2.5">
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[11px] font-bold",
-                        METHOD_TONE[method] || METHOD_TONE.unknown,
-                      )}
-                    >
+                    <Badge tone={METHOD_TONE[method] || METHOD_TONE.unknown}>
                       {leadSourceOption(method).short}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-3 py-2.5">
                     {/* An em dash, not a cross: a client on Meta forms, or on a
                         form tool that sends to GoHighLevel, is not failing to
                         install anything. */}
                     {!needsScript ? (
-                      <span className="text-pd-faint">—</span>
+                      <span className="text-muted-foreground">—</span>
                     ) : row.installed ? (
-                      <span className="text-pd-success">Live</span>
+                      <span className="text-success-ink">Live</span>
                     ) : (
-                      <span className="text-pd-faint">Not seen</span>
+                      <span className="text-muted-foreground">Not seen</span>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-pd-body">
-                    {relative(row.last_seen_at) || <span className="text-pd-faint">—</span>}
+                  <td className="px-3 py-2.5 text-body">
+                    {relative(row.last_seen_at, loadedAt) || <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-right text-pd-body">
-                    {needsScript ? row.tracked_leads : <span className="text-pd-faint">—</span>}
+                  <td className="num px-3 py-2.5 text-right text-body">
+                    {needsScript ? row.tracked_leads : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-3 py-2.5">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-1">
                       {row.site_id && needsScript && (
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => copyInstallLink(row)}
-                          className="flex items-center gap-1 text-[12px] text-pd-primary hover:underline"
+                          className="text-primary"
                           title="Copy the link to send to whoever owns the site"
                         >
-                          <Copy className="size-3" /> Link
-                        </button>
+                          <Copy aria-hidden className="size-3" /> Link
+                        </Button>
                       )}
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => router.push(`/clients/${row.group_id}/tracking`)}
-                        className="flex items-center gap-1 text-[12px] text-pd-primary hover:underline"
+                        className="text-primary"
                       >
-                        Set up <ExternalLink className="size-3" />
-                      </button>
+                        Set up <ExternalLink aria-hidden className="size-3" />
+                      </Button>
                     </div>
                   </td>
-                </StaggerItem>
+                </tr>
               )
             })}
-          </Stagger>
+          </tbody>
         </table>
-      </div>
+      </Surface>
     </div>
   )
 }

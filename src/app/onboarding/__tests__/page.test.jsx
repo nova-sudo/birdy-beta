@@ -1,3 +1,4 @@
+import { useEffect } from "react"
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -36,24 +37,18 @@ vi.mock("../BillingStep", () => ({
   ),
 }))
 // The report copilot is a live chat against /api/chat; its own behaviour is
-// covered in components/report-designer. The stand-in offers its two exits.
+// covered in components/report-designer. The stand-in reports a template the
+// way the real preview does (unless a test withholds it); the step's footer
+// owns both exits.
+const reportPreview = vi.hoisted(() => ({ ready: true }))
 vi.mock("@/components/report-designer/ReportDesigner", () => ({
-  default: ({ onUse, secondaryAction }) => (
-    <div>
-      report designer
-      <button onClick={() => onUse({ frequency: "weekly", day: "Friday", time: "8:00 AM", sections: [{ type: "alerts" }] })}>
-        use this report
-      </button>
-      {secondaryAction}
-    </div>
-  ),
-}))
-// next/font runs at build time and throws when called outside the Next
-// compiler; the wizard only wants the class name off it.
-vi.mock("@/lib/pd-fonts", () => ({
-  pdFontClass: "font-pd-body",
-  poppins: { variable: "" },
-  inter: { variable: "" },
+  default: ({ onTemplateChange }) => {
+    useEffect(() => {
+      if (!reportPreview.ready) return
+      onTemplateChange?.({ frequency: "weekly", day: "Friday", time: "8:00 AM", sections: [{ type: "alerts" }] })
+    }, [onTemplateChange])
+    return <div>report designer</div>
+  },
 }))
 
 import OnboardingPage from "@/app/onboarding/page"
@@ -106,6 +101,7 @@ function lastPersistedData() {
 }
 
 beforeEach(() => {
+  reportPreview.ready = true
   push.mockClear()
   replace.mockClear()
   apiRequest.mockReset()
@@ -355,7 +351,7 @@ describe("onboarding wizard", () => {
     bootAt(9, { data: PICKED_CLIENT })
     await screen.findByText(/what currency does .* report in/i)
 
-    await user.selectOptions(screen.getByRole("combobox"), "USD")
+    await user.click(screen.getByRole("radio", { name: /us dollar/i }))
     await user.click(screen.getByRole("button", { name: /continue/i }))
 
     expect(lastPersistedData()).toMatchObject({ currency: "USD" })
@@ -825,4 +821,105 @@ describe("onboarding wizard", () => {
     bootAt(16, { data: {}, overrides: SLACK_READY })   // old brief-content step
     await screen.findByText(/design your slack report/i)
   })
+
+  // ── The wizard frame ───────────────────────────────────────────────────
+
+  it("shows the phase, a progress bar and Step N of M in the top bar", async () => {
+    bootAt(4)
+    await screen.findByText(/choose your first client/i)
+
+    expect(screen.getByText("First client")).toBeTruthy()
+    expect(screen.getByText(/^step 4 of \d+$/i)).toBeTruthy()
+    const bar = screen.getByRole("progressbar", { name: /onboarding progress/i })
+    expect(bar.getAttribute("aria-valuenow")).toBe("4")
+  })
+
+  it("has no top bar or footer on the welcome screen", async () => {
+    bootAt(0)
+    await screen.findByText("Welcome to Birdy!")
+
+    expect(screen.queryByRole("progressbar")).toBeNull()
+    expect(screen.queryByRole("button", { name: /^back$/i })).toBeNull()
+  })
+
+  it("hides Back on the first step and offers it from the second", async () => {
+    const user = userEvent.setup()
+    bootAt(1)
+    await screen.findByText(/what should we call you/i)
+
+    // welcome_name is the first step with a footer, but not the first step: Back
+    // returns to the welcome screen.
+    await user.click(screen.getByRole("button", { name: /^back$/i }))
+    await screen.findByText("Welcome to Birdy!")
+    expect(lastPersistedStep()).toBe(0)
+    expect(screen.queryByRole("button", { name: /^back$/i })).toBeNull()
+  })
+
+  it("renders Back and the step's primary in the footer, and the primary saves as before", async () => {
+    const user = userEvent.setup()
+    bootAt(1)
+    await screen.findByText(/what should we call you/i)
+
+    const footer = screen.getByRole("button", { name: /^back$/i }).parentElement.parentElement
+    expect(footer.contains(screen.getByRole("button", { name: /continue/i }))).toBe(true)
+
+    await user.type(screen.getByPlaceholderText("Your first name"), "Sam")
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+    expect(lastPersistedData()).toMatchObject({ name: "Sam" })
+  })
+
+  it("keeps a choice step's options in the body and only Back in the footer", async () => {
+    bootAt(7)
+    await screen.findByText(/what do you use for sales/i)
+
+    expect(screen.getByRole("button", { name: /^back$/i })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /continue/i })).toBeNull()
+    expect(screen.queryAllByRole("radio").length).toBe(0)
+    expect(screen.getByRole("button", { name: /hot prospector/i })).toBeTruthy()
+  })
+
+  it("puts the completion call to action in the footer and drops Back there", async () => {
+    bootAt(19, { data: {} })
+    await screen.findByText(/you're all set/i)
+
+    expect(screen.queryByRole("button", { name: /^back$/i })).toBeNull()
+    const cta = screen.getByRole("button", { name: /take a look at birdy/i })
+    expect(cta.closest("[inert]")).toBeNull()
+  })
+
+  it("makes the footer inert while the old step plays its exit", async () => {
+    const user = userEvent.setup()
+    bootAt(1)
+    await screen.findByText(/what should we call you/i)
+    await user.type(screen.getByPlaceholderText("Your first name"), "Sam")
+    const footer = screen.getByRole("button", { name: /continue/i }).parentElement
+    expect(footer.hasAttribute("inert")).toBe(false)
+
+    await user.click(screen.getByRole("button", { name: /continue/i }))
+
+    // The old step is still mounted during its exit, with a live Continue in the
+    // slot; the slot is inert until the next step has mounted.
+    expect(footer.hasAttribute("inert")).toBe(true)
+    await screen.findByText(/what's your agency called/i)
+    await waitFor(() => expect(footer.hasAttribute("inert")).toBe(false))
+  })
+
+  // ── The report copilot footer ──────────────────────────────────────────
+
+  it("keeps Use this report disabled until the preview reports a template", async () => {
+    reportPreview.ready = false
+    bootAt(15, { data: { steps_version: 2 }, overrides: SLACK_READY })
+    await screen.findByText(/design your slack report/i)
+
+    expect(screen.getByRole("button", { name: /use this report/i })).toBeDisabled()
+    expect(screen.getByRole("button", { name: /skip, use the standard daily report/i })).not.toBeDisabled()
+  })
 })
+
+/** The `step` of the last PUT /api/onboarding/state call. */
+function lastPersistedStep() {
+  const calls = apiRequest.mock.calls.filter(
+    ([url, opts]) => url === "/api/onboarding/state" && opts?.method === "PUT"
+  )
+  return JSON.parse(calls[calls.length - 1][1].body).step
+}

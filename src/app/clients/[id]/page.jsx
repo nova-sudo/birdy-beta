@@ -1,20 +1,45 @@
 "use client"
 import { useCallback, useEffect, useState, useMemo } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, Clock, Trash2, AlertTriangle, Loader2, Settings, LayoutGrid, Sparkles, Megaphone, Phone, UserCheck, XCircle } from "lucide-react"
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Trash2,
+  Settings,
+} from "lucide-react"
 import { toast } from "sonner"
+import {
+  Badge,
+  BirdyRead,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  EmptyState,
+  Input,
+  Notice,
+  PageHeader,
+  SegmentedTabs,
+  Skeleton,
+  Spinner,
+  Surface,
+  Switch,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { useDashboardData } from "@/app/dashboard/useDashboardData"
-import { ActivityItem, isFeedActivity } from "@/components/activity/ActivityItem"
+import { PeriodControl } from "@/app/dashboard/PeriodControl"
+import { isFeedActivity } from "@/components/activity/ActivityItem"
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries"
 import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
 import { MarketingContent } from "@/components/campaigns/MarketingContent"
 import { LeadsContent } from "@/components/contacts/LeadsContent"
 import { CallCentreContent } from "@/components/callcenter/CallCentreContent"
@@ -22,21 +47,15 @@ import IntegrationsContent from "@/components/integrations/IntegrationsContent"
 import { ClientAskBirdy } from "@/components/clients/ClientAskBirdy"
 import { CallCentreOverview } from "@/components/saleshub/CallCentreOverview"
 import { LeadHubOverview } from "@/components/contacts/LeadHubOverview"
-import { Input } from "@/components/ui/input"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { HealthPill, DEFAULT_CLIENT_HEALTH } from "@/components/clients/HealthPill"
 import { usePageHeader } from "@/components/page-header"
-import { pdFontClass } from "@/lib/pd-fonts"
 import { GoalsStrip } from "@/components/clients/GoalsStrip"
 import { ClientTargetsForm } from "@/components/clients/ClientTargetsForm"
 import { DiagnosticsFunnel } from "@/components/clients/DiagnosticsFunnel"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { HistoryBook } from "@/components/clients/HistoryBook"
 import { ClientTrendChart } from "@/components/clients/ClientTrendChart"
-import { InsightCard, PageTabs, SidePanel, UnderlineTabs } from "@/components/portfolio"
-import { buildClientInsight, clientInsightPrompt } from "@/lib/client-insight"
+import { clientInsightPrompt } from "@/lib/client-insight"
 import { buildFunnelStages, buildPreviousFunnel } from "@/lib/client-funnel"
 import { buildClientGoals } from "@/lib/client-goals"
 import { diagnoseFunnel } from "@/lib/portfolio-metrics"
@@ -45,30 +64,29 @@ import { useLandingFunnel } from "@/lib/useLandingFunnel"
 import { leadSourceOption, normalizeLeadSource } from "@/lib/lead-sources"
 import { metaTabState, scopeChipLabel } from "@/lib/meta-scope"
 import { SYNCING_MESSAGE } from "@/lib/client-loading"
+import { clientFindings } from "./presentation"
 
-// ── Coming Soon placeholder ──────────────────────────────────────────────────
-function ComingSoon({ title }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="h-16 w-16 bg-pd-primary-tint rounded-full flex items-center justify-center mb-4">
-        <Clock className="h-8 w-8 text-pd-primary" />
-      </div>
-      <h3 className="font-pd-display text-lg font-semibold text-pd-ink">{title}</h3>
-      <p className="text-sm text-pd-subtle mt-1">This feature is coming soon.</p>
-    </div>
-  )
-}
-
-// ── Tab trigger style ────────────────────────────────────────────────────────
 // The handoff's five workspace tabs (section 3), with the leading icons it
 // names: grid, sparkle, megaphone, phone, user-check.
 const CLIENT_TABS = [
-  { key: "overview", label: "Overview", icon: LayoutGrid },
-  { key: "ask-birdy", label: "Ask Birdy", icon: Sparkles },
-  { key: "marketing", label: "Marketing", icon: Megaphone },
-  { key: "call-centre", label: "Call Centre", icon: Phone },
-  { key: "leads", label: "Leads", icon: UserCheck },
+  { key: "overview", label: "Overview" },
+  { key: "ask-birdy", label: "Ask Birdy" },
+  { key: "marketing", label: "Marketing" },
+  { key: "call-centre", label: "Call Centre" },
+  { key: "leads", label: "Leads" },
 ]
+
+// The settings dialog's sections: a segmented control, as the handoff calls for.
+const SETTINGS_TABS = [
+  { value: "details", label: "Details" },
+  { value: "targets", label: "Targets" },
+  { value: "integrations", label: "Integrations" },
+  { value: "tracking", label: "Tracking" },
+]
+
+// grid-cols-1 keeps the single column shrinkable below lg; the implicit column
+// would size to its widest content and push the funnel past the screen.
+const BODY_GRID = "grid grid-cols-1 items-start gap-6 lg:grid-cols-[1.35fr_1fr]"
 
 export default function ClientDetailsPage() {
   const router = useRouter()
@@ -103,11 +121,6 @@ export default function ClientDetailsPage() {
 
   // ── History Book: dashboard activity feed, filtered to this client ────────
   const { activity, loading: activityLoading } = useDashboardData()
-  const groupNameForActivity = clientData?.group_info?.name
-  const clientActivity = useMemo(
-    () => activity.filter((a) => a.client === groupNameForActivity && isFeedActivity(a)),
-    [activity, groupNameForActivity]
-  )
 
   // ── History book: hand-written notes, alongside the generated activity ────
   const [notes, setNotes] = useState([])
@@ -193,40 +206,6 @@ export default function ClientDetailsPage() {
     () => (matchingGroup ? buildClientGoals(matchingGroup) : []),
     [matchingGroup]
   )
-
-  const insight = useMemo(
-    () => (matchingGroup ? buildClientInsight(matchingGroup, goals, currencySymbol) : []),
-    [matchingGroup, goals, currencySymbol]
-  )
-
-  const [railPanel, setRailPanel] = useState("suggestions")
-  const railPanels = useMemo(() => [
-    {
-      key: "suggestions",
-      label: "Suggestions",
-      badge: 0,
-      badgeClassName: "bg-pd-primary-tint text-pd-primary",
-      isEmpty: true,
-      // Suggestions are generated per user, not per client, and nothing scopes
-      // them to one group yet — so this says so rather than showing another
-      // client's.
-      emptyMessage: "Client-scoped suggestions are not available yet",
-      render: () => null,
-    },
-    {
-      key: "activity",
-      label: "Activity",
-      badge: clientActivity.length,
-      badgeClassName: "bg-pd-divider text-pd-body",
-      isEmpty: clientActivity.length === 0,
-      emptyMessage: "No activity for this client yet",
-      render: () => (
-        <div className="space-y-4">
-          {clientActivity.map((a) => <ActivityItem key={a.id} {...a} />)}
-        </div>
-      ),
-    },
-  ], [clientActivity])
 
   // ── Diagnostics: the previous window, for the per-stage deltas ─────────────
   // Only some presets have a previous period expressible as another preset —
@@ -352,7 +331,17 @@ export default function ClientDetailsPage() {
     }
   }
 
-  const groupName = clientData?.group_info?.name || "Client"
+  // The client's own document is a slow request. Everything the header and the
+  // history book need is already on the list row, so they paint from that and
+  // the detail fills in the rest (settings, health reason) when it lands.
+  const groupName = clientData?.group_info?.name || matchingGroup?.name || "Client"
+  const headerLoading = clientLoading && !matchingGroup
+  const shownHealth = clientData ? clientHealth : matchingGroup?.health || DEFAULT_CLIENT_HEALTH
+
+  const clientActivity = useMemo(
+    () => activity.filter((a) => a.client === groupName && isFeedActivity(a)),
+    [activity, groupName]
+  )
 
   // Meta campaign scope. A group sharing an ad account owns only some of its
   // campaigns; right after a change its Meta cache is empty while it re-syncs.
@@ -385,187 +374,159 @@ export default function ClientDetailsPage() {
   // primary-contact field on a client group, so only the half that exists is
   // rendered rather than inventing a name.
   const clientSubline = useMemo(() => {
-    const since = clientData?.group_info?.created_at
+    const since = clientData?.group_info?.created_at ?? matchingGroup?.created_at
     if (!since) return null
     const d = new Date(since)
     if (Number.isNaN(d.getTime())) return null
     return `Client since ${d.toLocaleDateString(undefined, { month: "short", year: "numeric" })}`
-  }, [clientData])
+  }, [clientData, matchingGroup])
 
-  // Identity and filters belong in the global top bar, where the design puts
-  // them — in place of the Birdy wordmark, and beside the bell. Declared above
-  // the early return below, because a hook after a conditional return breaks
-  // the Rules of Hooks the moment that branch is taken.
-  const pageHeader = useMemo(
-    () => ({
-      title: (
-        <div className={`${pdFontClass} flex min-w-0 items-center gap-2.5`}>
-          <Button
-            variant="secondary"
-            size="icon-sm"
-            onClick={() => router.push("/clients")}
-            aria-label="Back to Client Hub"
-            className="shrink-0 text-pd-body"
-          >
-            <ArrowLeft className="size-4" />
-          </Button>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
-                {clientLoading ? "…" : groupName}
-              </h1>
-              {!clientLoading && <HealthPill health={clientHealth} />}
-              {!clientLoading && metaChip && (
-                <Badge variant="secondary" className="shrink-0 text-[11px] font-medium">
-                  {metaChip}
-                </Badge>
-              )}
-            </div>
-            {clientSubline && (
-              <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
-                {clientSubline}
-              </p>
-            )}
-          </div>
-        </div>
-      ),
-      controls: (
-        <div className="hidden items-center gap-2 md:flex">
-          <DateRangeSelect value={datePreset} onChange={setDatePreset} />
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setIntegrationsOpen(true)}
-            title="Client settings"
-            aria-label="Client settings"
-          >
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
-    }),
-    [groupName, clientLoading, clientHealth, clientSubline, metaChip, datePreset, setDatePreset, router]
+  // The top bar names the page; the client's own name is the PageHeader's title.
+  const topBar = useMemo(() => ({ title: "Clients" }), [])
+  usePageHeader(topBar)
+
+  // The funnel verdict is a finding in Birdy's read; dismissing it hides it for
+  // the visit rather than persisting a preference.
+  const [verdictDismissed, setVerdictDismissed] = useState(false)
+  const findings = useMemo(
+    () =>
+      clientFindings({
+        group: matchingGroup,
+        goals,
+        diagnosis: verdictDismissed ? null : diagnosis,
+        hasComparison: previousFunnel != null,
+        currencySymbol,
+        onViewCalls: () => setActiveTab("call-centre"),
+        onDismissDiagnosis: () => setVerdictDismissed(true),
+      }),
+    [matchingGroup, goals, diagnosis, verdictDismissed, previousFunnel, currencySymbol]
   )
-  usePageHeader(pageHeader)
+
+  const openSettings = (tab) => {
+    if (tab) setSettingsTab(tab)
+    setIntegrationsOpen(true)
+  }
+
+  const backToClients = (
+    <button
+      type="button"
+      onClick={() => router.push("/clients")}
+      aria-label="Back to Clients"
+      className="-ml-1 inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground outline-none hover:text-foreground focus-visible:shadow-control-focus"
+    >
+      <ArrowLeft className="size-3.5" aria-hidden="true" />
+      Clients
+    </button>
+  )
 
   // ── Error state (only shown if client data fails entirely) ─────────────────
-  if (!clientLoading && !clientData) {
+  if (!clientLoading && !clientData && !groupsLoading && !matchingGroup) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="font-pd-display text-2xl font-bold mb-2 text-pd-ink">Client Not Found</h2>
-          <Button onClick={() => router.push("/clients")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Clients
-          </Button>
-        </div>
+      <div className="flex flex-col gap-6">
+        <PageHeader eyebrow={backToClients} title="Client" />
+        <EmptyState
+          title="Client not found"
+          description="It may have been removed, or the link is out of date."
+          action={
+            <Button variant="primary" onClick={() => router.push("/clients")}>
+              <ArrowLeft /> Back to Clients
+            </Button>
+          }
+        />
       </div>
     )
   }
 
   return (
-    // Inter is the base for every tab, not just the bar; the display face
-    // for headings and numerals comes from the variables on <html>.
-    <div className={`${pdFontClass} flex flex-col gap-4 w-full`}>
-      {/* ── Tabs ────────────────────────────────────────────────────────────── */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
-        {/* The handoff draws this bar edge to edge under the client header, so
-            it bleeds the layout's own p-4/md:p-6 and carries its own padding.
-            Radix still swaps the panels; the strip is the design's. */}
-        <UnderlineTabs
-          label="Client workspace"
-          tabs={CLIENT_TABS}
-          value={activeTab}
-          onChange={setActiveTab}
-          className="-mx-4 -mt-4 md:-mx-6 md:-mt-6"
-        />
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        eyebrow={backToClients}
+        title={headerLoading ? "…" : groupName}
+        description={
+          !headerLoading ? (
+            <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+              {clientSubline}
+              <HealthPill health={shownHealth} />
+              {metaChip && <Badge tone="neutral">{metaChip}</Badge>}
+            </span>
+          ) : undefined
+        }
+        period={<PeriodControl value={datePreset} onChange={setDatePreset} />}
+        actions={
+          <Button size="icon" onClick={() => openSettings()} title="Client settings" aria-label="Client settings">
+            <Settings />
+          </Button>
+        }
+      />
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-0">
+        <TabsList aria-label="Client workspace">
+          {CLIENT_TABS.map(({ key, label }) => (
+            <TabsTrigger key={key} value={key}>
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
         {/* ── Overview Tab ──────────────────────────────────────────────────── */}
-        <TabsContent value="overview" className="mt-5">
-          <Stagger className="space-y-[18px]">
-          {/* Goals — each metric against the target set in Settings. The same
-              monthly-closes target drives the health pill in the header. */}
-          <StaggerItem>
-            <GoalsStrip
-              goals={goals}
+        <TabsContent value="overview" className="pt-6">
+          <div className="flex min-w-0 flex-col gap-6">
+            {/* Goals — each metric against the target set in Settings. The same
+                monthly-closes target drives the health pill in the header. */}
+            <GoalsStrip goals={goals} currencySymbol={currencySymbol} loading={groupsLoading} />
+
+            <ClientTrendChart
+              group={matchingGroup}
+              datePreset={datePreset}
               currencySymbol={currencySymbol}
               loading={groupsLoading}
             />
-          </StaggerItem>
 
-          {/* Above the diagnostics funnel rather than inside it, because it is
-              a different cohort: the four stages below start at leads, and
-              this one counts everyone who reached the page and never became
-              one. Drawing them as eight stages of a single funnel would put a
-              CRM-sync percentage next to a page-visit percentage and imply the
-              two are comparable. */}
-          <LandingFunnel
-            funnel={landingFunnel}
-            loading={landingLoading}
-            error={landingError}
-            groupId={clientId}
-          />
-
-          {/* 1d: the chart and, beneath it, the history book beside
-              diagnostics all share one left column, so the 340px rail runs the
-              full height of both rows. */}
-          <div className="flex flex-col items-stretch gap-[18px] lg:flex-row">
-            <div className="flex min-w-0 flex-1 flex-col gap-[18px]">
-              <StaggerItem>
-                <ClientTrendChart
-                  group={matchingGroup}
-                  datePreset={datePreset}
-                  currencySymbol={currencySymbol}
-                  loading={groupsLoading}
-                />
-              </StaggerItem>
-
-              {/* The design's 1.35 / 0.65 split, stretched so both cards end
-                  level with the rail beside them. */}
-              <StaggerItem className="grid gap-[18px] md:grid-cols-[1.35fr_0.65fr] md:items-stretch">
-                <HistoryBook
-                  clientName={groupName}
-                  notes={notes}
-                  activity={clientActivity}
-                  loading={clientLoading || activityLoading || notesLoading}
-                  onAddNote={handleAddNote}
-                  onDeleteNote={handleDeleteNote}
-                />
-
+            <div className={BODY_GRID}>
+              <div className="flex min-w-0 flex-col gap-6">
                 <DiagnosticsFunnel
                   stages={funnelStages}
                   loading={groupsLoading}
-                  diagnosis={diagnosis}
                   hasComparison={previousFunnel != null}
-                  onViewCalls={() => setActiveTab("call-centre")}
                 />
-              </StaggerItem>
-            </div>
 
-            <StaggerItem className="flex min-w-0 flex-col gap-[14px] lg:w-[340px] lg:shrink-0">
-              <InsightCard
-                segments={insight}
-                onAsk={() => {
-                  setAskPrompt(clientInsightPrompt(matchingGroup, goals))
+                {/* Beside the diagnostics funnel rather than inside it, because it
+                    is a different cohort: the four stages above start at leads, and
+                    this one counts everyone who reached the page and never became
+                    one. Drawing them as eight stages of a single funnel would put a
+                    CRM-sync percentage next to a page-visit percentage and imply the
+                    two are comparable. */}
+                <LandingFunnel
+                  funnel={landingFunnel}
+                  loading={landingLoading}
+                  error={landingError}
+                  groupId={clientId}
+                />
+              </div>
+
+              <BirdyRead
+                findings={findings}
+                prompt={matchingGroup ? clientInsightPrompt(matchingGroup, goals) : undefined}
+                onAsk={(prompt) => {
+                  setAskPrompt(prompt)
                   setActiveTab("ask-birdy")
                 }}
               />
-              <SidePanel
-                panels={railPanels}
-                active={railPanel}
-                onChange={setRailPanel}
-                label="Client panel"
-                id="client-side-panel"
-                className="min-h-[280px] w-full flex-1 rounded-xl border border-pd-border"
-              />
-            </StaggerItem>
+            </div>
+
+            <HistoryBook
+              clientName={groupName}
+              notes={notes}
+              activity={clientActivity}
+              loading={activityLoading || notesLoading}
+              onAddNote={handleAddNote}
+              onDeleteNote={handleDeleteNote}
+            />
           </div>
-          </Stagger>
         </TabsContent>
 
         {/* ── Ask Birdy Tab ─────────────────────────────────────────────────── */}
-        {/* Every panel opens on the same gutter below the tab strip — the
-            design's 20px content inset, not a different one per tab. */}
-        <TabsContent value="ask-birdy" className="mt-5">
+        <TabsContent value="ask-birdy" className="pt-6">
           <ClientAskBirdy
             clientId={matchingGroup?.id}
             clientName={matchingGroup?.name}
@@ -574,73 +535,44 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Marketing Tab ─────────────────────────────────────────────────── */}
-        <TabsContent value="marketing" className="mt-5">
+        <TabsContent value="marketing" className="pt-6">
           {metaState === "none-selected" ? (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center gap-2 py-10 text-center">
-                <p className="font-pd-display text-base font-semibold text-pd-ink">No campaigns selected</p>
-                <p className="max-w-sm text-sm text-pd-subtle">
-                  This client shares its Meta ad account. Choose the campaigns that belong to it to see its spend and results.
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2"
-                  onClick={() => {
-                    setSettingsTab("integrations")
-                    setIntegrationsOpen(true)
-                  }}
-                >
-                  Choose campaigns
-                </Button>
-              </CardContent>
-            </Card>
+            <EmptyState
+              title="No campaigns selected"
+              description="This client shares its Meta ad account. Choose the campaigns that belong to it to see its spend and results."
+              action={<Button onClick={() => openSettings("integrations")}>Choose campaigns</Button>}
+            />
           ) : metaState === "error" ? (
-            <Card>
-              <CardContent className="flex items-start gap-3 py-6">
-                <XCircle className="mt-0.5 size-4 shrink-0 text-pd-danger" aria-hidden="true" />
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-pd-ink">Refresh failed</p>
-                  <p className="text-sm text-pd-subtle">
-                    {metaRefreshError || "Meta data for this client could not be loaded."}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => {
-                      setSettingsTab("integrations")
-                      setIntegrationsOpen(true)
-                    }}
-                  >
-                    Open integrations
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <Notice
+              tone="danger"
+              title="Refresh failed"
+              action={<Button size="sm" onClick={() => openSettings("integrations")}>Open integrations</Button>}
+            >
+              {metaRefreshError || "Meta data for this client could not be loaded."}
+            </Notice>
           ) : metaSyncing ? (
-            <Card>
-              <CardContent className="flex items-center gap-3 py-6">
-                <Loader2 className="size-4 shrink-0 animate-spin text-pd-primary" aria-hidden="true" />
-                <p className="text-sm text-pd-subtle">{SYNCING_MESSAGE}</p>
-              </CardContent>
-            </Card>
+            <Notice tone="info">
+              <span className="flex items-center gap-2">
+                <Spinner />
+                {SYNCING_MESSAGE}
+              </span>
+            </Notice>
           ) : (
-          <MarketingContent
-            clientGroups={singleGroupArray}
-            groupsLoading={groupsLoading}
-            groupsError={groupsError}
-            datePreset={datePreset}
-            setDatePreset={setDatePreset}
-            showGroupFilter={false}
-            showHeader={false}
-            onCacheInvalidate={invalidate}
-          />
+            <MarketingContent
+              clientGroups={singleGroupArray}
+              groupsLoading={groupsLoading}
+              groupsError={groupsError}
+              datePreset={datePreset}
+              setDatePreset={setDatePreset}
+              showGroupFilter={false}
+              showHeader={false}
+              onCacheInvalidate={invalidate}
+            />
           )}
         </TabsContent>
 
         {/* ── Call Centre Tab ───────────────────────────────────────────────── */}
-        <TabsContent value="call-centre" className="mt-5">
+        <TabsContent value="call-centre" className="pt-6">
           {/* Same chart + insight + KPI row the Sales Hub draws, scoped to
               this client — the tab used to open straight onto a bare table. */}
           <CallCentreOverview
@@ -662,7 +594,7 @@ export default function ClientDetailsPage() {
         </TabsContent>
 
         {/* ── Leads Tab ─────────────────────────────────────────────────────── */}
-        <TabsContent value="leads" className="mt-5">
+        <TabsContent value="leads" className="pt-6">
           {/* Same row the Lead Hub draws, scoped to this client. */}
           <LeadHubOverview
             clientGroups={singleGroupArray}
@@ -684,12 +616,11 @@ export default function ClientDetailsPage() {
             selectedClientGroup={matchingGroup?.id}
           />
         </TabsContent>
-
       </Tabs>
 
       {/* ── Integrations & Settings Dialog ───────────────────────────────────── */}
       <Dialog open={integrationsOpen} onOpenChange={setIntegrationsOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-y-auto">
+        <DialogContent size="xl">
           <DialogHeader>
             <DialogTitle>{groupName} settings</DialogTitle>
             <DialogDescription>
@@ -699,200 +630,176 @@ export default function ClientDetailsPage() {
 
           {/* The design splits this modal into Details / Targets / Integrations
               rather than one long scroll. */}
-          <Tabs value={settingsTab} onValueChange={setSettingsTab} className="w-full">
-            {/* The handoff calls for a segmented control here, which is the
-                shared page tab bar — the same one Settings itself uses. */}
-            <div className={pdFontClass}>
-              <PageTabs
-                label="Client settings section"
-                tabs={[
-                  { key: "details", label: "Details" },
-                  { key: "targets", label: "Targets" },
-                  { key: "integrations", label: "Integrations" },
-                  { key: "tracking", label: "Tracking" },
-                ]}
-                value={settingsTab}
-                onChange={setSettingsTab}
-              />
-            </div>
+          <div className="min-w-0 max-w-full">
+            <SegmentedTabs
+              ariaLabel="Client settings section"
+              value={settingsTab}
+              onValueChange={setSettingsTab}
+              items={SETTINGS_TABS}
+            />
+          </div>
 
-            <TabsContent value="details" className="mt-4 space-y-6">
-            <Card>
-              <CardContent >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`h-9 w-9 rounded-full flex items-center justify-center ${
-                      clientStatus === "Active" ? "bg-pd-success-bg" : "bg-pd-amber-bg"
-                    }`}>
-                      <span className={`h-2.5 w-2.5 rounded-full ${
-                        clientStatus === "Active" ? "bg-pd-success" : "bg-pd-amber"
-                      }`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-pd-ink">Client Status</p>
-                      <p className="text-xs text-pd-subtle">
-                        {clientStatus === "Active"
-                          ? "This client is currently active and receiving data"
-                          : "This client is paused — data refresh is suspended"}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleToggleStatus}
-                    disabled={statusLoading || clientLoading}
-                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-pd-primary/25 disabled:cursor-not-allowed disabled:opacity-50 ${
-                      clientStatus === "Active" ? "bg-pd-primary" : "bg-pd-border-strong"
+          {settingsTab === "details" && (
+            <div className="flex flex-col gap-4">
+              <Surface className="flex items-center justify-between gap-4 bg-muted shadow-none">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`flex size-9 items-center justify-center rounded-full ${
+                      clientStatus === "Active" ? "bg-success-soft" : "bg-warning-soft"
                     }`}
                   >
-                    <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
-                      clientStatus === "Active" ? "translate-x-[22px]" : "translate-x-[4px]"
-                    }`} />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* ── Client health ─────────────────────────────────────────────────
-                Derived, not chosen: recomputed every Monday from this client's
-                monthly closes goal. Shown with the figures behind it so the
-                band can be checked rather than just believed. */}
-            <Card>
-              <CardContent>
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-pd-ink">Client Health</p>
-                    <p className="text-xs text-pd-subtle">
-                      {healthDetail?.reason
-                        ? `${healthDetail.reason}${
-                            healthDetail.pace != null
-                              ? ` · ${Math.round(healthDetail.pace * 100)}% of pace`
-                              : ""
-                          }`
-                        : "Set a monthly closes target to track health."}
-                    </p>
-                    <p className="mt-1 text-[11px] text-pd-subtle">
-                      Recalculated every Monday from the monthly closes goal.
+                    <span
+                      className={`size-2.5 rounded-full ${clientStatus === "Active" ? "bg-success" : "bg-warning"}`}
+                    />
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Client Status</p>
+                    <p className="text-sm text-muted-foreground">
+                      {clientStatus === "Active"
+                        ? "This client is currently active and receiving data"
+                        : "This client is paused — data refresh is suspended"}
                     </p>
                   </div>
-                  <HealthPill health={clientHealth} className="shrink-0" />
                 </div>
-              </CardContent>
-            </Card>
+                <Switch
+                  checked={clientStatus === "Active"}
+                  onCheckedChange={handleToggleStatus}
+                  disabled={statusLoading || clientLoading}
+                  aria-label="Client active"
+                />
+              </Surface>
 
-            {/* ── Danger Zone ───────────────────────────────────────────────────── */}
-            <Card className="border-pd-danger-border bg-pd-danger-surface">
-              <CardHeader>
-                <CardTitle className="text-base text-pd-danger">Danger Zone</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
+              {/* ── Client health ─────────────────────────────────────────────
+                  Derived, not chosen: recomputed every Monday from this client's
+                  monthly closes goal. Shown with the figures behind it so the
+                  band can be checked rather than just believed. */}
+              <Surface className="flex items-center justify-between gap-4 bg-muted shadow-none">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Client Health</p>
+                  <p className="text-sm text-muted-foreground">
+                    {healthDetail?.reason
+                      ? `${healthDetail.reason}${
+                          healthDetail.pace != null
+                            ? ` · ${Math.round(healthDetail.pace * 100)}% of pace`
+                            : ""
+                        }`
+                      : "Set a monthly closes target to track health."}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Recalculated every Monday from the monthly closes goal.
+                  </p>
+                </div>
+                <HealthPill health={clientHealth} className="shrink-0" />
+              </Surface>
+
+              {/* ── Danger Zone ───────────────────────────────────────────────── */}
+              <Surface className="bg-danger-soft shadow-none">
+                <h3 className="text-base font-semibold text-danger-ink">Danger Zone</h3>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-medium text-pd-ink">Remove Client Group</p>
-                    <p className="text-xs text-pd-subtle mt-0.5">
+                    <p className="text-sm font-medium text-foreground">Remove Client Group</p>
+                    <p className="mt-0.5 text-sm text-body">
                       Permanently delete this client group and all associated GHL contacts. This cannot be undone.
                     </p>
                   </div>
                   <Button
                     variant="destructive"
-                    size="sm"
-                    className="shrink-0 gap-2"
+                    className="shrink-0"
                     onClick={() => {
                       setDeleteInput("")
                       setDeleteError("")
                       setDeleteModalOpen(true)
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 />
                     Remove Client Group
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-            </TabsContent>
+              </Surface>
+            </div>
+          )}
 
-            <TabsContent value="targets" className="mt-4">
-              <ClientTargetsForm
-                clientId={clientId}
-                targets={matchingGroup?.targets}
-                currencySymbol={currencySymbol}
-                onSaved={() => invalidate()}
-              />
-            </TabsContent>
+          {settingsTab === "targets" && (
+            <ClientTargetsForm
+              clientId={clientId}
+              targets={matchingGroup?.targets}
+              currencySymbol={currencySymbol}
+              onSaved={() => invalidate()}
+            />
+          )}
 
-            <TabsContent value="integrations" className="mt-4">
-              <IntegrationsContent
-                group={matchingGroup}
-                onRefreshComplete={invalidate}
-                onCampaignsSaved={handleCampaignsSaved}
-              />
-            </TabsContent>
+          {settingsTab === "integrations" && (
+            <IntegrationsContent
+              group={matchingGroup}
+              onRefreshComplete={invalidate}
+              onCampaignsSaved={handleCampaignsSaved}
+            />
+          )}
 
-            {/* A pointer, not the thing itself. Setting tracking up is a guided
-                flow with five steps and three strings to copy, which does not
-                belong in a dialog — and its URL gets forwarded to colleagues,
-                which a dialog cannot be. */}
-            <TabsContent value="tracking" className="mt-4">
-              <TrackingSummaryCard clientId={clientId} />
-            </TabsContent>
-          </Tabs>
+          {/* A pointer, not the thing itself. Setting tracking up is a guided
+              flow with five steps and three strings to copy, which does not
+              belong in a dialog — and its URL gets forwarded to colleagues,
+              which a dialog cannot be. */}
+          {settingsTab === "tracking" && <TrackingSummaryCard clientId={clientId} />}
         </DialogContent>
       </Dialog>
 
       {/* ── Delete Confirmation Modal ─────────────────────────────────────────── */}
       <Dialog open={deleteModalOpen} onOpenChange={(v) => { if (!deleteLoading) setDeleteModalOpen(v) }}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent size="sm">
           <DialogHeader>
-            <div className="flex items-center gap-3 mb-1">
-              <div className="h-10 w-10 rounded-full bg-pd-danger-bg flex items-center justify-center shrink-0">
-                <AlertTriangle className="h-5 w-5 text-pd-danger" />
-              </div>
+            <div className="mb-1 flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-danger-soft text-danger-ink">
+                <AlertTriangle className="size-5" />
+              </span>
               <DialogTitle className="text-xl">Delete Client Group</DialogTitle>
             </div>
-            <DialogDescription className="text-sm leading-relaxed">
-              This action is <span className="font-semibold text-pd-ink">permanent and irreversible</span>. It will delete:
+            <DialogDescription className="leading-relaxed">
+              This action is <span className="font-semibold text-foreground">permanent and irreversible</span>. It will delete:
             </DialogDescription>
           </DialogHeader>
 
-          <ul className="text-sm text-pd-subtle space-y-1.5 pl-4 list-disc">
-            <li>All <span className="text-pd-ink font-medium">GHL contacts</span> linked to this group</li>
-            <li>The <span className="text-pd-ink font-medium">client group</span> and all its configuration</li>
+          <ul className="flex list-disc flex-col gap-1.5 pl-4 text-sm text-muted-foreground">
+            <li>All <span className="font-medium text-foreground">GHL contacts</span> linked to this group</li>
+            <li>The <span className="font-medium text-foreground">client group</span> and all its configuration</li>
           </ul>
 
-          <div className="space-y-2 pt-1">
+          <div className="flex flex-col gap-2 pt-1">
             <p className="text-sm">
               Type{" "}
-              <span className="font-mono text-xs font-semibold bg-pd-divider px-1.5 py-0.5 rounded-full">{groupName}</span>
+              <span className="rounded-sm bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold">{groupName}</span>
               {" "}to confirm:
             </p>
             <Input
               value={deleteInput}
               onChange={(e) => { setDeleteInput(e.target.value); setDeleteError("") }}
               placeholder={groupName}
-              className={`font-mono text-sm ${deleteError ? "border-pd-danger" : ""}`}
+              className="font-mono"
+              aria-invalid={deleteError ? true : undefined}
               disabled={deleteLoading}
               onKeyDown={(e) => { if (e.key === "Enter") handleDeleteGroup() }}
               autoComplete="off"
             />
             {deleteError && (
-              <p className="text-xs text-pd-danger flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" /> {deleteError}
+              <p className="flex items-center gap-1 text-xs text-danger-ink">
+                <AlertTriangle className="size-3" /> {deleteError}
               </p>
             )}
           </div>
 
-          <DialogFooter className="flex gap-2 pt-2">
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading} className="flex-1">
+          <DialogFooter>
+            <Button onClick={() => setDeleteModalOpen(false)} disabled={deleteLoading} className="flex-1">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteGroup}
-              disabled={deleteInput.trim() !== groupName?.trim() || deleteLoading}
-              className="flex-1 gap-2"
+              disabled={deleteInput.trim() !== groupName?.trim()}
+              loading={deleteLoading}
+              className="flex-1"
             >
-              {deleteLoading
-                ? <><Loader2 className="h-4 w-4 animate-spin" /> Deleting…</>
-                : <><Trash2 className="h-4 w-4" /> Delete Group</>}
+              <Trash2 />
+              {deleteLoading ? "Deleting…" : "Delete Group"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -922,18 +829,18 @@ function TrackingSummaryCard({ clientId }) {
   const isFormToGhl = normalizeLeadSource(state?.method) === "form_to_ghl"
 
   return (
-    <div className="rounded-xl border border-pd-border bg-pd-surface p-4">
+    <Surface className="bg-muted shadow-none">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="font-pd-display text-[13px] font-semibold text-pd-ink">Lead tracking</p>
+          <p className="text-sm font-semibold text-foreground">Lead tracking</p>
           {state === null ? (
-            <div className="mt-1.5 space-y-1.5" aria-busy="true" aria-label="Checking lead tracking">
+            <div className="mt-2 flex flex-col gap-1.5" aria-busy="true" aria-label="Checking lead tracking">
               <Skeleton className="h-3 w-72 max-w-full" />
               <Skeleton className="h-3 w-40" />
             </div>
           ) : (
-          <p className="mt-1 text-[12.5px] leading-[1.5] text-pd-body">
-            {!state.applicable
+            <p className="mt-1 text-sm leading-normal text-body">
+              {!state.applicable
                 ? "This client's leads come from Meta Instant Forms, so there is nothing to install."
                 : isFormToGhl
                   ? state.complete
@@ -942,22 +849,23 @@ function TrackingSummaryCard({ clientId }) {
                   : state.complete
                     ? "Working — landing-page leads are being counted against the ads that produced them."
                     : "Not finished. Leads from this client's landing pages aren't being tied to ads yet."}
-          </p>
+            </p>
           )}
           {state?.method && (
-            <p className="mt-1.5 text-[11.5px] text-pd-faint">
+            <p className="mt-1.5 text-xs text-muted-foreground">
               Leads from: {leadSourceOption(state.method).label}
             </p>
           )}
         </div>
         <Button
+          variant="primary"
           size="sm"
           onClick={() => router.push(`/clients/${clientId}/tracking`)}
-          className="shrink-0 text-[12.5px]"
+          className="shrink-0"
         >
           {state && state.applicable && !state.complete ? "Finish setup" : "Open setup"}
         </Button>
       </div>
-    </div>
+    </Surface>
   )
 }

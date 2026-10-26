@@ -2,18 +2,18 @@
 
 // Onboarding step 19 (mandatory, no skip): the reader must have an active
 // Whop subscription before the bulk sub-account import — the actual client-
-// data load — is allowed to run. Reuses the same plan list and embedded
-// checkout /billing sells from (@/components/billing/plans,
-// @whop/checkout/react), styled with the wizard's own pd-* look instead of
-// that page's Tailwind-gray cards.
+// data load — is allowed to run. Reuses the same plan list, plan cards and
+// embedded checkout /billing sells from (@/components/billing,
+// @whop/checkout/react).
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Skeleton } from "@/components/ui/skeleton"
+import { Badge, Button, Notice, Skeleton, Spinner, Surface } from "@/components/ds"
 import { WhopCheckoutEmbed } from "@whop/checkout/react"
 import { apiRequest } from "@/lib/api"
 import { PLANS } from "@/components/billing/plans"
+import { PlanCard } from "@/components/billing/PlanCard"
 import { Stagger, StaggerItem } from "@/components/motion"
-import { FakeProgressBar, SpinnerRing, STEP_COL, StepHeading, SuccessRow } from "./parts"
+import { FakeProgressBar, STEP_COL_WIDE, StepHeading, SuccessRow } from "./parts"
 
 const WHOP_ENVIRONMENT =
   (process.env.NEXT_PUBLIC_WHOP_ENVIRONMENT ?? "production") === "sandbox"
@@ -95,10 +95,10 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
 
   if (phase === "checking") {
     return (
-      <div className="flex w-full max-w-[780px] flex-col items-center gap-3 py-16">
+      <div className={`${STEP_COL_WIDE} flex flex-col gap-3 py-16`}>
         <Skeleton className="h-6 w-2/3" />
         <Skeleton className="mb-3 h-4 w-1/2" />
-        <div className="grid w-full grid-cols-1 gap-[14px] sm:grid-cols-3">
+        <div className="grid w-full grid-cols-1 gap-3.5 sm:grid-cols-3">
           {[0, 1, 2].map((i) => <Skeleton key={i} className="h-[150px] w-full" />)}
         </div>
       </div>
@@ -107,25 +107,25 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
 
   if (phase === "activating" || importing) {
     return (
-      <div className={`${STEP_COL} text-center`}>
+      <div className={STEP_COL_WIDE}>
         <SuccessRow>Payment received</SuccessRow>
-        <div className="mb-3"><StepHeading small>Activating your subscription…</StepHeading></div>
+        <StepHeading>Activating your subscription…</StepHeading>
         {/* Two different waits wearing one screen. Whop's activation is
             seconds; the import inserts a client group per sub-account and can
             run well past a minute on a full 25. Both are long enough that a
             lone spinner reads as a hang, and this is the one screen nobody can
             afford to reload — they have already paid. */}
-        <div className="mb-[22px] flex justify-center"><SpinnerRing size={22} /></div>
+        <div className="mb-5 flex"><Spinner size={22} className="text-primary" /></div>
         <FakeProgressBar
-          className="mb-[14px]"
+          className="mb-3.5"
           expectedMs={importing ? Math.max(8000, accountCount * 1200) : 4000}
         />
-        <div className="text-[13px] text-pd-faint">
+        <div className="text-center text-sm text-muted-foreground">
           {importing
             ? `Bringing in your ${accountCount} sub-account${accountCount === 1 ? "" : "s"}…`
             : "This usually takes a few seconds — safe to leave this open, it'll pick up automatically."}
         </div>
-        {error && <div className="mt-4 text-[12.5px] text-pd-faint">{error}</div>}
+        {error && <div className="mt-4 text-center text-xs text-muted-foreground">{error}</div>}
       </div>
     )
   }
@@ -133,58 +133,41 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
   return (
     // Heading and copy lead the plan tiles in by a beat; the tiles and the
     // checkout that replaces them come in with the step itself.
-    <Stagger className="w-full max-w-[780px] text-left" gap={0.06}>
-      <StaggerItem className="mb-2 text-center">
-        <StepHeading small>One more thing — pick a plan to bring in your sub-accounts</StepHeading>
-      </StaggerItem>
-      <StaggerItem className="mb-[22px] text-center text-[13.5px] text-pd-faint">
-        You&apos;re about to import {accountCount} sub-account{accountCount === 1 ? "" : "s"} — an active
-        plan is required before Birdy loads their data.
+    <Stagger className={STEP_COL_WIDE} gap={0.06}>
+      <StaggerItem>
+        <StepHeading
+          description={`You're about to import ${accountCount} sub-account${accountCount === 1 ? "" : "s"} — an active plan is required before Birdy loads their data.`}
+        >
+          One more thing — pick a plan to bring in your sub-accounts
+        </StepHeading>
       </StaggerItem>
 
       {!selectedPlan ? (
         <>
-          <div className="mb-6 grid grid-cols-1 gap-[14px] sm:grid-cols-3">
-            {PLANS.map((plan) => {
-              const Icon = plan.icon
-              const isRecommended = plan.id === recommendedPlanId
-              return (
-                <div
-                  key={plan.id}
-                  onClick={() => plan.planId && setSelectedPlan(plan)}
-                  className={`relative cursor-pointer rounded-xl border-2 px-5 py-[22px] text-center transition-colors ${
-                    plan.planId ? "" : "cursor-not-allowed opacity-50"
-                  } ${isRecommended ? "border-pd-primary bg-pd-primary-tint/50" : "border-pd-border bg-white"}`}
-                >
-                  {isRecommended && (
-                    <span className="absolute -top-[11px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-pd-primary px-[10px] py-[3px] text-[10px] font-bold text-white">
-                      RECOMMENDED FOR YOU
-                    </span>
-                  )}
-                  <div className="mx-auto mb-3 flex h-[38px] w-[38px] items-center justify-center rounded-xl bg-pd-primary-tint text-pd-primary">
-                    <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-                  </div>
-                  <div className="mb-1 font-pd-display text-[15px] font-semibold text-pd-ink">{plan.name}</div>
-                  <div className="mb-2 font-pd-display text-[22px] font-bold text-pd-ink">
-                    ${plan.price}<span className="text-[12px] font-medium text-pd-faint">/mo</span>
-                  </div>
-                  <div className="text-[11.5px] text-pd-faint">Up to {plan.maxClients} clients</div>
+          <div className="mb-6 grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            {PLANS.map((plan) => (
+              <div key={plan.id} className="flex flex-col gap-2">
+                {/* Reserved on every column so the three cards stay level. */}
+                <div className="h-5">
+                  {plan.id === recommendedPlanId && <Badge tone="primary">Recommended for you</Badge>}
                 </div>
-              )
-            })}
+                <PlanCard
+                  plan={plan}
+                  billingStatus={null}
+                  // A plan with no Whop id yet cannot be bought; one badge per card.
+                  disabled={!plan.planId}
+                  hideBadge={plan.id === recommendedPlanId}
+                  onCheckout={(picked) => picked.planId && setSelectedPlan(picked)}
+                />
+              </div>
+            ))}
           </div>
-          {error && (
-            <div className="mb-4 rounded-xl border border-pd-danger-border bg-pd-danger-bg px-4 py-3 text-center text-[12.5px] text-pd-body">
-              {error}
-            </div>
-          )}
+          {error && <Notice tone="danger" className="mb-4">{error}</Notice>}
         </>
       ) : (
-        <div className="mx-auto max-w-[440px]">
-          <div className="mb-4 text-center">
-            <SuccessRow>{selectedPlan.name} selected — ${selectedPlan.price}/mo</SuccessRow>
-          </div>
-          <div className="rounded-xl border border-pd-border p-3">
+        <div className="max-w-[440px]">
+          <SuccessRow>{selectedPlan.name} selected — ${selectedPlan.price}/mo</SuccessRow>
+          <Surface padded={false} className="p-3">
             <WhopCheckoutEmbed
               planId={selectedPlan.planId}
               environment={WHOP_ENVIRONMENT}
@@ -201,21 +184,17 @@ export default function BillingStep({ accountCount, onSubscribed, importing }) {
               onComplete={pollUntilSubscribed}
               fallback={
                 <div className="flex flex-col gap-3 py-6">
-                  <Skeleton className="h-10 w-full rounded-full" />
-                  <Skeleton className="h-10 w-full rounded-full" />
-                  <Skeleton className="h-11 w-full rounded-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-11 w-full" />
                 </div>
               }
             />
-          </div>
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              onClick={() => setSelectedPlan(null)}
-              className="cursor-pointer text-[12.5px] font-semibold text-pd-faint hover:text-pd-body"
-            >
+          </Surface>
+          <div className="mt-3">
+            <Button variant="ghost" size="sm" onClick={() => setSelectedPlan(null)} className="text-muted-foreground">
               Choose a different plan
-            </button>
+            </Button>
           </div>
         </div>
       )}

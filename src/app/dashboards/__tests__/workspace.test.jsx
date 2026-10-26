@@ -17,7 +17,7 @@ vi.mock("@/lib/api", () => ({
   API_BASE_URL: "http://api.test",
 }))
 // next/font hits the network at module load; the class names are all the shell uses.
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 
 const replace = vi.fn()
@@ -145,7 +145,7 @@ const textOp = (id, markdown) => ({ op: "addWidget", after: "w1", widget: { type
 
 async function enterEditAndAddText(user) {
   await screen.findByText("Hello there")
-  await user.click(screen.getByRole("radio", { name: /Edit/ }))
+  await user.click(screen.getByRole("tab", { name: /Edit/ }))
   await user.click(await screen.findByRole("button", { name: "Add Text" }))
   expect(screen.getByText("Unsaved changes")).toBeInTheDocument()
 }
@@ -181,7 +181,7 @@ describe("Dashboard workspace", () => {
     expect(await screen.findByText("Hello there")).toBeInTheDocument()
     expect(container.querySelector('[data-dk="canvas"]')).toBeNull()
 
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
 
     expect(await screen.findByRole("complementary", { name: "Widgets" })).toBeInTheDocument()
     expect(container.querySelector('[data-dk="canvas"]')).not.toBeNull()
@@ -236,7 +236,7 @@ describe("Dashboard workspace", () => {
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")
 
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
 
     expect(await screen.findByText("Editing needs a wider window")).toBeInTheDocument()
     expect(screen.getByRole("textbox", { name: "Dashboard title" })).toBeInTheDocument()
@@ -254,7 +254,7 @@ describe("Dashboard workspace", () => {
     // View mode docks the chat: no rail.
     expect(screen.queryByRole("button", { name: "Ask Birdy" })).toBeNull()
 
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
     const open = await screen.findByRole("button", { name: "Ask Birdy" })
     expect(open).toHaveAttribute("aria-expanded", "false")
     const drawer = document.getElementById(open.getAttribute("aria-controls"))
@@ -288,7 +288,7 @@ describe("Dashboard workspace", () => {
     expect(drawer).toHaveAttribute("data-state", "closed")
 
     // Back in view the chat docks again, still the same one.
-    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await user.click(screen.getByRole("tab", { name: /View/ }))
     expect(screen.queryByRole("button", { name: "Ask Birdy" })).toBeNull()
     expect(screen.getByTestId("chat")).toBe(chat)
   })
@@ -301,6 +301,12 @@ describe("Dashboard workspace", () => {
     const crumb = screen.getByRole("link", { name: "My dashboards" })
     expect(crumb).toHaveAttribute("href", "/dashboards")
     expect(crumb.parentElement).toHaveTextContent("My dashboards / Weekly spend")
+    // Narrow screens: the prefix hides and the mode tabs / Add widget go icon-only,
+    // each keeping its accessible name, so the header fits at 375px.
+    expect(crumb).toHaveClass("max-sm:hidden")
+    expect(screen.getByRole("tab", { name: /View/ }).querySelector(".max-sm\\:sr-only")).not.toBeNull()
+    expect(screen.getByRole("button", { name: "Add widget" }).querySelector(".max-sm\\:sr-only")).not.toBeNull()
+    expect(screen.getByRole("tabpanel", { name: "View" })).toHaveAttribute("aria-labelledby", "dashboard-board-tab-view")
     // The migrated section title is a heading widget on the board.
     expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument()
   })
@@ -318,7 +324,7 @@ describe("Dashboard workspace", () => {
     const user = userEvent.setup()
     const { container } = renderWorkspace()
     await screen.findByText("Hello there")
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
 
     const palette = await screen.findByRole("complementary", { name: "Widgets" })
     const root = palette.closest(".dk-root")
@@ -340,7 +346,7 @@ describe("Dashboard workspace", () => {
     const user = userEvent.setup()
     renderWorkspace()
     await screen.findByText("Hello there")
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
 
     const palette = await screen.findByRole("complementary", { name: "Widgets" })
     await user.click(within(palette).getByRole("button", { name: "Add Table" }))
@@ -362,11 +368,11 @@ describe("Dashboard workspace", () => {
     const user = userEvent.setup()
     renderWorkspace()
     await screen.findByText("Hello there")
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
     await user.click(await screen.findByRole("button", { name: "Add Text" }))
     expect(vi.mocked(apiRequest).mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false)
 
-    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await user.click(screen.getByRole("tab", { name: /View/ }))
 
     await waitFor(() => {
       const put = vi.mocked(apiRequest).mock.calls.find(([, init]) => init?.method === "PUT")
@@ -565,7 +571,7 @@ describe("Dashboard workspace", () => {
     act(() => {
       chatProps.current.onDashboardOps([textOp("ai", "From Birdy")], { dashboard_id: "d1" })
     })
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
     await user.click(await screen.findByRole("button", { name: "Add Text" }))
 
     let undone
@@ -584,7 +590,7 @@ describe("Dashboard workspace", () => {
     // The migrated heading plus the two text widgets.
     expect(container.querySelectorAll('[data-dk="widget"]')).toHaveLength(3)
 
-    await user.click(screen.getByRole("radio", { name: /View/ }))
+    await user.click(screen.getByRole("tab", { name: /View/ }))
     await waitFor(() => expect(puts()).toHaveLength(1))
 
     // The edit made in the editor is still on the shared history.
@@ -594,7 +600,7 @@ describe("Dashboard workspace", () => {
     expect(bodyWidgets(putBody(puts()[1]))).toHaveLength(1)
 
     // Back in the editor, the toolbar can redo it.
-    await user.click(screen.getByRole("radio", { name: /Edit/ }))
+    await user.click(screen.getByRole("tab", { name: /Edit/ }))
     const redo = await screen.findByRole("button", { name: "Redo" })
     expect(redo).not.toBeDisabled()
     await user.click(redo)

@@ -4,13 +4,13 @@
 // The Client Detail overview's trend chart — the same card Sales, Marketing
 // and Lead Hub draw, scoped to one client.
 //
-// Metrics are Leads · Spend · CPL · Closes, per the handoff. CPL declares
-// itself a cost metric so the chart colours a rise red: TrendChart tones by
-// meaning rather than direction, and without that a climbing cost per lead
-// would render as good news in green.
+// Metrics are Leads · Spend · CPL · Closes, per the handoff, as the ds
+// MetricTabsChart. None of them carries a delta here: this page holds a single
+// window, so there is no previous period to compare against.
 
 import { useMemo, useState } from "react"
-import { CHART_LOADING, LoadingPulse, PdCard, TrendChart } from "@/components/portfolio"
+import { MetricTabsChart } from "@/components/ds"
+import { cn } from "@/lib/utils"
 import { presetToDateRange } from "@/lib/date-utils"
 import { coverageNote } from "@/lib/marketing-aggregate"
 import {
@@ -52,6 +52,7 @@ export function ClientTrendChart({
   datePreset,
   currencySymbol = "$",
   loading = false,
+  className,
 }) {
   const [activeMetric, setActiveMetric] = useState("leads")
 
@@ -93,6 +94,7 @@ export function ClientTrendChart({
     const insights = group.facebook?.metrics?.insights ?? {}
     const accountSpend = num(insights.spend)
     const accountLeads = num(insights.results) || num(insights.total_leads)
+    const crmCloses = num(group.gohighlevel?.metrics?.funnel?.closes)
 
     return CLIENT_CHART_METRICS.reduce((acc, metric) => {
       const s = series[metric.key]
@@ -108,6 +110,16 @@ export function ClientTrendChart({
         // headline; a preset whose cache spans the whole window renders no
         // note at all.
         coverage = coverageNote(windowed.facebook.daily_spend, plottedTotal, accountSpend)
+      } else if (metric.key === "leads" && accountLeads > 0) {
+        // Meta's results, the same figure CPL divides by and the goals strip
+        // shows as "Number of leads". The GHL daily rows count contacts the CRM
+        // classified as leads, which can be none for a client whose daily series
+        // is empty or whose contacts are unclassified, under a CPL that says
+        // otherwise.
+        headline = accountLeads
+      } else if (metric.key === "closes" && plottedTotal === 0 && crmCloses > 0) {
+        // No dated closes in the window's rows: the cohort funnel still knows.
+        headline = crmCloses
       } else if (metric.key === "cpl") {
         // CPL is a rate, so its headline is the blended figure over the
         // window, not the sum of per-bucket rates — adding costs per lead
@@ -136,14 +148,14 @@ export function ClientTrendChart({
         // last known value instead.
         values: carryForward(s.values),
         total: formatValue(metric.key, headline, currencySymbol),
+        // The headline stands even where the daily rows do not.
+        hasTotal: Number.isFinite(headline) && headline > 0,
         // Required by TrendChart's tooltips and its screen-reader summary,
         // which indexes into it directly.
         pointValues: s.values.map((v) =>
           v == null ? "—" : formatValue(metric.key, v, currencySymbol)
         ),
         coverage,
-        // Rising cost is bad news; TrendChart colours by meaning.
-        polarity: metric.key === "cpl" ? "lower" : "higher",
       }
       return acc
     }, {})
@@ -151,29 +163,49 @@ export function ClientTrendChart({
 
   const chart = chartMetrics[activeMetric]
 
-  if (loading) {
-    return <LoadingPulse className="h-[340px]" statements={CHART_LOADING} />
-  }
-
-  if (!chart || !hasData(chart)) {
-    return (
-      <PdCard title="Trend">
-        <p className="py-8 text-center text-[12px] text-pd-faint">
-          No daily data for this client in this window yet.
-        </p>
-      </PdCard>
-    )
-  }
+  const metrics = CLIENT_CHART_METRICS.map((metric) => {
+    const m = chartMetrics[metric.key]
+    // A trend needs at least two points; one bucket is a figure, not a line.
+    const points = (m?.values ?? []).map((current, i) => ({
+      x: m.labels?.[i] ?? "",
+      current,
+      tooltipLabel: m.tooltipLabels?.[i],
+      // A bucket with no reading says so, rather than repeating the carried value.
+      display: m.pointValues?.[i] === "—" ? "—" : undefined,
+    }))
+    return {
+      key: metric.key,
+      label: metric.tab,
+      value: m?.total ?? "—",
+      series: m && hasData(m) && points.length >= 2 ? points : undefined,
+      plottable: Boolean(group),
+      // One bucket is a figure but not a trend; say so rather than "no data".
+      points: points.length,
+      hasTotal: Boolean(m?.hasTotal),
+    }
+  })
+  const active = metrics.find((m) => m.key === activeMetric)
 
   return (
-    <TrendChart
-      chart={chart}
-      metrics={CLIENT_CHART_METRICS}
-      activeMetric={activeMetric}
-      onMetricChange={setActiveMetric}
-      // Remounting on metric or window replays the draw animation, the same
-      // way Sales Hub keys its chart.
-      redrawKey={`${activeMetric}-${datePreset}-${group?.id}`}
-    />
+    <div className={cn("flex min-w-0 flex-col gap-2", className)}>
+      <MetricTabsChart
+        metrics={metrics}
+        value={activeMetric}
+        onValueChange={setActiveMetric}
+        formatValue={(n, metric) => formatValue(metric.key, n, currencySymbol)}
+        xLabel={`${active?.label ?? "Metric"} over the period`}
+        loading={loading}
+        emptyMessage={
+          active?.points === 1
+            ? "Pick 7 days or longer to see a trend."
+            : active?.hasTotal
+              ? "No daily breakdown for this client in this window yet."
+              : "No daily data for this client in this window yet."
+        }
+      />
+      {!loading && chart?.coverage && (
+        <p className="px-1 text-xs text-muted-foreground first-letter:uppercase">{chart.coverage}</p>
+      )}
+    </div>
   )
 }

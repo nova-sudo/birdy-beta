@@ -10,7 +10,7 @@ vi.mock("@/lib/api", () => ({
   API_BASE_URL: "http://api.test",
 }))
 // next/font hits the network at module load; the class names are all the shell uses.
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({
@@ -68,6 +68,7 @@ describe("My dashboards list page", () => {
     expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
     expect(screen.getByText("Lead sources")).toBeInTheDocument()
     expect(screen.getAllByText(/^Updated /)).toHaveLength(2)
+    expect(document.querySelectorAll('[data-ds="surface"]')).toHaveLength(2)
     expect(screen.getByRole("link", { name: /Weekly spend/ })).toHaveAttribute("href", "/dashboards/d1")
   })
 
@@ -76,6 +77,28 @@ describe("My dashboards list page", () => {
     renderPage()
 
     expect(await screen.findByText("No dashboards yet")).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="empty-state"]')).not.toBeNull()
+  })
+
+  it("shows an error state with a retry when the list fails to load", async () => {
+    const user = userEvent.setup()
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/dashboards" && (init.method ?? "GET") === "GET"
+        ? Promise.resolve(res({}, 500))
+        : mockApi(path, init),
+    )
+    renderPage()
+
+    expect(await screen.findByText("Couldn't load your dashboards.")).toBeInTheDocument()
+    expect(document.querySelector('[data-ds="error-state"]')).not.toBeNull()
+
+    vi.mocked(apiRequest).mockImplementation(mockApi)
+    await user.click(screen.getByRole("button", { name: /Try again/ }))
+    expect(await screen.findByText("Weekly spend")).toBeInTheDocument()
+    const listCalls = vi.mocked(apiRequest).mock.calls.filter(
+      ([path, init]) => path === "/api/dashboards" && (init?.method ?? "GET") === "GET",
+    )
+    expect(listCalls).toHaveLength(2)
   })
 
   it("create blank saves and navigates", async () => {

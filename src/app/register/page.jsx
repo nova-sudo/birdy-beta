@@ -1,26 +1,14 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Eye, EyeOff, Lock, Mail, Loader2 } from "lucide-react"
+import { Button, Input, Label, Notice } from "@/components/ds"
 import { publicRequest } from "@/lib/api"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { useBirdy } from "@/components/birdy/use-birdy"
-import dynamic from "next/dynamic"
-// Silk is the WebGL wallpaper in the right-hand panel — decoration, and 877kB
-// of three.js to draw it. Loaded eagerly it was the single heaviest thing on
-// the page people see before they can do anything at all, and it blocked the
-// form behind it.
-//
-// ssr:false because it needs a GL context, and no placeholder: the panel keeps
-// its brand background underneath, so the wallpaper fades in a moment later
-// and nothing shifts.
-const Silk = dynamic(() => import("@/components/Silk"), { ssr: false })
-
+import AuthLayout from "@/components/auth/AuthLayout"
+import PasswordInput from "@/components/auth/PasswordInput"
 
 export default function RegisterPage() {
   // Email + password only. Name and currency used to live on this form, but
@@ -29,7 +17,6 @@ export default function RegisterPage() {
   // welcome_name step PUTs to /api/onboarding/state, which writes users.name).
   const [formData, setFormData] = useState({ email: "", password: "" })
   const [error, setError] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const { state: birdyState, flash: flashBirdy } = useBirdy()
@@ -88,148 +75,61 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="grid min-h-svh bg-pd-surface lg:grid-cols-2">
-      {/* Left: form */}
-      <div className="flex flex-col gap-4 p-6 md:p-10">
-        <div className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-sm">
-            <div>
-              <div className="mb-8">
-                <BirdyAvatar state={birdyState} size={52} />
-                <h1 className="mt-5 font-pd-display text-[32px] font-extrabold leading-tight tracking-[-0.02em] text-pd-ink">Create your account</h1>
-                <p className="mt-1.5 text-[14.5px] text-pd-subtle">Get started with your free account</p>
-              </div>
-
-              <div className="space-y-6">
-                {error && (
-                  <Alert variant="destructive" className="rounded-2xl border-pd-danger-border bg-pd-danger-bg">
-                    <AlertDescription className="text-sm text-pd-danger">{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-[13px] font-semibold text-pd-ink">Email address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                      <Input
-                        type="email"
-                        id="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        className="pl-10 h-12"
-                        placeholder="Enter your email"
-                        required
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="password" className="text-[13px] font-semibold text-pd-ink">Password</Label>
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                      <Input
-                        type={showPassword ? "text" : "password"}
-                        id="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        className="pl-10 pr-11 h-12"
-                        placeholder="Create a strong password"
-                        required
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 transform -translate-y-1/2 text-pd-faint hover:text-pd-ink transition-colors border-0 p-0 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <p className="text-xs text-pd-subtle mt-1">Must be at least 8 characters long</p>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-[14.5px]"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? (
-                      <div className="flex items-center space-x-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Creating account...</span>
-                      </div>
-                    ) : (
-                      "Create Account"
-                    )}
-                  </Button>
-                </form>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-pd-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-pd-surface px-2 text-pd-faint">Or</span>
-                  </div>
-                </div>
-
-                <div className="text-center text-sm text-pd-subtle">
-                  {"Already have an account? "}
-                  <a href="/login" className="text-pd-primary hover:text-purple-700 font-semibold transition-colors">
-                    Sign in here
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            <p className="text-center text-xs text-pd-subtle mt-6">
-              By creating an account, you agree to our{" "}
-              <a href="/billing/terms-of-service" className="text-pd-primary hover:text-purple-700">Terms of Service</a>{" "}
-              and{" "}
-              <a href="/billing/privacy-policy" className="text-pd-primary hover:text-purple-700">Privacy Policy</a>
-            </p>
-          </div>
+    <AuthLayout
+      prompt="Already have an account?"
+      linkHref="/login"
+      linkLabel="Sign in"
+      panelHeadline="Join Birdy"
+      showLegal={false}
+      panelSub="Start growing smarter campaigns, conversations, and conversions in minutes."
+    >
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <BirdyAvatar state={birdyState} size={52} />
+          <h1 className="mt-3 text-2xl font-semibold tracking-tight">Create your account</h1>
+          <p className="text-base text-muted-foreground">Get started with your free account</p>
         </div>
-      </div>
 
-      {/* Right: Silk wallpaper */}
-      <div className="relative hidden lg:block p-4">
-        <div className="relative h-full w-full overflow-hidden rounded-3xl">
-          <Silk
-            speed={5}
-            scale={1}
-            color="#5B3FD6"
-            noiseIntensity={1.5}
-            rotation={0}
-          />
-          <div className="pointer-events-none absolute inset-0 text-white">
-            {/* Top-left: Birdy lockup */}
-            <div className="absolute left-8 top-8">
-              <span className="font-pd-display text-xl font-extrabold text-white ">Birdy</span>
-            </div>
-
-            {/* Centered hero */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
-              <h2 className="font-pd-display text-[64px] font-extrabold leading-[1] tracking-[-0.035em] ">
-                Join Birdy
-              </h2>
-              <p className="mt-5 max-w-md text-[19px] leading-relaxed text-white/85 ">
-                Start growing smarter campaigns, conversations, and conversions in minutes.
-              </p>
-            </div>
-
-            {/* Bottom-left */}
-            <span className="absolute bottom-10 left-8 max-w-xs text-sm leading-relaxed text-white/75 ">
-              Built for teams that move fast and close faster.
-            </span>
-
-            {/* Bottom-right */}
-            <span className="absolute bottom-10 right-10 text-sm font-medium tracking-wider text-white/80 ">
-              © Birdy 2026
-            </span>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email">Email address</Label>
+            <Input
+              type="email"
+              id="email"
+              value={formData.email}
+              onChange={handleChange}
+              size="lg"
+              placeholder="Enter your email"
+              required
+            />
           </div>
-        </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="password">Password</Label>
+            <PasswordInput
+              id="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Create a strong password"
+              required
+            />
+            <p className="text-xs text-muted-foreground">Must be at least 8 characters long</p>
+          </div>
+
+          {error && <Notice tone="danger" role="alert">{error}</Notice>}
+
+          <Button type="submit" variant="primary" size="lg" className="w-full" loading={isLoading}>
+            {isLoading ? "Creating account..." : "Create Account"}
+          </Button>
+        </form>
+
+        <p className="text-center text-xs text-muted-foreground">
+          By creating an account, you agree to our{" "}
+          <Link href="/billing/terms-of-service" className="text-primary hover:underline">Terms of Service</Link>{" "}
+          and{" "}
+          <Link href="/billing/privacy-policy" className="text-primary hover:underline">Privacy Policy</Link>
+        </p>
       </div>
-    </div>
+    </AuthLayout>
   )
 }

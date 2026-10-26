@@ -1,24 +1,31 @@
 "use client"
 import { Fragment, useEffect, useState, useMemo, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { ErrorBanner } from "@/components/ErrorBanner"
-import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { ArrowLeft, ArrowRight, Building2, Plus, Check, ChevronRight, Search, Download } from "lucide-react"
+import { ArrowLeft, ArrowRight, Plus, Check, Search, Download } from "lucide-react"
 import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
-import { useColumnViews } from "@/lib/useColumnViews"
+import {
+  Button,
+  DataTable,
+  DataTableColumnHeader,
+  Delta,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  EmptyState,
+  ErrorState,
+  Input,
+  Label,
+  MoneyCell,
+  PageHeader,
+  SegmentedTabs,
+  Skeleton,
+  StatusCell,
+  TwoLineCell,
+} from "@/components/ds"
+import { PeriodControl } from "@/app/dashboard/PeriodControl"
 import {
   activeGroups as selectActive,
   isActive,
@@ -28,66 +35,62 @@ import {
   healthCounts as countByHealth,
   HEALTH_VALUES,
 } from "@/lib/client-status"
-
-import {
-  ENHANCED_CLIENT_COLUMNS,
-  ENHANCED_CATEGORIES,
-  COLUMN_PRESETS,
-  COLUMN_MENU_SOURCES,
-  columnMenuSource,
-  buildDynamicColumns,
-  getTagCount
-} from '@/lib/enhanced-columns-config';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { ghlIcon as ghl, metaIcon as metaa, hpIcon as HP } from "@/lib/icons"
-import { Progress } from "@/components/ui/progress"
-import { flaskIcon as Flask } from "@/lib/icons"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
-import Image from "next/image"
-import StyledTable from "@/components/ui/table-container"
-import { PageTabPanel, PageTabs } from "@/components/portfolio"
-import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { usePageHeader } from "@/components/page-header"
-import ColumnsMenu from "@/components/views/ColumnsMenu"
-import { HealthPill } from "@/components/clients/HealthPill"
-import { metricTone } from "@/lib/metric-tone"
-import { usePageViews } from "@/lib/usePageViews"
+import { useCurrency } from "@/hooks/useCurrency"
 import getSymbolFromCurrency from "currency-symbol-map"
-
-import { STORAGE_KEYS, DEFAULT_DATE_PRESET } from "@/lib/constants"
+import { useColumnViews } from "@/lib/useColumnViews"
+import { usePageViews } from "@/lib/usePageViews"
+import ColumnsMenu from "@/components/views/ColumnsMenu"
+import { COLUMN_MENU_SOURCES } from "@/lib/enhanced-columns-config"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
-import { apiRequest, API_BASE_URL } from "@/lib/api"
+import { apiRequest } from "@/lib/api"
+import { cn } from "@/lib/utils"
 import { useClientGroups } from "@/lib/useClientGroups"
-import { isAwaitingFirstData } from "@/lib/client-loading"
+import { isAwaitingFirstData, isBeingCreated } from "@/lib/client-loading"
 import BulkImportDialog from "@/components/clients/BulkImportDialog"
 import { MetaCampaignPicker } from "@/components/clients/MetaCampaignPicker"
 import { MetaCampaignsDialog } from "@/components/clients/MetaCampaignsDialog"
 import { sharesMetaAccount, remainderOwner, unassignedText } from "@/lib/meta-scope"
 import { LEAD_SOURCE_OPTIONS, LEAD_SOURCE_UNKNOWN } from "@/lib/lead-sources"
+import { HEALTH_TONE, clientRows, statusOf } from "./presentation"
+import { DEFAULT_VISIBLE, catalogueColumns, catalogueValues, formatCell, readSavedView } from "./catalogue"
+import { usePreviousClientGroups } from "./usePreviousClientGroups"
 
-const STORAGE_KEY = STORAGE_KEYS.DEFAULT_CURRENCY
-
-// Ties the status tabs to the table they filter, for anyone navigating by role.
-const CLIENTS_PANEL_ID = "clients-table-panel"
+// The name column leads the table and stays on whatever the user picks.
+const LOCKED_COLUMNS = ["name"]
+const nameFirst = (ids) => ["name", ...ids.filter((id) => id !== "name")]
+// Where each curated column sits in the Columns menu; catalogue columns carry their own.
+const CURATED_SOURCES = { name: "birdy", status: "birdy", health: "birdy", leads: "meta", cpl: "meta", spend: "meta" }
 
 // The same question the bulk-import review step asks per row, kept in the same
 // order and wording so the two paths don't describe the same choice
 // differently. "unknown" leads deliberately: it is the default, and picking it
 // leaves the client behaving exactly as an unconfigured client always has.
 const LEAD_SOURCES = [LEAD_SOURCE_UNKNOWN, ...LEAD_SOURCE_OPTIONS]
+
+const WIZARD_STEPS = [
+  { num: 1, short: "Name", full: "Client Name" },
+  { num: 2, short: "GHL", full: "GHL" },
+  { num: 3, short: "Meta", full: "Meta" },
+  { num: 4, short: "Calls", full: "Sales Calls" },
+  { num: 5, short: "Leads", full: "Lead Source" },
+]
+
+// A selectable card in the wizard: white on the muted step panel, primary edge
+// and tint when chosen.
+const choiceClass = (selected) =>
+  cn(
+    "w-full rounded-surface border-2 p-4 text-left shadow-surface outline-none transition-colors focus-visible:shadow-control-focus",
+    selected ? "border-primary bg-primary-soft" : "border-transparent bg-background hover:border-border"
+  )
+
+const numericHeader = (title) =>
+  function NumericHeader({ column }) {
+    return <DataTableColumnHeader column={column} title={title} align="right" />
+  }
+
+const dash = <span className="num block text-right text-sm text-muted-foreground">—</span>
 
 export default function ClientsPage() {
   const router = useRouter()
@@ -102,7 +105,6 @@ export default function ClientsPage() {
     // Opts OUT of the per-day series: this page shows totals, never a trend
     // chart, and the three daily arrays are 6.38 MB of the response.
   } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
-  const [error, setError] = useState("")
   const [clientGroups, setClientGroups] = useState([])
   const [wizardOpen, setWizardOpen] = useState(false)
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
@@ -116,7 +118,6 @@ export default function ClientsPage() {
   const [clientGroupName, setClientGroupName] = useState("")
   const [ghlLocations, setGhlLocations] = useState([])
   const [metaAdAccounts, setMetaAdAccounts] = useState([])
-  const [hotProspectorGroups, setHotProspectorGroups] = useState([])
   const [selectedGhlLocation, setSelectedGhlLocation] = useState(null)
   const [newGhlLocationId, setNewGhlLocationId] = useState("")
   const [selectedMetaAdAccount, setSelectedMetaAdAccount] = useState(null)
@@ -127,26 +128,19 @@ export default function ClientsPage() {
   const [selectedHotProspectorGroup, setSelectedHotProspectorGroup] = useState(null)
   const [locationSearchQuery, setLocationSearchQuery] = useState("")
   const [metaSearchQuery, setMetaSearchQuery] = useState("")
-  const [hotProspectorSearchQuery, setHotProspectorSearchQuery] = useState("")
   const [addingClientGroup, setAddingClientGroup] = useState(false)
   // ── Step 4: call log provider ────────────────────────────────────────────
   // Credentials are account-wide and live in Settings → Integrations; the wizard
   // only records which provider feeds this client's call logs.
   const [callLogProvider, setCallLogProvider] = useState(null) // null | "ghl" | "hotprospector"
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  const [togglingRows, setTogglingRows] = useState(new Set())
 
   // ── Status filter ─────────────────────────────────────────────────────────
   // Opens on Active: the clients being worked on are what the hub is for, and
   // paused ones are a tab away.
   const [statusFilter, setStatusFilter] = useState("Active")
-  // Declared here rather than beside the table controls so the saved-view
-  // state memo below can depend on it.
-  const [searchQuery, setSearchQuery] = useState("")
 
   // Sync hook data → local state (local state allows optimistic updates)
   useEffect(() => {
-    if (fetchError) setError(fetchError)
     const groups = fetchedGroups.map(group => ({
       ...group,
       _isPending: group.status === "pending",
@@ -158,45 +152,54 @@ export default function ClientsPage() {
       _isSyncing: isAwaitingFirstData(group),
     }))
     setClientGroups(groups)
-  }, [fetchedGroups, fetchError])
+  }, [fetchedGroups])
 
-  const [progress, setProgress] = useState(0)
-  const [customMetrics, setCustomMetrics] = useState([]);
+  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
+  const [duplicateGroupName, setDuplicateGroupName] = useState("")
+  const { currency: userCurrency } = useCurrency("GBP")
+
+  // The agency's own formulas (shown on the Clients dashboard) are extra columns.
+  const [customMetrics, setCustomMetrics] = useState([])
   useEffect(() => {
     apiRequest("/api/custom-metrics").then(async res => {
       if (!res.ok) return
       const data = await res.json()
-      setCustomMetrics((data.custom_metrics || []).map(m => ({
-        id: m.id, name: m.name, description: m.description || "",
-        source: "Custom Formula", dashboard: (m.dashboards || []).join(", "),
-        dashboards: m.dashboards || [], formula: m.formula_display || "",
+      const metrics = (data.custom_metrics || []).map(m => ({
+        id: m.id, name: m.name, dashboards: m.dashboards || [],
         formulaParts: m.formula_parts || [], formatType: m.format_type || "integer",
-        displayOnDashboard: true, category: "custom", enabled: true,
-      })))
+        enabled: true,
+      }))
+      // Nothing to add is not a change: a new empty array would rebuild the columns.
+      if (metrics.length > 0) setCustomMetrics(metrics)
     }).catch(() => {})
   }, [])
-  const [clientLimitDialogOpen, setClientLimitDialogOpen] = useState(false)
-  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false)
-  const [duplicateGroupName, setDuplicateGroupName] = useState("")
-  const [userCurrency, setUserCurrency] = useState(() => {
-    try { return localStorage.getItem(STORAGE_KEY) ?? null; } catch { return null; }
-  });
-  const [currencyLoading, setCurrencyLoading] = useState(true);
-  const { savedColumns, saveView: saveToDB, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
+
+  // The per-user column layout: a flat ordered list of ids, read here and
+  // written when the Columns menu saves ("Save to existing"), the toolbar's
+  // "Save columns" is pressed, or a header is dragged (debounced auto-save).
+  const { savedColumns, saveView, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
+  const savedView = useMemo(() => (viewsLoaded ? readSavedView(savedColumns) : null), [viewsLoaded, savedColumns])
+  // The columns on screen, in order. Name leads and cannot be removed; choices
+  // sit on top of the saved view or the default until they are saved.
+  const [visibleIds, setVisibleIdsRaw] = useState(DEFAULT_VISIBLE)
+  const setVisibleIds = useCallback((ids) => setVisibleIdsRaw(nameFirst(ids)), [])
+  useEffect(() => {
+    if (savedView) setVisibleIds(savedView.order)
+  }, [savedView, setVisibleIds])
 
   // ── Filter groups by status ───────────────────────────────────────────────
-  // The design's six tabs mix two axes — Active/Inactive are status, and
+  // The six tabs mix two axes — Active/Inactive are status, and
   // Healthy/Warning/Critical are health — so one selection resolves against
   // whichever axis the chosen tab belongs to. The health tabs read as a
   // breakdown of the Active tab, so they only ever consider active clients:
   // an inactive client's health says nothing about a live account.
-  const filteredByStatus = useMemo(
-    () => clientGroups.filter(g =>
+  const inTab = useCallback(
+    (g) =>
       HEALTH_VALUES.includes(statusFilter)
         ? isActive(g) && matchesHealthFilter(g, statusFilter)
-        : matchesStatusFilter(g, statusFilter)
-    ),
-    [clientGroups, statusFilter],
+        : matchesStatusFilter(g, statusFilter),
+    [statusFilter],
   )
 
   // ── Status counts for filter badges ───────────────────────────────────────
@@ -206,196 +209,192 @@ export default function ClientsPage() {
     [clientGroups],
   )
 
-  // Build dynamic columns when filteredByStatus changes
-  const columns = useMemo(() => {
-    console.log("🔄 Rebuilding columns with", filteredByStatus.length, "client groups");
+  // ── Table rows ────────────────────────────────────────────────────────────
+  const { groups: previousGroups, comparison } = usePreviousClientGroups(selectedDateRange)
+  // Extra columns on offer: the catalogue, a column per GHL tag, the agency's formulas.
+  const extraColumns = useMemo(() => catalogueColumns(clientGroups, customMetrics), [clientGroups, customMetrics])
+  const symbol = getSymbolFromCurrency(userCurrency) || "$"
 
-    const dynamicColumns = buildDynamicColumns(filteredByStatus);
-    console.log("📊 Dynamic columns built:", dynamicColumns.length, "total columns");
+  // Every client, once; the tab only decides which of them show. Keeping the
+  // data (and so the columns) stable across tabs keeps sort and paging intact.
+  const allRows = useMemo(
+    () =>
+      clientRows(clientGroups, previousGroups, comparison)
+        // Biggest spenders first, which is how the table has always opened.
+        .sort((a, b) => (b.spend ?? -1) - (a.spend ?? -1))
+        .map((row) => ({ ...row, values: catalogueValues(row.group, extraColumns) })),
+    [clientGroups, previousGroups, comparison, extraColumns],
+  )
+  const rows = useMemo(() => allRows.filter((row) => inTab(row.group)), [allRows, inTab])
 
-    // Add custom formula metrics
-    const custom = customMetrics
-      .filter((m) => m.enabled && (m.dashboards?.includes("clients") || m.dashboard === "Clients"))
-      .map((m) => ({
-        id: m.id,
-        label: m.name,
-        visible: true,
-        sortable: true,
-        category: 'formulas',
-        type: 'formula',
-        icons: Flask,
-      }));
-
-    // Health — a stored per-client choice rather than anything measured, so it
-    // is injected here instead of living in the metric column config.
-    const health = {
-      id: "health",
-      label: "Health",
-      visible: true,
-      sortable: true,
-      category: "core",
-      type: "data",
-      cell: (_v, row) => <HealthPill health={row?.health} withDot={false} />,
-    };
-
-    // Cost per lead reads against the client's own target rather than a
-    // threshold nobody chose — £9 is good or bad depending entirely on what
-    // they set out to pay. Uncoloured where no target exists.
-    //
-    // A `cell` of its own opts the column out of the table's formatting, so the
-    // currency symbol every other cost column gets is added back here — without
-    // it the column read "9.00", a cost with no currency on it.
-    const withTone = (list) => list.map((col) =>
-      col.id === "cost_per_lead"
-        ? {
-            ...col,
-            cell: (value, row) => (
-              <span className={metricTone(value, row?.targets?.cpl, "lower")}>
-                {value == null || !Number.isFinite(Number(value)) || Number(value) === 0
-                  ? "—"
-                  : `${getSymbolFromCurrency(userCurrency) || "$"}${Number(value).toLocaleString(undefined, {
-                      minimumFractionDigits: 2, maximumFractionDigits: 2,
-                    })}`}
-              </span>
-            ),
-          }
-        : col
-    );
-
-    // Combine and deduplicate — health sits directly after the name column,
-    // where the design puts it.
-    const seen = new Set();
-    const [rawNameCol, ...restDynamic] = withTone(dynamicColumns);
-    // Beside the name: campaigns of a shared Meta account no client owns yet.
-    const nameCol = rawNameCol?.id === "name" && !rawNameCol.cell ? {
-      ...rawNameCol,
-      cell: (value, row) => {
-        const name = String(value ?? "—")
-          .split(" ")
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-          .join(" ");
-        const group = row?.original ?? row;
-        const nudge = unassignedText(group?.meta_scope);
-        // Stacked under the name so a long badge never squeezes it.
-        return nudge ? (
-          <span className="flex min-w-0 flex-col items-start gap-0.5">
-            <span className="max-w-full truncate">{name}</span>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setAssignGroup(group); }}
-              title={nudge}
-              aria-label={`${nudge} · Assign`}
-              className="whitespace-nowrap rounded-full bg-pd-warning-bg px-2 py-0.5 text-[10px] font-medium text-pd-amber hover:underline focus-visible:underline focus-visible:outline-none"
-            >
-              {group.meta_scope.unassigned.length} unassigned · <span className="font-semibold text-pd-primary">Assign</span>
-            </button>
-          </span>
-        ) : name;
+  const columns = useMemo(
+    () => [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "Client",
+        enableHiding: false,
+        meta: { label: "Clients", variant: "text" },
+        cell: ({ row }) => {
+          const { name, group } = row.original
+          // Beside the name: campaigns of a shared Meta account no client owns yet.
+          const nudge = unassignedText(group?.meta_scope)
+          return (
+            <TwoLineCell
+              primary={name}
+              secondary={
+                nudge ? (
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setAssignGroup(group) }}
+                    title={nudge}
+                    aria-label={`${nudge} · Assign`}
+                    className="whitespace-nowrap rounded-sm bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-ink outline-none hover:underline focus-visible:shadow-control-focus"
+                  >
+                    {group.meta_scope.unassigned.length} unassigned · <span className="font-semibold text-primary">Assign</span>
+                  </button>
+                ) : undefined
+              }
+            />
+          )
+        },
       },
-    } : rawNameCol;
-    const all = nameCol
-      ? [nameCol, health, ...restDynamic, ...custom]
-      : [health, ...dynamicColumns, ...custom];
-    const deduplicated = all.filter((col) => {
-      if (seen.has(col.id)) return false;
-      seen.add(col.id);
-      return true;
-    });
-
-    console.log("✅ Final columns:", deduplicated.length);
-    return deduplicated;
-  }, [customMetrics, filteredByStatus, userCurrency]);
-
-  const [columnVisibility, setColumnVisibility] = useState(() => {
-    const map = {};
-    columns.forEach((c) => (map[c.id] = c.visible));
-    return map;
-  });
-  // The saved view is a flat ordered array — its sequence implies BOTH which
-  // columns are visible (those present) AND the order they should render in.
-  const [columnOrder, setColumnOrder] = useState([])
-
-  useEffect(() => {
-    if (!viewsLoaded || !savedColumns) return
-    setColumnVisibility(prev => {
-      const updated = { ...prev }
-      Object.keys(updated).forEach(k => { updated[k] = false })
-      savedColumns.forEach(id => { updated[id] = true })
-      return updated
-    })
-    // Hydrate column order from the saved sequence
-    if (Array.isArray(savedColumns) && savedColumns.length > 0) {
-      setColumnOrder(savedColumns)
-    }
-  }, [viewsLoaded, savedColumns])
-
-  useEffect(() => {
-    setColumnVisibility((prev) => {
-      const updated = { ...prev };
-      columns.forEach((col) => {
-        if (!(col.id in updated)) {
-          updated[col.id] = col.visible;
+      {
+        id: "status",
+        accessorFn: (row) => statusOf(row).label,
+        header: "Status",
+        meta: { label: "Status" },
+        cell: ({ row }) => {
+          const { label, tone } = statusOf(row.original)
+          return <StatusCell label={label} tone={tone} />
+        },
+      },
+      {
+        id: "health",
+        accessorKey: "health",
+        header: "Health",
+        meta: { label: "Health" },
+        cell: ({ row }) => <StatusCell label={row.original.health} tone={HEALTH_TONE[row.original.health]} />,
+      },
+      {
+        id: "leads",
+        accessorFn: (row) => row.leads ?? undefined,
+        header: numericHeader("Leads"),
+        meta: { label: "Leads" },
+        cell: ({ row }) =>
+          row.original.leads == null ? dash : (
+            <span className="num block text-right text-sm text-foreground">
+              {Math.round(row.original.leads).toLocaleString("en-GB")}
+            </span>
+          ),
+      },
+      {
+        id: "cpl",
+        accessorFn: (row) => row.cpl ?? undefined,
+        header: numericHeader("Cost per lead"),
+        meta: { label: "Cost per lead" },
+        cell: ({ row }) => {
+          const { cpl, cplDelta, currency } = row.original
+          if (cpl == null) return dash
+          return (
+            <MoneyCell
+              value={cpl}
+              currency={currency || userCurrency}
+              sub={cplDelta != null ? <Delta change={cplDelta} goodWhen="down" /> : undefined}
+            />
+          )
+        },
+      },
+      {
+        id: "spend",
+        accessorFn: (row) => row.spend ?? undefined,
+        header: numericHeader("Ad spend"),
+        meta: { label: "Ad spend" },
+        cell: ({ row }) =>
+          row.original.spend == null ? dash : (
+            <MoneyCell value={row.original.spend} currency={row.original.currency || userCurrency} />
+          ),
+      },
+      ...extraColumns.map((col) => {
+        const numeric = !col.text
+        return {
+          id: col.id,
+          accessorFn: (row) => row.values?.[col.id] ?? undefined,
+          header: numeric ? numericHeader(col.label) : col.label,
+          meta: { label: col.label },
+          enableSorting: col.sortable,
+          cell: ({ row }) => {
+            const text = formatCell(col.id, row.original.values?.[col.id], { symbol, custom: col.custom })
+            return numeric ? <span className="num block text-right text-sm text-foreground">{text}</span> : <span className="text-sm text-foreground">{text}</span>
+          },
         }
-      });
-      return updated;
-    });
-  }, [columns]);
-
-  // ── Saved column views ───────────────────────────────────────────────
-  // This page tracks visibility as an id→bool map; the Columns menu speaks in
-  // ordered id arrays, so translate at the boundary. "name" is not toggleable
-  // and stays on regardless of what a view carries.
-  const visibleColumnIds = useMemo(
-    () => columns.filter(c => columnVisibility[c.id]).map(c => c.id),
-    [columns, columnVisibility]
+      }),
+    ],
+    [userCurrency, symbol, extraColumns],
   )
 
-  const setVisibleColumnIds = useCallback((ids) => {
-    const on = new Set([...ids, "name"])
-    setColumnVisibility(prev => {
-      const updated = { ...prev }
-      Object.keys(updated).forEach(k => { updated[k] = on.has(k) })
-      return updated
-    })
-  }, [])
+  // Shown columns in their saved order (the name column always leads), then
+  // the rest as catalogued. The Columns menu owns visibility, so the table's
+  // own View picker has nothing to offer.
+  const orderedColumns = useMemo(() => {
+    const rank = new Map(visibleIds.map((id, i) => [id, i]))
+    return columns
+      .map((c) => ({ ...c, enableHiding: false }))
+      .sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity))
+  }, [columns, visibleIds])
 
-  // Explicit save only — "Save to existing" in the Columns menu writes the
-  // page's own layout, which is what brings these columns back next visit.
-  const saveDefaultColumns = useCallback(async (ids) => {
-    const on = new Set([...ids, "name"])
-    const known = new Set(columnOrder)
-    const ordered = columnOrder.length
-      ? [...columnOrder.filter(id => on.has(id)), ...[...on].filter(id => !known.has(id))]
-      : columns.filter(c => on.has(c.id)).map(c => c.id)
-    await saveToDB(ordered)
+  // Every column gets an explicit answer: the table would show an unknown one.
+  const columnVisibility = useMemo(
+    () => Object.fromEntries(orderedColumns.map((c) => [c.id, visibleIds.includes(c.id)])),
+    [orderedColumns, visibleIds],
+  )
+
+  const columnCatalogue = useMemo(() => {
+    const sources = new Map(extraColumns.map((c) => [c.id, c.source]))
+    return columns.map((c) => ({
+      id: c.id,
+      label: c.id === "name" ? "Client" : c.meta.label,
+      source: CURATED_SOURCES[c.id] ?? sources.get(c.id) ?? "birdy",
+    }))
+  }, [columns, extraColumns])
+
+  // "Save to existing" in the menu writes the page's own layout.
+  const saveColumns = useCallback(async (ids = visibleIds) => {
+    await saveView(nameFirst(ids))
     return true
-  }, [columnOrder, columns, saveToDB])
+  }, [saveView, visibleIds])
 
-  const defaultColumnIds = useMemo(
-    () => columns.filter(c => c.visible).map(c => c.id),
-    [columns]
-  )
+  // Dragging a header onto another moves it there. The order is the visible
+  // list, so it auto-saves the way the pre-migration table saved a reorder
+  // (debounced, so a flurry of drags is one request).
+  const reorderColumn = useCallback((fromId, toId) => {
+    // Until the saved layout has loaded, the columns on screen are the default:
+    // saving them would overwrite the user's layout with it.
+    if (!viewsLoaded) return
+    const from = visibleIds.indexOf(fromId)
+    const to = visibleIds.indexOf(toId)
+    if (from < 0 || to < 0 || LOCKED_COLUMNS.includes(fromId) || LOCKED_COLUMNS.includes(toId)) return
+    const moved = visibleIds.filter((id) => id !== fromId)
+    moved.splice(moved.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    const next = nameFirst(moved)
+    setVisibleIds(next)
+    saveViewDebounced(next)
+  }, [viewsLoaded, visibleIds, setVisibleIds, saveViewDebounced])
 
   const applyColumnView = useCallback((s) => {
-    if (Array.isArray(s.visibleColumns)) setVisibleColumnIds(s.visibleColumns)
-  }, [setVisibleColumnIds])
+    if (Array.isArray(s.visibleColumns)) setVisibleIds(s.visibleColumns)
+  }, [setVisibleIds])
 
   const pageViews = usePageViews("clients", {
     onApply: applyColumnView,
-    // Hold the default view until the legacy column layout has loaded and
-    // applied, so it can't be clobbered a tick later.
+    // Hold the default view until the saved layout has loaded and applied.
     ready: viewsLoaded,
   })
 
-  const columnCatalogue = useMemo(
-    () => columns
-      .filter(c => c.id !== 'name')
-      .map(c => ({
-        id: c.id,
-        label: c.label ?? c.id,
-        source: columnMenuSource(c),
-      })),
-    [columns]
+  // Whether the columns on screen differ from what is saved (or the default).
+  const columnsChanged = useMemo(
+    () => visibleIds.join() !== nameFirst(savedView ? savedView.order : DEFAULT_VISIBLE).join(),
+    [visibleIds, savedView],
   )
 
   useEffect(() => {
@@ -412,7 +411,6 @@ export default function ClientsPage() {
         const cached = getCachedData("ghlLocations")
         if (cached) {
           setGhlLocations(cached)
-          console.log("[v0] Using cached GHL locations:", cached.length)
           return
         }
       }
@@ -423,7 +421,6 @@ export default function ClientsPage() {
         const data = await response.json()
         const locations = data.locations || []
         setGhlLocations(locations)
-        console.log("[v0] Fetched fresh GHL locations:", locations.length)
         if (locations.length === 0) {
           toast.warning("No GHL locations found. Please enter a location ID or skip this step.")
         }
@@ -432,12 +429,12 @@ export default function ClientsPage() {
         toast.error(errorData.detail || "Failed to fetch GHL locations")
       }
     } catch (err) {
-      console.error("[v0] Error fetching GHL locations:", err)
+      console.error("Error fetching GHL locations:", err)
       toast.error("Failed to fetch GHL locations")
     }
   }
 
-  const fetchMetaAdAccounts = async (forceRefresh = false) => {
+  const fetchMetaAdAccounts = async () => {
     try {
       const response = await apiRequest("/api/facebook/adaccounts")
 
@@ -445,51 +442,12 @@ export default function ClientsPage() {
         const data = await response.json()
         const accounts = data.data?.data || []
         setMetaAdAccounts(accounts)
-        console.log("[v0] Fetched fresh Meta ad accounts:", accounts.length)
       } else {
         toast.error("Failed to fetch Meta ad accounts")
       }
     } catch (err) {
-      console.error("[v0] Error fetching Meta ad accounts:", err)
+      console.error("Error fetching Meta ad accounts:", err)
       toast.error("Failed to fetch Meta ad accounts")
-    }
-  }
-
-  const handleRefresh = () => {
-    setIsRefreshing(true)
-    invalidateClientGroups()
-    toast.success("Client groups refreshed")
-    setIsRefreshing(false)
-  }
-
-  // ── Status toggle handler ────────────────────────────────────────────────
-  const handleStatusToggle = async (groupId, currentStatus) => {
-    const newStatus = String(currentStatus).toLowerCase() === "active" ? "Inactive" : "Active"
-
-    setTogglingRows(prev => new Set(prev).add(groupId))
-
-    try {
-      const res = await apiRequest(`/api/client-groups/${groupId}/client-status`, {
-        method: "PATCH",
-        body: JSON.stringify({ client_status: newStatus }),
-      })
-
-      if (res.ok) {
-        setClientGroups(prev => prev.map(g =>
-          g.id === groupId ? { ...g, client_status: newStatus } : g
-        ))
-        toast.success(`Client marked as ${newStatus}`)
-      } else {
-        toast.error("Failed to update client status")
-      }
-    } catch {
-      toast.error("Failed to update client status")
-    } finally {
-      setTogglingRows(prev => {
-        const next = new Set(prev)
-        next.delete(groupId)
-        return next
-      })
     }
   }
 
@@ -558,7 +516,6 @@ export default function ClientsPage() {
     setSelectedHotProspectorGroup(null)
     setLocationSearchQuery("")
     setMetaSearchQuery("")
-    setHotProspectorSearchQuery("")
     setCallLogProvider(null)
     const creatingLeadSource = leadSource
     setLeadSource("unknown")
@@ -566,10 +523,6 @@ export default function ClientsPage() {
     toast.info(`Creating "${creatingGroupName}"...`)
 
     setAddingClientGroup(true)
-    setProgress(10)
-    const progressInterval = setInterval(() => {
-      setProgress(prev => (prev >= 95 ? prev : prev + 5))
-    }, 500)
 
     try {
       const response = await apiRequest("/api/client-groups", {
@@ -586,9 +539,6 @@ export default function ClientsPage() {
           notes: "",
         }),
       });
-
-      clearInterval(progressInterval)
-      setProgress(100)
 
       if (response.ok) {
         const data = await response.json()
@@ -626,8 +576,7 @@ export default function ClientsPage() {
         }
       }
     } catch (err) {
-      clearInterval(progressInterval)
-      console.error("[v0] Error creating client group:", err)
+      console.error("Error creating client group:", err)
 
       setClientGroups(prev => prev.filter(group => group.id !== tempId))
 
@@ -637,8 +586,10 @@ export default function ClientsPage() {
     }
   }
 
-  const handleClientGroupClick = (group) => {
-    router.push(`/clients/${group.id}`)
+  const handleClientGroupClick = (row) => {
+    // A client still being wired up has nothing to open yet.
+    if (isBeingCreated(row.group)) return
+    router.push(`/clients/${row.id}`)
   }
 
   const filteredGhlLocations = ghlLocations.filter(
@@ -653,48 +604,49 @@ export default function ClientsPage() {
       acc.id?.toLowerCase().includes(metaSearchQuery.toLowerCase()),
   )
 
-  const filteredHotProspectorGroups = hotProspectorGroups.filter(
-    (group) =>
-      group.name?.toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()) ||
-      String(group.id).toLowerCase().includes(hotProspectorSearchQuery.toLowerCase()),
-  )
-
-  // ── Calculate stats from ALL groups (unfiltered) ──────────────────────────
-  // ── Filter tab config ─────────────────────────────────────────────────────
-
-  // Title and the date filter belong in the global top bar, which is where the
-  // design puts them and where every other hub already publishes them.
-  // Memoised: publishing sets state on the provider above, so a fresh object
-  // each render would republish each render.
-  const pageHeader = useMemo(
-    () => ({
-      title: (
-        <SalesHubHeaderTitle
-          title="Client Hub"
-          subtitle="Health and performance across every connected client"
-        />
-      ),
-      controls: (
-        <div className="hidden items-center gap-2 md:flex">
-          <DateRangeSelect value={selectedDateRange} onChange={setSelectedDateRange} />
-        </div>
-      ),
-    }),
-    [selectedDateRange, setSelectedDateRange]
-  )
-  usePageHeader(pageHeader)
+  // The page's own title is in the PageHeader below; the top bar only names the page.
+  const topBar = useMemo(() => ({ title: "Clients" }), [])
+  usePageHeader(topBar)
 
   const filterTabs = [
-    { key: "Active", label: "Active", count: statusCounts.active },
-    { key: "Healthy", label: "Healthy", count: healthCounts.healthy },
-    { key: "Warning", label: "Warning", count: healthCounts.warning },
-    { key: "Critical", label: "Critical", count: healthCounts.critical },
-    { key: "Inactive", label: "Inactive", count: statusCounts.inactive },
-    { key: "all", label: "All Clients", count: statusCounts.all },
+    { value: "Active", label: "Active", count: statusCounts.active },
+    { value: "Healthy", label: "Healthy", count: healthCounts.healthy },
+    { value: "Warning", label: "Warning", count: healthCounts.warning },
+    { value: "Critical", label: "Critical", count: healthCounts.critical },
+    { value: "Inactive", label: "Inactive", count: statusCounts.inactive },
+    { value: "all", label: "All Clients", count: statusCounts.all },
   ]
 
+  const openAddClient = useCallback(() => setWizardOpen(true), [])
+  const tabLabel = filterTabs.find((t) => t.value === statusFilter)?.label ?? "matching"
+
+  const addClientButton = (
+    <Button variant="primary" onClick={openAddClient}>
+      <Plus />
+      Add client
+    </Button>
+  )
+
   return (
-    <SalesHubShell>
+    <div className="flex min-w-0 flex-col gap-6">
+      <PageHeader
+        title="Clients"
+        description="Health and performance across every connected client"
+        period={<PeriodControl value={selectedDateRange} onChange={setSelectedDateRange} />}
+        actions={
+          <>
+            {/* Bulk import stays available after onboarding. Agencies win
+                clients continuously, and adding five of them one at a time
+                through the five-step wizard means re-picking the same GHL and
+                Meta accounts by hand five times. */}
+            <Button onClick={() => setBulkImportOpen(true)} aria-label="Import clients from GoHighLevel">
+              <Download />
+              <span className="hidden sm:inline">Import</span>
+            </Button>
+            {addClientButton}
+          </>
+        }
+      />
 
       {/* Add client dialog */}
       <Dialog
@@ -712,51 +664,47 @@ export default function ClientsPage() {
             setSelectedHotProspectorGroup(null)
             setLocationSearchQuery("")
             setMetaSearchQuery("")
-            setHotProspectorSearchQuery("")
             setCallLogProvider(null)
           }
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[95vh] overflow-y-auto overflow-x-hidden p-4 md:p-6">
+        <DialogContent size="lg">
           {/* sr-only title so Radix Dialog has accessible labelling */}
           <DialogHeader className="sr-only">
             <DialogTitle>Birdy Linking Wizard</DialogTitle>
+            <DialogDescription>Link a new client to GoHighLevel, Meta and your call provider.</DialogDescription>
           </DialogHeader>
 
           <div className="w-full py-2">
-            <div className="w-full max-w-xl mx-auto space-y-6 flex flex-col">
+            <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
               {/* ── Top stepper (responsive) ────────────────────── */}
               <div className="w-full overflow-hidden">
-                <div className="flex items-start gap-1 sm:gap-2 w-full">
-                  {[
-                    { num: 1, short: "Name", full: "Client Name" },
-                    { num: 2, short: "GHL", full: "GHL" },
-                    { num: 3, short: "Meta", full: "Meta" },
-                    { num: 4, short: "Calls", full: "Sales Calls" },
-                    { num: 5, short: "Leads", full: "Lead Source" },
-                  ].map((s, i, arr) => (
+                <div className="flex w-full items-start gap-1 sm:gap-2">
+                  {WIZARD_STEPS.map((s, i, arr) => (
                     <Fragment key={s.num}>
-                      <div className="flex flex-col items-center flex-shrink-0">
+                      <div className="flex shrink-0 flex-col items-center">
                         <div
-                          className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium transition-all duration-300 ${wizardStep > s.num
-                            ? "stepper-completed"
-                            : wizardStep === s.num
-                              ? "stepper-active"
-                              : "stepper-pending"
-                            }`}
-                        >
-                          {wizardStep > s.num
-                            ? <Check className="w-4 h-4 sm:w-5 sm:h-5" />
-                            : <span>{s.num}</span>}
-                        </div>
-                        <div className="mt-2 text-center px-1">
-                          <div
-                            className={`text-[10px] sm:text-xs md:text-sm font-medium transition-colors whitespace-nowrap ${wizardStep > s.num
-                              ? "text-pd-success"
+                          className={cn(
+                            "num flex size-8 items-center justify-center rounded-full text-sm font-medium transition-colors duration-300 sm:size-10",
+                            wizardStep > s.num
+                              ? "bg-success-soft text-success-ink"
                               : wizardStep === s.num
-                                ? "text-pd-primary"
-                                : "text-pd-subtle"
-                              }`}
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          {wizardStep > s.num ? <Check className="size-4 sm:size-5" /> : <span>{s.num}</span>}
+                        </div>
+                        <div className="mt-2 px-1 text-center">
+                          <div
+                            className={cn(
+                              "whitespace-nowrap text-xs font-medium transition-colors sm:text-sm",
+                              wizardStep > s.num
+                                ? "text-success-ink"
+                                : wizardStep === s.num
+                                  ? "text-primary"
+                                  : "text-muted-foreground"
+                            )}
                           >
                             <span className="sm:hidden">{s.short}</span>
                             <span className="hidden sm:inline">{s.full}</span>
@@ -764,10 +712,12 @@ export default function ClientsPage() {
                         </div>
                       </div>
                       {i < arr.length - 1 && (
-                        <div className="flex-1 min-w-[8px] mt-[14px] sm:mt-5">
+                        <div className="mt-4 min-w-2 flex-1 sm:mt-5">
                           <div
-                            className={`h-0.5 rounded-full transition-all duration-500 ${wizardStep > s.num ? "bg-pd-success" : "bg-pd-border"
-                              }`}
+                            className={cn(
+                              "h-0.5 rounded-full transition-colors duration-500",
+                              wizardStep > s.num ? "bg-success" : "bg-border"
+                            )}
                           />
                         </div>
                       )}
@@ -776,21 +726,18 @@ export default function ClientsPage() {
                 </div>
               </div>
 
-              {/* ── Card-wrapped step content ──────────────────── */}
-              <div
-                key={wizardStep}
-                className="rounded-xl border border-pd-border bg-pd-surface text-pd-ink animate-slide-in"
-              >
-                <div className="p-6 md:p-8 space-y-6">
+              {/* ── Step content ──────────────────── */}
+              <div key={wizardStep} className="rounded-frame bg-frame text-foreground">
+                <div className="flex flex-col gap-6 p-6 md:p-8">
                   {/* === Step 1: Client name === */}
                   {wizardStep === 1 && (
-                    <div className="max-w-md mx-auto space-y-4">
-                      <div className="text-center space-y-2">
-                        <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Name your client group</h2>
-                        <p className="text-pd-subtle">A short label you'll use to find this client later.</p>
+                    <div className="mx-auto flex w-full max-w-md flex-col gap-4">
+                      <div className="flex flex-col gap-2 text-center">
+                        <h2 className="text-xl font-semibold">Name your client group</h2>
+                        <p className="text-muted-foreground">A short label you&apos;ll use to find this client later.</p>
                       </div>
-                      <div className="space-y-2 text-left">
-                        <label className="text-sm font-medium leading-none" htmlFor="client-group-name">Client Group Name</label>
+                      <div className="flex flex-col gap-2 text-left">
+                        <Label htmlFor="client-group-name">Client Group Name</Label>
                         <Input
                           id="client-group-name"
                           type="text"
@@ -806,345 +753,287 @@ export default function ClientsPage() {
                           add. Adding five here means walking five steps five
                           times and re-picking the same GHL and Meta accounts
                           by hand; the import table does all five at once. */}
-                      <div className="pt-2 border-t border-pd-border">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setWizardOpen(false)
-                            setBulkImportOpen(true)
-                          }}
-                          className="w-full flex items-center gap-3 p-3 rounded-xl border border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
-                        >
-                          <Download className="w-4 h-4 text-pd-primary shrink-0" />
-                          <span>
-                            <span className="block text-sm font-medium text-pd-ink">
-                              Adding more than one?
-                            </span>
-                            <span className="block text-xs text-pd-subtle">
-                              Import them together from GoHighLevel.
-                            </span>
-                          </span>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-            {wizardStep === 2 && (
-              <div className="space-y-4">
-                <div className="text-center space-y-2">
-                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Link a GoHighLevel subaccount</h2>
-                  <p className="text-pd-subtle">Pick the GHL location for this client&apos;s contacts &amp; opportunities.</p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="Search GHL locations by name or ID..."
-                    value={locationSearchQuery}
-                    onChange={(e) => setLocationSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-3"
-                  />
-                </div>
-                <div className="space-y-2 max-h-80 overflow-y-auto">
-                  {filteredGhlLocations.length > 0 ? (
-                    filteredGhlLocations.map((location) => (
-                      <div
-                        key={location.locationId}
+                      <button
+                        type="button"
                         onClick={() => {
-                          setSelectedGhlLocation(location)
-                          setNewGhlLocationId("")
+                          setWizardOpen(false)
+                          setBulkImportOpen(true)
                         }}
-                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${selectedGhlLocation?.locationId === location.locationId
-                          ? "border-pd-primary bg-pd-primary-tint"
-                          : "border-pd-border hover:border-pd-border-strong bg-pd-surface"
-                          }`}
+                        className={cn(choiceClass(false), "flex items-center gap-3")}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3
-                                className={`font-pd-display font-semibold truncate ${selectedGhlLocation?.locationId === location.locationId
-                                  ? "text-pd-primary"
-                                  : "text-pd-ink"
-                                  }`}
-                              >
-                                {location.name || "Unnamed Location"}
-                              </h3>
-                            </div>
-                            <p
-                              className={`text-xs font-mono truncate ${selectedGhlLocation?.locationId === location.locationId
-                                ? "text-pd-primary"
-                                : "text-pd-subtle"
-                                }`}
-                            >
-                              ID: {location.locationId}
-                            </p>
-                          </div>
-                          <div
-                            className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedGhlLocation?.locationId === location.locationId
-                              ? "bg-pd-primary border-pd-primary"
-                              : "border-pd-border group-hover:border-pd-border-strong"
-                              }`}
-                          >
-                            {selectedGhlLocation?.locationId === location.locationId && (
-                              <Check className="w-3 h-3 text-white" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="space-y-2" aria-busy="true" aria-label="Loading GHL Locations">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex items-start justify-between rounded-xl border-2 border-pd-border p-4">
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-4 w-1/2" />
-                            <Skeleton className="h-3 w-1/3" />
-                          </div>
-                          <Skeleton className="ml-3 size-5 rounded-full" />
-                        </div>
-                      ))}
+                        <Download className="size-4 shrink-0 text-primary" />
+                        <span>
+                          <span className="block text-sm font-medium">Adding more than one?</span>
+                          <span className="block text-xs text-muted-foreground">Import them together from GoHighLevel.</span>
+                        </span>
+                      </button>
                     </div>
                   )}
-                </div>
-                {(selectedGhlLocation || newGhlLocationId) && (
-                  <div className="mt-4 p-3 bg-pd-primary-tint rounded-xl border border-pd-primary-pale">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-pd-primary" />
-                      <span className="text-sm font-medium text-pd-primary">
-                        Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-            {wizardStep === 3 && (
-              <div className="space-y-4">
-                <div className="text-center space-y-2">
-                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Link a Meta ad account</h2>
-                  <p className="text-pd-subtle">Pick the ad account for this client&apos;s campaigns &amp; spend.</p>
-                </div>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-pd-faint w-4 h-4" />
-                  <Input
-                    type="text"
-                    placeholder="Search Meta ad accounts by name or ID..."
-                    value={metaSearchQuery}
-                    onChange={(e) => setMetaSearchQuery(e.target.value)}
-                    className="pl-10 pr py-3"
-                  />
-                </div>
-                <div className="space-y-2 max-h-80 overflow-y-auto ">
-                  {filteredMetaAdAccounts.length > 0 ? (
-                    filteredMetaAdAccounts.map((account) => (
-                      <div
-                        key={account.id}
-                        onClick={() => {
-                          if (selectedMetaAdAccount?.id === account.id) return
-                          setSelectedMetaAdAccount(account)
-                          setMetaCampaignIds(sharesMetaAccount(clientGroups, account.id) ? [] : null)
-                        }}
-                        className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 group ${selectedMetaAdAccount?.id === account.id
-                          ? "border-pd-primary bg-pd-primary-tint"
-                          : "border-pd-border hover:border-pd-border-strong bg-pd-surface"
-                          }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3
-                                className={`font-pd-display font-semibold truncate ${selectedMetaAdAccount?.id === account.id
-                                  ? "text-pd-primary"
-                                  : "text-pd-ink"
-                                  }`}
-                              >
-                                {account.name || "Unnamed Ad Account"}
-                              </h3>
-                            </div>
-                            <p
-                              className={`text-xs font-mono truncate ${selectedMetaAdAccount?.id === account.id
-                                ? "text-pd-primary"
-                                : "text-pd-subtle"
-                                }`}
-                            >
-                              ID: {account.id}
-                            </p>
-                          </div>
-                          <div
-                            className={`ml-3 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 ${selectedMetaAdAccount?.id === account.id
-                              ? "bg-pd-primary border-pd-primary"
-                              : "border-pd-border group-hover:border-pd-border-strong"
-                              }`}
-                          >
-                            {selectedMetaAdAccount?.id === account.id && (
-                              <Check className="w-3 h-3 text-white" />
-                            )}
-                          </div>
-                        </div>
+
+                  {wizardStep === 2 && (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2 text-center">
+                        <h2 className="text-xl font-semibold">Link a GoHighLevel subaccount</h2>
+                        <p className="text-muted-foreground">Pick the GHL location for this client&apos;s contacts &amp; opportunities.</p>
                       </div>
-                    ))
-                  ) : (
-                    <div className="space-y-2" aria-busy="true" aria-label="Loading Meta Adaccounts">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <div key={i} className="flex items-start justify-between rounded-xl border-2 border-pd-border p-4">
-                          <div className="flex-1 space-y-2">
-                            <Skeleton className="h-4 w-1/2" />
-                            <Skeleton className="h-3 w-1/3" />
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          type="text"
+                          placeholder="Search GHL locations by name or ID..."
+                          aria-label="Search GHL locations"
+                          value={locationSearchQuery}
+                          onChange={(e) => setLocationSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <div className="flex max-h-80 flex-col gap-2 overflow-y-auto p-1">
+                        {filteredGhlLocations.length > 0 ? (
+                          filteredGhlLocations.map((location) => {
+                            const selected = selectedGhlLocation?.locationId === location.locationId
+                            return (
+                              <button
+                                type="button"
+                                key={location.locationId}
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  setSelectedGhlLocation(location)
+                                  setNewGhlLocationId("")
+                                }}
+                                className={cn(choiceClass(selected), "flex items-start justify-between gap-3")}
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className={cn("block truncate font-semibold", selected && "text-primary")}>
+                                    {location.name || "Unnamed Location"}
+                                  </span>
+                                  <span className={cn("mt-1 block truncate font-mono text-xs", selected ? "text-primary" : "text-muted-foreground")}>
+                                    ID: {location.locationId}
+                                  </span>
+                                </span>
+                                <span
+                                  className={cn(
+                                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                                  )}
+                                >
+                                  {selected && <Check className="size-3" />}
+                                </span>
+                              </button>
+                            )
+                          })
+                        ) : (
+                          <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading GHL Locations">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className="flex items-start justify-between rounded-surface bg-background p-4 shadow-surface">
+                                <div className="flex flex-1 flex-col gap-2">
+                                  <Skeleton className="h-4 w-1/2" />
+                                  <Skeleton className="h-3 w-1/3" />
+                                </div>
+                                <Skeleton className="ml-3 size-5 rounded-full" />
+                              </div>
+                            ))}
                           </div>
-                          <Skeleton className="ml-3 size-5 rounded-full" />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {selectedMetaAdAccount && (
-                  <div className="mt-4 p-3 bg-pd-primary-tint rounded-xl border border-pd-primary-pale">
-                    <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-pd-primary" />
-                      <span className="text-sm font-medium text-pd-primary">
-                        Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                {selectedMetaAdAccount && (
-                  <div className="space-y-2 pt-2">
-                    <h3 className="font-pd-display text-sm font-semibold text-pd-ink">Campaigns</h3>
-                    {metaAccountShared && (
-                      <p className="text-xs text-pd-subtle">
-                        Another client already uses this ad account. Pick the campaigns that belong to this one.
-                      </p>
-                    )}
-                    <MetaCampaignPicker
-                      adAccountId={selectedMetaAdAccount.id}
-                      value={metaCampaignIds}
-                      onChange={setMetaCampaignIds}
-                      required={metaAccountShared}
-                      shareNote={
-                        metaAccountShared && metaRemainderOwner
-                          ? `The rest stay with ${metaRemainderOwner}`
-                          : null
-                      }
-                    />
-                    {metaCampaignsMissing && (
-                      <p className="text-xs text-pd-amber">Pick at least one campaign to continue.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-            {/* === Step 4: Call log provider === */}
-            {wizardStep === 4 && (
-              <div className="max-w-md mx-auto space-y-6">
-                {!callLogProvider && (
-                  <>
-                    <div className="text-center space-y-2">
-                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Where do calls come from?</h2>
-                      <p className="text-pd-subtle">Pick which provider feeds this client&apos;s Sales Hub call logs.</p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setCallLogProvider("ghl")}
-                        className="p-5 rounded-xl border-2 border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
-                      >
-                        <div className="font-semibold text-pd-ink mb-1">GoHighLevel</div>
-                        <div className="text-xs text-pd-subtle">Uses your GHL workflow webhook.</div>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setCallLogProvider("hotprospector")}
-                        className="p-5 rounded-xl border-2 border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint transition-colors text-left"
-                      >
-                        <div className="font-semibold text-pd-ink mb-1">Hot Prospector</div>
-                        <div className="text-xs text-pd-subtle">Calls sync from your account&apos;s Hot Prospector connection.</div>
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {callLogProvider === "ghl" && (
-                  <>
-                    <div className="text-center space-y-2">
-                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Using GoHighLevel</h2>
-                      <p className="text-pd-subtle">Calls will arrive via your GHL workflow webhook on the linked subaccount.</p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-pd-success-bg border border-pd-healthy-border flex items-center gap-3">
-                      <Check className="w-5 h-5 text-pd-success shrink-0" />
-                      <span className="text-sm text-pd-ink">Ready &mdash; no extra setup needed at this step.</span>
-                    </div>
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => setCallLogProvider(null)}
-                        className="text-sm text-pd-subtle hover:text-pd-ink underline-offset-4 hover:underline"
-                      >
-                        Change provider
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {callLogProvider === "hotprospector" && (
-                  <>
-                    <div className="text-center space-y-2">
-                      <h2 className="font-pd-display text-2xl font-bold text-pd-ink">Using Hot Prospector</h2>
-                      <p className="text-pd-subtle">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
-                    </div>
-                    <div className="p-4 rounded-xl bg-pd-success-bg border border-pd-healthy-border flex items-center gap-3">
-                      <Check className="w-5 h-5 text-pd-success shrink-0" />
-                      <span className="text-sm text-pd-ink">Account-wide credentials power every client — nothing to enter here.</span>
-                    </div>
-                    <div className="text-center">
-                      <button
-                        type="button"
-                        onClick={() => setCallLogProvider(null)}
-                        className="text-sm text-pd-subtle hover:text-pd-ink underline-offset-4 hover:underline"
-                      >
-                        Change provider
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {wizardStep === 5 && (
-              <div className="max-w-md mx-auto space-y-6">
-                <div className="text-center space-y-2">
-                  <h2 className="font-pd-display text-2xl font-bold text-pd-ink">How does this client get leads?</h2>
-                  <p className="text-pd-subtle">
-                    Meta Instant Forms and form tools that send to GoHighLevel need nothing
-                    set up. Only a client&apos;s own landing page needs the Birdy pixel —
-                    we&apos;ll walk you through it after.
-                  </p>
-                </div>
-                <div className="space-y-3">
-                  {LEAD_SOURCES.map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => setLeadSource(option.key)}
-                      className={`w-full p-4 rounded-xl border-2 transition-colors text-left ${
-                        leadSource === option.key
-                          ? "border-pd-primary bg-pd-primary-tint"
-                          : "border-pd-border hover:border-pd-primary hover:bg-pd-primary-tint"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <div className="font-semibold text-pd-ink mb-1">{option.label}</div>
-                          <div className="text-xs text-pd-subtle">{option.hint}</div>
-                        </div>
-                        {leadSource === option.key && (
-                          <Check className="w-5 h-5 text-pd-primary shrink-0" />
                         )}
                       </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+                      {(selectedGhlLocation || newGhlLocationId) && (
+                        <div className="flex items-center gap-2 rounded-control bg-primary-soft p-3">
+                          <Check className="size-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">
+                            Selected: {selectedGhlLocation?.name || newGhlLocationId || "Unnamed Location"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {wizardStep === 3 && (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2 text-center">
+                        <h2 className="text-xl font-semibold">Link a Meta ad account</h2>
+                        <p className="text-muted-foreground">Pick the ad account for this client&apos;s campaigns &amp; spend.</p>
+                      </div>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+                        <Input
+                          type="text"
+                          placeholder="Search Meta ad accounts by name or ID..."
+                          aria-label="Search Meta ad accounts"
+                          value={metaSearchQuery}
+                          onChange={(e) => setMetaSearchQuery(e.target.value)}
+                          className="pl-10"
+                        />
+                      </div>
+                      <div className="flex max-h-80 flex-col gap-2 overflow-y-auto p-1">
+                        {filteredMetaAdAccounts.length > 0 ? (
+                          filteredMetaAdAccounts.map((account) => {
+                            const selected = selectedMetaAdAccount?.id === account.id
+                            return (
+                              <button
+                                type="button"
+                                key={account.id}
+                                aria-pressed={selected}
+                                onClick={() => {
+                                  if (selected) return
+                                  setSelectedMetaAdAccount(account)
+                                  setMetaCampaignIds(sharesMetaAccount(clientGroups, account.id) ? [] : null)
+                                }}
+                                className={cn(choiceClass(selected), "flex items-start justify-between gap-3")}
+                              >
+                                <span className="min-w-0 flex-1">
+                                  <span className={cn("block truncate font-semibold", selected && "text-primary")}>
+                                    {account.name || "Unnamed Ad Account"}
+                                  </span>
+                                  <span className={cn("mt-1 block truncate font-mono text-xs", selected ? "text-primary" : "text-muted-foreground")}>
+                                    ID: {account.id}
+                                  </span>
+                                </span>
+                                <span
+                                  className={cn(
+                                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2",
+                                    selected ? "border-primary bg-primary text-primary-foreground" : "border-border"
+                                  )}
+                                >
+                                  {selected && <Check className="size-3" />}
+                                </span>
+                              </button>
+                            )
+                          })
+                        ) : (
+                          <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading Meta Adaccounts">
+                            {Array.from({ length: 4 }).map((_, i) => (
+                              <div key={i} className="flex items-start justify-between rounded-surface bg-background p-4 shadow-surface">
+                                <div className="flex flex-1 flex-col gap-2">
+                                  <Skeleton className="h-4 w-1/2" />
+                                  <Skeleton className="h-3 w-1/3" />
+                                </div>
+                                <Skeleton className="ml-3 size-5 rounded-full" />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {selectedMetaAdAccount && (
+                        <div className="flex items-center gap-2 rounded-control bg-primary-soft p-3">
+                          <Check className="size-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">
+                            Selected: {selectedMetaAdAccount.name || "Unnamed Ad Account"}
+                          </span>
+                        </div>
+                      )}
+                      {selectedMetaAdAccount && (
+                        <div className="flex flex-col gap-2 pt-2">
+                          <h3 className="text-sm font-semibold">Campaigns</h3>
+                          {metaAccountShared && (
+                            <p className="text-xs text-muted-foreground">
+                              Another client already uses this ad account. Pick the campaigns that belong to this one.
+                            </p>
+                          )}
+                          <MetaCampaignPicker
+                            adAccountId={selectedMetaAdAccount.id}
+                            value={metaCampaignIds}
+                            onChange={setMetaCampaignIds}
+                            required={metaAccountShared}
+                            shareNote={
+                              metaAccountShared && metaRemainderOwner
+                                ? `The rest stay with ${metaRemainderOwner}`
+                                : null
+                            }
+                          />
+                          {metaCampaignsMissing && (
+                            <p className="text-xs text-warning-ink">Pick at least one campaign to continue.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* === Step 4: Call log provider === */}
+                  {wizardStep === 4 && (
+                    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+                      {!callLogProvider && (
+                        <>
+                          <div className="flex flex-col gap-2 text-center">
+                            <h2 className="text-xl font-semibold">Where do calls come from?</h2>
+                            <p className="text-muted-foreground">Pick which provider feeds this client&apos;s Sales Hub call logs.</p>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <button type="button" onClick={() => setCallLogProvider("ghl")} className={choiceClass(false)}>
+                              <div className="mb-1 font-semibold">GoHighLevel</div>
+                              <div className="text-xs text-muted-foreground">Uses your GHL workflow webhook.</div>
+                            </button>
+                            <button type="button" onClick={() => setCallLogProvider("hotprospector")} className={choiceClass(false)}>
+                              <div className="mb-1 font-semibold">Hot Prospector</div>
+                              <div className="text-xs text-muted-foreground">Calls sync from your account&apos;s Hot Prospector connection.</div>
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {callLogProvider === "ghl" && (
+                        <>
+                          <div className="flex flex-col gap-2 text-center">
+                            <h2 className="text-xl font-semibold">Using GoHighLevel</h2>
+                            <p className="text-muted-foreground">Calls will arrive via your GHL workflow webhook on the linked subaccount.</p>
+                          </div>
+                          <div className="flex items-center gap-3 rounded-control bg-success-soft p-4">
+                            <Check className="size-5 shrink-0 text-success-ink" />
+                            <span className="text-sm text-foreground">Ready &mdash; no extra setup needed at this step.</span>
+                          </div>
+                          <div className="text-center">
+                            <Button variant="link" onClick={() => setCallLogProvider(null)}>Change provider</Button>
+                          </div>
+                        </>
+                      )}
+
+                      {callLogProvider === "hotprospector" && (
+                        <>
+                          <div className="flex flex-col gap-2 text-center">
+                            <h2 className="text-xl font-semibold">Using Hot Prospector</h2>
+                            <p className="text-muted-foreground">Calls for this client sync automatically from your account&apos;s Hot Prospector connection.</p>
+                          </div>
+                          <div className="flex items-center gap-3 rounded-control bg-success-soft p-4">
+                            <Check className="size-5 shrink-0 text-success-ink" />
+                            <span className="text-sm text-foreground">Account-wide credentials power every client — nothing to enter here.</span>
+                          </div>
+                          <div className="text-center">
+                            <Button variant="link" onClick={() => setCallLogProvider(null)}>Change provider</Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {wizardStep === 5 && (
+                    <div className="mx-auto flex w-full max-w-md flex-col gap-6">
+                      <div className="flex flex-col gap-2 text-center">
+                        <h2 className="text-xl font-semibold">How does this client get leads?</h2>
+                        <p className="text-muted-foreground">
+                          Meta Instant Forms and form tools that send to GoHighLevel need nothing
+                          set up. Only a client&apos;s own landing page needs the Birdy pixel —
+                          we&apos;ll walk you through it after.
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        {LEAD_SOURCES.map((option) => (
+                          <button
+                            key={option.key}
+                            type="button"
+                            aria-pressed={leadSource === option.key}
+                            onClick={() => setLeadSource(option.key)}
+                            className={choiceClass(leadSource === option.key)}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div>
+                                <div className="mb-1 font-semibold">{option.label}</div>
+                                <div className="text-xs text-muted-foreground">{option.hint}</div>
+                              </div>
+                              {leadSource === option.key && <Check className="size-5 shrink-0 text-primary" />}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1152,33 +1041,28 @@ export default function ClientsPage() {
               <div className="flex items-center justify-between">
                 <Button
                   type="button"
-                  variant="outline"
                   disabled={wizardStep === 1 || addingClientGroup}
                   onClick={() => setWizardStep(Math.max(1, wizardStep - 1))}
-                  className="gap-2"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Back
+                  <ArrowLeft /> Back
                 </Button>
                 <Button
                   type="button"
+                  variant="primary"
                   onClick={handleCreateClientGroup}
+                  loading={addingClientGroup}
                   disabled={
                     addingClientGroup
                     || (wizardStep === 1 && !clientGroupName)
                     || (wizardStep === 4 && !callLogProvider)
                     || (wizardStep >= 3 && metaCampaignsMissing)
                   }
-                  className="gap-2 min-w-[160px] justify-center"
+                  className="min-w-40"
                 >
-                  {addingClientGroup ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Creating...
-                    </>
-                  ) : wizardStep < 5 ? (
-                    <>Next <ArrowRight className="w-4 h-4" /></>
+                  {wizardStep < 5 ? (
+                    <>Next <ArrowRight /></>
                   ) : (
-                    <><Plus className="w-4 h-4" /> Create Client Group</>
+                    <><Plus /> Create Client Group</>
                   )}
                 </Button>
               </div>
@@ -1188,132 +1072,53 @@ export default function ClientsPage() {
       </Dialog>
 
       {/* Client Limit Reached Dialog */}
-      <AlertDialog open={clientLimitDialogOpen} onOpenChange={setClientLimitDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Client Limit Reached</AlertDialogTitle>
-            <AlertDialogDescription>
-              You've reached your client limit (25). Add extra client slots ($10/mo each)
+      <Dialog open={clientLimitDialogOpen} onOpenChange={setClientLimitDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Client Limit Reached</DialogTitle>
+            <DialogDescription>
+              You&apos;ve reached your client limit (25). Add extra client slots ($10/mo each)
               from the Billing page to continue.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setClientLimitDialogOpen(false)}>Cancel</Button>
+            <Button
+              variant="primary"
               onClick={() => { setClientLimitDialogOpen(false); router.push("/billing") }}
             >
               Go to Billing
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Duplicate Integration Dialog */}
-      <AlertDialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Integration Already in Use</AlertDialogTitle>
-            <AlertDialogDescription>
+      <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Integration Already in Use</DialogTitle>
+            <DialogDescription>
               The selected GHL location or Meta ad account is already linked to{" "}
-              <span className="font-semibold text-pd-ink">
+              <span className="font-semibold text-foreground">
                 &ldquo;{duplicateGroupName}&rdquo;
               </span>
               . Each integration can only be connected to one client group at a time.
               Please choose a different account, or remove it from the existing group first.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogAction
-              onClick={() => setDuplicateDialogOpen(false)}
-            >
-              Got it
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <div className="min-w-0">
-      <div className="flex flex-col gap-6">
-      <ErrorBanner error={error} />
-
-      <Stagger>
-
-      {/* Status tabs left, table controls right. PageTabs carries the sizing,
-          so this strip stays identical to the Leads, Marketing and Call Centre
-          ones without any page repeating the measurements. */}
-      <StaggerItem className="mb-[14px] flex flex-col gap-3 md:flex-row md:items-center">
-        <PageTabs
-          label="Filter clients by status"
-          panelId={CLIENTS_PANEL_ID}
-          tabs={filterTabs.map((t) => ({
-            key: t.key,
-            label: t.label,
-            badge: t.count,
-          }))}
-          value={statusFilter}
-          onChange={setStatusFilter}
-        />
-
-        <div className="flex items-center gap-2.5 md:ml-auto">
-          <div className="relative">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-[13px] size-[15px] -translate-y-1/2 text-pd-faint"
-              aria-hidden="true"
-            />
-            <Input
-              placeholder="Search clients…"
-              aria-label="Search clients"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-[38px] w-full pl-9 text-[13px] md:w-[200px]"
-            />
-          </div>
-
-          <ColumnsMenu
-            columns={columnCatalogue}
-            visibleColumns={visibleColumnIds}
-            onChange={setVisibleColumnIds}
-            defaultColumns={defaultColumnIds}
-            views={pageViews}
-            sources={COLUMN_MENU_SOURCES}
-          />
-
-          {/* Bulk import stays available after onboarding. Agencies win
-              clients continuously, and adding five of them one at a time
-              through the five-step wizard means re-picking the same GHL and
-              Meta accounts by hand five times.
-
-              Carries its label rather than sitting as a bare icon: a download
-              arrow beside the "+" reads as nothing in particular, and the
-              first person to look for this feature looked inside the Add
-              Client wizard instead — where there is now a link to it too. */}
-          <Button
-            variant="outline"
-            onClick={() => setBulkImportOpen(true)}
-            aria-label="Import clients from GoHighLevel"
-            className="h-[38px] shrink-0 gap-2 px-3 text-[13px]"
-          >
-            <Download className="size-4" />
-            <span className="hidden sm:inline">Import</span>
-          </Button>
-
-          <Button
-            size="icon"
-            onClick={() => setWizardOpen(true)}
-            aria-label="Add client"
-            className="size-[38px] shrink-0"
-          >
-            <Plus className="size-4" />
-          </Button>
-        </div>
-      </StaggerItem>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="primary" onClick={() => setDuplicateDialogOpen(false)}>Got it</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <BulkImportDialog
         open={bulkImportOpen}
         onOpenChange={setBulkImportOpen}
         onImported={() => {
           // Freshly imported clients have no figures yet; invalidate so the
-          // table picks them up as loading rows rather than leaving the user
+          // table picks them up as syncing rows rather than leaving the user
           // on a list that doesn't show what they just imported.
           invalidateClientGroups?.()
           refreshClientGroups?.()
@@ -1327,41 +1132,72 @@ export default function ClientsPage() {
         onSaved={() => { invalidateClientGroups?.(); refreshClientGroups?.() }}
       />
 
-        {/* StyledTable — receives filtered data */}
-        <StaggerItem>
-        <PageTabPanel id={CLIENTS_PANEL_ID} label="Clients" className="mt-4">
-        <StyledTable
-          data={filteredByStatus}
-          onRowClick={handleClientGroupClick}
-          columns={columns}
-          searchQuery={searchQuery}
-          columnVisibility={columnVisibility}
-          customMetrics={customMetrics}
-          setCustomMetrics={setCustomMetrics}
-          enableEnhancedExtraction={true}
-          getTagCount={getTagCount}
-          isLoading={loading}
-          isRowLoading={(row) => row._isPending || row._isCreating || row._isSyncing}
-          initialColumnOrder={columnOrder}
-          onColumnOrderChange={(newOrder) => {
-            setColumnOrder(newOrder)
-            // Auto-persist column order so a drag-reorder survives a refresh
-            // without the user having to click "Save View". Debounced inside
-            // the hook so a flurry of drags collapses to a single API call.
-            saveViewDebounced(newOrder)
-          }}
-          enableStatusToggle={true}
-          onStatusToggle={handleStatusToggle}
-          togglingRows={togglingRows}
-          // Dropping the Status column freed the vertical room for a longer
-          // page, so the roster fits in fewer clicks.
-          initialPageSize={20}
+      {fetchError ? (
+        <ErrorState
+          title="Couldn't load your client data"
+          description={`${String(fetchError).replace(/\.+$/, "")}. Nothing here is out of date — we just couldn't reach your clients.`}
+          onRetry={() => refreshClientGroups?.()}
         />
-        </PageTabPanel>
-        </StaggerItem>
-      </Stagger>
-      </div>
-      </div>
-    </SalesHubShell>
+      ) : (
+        <div className="flex min-w-0 flex-col gap-3">
+          {/* Status and health, with counts. Search and column choice sit in the table's own toolbar. */}
+          <div className="min-w-0 max-w-full">
+            <SegmentedTabs
+              ariaLabel="Filter clients by status"
+              value={statusFilter}
+              onValueChange={setStatusFilter}
+              items={filterTabs}
+            />
+          </div>
+
+          <DataTable
+            columns={orderedColumns}
+            data={rows}
+            stickyFirstColumn
+            onColumnReorder={reorderColumn}
+            lockedColumnIds={LOCKED_COLUMNS}
+            state={{ columnVisibility }}
+            toolbar={
+              <>
+                <ColumnsMenu
+                  columns={columnCatalogue}
+                  visibleColumns={visibleIds}
+                  onChange={setVisibleIds}
+                  defaultColumns={DEFAULT_VISIBLE}
+                  views={pageViews}
+                  sources={COLUMN_MENU_SOURCES}
+                  onSaveDefault={saveColumns}
+                  lockedColumnIds={LOCKED_COLUMNS}
+                  buttonClassName="ml-auto"
+                />
+                {columnsChanged && (
+                  <Button variant="ghost" onClick={() => saveColumns()}>
+                    Save columns
+                  </Button>
+                )}
+              </>
+            }
+            loading={loading}
+            getRowId={(row) => row.id}
+            onRowClick={handleClientGroupClick}
+            pageSize={20}
+            empty={
+              clientGroups.length === 0 ? (
+                <EmptyState
+                  title="No clients yet"
+                  description="Link a client's GoHighLevel and Meta accounts to see its leads and spend here."
+                  action={addClientButton}
+                />
+              ) : (
+                <EmptyState
+                  title={`No ${tabLabel.toLowerCase()} clients`}
+                  description="Pick another tab to see the rest of your clients."
+                />
+              )
+            }
+          />
+        </div>
+      )}
+    </div>
   )
 }

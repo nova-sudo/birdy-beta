@@ -15,7 +15,7 @@ vi.mock("next/navigation", () => ({
 }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }))
-vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
+vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
 vi.mock("@/components/page-header", () => ({ usePageHeader: () => {} }))
 vi.mock("@/components/settings/GeneralSettings", () => ({ GeneralSettings: () => null }))
 vi.mock("@/components/settings/CreditsPanel", () => ({ CreditsPanel: () => null }))
@@ -23,7 +23,7 @@ vi.mock("@/components/billing/PlanPicker", () => ({ PlanPicker: () => null }))
 vi.mock("@/components/attribution/TrackingOverview", () => ({ default: () => null }))
 // Radix Select needs pointer APIs jsdom lacks; a native <select> keeps the
 // same value/onValueChange contract and lets the test pick an option.
-vi.mock("@/components/ui/select", () => {
+vi.mock("@/components/ds/primitives/select", () => {
   const React = require("react")
   const SelectTrigger = () => null
   const SelectValue = () => null

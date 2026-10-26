@@ -5,9 +5,9 @@
 // call stats. Everything on this screen is either a sum across those, a ratio
 // of two sums, or a ranking by one of them.
 //
-// The field paths mirror what StyledTable already reads in
-// components/ui/table-container.jsx, so the dashboard and the clients table
-// can't drift into disagreeing about what "leads" means.
+// The field paths match the ones the clients catalogue (app/clients/catalogue.js)
+// reads, so the dashboard and the clients table can't drift into disagreeing
+// about what "leads" means.
 
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "./portfolio-metrics";
 import { activeGroups } from "./client-status";
@@ -333,6 +333,10 @@ export function buildCallInsights(current) {
  * @param {object} current portfolio totals
  * @param {object|null} previous the preceding period, for deltas
  */
+/** Whether percentDelta had two figures to compare (a previous period, not 0). */
+const comparable = (current, previous) =>
+  Number.isFinite(current) && Number.isFinite(previous) && previous !== 0;
+
 export function buildFunnel(current, previous) {
   const prev = previous ?? {};
   if (!current.funnelCached) return [];
@@ -381,6 +385,8 @@ export function buildFunnel(current, previous) {
     return {
       key: s.key,
       stage: s.stage,
+      // The raw figure, for step-to-step conversion; `count` is for display.
+      value: Math.round(s.value),
       count: Math.round(s.value).toLocaleString(),
       // The first stage is the cohort itself; "100% of leads" is noise.
       share: s.key === "leads" ? null : share(s.value),
@@ -389,70 +395,9 @@ export function buildFunnel(current, previous) {
       // diagnoseFunnel reads delta as a number; the pill-style strings the
       // KPI strip uses don't apply here.
       ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
+      // Compared and unchanged: distinct from a stage with nothing to compare
+      // against, so the funnel can say "No change" instead of nothing.
+      ...(!change && comparable(s.value, s.prev) ? { flat: true } : {}),
     };
   });
-}
-
-/**
- * Client leaderboards, one ranking per metric.
- *
- * Bars are a share of the leader rather than of a fixed scale, so the top row
- * is always full and the rest read as "how close to the best". CPL sorts
- * ascending because cheap is good; everything else sorts descending.
- */
-export function buildLeaderboards(current, formatMoney, limit = 5) {
-  const rows = current.rows ?? [];
-  const money = (n) => formatMoney(n);
-
-  const rank = (list, { by, ascending = false, value, meta }) => {
-    const eligible = list.filter((r) => by(r) > 0);
-    const sorted = [...eligible].sort((a, b) => (ascending ? by(a) - by(b) : by(b) - by(a)));
-    const top = sorted.slice(0, limit);
-    if (top.length === 0) return [];
-
-    // Ascending metrics are better when smaller, so the leader is the smallest
-    // and a bar is the leader's value over this row's.
-    const leader = by(top[0]);
-
-    return top.map((row) => ({
-      id: row.id,
-      name: row.name,
-      meta: meta(row),
-      value: value(row),
-      bar: ascending
-        ? (leader / by(row)) * 100
-        : leader > 0
-          ? (by(row) / leader) * 100
-          : 0,
-    }));
-  };
-
-  const cpl = (r) => (r.leads > 0 ? r.spend / r.leads : 0);
-
-  return {
-    "Avg CPL": rank(rows, {
-      by: cpl,
-      ascending: true,
-      value: (r) => formatMoney(cpl(r), 2),
-      meta: (r) => `${money(r.spend)} spend · ${Math.round(r.leads).toLocaleString()} leads`,
-    }),
-    Closes: rank(rows, {
-      by: (r) => r.closes,
-      value: (r) => Math.round(r.closes).toLocaleString(),
-      meta: (r) =>
-        `${Math.round(r.leads).toLocaleString()} leads · ${
-          r.leads > 0 ? ((r.closes / r.leads) * 100).toFixed(1) : "0.0"
-        }% conv`,
-    }),
-    Leads: rank(rows, {
-      by: (r) => r.leads,
-      value: (r) => Math.round(r.leads).toLocaleString(),
-      meta: (r) => `${money(r.spend)} spend · ${formatMoney(cpl(r), 2)} CPL`,
-    }),
-    Revenue: rank(rows, {
-      by: (r) => r.revenue,
-      value: (r) => money(r.revenue),
-      meta: (r) => `${Math.round(r.closes).toLocaleString()} closes`,
-    }),
-  };
 }

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboarding report options</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FFFFFF; --fg: #0A0A0A; --muted: #F7F7F7; --muted-fg: #737373; --border: #E5E5E5;
+    --primary: #5B3FD6; --primary-soft: #EFECFB;
+    --success-soft: #DCFCE7; --success-ink: #166534;
+    --shadow-surface: 0 0 0 1px #0000000F, 0 1px 2px #0000000A;
+    --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000F, 0 2px 4px -2px #0000000D;
+    --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--muted); color: var(--fg); font: 16px/1.5 Outfit, system-ui, sans-serif; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 40px 16px 80px; }
+  h1 { font-size: 32px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+  .lede { color: var(--muted-fg); margin: 0 0 32px; max-width: 720px; }
+  .option { margin-bottom: 56px; }
+  .opt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 12px; }
+  .opt-head b { font-size: 18px; font-weight: 600; }
+  .opt-head span { color: var(--muted-fg); font-size: 14px; }
+  .rec { font-size: 13px; font-weight: 500; color: var(--primary); background: var(--primary-soft); padding: 2px 8px; border-radius: 999px; }
+  .note { font-size: 14px; color: var(--muted-fg); margin-top: 10px; max-width: 820px; }
+  .note li { margin-bottom: 4px; }
+  .muted { color: var(--muted-fg); }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* Paper wizard frame */
+  .wiz { background: var(--bg); border-radius: 16px; box-shadow: var(--shadow-surface); overflow: hidden; display: flex; flex-direction: column; min-height: 720px; }
+  .wiz-top { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 1px solid #E5E5E599; flex-shrink: 0; }
+  .wiz-top .slot { width: 120px; font-size: 13px; }
+  .exit { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; padding: 0 12px; height: 32px; }
+  .prog { display: flex; gap: 6px; }
+  .prog i { display: block; height: 6px; border-radius: 3px; background: var(--border); }
+  .prog i.done { background: var(--primary); }
+  .prog i.cur { background: linear-gradient(90deg, var(--primary) 66%, var(--border) 66%); }
+  .wiz-body { flex: 1; display: flex; justify-content: center; padding: 40px 24px 24px; min-height: 0; }
+  .wiz-foot { height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 24px; border-top: 1px solid #E5E5E599; flex-shrink: 0; gap: 8px; }
+  .head { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .eyebrow { font-size: 13px; font-weight: 500; color: var(--primary); }
+  .title { font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em; margin: 0; }
+  .desc { color: var(--muted-fg); margin: 0; }
+
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 40px; padding: 0 16px; border-radius: 12px; border: 0; font: 500 16px Outfit, sans-serif; background: var(--primary); color: #fff; white-space: nowrap; }
+  .btn.out { background: var(--bg); color: var(--fg); box-shadow: var(--shadow-control); }
+  .btn.ghost { background: transparent; color: var(--muted-fg); }
+  .btn.sm { height: 32px; font-size: 14px; padding: 0 12px; }
+
+  /* conversation */
+  .frame { background: var(--muted); border-radius: 16px; box-shadow: 0 0 0 1px #0000000A; display: flex; flex-direction: column; min-height: 0; }
+  .frame-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; }
+  .frame-head b { font-size: 16px; font-weight: 600; display: block; }
+  .frame-head small { font-size: 13px; color: var(--muted-fg); }
+  .frame-body { background: var(--bg); border-radius: 16px; box-shadow: var(--shadow-surface); margin: 0 -1px -1px; flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .msgs { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; }
+  .av { width: 28px; height: 28px; border-radius: 999px; background: var(--primary-soft); box-shadow: 0 0 0 1px #5B3FD633; flex-shrink: 0; display: grid; place-items: center; font-size: 11px; color: var(--primary); font-weight: 600; }
+  .bubble-me { margin-left: auto; background: var(--muted); border-radius: 12px; padding: 8px 12px; max-width: 80%; font-size: 14px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--bg); box-shadow: var(--shadow-control); }
+  .composer { margin: 12px; border-radius: 12px; box-shadow: var(--shadow-control); padding: 10px 12px; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted-fg); }
+  .composer .send { margin-left: auto; width: 28px; height: 28px; border-radius: 8px; background: var(--primary); }
+
+  /* Slack preview */
+  .label { font-size: 13px; font-weight: 500; color: var(--muted-fg); display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .slack { background: var(--bg); border-radius: 12px; box-shadow: var(--shadow-surface); padding: 16px; font-size: 14px; }
+  .slack .who { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .slack .who b { font-weight: 700; }
+  .slack .who .app { font-size: 11px; background: var(--muted); padding: 0 4px; border-radius: 3px; color: var(--muted-fg); }
+  .slack h4 { margin: 0 0 6px; font-size: 15px; }
+  .row { display: grid; grid-template-columns: 1fr 64px 48px 56px; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .row.h { color: var(--muted-fg); border-top: 0; }
+  .row span:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+  .flash { background: var(--primary-soft); border-radius: 6px; }
+  .sample { font-size: 13px; color: var(--muted-fg); margin-top: 8px; }
+
+  .seg { display: inline-flex; background: var(--muted); border-radius: 12px; padding: 3px; gap: 2px; box-shadow: 0 0 0 1px #0000000A; }
+  .seg span { font-size: 14px; font-weight: 500; padding: 5px 14px; border-radius: 9px; color: var(--muted-fg); display: inline-flex; gap: 6px; align-items: center; }
+  .seg span.on { background: var(--bg); color: var(--fg); box-shadow: var(--shadow-control); }
+  .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--primary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Onboarding · “Design your Slack report” step</h1>
+  <p class="lede">The rest of onboarding follows Paper's wizard frame: Exit and segmented progress on top, a 560px column, and Back and Continue in the footer. The report copilot has no Paper equivalent. It is a chat with Birdy beside a live Slack preview. Here are three ways to fit it into that frame. The behaviour is the same in all three: chat drives the draft, the preview refetches, “Use this report” saves it, and “Skip, use the standard daily report” is still there.</p>
+
+  <!-- Snippets reused by each option -->
+  <template id="slack">
+    <div class="slack">
+      <div class="who"><div class="av">B</div><b>Birdy</b><span class="app">APP</span><span class="muted" style="font-size:12px">8:00</span></div>
+      <h4>Daily report · Mon 24 Oct</h4>
+      <div class="muted" style="font-size:13px;margin-bottom:8px">Yesterday across 48 clients</div>
+      <div class="row h"><span>Client</span><span>Spend</span><span>Leads</span><span>CPL</span></div>
+      <div class="row"><span>Beaulea Clinic</span><span>£182</span><span>14</span><span>£13.00</span></div>
+      <div class="row flash"><span>Konfidence Clinic</span><span>£96</span><span>11</span><span>£8.73</span></div>
+      <div class="row"><span>Skin Beautiful</span><span>£121</span><span>9</span><span>£13.44</span></div>
+      <div class="row"><span>Aura</span><span>£74</span><span>8</span><span>£9.25</span></div>
+      <div class="muted" style="font-size:13px;margin-top:8px">+ 44 more · View in Birdy</div>
+    </div>
+  </template>
+
+  <!-- A -->
+  <section class="option">
+    <div class="opt-head"><b>A · Split, wide</b><span class="rec">Recommended</span><span>Chat on the left, preview on the right, with actions in the wizard footer</span></div>
+    <div class="wiz">
+      <div class="wiz-top">
+        <div class="slot"><span class="exit">✕ Exit</span></div>
+        <div class="prog"><i class="done" style="width:24px"></i><i class="done" style="width:48px"></i><i class="done" style="width:48px"></i><i class="done" style="width:24px"></i><i class="done" style="width:24px"></i><i class="cur" style="width:72px"></i><i style="width:24px"></i><i style="width:24px"></i></div>
+        <div class="slot muted num" style="text-align:right">6 of 9</div>
+      </div>
+      <div class="wiz-body">
+        <div style="width:100%;max-width:1120px;display:flex;flex-direction:column">
+          <div class="head">
+            <div class="eyebrow">Notifications</div>
+            <h2 class="title">Let's design your Slack report</h2>
+            <p class="desc">Birdy will post it to #client-reports. Chat it through and watch it take shape.</p>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;height:430px">
+            <div class="frame">
+              <div class="frame-head"><div><b>Design with Birdy</b><small>Answer a few questions, or just say what you want.</small></div><span class="btn ghost sm">↺ Start over</span></div>
+              <div class="frame-body">
+                <div class="msgs">
+                  <div class="msg"><div class="av">B</div><div>I've started from a daily summary of spend, leads and CPL for all 48 clients. Who reads it: you, or your clients' account managers?</div></div>
+                  <div class="bubble-me">Just me. Only show clients that got worse.</div>
+                  <div class="msg"><div class="av">B</div><div>Done. It now lists only clients whose CPL rose more than 15%. Want it every weekday at 8, or Mondays only?</div></div>
+                  <div class="chips" style="padding-left:38px"><span class="chip">Weekdays at 8</span><span class="chip">Mondays only</span></div>
+                </div>
+                <div class="composer">e.g. Just spend and leads per client, every Monday at 8<span class="send"></span></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column">
+              <div class="label"><span>Live preview</span><span>🗓 Weekdays · 8:00</span></div>
+              <div class="slack-slot"></div>
+              <div class="sample">Sample numbers for now. Your real figures appear once your first client syncs.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <span class="btn out">Back</span>
+        <div style="display:flex;gap:8px"><span class="btn ghost">Skip, use the standard daily report</span><span class="btn">Use this report</span></div>
+      </div>
+    </div>
+    <ul class="note">
+      <li>Closest to today's layout. The step widens the 560px column to 1120px, which is the only step that does.</li>
+      <li>“Use this report” becomes the footer's primary button, and Skip sits beside it as a ghost button. That gives the step one primary action, in the same place as every other step.</li>
+      <li>Below lg the two panes stack, with chat first, and the footer stays pinned.</li>
+    </ul>
+  </section>
+
+  <!-- B -->
+  <section class="option">
+    <div class="opt-head"><b>B · Preview first</b><span>The preview is the hero in the 560px column, and Birdy is a composer under it</span></div>
+    <div class="wiz">
+      <div class="wiz-top">
+        <div class="slot"><span class="exit">✕ Exit</span></div>
+        <div class="prog"><i class="done" style="width:24px"></i><i class="done" style="width:48px"></i><i class="done" style="width:48px"></i><i class="done" style="width:24px"></i><i class="done" style="width:24px"></i><i class="cur" style="width:72px"></i><i style="width:24px"></i><i style="width:24px"></i></div>
+        <div class="slot muted num" style="text-align:right">6 of 9</div>
+      </div>
+      <div class="wiz-body">
+        <div style="width:100%;max-width:560px">
+          <div class="head">
+            <div class="eyebrow">Notifications</div>
+            <h2 class="title">Let's design your Slack report</h2>
+            <p class="desc">This is what lands in #client-reports. Tell Birdy what to change.</p>
+          </div>
+          <div class="label"><span>Live preview</span><span>🗓 Weekdays · 8:00</span></div>
+          <div class="slack-slot"></div>
+          <div style="margin-top:16px;border-radius:16px;background:var(--muted);padding:12px;box-shadow:0 0 0 1px #0000000A">
+            <div class="msg" style="margin-bottom:10px"><div class="av">B</div><div>It now lists only clients whose CPL rose more than 15%. Every weekday at 8, or Mondays only?</div></div>
+            <div class="chips" style="margin:0 0 10px 38px"><span class="chip">Weekdays at 8</span><span class="chip">Mondays only</span></div>
+            <div class="composer" style="margin:0;background:var(--bg)">Tell Birdy what to change…<span class="send"></span></div>
+            <div style="text-align:right;margin-top:6px"><span class="btn ghost sm">Show whole conversation (4)</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <span class="btn out">Back</span>
+        <div style="display:flex;gap:8px"><span class="btn ghost">Skip, use the standard daily report</span><span class="btn">Use this report</span></div>
+      </div>
+    </div>
+    <ul class="note">
+      <li>It keeps Paper's 560px column, so it looks like every other step and works at 390 with no reflow.</li>
+      <li>Only Birdy's latest turn and its quick replies show. The full transcript opens in a sheet. That needs a new “latest turn” view of ChatConversation, which is more build work.</li>
+      <li>Long reports push the composer below the fold, so people scroll between reading and asking.</li>
+    </ul>
+  </section>
+
+  <!-- C -->
+  <section class="option">
+    <div class="opt-head"><b>C · Tabs</b><span>One 720px column with Conversation and Preview tabs</span></div>
+    <div class="wiz">
+      <div class="wiz-top">
+        <div class="slot"><span class="exit">✕ Exit</span></div>
+        <div class="prog"><i class="done" style="width:24px"></i><i class="done" style="width:48px"></i><i class="done" style="width:48px"></i><i class="done" style="width:24px"></i><i class="done" style="width:24px"></i><i class="cur" style="width:72px"></i><i style="width:24px"></i><i style="width:24px"></i></div>
+        <div class="slot muted num" style="text-align:right">6 of 9</div>
+      </div>
+      <div class="wiz-body">
+        <div style="width:100%;max-width:720px;display:flex;flex-direction:column">
+          <div class="head">
+            <div class="eyebrow">Notifications</div>
+            <h2 class="title">Let's design your Slack report</h2>
+            <p class="desc">Birdy will post it to #client-reports.</p>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="seg"><span class="on">Conversation</span><span>Preview <i class="dot"></i></span></div>
+            <span class="btn ghost sm">↺ Start over</span>
+          </div>
+          <div class="frame" style="height:360px">
+            <div class="frame-body" style="margin:0">
+              <div class="msgs">
+                <div class="msg"><div class="av">B</div><div>I've started from a daily summary of spend, leads and CPL for all 48 clients. Who reads it?</div></div>
+                <div class="bubble-me">Just me. Only show clients that got worse.</div>
+                <div class="msg"><div class="av">B</div><div>Done. Check the Preview tab. Every weekday at 8, or Mondays only?</div></div>
+              </div>
+              <div class="composer">e.g. Just spend and leads per client, every Monday at 8<span class="send"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="wiz-foot">
+        <span class="btn out">Back</span>
+        <div style="display:flex;gap:8px"><span class="btn ghost">Skip, use the standard daily report</span><span class="btn">Use this report</span></div>
+      </div>
+    </div>
+    <ul class="note">
+      <li>It uses ds SegmentedTabs, and a dot on Preview marks a new change. It is the same at 1440 and 390.</li>
+      <li>You can't watch the preview change as you type. That is the main thing the copilot is for, so this is the weakest option on desktop.</li>
+    </ul>
+  </section>
+</div>
+<script>
+  const tpl = document.getElementById('slack').innerHTML
+  document.querySelectorAll('.slack-slot').forEach((el) => { el.outerHTML = tpl })
+</script>
+</body>
+</html>

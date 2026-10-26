@@ -1,203 +1,165 @@
 "use client"
 
-import { motion, useReducedMotion } from "framer-motion"
+import { useMemo } from "react"
 import { formatDistanceToNow } from "date-fns"
-import { Lightbulb, Sparkles, Slack, TrendingUp } from "lucide-react"
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from "recharts"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stagger, StaggerItem } from "@/components/motion"
-
-const EASE = [0.165, 0.84, 0.44, 1]
-
-const CATEGORY_COLORS = {
-  performance_roas: "bg-pd-primary",
-  pause_scale: "bg-pd-danger",
-  cost_per_lead: "bg-pd-warning",
-  lead_volume: "bg-pd-success",
-  crm_sync: "bg-pd-info",
-  other: "bg-pd-faint",
-}
-
-const CARD = "rounded-xl border border-pd-border bg-pd-surface p-4 shadow-sm"
+import { BarList, Badge, DataTable, EmptyState, ErrorState, Notice, Skeleton, Surface } from "@/components/ds"
 
 function relative(ts) {
   if (!ts) return ""
   try { return formatDistanceToNow(new Date(ts), { addSuffix: true }) } catch { return "" }
 }
 
-function ThemeBars({ clusters, reduce }) {
-  return (
-    <div className="space-y-3">
-      {clusters.map((c, i) => (
-        <div key={c.category}>
-          <div className="flex items-center justify-between text-sm mb-1">
-            <span className="font-medium text-pd-ink">{c.label}</span>
-            <span className="tabular-nums text-pd-subtle">{c.pct}%</span>
-          </div>
-          <div className="h-2 rounded-full bg-pd-divider overflow-hidden">
-            <motion.div
-              initial={reduce ? false : { width: 0 }}
-              animate={{ width: `${c.pct}%` }}
-              transition={{ duration: 0.5, ease: EASE, delay: reduce ? 0 : i * 0.05 }}
-              className={`h-full rounded-full ${CATEGORY_COLORS[c.category] || CATEGORY_COLORS.other}`}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
-
 function PanelSkeleton() {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      <div className={`lg:col-span-1 ${CARD}`}>
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="mt-2 h-3 w-full" />
-        <div className="mt-5 space-y-4">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i}>
-              <div className="flex justify-between">
-                <Skeleton className="h-3.5 w-28" />
-                <Skeleton className="h-3.5 w-8" />
-              </div>
-              <Skeleton className="mt-1.5 h-2 w-full rounded-full" />
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="lg:col-span-2 space-y-4">
-        <div className={CARD}>
-          <Skeleton className="h-4 w-48" />
-          <Skeleton className="mt-3 h-40 w-full" />
-        </div>
-        <div className={CARD}>
-          <Skeleton className="h-4 w-32" />
-          <div className="mt-3 space-y-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <Skeleton className="h-7 w-7 rounded-full" />
-                <div className="flex-1 space-y-1.5">
-                  <Skeleton className="h-3 w-48" />
-                  <Skeleton className="h-3.5 w-full" />
-                </div>
-              </div>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Surface>
+          <Skeleton className="h-4 w-40" />
+          <div className="mt-4 space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-control-sm w-full rounded-full" />
             ))}
           </div>
-        </div>
+        </Surface>
+        <Surface>
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="mt-3 h-40 w-full" />
+        </Surface>
       </div>
+      <Skeleton className="h-64 w-full rounded-surface" />
     </div>
   )
 }
 
-export default function AiQueriesPanel({ data, loading, onOpenConversation }) {
-  const reduce = useReducedMotion()
+const QUERY_COLUMNS = [
+  {
+    id: "question",
+    accessorFn: (q) => q.content,
+    header: "Question",
+    meta: { label: "questions", variant: "text", minWidth: 280 },
+    cell: ({ row }) => (
+      <span className="block max-w-md truncate text-sm text-foreground">&ldquo;{row.original.content}&rdquo;</span>
+    ),
+  },
+  {
+    id: "owner",
+    accessorFn: (q) => q.owner,
+    header: "Owner",
+    meta: { label: "Owner" },
+    cell: ({ row }) => <span className="text-sm text-muted-foreground">{row.original.owner}</span>,
+  },
+  {
+    id: "theme",
+    accessorFn: (q) => q.category_label,
+    header: "Theme",
+    meta: { label: "Theme" },
+    cell: ({ row }) => (row.original.category_label ? <Badge tone="primary">{row.original.category_label}</Badge> : null),
+  },
+  {
+    id: "source",
+    accessorFn: (q) => (q.source === "slack" ? "Slack" : "App"),
+    header: "Source",
+    meta: { label: "Source" },
+    cell: ({ getValue }) => <span className="text-sm text-muted-foreground">{getValue()}</span>,
+  },
+  {
+    id: "asked",
+    accessorFn: (q) => (q.created_at ? new Date(q.created_at).getTime() : 0),
+    header: "Asked",
+    meta: { label: "Asked" },
+    cell: ({ row }) => <span className="text-sm text-muted-foreground">{relative(row.original.created_at)}</span>,
+  },
+]
 
-  if (loading) return <PanelSkeleton />
-
+export default function AiQueriesPanel({ data, loading, error, onRetry, onOpenConversation }) {
   const d = data || {}
   const clusters = d.clusters || []
   const volume = d.volume || []
+  const recent = useMemo(() => d.recent_queries || [], [d.recent_queries])
+
+  if (loading) return <PanelSkeleton />
+  if (error && !data) {
+    return (
+      <Surface>
+        <ErrorState title="Couldn't load AI queries" onRetry={onRetry} />
+      </Surface>
+    )
+  }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Left: theme clustering + roadmap signal */}
-      <div className="lg:col-span-1 space-y-4">
-        <div className={CARD}>
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-4 w-4 text-pd-primary" />
-            <h3 className="font-pd-display text-sm font-semibold text-pd-ink">Top request themes</h3>
-          </div>
-          <p className="text-xs text-pd-subtle mb-4">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Left: theme clustering + roadmap signal */}
+        <div className="flex flex-col gap-3">
+          <BarList
+            title="Top request themes"
+            description={clusters.length ? `${(d.total ?? 0).toLocaleString()} queries` : undefined}
+            empty="No queries yet."
+            rows={clusters.map((c) => ({ key: c.category, label: c.label, value: c.pct, display: `${c.pct}%` }))}
+          />
+          <p className="px-1 text-xs text-muted-foreground">
             Clustered from {(d.total ?? 0).toLocaleString()} queries in the last {d.window_days ?? 7} days — use to guide the roadmap.
           </p>
-          {clusters.length ? <ThemeBars clusters={clusters} reduce={reduce} /> : (
-            <p className="text-sm text-pd-subtle py-6 text-center">No queries yet.</p>
+          {d.roadmap_signal && (
+            <Notice title="Roadmap signal" className="bg-primary-soft text-primary">
+              {d.roadmap_signal}
+            </Notice>
           )}
         </div>
 
-        {d.roadmap_signal && (
-          <div className="rounded-xl border border-pd-primary-pale bg-pd-primary-tint p-4">
-            <div className="flex items-center gap-1.5 mb-1.5">
-              <Lightbulb className="h-3.5 w-3.5 text-pd-primary" />
-              <span className="text-[11px] font-bold uppercase tracking-wide text-pd-primary">Roadmap signal</span>
-            </div>
-            <p className="text-sm text-pd-ink leading-relaxed">{d.roadmap_signal}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Right: volume chart + recent queries */}
-      <div className="lg:col-span-2 space-y-4">
-        <div className={CARD}>
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-pd-primary" />
-            <h3 className="font-pd-display text-sm font-semibold text-pd-ink">Query volume · last 14 days</h3>
-          </div>
+        {/* Right: volume chart */}
+        <Surface className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium text-body">Query volume · last 14 days</h3>
           <div className="h-40">
             {volume.length ? (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={volume} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="qvol" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#5B3FD6" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="#5B3FD6" stopOpacity={0} />
+                      <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
                     dataKey="date"
-                    tick={{ fontSize: 10, fill: "#98989E" }}
-                    axisLine={{ stroke: "#E7E6E3" }}
+                    tick={{ fontSize: 12, fill: "var(--color-muted-foreground)" }}
+                    axisLine={{ stroke: "var(--color-border)" }}
                     tickLine={false}
                     tickFormatter={(v) => v?.slice(5)}
                     interval="preserveStartEnd"
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: "1px solid #E7E6E3", fontSize: 12, color: "#18181B" }}
+                    contentStyle={{
+                      borderRadius: 12,
+                      border: "1px solid var(--color-border)",
+                      fontSize: 13,
+                      color: "var(--color-foreground)",
+                    }}
                     labelFormatter={(v) => v}
                     formatter={(v) => [v, "queries"]}
                   />
-                  <Area type="monotone" dataKey="count" stroke="#5B3FD6" strokeWidth={2} fill="url(#qvol)" />
+                  <Area type="monotone" dataKey="count" stroke="var(--color-primary)" strokeWidth={2} fill="url(#qvol)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-full flex items-center justify-center text-sm text-pd-subtle">No volume data yet.</div>
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">No volume data yet.</div>
             )}
           </div>
-        </div>
-
-        <div className={CARD}>
-          <h3 className="font-pd-display text-sm font-semibold text-pd-ink mb-3">Recent queries</h3>
-          <Stagger gap={0.04} className="divide-y divide-pd-divider">
-            {(d.recent_queries || []).length === 0 && (
-              <p className="text-sm text-pd-subtle py-6 text-center">No queries yet.</p>
-            )}
-            {(d.recent_queries || []).map((q, i) => (
-              <StaggerItem key={`${q.session_id}-${i}`}>
-                <button
-                  onClick={() => onOpenConversation?.(q.session_id)}
-                  className="w-full text-left py-2.5 flex items-start gap-3 hover:bg-pd-table-head rounded-xl px-2 -mx-2 transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-ring/25"
-                >
-                  <div className="h-7 w-7 shrink-0 rounded-full bg-pd-primary-tint text-pd-primary text-[10px] font-bold flex items-center justify-center">
-                    {(q.owner || "?").slice(0, 2).toUpperCase()}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-semibold text-pd-ink">{q.owner}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-pd-primary">{q.category_label}</span>
-                      {q.source === "slack" && (
-                        <span className="inline-flex items-center gap-0.5 text-[10px] text-pd-subtle"><Slack className="h-3 w-3" /> Slack</span>
-                      )}
-                      <span className="text-[10px] text-pd-subtle ml-auto">{relative(q.created_at)}</span>
-                    </div>
-                    <p className="text-sm text-pd-body truncate mt-0.5">&ldquo;{q.content}&rdquo;</p>
-                  </div>
-                </button>
-              </StaggerItem>
-            ))}
-          </Stagger>
-        </div>
+        </Surface>
       </div>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="px-1 text-base font-semibold text-foreground">Recent queries</h3>
+        <DataTable
+          columns={QUERY_COLUMNS}
+          data={recent}
+          pageSize={10}
+          getRowId={(q, i) => `${q.session_id}-${i}`}
+          onRowClick={(q) => onOpenConversation?.(q.session_id)}
+          empty={<EmptyState title="No queries yet." />}
+        />
+      </section>
     </div>
   )
 }

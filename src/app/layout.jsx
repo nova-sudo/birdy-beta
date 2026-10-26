@@ -1,20 +1,15 @@
 "use client";
 
 import "./globals.css";
-import { fontVariables } from "@/lib/pd-fonts";
+import { fontVariables } from "@/lib/fonts";
 import { MotionConfig } from "framer-motion";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import UserMenu from "@/components/UserMenu";
 import ProtectedLayout from '../components/ProtectedLayout';
 import SWRProvider from "@/components/swr-provider";
-import { AppSidebar } from "@/components/app-sidebar";
 import { usePathname } from "next/navigation";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
-import { Search, Sparkles, Tag } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { Tag } from 'lucide-react';
 import { APP_VERSION } from "@/lib/changelog";
 import { ASK_BIRDY_EVENT } from "@/lib/ask-birdy";
 // The assistant drags in the two heaviest libraries in the app — recharts for
@@ -31,21 +26,21 @@ const BirdyChatModal = dynamic(() => import("@/components/chat/BirdyChatModal"),
   ssr: false,
 });
 import BirdyDefs from "@/components/birdy/BirdyDefs";
-import NotificationsDropdown from "@/components/NotificationsDropdown";
 import ImpersonationBar from "@/components/ImpersonationBar";
-import { Toaster } from "@/components/ui/sonner";
+import {
+  AppSidebar,
+  CommandSearch,
+  ConfirmHost,
+  MobileNavSheet,
+  PageCard,
+  Toaster,
+  TopBar,
+} from "@/components/ds";
 import { CreditsProvider } from "@/hooks/useCredits";
-import {
-  DashboardControlsProvider,
-  DashboardHeaderControls,
-  DashboardHeaderTitle,
-} from "@/components/dashboard-controls";
-import {
-  PageHeaderControls,
-  PageHeaderProvider,
-  PageHeaderTitle,
-  useHasPageHeader,
-} from "@/components/page-header";
+import { DashboardControlsProvider } from "@/components/dashboard-controls";
+import { PageHeaderProvider, useHasPageHeader } from "@/components/page-header";
+
+const SIDEBAR_COLLAPSED_KEY = "birdy.sidebarCollapsed";
 
 /**
  * The wordmark and version badge, which stand down whenever a page has put its
@@ -53,37 +48,39 @@ import {
  * the provider rather than part of RootLayout, which renders it.
  */
 function BirdyWordmark() {
-  const pathname = usePathname();
-  const hasPageHeader = useHasPageHeader();
-
-  // /dashboard publishes its title the older way (a route check in
-  // dashboard-controls), so it is named here rather than detected.
-  if (pathname === "/dashboard" || hasPageHeader) return null;
-
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-pd-display text-[20px] font-extrabold leading-none tracking-[-0.02em] text-pd-ink">Birdy</span>
+    <span className="flex items-center gap-2">
+      <span className="text-lg font-semibold leading-none">Birdy</span>
       <Link
         href="/changelog"
         aria-label={`What's new in Birdy — version ${APP_VERSION}`}
         title={`What's new — ${APP_VERSION}`}
-        className="rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-primary/15"
+        className="inline-flex items-center gap-1 rounded-sm bg-neutral-soft px-2 py-0.5 text-xs font-medium text-neutral-ink outline-none focus-visible:shadow-control-focus"
       >
-        <Badge
-          variant="secondary"
-          className="cursor-pointer gap-1 font-semibold transition-colors"
-        >
-          <Tag className="h-3 w-3" aria-hidden="true" />
-          {APP_VERSION}
-        </Badge>
+        <Tag className="size-3" aria-hidden="true" />
+        {APP_VERSION}
       </Link>
-    </div>
+    </span>
+  );
+}
+
+/** TopBar, with the wordmark as its title on pages that publish none. */
+function ShellTopBar({ onMenuClick, onToggleSidebar, onSearch }) {
+  const hasPageHeader = useHasPageHeader();
+
+  return (
+    <TopBar
+      title={hasPageHeader ? undefined : <BirdyWordmark />}
+      onMenuClick={onMenuClick}
+      onToggleSidebar={onToggleSidebar}
+      onSearch={onSearch}
+    />
   );
 }
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
-  // /admin runs as a separate app-shell (its own dark rail + topbar via
+  // /admin runs as a separate app-shell (its own rail + topbar via
   // src/app/admin/layout.jsx), so it opts out of the main sidebar/header here.
   //
   // An OAuth callback on its way back to the wizard is deliberately NOT
@@ -102,15 +99,33 @@ export default function RootLayout({ children }) {
 
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInitialMsg, setChatInitialMsg] = useState("");
-  const [headerInput, setHeaderInput] = useState("");
-  const headerInputRef = useRef(null);
-  const [isMac, setIsMac] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // The width animates only once someone toggles it, so restoring a saved
+  // rail on load does not slide 256 → 56 in front of them.
+  const [sidebarAnimated, setSidebarAnimated] = useState(false);
 
+  // The rail choice survives reloads. Read after mount so the server render
+  // (always expanded) and the first client render agree.
   useEffect(() => {
-    if (typeof navigator !== "undefined") {
-      setIsMac(/Mac|iPhone|iPad|iPod/i.test(navigator.platform));
+    try {
+      if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setSidebarCollapsed(true);
+    } catch {
+      // Storage blocked: start expanded.
     }
   }, []);
+
+  const toggleSidebar = () => {
+    const next = !sidebarCollapsed;
+    setSidebarAnimated(true);
+    setSidebarCollapsed(next);
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+    } catch {
+      // Storage blocked: the toggle still works for this visit.
+    }
+  };
 
   // Pages open the assistant by announcing a question rather than by reaching
   // into this component's state — see lib/ask-birdy.js for why.
@@ -130,124 +145,94 @@ export default function RootLayout({ children }) {
     return () => window.removeEventListener(ASK_BIRDY_EVENT, onAsk);
   }, []);
 
-  // ⌘K / Ctrl+K focuses the header search bar (only when chat modal is closed)
+  // ⌘K / Ctrl+K opens search, ⌘J / Ctrl+J opens the assistant. Neither fires
+  // while the chat modal is open, and neither exists on the shell-less routes.
   useEffect(() => {
+    if (hideSidebar) return;
     const onKey = (e) => {
-      const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key.toLowerCase() === "k" && !chatOpen) {
+      if (!(e.metaKey || e.ctrlKey) || chatOpen) return;
+      const key = e.key.toLowerCase();
+      if (key === "k") {
         e.preventDefault();
-        headerInputRef.current?.focus();
+        setSearchOpen((v) => !v);
+      } else if (key === "j") {
+        e.preventDefault();
+        setSearchOpen(false);
+        setChatOpen(true);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [chatOpen]);
+  }, [chatOpen, hideSidebar]);
 
-  const handleHeaderSubmit = (e) => {
-    e.preventDefault();
-    const msg = headerInput.trim();
-    if (!msg) return;
-    setChatInitialMsg(msg);
-    setHeaderInput("");
-    setChatOpen(true);
+  // A route change (link click, back button) always leaves the mobile sheet shut.
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
+  const openSearch = () => {
+    setNavOpen(false);
+    setSearchOpen(true);
   };
 
   return (
-    <html suppressHydrationWarning className={fontVariables}>
+    <html lang="en" suppressHydrationWarning className={fontVariables}>
       <head />
       <body suppressHydrationWarning className="antialiased">
         <BirdyDefs />
         <MotionConfig reducedMotion="user">
         <SWRProvider>
         <ProtectedLayout>
-          <SidebarProvider open={false}>
+          <>
             {!hideSidebar && (
               <CreditsProvider>
               <DashboardControlsProvider>
               <PageHeaderProvider>
-              <div className="flex h-screen w-full overflow-hidden">
-                <AppSidebar />
-                <div className="flex flex-col flex-1 min-w-0">
-                  {/* Impersonation banner (shows only while an admin is impersonating) */}
-                  <ImpersonationBar />
-                  {/* Top Header */}
-                  <header className="bg-background border-b border-pd-border w-full z-50 flex items-center justify-between px-4 py-2 h-15 shrink-0">
-                    <div className="flex items-center gap-2">
-                      <SidebarTrigger className="md:hidden" />
-                      {/* The dashboard puts its own title here instead of the
-                          wordmark — the page no longer carries one. */}
-                      <DashboardHeaderTitle />
-                      <PageHeaderTitle />
-                      <BirdyWordmark />
-                    </div>
-
-                    {/* Center Ask-Birdy search bar */}
-                    <div className="mx-auto flex-1 flex justify-center max-w-2xl px-4">
-                      <form onSubmit={handleHeaderSubmit} className="relative w-full max-w-md group">
-                        <Sparkles className="absolute top-1/2 -translate-y-1/2 left-3.5 h-4 w-4 text-pd-primary pointer-events-none" />
-                        <input
-                          ref={headerInputRef}
-                          value={headerInput}
-                          onChange={(e) => setHeaderInput(e.target.value)}
-                          className="w-full h-[42px] pl-10 pr-20 text-sm rounded-full bg-background border border-gray-300 hover:border-gray-400 placeholder:text-muted-foreground outline-none focus:border-primary focus:hover:border-primary focus:ring-4 focus:ring-primary/15 transition-[color,box-shadow,border-color] duration-200"
-                          placeholder="Ask Birdy about your marketing data..."
-                          aria-label="Ask Birdy"
-                        />
-                        {!headerInput && (
-                          <kbd className="absolute top-1/2 -translate-y-1/2 right-11 hidden sm:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-pd-divider text-[10px] font-medium text-pd-body font-sans pointer-events-none">
-                            {isMac ? "⌘" : "Ctrl"}K
-                          </kbd>
-                        )}
-                        <Button
-                          type="submit"
-                          size="icon-sm"
-                          variant={headerInput.trim() ? "default" : "secondary"}
-                          disabled={!headerInput.trim()}
-                          // Centred with a negative margin rather than a
-                          // translate: the Button's own hover lift is a
-                          // translate too, and the two would fight.
-                          className="absolute top-1/2 right-1.5 -mt-4"
-                          aria-label="Ask Birdy"
-                        >
-                          <Search className="h-4 w-4" />
-                        </Button>
-                      </form>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {/* Dashboard date range + granularity; renders on that
-                          route only, since nothing else obeys them. */}
-                      <DashboardHeaderControls />
-                      <PageHeaderControls />
-                      <NotificationsDropdown />
-                      <UserMenu />
-                    </div>
-                  </header>
-
-                  {/* Content */}
-                  <SidebarInset className="flex-1 overflow-hidden bg-pd-canvas">
-                    <div className="mx-auto w-full flex flex-1 flex-col gap-4 p-4 md:p-6 overflow-x-hidden overflow-y-auto h-full">
-                      {children}
-                    </div>
-                  </SidebarInset>
-
-                  {/* Birdy Chat Modal — mounted only while open, so its chunk
-                      is fetched on first use rather than on every page load.
-                      Nothing is lost on unmount: the transcript lives in
-                      chat-store, which is why closing and reopening already
-                      showed a reply that finished while it was shut. */}
-                  {chatOpen && (
-                    <BirdyChatModal
-                      open={chatOpen}
-                      onOpenChange={(v) => {
-                        setChatOpen(v);
-                        if (!v) setChatInitialMsg("");
-                      }}
-                      initialMessage={chatInitialMsg}
-                      pathname={pathname}
+              <div className="flex h-screen w-full flex-col overflow-hidden bg-frame font-sans">
+                {/* Impersonation banner (shows only while an admin is impersonating) */}
+                <ImpersonationBar />
+                <div className="flex min-h-0 flex-1">
+                  <AppSidebar
+                    onSearch={openSearch}
+                    collapsed={sidebarCollapsed}
+                    animated={sidebarAnimated}
+                    className="hidden md:flex"
+                  />
+                  {/* The top bar sits on the canvas; the page is the white card
+                      below it, with an 8px gutter right and bottom on desktop. */}
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    <ShellTopBar
+                      onMenuClick={() => setNavOpen(true)}
+                      onToggleSidebar={toggleSidebar}
+                      onSearch={openSearch}
                     />
-                  )}
+                    <PageCard>{children}</PageCard>
+                  </div>
                 </div>
+
+                <MobileNavSheet
+                  open={navOpen}
+                  onOpenChange={setNavOpen}
+                  sidebarProps={{ onSearch: openSearch }}
+                />
+                <CommandSearch open={searchOpen} onOpenChange={setSearchOpen} />
+
+                {/* Birdy Chat Modal — mounted only while open, so its chunk
+                    is fetched on first use rather than on every page load.
+                    Nothing is lost on unmount: the transcript lives in
+                    chat-store, which is why closing and reopening already
+                    showed a reply that finished while it was shut. */}
+                {chatOpen && (
+                  <BirdyChatModal
+                    open={chatOpen}
+                    onOpenChange={(v) => {
+                      setChatOpen(v);
+                      if (!v) setChatInitialMsg("");
+                    }}
+                    initialMessage={chatInitialMsg}
+                    pathname={pathname}
+                  />
+                )}
               </div>
               </PageHeaderProvider>
               </DashboardControlsProvider>
@@ -259,10 +244,11 @@ export default function RootLayout({ children }) {
                 {children}
               </div>
             )}
-          </SidebarProvider>
+          </>
         </ProtectedLayout>
         </SWRProvider>
         </MotionConfig>
+        <ConfirmHost />
         <Toaster />
       </body>
     </html>

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { AnimatePresence, motion } from "framer-motion"
 import { MessageSquarePlus, Maximize2, X } from "lucide-react"
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { Badge, Button } from "@/components/ds"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { resetChat } from "@/lib/chat-store"
@@ -84,16 +84,16 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 32, opacity: 0 }}
           transition={{ duration: 0.32, ease: EASE_OUT }}
-          className="fixed inset-y-2 right-2 z-[60] flex w-[420px] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-2xl border border-pd-border bg-pd-surface shadow-pd-popover sm:inset-y-3 sm:right-3"
+          className="fixed inset-y-2 right-2 z-[60] flex w-[420px] max-w-[calc(100vw-16px)] flex-col overflow-hidden rounded-overlay bg-background shadow-overlay sm:inset-y-3 sm:right-3"
         >
           {/* Header: who, where, and the three things you can do to the panel. */}
-          <div className="flex shrink-0 items-center gap-2 border-b border-pd-divider bg-pd-surface px-3.5 py-2.5">
-            <BirdyAvatar size={30} />
-            <span className="font-pd-display text-[15px] font-bold leading-none text-pd-ink">Birdy</span>
+          <div className="flex shrink-0 items-center gap-2 border-b border-border bg-background px-3.5 py-2.5">
+            <BirdyAvatar size={28} />
+            <span className="text-base font-semibold leading-none text-foreground">Birdy</span>
             {context && (
-              <span className="ml-1 truncate rounded-full bg-pd-primary-tint px-2 py-[3px] text-[11px] font-semibold text-pd-primary">
-                {context}
-              </span>
+              <Badge tone="primary" className="ml-1 min-w-0">
+                <span className="truncate">{context}</span>
+              </Badge>
             )}
             <div className="ml-auto flex items-center gap-0.5">
               <Button

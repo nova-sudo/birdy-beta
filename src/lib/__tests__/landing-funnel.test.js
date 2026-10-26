@@ -10,7 +10,7 @@
 import { describe, it, expect } from "vitest"
 import {
   buildExitSplit,
-  buildLandingStages,
+  buildLandingSteps,
   diagnoseLandingFunnel,
 } from "@/lib/landing-funnel"
 
@@ -33,37 +33,39 @@ const funnel = ({ views = 1000, ad_views = 800, form_starts = 300, opt_ins = 100
 
 const byKey = (stages) => Object.fromEntries(stages.map((s) => [s.key, s]))
 
-describe("buildLandingStages", () => {
-  it("gives every stage an icon and a tone", () => {
-    const stages = buildLandingStages(funnel())
-    expect(stages).toHaveLength(4)
-    expect(stages.every((s) => s.icon && s.tone)).toBe(true)
+describe("buildLandingSteps", () => {
+  it("gives every stage a label, a short label where it has one, and a numeric value", () => {
+    const steps = buildLandingSteps(funnel())
+    expect(steps).toHaveLength(4)
+    expect(steps.map((s) => s.value)).toEqual([800, 1000, 300, 100])
+    expect(byKey(steps).ad_views.shortLabel).toBe("Ads")
   })
 
-  it("formats counts and shares for the stepper", () => {
-    const stages = byKey(buildLandingStages(funnel({ views: 1204, opt_ins: 118 })))
-    expect(stages.views.count).toBe("1,204")
-    expect(stages.opt_ins.share).toBe("9.8%")
+  it("passes shares through as fractions of landing views", () => {
+    const steps = byKey(buildLandingSteps(funnel({ views: 1204, opt_ins: 118 })))
+    expect(steps.opt_ins.share).toBeCloseTo(118 / 1204)
   })
 
-  it("leaves the cohort and its ad slice without a share", () => {
-    const stages = byKey(buildLandingStages(funnel()))
-    expect(stages.views.share).toBeNull()
-    expect(stages.ad_views.share).toBeNull()
+  it("keeps the cohort and its ad slice share-less, explicitly", () => {
+    const steps = byKey(buildLandingSteps(funnel()))
+    expect(steps.views.share).toBeNull()
+    expect(steps.ad_views.share).toBeNull()
   })
 
-  it("carries a delta only where the server sent one", () => {
+  it("carries a signed delta only where the server sent one", () => {
     const withDelta = funnel()
     withDelta.stages[3] = { ...withDelta.stages[3], direction: "down", delta: 12.5 }
+    withDelta.stages[2] = { ...withDelta.stages[2], direction: "up", delta: 4 }
 
-    const stages = byKey(buildLandingStages(withDelta))
-    expect(stages.opt_ins).toMatchObject({ direction: "down", delta: 12.5 })
-    expect(stages.views.direction).toBeUndefined()
+    const steps = byKey(buildLandingSteps(withDelta))
+    expect(steps.opt_ins.delta).toBe(-12.5)
+    expect(steps.form_starts.delta).toBe(4)
+    expect(steps.views.delta).toBeUndefined()
   })
 
   it("draws nothing for a client with no funnel", () => {
-    expect(buildLandingStages(null)).toBeNull()
-    expect(buildLandingStages({ applicable: false })).toBeNull()
+    expect(buildLandingSteps(null)).toBeNull()
+    expect(buildLandingSteps({ applicable: false })).toBeNull()
   })
 })
 

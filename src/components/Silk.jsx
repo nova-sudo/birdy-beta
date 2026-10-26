@@ -3,6 +3,7 @@
 import { Canvas, useFrame, useThree } from "@react-three/fiber"
 import { forwardRef, useRef, useMemo, useLayoutEffect } from "react"
 import { Color } from "three"
+import { SILK_DEFAULT_COLOR } from "@/lib/brand-colors"
 
 const hexToNormalizedRGB = (hex) => {
   hex = hex.replace("#", "")
@@ -95,7 +96,7 @@ SilkPlane.displayName = "SilkPlane"
 const Silk = ({
   speed = 5,
   scale = 1,
-  color = "#7B7481",
+  color = SILK_DEFAULT_COLOR,
   noiseIntensity = 1.5,
   rotation = 0,
 }) => {

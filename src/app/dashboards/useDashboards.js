@@ -58,5 +58,7 @@ export function useDashboards() {
     [mutate],
   )
 
-  return { items: data ?? [], isLoading, error, create, remove }
+  const retry = useCallback(() => mutate(), [mutate])
+
+  return { items: data ?? [], isLoading, error, create, remove, retry }
 }

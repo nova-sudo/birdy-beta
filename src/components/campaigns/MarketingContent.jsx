@@ -1,63 +1,54 @@
 "use client"
-import { useState, useEffect, useMemo, useRef, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { loadCustomMetrics, evaluateFormula, formatMetricValue, setCustomMetricsCache } from "@/lib/metrics"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import Image from "next/image"
+import { CheckIcon, FileBarChart, Grid3X3, Info, LayoutGrid, Users } from "lucide-react"
+import { toast } from "sonner"
+import getSymbolFromCurrency from "currency-symbol-map"
+import {
+  Badge,
+  BirdyRead,
+  Button,
+  Checkbox,
+  DataTable,
+  DataTableColumnHeader,
+  EmptyState,
+  ErrorState,
+  SearchInput,
+  MetricTabsChart,
+  Notice,
+  PageHeader,
+  SegmentedTabs,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+  fromPortfolioTabs,
+  StateBadge,
+} from "@/components/ds"
+import { evaluateFormula, setCustomMetricsCache } from "@/lib/metrics"
 import { apiRequest } from "@/lib/api"
 import { useColumnViews } from "@/lib/useColumnViews"
-import {
-  LayoutGrid,
-  Grid3X3,
-  FileBarChart,
-  Users,
-  X,
-  Info,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
 import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
-import StyledTable from "@/components/ui/table-container"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
-import getSymbolFromCurrency from "currency-symbol-map"
-import { Stagger, StaggerItem } from "@/components/motion"
-import { toast } from "sonner"
-
 import { presetToStartEnd as getDateRangeFromPreset } from "@/lib/date-utils"
 import { DrillDownBreadcrumb } from "@/components/campaigns/DrillDownBreadcrumb"
 import AdsGallery, { AdsViewSwitch } from "@/components/campaigns/AdsGallery"
-import { ClientGroupPicker } from "@/components/campaigns/ClientGroupPicker"
+import { ClientGroupSelect } from "@/components/contacts/ClientGroupSelect"
+import { PeriodControl } from "@/app/dashboard/PeriodControl"
 import { useCurrency } from "@/hooks/useCurrency"
-import { DateRangeSelect } from "@/components/DateRangeSelect"
-import { GranularitySelect } from "@/components/GranularitySelect"
 import { useGranularity } from "@/lib/useGranularity"
+import { GRANULARITIES } from "@/lib/portfolio-series"
 import { usePageHeader } from "@/components/page-header"
-
-// The Marketing Hub is drawn on the design system in
-// design_handoff_hubs/Birdy Style Guide.md, on the --pd-* tokens in
-// globals.css. Fonts (Bricolage Grotesque display, Inter body) come from the
-// root layout; pdFontClass only sets Inter as the base.
-import { pdFontClass } from "@/lib/pd-fonts"
-import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart, PageTabPanel, PageTabs } from "@/components/portfolio"
+import { toLeadFindings, toTrendSeries } from "@/app/contacts/presentation"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
 import { isOverCplCeiling, marketingInsightPrompt, scopeGroups } from "@/lib/marketing-aggregate"
 import { DATE_PRESETS } from "@/lib/constants"
-
-// The colour family each hero figure wears, from the handoff's tile table. It
-// is the dot before the label in the metric tab row; the same words tones.js
-// uses, so the figure keeps its colour wherever else it is drawn.
-const MARKETING_KPI_PRESENTATION = {
-  activeCampaigns: { tone: "primary" },
-  spend: { tone: "success" },
-  leads: { tone: "info" },
-  cpl: { tone: "amber" },
-  impressions: { tone: "info" },
-  ctr: { tone: "primary" },
-}
 
 // What the plot says when the selected metric has no series for the window.
 // Each is specific to why that metric's line can be missing while its figure
@@ -73,13 +64,10 @@ const CHART_EMPTY = {
 }
 
 // The card's copy before there is anything to read: no spend in the window.
-const BRIEFING_WAITING = [
-  {
-    text: "Once campaigns in this window have spend against them, Birdy reads the movement and names what to act on.",
-  },
-]
+const BRIEFING_WAITING =
+  "Once campaigns in this window have spend against them, Birdy reads the movement and names what to act on."
 
-// The page's sections, with the tab bar's 14px leading glyph.
+// The page's sections, with the tab bar's leading glyph.
 const SECTION_TABS = [
   { key: "campaigns", label: "Campaigns", icon: LayoutGrid },
   { key: "adsets", label: "Ad Sets", icon: Grid3X3 },
@@ -89,6 +77,27 @@ const SECTION_TABS = [
 
 // Ties the tablist to the panel it swaps, for anyone navigating by role.
 const TABLE_PANEL_ID = "marketing-hub-table-panel"
+
+// Tables page client-side; the gallery pages itself (AdsGallery).
+const TABLE_PAGE_SIZE = 25
+
+// The campaign, ad set and ad tables open sorted by spend, biggest first.
+const SPEND_FIRST = [{ id: "spend", desc: true }]
+
+// The name column leads the Meta tables and stays put: it carries the
+// selection checkbox and the status switch, cannot be dragged, and nothing
+// goes ahead of it. The Leads tab has no such column.
+const LOCKED_COLUMNS = { campaigns: ["name"], adsets: ["name"], ads: ["name"], leads: [] }
+
+// Any column order, with the tab's locked columns first. Saved views from
+// before the lock can have Name anywhere, or not at all.
+const lockedFirst = (ids, locked) => [
+  ...locked,
+  ...ids.filter((id) => !locked.includes(id)),
+]
+
+// The ClientGroupSelect's value is a group id, or "all".
+const ALL_GROUPS = "all"
 
 // FIX: non-empty defaults so skeletons always have columns
 export const DEFAULT_VISIBLE_COLUMNS = {
@@ -101,6 +110,8 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   // one click away in the Columns menu.
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "lead_source", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
+
+const OPPORTUNITY_STATE = { won: "won", lost: "lost", open: "in_progress", abandoned: "skipped" }
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function MarketingContent({
@@ -116,19 +127,20 @@ export function MarketingContent({
   const { currency: userCurrency, currencySymbol } = useCurrency()
 
   const [customMetrics, setCustomMetrics] = useState([])
-  const [selectedClientGroup, setSelectedClientGroup] = useState(null)
+  const [selectedClientGroup, setSelectedClientGroup] = useState(ALL_GROUPS)
   const [campaigns, setCampaigns] = useState([])
   const [allAdSets, setAllAdSets] = useState([])
   const [allAds, setAllAds] = useState([])
   const [leads, setLeads] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  // Bumped by the error state's "Try again" to re-run the leads fetch.
+  const [reloadKey, setReloadKey] = useState(0)
   const [activeTab, setActiveTab] = useState("campaigns")
   // Ads-tab-only layout switch: the same rows and column order drawn either as
   // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
   const [adsView, setAdsView] = useState("table")
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterConditions, setFilterConditions] = useState([])
 
   // ── Drill-down state: each holds the full row object for name display ──────
   const [selectedCampaign, setSelectedCampaign] = useState(null)
@@ -251,10 +263,6 @@ export function MarketingContent({
     setVisibleColumns(prev => ({ ...prev, leads: savedLeads }))
   }, [loadedLeads, savedLeads])
 
-  const [gridOpen, setGridOpen] = useState(false)
-  const [groupSearch, setGroupSearch] = useState("")
-  const gridRef = useRef(null)
-
   // ── Custom metrics (load from API) ─────────────────────────────────────────
   const [metricsLoaded, setMetricsLoaded] = useState(false)
   useEffect(() => {
@@ -296,17 +304,6 @@ export function MarketingContent({
       setAvailableTags([...allTags].sort())
     }).catch(() => {})
   }, [clientGroups])
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (gridRef.current && !gridRef.current.contains(e.target)) {
-        setGridOpen(false)
-        setGroupSearch("")
-      }
-    }
-    if (gridOpen) document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [gridOpen])
 
   // ── GHL opportunity attribution per campaign/adset/ad ────────────────────
   // Drives the GHL columns (won/lost/open/abandoned/total/revenue/contacts)
@@ -643,7 +640,7 @@ export function MarketingContent({
 
     fetchLeads()
     return () => ctrl.abort()
-  }, [clientGroups, groupsLoading, datePreset])
+  }, [clientGroups, groupsLoading, datePreset, reloadKey])
 
   // ── Drill-down row-click handler ──────────────────────────────────────────
   // Clicking a campaign row selects it, clears downstream, and advances the tab.
@@ -765,28 +762,6 @@ export function MarketingContent({
       })
     }
 
-    // Advanced filter conditions
-    filterConditions.forEach(c => {
-      filtered = filtered.filter(i => {
-        let val = i[c.field]
-        if (c.field === "full_name") {
-          val = i.full_name || i.field_data?.["full name"] || i.field_data?.full_name ||
-            i.fullName || i.name || `${i.first_name || ""} ${i.last_name || ""}`.trim() || ""
-        }
-        if (typeof val === "string") {
-          if (c.operator === "equals") return val.toLowerCase() === String(c.value).toLowerCase()
-          if (c.operator === "contains") return val.toLowerCase().includes(String(c.value).toLowerCase())
-        } else if (typeof val === "number") {
-          const n = Number(c.value)
-          if (isNaN(n)) return true
-          if (c.operator === "equals") return val === n
-          if (c.operator === "greaterThan") return val > n
-          if (c.operator === "lessThan") return val < n
-        }
-        return true
-      })
-    })
-
     return filtered
   }
 
@@ -865,7 +840,6 @@ export function MarketingContent({
   })
 
   const getCurrentVisibleColumns = () => visibleColumns[activeTab] || DEFAULT_VISIBLE_COLUMNS[activeTab]
-  const columnVisibility = Object.fromEntries(getCurrentVisibleColumns().map(col => [col, true]))
 
   // ── Columns menu plumbing ──────────────────────────────────────────────
   // `type` is already meta/ghl/tags/custom, which is exactly the menu's source.
@@ -887,8 +861,9 @@ export function MarketingContent({
   // visibleColumns slot and persists the same debounced way, so the other
   // layout reorders with it instantly.
   const handleColumnOrderChange = (newOrder) => {
-    setVisibleColumns(prev => ({ ...prev, [activeTab]: newOrder }))
-    saveDebouncedByTab[activeTab]?.(newOrder)
+    const next = lockedFirst(newOrder, LOCKED_COLUMNS[activeTab])
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: next }))
+    saveDebouncedByTab[activeTab]?.(next)
   }
 
   // Explicit save only — see ColumnsMenu. Writes this tab's own layout.
@@ -915,19 +890,16 @@ export function MarketingContent({
       return count ? count.toLocaleString() : "-"
     }
     // GHL enrichment columns on Meta leads tab
-    if (col === "ghl_matched") return value ? "✅" : "–"
+    if (col === "ghl_matched")
+      return value ? <><CheckIcon aria-hidden className="size-4 text-success-ink" /><span className="sr-only">Yes</span></> : "–"
     if (col === "ghl_opportunity_status") {
       if (!value) return "–"
-      const colors = { won: "bg-pd-success-bg text-pd-success", lost: "bg-pd-danger-bg text-pd-danger", open: "bg-pd-info-bg text-pd-info", abandoned: "bg-pd-divider text-pd-body" }
-      return <span className={`${colors[value] || "bg-pd-divider text-pd-body"} px-2 py-0.5 rounded-full text-[11px] font-bold capitalize`}>{value}</span>
+      return <StateBadge state={OPPORTUNITY_STATE[value] ?? "unknown"} className="capitalize">{value}</StateBadge>
     }
     if (col === "lead_source") {
       const label = { instant_form: "Meta form", ghl_attribution: "GHL attribution" }[value]
       if (!label) return "–"
-      const tone = value === "instant_form"
-        ? "bg-pd-info-bg text-pd-info"
-        : "bg-pd-primary-tint text-pd-primary"
-      return <span className={`${tone} px-2 py-0.5 rounded-full text-[11px] font-bold`}>{label}</span>
+      return <Badge tone={value === "instant_form" ? "info" : "primary"}>{label}</Badge>
     }
     if (col === "ghl_opportunity_value") return value ? `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(0)}` : "–"
     if (col === "ghl_tags") {
@@ -955,7 +927,7 @@ export function MarketingContent({
     if (col === "cpl" || col === "cost_per_result") {
       const money = `${getSymbolFromCurrency(userCurrency)}${Number(value).toFixed(2)}`
       return isOverCplCeiling(row, heroTotals.cpl)
-        ? <span className="font-medium text-pd-danger">{money}</span>
+        ? <span className="font-medium text-danger-ink">{money}</span>
         : money
     }
     if (["spend", "cpc", "cpm", "cpp", "social_spend"].includes(col))
@@ -974,10 +946,15 @@ export function MarketingContent({
     return value
   }
 
-  // FIX: useMemo with non-empty fallback so StyledTable always has columns for skeletons
-  const tableColumns = useMemo(() => {
+  // What each visible column is, in order: the table maps these to DataTable
+  // columns (below) and the Ads gallery draws them as card metrics.
+  // FIX: non-empty fallback so the table always has columns for its skeleton
+  const columnSpecs = useMemo(() => {
     const cols = getCurrentVisibleColumns()
-    const effectiveCols = cols.length > 0 ? cols : DEFAULT_VISIBLE_COLUMNS[activeTab]
+    const effectiveCols = lockedFirst(
+      cols.length > 0 ? cols : DEFAULT_VISIBLE_COLUMNS[activeTab],
+      LOCKED_COLUMNS[activeTab]
+    )
     return effectiveCols.map(col => {
       // Resolve custom metric names from local state (not global cache)
       const customMatch = customMetrics.find(m => m.id === col)
@@ -991,7 +968,7 @@ export function MarketingContent({
       else if (isCustomMetric) colIcon = Flask
 
       return {
-        id: col, key: col,
+        id: col,
         header: displayName,
         label: displayName,
         icons: colIcon,
@@ -1007,63 +984,199 @@ export function MarketingContent({
     // heroTotals.cpl is in here because formatCellValue closes over it to
     // decide which CPL cells render red; without it the columns keep the
     // closure from the render where the threshold was last different.
-  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl, rowsSpanClients])
+  }, [visibleColumns, activeTab, customMetrics, userCurrency, heroTotals.cpl, rowsSpanClients, tagRollup, tagColumnIds, dedupedTags])
 
-  // The six figures are the chart's tabs. Only the four with a daily series
-  // are selectable; active campaigns and CTR are figures in the row and
-  // nothing more.
-  // Only figures with a curve sit over the chart: a tab that does nothing
-  // when clicked reads as broken. Active campaigns and CTR have no daily
-  // series, so they are left to the table and the briefing.
-  const heroTabs = useMemo(
-    () => kpis
-      .filter(k => Boolean(chartMetrics[k.key]))
-      .map(k => ({ ...k, tone: MARKETING_KPI_PRESENTATION[k.key]?.tone })),
-    [kpis, chartMetrics]
+  // ── The rows the current tab draws ────────────────────────────────────────
+  // Memoised because DataTable re-runs on a new `data` reference.
+  const tabRows = useMemo(
+    () => getFilteredDataForTab(),
+    // applyFilters reads exactly these; the function itself is rebuilt each render.
+    [
+      activeTab, enhancedCampaigns, enhancedAdSets, enhancedAds, leads, campaigns, allAdSets, allAds,
+      clientGroups, selectedClientGroup, selectedCampaign, selectedAdSet, selectedAd,
+      selectedCampaignIds, selectedAdSetIds, selectedAdIds, searchTerm,
+    ]
   )
+
+  // ── Row selection (per tab) ───────────────────────────────────────────────
+  // Checked rows narrow the next level down, the same way a drill-down click
+  // does (see applyFilters). The Leads tab is the end of the chain.
+  const [selectedIds, setSelectedIds] = {
+    campaigns: [selectedCampaignIds, setSelectedCampaignIds],
+    adsets: [selectedAdSetIds, setSelectedAdSetIds],
+    ads: [selectedAdIds, setSelectedAdIds],
+    leads: [null, null],
+  }[activeTab]
+
+  const lockedColumns = LOCKED_COLUMNS[activeTab]
+
+  // The visible columns as DataTable columns. On the Meta tabs the first one
+  // (Name) carries the row's select checkbox and status switch ahead of the
+  // name, so they stay pinned with it when the table scrolls sideways.
+  const tableColumns = useMemo(() => {
+    const canSelect = activeTab !== "leads"
+    const allSelected = tabRows.length > 0 && tabRows.every((r) => selectedIds?.has(r.id))
+    const someSelected = !allSelected && tabRows.some((r) => selectedIds?.has(r.id))
+
+    return columnSpecs.map((spec, index) => {
+      const leading = canSelect && index === 0
+      return {
+        id: spec.id,
+        accessorFn: (row) => row?.[spec.id],
+        header: ({ column }) => (
+          <span className="inline-flex items-center gap-1.5">
+            {leading && (
+              <Checkbox
+                checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                onCheckedChange={(checked) => {
+                  const next = new Set(selectedIds)
+                  tabRows.forEach((r) => (checked ? next.add(r.id) : next.delete(r.id)))
+                  setSelectedIds(next)
+                }}
+                // Dragging and sorting live on the header cell; the box is only a box.
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Select all rows"
+                className="mr-1.5"
+              />
+            )}
+            {spec.icons && <Image src={spec.icons} alt="" width={14} height={14} className="shrink-0" />}
+            <DataTableColumnHeader column={column} title={spec.header} />
+          </span>
+        ),
+        enableSorting: true,
+        enableHiding: false,
+        meta: { label: spec.label, minWidth: leading ? 320 : index === 0 ? 220 : 140 },
+        cell: ({ getValue, row }) => {
+          const original = row.original
+          const content = spec.render(getValue(), original)
+          const sub = index === 0 && spec.sub ? spec.sub(original) : null
+          const text = sub ? (
+            <div className="flex min-w-0 flex-col gap-0.5">
+              {content}
+              <span className="truncate text-xs text-muted-foreground">{sub}</span>
+            </div>
+          ) : (
+            content
+          )
+          if (!leading) return text
+
+          const isActive = String(original.status).toLowerCase() === "active"
+          return (
+            <div className="flex min-w-0 items-center gap-3">
+              {/* The row drills on click; these two must not. */}
+              <span className="flex shrink-0 items-center gap-3" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  checked={selectedIds.has(original.id)}
+                  onCheckedChange={(checked) => {
+                    const next = new Set(selectedIds)
+                    if (checked) next.add(original.id)
+                    else next.delete(original.id)
+                    setSelectedIds(next)
+                  }}
+                  aria-label={`Select ${original.name || original.id}`}
+                />
+                <Switch
+                  checked={isActive}
+                  disabled={togglingRows.has(original.id)}
+                  aria-label={`${isActive ? "Pause" : "Activate"} ${original.name || original.id}`}
+                  onCheckedChange={() => handleStatusToggle(original.id, original.status)}
+                />
+              </span>
+              <div className="min-w-0 font-medium text-foreground">{text}</div>
+            </div>
+          )
+        },
+      }
+    })
+    // handleStatusToggle closes over activeTab, which is already a dependency.
+  }, [columnSpecs, activeTab, tabRows, selectedIds, togglingRows])
+
+  const tableColumnOrder = useMemo(() => columnSpecs.map((s) => s.id), [columnSpecs])
+
+  // Dragging a header onto another moves it there, within the unlocked
+  // columns. The order is the visible list, saved debounced like the gallery's.
+  const reorderColumn = useCallback((fromId, toId) => {
+    const ids = tableColumnOrder
+    const from = ids.indexOf(fromId)
+    const to = ids.indexOf(toId)
+    if (from < 0 || to < 0 || lockedColumns.includes(fromId) || lockedColumns.includes(toId)) return
+    const moved = ids.filter((id) => id !== fromId)
+    moved.splice(moved.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    handleColumnOrderChange(moved)
+    // handleColumnOrderChange is rebuilt every render but only reads activeTab.
+  }, [tableColumnOrder, lockedColumns, activeTab])
+
+  const [sortingByTab, setSortingByTab] = useState({
+    campaigns: SPEND_FIRST, adsets: SPEND_FIRST, ads: SPEND_FIRST, leads: [],
+  })
+  // Paging is held here so a new search, level tab or drill-down can send the
+  // table back to page 1 without remounting it (which would drop the search box's focus).
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: TABLE_PAGE_SIZE })
+  const resetKey = [
+    activeTab, searchTerm, selectedCampaign?.id, selectedAdSet?.id, selectedAd?.id,
+    [...selectedCampaignIds].join(), [...selectedAdSetIds].join(), [...selectedAdIds].join(),
+  ].join("|")
+  useEffect(() => {
+    setPagination((prev) => (prev.pageIndex === 0 ? prev : { ...prev, pageIndex: 0 }))
+  }, [resetKey])
+
+  const tableState = useMemo(
+    () => ({ sorting: sortingByTab[activeTab], columnOrder: tableColumnOrder, pagination }),
+    [sortingByTab, activeTab, tableColumnOrder, pagination]
+  )
+
+  // ── Hero row: metric tabs over the chart, and Birdy's read ───────────────
+  // The six figures are the chart's tabs. Only the four with a daily series
+  // are selectable: a tab that does nothing when clicked reads as broken.
+  // Active campaigns and CTR have no daily series, so they are left to the
+  // table and the briefing.
+  //
+  // A metric with no comparable previous period renders without a pill rather
+  // than with a zero: an unknown delta is not a flat one.
+  const heroMetrics = useMemo(() => {
+    const tabs = kpis
+      .filter((k) => Boolean(chartMetrics[k.key]))
+      .map(({ key, label, value, polarity, direction, delta }) => ({
+        key, label, value, polarity, direction, delta,
+      }))
+
+    return fromPortfolioTabs({ tabs, activeKey: chartMetric, chart: null, comparison: "vs previous period" }).map((m) => {
+      const source = chartMetrics[m.key]
+      const decimals = source.decimals ?? 0
+      const pointValues = (source.values ?? []).map(
+        (v) =>
+          `${source.valuePrefix ?? ""}${Number(v).toLocaleString(undefined, {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals,
+          })}`
+      )
+      return {
+        ...m,
+        series: toTrendSeries({ ...source, pointValues }),
+        points: source.values?.length ?? 0,
+      }
+    })
+  }, [kpis, chartMetrics, chartMetric])
 
   // Guards against a selection that has no series to show — spend always has
   // one, so it is the tab the chart falls back to.
   const activeChartMetric = chartMetrics[chartMetric] ? chartMetric : "spend"
+  const activeMetric = heroMetrics.find((m) => m.key === activeChartMetric)
+  const activeSource = chartMetrics[activeChartMetric]
 
-  const chart = useMemo(() => {
-    const metric = chartMetrics[activeChartMetric]
-    if (!metric?.values?.length) return null
+  // Where the line covers less than the figure, or is shaped rather than
+  // counted, the plot says so — the note would otherwise be lost now that the
+  // headline lives in the tab above.
+  const plottedNote = activeSource?.coverage ?? activeSource?.estimateNote
 
-    // The chart's headline delta is the same period-over-period figure the
-    // tab for that metric shows — one number, computed once.
-    const kpi = kpis.find(k => k.key === activeChartMetric)
-    const decimals = metric.decimals ?? 0
-
-    return {
-      ...metric,
-      subtitle: `${dateRangeLabel} · ${metric.subtitle}`,
-      pointValues: metric.values.map(v =>
-        `${metric.valuePrefix ?? ""}${Number(v).toLocaleString(undefined, {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        })}`
-      ),
-      // Where the line covers less than the figure, or is shaped rather than
-      // counted, the plot header says so — the note would otherwise be lost
-      // now that the headline lives in the tab above.
-      plottedNote: metric.coverage ?? metric.estimateNote ?? undefined,
-      direction: kpi?.direction,
-      delta: kpi?.delta,
-      polarity: kpi?.polarity,
-    }
-  }, [chartMetrics, activeChartMetric, kpis, dateRangeLabel])
-
+  const readRows = useMemo(
+    () => (insight ? toLeadFindings(insight.segments, findings) : []),
+    [insight, findings]
+  )
   const briefingPrompt = useMemo(
     () => (insight ? marketingInsightPrompt(insight.segments) : undefined),
     [insight]
   )
-
-  // ── Filter condition helpers ──────────────────────────────────────────────
-  const addFilterCondition = () => setFilterConditions(prev => [...prev, { field: activeTab === "leads" ? "full_name" : "name", operator: "contains", value: "" }])
-  const updateFilterCondition = (idx, field, val) => setFilterConditions(prev => prev.map((c, i) => i === idx ? { ...c, [field]: val } : c))
-  const removeFilterCondition = (idx) => setFilterConditions(prev => prev.filter((_, i) => i !== idx))
-  const handleClearFilters = () => { setFilterConditions([]); setSearchTerm("") }
 
   // ── Tab count badges ──────────────────────────────────────────────────────
   const tabBadge = (tab) => {
@@ -1076,12 +1189,19 @@ export function MarketingContent({
     return null
   }
 
-  const ghlClientGroups = clientGroups // Marketing uses all groups (not filtered by ghl_location_id)
-
-  const gridItems = useMemo(() => [
-    { id: "all", name: "All Groups" },
-    ...clientGroups.slice(0, 49),
-  ], [clientGroups])
+  const sectionTabs = SECTION_TABS.map(({ key, label, icon: Icon }) => {
+    const badge = tabBadge(key)
+    return {
+      value: key,
+      label: (
+        <>
+          <Icon aria-hidden className="size-3.5" />
+          {label}
+        </>
+      ),
+      count: badge ?? undefined,
+    }
+  })
 
   // ── Landing-page funnel ───────────────────────────────────────────────────
   // Only ever for one client. The funnel's stages are a single page's visits,
@@ -1089,7 +1209,7 @@ export function MarketingContent({
   // average a client whose page converts at 14% with one who has no page at
   // all, and the result describes neither. Null means the card draws nothing.
   const funnelGroupId = useMemo(() => {
-    if (selectedClientGroup && selectedClientGroup !== "all") return selectedClientGroup
+    if (selectedClientGroup && selectedClientGroup !== ALL_GROUPS) return selectedClientGroup
     // The embedded case — the client workspace's Marketing tab passes one
     // group and hides the picker, so there is nothing to select.
     if (clientGroups?.length === 1) return clientGroups[0]?.id ?? null
@@ -1102,421 +1222,311 @@ export function MarketingContent({
     error: landingFunnelError,
   } = useLandingFunnel(funnelGroupId, datePreset)
 
-  const selectedGroupLabel = useMemo(() => {
-    if (!selectedClientGroup || selectedClientGroup === "all") return "All Groups"
-    return clientGroups.find(g => g.id === selectedClientGroup)?.name ?? "All Groups"
-  }, [selectedClientGroup, clientGroups])
+  // ── Top bar ───────────────────────────────────────────────────────────────
+  // The page's own title is in the PageHeader below; the top bar only names
+  // the page. `showHeader` is false where MarketingContent is embedded inside
+  // the client detail page; that copy must not claim the top bar out from
+  // under the route that owns it.
+  const topBar = useMemo(() => (showHeader ? { title: "Marketing Hub" } : null), [showHeader])
+  usePageHeader(topBar)
 
-  const filteredGridItems = useMemo(() =>
-    gridItems.filter(item =>
-      item.name.toLowerCase().includes(groupSearch.toLowerCase())
-    ),
-    [gridItems, groupSearch]
+  // ── Toolbar: search, layout switch, columns ───────────────────────────────
+  const hasSearch = searchTerm !== ""
+  const toolbar = (
+    <>
+      <SearchInput
+        placeholder={`Search ${activeTab}…`}
+        aria-label={`Search ${activeTab}`}
+        value={searchTerm}
+        onChange={setSearchTerm}
+        debounceMs={0}
+        className="sm:w-72"
+      />
+      <div className="ml-auto flex items-center gap-2">
+        {/* Table/gallery switch — Ads tab only. */}
+        {activeTab === "ads" && <AdsViewSwitch value={adsView} onChange={setAdsView} />}
+        <ColumnsMenu
+          columns={columnCatalogue}
+          visibleColumns={getCurrentVisibleColumns()}
+          onChange={setTabColumns}
+          defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
+          views={pageViews}
+          onSaveDefault={saveDefaultColumns}
+          lockedColumnIds={lockedColumns}
+        />
+      </div>
+    </>
   )
 
-  // ── Top-bar slot ──────────────────────────────────────────────────────────
-  // The title and the date/group filters sit in the global header next to the
-  // notifications bell and the profile menu, in place of the Birdy wordmark —
-  // published through page-header's context, since the header is rendered
-  // above this page in the tree. See usePageHeader.
-  //
-  // `showHeader` is false where MarketingContent is embedded inside the client
-  // detail page; that copy must not claim the top bar out from under the route
-  // that owns it.
-  const header = useMemo(() => {
-    if (!showHeader) return null
-
-    return {
-      title: (
-        <div className={`${pdFontClass} min-w-0`}>
-          <h1 className="truncate font-pd-display text-[19px] font-bold leading-none tracking-[-0.02em] text-pd-ink">
-            Marketing Hub
-          </h1>
-          <p className="mt-1 truncate text-[12px] leading-none text-pd-faint">
-            Campaign performance across all connected ad accounts
-          </p>
-        </div>
-      ),
-      controls: (
-        <div className="flex items-center gap-2">
-          <GranularitySelect value={granularity} onChange={setGranularity} />
-          {setDatePreset && <DateRangeSelect value={datePreset} onChange={setDatePreset} />}
-          {showGroupFilter && clientGroups.length > 0 && (
-            <ClientGroupPicker
-              gridRef={gridRef}
-              open={gridOpen}
-              setOpen={setGridOpen}
-              label={selectedGroupLabel}
-              search={groupSearch}
-              setSearch={setGroupSearch}
-              items={filteredGridItems}
-              selectedId={selectedClientGroup}
-              onSelect={setSelectedClientGroup}
-            />
-          )}
-        </div>
-      ),
-    }
-    // filteredGridItems and selectedGroupLabel are themselves memoised, so this
-    // node is stable between renders that don't change a control's own state —
-    // which it has to be, since usePageHeader holds it in state.
-  }, [
-    showHeader, setDatePreset, datePreset, granularity, setGranularity,
-    showGroupFilter, clientGroups.length,
-    gridOpen, selectedGroupLabel, groupSearch, filteredGridItems, selectedClientGroup,
-  ])
-
-  usePageHeader(header)
+  const selectedGroup = selectedClientGroup && selectedClientGroup !== ALL_GROUPS
+    ? clientGroups.find(g => g.id === selectedClientGroup)
+    : null
+  // Inactive clients aren't being actively managed, so a lapsed Meta token or a
+  // missing lead source there isn't worth surfacing — only check clients that
+  // are currently active.
+  const selectedActiveGroup =
+    selectedGroup && String(selectedGroup.client_status || "").toLowerCase() === "active" ? selectedGroup : null
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    // Width comes from the container, the way every other hub screen takes it
-    // (SalesHubShell — Sales, Leads, Clients, Dashboard). This used to size
-    // itself off the viewport minus 130px, but the collapsed rail is only 48px
-    // and the layout has already inset this screen by its own p-6: the sum was
-    // ~82px of width thrown away and, being mx-auto, split into gutters far
-    // wider than the neighbouring hubs'. It went wrong in the embedded case
-    // too — /clients/[id]'s Marketing tab measures a viewport it doesn't own.
-    <div className="min-w-0">
-      <Stagger className="flex flex-col gap-6">
-
-        {/* The title block and the date/group filters now live in the global
-            top bar beside the bell and the profile menu — published by
-            usePageHeader above. The handoff puts filters in the header, so the
-            page starts straight at its content. */}
-
-        {/* The prop was accepted and then dropped, so a failed client-groups
-            fetch rendered as an empty account list and zeroed totals — a
-            silent failure that looked like a quiet month. */}
-        {groupsError && <LoadError error={groupsError} onRetry={onCacheInvalidate} />}
-
-        {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
-        {(() => {
-          if (!selectedClientGroup || selectedClientGroup === "all") return null
-
-          const group = clientGroups.find(g => g.id === selectedClientGroup)
-          if (!group) return null
-
-          // Inactive clients aren't being actively managed, so a lapsed Meta
-          // token there isn't worth surfacing — only check the token for
-          // clients that are currently active.
-          const isActive = String(group.client_status || "").toLowerCase() === "active"
-          if (!isActive) return null
-          if (!group.meta_token_error) return null
-
-          return (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-pd-amber/30 bg-pd-amber-bg px-4 py-3">
-              <div className="flex items-center gap-2 text-sm text-pd-amber">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <span>
-                  Your Meta connection has expired or lost permissions. Please reconnect to continue seeing campaign data.
-                </span>
-              </div>
-              <Button asChild size="xs" className="shrink-0">
-                <a href="/settings?tab=integrations">
-                  Reconnect Meta
-                </a>
-              </Button>
-            </div>
-          )
-        })()}
-
-        {/* No lead source at all — spend with nothing to show for it.
-            Gated the same way as the reconnect banner above: one selected
-            client, active only, never on "All Groups".
-
-            This exists because a zero in the leads column is ambiguous. It can
-            mean the ads genuinely produced nothing, or it can mean the client
-            runs their own landing page and nothing on it reports a lead back —
-            which is a setup gap, not a performance one. Those two need
-            opposite reactions from a media buyer, so the number alone is worse
-            than useless. */}
-        {(() => {
-          if (!selectedClientGroup || selectedClientGroup === "all") return null
-
-          const group = clientGroups.find(g => g.id === selectedClientGroup)
-          if (!group) return null
-          if (String(group.client_status || "").toLowerCase() !== "active") return null
-          // A reconnect banner is already showing, and it is the more urgent
-          // of the two — don't stack them.
-          if (group.meta_token_error) return null
-
-          const spend = Number(group.facebook?.metrics?.insights?.spend || 0)
-          if (spend <= 0) return null
-
-          const leadSource = group.facebook?.lead_source || "none"
-          if (leadSource !== "none" && leadSource !== "pixel") return null
-
-          // Two different situations, and they need opposite reactions.
-          const message = leadSource === "pixel" ? (
+    // Width comes from the container, the way every other hub screen takes it.
+    <div className="flex min-w-0 flex-col gap-6">
+      {showHeader && (
+        <PageHeader
+          title="Marketing Hub"
+          description="Campaign performance across all connected ad accounts"
+          period={setDatePreset ? <PeriodControl value={datePreset} onChange={setDatePreset} /> : undefined}
+          actions={
             <>
-              <span className="font-medium text-pd-ink">These lead counts come from this client&apos;s Meta pixel.</span>{" "}
-              Meta reports how many conversions each ad produced, but never who they were —
-              so the counts and CPL above are real, and the Leads tab has no rows behind them.
-              Contact details would need the lead to reach GoHighLevel.
+              <Select value={granularity} onValueChange={setGranularity}>
+                <SelectTrigger aria-label="Chart granularity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {GRANULARITIES.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {showGroupFilter && clientGroups.length > 0 && (
+                <ClientGroupSelect
+                  clientGroups={clientGroups}
+                  value={selectedClientGroup}
+                  onChange={setSelectedClientGroup}
+                />
+              )}
             </>
-          ) : (
-            <>
-              <span className="font-medium text-pd-ink">No leads are reaching Birdy for this client.</span>{" "}
-              Their ads are spending, but nothing is reporting a lead back — not a Meta
-              instant form, not GoHighLevel&apos;s own ad attribution, not even a pixel
-              conversion. If their ads point at a landing page, that page needs to pass the
-              ad through before leads and CPL can be counted here.
-            </>
-          )
+          }
+        />
+      )}
 
-          return (
-            <div className="flex items-start gap-2 rounded-xl border border-pd-border bg-pd-canvas px-4 py-3">
-              <Info className="mt-0.5 size-4 shrink-0 text-pd-subtle" aria-hidden="true" />
-              <p className="text-[12.5px] leading-[1.5] text-pd-body">{message}</p>
-            </div>
-          )
-        })()}
+      {/* The prop was accepted and then dropped, so a failed client-groups
+          fetch rendered as an empty account list and zeroed totals — a
+          silent failure that looked like a quiet month. */}
+      {groupsError && (
+        <ErrorState
+          title="Couldn't load your client data"
+          description={`${String(groupsError).replace(/\.+$/, "")}. The figures here are missing, not zero.`}
+          onRetry={onCacheInvalidate}
+        />
+      )}
 
-        {/* ── Hero row: metric tabs over the chart · Birdy's read ───────────
-            The six figures are the chart's tabs, so each number appears once
-            and is one click from its own curve; there is no separate tile grid
-            and no separate metric picker. Beside it, Birdy's read of the period
-            in a white card like every other section.
+      {/* Meta reconnect banner — only for a single selected client group with a connection problem, never on "All Groups" */}
+      {selectedActiveGroup?.meta_token_error && (
+        <Notice
+          tone="warning"
+          action={
+            <Button asChild size="sm">
+              <a href="/settings?tab=integrations">Reconnect Meta</a>
+            </Button>
+          }
+        >
+          Your Meta connection has expired or lost permissions. Please reconnect to continue seeing campaign data.
+        </Notice>
+      )}
 
-            A metric with no comparable previous period renders without a pill
-            rather than with a zero: an unknown delta is not a flat one. */}
-        <StaggerItem className={`${pdFontClass} grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]`}>
+      {/* No lead source at all — spend with nothing to show for it.
+          Gated the same way as the reconnect banner above: one selected
+          client, active only, never on "All Groups".
+
+          This exists because a zero in the leads column is ambiguous. It can
+          mean the ads genuinely produced nothing, or it can mean the client
+          runs their own landing page and nothing on it reports a lead back —
+          which is a setup gap, not a performance one. Those two need
+          opposite reactions from a media buyer, so the number alone is worse
+          than useless. */}
+      {(() => {
+        const group = selectedActiveGroup
+        if (!group) return null
+        // A reconnect banner is already showing, and it is the more urgent
+        // of the two — don't stack them.
+        if (group.meta_token_error) return null
+
+        const spend = Number(group.facebook?.metrics?.insights?.spend || 0)
+        if (spend <= 0) return null
+
+        const leadSource = group.facebook?.lead_source || "none"
+        if (leadSource !== "none" && leadSource !== "pixel") return null
+
+        // Two different situations, and they need opposite reactions.
+        const message = leadSource === "pixel" ? (
+          <>
+            <span className="font-medium">These lead counts come from this client&apos;s Meta pixel.</span>{" "}
+            Meta reports how many conversions each ad produced, but never who they were —
+            so the counts and CPL above are real, and the Leads tab has no rows behind them.
+            Contact details would need the lead to reach GoHighLevel.
+          </>
+        ) : (
+          <>
+            <span className="font-medium">No leads are reaching Birdy for this client.</span>{" "}
+            Their ads are spending, but nothing is reporting a lead back — not a Meta
+            instant form, not GoHighLevel&apos;s own ad attribution, not even a pixel
+            conversion. If their ads point at a landing page, that page needs to pass the
+            ad through before leads and CPL can be counted here.
+          </>
+        )
+
+        return (
+          <Notice tone="info" className="items-start">
+            <span className="flex items-start gap-2">
+              <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <span>{message}</span>
+            </span>
+          </Notice>
+        )
+      })()}
+
+      {/* ── Hero row: metric tabs over the chart · Birdy's read ───────────
+          The figures are the chart's tabs, so each number appears once and is
+          one click from its own curve; there is no separate tile grid and no
+          separate metric picker. Beside it, Birdy's read of the period. */}
+      <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex min-w-0 flex-col gap-2">
           <MetricTabsChart
-            tabs={heroTabs}
-            activeKey={activeChartMetric}
-            onChange={setChartMetric}
-            chart={chart}
+            metrics={heroMetrics}
+            value={activeChartMetric}
+            onValueChange={setChartMetric}
+            xLabel={`${activeMetric?.label ?? "Metric"} over ${dateRangeLabel}`}
             loading={groupsLoading}
             plotLoading={groupsLoading || seriesLoading}
-            loadingStatements={CHART_LOADING}
-            emptyMessage={CHART_EMPTY[activeChartMetric]}
-            redrawKey={`${activeChartMetric}-${datePreset}-${granularity}-${selectedClientGroup ?? "all"}`}
-            layoutId="marketing-hub-hero"
+            emptyMessage={
+              activeMetric?.points === 1
+                ? "Pick 7 days or longer to see a trend."
+                : CHART_EMPTY[activeChartMetric]
+            }
+          />
+          {plottedNote && <p className="px-1 text-xs text-muted-foreground">{plottedNote}</p>}
+        </div>
+
+        {/* Copy is generated per period from the rows below it — the headline
+            movement, the single campaign worth acting on, then the bullets the
+            rows support beyond that. Until there is spend in the window the
+            card says what it is waiting for, with no link. */}
+        <BirdyRead
+          findings={readRows}
+          empty={insight ? undefined : BRIEFING_WAITING}
+          prompt={briefingPrompt}
+        />
+      </div>
+
+      {/* ── Landing page funnel ──────────────────────────────────────────
+          Between the hero and the tables on purpose: it is the step the
+          tables cannot show. Spend, clicks and CPL above describe getting
+          people to the page; the campaign rows below describe what each ad
+          produced. What happened on the page in between has never been on
+          this screen, and for a client running their own landing page it is
+          usually where the money goes. */}
+      <LandingFunnel
+        funnel={landingFunnel}
+        loading={landingFunnelLoading}
+        error={landingFunnelError}
+        groupId={funnelGroupId}
+      />
+
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="min-w-0 max-w-full">
+          <SegmentedTabs
+            ariaLabel="Marketing Hub section"
+            value={activeTab}
+            onValueChange={setActiveTab}
+            items={sectionTabs}
+            panelId={TABLE_PANEL_ID}
+          />
+        </div>
+
+        <div
+          role="tabpanel"
+          id={TABLE_PANEL_ID}
+          aria-labelledby={`${TABLE_PANEL_ID}-tab-${activeTab}`}
+          className="flex min-w-0 flex-col gap-3"
+        >
+          {/* Drill-down breadcrumb */}
+          <DrillDownBreadcrumb
+            selectedCampaign={selectedCampaign}
+            selectedAdSet={selectedAdSet}
+            selectedAd={selectedAd}
+            onClearCampaign={clearCampaign}
+            onClearAdSet={clearAdSet}
+            onClearAd={clearAd}
+            onTabChange={setActiveTab}
           />
 
-          {/* Copy is generated per period from the rows below it — the
-              headline movement, the single campaign worth acting on, then the
-              bullets the rows support beyond that. Until there is spend in the
-              window the card says what it is waiting for, with no link. */}
-          {insight ? (
-            <BirdyBriefing
-              parts={insight.segments}
-              findings={findings}
-              prompt={briefingPrompt}
+          {error ? (
+            <ErrorState
+              title="Couldn't load this data"
+              description={`${error}. Try again in a moment.`}
+              onRetry={() => setReloadKey((k) => k + 1)}
             />
-          ) : (
-            <BirdyBriefing parts={BRIEFING_WAITING} />
-          )}
-        </StaggerItem>
-
-        {/* ── Landing page funnel ──────────────────────────────────────────
-            Between the hero and the tables on purpose: it is the step the
-            tables cannot show. Spend, clicks and CPL above describe getting
-            people to the page; the campaign rows below describe what each ad
-            produced. What happened on the page in between has never been on
-            this screen, and for a client running their own landing page it is
-            usually where the money goes. */}
-        <StaggerItem>
-          <LandingFunnel
-            funnel={landingFunnel}
-            loading={landingFunnelLoading}
-            error={landingFunnelError}
-            groupId={funnelGroupId}
-          />
-        </StaggerItem>
-
-        {/* Tabs */}
-        <StaggerItem className="flex w-full flex-col">
-          {/* The app's page tab bar, same component the Sales, Lead and Client
-              hubs use — this page brings only its four sections. It replaced a
-              hand-skinned Radix TabsList that had drifted a pixel off the
-              others on radii and badge tint. */}
-          <div className={`${pdFontClass} flex flex-col md:flex-row md:items-center gap-3`}>
-            <PageTabs
-              label="Marketing Hub section"
-              panelId={TABLE_PANEL_ID}
-              tabs={SECTION_TABS.map(tab => ({ ...tab, badge: tabBadge(tab.key) ?? undefined }))}
-              value={activeTab}
-              onChange={setActiveTab}
-            />
-
-            {/* Search and Columns as the handoff's 38px controls, sitting
-                together at the right end of the tab row. */}
-            <div className="ml-auto flex w-fit shrink-0 items-center gap-[10px]">
-              {/* Table/gallery switch — Ads tab only, per the handoff. */}
-              {activeTab === "ads" && (
-                <AdsViewSwitch value={adsView} onChange={setAdsView} />
-              )}
-              <Input
-                type="search"
-                placeholder={`Search ${activeTab}…`}
-                className="h-[38px] w-fit text-[13px] md:w-[220px]"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              <ColumnsMenu
-                columns={columnCatalogue}
-                visibleColumns={getCurrentVisibleColumns()}
-                onChange={setTabColumns}
-                defaultColumns={DEFAULT_VISIBLE_COLUMNS[activeTab]}
-                views={pageViews}
-                onSaveDefault={saveDefaultColumns}
-              />
-            </div>
-          </div>
-
-          <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
-
-            {/* Drill-down breadcrumb */}
-            <DrillDownBreadcrumb
-              selectedCampaign={selectedCampaign}
-              selectedAdSet={selectedAdSet}
-              selectedAd={selectedAd}
-              onClearCampaign={clearCampaign}
-              onClearAdSet={clearAdSet}
-              onClearAd={clearAd}
-              onTabChange={setActiveTab}
-            />
-
-            {/* Advanced filter conditions */}
-            {filterConditions.length > 0 && (
-              <div className="border border-pd-border rounded-xl my-3 text-left">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-pd-display text-sm px-4 mt-2 font-semibold text-pd-ink">Active Filters</h3>
-                  <Button variant="ghost" size="sm" onClick={() => setFilterConditions([])} className="h-8 px-4 mt-2 text-xs">Clear all</Button>
-                </div>
-                <div className="space-y-2">
-                  {filterConditions.map((c, idx) => (
-                    <div key={idx} className="flex items-center gap-2 p-3 bg-pd-divider/60 border-t border-pd-divider">
-                      <Select value={c.field} onValueChange={v => updateFilterCondition(idx, "field", v)}>
-                        <SelectTrigger className="w-[160px] h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {activeTab === "leads" ? (
-                            <>
-                              <SelectItem value="full_name">Full Name</SelectItem>
-                              <SelectItem value="email">Email</SelectItem>
-                              <SelectItem value="phone_number">Phone Number</SelectItem>
-                              <SelectItem value="ad_name">Ad Name</SelectItem>
-                              <SelectItem value="adset_name">Ad Set Name</SelectItem>
-                              <SelectItem value="campaign_name">Campaign Name</SelectItem>
-                              <SelectItem value="platform">Platform</SelectItem>
-                              <SelectItem value="group_name">Client Group</SelectItem>
-                            </>
-                          ) : (
-                            <>
-                              <SelectItem value="name">Name</SelectItem>
-                              <SelectItem value="clientGroup">Client Group</SelectItem>
-                              <SelectItem value="adAccount">Ad Account</SelectItem>
-                              <SelectItem value="spend">Spend</SelectItem>
-                              <SelectItem value="leads">Leads</SelectItem>
-                              <SelectItem value="clicks">Clicks</SelectItem>
-                              {customMetrics.map(m => <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>)}
-                            </>
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <Select value={c.operator} onValueChange={v => updateFilterCondition(idx, "operator", v)}>
-                        <SelectTrigger className="w-[140px] h-9"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="equals">Equals</SelectItem>
-                          <SelectItem value="contains">Contains</SelectItem>
-                          <SelectItem value="greaterThan">Greater Than</SelectItem>
-                          <SelectItem value="lessThan">Less Than</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input type="text" placeholder="Value" value={c.value} onChange={e => updateFilterCondition(idx, "value", e.target.value)} className="flex-1 h-9" />
-                      <Button variant="ghost" size="sm" onClick={() => removeFilterCondition(idx)} className="h-9 w-9 p-0">
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex justify-end items-center gap-3 flex-1">
-              {(filterConditions.length > 0 || searchTerm) && (
-                <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
-                  <X className="h-4 w-4" /> Clear
-                </Button>
-              )}
-            </div>
-
-            {/* Table */}
-            {error ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface p-16">
-                <div className="rounded-full bg-pd-danger-bg p-3 mb-4">
-                  <X className="h-6 w-6 text-pd-danger" />
-                </div>
-                <h3 className="font-pd-display text-lg font-semibold text-pd-ink mb-2">Error loading data</h3>
-                <p className="text-sm text-pd-subtle text-center max-w-md">{error}</p>
-              </div>
-            ) : activeTab === "ads" && adsView === "gallery" ? (
+          ) : activeTab === "ads" && adsView === "gallery" ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
               <AdsGallery
-                rows={getFilteredDataForTab()}
-                columns={tableColumns}
+                rows={tabRows}
+                columns={columnSpecs}
                 onOrderChange={handleColumnOrderChange}
                 onStatusToggle={handleStatusToggle}
                 togglingRows={togglingRows}
                 isLoading={isLoading || groupsLoading}
+                resetKey={resetKey}
               />
-            ) : (
-              <StyledTable
-                columns={tableColumns}
-                data={getFilteredDataForTab()}
-                columnVisibility={columnVisibility}
-                isLoading={isLoading}
-                emptyMessage={
-                  activeTab === "leads" && datePreset === "last_year"
-                    ? { title: "We currently don't hold your last year lead data", subtitle: "Last year lead data is not available at this time" }
-                    : undefined
-                }
-                  // Drill-down: campaigns/adsets/ads rows are clickable; leads are not
-                onRowClick={activeTab !== "leads" ? handleRowClick : undefined}
-                  // Multi-row checkbox selection (not on leads tab)
-                enableSelection={activeTab !== "leads"}
-                selectedRows={
-                  activeTab === "campaigns" ? selectedCampaignIds :
-                  activeTab === "adsets" ? selectedAdSetIds :
-                        activeTab === "ads" ? selectedAdIds :
-                          new Set()
-                }
-                onSelectionChange={
-                  activeTab === "campaigns" ? setSelectedCampaignIds :
-                  activeTab === "adsets" ? setSelectedAdSetIds :
-                        activeTab === "ads" ? setSelectedAdIds :
-                          undefined
-                }
-                enableStatusToggle={activeTab !== "leads"}
-                onStatusToggle={handleStatusToggle}
-                togglingRows={togglingRows}
-                  // Persist column order per-tab. visibleColumns[activeTab] is
-                  // already an ordered array of visible IDs — feed it as the
-                  // initial order, and any drag updates the same slot.
-                initialColumnOrder={visibleColumns[activeTab] || []}
-                onColumnOrderChange={handleColumnOrderChange}
-              />
-            )}
+            </>
+          ) : (
+            <DataTable
+              key={activeTab}
+              columns={tableColumns}
+              data={tabRows}
+              loading={isLoading}
+              toolbar={toolbar}
+              state={tableState}
+              onStateChange={(next) => {
+                setSortingByTab((prev) => ({ ...prev, [activeTab]: next.sorting }))
+                setPagination(next.pagination)
+              }}
+              onColumnReorder={reorderColumn}
+              lockedColumnIds={lockedColumns}
+              stickyFirstColumn
+              pageSize={TABLE_PAGE_SIZE}
+              getRowId={(row, index) => row.id ?? `${activeTab}-${index}`}
+              // Drill-down: campaigns/adsets/ads rows are clickable; leads are not
+              onRowClick={activeTab !== "leads" ? handleRowClick : undefined}
+              empty={
+                activeTab === "leads" && datePreset === "last_year" ? (
+                  <EmptyState
+                    title="We currently don't hold your last year lead data"
+                    description="Last year lead data is not available at this time"
+                  />
+                ) : hasSearch ? (
+                  <EmptyState
+                    title={`No ${activeTab === "adsets" ? "ad sets" : activeTab} match`}
+                    description="Nothing fits the current search."
+                  />
+                ) : (
+                  <EmptyState
+                    title={`No ${activeTab === "adsets" ? "ad sets" : activeTab} to show`}
+                    description="Try adjusting your client group or date range."
+                  />
+                )
+              }
+            />
+          )}
 
-            {/* The campaigns tab is the only one whose rows are meant to
-                reconcile against the spend tile, and Meta's campaigns edge
-                drops deleted and archived campaigns — so the rows can sum to
-                less than the account did without either being wrong. Say so
-                once, under the rows, rather than leaving the two figures to
-                look like a lost total. */}
-            {activeTab === "campaigns" && unlistedSpend && !isLoading && (
-              <p className="mt-3 text-[11.5px] text-pd-faint">
-                {unlistedSpend.formatted} of this period&apos;s spend sits on campaigns Meta
-                no longer lists — deleted or archived — so it counts towards the
-                total above but has no row here.
-              </p>
-            )}
-          </PageTabPanel>
-        </StaggerItem>
-      </Stagger>
+          {/* The campaigns tab is the only one whose rows are meant to
+              reconcile against the spend tile, and Meta's campaigns edge
+              drops deleted and archived campaigns — so the rows can sum to
+              less than the account did without either being wrong. Say so
+              once, under the rows, rather than leaving the two figures to
+              look like a lost total. */}
+          {activeTab === "campaigns" && unlistedSpend && !isLoading && (
+            <p className="text-xs text-muted-foreground">
+              {unlistedSpend.formatted} of this period&apos;s spend sits on campaigns Meta
+              no longer lists — deleted or archived — so it counts towards the
+              total above but has no row here.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

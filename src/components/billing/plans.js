@@ -1,3 +1,5 @@
+import { AlertDiscIcon, CheckDiscIcon, ClockDiscIcon, CrossDiscIcon, MinusDiscIcon } from "@/components/ds/primitives/badge-icons";
+
 import { Zap, TrendingUp, Building2 } from "lucide-react";
 
 // The three subscription tiers, in one place: /billing sells them and the
@@ -46,14 +48,23 @@ export const PLANS = [
 // downgrade.
 export const PLAN_ORDER = ["starter", "growth", "scale"];
 
-// Solid status pills: a filled colour with white text.
-export const STATUS_STYLES = {
-  active: "bg-pd-success-bg text-pd-success",
-  trialing: "bg-pd-info-bg text-pd-info",
-  past_due: "bg-pd-warning-bg text-pd-amber",
-  canceling: "bg-pd-warning-bg text-pd-amber",
-  canceled: "bg-pd-danger-bg text-pd-danger",
-  inactive: "bg-pd-divider text-pd-body",
+// Badge tone and leading icon per subscription status.
+export const STATUS_TONES = {
+  active: "success",
+  trialing: "info",
+  past_due: "warning",
+  canceling: "warning",
+  canceled: "danger",
+  inactive: "muted",
+};
+
+export const STATUS_ICONS = {
+  active: CheckDiscIcon,
+  trialing: ClockDiscIcon,
+  past_due: AlertDiscIcon,
+  canceling: ClockDiscIcon,
+  canceled: CrossDiscIcon,
+  inactive: MinusDiscIcon,
 };
 
 export const STATUS_LABELS = {
