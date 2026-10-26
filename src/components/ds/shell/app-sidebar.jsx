@@ -125,6 +125,41 @@ function AppSidebar({
     if (ok) await logout()
   }
 
+  const mainItems = items.filter((i) => (i.section ?? "main") === "main")
+  const bottomItems = items.filter((i) => i.section === "bottom")
+
+  const renderItem = (item) => {
+    const active = isActive(item, pathname)
+    const count = item.badge?.() ?? null
+    const Icon = item.icon
+    return (
+      <li key={item.key}>
+        <Link
+          href={item.href}
+          onClick={onNavigate}
+          aria-current={active ? "page" : undefined}
+          data-active={active}
+          title={collapsed ? item.label : undefined}
+          className={cn(SIDEBAR_ROW, collapsed && RAIL_ROW)}
+        >
+          <Icon aria-hidden />
+          {collapsed ? (
+            <span className="sr-only">{item.label}</span>
+          ) : (
+            <>
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+              {count != null && count > 0 && (
+                <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
+                  {count > 99 ? "99+" : count}
+                </span>
+              )}
+            </>
+          )}
+        </Link>
+      </li>
+    )
+  }
+
   return (
     <aside
       data-ds="app-sidebar"
@@ -227,38 +262,14 @@ function AppSidebar({
 
       <nav aria-label="Main" className="-m-2 min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-2">
         <ul className="flex w-full min-w-0 flex-col gap-0.5">
-          {items.map((item) => {
-            const active = isActive(item, pathname)
-            const count = item.badge?.() ?? null
-            const Icon = item.icon
-            return (
-              <li key={item.key}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  data-active={active}
-                  title={collapsed ? item.label : undefined}
-                  className={cn(SIDEBAR_ROW, collapsed && RAIL_ROW)}
-                >
-                  <Icon aria-hidden />
-                  {collapsed ? (
-                    <span className="sr-only">{item.label}</span>
-                  ) : (
-                    <>
-                      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {count != null && count > 0 && (
-                        <span className="num shrink-0 rounded-full bg-primary-soft px-1.5 text-xs font-medium text-primary">
-                          {count > 99 ? "99+" : count}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </Link>
-              </li>
-            )
-          })}
+          {mainItems.map(renderItem)}
         </ul>
+        {bottomItems.length > 0 && (
+          <>
+            <div data-slot="nav-divider" role="separator" className="my-2 h-px bg-border" />
+            <ul className="flex w-full min-w-0 flex-col gap-0.5">{bottomItems.map(renderItem)}</ul>
+          </>
+        )}
       </nav>
 
       {!minimal && !collapsed && (

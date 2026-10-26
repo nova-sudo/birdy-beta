@@ -101,7 +101,7 @@ export default function DashboardWorkspace({ id }) {
   useEffect(() => {
     if (!brief || briefConsumed.current) return
     briefConsumed.current = true
-    router.replace(`/dashboards/${id}`)
+    router.replace(`/hub/dashboards/${id}`)
   }, [brief, id, router])
 
   const ready = Boolean(doc && catalog)
@@ -125,7 +125,7 @@ export default function DashboardWorkspace({ id }) {
             <Surface>
               <p className="text-sm text-muted-foreground">
                 Couldn&apos;t load this dashboard.{" "}
-                <Link href="/dashboards" className="font-semibold text-primary underline-offset-2 hover:underline">
+                <Link href="/hub/dashboards" className="font-semibold text-primary underline-offset-2 hover:underline">
                   Back to My dashboards
                 </Link>
               </p>
@@ -683,7 +683,7 @@ function DashboardBreadcrumb({ title }) {
     <nav aria-label="Breadcrumb" className="min-w-0">
       <p className="flex min-w-0 items-baseline gap-0 whitespace-pre text-base font-semibold leading-none">
         <Link
-          href="/dashboards"
+          href="/hub/dashboards"
           className={`${title ? "max-sm:hidden " : ""}shrink-0 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
         >
           My dashboards

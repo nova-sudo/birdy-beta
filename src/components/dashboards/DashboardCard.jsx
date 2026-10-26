@@ -32,7 +32,7 @@ export function DashboardCard({ dashboard, onRemove }) {
     <div className="group relative">
       <Surface className="transition-shadow duration-200 group-hover:shadow-floating motion-reduce:transition-none">
         <Link
-          href={`/dashboards/${dashboard.id}`}
+          href={`/hub/dashboards/${dashboard.id}`}
           className="flex items-start gap-3 rounded-control outline-none focus-visible:shadow-control-focus"
         >
           <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-muted text-muted-foreground">

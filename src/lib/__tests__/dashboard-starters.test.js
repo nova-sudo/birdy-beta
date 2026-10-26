@@ -9,7 +9,7 @@ import { describe, it, expect } from "vitest"
 import { applyAll, createDashboard, validate } from "dashkit/core"
 import { createRegistry, builtinWidgets } from "dashkit/react"
 import { STARTERS, addWidgetOps, starterOps } from "@/lib/dashboard-starters"
-import catalog from "@/app/dashboards/__tests__/fixtures/birdy-catalog.json"
+import catalog from "@/app/hub/dashboards/__tests__/fixtures/birdy-catalog.json"
 
 const registry = createRegistry(builtinWidgets)
 

@@ -1,47 +1,32 @@
 "use client"
 
-import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { LayoutDashboard, Plus } from "lucide-react"
-import { usePageHeader } from "@/components/page-header"
-import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { Button, EmptyState, ErrorState, Skeleton, Surface } from "@/components/ds"
 import { DashboardCard } from "@/components/dashboards/DashboardCard"
 import { NewDashboardDialog } from "@/components/dashboards/NewDashboardDialog"
-import { useDashboards } from "./useDashboards"
+import { useDashboards } from "@/components/dashboards/useDashboards"
 
-// ─── My dashboards ──────────────────────────────────────────────────────────
-// The user's saved, AI-assisted dashboards. Opening one goes to
-// /dashboards/<id>; creating one saves an empty document first so the detail
-// page always has something to load, then hands over any brief in the URL.
-
-export default function DashboardsPage() {
+/**
+ * The saved-dashboards list with its "New dashboard" dialog. Opening a card goes
+ * to /hub/dashboards/<id>; creating one saves an empty document first so the
+ * detail page always has something to load, then hands over any brief in the URL.
+ *
+ * The caller owns the dialog's open state so its own "New dashboard" button
+ * (page header, section header) can open it.
+ *
+ * @param {object} props
+ * @param {boolean} props.creating Whether the new-dashboard dialog is open
+ * @param {(open: boolean) => void} props.onCreatingChange
+ */
+export function DashboardList({ creating, onCreatingChange }) {
   const router = useRouter()
   const { items, isLoading, error, create, remove, retry } = useDashboards()
-  const [creating, setCreating] = useState(false)
-
-  // Memoised because publishing sets state on the provider above: a fresh
-  // object every render would republish every render. See usePageHeader.
-  const header = useMemo(
-    () => ({
-      title: (
-        <SalesHubHeaderTitle title="My dashboards" subtitle="Dashboards you and Birdy have built" />
-      ),
-      controls: (
-        <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-          <Plus aria-hidden="true" />
-          New dashboard
-        </Button>
-      ),
-    }),
-    [],
-  )
-  usePageHeader(header)
 
   const handleCreate = async ({ title, brief }) => {
     const id = await create({ title, brief })
-    router.push(brief ? `/dashboards/${id}?brief=${encodeURIComponent(brief)}` : `/dashboards/${id}`)
+    router.push(brief ? `/hub/dashboards/${id}?brief=${encodeURIComponent(brief)}` : `/hub/dashboards/${id}`)
   }
 
   const handleRemove = async (id) => {
@@ -65,11 +50,7 @@ export default function DashboardsPage() {
   } else if (error && items.length === 0) {
     body = (
       <Surface>
-        <ErrorState
-          title="Couldn't load your dashboards."
-          description="Try again."
-          onRetry={retry}
-        />
+        <ErrorState title="Couldn't load your dashboards." description="Try again." onRetry={retry} />
       </Surface>
     )
   } else if (items.length === 0) {
@@ -80,7 +61,7 @@ export default function DashboardsPage() {
           title="No dashboards yet"
           description="Describe the numbers you care about and Birdy will lay them out for you."
           action={
-            <Button variant="outline" onClick={() => setCreating(true)}>
+            <Button variant="outline" onClick={() => onCreatingChange(true)}>
               <Plus aria-hidden="true" />
               New dashboard
             </Button>
@@ -99,9 +80,9 @@ export default function DashboardsPage() {
   }
 
   return (
-    <SalesHubShell>
+    <>
       {body}
-      <NewDashboardDialog open={creating} onOpenChange={setCreating} onCreate={handleCreate} />
-    </SalesHubShell>
+      <NewDashboardDialog open={creating} onOpenChange={onCreatingChange} onCreate={handleCreate} />
+    </>
   )
 }
