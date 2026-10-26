@@ -58,9 +58,11 @@ const openCount = (work) => (Array.isArray(work?.open) ? work.open.length : 0)
 export function useAgentWorkCount() {
   const { agents } = useAgents()
   const ids = agents.filter((a) => a.status === "active").map((a) => a.id)
-  const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher)
-  const many = useSWR(ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null, ([, ...list]) =>
-    Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id))))
+  const one = useSWR(ids.length === 1 ? queryKeys.agentWork(ids[0]) : null, fetcher, FRESH_WORK)
+  const many = useSWR(
+    ids.length > 1 ? [WORK_COUNT_KEY, ...ids] : null,
+    ([, ...list]) => Promise.all(list.map((id) => fetcher(queryKeys.agentWork(id)))),
+    FRESH_WORK
   )
   if (ids.length === 0) return null
   if (ids.length === 1) return one.data ? openCount(one.data) : null
@@ -82,9 +84,15 @@ export function useAgentRules(id) {
   return { rules: data ?? [], error, isLoading, mutate }
 }
 
+/**
+ * The work list changes under an open tab (the morning run, Slack decisions), so
+ * unlike the app default it refetches on focus and keeps a short dedupe window.
+ */
+const FRESH_WORK = { revalidateOnFocus: true, dedupingInterval: 30 * 1000 }
+
 /** Open work items and the last 24h of auto-applied ones. */
 export function useAgentWork(id) {
-  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentWork(id) : null, fetcher)
+  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentWork(id) : null, fetcher, FRESH_WORK)
   return { work: data ?? { open: [], auto_applied: [] }, error, isLoading, mutate }
 }
 
@@ -151,6 +159,10 @@ async function send(endpoint, method, body) {
     const err = new Error(typeof detail === "string" ? detail : `HTTP ${res.status}`)
     err.status = res.status
     err.detail = detail
+    // A decision on an item that is no longer open (409) says what it is now.
+    if (typeof data?.outcome === "string") err.outcome = data.outcome
+    if (typeof data?.status === "string") err.itemStatus = data.status
+    if (data?.decided_by) err.decidedBy = data.decided_by
     // Activation's 409 carries `missing` beside `detail`, not inside it.
     if (Array.isArray(data?.missing)) err.missing = data.missing
     throw err
@@ -221,21 +233,27 @@ const suggestionPath = (id) => `/api/dashboard/suggestions/${encodeURIComponent(
 
 /**
  * Approves (or, for a flag item with nothing to write, marks handled) a work item.
- * @returns {Promise<{ok: boolean, outcome: string, succeeded: object[], failed: object[], blocked_reason: {code: string, message: string}|null}>}
- *   A guardrail block is `ok: false, outcome: "blocked"`; a Meta failure throws (502).
+ * @returns {Promise<{ok: boolean, outcome: string, succeeded: object[], failed: object[], blocked_reason: {code: string, message: string}|null, decided_by: {actor: string, source: string}|null}>}
+ *   A guardrail block is `ok: false, outcome: "blocked"`; `outcome: "already"` means
+ *   someone else applied it; a Meta failure throws (502); an item that was closed
+ *   meanwhile throws 409 with `err.outcome === "closed"`.
  */
 export function applyWorkItem(id) {
   return send(`${suggestionPath(id)}/apply`, "POST")
 }
 
-/** Declines a work item. `reason_code` is one of DENY_REASONS' codes. 409 while it is being applied. */
+/**
+ * Declines a work item. `reason_code` is one of DENY_REASONS' codes. 409 while it
+ * is being applied, or (`err.outcome === "already"`, `err.itemStatus`) when it was
+ * applied or closed meanwhile.
+ */
 export function denyWorkItem(id, { reason_code, note }) {
   const body = { reason_code }
   if (note && note.trim()) body.note = note.trim()
   return send(`${suggestionPath(id)}/deny`, "POST", body)
 }
 
-/** Dismisses a work item without a reason. 409 while it is being applied. */
+/** Dismisses a work item without a reason. 409 as for denyWorkItem. */
 export function dismissWorkItem(id) {
   return send(suggestionPath(id), "DELETE")
 }

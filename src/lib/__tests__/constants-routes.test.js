@@ -10,4 +10,8 @@ describe("PROTECTED_ROUTES", () => {
   it("guards the agent setup wizard (its ?step= is not part of the pathname)", () => {
     expect(PROTECTED_ROUTES).toContain("/hub/agents/media-buying/setup")
   })
+
+  it("guards the agent page itself (final review minor 10)", () => {
+    expect(PROTECTED_ROUTES).toContain("/hub/agents/media-buying")
+  })
 })

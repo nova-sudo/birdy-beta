@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from "react"
+import { useSWRConfig } from "swr"
 import { CircleAlert, Pause, RotateCcw, Sparkles, TrendingDown } from "lucide-react"
 
 import { Badge, Button, CheckDiscIcon, CrossDiscIcon, MinusDiscIcon, Notice, toast } from "@/components/ds"
-import { applyWorkItem, denyWorkItem, dismissWorkItem } from "@/lib/agents-api"
+import { applyWorkItem, denyWorkItem, dismissWorkItem, revalidateAgentWork } from "@/lib/agents-api"
 import { cn } from "@/lib/utils"
 import { DenyReason } from "./DenyReason"
 
@@ -30,6 +31,21 @@ const DONE = {
   handled: { label: "Noted", tone: "success", Icon: CheckDiscIcon },
   denied: { label: "Denied", tone: "danger", Icon: CrossDiscIcon },
   dismissed: { label: "Dismissed", tone: "neutral", Icon: MinusDiscIcon },
+  // Decided elsewhere (Slack, another tab, the morning run) before this click.
+  applied_elsewhere: { label: "Already approved", tone: "success", Icon: CheckDiscIcon },
+  closed: { label: "Already closed", tone: "neutral", Icon: MinusDiscIcon },
+}
+
+/** Who applied an item someone else got to first. */
+const appliedBy = (d) =>
+  d?.actor === "birdy" ? "Done by Birdy" : d?.source === "slack" ? "Approved in Slack" : "Already approved"
+
+/** A 409 saying the item is no longer open, as the state to show; null for any other error. */
+function staleState(err) {
+  if (err?.status !== 409 || !err.outcome) return null
+  if (err.itemStatus === "applied") return { done: "applied_elsewhere", label: appliedBy(err.decidedBy) }
+  if (err.itemStatus === "dismissed" && err.outcome === "already") return { done: "dismissed" }
+  return { done: "closed" }
 }
 
 /**
@@ -63,6 +79,8 @@ function Stats({ stats }) {
  */
 export function WorkItem({ item, onDecided, decided = null, className }) {
   const [done, setDone] = useState(decided)
+  const [doneLabel, setDoneLabel] = useState(null)
+  const { mutate } = useSWRConfig()
   const [busy, setBusy] = useState(null)
   const [denying, setDenying] = useState(false)
   const [applyFailed, setApplyFailed] = useState(null)
@@ -74,12 +92,23 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
   const { tone, Icon } = KIND[item.rule_kind] ?? { tone: "info", Icon: Sparkles }
   const flag = isFlagItem(item)
   const blocked = blockedNow ?? item.blocked_reason
-  const settled = done ? DONE[done] : null
+  const settled = done ? { ...DONE[done], ...(doneLabel ? { label: doneLabel } : {}) } : null
 
   const fail = (err, title) => {
     const message = err?.message || "Something went wrong"
     setError(message)
     toast.error(title, { description: message })
+  }
+
+  // The list was stale: this item was decided or closed elsewhere. Say so
+  // truthfully (never "Done in Meta" for a write that didn't happen) and refetch.
+  const settleStale = (state, message) => {
+    setDone(state.done)
+    setDoneLabel(state.label ?? null)
+    setBlockedNow(null)
+    setApplyFailed(null)
+    toast(message, { description: item.title })
+    revalidateAgentWork(mutate)
   }
 
   // Approve, or "Got it" on an item with nothing to write (marks it handled).
@@ -98,6 +127,11 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
         toast.warning("Not done", { description: reason.message })
         return
       }
+      if (r?.outcome === "already") {
+        const label = kind === "handled" ? "Already noted" : appliedBy(r.decided_by)
+        settleStale({ done: "applied_elsewhere", label }, label)
+        return
+      }
       setBlockedNow(null)
       if (r?.outcome === "already_in_meta" && kind === "approved") setDone("already")
       const failed = r?.failed?.length ?? 0
@@ -106,6 +140,11 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
       else toast.success("Done in Meta", { description: item.title })
       onDecided?.(item, kind)
     } catch (err) {
+      const stale = staleState(err)
+      if (stale) {
+        settleStale(stale, stale.done === "closed" ? "This item was already closed" : err.message)
+        return
+      }
       setDone(null)
       if (kind === "approved") setApplyFailed(true)
       fail(err, kind === "approved" ? "Couldn't apply that in Meta" : "Couldn't save that")
@@ -124,6 +163,11 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
       toast(kind === "handled" ? "Noted" : "Dismissed", { description: item.title })
       onDecided?.(item, kind)
     } catch (err) {
+      const stale = staleState(err)
+      if (stale) {
+        settleStale(stale, err.message)
+        return
+      }
       setDone(null)
       fail(err, "Couldn't dismiss that")
     } finally {
@@ -144,6 +188,12 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
       else toast("Denied. Birdy will remember why.", { description: item.title })
       onDecided?.(item, "denied")
     } catch (err) {
+      const stale = staleState(err)
+      if (stale) {
+        setDenyDraft(null)
+        settleStale(stale, err.message)
+        return
+      }
       setDone(null)
       setDenyDraft(choice)
       setDenying(true)

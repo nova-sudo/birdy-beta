@@ -203,3 +203,51 @@ describe("WorkItem", () => {
     expect(calls("/api/dashboard/suggestions/s1/apply", "POST")).toHaveLength(2)
   })
 })
+
+// Final review I2 / I1: decisions on an item the stale list still shows as open.
+describe("WorkItem on an item decided elsewhere", () => {
+  it("Approve on an item closed meanwhile says so, never Done in Meta", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(
+      res({ detail: "This item was already closed", outcome: "closed", status: "resolved", decided_by: null }, 409)
+    )
+    const onDecided = vi.fn()
+    render(<WorkItem item={PAUSE} onDecided={onDecided} />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }))
+
+    expect(await screen.findByText("Already closed")).toBeInTheDocument()
+    expect(screen.queryByText("Done in Meta")).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument()
+    expect(onDecided).not.toHaveBeenCalled()
+  })
+
+  it("Approve on an item already applied in Slack shows who did it", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(
+      res({ ok: true, outcome: "already", status: "applied", succeeded: [], failed: [],
+            decided_by: { actor: "user", source: "slack" } })
+    )
+    render(<WorkItem item={PAUSE} onDecided={vi.fn()} />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Approve" }))
+
+    expect(await screen.findByText("Approved in Slack")).toBeInTheDocument()
+    expect(screen.queryByText("Done in Meta")).not.toBeInTheDocument()
+  })
+
+  it("Deny on an item applied meanwhile shows it applied, not denied", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(
+      res({ detail: "Already applied — undo it instead", outcome: "already", status: "applied",
+            decided_by: { actor: "birdy", source: "agent" } }, 409)
+    )
+    const onDecided = vi.fn()
+    render(<WorkItem item={PAUSE} onDecided={onDecided} />)
+
+    await userEvent.click(screen.getByRole("button", { name: "Deny" }))
+    await userEvent.click(screen.getByRole("radio", { name: "Target is wrong" }))
+    await userEvent.click(screen.getByRole("button", { name: "Confirm" }))
+
+    expect(await screen.findByText("Done by Birdy")).toBeInTheDocument()
+    expect(screen.queryByText("Denied")).not.toBeInTheDocument()
+    expect(onDecided).not.toHaveBeenCalled()
+  })
+})
