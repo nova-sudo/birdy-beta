@@ -70,7 +70,7 @@ export function DashboardCard({ dashboard, onRemove }) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => onRemove(dashboard.id)}>Delete</AlertDialogAction>
+            <AlertDialogAction variant="destructive" onClick={() => onRemove(dashboard.id)}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

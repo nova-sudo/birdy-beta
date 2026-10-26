@@ -26,6 +26,19 @@ describe("ds hygiene", () => {
     expect(fs.existsSync(path.join(DS_ROOT, "PORTED.md"))).toBe(true)
   })
 
+  // The server-rendered not-found page imports the barrel, so a hook or context in a
+  // module without the directive 500s every route; jsdom never notices.
+  it("marks every module that uses context or hooks as a client module", () => {
+    const hits = files
+      .filter((f) => /\.(js|jsx)$/.test(f))
+      .filter((f) => {
+        const src = fs.readFileSync(f, "utf8")
+        return /\b(createContext|use(State|Effect|Context|Ref|Memo|Callback|LayoutEffect|Id|Reducer))\(/.test(src) && !/^\s*["']use client["']/.test(src)
+      })
+      .map(rel)
+    expect(hits).toEqual([])
+  })
+
   it.each([
     ["raw hex", /#[0-9a-fA-F]{3,8}\b/],
     ["bytes alias", /@bytes\//],
