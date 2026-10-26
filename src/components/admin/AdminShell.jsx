@@ -23,12 +23,12 @@ export const ADMIN_NAV = [
 const SIDEBAR_PROPS = { items: ADMIN_NAV, agencyName: "Admin", minimal: true };
 
 const ADMIN_TITLE = (
-  <span className="flex min-w-0 items-center gap-2">
+  <div className="flex min-w-0 items-center gap-2">
     <h1 className="truncate text-base font-semibold">Admin</h1>
     <Badge variant="soft" tone="warning">
       Internal
     </Badge>
-  </span>
+  </div>
 );
 
 const BACK_TO_BIRDY = (

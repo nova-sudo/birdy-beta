@@ -51,6 +51,8 @@ function SearchInput({
   className,
   ...props
 }) {
+  const autoId = React.useId()
+  const inputId = props.id ?? autoId
   const [query, setQuery] = React.useState(value || "")
   const [syncedValue, setSyncedValue] = React.useState(value)
 
@@ -92,7 +94,7 @@ function SearchInput({
 
   return (
     <div data-ds="search-input" className={cn("w-full space-y-1", className)} onFocus={onFocus} onBlur={onBlur}>
-      {label && <Label>{label}</Label>}
+      {label && <Label htmlFor={inputId}>{label}</Label>}
       <div className="relative w-full">
         {/* The icon sits on the field's own side padding, so it lines up with the text margin. */}
         {!query ? (
@@ -116,6 +118,7 @@ function SearchInput({
         )}
         <Input
           role="searchbox"
+          id={inputId}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}

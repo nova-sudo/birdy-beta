@@ -49,8 +49,8 @@ const badgeVariants = cva(
       variant: { soft: "", dot: "" },
       tone: BADGE_TONE_CLASSES,
       size: {
-        sm: "h-6 gap-[5px] rounded-[6px] pr-2 pl-1 text-xs leading-4 [&>img]:size-4 [&>img]:rounded-[4px] [&>svg]:size-4",
-        md: "h-7 gap-1.5 rounded-badge pr-2.5 pl-[5px] text-sm leading-[18px] has-[>img]:gap-[7px] [&>img]:size-[18px] [&>img]:rounded-[5px] [&>svg]:size-[18px]",
+        sm: "h-6 gap-[5px] rounded-[6px] pr-2 pl-2 has-[>svg:first-child,>img:first-child]:pl-1 text-xs leading-4 [&>img]:size-4 [&>img]:rounded-[4px] [&>svg]:size-4",
+        md: "h-7 gap-1.5 rounded-badge pr-2.5 pl-2.5 has-[>svg:first-child,>img:first-child]:pl-[5px] text-sm leading-[18px] has-[>img]:gap-[7px] [&>img]:size-[18px] [&>img]:rounded-[5px] [&>svg]:size-[18px]",
       },
     },
     compoundVariants: [{ variant: "dot", className: "h-auto gap-1.5 rounded-none bg-transparent p-0" }],
@@ -77,7 +77,13 @@ function Badge({ className, tone = "neutral", size = "md", variant = "soft", ico
     <span
       data-ds="badge"
       data-slot="badge"
-      className={cn(badgeVariants({ variant, tone, size }), dot && BADGE_TONE_TEXT[tone], className)}
+      className={cn(
+        badgeVariants({ variant, tone, size }),
+        dot && BADGE_TONE_TEXT[tone],
+        // The short left padding is sized for a leading mark; a text-only badge stays even.
+        mark && !dot && (size === "sm" ? "pl-1" : "pl-[5px]"),
+        className
+      )}
       {...props}
     >
       {dot && <span aria-hidden data-badge-dot className={cn("size-1.5 rounded-full", DOT[tone])} />}

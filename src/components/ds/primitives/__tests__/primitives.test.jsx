@@ -85,13 +85,20 @@ describe("Badge", () => {
 
   it("md is 28px with Bytes radius and padding, sm is 24px", () => {
     const { rerender } = render(<Badge>Tag</Badge>)
-    for (const c of ["h-7", "rounded-badge", "pr-2.5", "pl-[5px]", "text-sm"]) {
+    for (const c of ["h-7", "rounded-badge", "pr-2.5", "has-[>svg:first-child,>img:first-child]:pl-[5px]", "text-sm"]) {
       expect(screen.getByText("Tag").className).toContain(c)
     }
     rerender(<Badge size="sm">Tag</Badge>)
-    for (const c of ["h-6", "rounded-[6px]", "pr-2", "pl-1", "text-xs"]) {
+    for (const c of ["h-6", "rounded-[6px]", "pr-2", "has-[>svg:first-child,>img:first-child]:pl-1", "text-xs"]) {
       expect(screen.getByText("Tag").className).toContain(c)
     }
+  })
+
+  it("keeps even padding without a leading mark, and the short side for a mark node", () => {
+    const { rerender } = render(<Badge>Tag</Badge>)
+    expect(screen.getByText("Tag").className.split(" ")).toContain("pl-2.5")
+    rerender(<Badge mark={<span />}>Tag</Badge>)
+    expect(screen.getByText("Tag").className.split(" ")).toContain("pl-[5px]")
   })
 
   it("covers the purple and muted tones", () => {
