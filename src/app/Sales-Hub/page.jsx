@@ -48,7 +48,7 @@ export default function SalesHubPage() {
         actions={
           <>
             <Select value={granularity} onValueChange={setGranularity}>
-              <SelectTrigger size="sm" aria-label="Chart granularity">
+              <SelectTrigger aria-label="Chart granularity">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent align="end">

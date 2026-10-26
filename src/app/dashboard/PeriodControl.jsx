@@ -1,14 +1,13 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import {
-  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   SegmentedTabs,
+  TriggerButton,
 } from "@/components/ds";
 import { DATE_PRESETS } from "@/lib/constants";
 
@@ -41,10 +40,9 @@ export function PeriodControl({ value, onChange }) {
       />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" aria-label={extra ? `More periods: ${extra.label}` : "More periods"}>
+          <TriggerButton aria-label={extra ? `More periods: ${extra.label}` : "More periods"}>
             {extra ? extra.label : "More"}
-            <ChevronDown />
-          </Button>
+          </TriggerButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuRadioGroup value={value} onValueChange={onChange}>

@@ -6,11 +6,6 @@ import {
   AlertTriangle,
   Trash2,
   Settings,
-  LayoutGrid,
-  Sparkles,
-  Megaphone,
-  Phone,
-  UserCheck,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -74,11 +69,11 @@ import { clientFindings } from "./presentation"
 // The handoff's five workspace tabs (section 3), with the leading icons it
 // names: grid, sparkle, megaphone, phone, user-check.
 const CLIENT_TABS = [
-  { key: "overview", label: "Overview", icon: LayoutGrid },
-  { key: "ask-birdy", label: "Ask Birdy", icon: Sparkles },
-  { key: "marketing", label: "Marketing", icon: Megaphone },
-  { key: "call-centre", label: "Call Centre", icon: Phone },
-  { key: "leads", label: "Leads", icon: UserCheck },
+  { key: "overview", label: "Overview" },
+  { key: "ask-birdy", label: "Ask Birdy" },
+  { key: "marketing", label: "Marketing" },
+  { key: "call-centre", label: "Call Centre" },
+  { key: "leads", label: "Leads" },
 ]
 
 // The settings dialog's sections: a segmented control, as the handoff calls for.
@@ -465,10 +460,9 @@ export default function ClientDetailsPage() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-0">
-        <TabsList variant="underline" aria-label="Client workspace">
-          {CLIENT_TABS.map(({ key, label, icon: Icon }) => (
+        <TabsList aria-label="Client workspace">
+          {CLIENT_TABS.map(({ key, label }) => (
             <TabsTrigger key={key} value={key}>
-              <Icon aria-hidden="true" />
               {label}
             </TabsTrigger>
           ))}

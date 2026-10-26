@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from "react"
 import Image from "next/image"
-import { Button, Input, Popover, PopoverContent, PopoverTrigger } from "@/components/ds"
-import { ChevronDown, Check } from "lucide-react"
+import { Button, Input, Popover, PopoverContent, PopoverTrigger, TriggerButton } from "@/components/ds"
+import { Check } from "lucide-react"
 
 /**
  * MetricPicker — Reusable tabbed/searchable metric selector.
@@ -67,13 +67,7 @@ export default function MetricPicker({
       }}
     >
       <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled}
-          className={`justify-between ${triggerClassName}`}
-        >
+        <TriggerButton role="combobox" aria-expanded={open} disabled={disabled} className={triggerClassName}>
           {selectedMetric ? (
             <span className="flex items-center gap-2 truncate">
               {selectedMetric.icon && (
@@ -84,8 +78,7 @@ export default function MetricPicker({
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
+        </TriggerButton>
       </PopoverTrigger>
 
       <PopoverContent

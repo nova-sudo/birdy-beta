@@ -3,6 +3,7 @@ export { Button, buttonVariants } from "./primitives/button"
 export { Input } from "./primitives/input"
 export { fieldVariants, triggerVariants, FIELD_SIZES } from "./primitives/field-variants"
 export { Textarea } from "./primitives/textarea"
+export { TriggerButton } from "./primitives/trigger-button"
 export { SearchInput } from "./forms/search-input"
 export {
   Select,

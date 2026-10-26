@@ -1,10 +1,9 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CheckIcon, ChevronDownIcon } from "lucide-react"
+import { CheckIcon } from "lucide-react"
 
 import {
-  Button,
   Command,
   CommandEmpty,
   CommandInput,
@@ -13,6 +12,7 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  TriggerButton,
 } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
@@ -42,16 +42,9 @@ export function ClientGroupSelect({ clientGroups, value, onChange }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          role="combobox"
-          aria-label="Client group"
-          aria-expanded={open}
-          size="sm"
-          className="max-w-52 justify-between"
-        >
+        <TriggerButton role="combobox" aria-label="Client group" aria-expanded={open} className="max-w-52">
           <span className="truncate">{label}</span>
-          <ChevronDownIcon aria-hidden className="text-muted-foreground" />
-        </Button>
+        </TriggerButton>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-0">
         <Command>

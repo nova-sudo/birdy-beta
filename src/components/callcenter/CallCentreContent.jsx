@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react"
 import {
-  ChevronDownIcon,
   LayoutGridIcon,
   PhoneIcon,
   SlidersHorizontalIcon,
@@ -14,6 +13,7 @@ import {
 import {
   Badge,
   Button,
+  TriggerButton,
   Checkbox,
   DataTable,
   EmptyState,
@@ -160,10 +160,10 @@ const TABLE_COLUMNS = Object.fromEntries(Object.entries(TAB_COLUMNS).map(([tab, 
 // upstream — neither means anything once the view is already scoped to a
 // single client.
 const SECTION_TABS = [
-  { key: "overview", label: "Overview", icon: LayoutGridIcon, hubOnly: true },
-  { key: "leads", label: "Leads", icon: UserIcon, hubOnly: false },
-  { key: "members", label: "Members", icon: UsersIcon, hubOnly: true },
-  { key: "calls", label: "Calls", icon: PhoneIcon, hubOnly: false },
+  { key: "overview", label: "Overview", hubOnly: true },
+  { key: "leads", label: "Leads", hubOnly: false },
+  { key: "members", label: "Members", hubOnly: true },
+  { key: "calls", label: "Calls", hubOnly: false },
 ]
 
 const allVisible = (cols) => Object.fromEntries(cols.map((c) => [c.id, true]))
@@ -176,7 +176,7 @@ function FilterButton({ count, children, width = "w-80" }) {
     <Popover>
       <PopoverTrigger asChild>
         {/* A table toolbar control: md, the toolbar's one height. */}
-        <Button>
+        <TriggerButton>
           <SlidersHorizontalIcon />
           Filters
           {count > 0 && (
@@ -184,8 +184,7 @@ function FilterButton({ count, children, width = "w-80" }) {
               {count}
             </Badge>
           )}
-          <ChevronDownIcon />
-        </Button>
+        </TriggerButton>
       </PopoverTrigger>
       <PopoverContent align="end" className={`${width} flex flex-col gap-4 p-4`}>
         {children}
@@ -950,10 +949,9 @@ export function CallCentreContent({
 
       {/* Radix mounts only the selected panel; each carries its own fetch. */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="gap-4">
-        <TabsList variant="underline" aria-label="Sales Hub section">
+        <TabsList aria-label="Sales Hub section">
           {sectionTabs.map((t) => (
             <TabsTrigger key={t.key} value={t.key}>
-              <t.icon aria-hidden="true" />
               {t.label}
             </TabsTrigger>
           ))}

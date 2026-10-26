@@ -26,7 +26,7 @@
 //                defaultColumns={...} views={views} />
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Badge, Button, Popover, PopoverContent, PopoverTrigger } from "@/components/ds"
+import { Badge, Button, Popover, PopoverContent, PopoverTrigger, TriggerButton } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
 export const DEFAULT_VIEW_ID = "__default__"
@@ -249,13 +249,8 @@ export default function ColumnsMenu({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          aria-haspopup="dialog"
-          // It sits in table toolbars, whose controls are all md.
-          className={buttonClassName}
-        >
+        {/* It sits in table toolbars, whose controls are all md. */}
+        <TriggerButton aria-haspopup="dialog" className={buttonClassName}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -265,11 +260,7 @@ export default function ColumnsMenu({
             <line x1="17" y1="16" x2="23" y2="16" />
           </svg>
           Columns
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </Button>
+        </TriggerButton>
       </PopoverTrigger>
 
       {/* Portalled, so a toolbar with overflow-x-auto (the Clients page has

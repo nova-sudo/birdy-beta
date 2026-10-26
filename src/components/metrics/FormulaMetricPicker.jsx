@@ -2,10 +2,8 @@
 
 import { useMemo, useState } from "react"
 import Image from "next/image"
-import { ChevronDown } from "lucide-react"
 
-import { Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger, Input } from "@/components/ds"
-import { cn } from "@/lib/utils"
+import { Button, DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger, Input, TriggerButton } from "@/components/ds"
 
 /**
  * Searchable metric picker with category chips, for the formula builder.
@@ -55,10 +53,9 @@ export function FormulaMetricPicker({ metrics = [], value, onChange, placeholder
       }}
     >
       <DropdownMenuTrigger asChild>
-        <Button data-ds="formula-metric-picker" disabled={disabled} className={cn("justify-between", className)}>
-          {selected ? <span className="truncate">{selected.label}</span> : <span>{placeholder}</span>}
-          <ChevronDown className="text-muted-foreground" />
-        </Button>
+        <TriggerButton data-ds="formula-metric-picker" disabled={disabled} className={className}>
+          {selected ? <span className="truncate">{selected.label}</span> : <span className="text-muted-foreground">{placeholder}</span>}
+        </TriggerButton>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[360px] max-w-[calc(100vw-2rem)] p-0">
         <div className="flex gap-1 overflow-x-auto border-b border-border p-2">
