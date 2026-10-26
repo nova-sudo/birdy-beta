@@ -209,7 +209,7 @@ describe("PageCard", () => {
     expect(card).toHaveClass("bg-background", "shadow-surface", "md:mr-2", "md:mb-2", "md:rounded-frame")
     const main = screen.getByRole("main")
     expect(card.contains(main)).toBe(true)
-    expect(screen.getByText("page body").parentElement).toHaveClass("max-w-[1360px]", "mx-auto", "px-4", "md:px-10", "md:pt-9")
+    expect(screen.getByText("page body").parentElement).toHaveClass("max-w-[1360px]", "mx-auto", "px-4", "md:px-6", "xl:px-10", "md:pt-9")
   })
 })
 

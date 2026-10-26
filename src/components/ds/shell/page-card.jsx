@@ -5,7 +5,8 @@ import { cn } from "@/lib/utils"
 /**
  * The white page card under the top bar: an 8px canvas gutter right and bottom on desktop, a
  * sheet-like card rounded on top on a phone. `main` scrolls inside it and holds the page in the
- * 1360 column (36/40 gutters on desktop).
+ * 1360 column. The side gutters are 24px until the window is 1280 wide, then 40: a 40px gutter
+ * on a narrow window (sidebar collapsed, or a small laptop) wastes width the tables need.
  *
  * A page whose root is marked `data-main-fill` (its own panes scroll inside it) is held to main's
  * height instead of growing with its content; `data-main-bleed` does the same and also drops the
@@ -25,7 +26,7 @@ function PageCard({ className, children }) {
       )}
     >
       <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col gap-4 px-4 pt-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-9 md:pb-10 has-[[data-main-fill]]:min-h-0 has-[[data-main-bleed]]:min-h-0 has-[[data-main-bleed]]:max-w-none has-[[data-main-bleed]]:p-0">
+        <div className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col gap-4 px-4 pt-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] md:px-6 md:pt-9 xl:px-10 md:pb-10 has-[[data-main-fill]]:min-h-0 has-[[data-main-bleed]]:min-h-0 has-[[data-main-bleed]]:max-w-none has-[[data-main-bleed]]:p-0">
           {children}
         </div>
       </main>
