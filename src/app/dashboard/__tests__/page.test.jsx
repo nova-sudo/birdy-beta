@@ -759,6 +759,19 @@ describe("Performance funnel", () => {
     expect(notice).toHaveTextContent(/Problem found|All looking good/);
   });
 
+  it("keeps the frame and says the data isn't ready when no client has the period cached", async () => {
+    useClientGroupsWithSeries.mockImplementation(
+      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, gohighlevel: { metrics: { ...g.gohighlevel.metrics, funnel: null } } })) })
+    );
+    await renderPage();
+    expect(funnel()).toHaveTextContent("Performance funnel");
+    expect(funnel()).toHaveTextContent("Funnel data for this period isn't ready yet.");
+    expect(cells()).toHaveLength(0);
+    // No figures, so no verdict on their health.
+    expect(funnel().querySelector('[data-slot="frame-footer"]')).toBeNull();
+    expect(funnel()).not.toHaveTextContent(/All looking good|Problem found/);
+  });
+
   it("asks for a comparable period when the window has none", async () => {
     const user = userEvent.setup();
     useClientGroupsWithSeries.mockImplementation(

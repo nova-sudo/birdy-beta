@@ -128,9 +128,42 @@ describe("FunnelGroup", () => {
     expect(root().querySelector('[data-slot="frame-footer"]')).toHaveTextContent("Problem")
   })
 
+  it("draws a flat stage's delta in the neutral no-change look", () => {
+    render(<FunnelGroup title="Funnel" stages={[{ ...STAGES[0], delta: { change: 0, comparison: COMPARISON } }]} />)
+    const delta = cells()[0].querySelector("[data-ds=delta]")
+    expect(delta).toHaveAttribute("data-tone", "neutral")
+    expect(delta).toHaveTextContent("No change")
+  })
+
+  it("sets the last stage's caption at the 13px type token", () => {
+    render(<FunnelGroup title="Funnel" stages={STAGES} />)
+    const caption = within(cells()[3]).getByText("5.1% of leads")
+    expect(caption).toHaveAttribute("data-slot", "funnel-group-caption")
+    expect(caption).toHaveClass("text-xs", "text-muted-foreground")
+  })
+
   it("renders nothing without stages", () => {
     render(<FunnelGroup title="Funnel" stages={[]} />)
     expect(root()).toBeNull()
+  })
+
+  it("keeps the titled frame with a muted line when there are no stages but an empty message", () => {
+    render(
+      <FunnelGroup
+        title="Performance funnel"
+        stages={[]}
+        empty="Funnel data for this period isn't ready yet."
+        footer={<Notice tone="success">All looking good</Notice>}
+      />
+    )
+    expect(screen.getByRole("heading", { name: "Performance funnel" })).toBeInTheDocument()
+    const line = root().querySelector('[data-slot="funnel-group-empty"]')
+    expect(line).toHaveTextContent("Funnel data for this period isn't ready yet.")
+    expect(line).toHaveClass("text-muted-foreground")
+    expect(cells()).toHaveLength(0)
+    // The footer diagnoses the cells; with none, it claims nothing.
+    expect(root().querySelector('[data-slot="frame-footer"]')).toBeNull()
+    expect(root()).not.toHaveTextContent("All looking good")
   })
 })
 

@@ -286,6 +286,13 @@ describe("funnelStageItems", () => {
     expect(funnelStageItems(flat, true).every((i) => i.delta === undefined)).toBe(true);
   });
 
+  it("gives a stage that held level a zero change, so it reads as no change", () => {
+    const [leads, ...rest] = funnel;
+    const { direction, delta, ...held } = leads;
+    const items = funnelStageItems([{ ...held, flat: true }, ...rest], true);
+    expect(items[0].delta).toEqual({ change: 0, comparison: "vs previous period" });
+  });
+
   it("makes Called unavailable when no client dials: no value, delta or tone", () => {
     const called = funnelStageItems(funnel, false).find((i) => i.key === "called");
     expect(called).toMatchObject({ unavailable: true, tone: "neutral", value: null });

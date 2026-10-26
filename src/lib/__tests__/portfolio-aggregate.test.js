@@ -228,6 +228,21 @@ describe("buildFunnel", () => {
     for (const stage of stages) expect(typeof stage.delta).toBe("number");
   });
 
+  it("marks a stage that held level as flat, apart from one with nothing to compare", () => {
+    const previous = { funnelLeads: 1000, funnelInCrm: 0, funnelCalled: 600, funnelCloses: 40 };
+    const stages = buildFunnel(current, previous);
+    const flat = (key) => stages.find((s) => s.key === key).flat;
+
+    // Leads held at 1,000: compared, unchanged, so no direction but flat.
+    expect(flat("leads")).toBe(true);
+    expect(stages.find((s) => s.key === "leads").direction).toBeUndefined();
+    // In CRM had 0 before: there is no change to state at all.
+    expect(flat("engaged")).toBeUndefined();
+    expect(flat("called")).toBeUndefined();
+    // No previous period, no flat.
+    expect(buildFunnel(current, null).some((s) => s.flat)).toBe(false);
+  });
+
   it("keeps Closes inside In CRM inside Leads", () => {
     // The invariant the close rate depends on. The backend counts all three
     // off one cohort, so this must survive whatever the other caches say.

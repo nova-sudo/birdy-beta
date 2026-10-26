@@ -333,6 +333,10 @@ export function buildCallInsights(current) {
  * @param {object} current portfolio totals
  * @param {object|null} previous the preceding period, for deltas
  */
+/** Whether percentDelta had two figures to compare (a previous period, not 0). */
+const comparable = (current, previous) =>
+  Number.isFinite(current) && Number.isFinite(previous) && previous !== 0;
+
 export function buildFunnel(current, previous) {
   const prev = previous ?? {};
   if (!current.funnelCached) return [];
@@ -391,6 +395,9 @@ export function buildFunnel(current, previous) {
       // diagnoseFunnel reads delta as a number; the pill-style strings the
       // KPI strip uses don't apply here.
       ...(change ? { direction: change.direction, delta: parseFloat(change.delta) } : {}),
+      // Compared and unchanged: distinct from a stage with nothing to compare
+      // against, so the funnel can say "No change" instead of nothing.
+      ...(!change && comparable(s.value, s.prev) ? { flat: true } : {}),
     };
   });
 }

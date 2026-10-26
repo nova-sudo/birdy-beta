@@ -92,7 +92,9 @@ function FunnelGroupCell({ stage, rate, previousLabel }) {
         />
       )}
       {stage.caption && (
-        <span className="text-xs leading-4 text-muted-foreground tabular-nums">{stage.caption}</span>
+        <span data-slot="funnel-group-caption" className="text-xs leading-4 text-muted-foreground tabular-nums">
+          {stage.caption}
+        </span>
       )}
     </div>
   )
@@ -106,16 +108,28 @@ function FunnelGroupCell({ stage, rate, previousLabel }) {
  * the diagnosis.
  *
  * @param {object} props
- * @param {FunnelGroupStage[]} props.stages In funnel order; renders nothing when empty
+ * @param {FunnelGroupStage[]} props.stages In funnel order
+ * @param {React.ReactNode} [props.empty] With no stages, a muted line in the
+ *   titled frame ("isn't ready yet"); without it an empty funnel renders nothing
  * @param {React.ReactNode} [props.title]
  * @param {React.ReactNode} [props.description]
- * @param {React.ReactNode} [props.footer] Under the cells, in the frame's muted strip
+ * @param {React.ReactNode} [props.footer] Under the cells, in the frame's muted
+ *   strip; dropped with no stages, since it diagnoses cells that aren't there
  */
-function FunnelGroup({ stages = [], className, ...frame }) {
-  if (!stages.length) return null
+function FunnelGroup({ stages = [], empty, className, footer, ...frame }) {
+  if (!stages.length) {
+    if (!empty) return null
+    return (
+      <Frame data-ds="funnel-group" className={className} {...frame}>
+        <p data-slot="funnel-group-empty" className="px-5 py-6 text-sm text-muted-foreground">
+          {empty}
+        </p>
+      </Frame>
+    )
+  }
 
   return (
-    <Frame data-ds="funnel-group" className={className} {...frame}>
+    <Frame data-ds="funnel-group" className={className} footer={footer} {...frame}>
       <div className="@container/metric-group">
         <div data-slot="funnel-group" className={cn("grid overflow-clip", metricGroupColumns(stages.length))}>
           {stages.map((stage, i) => (

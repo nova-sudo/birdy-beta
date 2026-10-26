@@ -156,9 +156,10 @@ export function comparableFunnel(funnel, hasCallCentre) {
  * buildFunnel's stages as FunnelGroup stages. The last stage is captioned with
  * its share of leads (on Closes, the close rate). Where no client has a dialler
  * Called is flagged `unavailable` with no value, delta or tone — the page puts
- * its placeholder in — rather than the zero it sums to.
+ * its placeholder in — rather than the zero it sums to. A stage buildFunnel
+ * marks `flat` gets a zero change, which Delta reads as "No change".
  *
- * @param {{key: string, stage: string, value: number, share: string|null, direction?: "up"|"down", delta?: number}[]} funnel
+ * @param {{key: string, stage: string, value: number, share: string|null, direction?: "up"|"down", delta?: number, flat?: boolean}[]} funnel
  * @param {boolean} hasCallCentre
  */
 export function funnelStageItems(funnel, hasCallCentre) {
@@ -176,7 +177,9 @@ export function funnelStageItems(funnel, hasCallCentre) {
       value: stage.value,
       delta: moved
         ? { change: stage.direction === "down" ? -stage.delta : stage.delta, comparison: FUNNEL_COMPARISON }
-        : undefined,
+        : stage.flat
+          ? { change: 0, comparison: FUNNEL_COMPARISON }
+          : undefined,
       caption: last && stage.share ? `${stage.share} of leads` : undefined,
     };
   });

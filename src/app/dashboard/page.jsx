@@ -378,6 +378,7 @@ export default function PortfolioDashboardPage() {
                 title="Performance funnel"
                 description="From lead to close, across all clients"
                 stages={funnelStages}
+                empty="Funnel data for this period isn't ready yet."
                 footer={
                   <Notice
                     tone={verdict.tone}
