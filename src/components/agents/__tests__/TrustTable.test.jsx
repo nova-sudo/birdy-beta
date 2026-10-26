@@ -89,4 +89,22 @@ describe("LearnedList", () => {
     )
     expect(screen.getByText("Palm Peach CPL target is £24")).toBeInTheDocument()
   })
+
+  it("puts the item back when DELETE fails", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      const method = init?.method ?? "GET"
+      if (path === "/api/agents/ag1/memory" && method === "GET") return Promise.resolve(res(MEMORY))
+      if (path === "/api/agents/ag1/memory/m1" && method === "DELETE") return Promise.resolve(res({ detail: "nope" }, 500))
+      return Promise.resolve(res({}, 404))
+    })
+    wrap(<LearnedList agentId="ag1" />)
+    const text = "Don't revive anything from the summer promo"
+    await userEvent.click(await screen.findByRole("button", { name: `Remove “${text}”` }))
+
+    expect(
+      vi.mocked(apiRequest).mock.calls.filter(([p, init]) => p === "/api/agents/ag1/memory/m1" && init?.method === "DELETE")
+    ).toHaveLength(1)
+    expect(await screen.findByText(text)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: `Remove “${text}”` })).toBeInTheDocument()
+  })
 })

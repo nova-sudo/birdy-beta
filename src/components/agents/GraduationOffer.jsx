@@ -153,6 +153,8 @@ export function LearningOffers({ agentId, className }) {
         rule = await graduateRule(agentId, offer.rule_id, choice)
       } catch (err) {
         toast.error("Couldn't save that", { description: err.message })
+        // The offer may be gone (409): re-read so a stale card doesn't linger.
+        revalidateAgentLearning(mutateCache, agentId)
         return
       }
       if (rule?.id) {

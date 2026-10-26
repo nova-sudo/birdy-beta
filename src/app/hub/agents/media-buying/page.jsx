@@ -116,7 +116,7 @@ function AgentHome() {
           {tab === "work" && (
             <div className="flex min-w-0 flex-col gap-6">
               <LearningOffers agentId={agent.id} />
-              <ProposalList agentId={agent.id} currency={currency} />
+              <ProposalList agentId={agent.id} currency={currency} clients={clients} />
               <WorkList
                 agentId={agent.id}
                 empty={`Nothing needs you right now. Birdy checks again tomorrow at ${clockTime(agent.scope?.schedule?.time ?? "07:00") ?? "its usual time"}.`}
@@ -134,6 +134,7 @@ function AgentHome() {
               <ProposalList
                 agentId={agent.id}
                 currency={currency}
+                clients={clients}
                 title="Suggested changes"
                 empty="Nothing to suggest yet. When the same denial reason comes up 3 times in 14 days, Birdy suggests a rule change here."
               />

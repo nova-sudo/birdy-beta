@@ -2,11 +2,12 @@
 
 import * as React from "react"
 import { useSWRConfig } from "swr"
-import { Check, History } from "lucide-react"
+import { Check, History, TriangleAlert } from "lucide-react"
 
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Badge, Button, Frame, Notice, toast } from "@/components/ds"
 import { acceptProposal, rejectProposal, revalidateAgentLearning, useAgentProposals } from "@/lib/agents-api"
+import { currencySymbol } from "@/lib/chat-viz"
 import { cn } from "@/lib/utils"
 import { DENY_REASONS } from "./DenyReason"
 import { RULE_COPY } from "./PlaybookRule"
@@ -60,6 +61,19 @@ function DiffRow({ label, kind, values, currency, tone }) {
   )
 }
 
+/**
+ * The currency a proposal's money is in: a client override is in that client's account currency;
+ * anything else (or a client we can't find) uses the scope-wide `fallback`.
+ */
+export function proposalCurrency(p, clients, fallback = "$") {
+  if (p.kind !== "client_override" || !p.client_group_id) return fallback
+  const client = (clients ?? []).find((c) => c.id === p.client_group_id)
+  return client?.currency ? currencySymbol(client.currency) : fallback
+}
+
+// Accept refused because the rule or the proposal moved on: 409 (already decided) or 400 (no longer valid).
+const isStale = (err) => err?.status === 409 || err?.status === 400
+
 function evidenceSentence(p) {
   const count = p.evidence?.count ?? p.evidence?.item_ids?.length ?? 0
   const who = p.kind === "client_override" && p.client_name ? ` for ${p.client_name}` : ""
@@ -95,12 +109,17 @@ function replaySentence(p) {
  * @param {object} props
  * @param {string} props.agentId
  * @param {object} props.proposal A Task 17 proposal
- * @param {string} [props.currency="$"]
+ * @param {string} [props.currency="$"] The scope-wide symbol
+ * @param {{id: string, currency?: string}[]} [props.clients] To show a client override in that client's currency
  * @param {(proposal: object, decision: "accepted"|"rejected", response: object) => void} [props.onDecided]
  */
-export function ProposalDiff({ agentId, proposal: p, currency = "$", onDecided, className }) {
+export function ProposalDiff({ agentId, proposal: p, currency: scopeSymbol = "$", clients, onDecided, className }) {
+  const { mutate: mutateCache } = useSWRConfig()
   const [busy, setBusy] = React.useState(null)
   const [accepted, setAccepted] = React.useState(p.status === "accepted")
+  // Accept was refused because the rule changed since: only Keep (dismiss) is left.
+  const [stale, setStale] = React.useState(false)
+  const currency = proposalCurrency(p, clients, scopeSymbol)
   const override = p.kind === "client_override"
   const keys = Object.keys(p.before ?? {})
   const keepLabel = keys.length === 1 ? `Keep ${formatParam(p.rule_kind, keys[0], p.before[keys[0]], currency)}` : "Keep as is"
@@ -114,9 +133,18 @@ export function ProposalDiff({ agentId, proposal: p, currency = "$", onDecided, 
       if (decision === "accepted") setAccepted(true)
       onDecided?.(p, decision, res)
     } catch (err) {
-      toast.error(decision === "accepted" ? "Couldn't update the rule" : "Couldn't keep the rule", {
-        description: err.message,
-      })
+      if (decision === "rejected" && stale && err?.status === 409) {
+        // Already decided elsewhere: dismissing it is all Keep has to do.
+        onDecided?.(p, "rejected", null)
+      } else if (decision === "accepted" && isStale(err)) {
+        setStale(true)
+      } else {
+        toast.error(decision === "accepted" ? "Couldn't update the rule" : "Couldn't keep the rule", {
+          description: err.message,
+        })
+      }
+      // Show the rule and proposals as they are now.
+      revalidateAgentLearning(mutateCache, agentId)
     } finally {
       setBusy(null)
     }
@@ -158,7 +186,12 @@ export function ProposalDiff({ agentId, proposal: p, currency = "$", onDecided, 
               <DiffRow label="After" kind={p.rule_kind} values={p.after ?? {}} currency={currency} tone="after" />
             </div>
           </div>
-          {replay && (
+          {stale && (
+            <Notice tone="warning" icon={TriangleAlert}>
+              This suggestion is out of date — the rule changed since. Keep it to dismiss.
+            </Notice>
+          )}
+          {replay && !stale && (
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <History aria-hidden className="mt-0.5 size-4 shrink-0" />
               {replay}
@@ -168,15 +201,17 @@ export function ProposalDiff({ agentId, proposal: p, currency = "$", onDecided, 
             <Button onClick={() => decide("rejected")} disabled={busy != null} loading={busy === "rejected"}>
               {keepLabel}
             </Button>
-            <Button
-              variant="primary"
-              onClick={() => decide("accepted")}
-              disabled={busy != null}
-              loading={busy === "accepted"}
-            >
-              <Check aria-hidden />
-              {override ? "Add exception" : "Update rule"}
-            </Button>
+            {!stale && (
+              <Button
+                variant="primary"
+                onClick={() => decide("accepted")}
+                disabled={busy != null}
+                loading={busy === "accepted"}
+              >
+                <Check aria-hidden />
+                {override ? "Add exception" : "Update rule"}
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -192,10 +227,11 @@ export function ProposalDiff({ agentId, proposal: p, currency = "$", onDecided, 
  * @param {object} props
  * @param {string} props.agentId
  * @param {string} [props.currency]
+ * @param {{id: string, currency?: string}[]} [props.clients] For client overrides' currency
  * @param {React.ReactNode} [props.title] A heading over the list
  * @param {React.ReactNode} [props.empty] Shown (under the title) when there is nothing to suggest
  */
-export function ProposalList({ agentId, currency, title, empty, className }) {
+export function ProposalList({ agentId, currency, clients, title, empty, className }) {
   const { proposals, mutate } = useAgentProposals(agentId)
   const { mutate: mutateCache } = useSWRConfig()
   const [settled, setSettled] = React.useState(() => new Map())
@@ -224,7 +260,14 @@ export function ProposalList({ agentId, currency, title, empty, className }) {
         <p className="text-sm text-muted-foreground">{empty}</p>
       ) : (
         list.map((p) => (
-          <ProposalDiff key={p.id} agentId={agentId} proposal={p} currency={currency} onDecided={onDecided} />
+          <ProposalDiff
+            key={p.id}
+            agentId={agentId}
+            proposal={p}
+            currency={currency}
+            clients={clients}
+            onDecided={onDecided}
+          />
         ))
       )}
     </section>
