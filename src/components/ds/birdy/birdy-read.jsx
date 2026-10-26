@@ -9,7 +9,6 @@ import { askBirdy } from "@/lib/ask-birdy"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Button } from "../primitives/button"
 import { Frame } from "../surfaces/frame"
-import { Surface } from "../surfaces/surface"
 
 const MAX_ROWS = 5
 
@@ -61,7 +60,8 @@ function Dismiss({ title, onDismiss }) {
 
 /**
  * Birdy's short list of what needs attention: a muted `Frame` with the framed
- * mascot, a count and a white `Surface` of actionable rows (at most 5).
+ * mascot and a count in the header strip, actionable rows (at most 5) on the
+ * frame surface and the "Ask Birdy" link in the footer strip.
  *
  * @param {object} props
  * @param {React.ReactNode} [props.title="Birdy's read"]
@@ -97,49 +97,49 @@ function BirdyRead({ title = "Birdy's read", findings = [], prompt, onAsk, empty
           )}
         </span>
       }
+      footer={
+        prompt ? (
+          <button
+            type="button"
+            onClick={() => (onAsk ? onAsk(prompt) : askBirdy(prompt))}
+            className="rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus"
+          >
+            Ask Birdy about this →
+          </button>
+        ) : undefined
+      }
       {...props}
     >
-      <Surface padded={false}>
-        {rows.length === 0 ? (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground">
-            {empty ?? "Nothing needs you right now."}
-          </div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {rows.map((f) => {
-              const { chip, Icon } = TONES[f.tone] ?? TONES.neutral
-              return (
-                <li key={f.id} className="flex items-center gap-3 px-4 py-3">
-                  <span
-                    className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", chip)}
-                    aria-hidden="true"
-                  >
-                    <Icon className="size-4" strokeWidth={2.5} />
-                  </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="line-clamp-2 text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
-                    {f.detail && (
-                      <span className="line-clamp-2 text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
-                        {f.detail}
-                      </span>
-                    )}
-                  </div>
-                  <Action action={f.action} />
-                  {canDismiss && <Dismiss title={f.title} onDismiss={f.onDismiss} />}
-                </li>
-              )
-            })}
-          </ul>
-        )}
-      </Surface>
-      {prompt && (
-        <button
-          type="button"
-          onClick={() => (onAsk ? onAsk(prompt) : askBirdy(prompt))}
-          className="self-start px-1 text-sm font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus"
-        >
-          Ask Birdy about this →
-        </button>
+      {rows.length === 0 ? (
+        <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+          {empty ?? "Nothing needs you right now."}
+        </div>
+      ) : (
+        <ul className="divide-y divide-divider">
+          {rows.map((f) => {
+            const { chip, Icon } = TONES[f.tone] ?? TONES.neutral
+            return (
+              <li key={f.id} className="flex items-center gap-3 px-4 py-3">
+                <span
+                  className={cn("flex size-7 shrink-0 items-center justify-center rounded-full", chip)}
+                  aria-hidden="true"
+                >
+                  <Icon className="size-4" strokeWidth={2.5} />
+                </span>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <span className="line-clamp-2 text-base font-medium text-foreground" title={typeof f.title === "string" ? f.title : undefined}>{f.title}</span>
+                  {f.detail && (
+                    <span className="line-clamp-2 text-xs text-muted-foreground" title={typeof f.detail === "string" ? f.detail : undefined}>
+                      {f.detail}
+                    </span>
+                  )}
+                </div>
+                <Action action={f.action} />
+                {canDismiss && <Dismiss title={f.title} onDismiss={f.onDismiss} />}
+              </li>
+            )
+          })}
+        </ul>
       )}
     </Frame>
   )

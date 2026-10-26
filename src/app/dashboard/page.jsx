@@ -209,11 +209,15 @@ export default function PortfolioDashboardPage() {
       label,
     }));
 
-    return fromPortfolioTabs({ tabs, activeKey: chartMetric, chart: null }).map((m) => ({
+    return fromPortfolioTabs({
+      tabs,
+      activeKey: chartMetric,
+      chart: null,
+      comparison: "vs previous period",
+    }).map((m) => ({
       ...m,
       series: series[m.key],
       points: raw[m.key].length,
-      caption: m.delta !== undefined ? "vs previous period" : undefined,
       symbol,
     }));
   }, [chartMetrics, kpis, callInsights, hasCallCentre, chartMetric]);

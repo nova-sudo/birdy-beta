@@ -221,7 +221,9 @@ describe("layout", () => {
     expect(desc.className).not.toMatch(/truncate/)
     const title = screen.getByRole("heading", { name: "General settings" })
     expect(title.compareDocumentPosition(desc) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(title.parentElement.contains(desc)).toBe(false)
+    // The Frame's own description slot, stacked under the title.
+    expect(desc).toHaveAttribute("data-slot", "frame-description")
+    expect(title.parentElement).toHaveClass("flex-col")
   })
 
   it("builds each form as a ds Frame of label/control rows", async () => {

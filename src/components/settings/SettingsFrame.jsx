@@ -4,7 +4,7 @@
 // label and description on the left and the control on the right. Rows stack
 // below md.
 
-import { Frame, Label, Surface } from "@/components/ds"
+import { Frame, Label } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
 /** Title and description at the top of a section's content. */
@@ -21,18 +21,20 @@ export function SectionHeader({ title, description }) {
  * A section Frame: muted shell with a head, and a white body that holds the rows.
  *
  * @param {React.ReactNode} title
- * @param {React.ReactNode} [description] Muted line beside the title
+ * @param {React.ReactNode} [description] Muted line under the title
  * @param {React.ReactNode} [actions] Control in the head, e.g. a Switch for the whole section
  */
 export function SettingsFrame({ title, description, actions, children, className }) {
   return (
-    <Frame title={title} titleAs="h3" actions={actions} className={className}>
-      {/* Under the title and free to wrap: the Frame head truncates a one-line
-          meta, which clipped the description on a phone. */}
-      {description && <p className="-mt-2 px-1 text-xs text-muted-foreground">{description}</p>}
-      <Surface padded={false} className="divide-y divide-border/60">
-        {children}
-      </Surface>
+    <Frame
+      title={title}
+      titleAs="h3"
+      description={description}
+      action={actions}
+      className={className}
+      contentClassName="divide-y divide-divider"
+    >
+      {children}
     </Frame>
   )
 }

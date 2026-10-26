@@ -261,10 +261,12 @@ describe("Portfolio Dashboard", () => {
     // up (£1.75 to £2.00) and for a cost that is bad, so red.
     const leadsDelta = tab(/^Leads/).querySelector("[data-ds=delta]");
     const cplDelta = tab(/Cost per lead/).querySelector("[data-ds=delta]");
-    expect(leadsDelta).toHaveAttribute("data-direction", "up");
-    expect(leadsDelta.className).toContain("text-success-ink");
-    expect(cplDelta).toHaveAttribute("data-direction", "up");
-    expect(cplDelta.className).toContain("text-danger-ink");
+    expect(leadsDelta).toHaveTextContent(/^Up/);
+    expect(leadsDelta).toHaveAttribute("data-tone", "good");
+    expect(cplDelta).toHaveTextContent(/^Up/);
+    expect(cplDelta).toHaveAttribute("data-tone", "bad");
+    // The delta names what it is measured against.
+    expect(leadsDelta).toHaveTextContent("vs previous period");
   });
 
   it("switches the selected metric", async () => {
@@ -660,7 +662,7 @@ describe("Call insights", () => {
     const insights = document.querySelector('[data-ds="metric-group"]');
     expect(insights).toHaveTextContent("Call insights");
     expect(insights).toHaveTextContent("Across all client call centres");
-    const cards = insights.querySelectorAll('[data-ds="metric-card"]');
+    const cards = insights.querySelectorAll('[data-slot="metric-group-cell"]');
     expect(Array.from(cards).map((c) => c.firstChild.textContent)).toEqual([
       "Total calls",
       "Talk time (min)",
@@ -669,7 +671,7 @@ describe("Call insights", () => {
       "Calls per close",
       "Conversion rate",
     ]);
-    expect(group_().getByText("Total calls").parentElement).toHaveTextContent("200");
+    expect(group_().getByText("Total calls").closest('[data-slot="metric-group-cell"]')).toHaveTextContent("200");
     expect(screen.queryByText(/None of your clients use a call centre/)).not.toBeInTheDocument();
   });
 
@@ -684,7 +686,7 @@ describe("Call insights", () => {
       "None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
     );
     const insights = document.querySelector('[data-ds="metric-group"]');
-    const cards = insights.querySelectorAll('[data-ds="metric-card"]');
+    const cards = insights.querySelectorAll('[data-slot="metric-group-cell"]');
     expect(cards).toHaveLength(6);
     // Five placeholders; conversion (closes / leads) stays a real number: 16 / 200.
     expect(insights.querySelectorAll("[title^='Not available']")).toHaveLength(5);

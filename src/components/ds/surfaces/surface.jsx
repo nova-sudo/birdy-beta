@@ -3,7 +3,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 /**
- * White card on the page or inside a `Frame`.
+ * A free-standing white panel on the page. Inside a `Frame`, use the frame's own
+ * content area (or `FrameSurface` in an overlay) instead of nesting a Surface.
  *
  * @param {object} props
  * @param {React.ElementType} [props.as="div"]
@@ -14,7 +15,7 @@ function Surface({ as: Comp = "div", padded = true, className, ...props }) {
     <Comp
       data-ds="surface"
       data-slot="surface"
-      className={cn("rounded-surface bg-background text-foreground shadow-surface", padded && "p-4", className)}
+      className={cn("rounded-frame bg-background text-foreground shadow-surface", padded && "p-4", className)}
       {...props}
     />
   )

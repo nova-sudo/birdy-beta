@@ -10,7 +10,7 @@
 // selected preset has none, no stage carries movement and it says so rather
 // than implying a flat trend.
 
-import { EmptyState, Frame, FunnelBar, Surface } from "@/components/ds"
+import { EmptyState, Frame, FunnelBar } from "@/components/ds"
 import { FUNNEL_STAGES } from "@/lib/client-funnel"
 
 // What each stage is called when the bar is only a phone wide.
@@ -45,10 +45,18 @@ export function DiagnosticsFunnel({
   return (
     <Frame
       title="Performance funnel"
-      meta={hasComparison ? "CRM cohort · vs previous period" : "CRM cohort"}
+      description={hasComparison ? "CRM cohort · vs previous period" : "CRM cohort"}
       className={className}
+      footer={
+        !loading && stages && !hasComparison ? (
+          <p>
+            No stage movement for this window — switch to Today or Last 7 days to
+            see how each stage is trending.
+          </p>
+        ) : undefined
+      }
     >
-      <Surface data-slot="diagnostics-funnel">
+      <div data-slot="diagnostics-funnel" className="p-5">
         {!loading && !stages ? (
           // No funnel cached for this window. Saying so beats drawing four
           // zeroes, which reads as "no results" when it means "not measured".
@@ -56,13 +64,7 @@ export function DiagnosticsFunnel({
         ) : (
           <FunnelBar loading={loading} steps={(stages ?? FUNNEL_STAGES).map(stepOf)} />
         )}
-      </Surface>
-      {!loading && stages && !hasComparison && (
-        <p className="px-1 text-sm text-muted-foreground">
-          No stage movement for this window — switch to Today or Last 7 days to
-          see how each stage is trending.
-        </p>
-      )}
+      </div>
     </Frame>
   )
 }

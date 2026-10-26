@@ -30,6 +30,7 @@ import {
   EmptyState,
   ErrorState,
   Frame,
+  FrameAction,
   Input,
   Kbd,
   Label,
@@ -75,9 +76,9 @@ const gbp = (n) => `£${n.toLocaleString("en-GB", { minimumFractionDigits: n % 1
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const METRICS = [
-  { key: "leads", label: "Leads", value: "1,284", delta: 12.4, caption: "vs last week", series: [150, 168, 190, 176, 214, 198, 188], prev: [140, 150, 162, 170, 168, 160, 155] },
-  { key: "calls", label: "Booked calls", value: "212", delta: 17, caption: "vs last week", series: [24, 28, 35, 30, 41, 28, 26], prev: [20, 22, 28, 27, 30, 24, 22] },
-  { key: "cpl", label: "Cost per lead", value: "£18.40", delta: -6.1, invert: true, caption: "cheaper", series: [20.1, 19.4, 18.9, 18.2, 17.8, 18.6, 18.4], prev: [21, 20.6, 20.2, 19.8, 19.4, 19.9, 19.6] },
+  { key: "leads", label: "Leads", value: "1,284", delta: { change: 12.4, comparison: "vs last week" }, series: [150, 168, 190, 176, 214, 198, 188], prev: [140, 150, 162, 170, 168, 160, 155] },
+  { key: "calls", label: "Booked calls", value: "212", delta: { change: 17, comparison: "vs last week" }, series: [24, 28, 35, 30, 41, 28, 26], prev: [20, 22, 28, 27, 30, 24, 22] },
+  { key: "cpl", label: "Cost per lead", value: "£18.40", delta: { change: -6.1, comparison: "vs last week" }, goodWhen: "down", series: [20.1, 19.4, 18.9, 18.2, 17.8, 18.6, 18.4], prev: [21, 20.6, 20.2, 19.8, 19.4, 19.9, 19.6] },
   { key: "spend", label: "Ad spend", value: "£23,620", caption: "of £30,000 budget", series: [3100, 3400, 3600, 3300, 3700, 3300, 3220], prev: [3000, 3100, 3200, 3300, 3350, 3250, 3100] },
 ]
 
@@ -310,9 +311,16 @@ export default function Showcase() {
       </Section>
 
       <Section id="surfaces" title="Surfaces">
-        <Frame title="Frame" meta="Muted panel" actions={<Button size="sm">Action</Button>}>
-          <Surface>A white Surface on a Frame. Cards sit here.</Surface>
+        <Frame
+          title="Frame"
+          description="A muted frame around one flush white surface"
+          action={<FrameAction href="#surfaces">View all</FrameAction>}
+          footer={<span>The footer strip, in the frame&apos;s muted tone</span>}
+          padded
+        >
+          The frame&apos;s own surface. Content sits here directly, not in a nested Surface.
         </Frame>
+        <Surface>A free-standing Surface, for a panel with no frame.</Surface>
         <Notice tone="warning" title="Meta token expires in 3 days" action={<Button size="sm">Reconnect</Button>}>
           Kestrel Roofing campaigns stop syncing when it lapses.
         </Notice>
@@ -376,7 +384,9 @@ export default function Showcase() {
 
       <Section id="data" title="Data">
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-          <Delta value={12.4} /> <Delta value={-4} /> <Delta value={-6.1} invert /> <Delta value={null} />
+          <Delta change={12.4} comparison="vs last week" /> <Delta change={-4} />{" "}
+          <Delta change={-6.1} goodWhen="down" /> <Delta change={6} format="count" /> <Delta change={null} />{" "}
+          <Delta change={3.2} variant="badge" />
         </div>
         <MetricTabsChart
           metrics={metrics}
@@ -391,23 +401,37 @@ export default function Showcase() {
         </Button>
         <MetricGroup
           title="This week"
-          meta="vs last week"
           items={[
-            { key: "leads", label: "Leads", value: "1,284", delta: 12.4, spark: [150, 168, 190, 176, 214, 198, 188] },
-            { key: "cpl", label: "Cost per lead", value: "£18.40", delta: -6.1, invert: true, spark: [20.1, 19.4, 18.9, 18.2, 17.8, 18.6, 18.4] },
+            {
+              key: "leads",
+              label: "Leads",
+              value: 1284,
+              format: "number",
+              description: "Every lead the ad accounts reported in the window.",
+              delta: { change: 12.4, comparison: "vs last week" },
+              caption: "Meta and CRM",
+            },
+            {
+              key: "cpl",
+              label: "Cost per lead",
+              value: "£18.40",
+              delta: { change: -6.1, comparison: "vs last week" },
+              goodWhen: "down",
+            },
+            { key: "booked", label: "Booked calls", value: 212, ratio: { total: 240 }, delta: { change: 31, format: "count", comparison: "vs last week" } },
             { key: "spend", label: "Ad spend", value: "£23,620", caption: "of £30,000 budget" },
           ]}
         />
         <div className="grid gap-3 md:grid-cols-3">
-          <MetricCard label="Booked calls" value="212" delta={17} caption="31 more than last week" />
+          <MetricCard label="Booked calls" value="212" delta={{ change: 17, comparison: "vs last week" }} caption="31 more than last week" />
           <Breakdown
             title="Leads by client"
             total="1,284"
             rows={[
-              { key: "h", label: "Harbour Dental", color: "var(--color-chart-1)", delta: 18, value: "412", share: 32 },
-              { key: "k", label: "Kestrel Roofing", color: "var(--color-chart-2)", delta: 9, value: "298", share: 23 },
-              { key: "o", label: "Oakline Solar", color: "var(--color-chart-3)", delta: -4, value: "201", share: 16 },
-              { key: "b", label: "Brightside Legal", color: "var(--color-chart-4)", delta: 2, value: "187", share: 15 },
+              { key: "h", label: "Harbour Dental", color: "var(--color-chart-1)", delta: { change: 18 }, value: "412", share: 32 },
+              { key: "k", label: "Kestrel Roofing", color: "var(--color-chart-2)", delta: { change: 9 }, value: "298", share: 23 },
+              { key: "o", label: "Oakline Solar", color: "var(--color-chart-3)", delta: { change: -4 }, value: "201", share: 16 },
+              { key: "b", label: "Brightside Legal", color: "var(--color-chart-4)", delta: { change: 2 }, value: "187", share: 15 },
             ]}
           />
           <BarList

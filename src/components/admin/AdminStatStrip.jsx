@@ -1,11 +1,11 @@
 "use client"
 
-import { MetricGroup, Skeleton } from "@/components/ds"
+import { MetricGroup } from "@/components/ds"
 
 /**
  * The five platform KPIs across the top of the Admin console, as one ds
- * MetricGroup. While loading each figure is a Skeleton, so the group keeps its
- * final shape and nothing shifts when the numbers land.
+ * MetricGroup. While loading the labels stay and each figure is a skeleton, so
+ * the group keeps its final shape and nothing shifts when the numbers land.
  */
 export default function AdminStatStrip({ kpis, loading }) {
   const k = kpis || {}
@@ -20,14 +20,5 @@ export default function AdminStatStrip({ kpis, loading }) {
     { label: "AI queries (7d)", value: fmt(k.ai_queries_7d), caption: `${fmt(k.ai_queries_total)} all-time` },
   ]
 
-  return (
-    <MetricGroup
-      title="Platform"
-      items={tiles.map((t) =>
-        loading
-          ? { key: t.label, label: t.label, value: <Skeleton className="h-7 w-16" /> }
-          : { key: t.label, ...t }
-      )}
-    />
-  )
+  return <MetricGroup title="Platform" loading={loading} items={tiles.map((t) => ({ key: t.label, ...t }))} />
 }

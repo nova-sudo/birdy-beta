@@ -143,7 +143,7 @@ describe("/clients", () => {
   it("shows cost per lead movement against the previous week, a falling cost green", async () => {
     render(<ClientsPage />)
     const delta = await waitFor(() => within(table()).getByText(/28\.6%/))
-    expect(delta).toHaveClass("text-success-ink")
+    expect(delta).toHaveClass("text-delta-good-ink")
     expect(apiRequest).toHaveBeenCalledWith(expect.stringContaining("date_preset=last_14d"))
   })
 
@@ -159,7 +159,7 @@ describe("/clients", () => {
       expect(el).toBeInTheDocument()
       return el
     })
-    expect(delta).toHaveClass("text-danger-ink")
+    expect(delta).toHaveClass("text-delta-bad-ink")
   })
 
   it("opens a client on row click", async () => {

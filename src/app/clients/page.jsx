@@ -304,7 +304,7 @@ export default function ClientsPage() {
             <MoneyCell
               value={cpl}
               currency={currency || userCurrency}
-              sub={cplDelta != null ? <Delta value={cplDelta} invert className="text-xs" /> : undefined}
+              sub={cplDelta != null ? <Delta change={cplDelta} goodWhen="down" /> : undefined}
             />
           )
         },

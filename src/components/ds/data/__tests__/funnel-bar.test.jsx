@@ -107,8 +107,8 @@ describe("FunnelBar", () => {
       />
     )
     const deltas = root().querySelectorAll('[data-ds="delta"]')
-    expect(deltas[0]).toHaveClass("text-danger-ink") // cost rising
-    expect(deltas[1]).toHaveClass("text-success-ink") // cost falling
+    expect(deltas[0]).toHaveAttribute("data-tone", "bad") // cost rising
+    expect(deltas[1]).toHaveAttribute("data-tone", "good") // cost falling
   })
 
   it("fills run from solid primary to a pale last step", () => {

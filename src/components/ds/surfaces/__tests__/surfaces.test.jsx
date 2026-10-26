@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
 import { Inbox } from "lucide-react"
-import { Frame, Surface, Notice, EmptyState, ErrorState, Skeleton, Spinner } from "@/components/ds"
+import { Frame, FrameSurface, Surface, Notice, EmptyState, ErrorState, Skeleton, Spinner, useInsideFrame } from "@/components/ds"
 
 describe("Frame", () => {
   it("renders the title as an h2 on a frame rounded-frame root", () => {
@@ -24,6 +24,74 @@ describe("Frame", () => {
     render(<Frame title="Metrics" titleAs="h3" />)
     expect(screen.getByRole("heading", { level: 3, name: "Metrics" })).toBeTruthy()
   })
+
+  it("is the Bytes shell: a hairline frame with no padding, a flush white surface and a footer strip", () => {
+    const { container } = render(
+      <Frame title="Locations" description="Live today" footer={<span>Note</span>} padded>
+        body
+      </Frame>
+    )
+    const root = container.firstChild
+    expect(root).toHaveClass("shadow-frame", "rounded-frame", "bg-frame")
+    expect(root.className).not.toMatch(/\bp-\d/)
+    expect(root).toHaveAttribute("aria-labelledby", screen.getByRole("heading").id)
+    const header = root.querySelector('[data-slot="frame-header"]')
+    expect(header).toHaveClass("min-h-12", "px-4", "py-2")
+    // The description sits under the title, not beside it.
+    expect(header.querySelector('[data-slot="frame-description"]').textContent).toBe("Live today")
+    const content = root.querySelector('[data-slot="frame-content"]')
+    expect(content).toHaveClass("rounded-frame", "bg-background", "shadow-surface", "p-5")
+    expect(content.textContent).toBe("body")
+    expect(root.querySelector('[data-slot="frame-footer"]').textContent).toBe("Note")
+  })
+
+  it("aliases action and takes actions as data, folding past two into a menu", () => {
+    const { rerender } = render(<Frame title="T" action={<button>Only</button>} />)
+    expect(screen.getByRole("button", { name: "Only" })).toBeTruthy()
+    const onClick = vi.fn()
+    rerender(
+      <Frame
+        title="T"
+        actions={[
+          { label: "Export", onClick },
+          { label: "Share" },
+          { label: "Archive" },
+        ]}
+      />
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    expect(onClick).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole("button", { name: "Share" })).toBeTruthy()
+    expect(screen.queryByRole("button", { name: "Archive" })).toBeNull()
+    expect(screen.getByRole("button", { name: "More actions" })).toBeTruthy()
+  })
+
+  it("an href adds a View all link with an arrow", () => {
+    render(<Frame title="Leads" href="/contacts" />)
+    const link = screen.getByRole("link", { name: "View all" })
+    expect(link).toHaveAttribute("href", "/contacts")
+    expect(link.querySelector("svg")).not.toBeNull()
+  })
+
+  it("tells nested content it is inside a frame", () => {
+    function Probe() {
+      return <span>{useInsideFrame() ? "inside" : "outside"}</span>
+    }
+    render(
+      <>
+        <Probe />
+        <Frame title="T">
+          <Probe />
+        </Frame>
+        <FrameSurface label="Details">
+          <Probe />
+        </FrameSurface>
+      </>
+    )
+    expect(screen.getAllByText("inside")).toHaveLength(2)
+    expect(screen.getAllByText("outside")).toHaveLength(1)
+    expect(screen.getByRole("group", { name: "Details" })).toHaveClass("rounded-control", "shadow-surface")
+  })
 })
 
 describe("Surface", () => {
@@ -31,7 +99,7 @@ describe("Surface", () => {
     const { container } = render(<Surface>x</Surface>)
     const root = container.firstChild
     expect(root.className).toContain("shadow-surface")
-    expect(root.className).toContain("rounded-surface")
+    expect(root.className).toContain("rounded-frame")
     expect(root.className).toContain("bg-background")
     expect(root.className).toContain("p-4")
     expect(root.getAttribute("data-ds")).toBe("surface")

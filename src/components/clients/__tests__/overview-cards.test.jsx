@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 
 // ─── Client overview cards, on the ds kit ────────────────────────────────────
-// Goals as white cells on a Frame; the four cohort stages as one FunnelBar; the
+// Goals as cells of one MetricGroup; the four cohort stages as one FunnelBar; the
 // health badge in status tones.
 
 import { GoalsStrip } from "@/components/clients/GoalsStrip"
@@ -35,7 +35,7 @@ describe("GoalsStrip", () => {
       />
     )
     const root = document.querySelector('[data-ds="goals-strip"]')
-    const cells = root.querySelectorAll('[data-slot="goal"]')
+    const cells = root.querySelectorAll('[data-slot="metric-group-cell"]')
     expect(cells).toHaveLength(3)
     expect(within(cells[0]).getByText("£12.00")).toBeInTheDocument()
     expect(within(cells[0]).getByText("/ £10.00")).toBeInTheDocument()
@@ -46,7 +46,7 @@ describe("GoalsStrip", () => {
 
   it("a goal with no target is a plain figure with no state", () => {
     render(<GoalsStrip goals={[goal({ target: null, state: null })]} />)
-    expect(document.querySelector('[data-slot="goal"]').textContent).not.toMatch(/On track|Behind|At risk/)
+    expect(document.querySelector('[data-slot="metric-group-cell"]').textContent).not.toMatch(/On track|Behind|At risk/)
     expect(screen.getByText(/No monthly targets set/)).toBeInTheDocument()
   })
 
@@ -85,8 +85,8 @@ describe("DiagnosticsFunnel", () => {
     render(<DiagnosticsFunnel stages={stages} hasComparison />)
     const deltas = document.querySelectorAll('[data-ds="funnel-bar"] [data-ds="delta"]')
     expect(deltas.length).toBe(4)
-    expect(deltas[3]).toHaveClass("text-danger-ink")
-    expect(deltas[0]).toHaveClass("text-success-ink")
+    expect(deltas[3]).toHaveAttribute("data-tone", "bad")
+    expect(deltas[0]).toHaveAttribute("data-tone", "good")
   })
 
   it("says so when the window has no previous period", () => {

@@ -92,18 +92,12 @@ export default function AiQueriesPanel({ data, loading, error, onRetry, onOpenCo
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         {/* Left: theme clustering + roadmap signal */}
         <div className="flex flex-col gap-3">
-          {clusters.length ? (
-            <BarList
-              title="Top request themes"
-              meta={`${(d.total ?? 0).toLocaleString()} queries`}
-              rows={clusters.map((c) => ({ key: c.category, label: c.label, value: c.pct, display: `${c.pct}%` }))}
-            />
-          ) : (
-            <Surface>
-              <h3 className="text-sm font-medium text-body">Top request themes</h3>
-              <p className="py-6 text-center text-sm text-muted-foreground">No queries yet.</p>
-            </Surface>
-          )}
+          <BarList
+            title="Top request themes"
+            description={clusters.length ? `${(d.total ?? 0).toLocaleString()} queries` : undefined}
+            empty="No queries yet."
+            rows={clusters.map((c) => ({ key: c.category, label: c.label, value: c.pct, display: `${c.pct}%` }))}
+          />
           <p className="px-1 text-xs text-muted-foreground">
             Clustered from {(d.total ?? 0).toLocaleString()} queries in the last {d.window_days ?? 7} days — use to guide the roadmap.
           </p>

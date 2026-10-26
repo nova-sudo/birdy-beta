@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, fireEvent } from "@testing-library/react"
+import { render, screen, fireEvent, within } from "@testing-library/react"
 import { fromPortfolioTabs, Delta, MetricCard, MetricGroup, MetricTabsChart, Breakdown, BarList } from "@/components/ds"
 
 // recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
@@ -9,69 +9,122 @@ globalThis.ResizeObserver ??= class {
   disconnect() {}
 }
 
+const figure = (container) => container.querySelector('[data-slot="delta-figure"]')
+
 describe("Delta", () => {
-  it("positive is green up", () => {
-    render(<Delta value={12.4} />)
-    expect(screen.getByText(/12\.4%/)).toHaveClass("text-success-ink")
-    expect(screen.getByText("↑")).toBeInTheDocument()
+  it("a rise that is good news is a green up arrow and figure", () => {
+    const { container } = render(<Delta change={12.4} />)
+    expect(container.firstChild).toHaveAttribute("data-tone", "good")
+    expect(figure(container)).toHaveClass("text-delta-good-ink")
+    expect(figure(container).textContent).toBe("Up12.4%")
+    expect(figure(container).querySelector("svg")).toHaveClass("text-delta-good", "size-3.5")
   })
-  it("inverted falling cost is green down", () => {
-    render(<Delta value={-6.1} invert />)
-    expect(screen.getByText(/6\.1%/)).toHaveClass("text-success-ink")
-    expect(screen.getByText("↓")).toBeInTheDocument()
+  it("goodWhen down: a falling cost is good, a rising one bad", () => {
+    const { container, rerender } = render(<Delta change={-6.1} goodWhen="down" />)
+    expect(figure(container)).toHaveClass("text-delta-good-ink")
+    expect(screen.getByText("Down")).toHaveClass("sr-only")
+    rerender(<Delta change={3} goodWhen="down" />)
+    expect(figure(container)).toHaveClass("text-delta-bad-ink")
   })
-  it("inverted rising cost is red up", () => {
-    render(<Delta value={3} invert />)
-    expect(screen.getByText(/3\.0%/)).toHaveClass("text-danger-ink")
+  it("reads count and points formats without a sign", () => {
+    const { container, rerender } = render(<Delta change={-6} format="count" />)
+    expect(figure(container).textContent).toBe("Down6")
+    rerender(<Delta change={2} format="points" />)
+    expect(figure(container).textContent).toBe("Up2 pts")
+    rerender(<Delta change={1} format="points" />)
+    expect(figure(container).textContent).toBe("Up1 pt")
   })
-  it("zero is neutral without arrow", () => {
-    render(<Delta value={0} />)
-    expect(screen.getByText(/0%/)).toHaveClass("text-muted-foreground")
-    expect(screen.queryByText(/[↑↓]/)).toBeNull()
+  it("zero, missing, and values rounding to 0 read No change in muted", () => {
+    for (const change of [0, null, undefined, 0.04, Number.NaN]) {
+      const { container, unmount } = render(<Delta change={change} />)
+      expect(screen.getByText("No change")).toHaveClass("text-muted-foreground")
+      expect(container.firstChild).toHaveAttribute("data-tone", "neutral")
+      expect(container.querySelector("svg")).toBeNull()
+      unmount()
+    }
   })
-  it("values rounding to 0.0 are neutral", () => {
-    render(<Delta value={0.04} />)
-    expect(screen.getByText("0%")).toHaveClass("text-muted-foreground")
-    expect(screen.queryByText(/[↑↓]/)).toBeNull()
+  it("the comparison follows the figure in muted 13px text", () => {
+    const { container } = render(<Delta change={6} format="count" comparison="vs previous 30 days" />)
+    expect(container.firstChild).toHaveClass("text-xs", "leading-4")
+    expect(screen.getByText("vs previous 30 days")).toHaveClass("text-muted-foreground")
   })
-  it("number format with null renders 0", () => {
-    render(<Delta value={null} format="number" />)
-    expect(screen.getByText("0")).toHaveClass("text-muted-foreground")
+  it("neither keeps the change muted", () => {
+    const { container } = render(<Delta change={5} goodWhen="neither" />)
+    expect(figure(container)).toHaveClass("text-muted-foreground")
   })
-  it("null is neutral", () => {
-    render(<Delta value={null} />)
-    expect(screen.getByText("0%")).toHaveClass("text-muted-foreground")
-  })
-  it("number format uses en-GB grouping, absolute value, and suffix", () => {
-    render(<Delta value={-1234} format="number" suffix=" pts" />)
-    expect(screen.getByText(/1,234 pts/)).toBeInTheDocument()
-    expect(screen.getByText("↓")).toBeInTheDocument()
+  it("badge variant is a soft chip", () => {
+    const { container } = render(<Delta change={-3} variant="badge" />)
+    expect(container.firstChild).toHaveClass("h-7", "rounded-badge", "bg-delta-bad-soft", "text-delta-bad-ink")
   })
 })
 
-describe("MetricCard / MetricGroup", () => {
-  it("renders label, value, delta and caption", () => {
-    render(<MetricCard label="Spend" value="£1,200" delta={5} caption="vs last week" />)
-    expect(screen.getByText("Spend")).toBeInTheDocument()
-    expect(screen.getByText("£1,200")).toHaveClass("text-figure")
-    expect(screen.getByText(/5\.0%/)).toBeInTheDocument()
-    expect(screen.getByText("vs last week")).toBeInTheDocument()
+describe("MetricGroup", () => {
+  const items = [
+    {
+      key: "live",
+      label: "Live locations",
+      value: 641,
+      format: "number",
+      description: "Live today.",
+      delta: { change: 6, format: "count", comparison: "vs previous 30 days" },
+      caption: "641 locs · 195 brands",
+    },
+    { key: "b", label: "B", value: "2" },
+    { key: "c", label: "C", value: "3" },
+    { key: "d", label: "D", value: "4" },
+  ]
+
+  it("one frame, one flush surface split into hairline cells", () => {
+    const { container } = render(<MetricGroup title="Locations" meta="Today" action={<button>More</button>} items={items} />)
+    const root = container.firstChild
+    expect(root).toHaveAttribute("data-ds", "metric-group")
+    expect(root).toHaveClass("bg-frame", "shadow-frame")
+    expect(screen.getByRole("heading", { name: "Locations" })).toBeTruthy()
+    expect(screen.getByText("Today")).toHaveAttribute("data-slot", "frame-description")
+    expect(screen.getByRole("button", { name: "More" })).toBeTruthy()
+    const grid = root.querySelector('[data-slot="metric-group"]')
+    expect(grid).toHaveClass("grid", "grid-cols-2", "@3xl/metric-group:grid-cols-4")
+    const cells = grid.querySelectorAll('[data-slot="metric-group-cell"]')
+    expect(cells).toHaveLength(4)
+    expect(cells[0]).toHaveClass("p-5", "gap-1.5", "shadow-[1px_0_0_var(--color-divider),0_1px_0_var(--color-divider)]")
+    expect(root.querySelectorAll('[data-ds="surface"], [data-ds="metric-card"]')).toHaveLength(0)
   })
-  it("group renders title, meta, action and one card per item", () => {
+
+  it("a cell is a muted label with info, a 24px value, the delta line and a caption", () => {
+    const { container } = render(<MetricGroup title="Locations" items={items} />)
+    const cell = within(container.querySelector('[data-slot="metric-group-cell"]'))
+    expect(cell.getByText("Live locations").closest("span.text-muted-foreground")).toHaveClass("text-sm", "font-medium")
+    expect(cell.getByRole("button", { name: "How live locations is counted" })).toBeTruthy()
+    expect(cell.getByText("641")).toHaveClass("text-2xl", "leading-[30px]", "tracking-[-0.02em]")
+    expect(cell.getByText("vs previous 30 days")).toBeTruthy()
+    expect(cell.getByText("641 locs · 195 brands")).toHaveClass("text-xs", "text-muted-foreground")
+  })
+
+  it("columns follow the count: three go one-up then three across", () => {
+    const { container } = render(<MetricGroup title="T" items={items.slice(0, 3)} />)
+    expect(container.querySelector('[data-slot="metric-group"]')).toHaveClass("grid-cols-1", "@lg/metric-group:grid-cols-3")
+  })
+
+  it("loading keeps the labels and skeletons the figures", () => {
+    const { container } = render(<MetricGroup title="T" items={items} loading />)
+    expect(screen.getByText("Live locations")).toBeTruthy()
+    expect(screen.queryByText("641")).toBeNull()
+    expect(container.querySelectorAll('[data-ds="skeleton"]')).toHaveLength(8)
+  })
+
+  it("an href makes the cell a link", () => {
+    render(<MetricGroup title="T" items={[{ key: "a", label: "Leads", value: 3, href: "/contacts" }]} />)
+    expect(screen.getByRole("link", { name: "Leads" })).toHaveAttribute("href", "/contacts")
+  })
+
+  it("MetricCard is one free-standing cell", () => {
     const { container } = render(
-      <MetricGroup
-        title="Delivery"
-        meta="7d"
-        action={<button>More</button>}
-        items={[
-          { label: "A", value: "1" },
-          { label: "B", value: "2" },
-        ]}
-      />
+      <MetricCard label="Spend" value="£1,200" delta={{ change: 5, comparison: "vs last week" }} />
     )
-    expect(screen.getByText("Delivery")).toBeInTheDocument()
-    expect(screen.getByText("More")).toBeInTheDocument()
-    expect(container.querySelectorAll('[data-ds="metric-card"]')).toHaveLength(2)
+    expect(container.firstChild).toHaveAttribute("data-ds", "metric-card")
+    expect(container.querySelectorAll('[data-slot="metric-group-cell"]')).toHaveLength(1)
+    expect(screen.getByText("£1,200")).toHaveClass("text-2xl")
+    expect(screen.getByText("vs last week")).toBeTruthy()
   })
 })
 
@@ -79,7 +132,13 @@ const series = [
   { x: "Mon", current: 1, previous: 2 },
   { x: "Tue", current: 3, previous: 2 },
 ]
-const metrics = ["a", "b", "c", "d"].map((k) => ({ key: k, label: k.toUpperCase(), value: `v${k}`, delta: 1, series }))
+const metrics = ["a", "b", "c", "d"].map((k) => ({
+  key: k,
+  label: k.toUpperCase(),
+  value: `v${k}`,
+  delta: { change: 1, comparison: "vs previous period" },
+  series,
+}))
 
 describe("MetricTabsChart", () => {
   it("tabs are a tablist; clicking selects", () => {
@@ -91,6 +150,28 @@ describe("MetricTabsChart", () => {
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
     fireEvent.click(tabs[1])
     expect(onValueChange).toHaveBeenCalledWith("b")
+  })
+  it("sits in the frame shell; inactive figures are secondary ink, the active one foreground", () => {
+    const { container } = render(<MetricTabsChart title="Overview" metrics={metrics} value="b" onValueChange={() => {}} />)
+    expect(container.firstChild).toHaveClass("bg-frame", "shadow-frame", "rounded-frame")
+    expect(screen.getByRole("heading", { name: "Overview" })).toBeTruthy()
+    const [a, b] = screen.getAllByRole("tab")
+    expect(a).toHaveAttribute("data-state", "inactive")
+    expect(b).toHaveAttribute("data-state", "active")
+    const value = within(a).getByText("va")
+    expect(value).toHaveClass("text-[28px]", "tracking-[-0.02em]", "text-ink-secondary", "group-data-[state=active]/metric-tab:text-foreground")
+    expect(within(a).getByText("A")).toHaveClass("text-muted-foreground")
+    expect(within(a).getByText("vs previous period")).toBeTruthy()
+    expect(screen.getByRole("tabpanel")).toHaveClass("rounded-frame", "shadow-surface")
+  })
+  it("the caption shows only without a delta", () => {
+    render(
+      <MetricTabsChart
+        metrics={[{ key: "a", label: "A", value: "1", caption: "Last 7 days", series }]}
+        value="a"
+      />
+    )
+    expect(screen.getByText("Last 7 days")).toBeTruthy()
   })
   it("a metric without a series is shown but disabled", () => {
     const onValueChange = vi.fn()
@@ -109,7 +190,7 @@ describe("MetricTabsChart", () => {
 })
 
 describe("MetricTabsChart states and adapter", () => {
-  it("adapter keeps inactive plottable tabs enabled and clickable", () => {
+  it("adapter folds direction and polarity into a delta and goodWhen, with the comparison", () => {
     const onValueChange = vi.fn()
     const adapted = fromPortfolioTabs({
       tabs: [
@@ -119,18 +200,26 @@ describe("MetricTabsChart states and adapter", () => {
       ],
       activeKey: "a",
       chart: { values: [1, 2], labels: ["x", "y"] },
+      comparison: "vs previous period",
     })
-    expect(adapted[0]).toMatchObject({ delta: -2, invert: true })
+    expect(adapted[0]).toMatchObject({
+      delta: { change: -2, format: "percent", comparison: "vs previous period" },
+      goodWhen: "down",
+    })
+    expect(adapted[1].delta).toBeUndefined()
     render(<MetricTabsChart metrics={adapted} value="a" onValueChange={onValueChange} />)
     const b = screen.getByRole("tab", { name: /B/ })
     expect(b).toBeEnabled()
     fireEvent.click(b)
     expect(onValueChange).toHaveBeenCalledWith("b")
     expect(screen.getByRole("tab", { name: /C/ })).toBeDisabled()
+    // A falling cost is good news.
+    expect(screen.getByRole("tab", { name: /A/ }).querySelector('[data-ds="delta"]')).toHaveAttribute("data-tone", "good")
   })
-  it("loading shows skeleton tabs and no tablist", () => {
+  it("loading shows skeleton figures and no tablist", () => {
     const { container } = render(<MetricTabsChart metrics={metrics} value="a" loading />)
     expect(screen.queryByRole("tablist")).toBeNull()
+    expect(screen.getByText("A")).toBeTruthy()
     expect(container.querySelectorAll('[data-ds="skeleton"]').length).toBeGreaterThan(4)
   })
   it("plotLoading keeps tabs but skeletons the plot", () => {
@@ -163,16 +252,23 @@ describe("MetricTabsChart plotFallback", () => {
 })
 
 describe("Breakdown / BarList", () => {
-  it("shares render as tabular figures", () => {
-    render(
+  it("sits in a Frame with the total in its header, rows as tabular figures", () => {
+    const { container } = render(
       <Breakdown
         title="By source"
         total="£10"
-        rows={[{ key: "m", label: "Meta", color: "var(--color-chart-1)", value: "£6", share: 60, delta: 2 }]}
+        rows={[
+          { key: "m", label: "Meta", color: "var(--color-chart-1)", value: "£6", share: 60, delta: { change: 2 } },
+        ]}
       />
     )
+    expect(container.firstChild).toHaveAttribute("data-ds", "breakdown")
+    expect(container.firstChild).toHaveAttribute("data-slot", "frame")
+    expect(screen.getByRole("heading", { name: "By source" })).toBeTruthy()
+    expect(within(container.querySelector('[data-slot="frame-actions"]')).getByText("£10")).toBeTruthy()
     expect(screen.getByText("£6")).toHaveClass("num")
-    expect(screen.getByText("60%")).toHaveClass("num")
+    expect(screen.getByText("60%")).toHaveClass("num", "text-faint")
+    expect(container.querySelector('[data-ds="breakdown"] li')).toHaveClass("h-14")
   })
   it("sizes the share bar by proportion inside a shrinkable track, so it cannot overflow narrow screens", () => {
     // jsdom has no layout, so this pins the constraints that keep it in bounds:
@@ -186,27 +282,35 @@ describe("Breakdown / BarList", () => {
         ]}
       />
     )
-    const root = container.querySelector('[data-ds="breakdown"]')
+    const root = container.querySelector('[data-slot="breakdown"]')
     const track = root.querySelector('[aria-hidden="true"]')
     expect(root).toHaveClass("min-w-0")
-    expect(track).toHaveClass("min-w-0", "w-full", "overflow-hidden")
+    expect(track).toHaveClass("min-w-0", "overflow-hidden")
     const [a, b] = track.children
     expect(a.style.flex).toBe("60 1 0%")
     expect(b.style.flex).toBe("40 1 0%")
     expect(a.style.width).toBe("")
   })
-  it("BarList scales bars to the largest value", () => {
+  it("BarList scales bars to the largest value, in a Frame when titled", () => {
     const { container } = render(
       <BarList
         title="Top"
+        meta="7 days"
         rows={[
           { label: "A", value: 10 },
           { label: "B", value: 5 },
         ]}
       />
     )
+    expect(container.firstChild).toHaveAttribute("data-ds", "bar-list")
+    expect(container.firstChild).toHaveAttribute("data-slot", "frame")
+    expect(screen.getByText("7 days")).toHaveAttribute("data-slot", "frame-description")
     const bars = container.querySelectorAll("[data-bar]")
     expect(bars[0].style.width).toBe("100%")
     expect(bars[1].style.width).toBe("50%")
+  })
+  it("BarList shows its empty copy with no rows", () => {
+    render(<BarList title="Top" rows={[]} empty="No data yet." />)
+    expect(screen.getByText("No data yet.")).toBeTruthy()
   })
 })

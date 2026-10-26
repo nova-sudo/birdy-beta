@@ -149,7 +149,7 @@ function FunnelBar({ steps = [], loading = false, className, ...props }) {
                 {showDelta && (
                   <span className="hidden sm:inline">
                     {fraction != null && " · "}
-                    <Delta value={s.delta} invert={s.invert} className="text-xs" />
+                    <Delta change={s.delta} goodWhen={s.invert ? "down" : "up"} />
                   </span>
                 )}
               </span>

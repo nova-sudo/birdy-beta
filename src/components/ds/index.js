@@ -24,7 +24,7 @@ export { SegmentedTabs } from "./primitives/segmented-tabs"
 export { Kbd, KbdGroup, KbdShortcut, KbdThen, keyLabel, useIsMac } from "./primitives/kbd"
 
 // Surfaces
-export { Frame } from "./surfaces/frame"
+export { FRAME_ACTION_LIMIT, Frame, FrameAction, FrameSurface, InsideFrameContext, useInsideFrame } from "./surfaces/frame"
 export { Surface } from "./surfaces/surface"
 export { Notice } from "./surfaces/notice"
 export { EmptyState } from "./surfaces/empty-state"
@@ -33,9 +33,11 @@ export { Skeleton } from "./surfaces/skeleton"
 export { Spinner } from "./surfaces/spinner"
 
 // Data
-export { Delta } from "./data/delta"
+export { Delta, deltaTone, formatChange } from "./data/delta"
 export { MetricCard } from "./data/metric-card"
-export { MetricGroup } from "./data/metric-group"
+export { MetricGroup, MetricGroupCell } from "./data/metric-group"
+export { MetricLabel } from "./data/metric-label"
+export { formatMetricValue } from "./data/format-metric-value"
 export { MetricTabsChart, fromPortfolioTabs } from "./data/metric-tabs-chart"
 export { Breakdown } from "./data/breakdown"
 export { BarList } from "./data/bar-list"

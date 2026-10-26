@@ -111,7 +111,7 @@ describe("tracking setup", () => {
     expect(screen.getByText(/Needs the Birdy pixel/)).toBeInTheDocument()
   })
 
-  it("is a ds page: PageHeader, a Frame per step, Surface blocks, code in a mono snippet", async () => {
+  it("is a ds page: PageHeader, a Frame per step on its own surface, code in a mono snippet", async () => {
     current = portal("landing_page")
     const user = userEvent.setup()
     render(<TrackingPortalPage />)
@@ -120,7 +120,7 @@ describe("tracking setup", () => {
     expect(document.querySelector('[data-ds="page-header"] h1')).toHaveTextContent("Tracking setup")
     expect(document.querySelector('[data-ds="page-header"]')).toHaveTextContent("Glow Clinic")
     expect(document.querySelector('[data-ds="frame"]')).not.toBeNull()
-    expect(document.querySelector('[data-ds="surface"]')).not.toBeNull()
+    expect(document.querySelector('[data-ds="frame"] [data-slot="frame-content"]')).not.toBeNull()
 
     await user.click(screen.getByRole("button", { name: /Next: install the pixel/ }))
     const code = screen.getByText(/t\.example\/t\/s1\.js/)

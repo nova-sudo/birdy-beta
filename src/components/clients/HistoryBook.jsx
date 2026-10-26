@@ -12,7 +12,7 @@
 import { useState } from "react"
 import { Send, Loader2, Trash2, StickyNote } from "lucide-react"
 import { toast } from "sonner"
-import { Badge, Button, Frame, Input, Skeleton, Surface } from "@/components/ds"
+import { Badge, Button, Frame, Input, Skeleton } from "@/components/ds"
 import { ActivityItem } from "@/components/activity/ActivityItem"
 import { cn } from "@/lib/utils"
 
@@ -105,69 +105,67 @@ export function HistoryBook({
   const isEmpty = notes.length === 0 && activity.length === 0
 
   return (
-    <Frame title="History book" className={className}>
-      <Surface padded={false} className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex max-h-80 min-h-32 flex-1 flex-col gap-2.5 overflow-y-auto p-4">
-          {loading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <Skeleton className="size-7 shrink-0 rounded-full" />
-                <div className="flex flex-1 flex-col gap-1.5">
-                  <Skeleton className="h-3 w-40" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
+    <Frame title="History book" className={className} contentClassName="flex flex-col">
+      <div className="flex max-h-80 min-h-32 flex-1 flex-col gap-2.5 overflow-y-auto p-4">
+        {loading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-start gap-3">
+              <Skeleton className="size-7 shrink-0 rounded-full" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-24" />
               </div>
-            ))
-          ) : isEmpty ? (
-            <p className="py-6 text-center text-sm text-muted-foreground">
-              Nothing recorded for this client yet. Add the first note below.
-            </p>
-          ) : (
-            <>
-              {notes.map((note) => (
-                <NoteEntry
-                  key={note.id}
-                  note={note}
-                  onDelete={remove}
-                  deleting={deletingId === note.id}
-                />
-              ))}
-              {activity.length > 0 && (
-                <div className="flex flex-col gap-4 pt-1">
-                  {notes.length > 0 && (
-                    <p className="text-xs font-medium text-muted-foreground">Activity</p>
-                  )}
-                  {activity.map((a) => (
-                    <ActivityItem key={a.id} {...a} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            </div>
+          ))
+        ) : isEmpty ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            Nothing recorded for this client yet. Add the first note below.
+          </p>
+        ) : (
+          <>
+            {notes.map((note) => (
+              <NoteEntry
+                key={note.id}
+                note={note}
+                onDelete={remove}
+                deleting={deletingId === note.id}
+              />
+            ))}
+            {activity.length > 0 && (
+              <div className="flex flex-col gap-4 pt-1">
+                {notes.length > 0 && (
+                  <p className="text-xs font-medium text-muted-foreground">Activity</p>
+                )}
+                {activity.map((a) => (
+                  <ActivityItem key={a.id} {...a} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
-        <form onSubmit={submit} className="flex items-center gap-2 border-t border-border p-3">
-          <Input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={`Add a note about ${clientName || "this client"}…`}
-            aria-label="Add a note"
-            maxLength={2000}
-            disabled={sending}
-            className="flex-1"
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            size="icon"
-            disabled={!draft.trim() || sending}
-            aria-label="Save note"
-            className="shrink-0"
-          >
-            {sending ? <Loader2 className="animate-spin" /> : <Send />}
-          </Button>
-        </form>
-      </Surface>
+      <form onSubmit={submit} className="flex items-center gap-2 border-t border-divider p-3">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={`Add a note about ${clientName || "this client"}…`}
+          aria-label="Add a note"
+          maxLength={2000}
+          disabled={sending}
+          className="flex-1"
+        />
+        <Button
+          type="submit"
+          variant="primary"
+          size="icon"
+          disabled={!draft.trim() || sending}
+          aria-label="Save note"
+          className="shrink-0"
+        >
+          {sending ? <Loader2 className="animate-spin" /> : <Send />}
+        </Button>
+      </form>
     </Frame>
   )
 }

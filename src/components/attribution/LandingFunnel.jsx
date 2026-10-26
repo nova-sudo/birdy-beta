@@ -16,10 +16,8 @@
 // reports a form start.
 
 import { useMemo } from "react"
-import { ArrowRight } from "lucide-react"
-import Link from "next/link"
 
-import { Frame, FunnelBar, Notice, Surface } from "@/components/ds"
+import { Frame, FrameAction, FunnelBar, Notice } from "@/components/ds"
 import {
   buildExitSplit,
   buildLandingSteps,
@@ -47,18 +45,12 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
     <Frame
       data-slot="landing-funnel"
       title="Landing page funnel"
-      meta="shares are of landing views"
+      description="shares are of landing views"
       className={className}
-      actions={
-        groupId ? (
-          <Link
-            href={`/clients/${groupId}/tracking`}
-            className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary outline-none hover:underline focus-visible:shadow-control-focus"
-          >
-            Tracking setup
-            <ArrowRight className="size-3.5" aria-hidden="true" />
-          </Link>
-        ) : null
+      padded
+      contentClassName="flex flex-col gap-4"
+      action={
+        groupId ? <FrameAction href={`/clients/${groupId}/tracking`}>Tracking setup</FrameAction> : null
       }
     >
       {children}
@@ -66,11 +58,7 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
   )
 
   if (loading) {
-    return frame(
-      <Surface>
-        <FunnelBar loading steps={steps ?? []} />
-      </Surface>
-    )
+    return frame(<FunnelBar loading steps={steps ?? []} />)
   }
 
   const installed = funnel.installed
@@ -78,49 +66,47 @@ export function LandingFunnel({ funnel, loading = false, error = null, groupId =
 
   return frame(
     <>
-      <Surface className="flex flex-col gap-4">
-        <FunnelBar steps={steps} />
+      <FunnelBar steps={steps} />
 
-        {/* Nothing has arrived yet. Which of the two reasons it is matters — a
-            snippet that was never installed is a task for someone, a quiet
-            window is not — so the card says which rather than drawing zeroes and
-            leaving the reader to guess. */}
-        {empty && (
-          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
-            {installed
-              ? "No landing page visits in this window. The snippet is live and reporting, so this is a quiet period rather than a broken tag."
-              : "We haven't seen a single page view from this client yet — the snippet isn't on their landing page, or it sits behind a cookie banner that blocks it until someone consents."}
-          </p>
-        )}
+      {/* Nothing has arrived yet. Which of the two reasons it is matters — a
+          snippet that was never installed is a task for someone, a quiet
+          window is not — so the card says which rather than drawing zeroes and
+          leaving the reader to guess. */}
+      {empty && (
+        <p className="border-t border-border pt-4 text-sm text-muted-foreground">
+          {installed
+            ? "No landing page visits in this window. The snippet is live and reporting, so this is a quiet period rather than a broken tag."
+            : "We haven't seen a single page view from this client yet — the snippet isn't on their landing page, or it sits behind a cookie banner that blocks it until someone consents."}
+        </p>
+      )}
 
-        {exits && (
-          <div className="flex flex-col gap-3 border-t border-border pt-4">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <h3 className="text-sm font-semibold text-foreground">Left without opting in</h3>
-              <p className="num text-sm text-muted-foreground">
-                {exits.totalLabel} visits · {exits.rate}
-              </p>
-            </div>
-
-            <ul className="grid gap-3 md:grid-cols-2">
-              {exits.rows.map((row) => (
-                <li key={row.key} className="rounded-control bg-muted p-3">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="text-sm text-body">{row.label}</span>
-                    <span className="num text-lg font-medium text-foreground">{row.countLabel}</span>
-                  </div>
-                  <div className="mt-0.5 flex items-baseline justify-between gap-3">
-                    {/* The fix each half points at. Two numbers with no reading
-                        attached is the thing this card exists to replace. */}
-                    <span className="text-xs text-muted-foreground">{row.note}</span>
-                    <span className="num shrink-0 text-xs text-muted-foreground">{row.share}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>
+      {exits && (
+        <div className="flex flex-col gap-3 border-t border-border pt-4">
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h3 className="text-sm font-semibold text-foreground">Left without opting in</h3>
+            <p className="num text-sm text-muted-foreground">
+              {exits.totalLabel} visits · {exits.rate}
+            </p>
           </div>
-        )}
-      </Surface>
+
+          <ul className="grid gap-3 md:grid-cols-2">
+            {exits.rows.map((row) => (
+              <li key={row.key} className="rounded-control bg-muted p-3">
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="text-sm text-body">{row.label}</span>
+                  <span className="num text-lg font-medium text-foreground">{row.countLabel}</span>
+                </div>
+                <div className="mt-0.5 flex items-baseline justify-between gap-3">
+                  {/* The fix each half points at. Two numbers with no reading
+                      attached is the thing this card exists to replace. */}
+                  <span className="text-xs text-muted-foreground">{row.note}</span>
+                  <span className="num shrink-0 text-xs text-muted-foreground">{row.share}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {diagnosis && (
         <Notice tone={diagnosis.state === "problem" ? "danger" : "success"} title={diagnosis.title}>

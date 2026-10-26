@@ -20,7 +20,7 @@ import { toast } from "sonner"
 
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import SetupChecklist from "@/components/attribution/SetupChecklist"
-import { Button, ErrorState, Frame, PageHeader, Skeleton, Surface } from "@/components/ds"
+import { Button, ErrorState, Frame, PageHeader, Skeleton } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { LEAD_SOURCE_OPTIONS, normalizeLeadSource } from "@/lib/lead-sources"
@@ -146,14 +146,17 @@ export default function TrackingPortalPage() {
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-4 w-32" />
         </div>
-        <div className="flex flex-col gap-3 rounded-frame bg-frame p-3">
-          <Skeleton className="h-6 w-56" />
-          <Surface className="flex flex-col gap-3">
+        {/* The Frame's shape: header strip, then the flush white surface. */}
+        <div className="flex flex-col rounded-frame bg-frame shadow-frame">
+          <div className="flex min-h-12 items-center px-4 py-2">
+            <Skeleton className="h-5 w-56" />
+          </div>
+          <div className="flex flex-col gap-3 rounded-frame bg-background p-5 shadow-surface">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
-          </Surface>
+          </div>
         </div>
       </div>
     )
@@ -248,184 +251,176 @@ export default function TrackingPortalPage() {
 
       {/* 1 - how they collect leads */}
       {shownStep === 0 && (
-        <Frame title="How does this client collect leads?">
-          <Surface className="flex flex-col gap-4">
-            <p className="text-sm leading-normal text-body">
-              This decides what has to be set up. Get it wrong and the rest of these
-              steps ask for things that don&apos;t apply.
-            </p>
-            <div className="flex flex-col gap-2">
-              {METHODS.map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  disabled={saving}
-                  aria-pressed={method === option.key}
-                  onClick={() => saveMethod(option.key)}
-                  className={cn(
-                    "rounded-control border-2 px-3.5 py-3 text-left outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
-                    method === option.key
-                      ? "border-primary bg-primary-soft"
-                      : "border-border bg-background hover:border-muted-foreground/40",
-                  )}
-                >
-                  <span className="text-sm font-medium text-foreground">{option.label}</span>
-                  <p className="mt-0.5 text-sm leading-snug text-body">{option.hint}</p>
-                </button>
-              ))}
-            </div>
+        <Frame title="How does this client collect leads?" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
+            This decides what has to be set up. Get it wrong and the rest of these
+            steps ask for things that don&apos;t apply.
+          </p>
+          <div className="flex flex-col gap-2">
+            {METHODS.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                disabled={saving}
+                aria-pressed={method === option.key}
+                onClick={() => saveMethod(option.key)}
+                className={cn(
+                  "rounded-control border-2 px-3.5 py-3 text-left outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
+                  method === option.key
+                    ? "border-primary bg-primary-soft"
+                    : "border-border bg-background hover:border-muted-foreground/40",
+                )}
+              >
+                <span className="text-sm font-medium text-foreground">{option.label}</span>
+                <p className="mt-0.5 text-sm leading-snug text-body">{option.hint}</p>
+              </button>
+            ))}
+          </div>
 
-            {isInstantForm && <SetupChecklist diagnostics={portal.diagnostics} />}
+          {isInstantForm && <SetupChecklist diagnostics={portal.diagnostics} />}
 
-            {isFormToGhl && (
-              <div className="flex flex-col gap-4">
-                <div className="rounded-control bg-muted p-3.5">
-                  <p className="text-sm font-medium text-foreground">Nothing to install in Birdy</p>
-                  <p className="mt-1 text-sm leading-normal text-body">
-                    The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
-                    attributes it from GoHighLevel. This setting changes nothing on its own — it tells
-                    Birdy where to look. Two things on the client&apos;s side make it work:
-                  </p>
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    1. Send attribution to GoHighLevel from the form tool
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {GHL_FORM_TOOLS.map((tool) => (
-                      <button
-                        key={tool.key}
-                        type="button"
-                        disabled={saving}
-                        aria-pressed={config.form_provider === tool.key}
-                        onClick={() => saveMethod(method, { form_provider: tool.key })}
-                        className={cn(
-                          "h-control-sm rounded-control border-2 px-3 text-sm outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
-                          config.form_provider === tool.key
-                            ? "border-primary bg-primary-soft text-primary"
-                            : "border-border text-body hover:border-muted-foreground/40",
-                        )}
-                      >
-                        {tool.label}
-                      </button>
-                    ))}
-                  </div>
-                  {ghlGuide && (
-                    <p className="mt-2 text-sm leading-normal text-body">{ghlGuide}</p>
-                  )}
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    2. Tag the Meta ads, if they aren&apos;t already
-                  </p>
-                  <p className="mb-2 mt-1 text-sm leading-normal text-body">
-                    In Ads Manager, at the ad level, paste this into the{" "}
-                    <span className="font-medium text-foreground">URL parameters</span> field. It is what
-                    gives the form tool an ad id to pass on.
-                  </p>
-                  <CodeSnippet value={portal.meta_url_parameters} label="URL parameters" />
-                </div>
-
-                <div>
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">Is it working?</p>
-                    {refreshButton(false)}
-                  </div>
-                  <SetupChecklist diagnostics={portal.diagnostics} />
-                </div>
+          {isFormToGhl && (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-control bg-muted p-3.5">
+                <p className="text-sm font-medium text-foreground">Nothing to install in Birdy</p>
+                <p className="mt-1 text-sm leading-normal text-body">
+                  The form tool sends each lead to GoHighLevel with the ad it came from, and Birdy
+                  attributes it from GoHighLevel. This setting changes nothing on its own — it tells
+                  Birdy where to look. Two things on the client&apos;s side make it work:
+                </p>
               </div>
-            )}
 
-            {isLandingPage && (
               <div>
-                <Button variant="primary" onClick={() => setStep(1)}>
-                  Next: install the pixel
-                </Button>
+                <p className="text-sm font-medium text-foreground">
+                  1. Send attribution to GoHighLevel from the form tool
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {GHL_FORM_TOOLS.map((tool) => (
+                    <button
+                      key={tool.key}
+                      type="button"
+                      disabled={saving}
+                      aria-pressed={config.form_provider === tool.key}
+                      onClick={() => saveMethod(method, { form_provider: tool.key })}
+                      className={cn(
+                        "h-control-sm rounded-control border-2 px-3 text-sm outline-none transition-colors focus-visible:shadow-control-focus disabled:opacity-60",
+                        config.form_provider === tool.key
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border text-body hover:border-muted-foreground/40",
+                      )}
+                    >
+                      {tool.label}
+                    </button>
+                  ))}
+                </div>
+                {ghlGuide && (
+                  <p className="mt-2 text-sm leading-normal text-body">{ghlGuide}</p>
+                )}
               </div>
-            )}
-          </Surface>
+
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  2. Tag the Meta ads, if they aren&apos;t already
+                </p>
+                <p className="mb-2 mt-1 text-sm leading-normal text-body">
+                  In Ads Manager, at the ad level, paste this into the{" "}
+                  <span className="font-medium text-foreground">URL parameters</span> field. It is what
+                  gives the form tool an ad id to pass on.
+                </p>
+                <CodeSnippet value={portal.meta_url_parameters} label="URL parameters" />
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">Is it working?</p>
+                  {refreshButton(false)}
+                </div>
+                <SetupChecklist diagnostics={portal.diagnostics} />
+              </div>
+            </div>
+          )}
+
+          {isLandingPage && (
+            <div>
+              <Button variant="primary" onClick={() => setStep(1)}>
+                Next: install the pixel
+              </Button>
+            </div>
+          )}
         </Frame>
       )}
 
       {/* 2 - the snippet */}
       {shownStep === 1 && (
-        <Frame title="Install the Birdy pixel">
-          <Surface className="flex flex-col gap-4">
-            <p className="text-sm leading-normal text-body">
-              One line, on every page the ads point at, just before the closing{" "}
-              <code className="rounded-sm bg-muted px-1.5 font-mono text-xs">
-                &lt;/head&gt;
-              </code>{" "}
-              tag. It works like a Meta pixel, does not slow the page down, and is how Birdy
-              sees leads that go to the client&apos;s own records instead of GoHighLevel.
+        <Frame title="Install the Birdy pixel" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
+            One line, on every page the ads point at, just before the closing{" "}
+            <code className="rounded-sm bg-muted px-1.5 font-mono text-xs">
+              &lt;/head&gt;
+            </code>{" "}
+            tag. It works like a Meta pixel, does not slow the page down, and is how Birdy
+            sees leads that go to the client&apos;s own records instead of GoHighLevel.
+          </p>
+
+          <CodeSnippet value={portal.snippet} label="Snippet" />
+
+          <div className="rounded-control bg-muted p-3.5">
+            <p className="text-sm font-medium text-foreground">Not your website?</p>
+            <p className="mt-1 text-sm leading-normal text-body">
+              Usually it isn&apos;t. Send this link to whoever looks after the site —
+              it has the snippet and the instructions on it, and they don&apos;t need
+              a Birdy login.
             </p>
-
-            <CodeSnippet value={portal.snippet} label="Snippet" />
-
-            <div className="rounded-control bg-muted p-3.5">
-              <p className="text-sm font-medium text-foreground">Not your website?</p>
-              <p className="mt-1 text-sm leading-normal text-body">
-                Usually it isn&apos;t. Send this link to whoever looks after the site —
-                it has the snippet and the instructions on it, and they don&apos;t need
-                a Birdy login.
-              </p>
-              <div className="mt-3">
-                <CodeSnippet value={portal.install_page_url} label="Install link" />
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                <Button asChild variant="link" size="sm">
-                  <a href={mailto}>
-                    <Mail /> Email it
-                  </a>
-                </Button>
-                <Button asChild variant="link" size="sm">
-                  <a href={portal.install_page_url} target="_blank" rel="noreferrer">
-                    <ExternalLink /> Preview the page
-                  </a>
-                </Button>
-              </div>
+            <div className="mt-3">
+              <CodeSnippet value={portal.install_page_url} label="Install link" />
             </div>
+            <div className="mt-3 flex items-center gap-2">
+              <Button asChild variant="link" size="sm">
+                <a href={mailto}>
+                  <Mail /> Email it
+                </a>
+              </Button>
+              <Button asChild variant="link" size="sm">
+                <a href={portal.install_page_url} target="_blank" rel="noreferrer">
+                  <ExternalLink /> Preview the page
+                </a>
+              </Button>
+            </div>
+          </div>
 
-            <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} nextLabel="Next: tag the ads" />
-          </Surface>
+          <StepNav onBack={() => setStep(0)} onNext={() => setStep(2)} nextLabel="Next: tag the ads" />
         </Frame>
       )}
 
       {/* 3 - Meta URL parameters */}
       {shownStep === 2 && (
-        <Frame title="Add tracking parameters to the Meta ads">
-          <Surface className="flex flex-col gap-4">
-            <p className="text-sm leading-normal text-body">
-              In Ads Manager, at the ad level, paste this into the{" "}
-              <span className="font-medium text-foreground">URL parameters</span> field.
-              Without it we can see that somebody visited but not which ad sent them —
-              the visit is tracked, the lead is unattributed.
-            </p>
+        <Frame title="Add tracking parameters to the Meta ads" padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
+            In Ads Manager, at the ad level, paste this into the{" "}
+            <span className="font-medium text-foreground">URL parameters</span> field.
+            Without it we can see that somebody visited but not which ad sent them —
+            the visit is tracked, the lead is unattributed.
+          </p>
 
-            <CodeSnippet
-              value={portal.meta_url_parameters}
-              label="URL parameters"
-              hint="Meta fills in the campaign, ad set and ad values itself. Only ad_id is used for reporting — the names are for readability."
-            />
+          <CodeSnippet
+            value={portal.meta_url_parameters}
+            label="URL parameters"
+            hint="Meta fills in the campaign, ad set and ad values itself. Only ad_id is used for reporting — the names are for readability."
+          />
 
-            <StepNav onBack={() => setStep(1)} onNext={() => setStep(VERIFY_STEP)} nextLabel="Next: verify" />
-          </Surface>
+          <StepNav onBack={() => setStep(1)} onNext={() => setStep(VERIFY_STEP)} nextLabel="Next: verify" />
         </Frame>
       )}
 
       {/* 4 - verify */}
       {shownStep === VERIFY_STEP && (
-        <Frame title="Check it's working" actions={refreshButton(polling)}>
-          <Surface className="flex flex-col gap-4">
-            <p className="text-sm leading-normal text-body">
-              This updates by itself. The quickest test is to click one of the
-              client&apos;s live ads yourself and submit the form.
-            </p>
-            <SetupChecklist diagnostics={portal.diagnostics} polling={polling} />
-            <StepNav onBack={() => setStep(2)} />
-          </Surface>
+        <Frame title="Check it's working" action={refreshButton(polling)} padded contentClassName="flex flex-col gap-4">
+          <p className="text-sm leading-normal text-body">
+            This updates by itself. The quickest test is to click one of the
+            client&apos;s live ads yourself and submit the form.
+          </p>
+          <SetupChecklist diagnostics={portal.diagnostics} polling={polling} />
+          <StepNav onBack={() => setStep(2)} />
         </Frame>
       )}
     </div>

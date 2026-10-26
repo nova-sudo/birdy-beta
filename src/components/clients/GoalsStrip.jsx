@@ -1,23 +1,14 @@
 "use client"
 
 // components/clients/GoalsStrip.jsx
-// The Client Detail overview's goals — one white cell per goal on a Frame,
-// each showing a live value against its target and a state badge.
+// The Client Detail overview's goals — one MetricGroup cell per goal, each
+// showing a live value against its target and a state badge.
 //
 // The design deliberately has no progress bar: a bar doesn't read sensibly for
 // ratio-style metrics like cost per lead or close rate, where lower or
 // bounded-at-100% breaks the metaphor.
 
-import { Info } from "lucide-react"
-import {
-  Badge,
-  Frame,
-  Skeleton,
-  Surface,
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ds"
+import { Badge, MetricGroup, Skeleton } from "@/components/ds"
 import { formatGoal, ON_TRACK, AT_RISK, BEHIND } from "@/lib/client-goals"
 
 // State reads in the status tones: on track is good, at risk is a warning,
@@ -28,87 +19,60 @@ const STATE_TONE = {
   [BEHIND]: "danger",
 }
 
-function GoalCell({ goal, currencySymbol }) {
-  const tone = goal.state ? STATE_TONE[goal.state] : null
-
-  return (
-    <Surface data-slot="goal" className="flex min-w-0 flex-col gap-1">
-      {/* "Leads" means different things depending on where it came from —
-          Meta counts form submissions, the CRM counts contact records it
-          created — so every figure says which one it is. */}
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            className="flex min-w-0 items-center gap-1 self-start rounded-sm text-left outline-none focus-visible:shadow-control-focus"
-            aria-label={`${goal.label}: ${goal.note}`}
-          >
-            <span className="min-w-0 truncate text-sm font-medium text-body">{goal.label}</span>
-            <Info className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom" className="max-w-64">
-          <p className="font-semibold">Source: {goal.source}</p>
-          <p className="mt-1 font-normal leading-snug">{goal.note}</p>
-          {goal.implied && (
-            <p className="mt-1 font-normal leading-snug opacity-80">
-              Target implied from monthly spend ÷ cost per lead.
-            </p>
-          )}
-        </TooltipContent>
-      </Tooltip>
-
-      <div className="flex items-baseline gap-1.5">
-        <span className="num text-figure font-medium text-foreground">
-          {formatGoal(goal.value, goal.format, currencySymbol)}
-        </span>
-        {goal.target != null && (
-          <span className="num truncate text-sm text-muted-foreground">
-            / {formatGoal(goal.target, goal.format, currencySymbol)}
-          </span>
-        )}
-      </div>
-
-      {tone && <Badge tone={tone}>{goal.state}</Badge>}
-    </Surface>
-  )
+// "Leads" means different things depending on where it came from — Meta
+// counts form submissions, the CRM counts contact records it created — so
+// every figure says which one it is, in the label's info tooltip.
+function goalDescription(goal) {
+  return [
+    `Source: ${goal.source}`,
+    goal.note,
+    goal.implied ? "Target implied from monthly spend ÷ cost per lead." : null,
+  ]
+    .filter(Boolean)
+    .join("\n")
 }
 
-const GRID = "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5"
+function goalItem(goal, currencySymbol) {
+  const tone = goal.state ? STATE_TONE[goal.state] : null
+  return {
+    key: goal.id,
+    label: goal.label,
+    description: goalDescription(goal),
+    value: formatGoal(goal.value, goal.format, currencySymbol),
+    unit: goal.target != null ? `/ ${formatGoal(goal.target, goal.format, currencySymbol)}` : undefined,
+    caption: tone ? (
+      <Badge tone={tone} className="mt-0.5">
+        {goal.state}
+      </Badge>
+    ) : undefined,
+  }
+}
+
+const LOADING_ITEMS = Array.from({ length: 5 }, (_, i) => ({
+  key: `loading-${i}`,
+  label: <Skeleton className="h-4 w-20" />,
+  value: "",
+}))
 
 export function GoalsStrip({ goals = [], currencySymbol = "$", loading = false, className }) {
-  if (loading) {
-    return (
-      <Frame title="Goals" meta="This month" className={className}>
-        <div data-ds="goals-strip" aria-busy="true" className={GRID}>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Surface key={i} className="flex flex-col gap-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-7 w-24" />
-              <Skeleton className="h-5 w-16" />
-            </Surface>
-          ))}
-        </div>
-      </Frame>
-    )
-  }
-
   const anyTarget = goals.some((g) => g.target != null)
 
   return (
-    <Frame title="Goals" meta="This month" className={className}>
-      <div data-ds="goals-strip" className={GRID}>
-        {goals.map((goal) => (
-          <GoalCell key={goal.id} goal={goal} currencySymbol={currencySymbol} />
-        ))}
-      </div>
-
-      {!anyTarget && (
-        <p className="px-1 text-sm text-muted-foreground">
-          No monthly targets set for this client yet — add them in Settings to
-          track progress and drive the health band.
-        </p>
-      )}
-    </Frame>
+    <MetricGroup
+      data-ds="goals-strip"
+      title="Goals"
+      description="This month"
+      className={className}
+      loading={loading}
+      items={loading ? LOADING_ITEMS : goals.map((goal) => goalItem(goal, currencySymbol))}
+      footer={
+        !loading && !anyTarget ? (
+          <p>
+            No monthly targets set for this client yet — add them in Settings to
+            track progress and drive the health band.
+          </p>
+        ) : undefined
+      }
+    />
   )
 }

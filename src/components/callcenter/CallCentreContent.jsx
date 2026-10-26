@@ -27,7 +27,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   SegmentedTabs,
-  Skeleton,
   Sparkline,
   Spinner,
   Tabs,
@@ -943,11 +942,12 @@ export function CallCentreContent({
       {showStatCards && (
         <MetricGroup
           title="Call centre"
+          loading={groupsLoading}
           items={[
-            { key: "leads", label: "Leads Called", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.leads.toLocaleString(), caption: "Leads contacted in the period" },
-            { key: "calls", label: "Total Calls", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.calls.toLocaleString(), caption: "In the selected period" },
-            { key: "inbound", label: "Inbound", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.inbound.toLocaleString(), caption: "Inbound calls" },
-            { key: "outbound", label: "Outbound", value: groupsLoading ? <Skeleton className="h-7 w-16 rounded-sm" /> : totals.outbound.toLocaleString(), caption: "Outbound calls" },
+            { key: "leads", label: "Leads Called", value: totals.leads.toLocaleString(), caption: "Leads contacted in the period" },
+            { key: "calls", label: "Total Calls", value: totals.calls.toLocaleString(), caption: "In the selected period" },
+            { key: "inbound", label: "Inbound", value: totals.inbound.toLocaleString(), caption: "Inbound calls" },
+            { key: "outbound", label: "Outbound", value: totals.outbound.toLocaleString(), caption: "Outbound calls" },
           ]}
         />
       )}

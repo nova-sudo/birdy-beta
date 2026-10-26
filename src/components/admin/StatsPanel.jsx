@@ -56,18 +56,11 @@ function LiveActivityFeed({ activity, reduce }) {
 }
 
 function TopAgencies({ top }) {
-  if (!(top || []).length) {
-    return (
-      <Surface>
-        <h3 className="text-sm font-medium text-body">Top agencies by leads</h3>
-        <p className="py-4 text-center text-sm text-muted-foreground">No data yet.</p>
-      </Surface>
-    )
-  }
   return (
     <BarList
       title="Top agencies by leads"
-      rows={top.map((a) => ({ key: a.email, label: a.owner, value: a.leads, display: a.leads.toLocaleString() }))}
+      empty="No data yet."
+      rows={(top || []).map((a) => ({ key: a.email, label: a.owner, value: a.leads, display: a.leads.toLocaleString() }))}
     />
   )
 }

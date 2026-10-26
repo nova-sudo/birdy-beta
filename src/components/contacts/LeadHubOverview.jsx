@@ -122,13 +122,12 @@ export function LeadHubOverview({
       plottable: Boolean(tile.chartKey),
       ...(deltas?.[tile.key] ?? {}),
     }))
-    return fromPortfolioTabs({ tabs, activeKey, chart: null }).map((m) => {
+    return fromPortfolioTabs({ tabs, activeKey, chart: null, comparison: "vs previous period" }).map((m) => {
       const source = chartMetrics[KPI_PRESENTATION.find((t) => t.key === m.key)?.chartKey]
       return {
         ...m,
         series: toTrendSeries(source),
         points: source?.values?.length ?? 0,
-        caption: m.delta !== undefined ? "vs previous period" : undefined,
       }
     })
   }, [totals, deltas, chartMetrics, activeKey])

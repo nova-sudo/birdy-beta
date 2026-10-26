@@ -1139,7 +1139,7 @@ export function MarketingContent({
         key, label, value, polarity, direction, delta,
       }))
 
-    return fromPortfolioTabs({ tabs, activeKey: chartMetric, chart: null }).map((m) => {
+    return fromPortfolioTabs({ tabs, activeKey: chartMetric, chart: null, comparison: "vs previous period" }).map((m) => {
       const source = chartMetrics[m.key]
       const decimals = source.decimals ?? 0
       const pointValues = (source.values ?? []).map(
@@ -1153,7 +1153,6 @@ export function MarketingContent({
         ...m,
         series: toTrendSeries({ ...source, pointValues }),
         points: source.values?.length ?? 0,
-        caption: m.delta !== undefined ? "vs previous period" : undefined,
       }
     })
   }, [kpis, chartMetrics, chartMetric])
