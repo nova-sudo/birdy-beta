@@ -36,6 +36,8 @@ const TONE_ICON = {
   warning: ClockDiscIcon,
   danger: CrossDiscIcon,
   info: InfoDiscIcon,
+  primary: InfoDiscIcon,
+  purple: InfoDiscIcon,
   neutral: MinusDiscIcon,
   muted: MinusDiscIcon,
 }

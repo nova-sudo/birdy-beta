@@ -14,8 +14,7 @@ function disc(Icon, name) {
       data-ds="badge-icons"
       {...props}
       fill="currentColor"
-      stroke="var(--color-background)"
-      className={cn("[&>circle]:stroke-current", className)}
+      className={cn("stroke-background [&>circle]:stroke-current", className)}
     />
   )
   Disc.displayName = name

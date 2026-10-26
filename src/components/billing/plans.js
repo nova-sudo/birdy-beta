@@ -1,4 +1,4 @@
-import { AlertDiscIcon, CheckDiscIcon, ClockDiscIcon, CrossDiscIcon, MinusDiscIcon } from "@/components/ds";
+import { AlertDiscIcon, CheckDiscIcon, ClockDiscIcon, CrossDiscIcon, MinusDiscIcon } from "@/components/ds/primitives/badge-icons";
 
 import { Zap, TrendingUp, Building2 } from "lucide-react";
 

@@ -17,8 +17,17 @@ function statusLabel(status) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-// Meta's DELETED reads as the shared "removed" state; anything unlisted is "unknown".
-const statusState = (status) => (status === "DELETED" ? "removed" : badgeStateOf(status))
+// Meta statuses that have a shared-state equivalent; anything unlisted is "unknown".
+const META_STATE = {
+  DELETED: "removed",
+  DISAPPROVED: "rejected",
+  WITH_ISSUES: "needs_review",
+  PENDING_REVIEW: "pending",
+  IN_PROCESS: "processing",
+  CAMPAIGN_PAUSED: "paused",
+  ADSET_PAUSED: "paused",
+}
+const statusState = (status) => META_STATE[status] ?? badgeStateOf(status)
 
 function Tick({ checked }) {
   return (

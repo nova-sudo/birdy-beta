@@ -109,7 +109,7 @@ describe("Badge", () => {
     const svg = el.firstElementChild
     expect(svg.tagName.toLowerCase()).toBe("svg")
     expect(svg.getAttribute("fill")).toBe("currentColor")
-    expect(svg.getAttribute("stroke")).toBe("var(--color-background)")
+    expect(svg.getAttribute("class")).toContain("stroke-background")
     expect(svg.getAttribute("class")).toContain("[&>circle]:stroke-current")
     expect(el.className).toContain("[&>svg]:text-success")
   })

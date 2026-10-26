@@ -13,8 +13,6 @@ function toTitleCase(str) {
     .join(" ")
 }
 
-// Opportunity stage to status tone: colour means status, and "abandoned" reads
-// as needing attention.
 // Opportunity statuses and the shared states that draw them.
 const OPPORTUNITY_STATE = { open: "in_progress", won: "won", lost: "lost", abandoned: "skipped" }
 
