@@ -26,6 +26,7 @@ import {
   Presentation,
   Pin,
   Repeat,
+  RotateCcw,
   Rocket,
   Send,
   ShieldAlert,
@@ -139,6 +140,10 @@ export const BADGE_STATES = {
   preparing: { tone: "info", icon: Flame, label: "Preparing" },
   processing: { tone: "info", icon: Loader, label: "Processing" },
   onboarding: { tone: "info", icon: Rocket, label: "Onboarding" },
+  queued: { tone: "info", icon: ClockDiscIcon, label: "Queued" },
+  refunded: { tone: "info", icon: RotateCcw, label: "Refunded" },
+  selected: { tone: "info", icon: CheckDiscIcon, label: "Selected" },
+  sending: { tone: "info", icon: Send, label: "Sending" },
   submitted: { tone: "info", icon: Send, label: "Submitted" },
 
   beta: { tone: "purple", icon: FlaskConical, label: "Beta" },

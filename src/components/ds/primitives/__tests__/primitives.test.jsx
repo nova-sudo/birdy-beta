@@ -322,4 +322,17 @@ describe("StateBadge", () => {
     expect(badgeStateOf("In Stock")).toBe("in_stock")
     expect(badgeStateOf("whatever")).toBe("unknown")
   })
+
+  it.each([
+    ["queued", "Queued"],
+    ["refunded", "Refunded"],
+    ["selected", "Selected"],
+    ["sending", "Sending"],
+  ])("has Bytes' info state %s", (state, label) => {
+    render(<StateBadge state={state} />)
+    const el = screen.getByText(label)
+    expect(el.className).toContain("bg-info-soft")
+    expect(el.querySelector("svg")).not.toBeNull()
+    expect(badgeStateOf(label)).toBe(state)
+  })
 })
