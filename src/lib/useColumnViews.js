@@ -29,7 +29,7 @@ export function useColumnViews(page) {
   const viewsLoaded = views !== undefined
 
   const saveView = useCallback(
-    async (columns) => {
+    async (columns, { silent = false } = {}) => {
       // Paint the new columns before the request goes out, and tell SWR to
       // confirm against the server afterwards. Every other mounted instance of
       // this hook — the other table pages — sees it at the same moment,
@@ -49,7 +49,7 @@ export function useColumnViews(page) {
           { optimisticData: optimistic, rollbackOnError: true, revalidate: true }
         )
 
-        toast.success("View saved!")
+        if (!silent) toast.success("View saved!")
       } catch (err) {
         console.error("[useColumnViews] Save failed:", err)
         toast.error("Failed to save view")
@@ -62,14 +62,15 @@ export function useColumnViews(page) {
   // Used by pages to persist column order changes (drag-reorder events) the
   // moment they happen — no need for the user to click "Save View". Rapid
   // consecutive reorders are collapsed into a single API call after `delay`
-  // ms of silence so the network doesn't get hammered.
+  // ms of silence so the network doesn't get hammered. A drag is its own
+  // feedback, so only a failure shows a toast.
   const debounceTimerRef = useRef(null)
 
   const saveViewDebounced = useCallback(
     (columns, delay = 600) => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
       debounceTimerRef.current = setTimeout(() => {
-        saveView(columns)
+        saveView(columns, { silent: true })
         debounceTimerRef.current = null
       }, delay)
     },
