@@ -5,7 +5,6 @@ import {
   ChevronDownIcon,
   LayoutGridIcon,
   PhoneIcon,
-  SearchIcon,
   SlidersHorizontalIcon,
   UserIcon,
   UsersIcon,
@@ -20,6 +19,7 @@ import {
   EmptyState,
   ErrorState,
   Input,
+  SearchInput,
   Label,
   MetricGroup,
   Notice,
@@ -856,20 +856,14 @@ export function CallCentreContent({
   // filters, then the Columns menu.
   const toolbar = (filters) => (
     <>
-      <div className="relative w-full sm:w-72">
-        <SearchIcon
-          className="pointer-events-none absolute top-1/2 left-3.5 size-[18px] -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          placeholder="Search…"
-          aria-label="Search the table"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <SearchInput
+        placeholder="Search…"
+        aria-label="Search the table"
+        value={searchQuery}
+        onChange={setSearchQuery}
+        debounceMs={0}
+        className="sm:w-72"
+      />
       {filters}
       <ColumnsMenu
         columns={columnCatalogue}
@@ -883,13 +877,13 @@ export function CallCentreContent({
     </>
   )
 
-  // The empty slot: a search that matches nothing is not "no data".
+  // The empty slot: a search that matches nothing is not "no data". The
+  // search field's own clear button is the way out.
   const emptyFor = (empty) =>
     searchQuery ? (
       <EmptyState
         title="No results"
         description={`Nothing in the first visible column matches "${searchQuery}".`}
-        action={<Button size="sm" onClick={() => setSearchQuery("")}>Clear search</Button>}
       />
     ) : (
       empty

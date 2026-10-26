@@ -40,7 +40,7 @@ beforeEach(() => vi.clearAllMocks())
 describe("admin credits page", () => {
   it("renders its ds widgets", () => {
     const { container } = render(<AdminCreditsPage />)
-    for (const ds of ["admin-header", "metric-group", "data-table", "notice", "switch", "surface"]) {
+    for (const ds of ["admin-header", "metric-group", "data-table", "notice", "switch", "surface", "search-input"]) {
       expect(container.querySelector(`[data-ds="${ds}"]`), ds).not.toBeNull()
     }
     expect(screen.getByText("Outstanding balance")).toBeInTheDocument()

@@ -204,9 +204,13 @@ describe("MarketingContent", () => {
     renderHub()
     await waitFor(() => expect(inTable().getByText("Alpha Campaign")).toBeInTheDocument())
 
-    await user.type(screen.getByRole("searchbox", { name: "Search campaigns" }), "zzz")
+    const box = screen.getByRole("searchbox", { name: "Search campaigns" })
+    expect(box.closest('[data-ds="search-input"]')).not.toBeNull()
+    await user.type(box, "zzz")
     expect(screen.getByText("No campaigns match")).toBeInTheDocument()
 
+    // One way to clear: the search field's own clear button.
+    expect(screen.getAllByRole("button", { name: /^Clear/ })).toHaveLength(1)
     await user.click(screen.getByRole("button", { name: "Clear search" }))
     expect(inTable().getByText("Alpha Campaign")).toBeInTheDocument()
   })

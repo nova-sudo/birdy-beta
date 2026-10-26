@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import Image from "next/image"
-import { CheckIcon, FileBarChart, Grid3X3, Info, LayoutGrid, Users, X } from "lucide-react"
+import { CheckIcon, FileBarChart, Grid3X3, Info, LayoutGrid, Users } from "lucide-react"
 import { toast } from "sonner"
 import getSymbolFromCurrency from "currency-symbol-map"
 import {
@@ -13,7 +13,7 @@ import {
   DataTableColumnHeader,
   EmptyState,
   ErrorState,
-  Input,
+  SearchInput,
   MetricTabsChart,
   Notice,
   PageHeader,
@@ -1234,20 +1234,14 @@ export function MarketingContent({
   const hasSearch = searchTerm !== ""
   const toolbar = (
     <>
-      <Input
-        type="search"
+      <SearchInput
         placeholder={`Search ${activeTab}…`}
         aria-label={`Search ${activeTab}`}
         value={searchTerm}
-        onChange={e => setSearchTerm(e.target.value)}
-        className="w-full sm:w-72"
+        onChange={setSearchTerm}
+        debounceMs={0}
+        className="sm:w-72"
       />
-      {hasSearch && (
-        <Button variant="ghost" onClick={() => setSearchTerm("")}>
-          <X aria-hidden />
-          Clear
-        </Button>
-      )}
       <div className="ml-auto flex items-center gap-2">
         {/* Table/gallery switch — Ads tab only. */}
         {activeTab === "ads" && <AdsViewSwitch value={adsView} onChange={setAdsView} />}
@@ -1507,7 +1501,6 @@ export function MarketingContent({
                   <EmptyState
                     title={`No ${activeTab === "adsets" ? "ad sets" : activeTab} match`}
                     description="Nothing fits the current search."
-                    action={<Button size="sm" onClick={() => setSearchTerm("")}>Clear search</Button>}
                   />
                 ) : (
                   <EmptyState

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Search, Sparkles, KeyRound, Save, Info, Gift } from "lucide-react";
+import { Sparkles, KeyRound, Save, Info, Gift } from "lucide-react";
 import { toast } from "sonner";
 import {
   Badge,
@@ -20,6 +20,7 @@ import {
   Label,
   MetricGroup,
   Notice,
+  SearchInput,
   Skeleton,
   Surface,
   Switch,
@@ -528,16 +529,14 @@ export default function AdminCreditsPage() {
             loading={accountsLoading}
             onGrant={setGrantAccount}
             toolbar={
-              <div className="relative w-full sm:w-72">
-                <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search accounts…"
-                  aria-label="Search accounts"
-                  className="pl-10"
-                />
-              </div>
+              <SearchInput
+                value={searchInput}
+                onChange={setSearchInput}
+                debounceMs={0}
+                placeholder="Search accounts…"
+                aria-label="Search accounts"
+                className="sm:w-72"
+              />
             }
           />
         )}

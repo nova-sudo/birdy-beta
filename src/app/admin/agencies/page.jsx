@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
 import { useAgencies, usePlatformStats } from "@/lib/admin-api";
-import { ErrorState, Input, Surface } from "@/components/ds";
+import { ErrorState, SearchInput, Surface } from "@/components/ds";
 import AdminHeader from "@/components/admin/AdminHeader";
 import AdminStatStrip from "@/components/admin/AdminStatStrip";
 import AgenciesTable from "@/components/admin/AgenciesTable";
@@ -56,16 +55,14 @@ export default function AdminAgenciesPage() {
           onViewChats={setChatsAgency}
           onDeleted={refetchAgencies}
           toolbar={
-            <div className="relative w-full sm:w-72">
-              <Search aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search agencies or owners…"
-                aria-label="Search agencies or owners"
-                className="pl-10"
-              />
-            </div>
+            <SearchInput
+              value={searchInput}
+              onChange={setSearchInput}
+              debounceMs={0}
+              placeholder="Search agencies or owners…"
+              aria-label="Search agencies or owners"
+              className="sm:w-72"
+            />
           }
         />
       )}

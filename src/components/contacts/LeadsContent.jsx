@@ -10,7 +10,7 @@ import {
   DataTableFacetedFilter,
   EmptyState,
   ErrorState,
-  Input,
+  SearchInput,
   SegmentedTabs,
 } from "@/components/ds"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -411,13 +411,13 @@ export function LeadsContent({
 
   const toolbar = (
     <>
-      <Input
-        type="search"
+      <SearchInput
         placeholder="Search leads…"
         aria-label="Search leads"
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full sm:w-72"
+        onChange={setSearchQuery}
+        debounceMs={0}
+        className="sm:w-72"
       />
 
       {facets.map((facet) => (
