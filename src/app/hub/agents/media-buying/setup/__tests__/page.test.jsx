@@ -227,4 +227,36 @@ describe("Media Buying Agent setup", () => {
     await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
     expect(await screen.findByText(/Still needed: Set a CPL target for X/)).toBeInTheDocument()
   })
+
+  it("score at 80 but a missing target: badge, gate and Next all say not ready", async () => {
+    agents = [AGENT]
+    search = "step=2"
+    confidence = { ...conf(82), ready: false, missing: ["Set a CPL target for Tylaesthetics"] }
+    renderPage()
+    expect(await screen.findByText("82%")).toBeInTheDocument()
+    expect(screen.getByText("Keep training")).toBeInTheDocument()
+    expect(screen.queryByText("Ready to switch on")).not.toBeInTheDocument()
+    expect(screen.getByText("Still needed: Set a CPL target for Tylaesthetics.")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Next: check the dry run/ })).toBeDisabled()
+  })
+
+  it("a failed More cases keeps the answered cases on screen", async () => {
+    agents = [AGENT]
+    search = "step=2"
+    let practiceCalls = 0
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      if (path.startsWith("/api/agents/ag1/practice?")) {
+        practiceCalls += 1
+        return Promise.resolve(practiceCalls === 1 ? res([CASE]) : res({ detail: "boom" }, 500))
+      }
+      return mockApi(path, init)
+    })
+    renderPage()
+    await userEvent.click(await screen.findByRole("button", { name: "Pause" }))
+    expect(await screen.findByText(/Birdy agrees: Pause/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: /More cases/ }))
+    expect(await screen.findByText("Couldn't load more cases.")).toBeInTheDocument()
+    expect(screen.getByText(/Birdy agrees: Pause/)).toBeInTheDocument()
+    expect(screen.getByText(CASE.why)).toBeInTheDocument()
+  })
 })

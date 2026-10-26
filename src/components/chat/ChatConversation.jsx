@@ -179,12 +179,13 @@ export default function ChatConversation({
   }, [messages, loading])
 
   const sendMessage = useCallback(async (text) => {
-    if (!text?.trim() || loading || !configured) return
+    // Resolves false when the message was not sent (the surface's sendRef callers use it).
+    if (!text?.trim() || loading || !configured) return false
     if (outOfCredits) {
       toast.error("You're out of Birdy Credits", {
         description: "Top up to keep using Birdy AI.",
       })
-      return
+      return false
     }
     setInput("")
 
@@ -220,7 +221,7 @@ export default function ChatConversation({
           onSettled: () => refreshCredits?.(),
         },
       )
-      return
+      return true
     }
 
     setLocalMessages(prev => [...prev, { role: "user", content: text }])
@@ -267,6 +268,7 @@ export default function ChatConversation({
     } finally {
       setLocalLoading(false)
     }
+    return true
   }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Expose send to the surface (the agent training page posts practice follow-ups).

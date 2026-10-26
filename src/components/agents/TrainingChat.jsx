@@ -83,7 +83,9 @@ export function changeChips(message, currency) {
  * refresh the playbook and the confidence score.
  *
  * `ref` gets `{ send(text) }` for messages the page posts itself (practice follow-ups);
- * a message sent while Birdy is still answering waits for that answer.
+ * a message sent while Birdy is still answering waits for that answer. send resolves
+ * true once the chat took the message, false when it could not (no chat, no AI key,
+ * out of credits), so the caller can offer a retry.
  */
 export function TrainingChat({ agentId, currency = "$", onChanged, ref, className }) {
   const sessionKey = `birdy_agent_training_${agentId}`
@@ -95,22 +97,33 @@ export function TrainingChat({ agentId, currency = "$", onChanged, ref, classNam
     onChangedRef.current = onChanged
   }, [onChanged])
 
+  const deliver = React.useCallback(async (text) => {
+    if (!sendRef.current) return false
+    try {
+      return (await sendRef.current(text)) !== false
+    } catch {
+      return false
+    }
+  }, [])
+
   React.useImperativeHandle(
     ref,
     () => ({
       send(text) {
-        if (!loading && sendRef.current) sendRef.current(text)
-        else queue.current.push(text)
+        if (!sendRef.current) return Promise.resolve(false)
+        if (!loading) return deliver(text)
+        return new Promise((resolve) => queue.current.push({ text, resolve }))
       },
     }),
-    [loading]
+    [loading, deliver]
   )
 
   // Child effects run first, so sendRef already holds the idle send here.
   React.useEffect(() => {
-    if (loading || !sendRef.current || queue.current.length === 0) return
-    sendRef.current(queue.current.shift())
-  }, [loading])
+    if (loading || queue.current.length === 0) return
+    const { text, resolve } = queue.current.shift()
+    deliver(text).then(resolve)
+  }, [loading, deliver])
 
   const onToolUsed = React.useCallback((tool) => {
     if (AGENT_WRITE_TOOLS.has(tool)) onChangedRef.current?.(tool)

@@ -123,13 +123,39 @@ describe("PracticeCase", () => {
     expect(names()).toEqual(["Revive", "Leave it"])
   })
 
-  it("an already answered case says so instead of failing silently", async () => {
+  it("an already answered case says so, drops its options and re-syncs", async () => {
     vi.mocked(apiRequest).mockImplementation(() =>
       Promise.resolve(res({ detail: "This case is already answered" }, 409))
     )
-    render(<PracticeCase agentId="ag1" case={LIVE} onAnswered={vi.fn()} />)
+    const onStale = vi.fn()
+    render(<PracticeCase agentId="ag1" case={LIVE} onAnswered={vi.fn()} onStale={onStale} />)
     await userEvent.click(screen.getByRole("button", { name: "Pause" }))
     expect(await screen.findByText(/already answered/)).toBeInTheDocument()
+    expect(screen.queryByRole("button")).not.toBeInTheDocument()
+    expect(onStale).toHaveBeenCalledWith(LIVE)
+  })
+
+  it("a follow-up the chat could not take offers Send to Birdy", async () => {
+    answerBody = { agreed: false, birdy_answer: "Pause", why: LIVE.why }
+    const onAskFollowUp = vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    render(<PracticeCase agentId="ag1" case={LIVE} onAnswered={vi.fn()} onAskFollowUp={onAskFollowUp} />)
+    await userEvent.click(screen.getByRole("button", { name: "Leave it" }))
+    await userEvent.click(await screen.findByRole("button", { name: "I am, update the rule" }))
+    expect(await screen.findByText(/Couldn't send this to the chat/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: "Send to Birdy" }))
+    expect(await screen.findByText("Birdy will ask about it in the chat")).toBeInTheDocument()
+    expect(onAskFollowUp).toHaveBeenCalledTimes(2)
+    expect(onAskFollowUp).toHaveBeenLastCalledWith(LIVE, "Leave it")
+    // Resolve was posted once; the retry only re-sends the message.
+    expect(calls("/api/agents/ag1/practice/c1/resolve")).toHaveLength(1)
+  })
+
+  it("puts Who's right? on its own line after why", async () => {
+    answerBody = { agreed: false, birdy_answer: "Pause", why: LIVE.why }
+    render(<PracticeCase agentId="ag1" case={LIVE} onAnswered={vi.fn()} />)
+    await userEvent.click(screen.getByRole("button", { name: "Flag" }))
+    expect(await screen.findByText("Who's right?")).toBeInTheDocument()
+    expect(screen.getByText(LIVE.why).tagName).toBe("P")
   })
 
   it("builds the follow-up chat message", () => {

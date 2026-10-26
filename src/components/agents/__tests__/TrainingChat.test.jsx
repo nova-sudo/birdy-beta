@@ -48,13 +48,24 @@ describe("TrainingChat", () => {
     expect(onChanged).toHaveBeenCalledTimes(1)
   })
 
-  it("send goes through the chat's own send", () => {
+  it("send goes through the chat's own send and reports whether it was taken", async () => {
     MESSAGE = { role: "assistant", content: "Hi" }
     const ref = createRef()
     render(<TrainingChat ref={ref} agentId="ag1" />)
-    const send = vi.fn()
+    lastProps.sendRef.current = null
+    await expect(ref.current.send("x")).resolves.toBe(false)
+
+    const send = vi.fn().mockResolvedValueOnce(true).mockResolvedValueOnce(false)
     lastProps.sendRef.current = send
-    act(() => ref.current.send("Practice case c1: I chose Pause."))
+    let sent
+    await act(async () => {
+      sent = await ref.current.send("Practice case c1: I chose Pause.")
+    })
     expect(send).toHaveBeenCalledWith("Practice case c1: I chose Pause.")
+    expect(sent).toBe(true)
+    await act(async () => {
+      sent = await ref.current.send("again")
+    })
+    expect(sent).toBe(false)
   })
 })

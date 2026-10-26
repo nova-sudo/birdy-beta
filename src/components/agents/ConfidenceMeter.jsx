@@ -32,10 +32,12 @@ function Part({ done, mark, children }) {
  * @param {number} [props.threshold=80]
  * @param {{set: number, total: number}} [props.targets] Watched clients with a CPL target, out of all watched
  * @param {string[]} [props.missing] What the server says is still needed
+ * @param {boolean} [props.ready] The server's verdict; when given it decides the badge and tone, so the
+ *   meter never says "Ready" while something else (a missing CPL target) still blocks switching on
  */
-export function ConfidenceMeter({ score, parts, threshold = 80, targets, missing, className }) {
+export function ConfidenceMeter({ score, parts, threshold = 80, targets, missing, ready: readyProp, className }) {
   const value = Math.max(0, Math.min(100, Math.round(Number(score) || 0)))
-  const ready = value >= threshold
+  const ready = typeof readyProp === "boolean" ? readyProp : value >= threshold
   const p = parts ?? {}
   const agreed = Number(p.practice_agreed) || 0
   const answered = Number(p.practice_answered) || 0

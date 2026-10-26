@@ -12,6 +12,7 @@ import {
   Button,
   ErrorState,
   Frame,
+  FrameAction,
   Input,
   Label,
   Notice,
@@ -367,6 +368,7 @@ function usePracticeCases(agentId) {
           return [...prev, ...(batch ?? []).filter((c) => !seen.has(c.case_id))]
         })
       } catch (err) {
+        // Cases already on screen stay; the error shows beside them.
         setError(err?.message || "Couldn't load practice cases")
       } finally {
         setLoading(false)
@@ -416,6 +418,7 @@ function TrainStep({ agent, clients, onBack, onNext }) {
           threshold={READY_SCORE}
           targets={targets}
           missing={confidence.missing}
+          ready={ready}
         />
       ) : (
         <Skeleton className="h-32 w-full rounded-frame" />
@@ -446,14 +449,26 @@ function TrainStep({ agent, clients, onBack, onNext }) {
         leading={<Target aria-hidden className="size-4 text-primary" />}
         action={
           practice.cases.length > 0 && (
-            <Button size="sm" variant="ghost" loading={practice.loading} onClick={practice.more}>
-              <RefreshCw aria-hidden />
-              More cases
-            </Button>
+            <FrameAction icon={RefreshCw} disabled={practice.loading} onClick={practice.more}>
+              {practice.loading ? "Loading…" : "More cases"}
+            </FrameAction>
           )
         }
       >
-        {practice.error ? (
+        {practice.error && practice.cases.length > 0 && (
+          <Notice
+            tone="danger"
+            className="m-3"
+            action={
+              <Button size="sm" variant="ghost" onClick={practice.more}>
+                Try again
+              </Button>
+            }
+          >
+            Couldn&apos;t load more cases.
+          </Notice>
+        )}
+        {practice.error && practice.cases.length === 0 ? (
           <ErrorState className="p-4" title="Couldn't load practice cases" onRetry={practice.retry} />
         ) : practice.cases.length === 0 ? (
           practice.loading ? (
@@ -479,7 +494,13 @@ function TrainStep({ agent, clients, onBack, onNext }) {
                   refreshConfidence()
                 }}
                 onResolved={refreshConfidence}
-                onAskFollowUp={(pc, answer) => chatRef.current?.send(followUpMessage(pc, answer))}
+                onStale={() => {
+                  practice.markAnswered(c.case_id)
+                  refreshConfidence()
+                }}
+                onAskFollowUp={(pc, answer) =>
+                  chatRef.current ? chatRef.current.send(followUpMessage(pc, answer)) : false
+                }
               />
             ))}
           </div>

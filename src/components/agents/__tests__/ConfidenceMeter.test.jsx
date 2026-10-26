@@ -35,6 +35,13 @@ describe("ConfidenceMeter", () => {
     expect(container.querySelector("[data-slot=confidence-threshold]")).toHaveStyle({ left: "70%" })
   })
 
+  it("the server's ready wins over the score for the badge and tone", () => {
+    const { container } = render(<ConfidenceMeter score={85} parts={PARTS} ready={false} />)
+    expect(container.querySelector("[data-slot=confidence-meter]")).toHaveAttribute("data-tone", "warning")
+    expect(screen.getByText("Keep training")).toBeInTheDocument()
+    expect(screen.queryByText("Ready to switch on")).not.toBeInTheDocument()
+  })
+
   it("lists missing parts", () => {
     render(
       <ConfidenceMeter

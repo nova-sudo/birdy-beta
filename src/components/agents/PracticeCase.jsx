@@ -28,14 +28,33 @@ export function followUpMessage(practiceCase, answer) {
  * @param {object} props.case `{case_id, client_name, title, facts, options, birdy_answer, why}`
  * @param {(result: {agreed, birdy_answer, why}) => void} [props.onAnswered]
  * @param {(resolution: "birdy_right"|"user_right") => void} [props.onResolved]
- * @param {(practiceCase: object, answer: string) => void} [props.onAskFollowUp] Sends the follow-up to the training chat
+ * @param {(practiceCase: object, answer: string) => (boolean|Promise<boolean>|void)} [props.onAskFollowUp] Sends the
+ *   follow-up to the training chat; false means it was not sent, and the case offers "Send to Birdy" again
+ * @param {(practiceCase: object) => void} [props.onStale] The server already has an answer for this case (409)
  */
-export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolved, onAskFollowUp, className }) {
+export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolved, onAskFollowUp, onStale, className }) {
   const [answer, setAnswer] = React.useState(null)
   const [result, setResult] = React.useState(null)
   const [resolution, setResolution] = React.useState(null)
   const [busy, setBusy] = React.useState(null)
   const [error, setError] = React.useState(null)
+  // Answered elsewhere (another tab): the options are gone, there is nothing left to do here.
+  const [stale, setStale] = React.useState(false)
+  // null until a user_right follow-up is attempted; then whether the chat took it.
+  const [followUpSent, setFollowUpSent] = React.useState(null)
+
+  const askFollowUp = async (ans) => {
+    if (!onAskFollowUp) return
+    setBusy("follow_up")
+    let sent = false
+    try {
+      sent = (await onAskFollowUp(practiceCase, ans)) !== false
+    } catch {
+      sent = false
+    }
+    setFollowUpSent(sent)
+    setBusy(null)
+  }
 
   const choose = async (option) => {
     setBusy(option)
@@ -46,7 +65,13 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
       setResult(res)
       onAnswered?.(res)
     } catch (err) {
-      setError(err?.status === 409 ? "You've already answered this case." : `Couldn't save your answer: ${err.message}`)
+      if (err?.status === 409) {
+        setStale(true)
+        setError("You've already answered this case.")
+        onStale?.(practiceCase)
+      } else {
+        setError(`Couldn't save your answer: ${err.message}`)
+      }
     } finally {
       setBusy(null)
     }
@@ -59,12 +84,13 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
       await resolvePractice(agentId, practiceCase.case_id, which)
       setResolution(which)
       onResolved?.(which)
-      if (which === "user_right") onAskFollowUp?.(practiceCase, answer)
     } catch (err) {
       setError(err?.status === 409 ? "This case is already settled." : `Couldn't save that: ${err.message}`)
-    } finally {
       setBusy(null)
+      return
     }
+    setBusy(null)
+    if (which === "user_right") await askFollowUp(answer)
   }
 
   const agreed = result?.agreed === true
@@ -81,7 +107,7 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
   return (
     <div
       data-slot="practice-case"
-      data-state={!result ? "open" : agreed ? "agreed" : resolution ?? "pending"}
+      data-state={stale ? "stale" : !result ? "open" : agreed ? "agreed" : resolution ?? "pending"}
       className={cn("flex flex-col gap-3 px-4 py-3.5 sm:flex-row sm:items-center sm:gap-4", className)}
     >
       <div className="flex min-w-0 flex-1 items-start gap-3">
@@ -107,7 +133,7 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
       </div>
 
       <div className="flex shrink-0 flex-col gap-1.5 sm:max-w-[22rem] sm:items-end">
-        {!result ? (
+        {stale ? null : !result ? (
           <div className="flex flex-wrap gap-1.5 sm:justify-end">
             {(practiceCase.options ?? []).map((option) => (
               <Button
@@ -128,6 +154,13 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
             </Badge>
             {result.why && <p className="text-xs text-muted-foreground sm:text-right">{result.why}</p>}
           </>
+        ) : resolution === "user_right" && followUpSent === false ? (
+          <>
+            <p className="text-xs text-danger-ink sm:text-right">Couldn&apos;t send this to the chat.</p>
+            <Button size="sm" variant="primary" loading={busy === "follow_up"} onClick={() => askFollowUp(answer)}>
+              Send to Birdy
+            </Button>
+          </>
         ) : resolution ? (
           <Badge size="sm" tone={resolution === "user_right" ? "primary" : "success"}>
             {resolution === "user_right" ? "Birdy will ask about it in the chat" : `Noted: ${result.birdy_answer}`}
@@ -137,9 +170,8 @@ export function PracticeCase({ agentId, case: practiceCase, onAnswered, onResolv
             <Badge size="sm" tone="warning">
               Birdy would have: {result.birdy_answer}
             </Badge>
-            <p className="text-xs text-muted-foreground sm:text-right">
-              {result.why ? <span>{result.why}</span> : null} Who&apos;s right?
-            </p>
+            {result.why && <p className="text-xs text-muted-foreground sm:text-right">{result.why}</p>}
+            <p className="text-xs font-medium text-foreground sm:text-right">Who&apos;s right?</p>
             <div className="flex flex-wrap gap-1.5 sm:justify-end">
               <Button
                 size="sm"
