@@ -13,6 +13,27 @@ vi.mock("@/components/ds/overlays/toaster", async (importOriginal) => {
   return { ...actual, toast: { success: vi.fn(), error: vi.fn(), message: vi.fn(), info: vi.fn() } }
 })
 
+// Records what ImpactTabs hands the chart, then renders the real one.
+const chartProps = []
+vi.mock("@/components/ds/data/metric-tabs-chart", async (importOriginal) => {
+  const actual = await importOriginal()
+  const Real = actual.MetricTabsChart
+  return {
+    ...actual,
+    MetricTabsChart: (props) => {
+      chartProps.push(props)
+      return <Real {...props} />
+    },
+  }
+})
+
+// recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
 import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import { toast } from "@/components/ds/overlays/toaster"
@@ -134,6 +155,82 @@ describe("ActivityTable", () => {
     expect(t.queryByText(/£70/)).toBeNull()
     expect(t.getByText("“Creative is stale”")).toBeInTheDocument()
   })
+
+  const undoable = () => [row({ id: "a1", decided: "auto", can_undo: true }), row({ id: "a2", decided: "auto", can_undo: true })]
+  const undoPath = "/api/agents/ag1/suggestions/sug_a1/undo-auto"
+  const undoCalls = () => vi.mocked(apiRequest).mock.calls.filter(([p]) => p === undoPath)
+
+  it("a successful undo greys the row at once, toasts and refreshes", async () => {
+    const onChanged = vi.fn()
+    vi.mocked(apiRequest).mockImplementation((path) =>
+      Promise.resolve(path === undoPath ? res({ ok: true, outcome: "undone" }) : res({}, 404))
+    )
+    renderTable(undoable(), { onChanged })
+    const t = within(table())
+    await userEvent.click(t.getByRole("button", { name: "Undo Paused a1" }))
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Undone", expect.anything()))
+    expect(onChanged).toHaveBeenCalled()
+    const r = t.getByText("Paused a1").closest("tr")
+    expect(r.querySelector("[data-undone='true']")).not.toBeNull()
+    expect(within(r).queryByRole("button", { name: /undo/i })).toBeNull()
+    // The other row keeps its Undo.
+    expect(t.getByRole("button", { name: "Undo Paused a2" })).toBeInTheDocument()
+  })
+
+  it("a failed undo keeps the row and says so; 409 says Birdy is still applying", async () => {
+    const onChanged = vi.fn()
+    let status = 502
+    vi.mocked(apiRequest).mockImplementation((path) =>
+      Promise.resolve(path === undoPath ? res({ detail: "Meta said no" }, status) : res({}, 404))
+    )
+    renderTable(undoable(), { onChanged })
+    const t = within(table())
+    await userEvent.click(t.getByRole("button", { name: "Undo Paused a1" }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Couldn't undo that", { description: "Meta said no" }))
+    const r = t.getByText("Paused a1").closest("tr")
+    expect(r.querySelector("[data-undone='true']")).toBeNull()
+    expect(within(r).getByRole("button", { name: "Undo Paused a1" })).toBeEnabled()
+    expect(onChanged).toHaveBeenCalledTimes(1)
+
+    status = 409
+    await userEvent.click(within(r).getByRole("button", { name: "Undo Paused a1" }))
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith("Birdy is still applying this — try again in a moment", expect.anything())
+    )
+  })
+
+  it("a double click sends one undo", async () => {
+    let finish
+    vi.mocked(apiRequest).mockImplementation((path) =>
+      path === undoPath
+        ? new Promise((resolve) => {
+            finish = () => resolve(res({ ok: true, outcome: "undone" }))
+          })
+        : Promise.resolve(res({}, 404))
+    )
+    renderTable(undoable())
+    const button = within(table()).getByRole("button", { name: "Undo Paused a1" })
+    await userEvent.dblClick(button)
+    await userEvent.click(button)
+    expect(undoCalls()).toHaveLength(1)
+    // Undoing another row meanwhile does not clear the first row's busy state.
+    expect(within(table()).getByRole("button", { name: "Undo Paused a2" })).toBeEnabled()
+    finish()
+    await waitFor(() => expect(toast.success).toHaveBeenCalledTimes(1))
+    expect(undoCalls()).toHaveLength(1)
+  })
+
+  it("shows every loaded row with no page footer", () => {
+    const many = Array.from({ length: 60 }, (_, n) => row({ id: `r${n}`, title: `Paused number ${n}` }))
+    renderTable(many)
+    expect(within(table()).getByText("Paused number 59")).toBeInTheDocument()
+    expect(screen.queryByText(/^Page \d+ of/)).toBeNull()
+  })
+
+  it("says so when there is nothing yet", () => {
+    renderTable([])
+    expect(screen.getAllByText(/Nothing yet\. Every action/).length).toBeGreaterThan(0)
+  })
 })
 
 const IMPACT = {
@@ -148,7 +245,44 @@ const IMPACT = {
   vs_prev_month: { month: "2026-09", actions: 35, auto: 20, approval_rate: 0.9 },
 }
 
+const SERIES_IMPACT = {
+  ...IMPACT,
+  series: [
+    { date: "2026-10-01", actions: 2, auto: 1, wasted_spend_stopped: 10, wasted_spend_by_currency: { GBP: 10, USD: 0 } },
+    { date: "2026-10-02", actions: 0, auto: 0, wasted_spend_stopped: 5, wasted_spend_by_currency: { GBP: 0, USD: 5 } },
+    { date: "2026-10-03", actions: 3, auto: 2, wasted_spend_stopped: 12.5, wasted_spend_by_currency: { GBP: 12.5, USD: 0 } },
+  ],
+}
+
 describe("ImpactTabs", () => {
+  it("charts the daily series; wasted spend in the majority currency", async () => {
+    chartProps.length = 0
+    vi.mocked(apiRequest).mockImplementation((path) =>
+      path === "/api/agents/ag1/impact" ? Promise.resolve(res(SERIES_IMPACT)) : Promise.resolve(res({}, 404))
+    )
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
+        <ImpactTabs agentId="ag1" />
+      </SWRConfig>
+    )
+    await screen.findByRole("tab", { name: /wasted spend stopped/i })
+    const { metrics } = chartProps.at(-1)
+    const by = Object.fromEntries(metrics.map((m) => [m.key, m]))
+    expect(by.actions.series.map((p) => [p.x, p.current])).toEqual([["1 Oct", 2], ["2 Oct", 0], ["3 Oct", 3]])
+    expect(by.auto.series.map((p) => p.current)).toEqual([1, 0, 2])
+    // GBP is the majority currency: its daily figures, not the mixed totals.
+    expect(by.wasted.series.map((p) => p.current)).toEqual([10, 0, 12.5])
+    expect(by.wasted.series[2].display).toBe("£12.50")
+    expect(by.approval.plottable).toBe(false)
+
+    // The plot is drawn, not the empty message; the rate tab is a figure only.
+    expect(screen.queryByText("Nothing to chart for this month yet.")).toBeNull()
+    expect(screen.getByLabelText("Day of the month")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("tab", { name: /wasted spend stopped/i }))
+    expect(screen.getByRole("tab", { name: /wasted spend stopped/i })).toHaveAttribute("aria-selected", "true")
+    expect(screen.getByRole("tab", { name: /approval rate/i })).toBeDisabled()
+  })
+
   it("shows each currency's wasted spend instead of one summed total", async () => {
     vi.mocked(apiRequest).mockImplementation((path) =>
       path === "/api/agents/ag1/impact" ? Promise.resolve(res(IMPACT)) : Promise.resolve(res({}, 404))

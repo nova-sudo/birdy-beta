@@ -161,6 +161,87 @@ describe("Media Buying Agent page", () => {
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull()
   })
 
+  it("keeps loaded rows and offers a retry when Load more fails", async () => {
+    search = "tab=activity"
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    let failMore = true
+    const item = (id, title) => ({
+      id,
+      at: "2026-10-20T07:01:00.000Z",
+      title,
+      client_name: "Tylaesthetics",
+      suggestion_id: `s_${id}`,
+      action_type: "pause_ads",
+      decided: "approved",
+      can_undo: false,
+      currency: "GBP",
+    })
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      if (path === "/api/agents/ag1/activity?limit=50") {
+        return Promise.resolve(res({ items: [item("a1", "Paused One")], next_before: null, next_cursor: "c1" }))
+      }
+      if (path === "/api/agents/ag1/activity?limit=50&cursor=c1") {
+        if (failMore) return Promise.resolve(res({ detail: "Server hiccup" }, 500))
+        return Promise.resolve(res({ items: [item("a2", "Paused Two")], next_before: null, next_cursor: null }))
+      }
+      return base(path, init)
+    })
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher, shouldRetryOnError: false }}>
+        <AgentPage />
+      </SWRConfig>
+    )
+    await userEvent.click(await screen.findByRole("button", { name: "Load more" }))
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent("Couldn't load more activity.")
+    expect(within(screen.getByRole("table")).getByText("Paused One")).toBeInTheDocument()
+
+    failMore = false
+    await userEvent.click(within(alert).getByRole("button", { name: "Retry" }))
+    expect(await within(screen.getByRole("table")).findByText("Paused Two")).toBeInTheDocument()
+    expect(within(screen.getByRole("table")).getByText("Paused One")).toBeInTheDocument()
+    expect(screen.queryByRole("alert")).toBeNull()
+  })
+
+  it("shows the empty activity log", async () => {
+    search = "tab=activity"
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/ag1/activity?limit=50"
+        ? Promise.resolve(res({ items: [], next_before: null, next_cursor: null }))
+        : base(path, init)
+    )
+    renderPage()
+    expect((await screen.findAllByText(/Nothing yet\. Every action/)).length).toBeGreaterThan(0)
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull()
+  })
+
+  it("shows an error with retry when the activity log fails", async () => {
+    search = "tab=activity"
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    let fail = true
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      if (path === "/api/agents/ag1/activity?limit=50") {
+        return Promise.resolve(
+          fail
+            ? res({ detail: "Activity is down" }, 500)
+            : res({ items: [{ id: "a1", at: "2026-10-20T07:01:00.000Z", title: "Paused One", decided: "approved" }] })
+        )
+      }
+      return base(path, init)
+    })
+    render(
+      <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher, shouldRetryOnError: false }}>
+        <AgentPage />
+      </SWRConfig>
+    )
+    const title = await screen.findByText("Couldn't load the activity")
+    const frame = title.closest("[data-ds='frame']") ?? title.parentElement.parentElement
+    fail = false
+    await userEvent.click(within(frame).getByRole("button", { name: "Try again" }))
+    expect(await within(await screen.findByRole("table")).findByText("Paused One")).toBeInTheDocument()
+  })
+
   it("says how confidence moved since launch", async () => {
     agent = { ...agent, confidence: { score: 82, at_activation: 82 } }
     const base = vi.mocked(apiRequest).getMockImplementation()

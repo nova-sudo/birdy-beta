@@ -132,11 +132,23 @@ const Dim = ({ row, children, className }) => (
  * @param {() => void} [props.onChanged] After an undo (or a refused one), to re-read activity and impact
  */
 export function ActivityTable({ agentId, items, loading = false, onChanged, className }) {
-  const [busyId, setBusyId] = React.useState(null)
+  const [busyIds, setBusyIds] = React.useState(() => new Set())
   const [undoneLocally, setUndoneLocally] = React.useState(() => new Set())
+  // Rows with an undo in flight, read synchronously so a double click never sends a second POST.
+  const inFlight = React.useRef(new Set())
+
+  const setBusy = (id, on) =>
+    setBusyIds((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(id)
+      else next.delete(id)
+      return next
+    })
 
   const undo = async (row) => {
-    setBusyId(row.id)
+    if (inFlight.current.has(row.id)) return
+    inFlight.current.add(row.id)
+    setBusy(row.id, true)
     try {
       await undoAutoRun(agentId, row.suggestionId)
       setUndoneLocally((prev) => new Set(prev).add(row.id))
@@ -144,11 +156,14 @@ export function ActivityTable({ agentId, items, loading = false, onChanged, clas
     } catch (err) {
       if (err?.status === 410) {
         toast.error("Undo window closed", { description: "Auto-run actions can only be undone for 24 hours." })
+      } else if (err?.status === 409) {
+        toast.error("Birdy is still applying this — try again in a moment", { description: row.title })
       } else {
         toast.error("Couldn't undo that", { description: err?.message })
       }
     } finally {
-      setBusyId(null)
+      inFlight.current.delete(row.id)
+      setBusy(row.id, false)
       onChanged?.()
     }
   }
@@ -156,8 +171,8 @@ export function ActivityTable({ agentId, items, loading = false, onChanged, clas
   undoRef.current = undo
 
   const data = React.useMemo(
-    () => withUndone(items ?? [], undoneLocally).map((r) => ({ ...r, busy: r.id === busyId })),
-    [items, undoneLocally, busyId]
+    () => withUndone(items ?? [], undoneLocally).map((r) => ({ ...r, busy: busyIds.has(r.id) })),
+    [items, undoneLocally, busyIds]
   )
 
   const columns = React.useMemo(
@@ -233,8 +248,8 @@ export function ActivityTable({ agentId, items, loading = false, onChanged, clas
       data={data}
       loading={loading}
       getRowId={(r) => r.id}
-      pageSize={25}
-      pageSizeOptions={[25, 50, 100]}
+      // "Load more" is the only pager: every loaded row shows, with no page footer.
+      paginate={false}
       empty={
         <p className="text-center text-sm text-muted-foreground">
           Nothing yet. Every action, who decided it and what happened 7 days later will show here.

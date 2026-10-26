@@ -76,7 +76,8 @@ function summary(agent, score) {
 /** Impact for a month over every decision, newest first, 50 at a time. */
 function ActivityTab({ agentId }) {
   const { mutate } = useSWRConfig()
-  const { items, error, isLoading, hasMore, loadingMore, loadMore, mutate: mutateActivity } = useAgentActivity(agentId)
+  const { items, error, moreError, isLoading, hasMore, loadingMore, loadMore, mutate: mutateActivity } =
+    useAgentActivity(agentId)
 
   // An undo changes the log, the month's figures and (through the brake) the rules and work list.
   const onChanged = useCallback(() => {
@@ -92,7 +93,14 @@ function ActivityTab({ agentId }) {
         title="Activity"
         description="Every action, who decided, and what happened next"
         footer={
-          hasMore ? (
+          moreError ? (
+            <div role="alert" className="flex flex-wrap items-center justify-center gap-3 text-sm text-danger-ink">
+              Couldn&apos;t load more activity.
+              <Button size="sm" variant="outline" onClick={() => mutateActivity()}>
+                Retry
+              </Button>
+            </div>
+          ) : hasMore ? (
             <Button size="sm" variant="outline" loading={loadingMore} onClick={loadMore}>
               Load more
             </Button>

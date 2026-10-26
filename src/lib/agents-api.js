@@ -320,6 +320,7 @@ export function toActivityRow(raw) {
 /**
  * One month's impact as the UI reads it. `byCurrency` lists each currency's wasted spend, largest
  * first; with more than one entry the single `wasted` total adds unlike money and should not be shown.
+ * `series` is one entry per local day (`wastedByCurrency` only when the month has more than one currency).
  */
 export function toImpact(raw) {
   if (!raw) return null
@@ -327,6 +328,15 @@ export function toImpact(raw) {
     .map(([code, amount]) => ({ code, amount: num(amount) ?? 0 }))
     .sort((a, b) => b.amount - a.amount)
   const counts = raw.approval_counts ?? {}
+  const series = (Array.isArray(raw.series) ? raw.series : []).map((e) => ({
+    date: e?.date ?? null,
+    actions: num(e?.actions) ?? 0,
+    auto: num(e?.auto) ?? 0,
+    wasted: num(e?.wasted_spend_stopped) ?? 0,
+    wastedByCurrency: e?.wasted_spend_by_currency
+      ? Object.fromEntries(Object.entries(e.wasted_spend_by_currency).map(([c, v]) => [c, num(v) ?? 0]))
+      : null,
+  }))
   const prev = raw.vs_prev_month ?? null
   return {
     month: raw.month ?? null,
@@ -336,6 +346,7 @@ export function toImpact(raw) {
     currency: raw.currency ?? byCurrency[0]?.code ?? null,
     byCurrency,
     approvalRate: num(raw.approval_rate),
+    series,
     counts: { approved: num(counts.approved) ?? 0, denied: num(counts.denied) ?? 0, undone: num(counts.undone_user) ?? 0 },
     prev: prev
       ? { month: prev.month ?? null, actions: num(prev.actions), auto: num(prev.auto), approvalRate: num(prev.approval_rate) }
@@ -368,12 +379,15 @@ export function useAgentActivity(id) {
       items.push(toActivityRow(raw))
     }
   }
+  // A failure after the first page leaves the loaded rows in place: it is a "load more" error.
+  const moreError = error && pages.length > 0 ? error : undefined
   return {
     items,
-    error,
+    error: pages.length === 0 ? error : undefined,
+    moreError,
     isLoading,
     hasMore: Boolean(pages.at(-1)?.next_cursor || pages.at(-1)?.next_before),
-    loadingMore: size > 0 && pages.length > 0 && pages.length < size,
+    loadingMore: !error && size > 0 && pages.length > 0 && pages.length < size,
     loadMore: () => setSize(size + 1),
     mutate,
   }

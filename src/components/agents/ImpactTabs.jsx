@@ -3,8 +3,9 @@
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
-import { BarList, Button, ErrorState, MetricTabsChart, Surface } from "@/components/ds"
+import { Button, ErrorState, MetricTabsChart, Surface } from "@/components/ds"
 import { useAgentImpact } from "@/lib/agents-api"
+import { prettyLabel } from "@/lib/chat-viz"
 import { money } from "./ActivityTable"
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
@@ -36,8 +37,9 @@ const OLDEST_BACK = 12
 /**
  * One month of the agent's impact as metric tabs: actions (against last month), how many ran on
  * auto, wasted spend stopped (per currency when the clients bill in more than one) and the
- * approval rate. Each tab's panel breaks its figure down. Defaults to this month; the arrows step
- * back through earlier months.
+ * approval rate. The first three chart the month day by day (wasted spend in the majority currency
+ * when there are several); the rate is a figure only. Defaults to this month; the arrows step back
+ * through earlier months.
  *
  * @param {object} props
  * @param {string} props.agentId
@@ -72,47 +74,23 @@ export function ImpactTabs({ agentId, className }) {
   const wastedValue = multi
     ? byCurrency.map((c) => money(c.amount, c.code)).join(" · ")
     : money(i.wasted ?? 0, i.currency ?? byCurrency[0]?.code)
-  const byYou = Math.max(0, (i.actions ?? 0) - (i.auto ?? 0))
   const counts = i.counts ?? { approved: 0, denied: 0, undone: 0 }
 
-  const byWho = (
-    <BarList
-      className="w-full self-stretch"
-      rows={[
-        { key: "auto", label: "Done on auto", value: i.auto ?? 0 },
-        { key: "you", label: "You approved", value: byYou },
-      ]}
-      empty="No actions this month."
-    />
-  )
-
-  const panels = {
-    actions: byWho,
-    auto: byWho,
-    wasted: (
-      <div className="flex w-full flex-col gap-3 self-stretch">
-        <BarList
-          rows={byCurrency
-            .filter((c) => c.amount > 0)
-            .map((c) => ({ key: c.code, label: c.code, value: c.amount, display: money(c.amount, c.code) }))}
-          empty="No ads paused this month."
-        />
-        <p className="text-xs text-muted-foreground">
-          Each paused ad&apos;s average daily spend in the week before, times the days it stayed paused.
-        </p>
-      </div>
-    ),
-    approval: (
-      <BarList
-        className="w-full self-stretch"
-        rows={[
-          { key: "approved", label: "You approved", value: counts.approved },
-          { key: "denied", label: "You denied", value: counts.denied },
-          { key: "undone", label: "You undid", value: counts.undone },
-        ].filter((r) => r.value > 0)}
-        empty="Nothing decided this month."
-      />
-    ),
+  // The wasted-spend chart plots one currency: the majority one, when the month has several.
+  const chartCurrency = i.currency ?? byCurrency[0]?.code ?? null
+  const days = i.series ?? []
+  const plot = (pick, show) =>
+    days.map((d) => {
+      const v = pick(d)
+      const label = prettyLabel(d.date)
+      return { x: label, current: v, tooltipLabel: label, display: show(v) }
+    })
+  const count = (n) => n.toLocaleString("en-GB")
+  const wastedOf = (d) => (multi ? (d.wastedByCurrency?.[chartCurrency] ?? 0) : d.wasted)
+  const series = {
+    actions: plot((d) => d.actions, count),
+    auto: plot((d) => d.auto, count),
+    wasted: plot(wastedOf, (v) => money(v, chartCurrency)),
   }
 
   const metrics = [
@@ -127,6 +105,7 @@ export function ImpactTabs({ agentId, className }) {
       goodWhen: "neither",
       caption: "changes made in Meta",
       plottable: true,
+      series: series.actions,
     },
     {
       key: "auto",
@@ -134,13 +113,17 @@ export function ImpactTabs({ agentId, className }) {
       value: loading ? "" : String(i.auto),
       caption: i.actions > 0 ? `${Math.round((i.auto / i.actions) * 100)}% of all actions` : "None yet",
       plottable: true,
+      series: series.auto,
     },
     {
       key: "wasted",
       label: "Wasted spend stopped",
       value: loading ? "" : wastedValue,
-      caption: multi ? `in ${byCurrency.length} currencies, kept apart` : "on ads Birdy paused",
+      caption: multi
+        ? `in ${byCurrency.length} currencies; chart shows ${chartCurrency}`
+        : "on ads Birdy paused",
       plottable: true,
+      series: series.wasted,
     },
     {
       key: "approval",
@@ -150,7 +133,8 @@ export function ImpactTabs({ agentId, className }) {
         counts.approved + counts.denied + counts.undone > 0
           ? `${plural(counts.denied, "denial", "denials")}, ${plural(counts.undone, "undo", "undos")}`
           : "Nothing decided yet",
-      plottable: true,
+      // A rate has no daily series; the tab carries the figure alone.
+      plottable: false,
     },
   ]
 
@@ -181,7 +165,9 @@ export function ImpactTabs({ agentId, className }) {
       value={tab}
       onValueChange={setTab}
       loading={loading}
-      plotFallback={panels[tab]}
+      xLabel="Day of the month"
+      redrawKey={shown}
+      emptyMessage="Nothing to chart for this month yet."
     />
   )
 }
