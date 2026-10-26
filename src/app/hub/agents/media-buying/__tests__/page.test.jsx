@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { SWRConfig } from "swr"
 
@@ -78,10 +78,104 @@ describe("Media Buying Agent page", () => {
     expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying?tab=playbook", { scroll: false })
   })
 
-  it("shows the activity placeholder on ?tab=activity", async () => {
+  it("shows impact and the activity log on ?tab=activity", async () => {
     search = "tab=activity"
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      if (path === "/api/agents/ag1/activity?limit=50") {
+        return Promise.resolve(
+          res({
+            items: [
+              {
+                id: "act1",
+                at: new Date().toISOString(),
+                title: "Paused “Botox – Static 4”",
+                client_name: "Tylaesthetics",
+                suggestion_id: "s9",
+                action_type: "pause_ads",
+                decided: "auto",
+                can_undo: true,
+                currency: "GBP",
+              },
+            ],
+            next_before: null,
+          })
+        )
+      }
+      if (path === "/api/agents/ag1/impact") {
+        return Promise.resolve(
+          res({
+            month: "2026-10",
+            actions: 1,
+            auto: 1,
+            wasted_spend_stopped: 40,
+            wasted_spend_by_currency: { GBP: 40 },
+            currency: "GBP",
+            approval_rate: null,
+            approval_counts: { approved: 0, denied: 0, undone_user: 0 },
+            vs_prev_month: { month: "2026-09", actions: 0, auto: 0, approval_rate: null },
+          })
+        )
+      }
+      return base(path, init)
+    })
     renderPage()
-    expect(await screen.findByText("Activity arrives soon")).toBeInTheDocument()
+    expect(await screen.findByRole("tab", { name: /Wasted spend stopped/ })).toHaveTextContent("£40")
+    const table = await screen.findByRole("table")
+    expect(await within(table).findByText("Paused “Botox – Static 4”")).toBeInTheDocument()
+    expect(within(table).getByRole("button", { name: "Undo Paused “Botox – Static 4”" })).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull()
+  })
+
+  it("loads older activity with the server's next_cursor", async () => {
+    search = "tab=activity"
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    const item = (id, title) => ({
+      id,
+      at: "2026-10-20T07:01:00.000Z",
+      title,
+      client_name: "Tylaesthetics",
+      suggestion_id: `s_${id}`,
+      action_type: "pause_ads",
+      decided: "approved",
+      can_undo: false,
+      currency: "GBP",
+    })
+    vi.mocked(apiRequest).mockImplementation((path, init) => {
+      if (path === "/api/agents/ag1/activity?limit=50") {
+        return Promise.resolve(
+          res({ items: [item("a1", "Paused One")], next_before: "2026-10-20T07:01:00.000Z", next_cursor: "c 1" })
+        )
+      }
+      if (path === "/api/agents/ag1/activity?limit=50&cursor=c%201") {
+        return Promise.resolve(res({ items: [item("a2", "Paused Two")], next_before: null, next_cursor: null }))
+      }
+      return base(path, init)
+    })
+    renderPage()
+    const more = await screen.findByRole("button", { name: "Load more" })
+    await userEvent.click(more)
+    const table = screen.getByRole("table")
+    expect(await within(table).findByText("Paused Two")).toBeInTheDocument()
+    expect(within(table).getByText("Paused One")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull()
+  })
+
+  it("says how confidence moved since launch", async () => {
+    agent = { ...agent, confidence: { score: 82, at_activation: 82 } }
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    vi.mocked(apiRequest).mockImplementation((path, init) =>
+      path === "/api/agents/ag1/confidence" ? Promise.resolve(res({ score: 91 })) : base(path, init)
+    )
+    renderPage()
+    expect(await screen.findByText(/confidence 91%, up from 82% at launch/)).toBeInTheDocument()
+  })
+
+  it("gives the score alone when it has not moved or there is no launch figure", async () => {
+    agent = { ...agent, confidence: { score: 84, at_activation: null } }
+    renderPage()
+    expect(await screen.findByText(/confidence 84%$/)).toBeInTheDocument()
+    expect(screen.queryByText(/at launch/)).toBeNull()
   })
 
   it("sends an agent that isn't on yet to setup", async () => {

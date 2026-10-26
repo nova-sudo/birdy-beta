@@ -1,6 +1,7 @@
 "use client"
 
 import useSWR from "swr"
+import useSWRInfinite from "swr/infinite"
 import { apiRequest } from "@/lib/api"
 import { fetcher, optionalFetcher } from "@/lib/fetcher"
 import { queryKeys } from "@/lib/query-keys"
@@ -267,4 +268,132 @@ export function graduateRule(id, ruleId, choice) {
 /** Forgets one remembered item. */
 export function deleteMemory(id, memoryId) {
   return send(`${queryKeys.agentMemory(id)}/${encodeURIComponent(memoryId)}`, "DELETE")
+}
+
+// ─── Activity and impact ─────────────────────────────────────────────────────
+// The server's activity and impact shapes are read here and nowhere else, so a
+// change to either route is one edit.
+
+export const ACTIVITY_PAGE = 50
+
+const num = (v) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? null : Number(v))
+
+/**
+ * One activity row as the UI reads it.
+ * @returns {{id: string, at: string, title: string, client: string|null, suggestionId: string|null,
+ *   actionType: "pause_ads"|"enable_ads"|null, decided: "auto"|"approved"|"denied"|"undone",
+ *   canUndo: boolean, currency: string|null, reasonCode: string|null, note: string|null,
+ *   outcome: null|{metric: "account_cpl", before: number|null, after: number|null, currency: string|null}
+ *     |{metric: "ad_cpl", after: number|null, leads: number, spend: number, currency: string|null}}}
+ */
+export function toActivityRow(raw) {
+  const o = raw?.outcome_7d
+  const currency = raw?.currency ?? o?.currency ?? null
+  let outcome = null
+  if (o?.metric === "account_cpl") {
+    outcome = { metric: "account_cpl", before: num(o.before), after: num(o.after), currency: o.currency ?? currency }
+  } else if (o?.metric === "ad_cpl") {
+    outcome = {
+      metric: "ad_cpl",
+      after: num(o.after),
+      leads: num(o.leads) ?? 0,
+      spend: num(o.spend) ?? 0,
+      currency: o.currency ?? currency,
+    }
+  }
+  return {
+    id: raw?.id,
+    at: raw?.at ?? null,
+    title: raw?.title ?? "",
+    client: raw?.client_name ?? null,
+    suggestionId: raw?.suggestion_id ?? null,
+    actionType: raw?.action_type ?? null,
+    decided: raw?.decided ?? "approved",
+    canUndo: Boolean(raw?.can_undo),
+    currency,
+    reasonCode: raw?.reason_code ?? null,
+    note: raw?.note ?? null,
+    outcome,
+  }
+}
+
+/**
+ * One month's impact as the UI reads it. `byCurrency` lists each currency's wasted spend, largest
+ * first; with more than one entry the single `wasted` total adds unlike money and should not be shown.
+ */
+export function toImpact(raw) {
+  if (!raw) return null
+  const byCurrency = Object.entries(raw.wasted_spend_by_currency ?? {})
+    .map(([code, amount]) => ({ code, amount: num(amount) ?? 0 }))
+    .sort((a, b) => b.amount - a.amount)
+  const counts = raw.approval_counts ?? {}
+  const prev = raw.vs_prev_month ?? null
+  return {
+    month: raw.month ?? null,
+    actions: num(raw.actions) ?? 0,
+    auto: num(raw.auto) ?? 0,
+    wasted: num(raw.wasted_spend_stopped) ?? 0,
+    currency: raw.currency ?? byCurrency[0]?.code ?? null,
+    byCurrency,
+    approvalRate: num(raw.approval_rate),
+    counts: { approved: num(counts.approved) ?? 0, denied: num(counts.denied) ?? 0, undone: num(counts.undone_user) ?? 0 },
+    prev: prev
+      ? { month: prev.month ?? null, actions: num(prev.actions), auto: num(prev.auto), approvalRate: num(prev.approval_rate) }
+      : null,
+  }
+}
+
+/**
+ * The agent's decisions, newest first, 50 at a time. `loadMore` fetches the next page with the
+ * server's `next_cursor` (or, failing that, `next_before`); `hasMore` is false once neither is set.
+ */
+export function useAgentActivity(id) {
+  const base = id ? queryKeys.agentActivity(id) : null
+  const getKey = (index, prev) => {
+    if (!base) return null
+    if (index === 0) return `${base}?limit=${ACTIVITY_PAGE}`
+    // `next_cursor` is exact across timestamp ties; `next_before` is the older, `at`-only cursor.
+    if (prev?.next_cursor) return `${base}?limit=${ACTIVITY_PAGE}&cursor=${encodeURIComponent(prev.next_cursor)}`
+    if (prev?.next_before) return `${base}?limit=${ACTIVITY_PAGE}&before=${encodeURIComponent(prev.next_before)}`
+    return null
+  }
+  const { data, error, isLoading, size, setSize, mutate } = useSWRInfinite(getKey, fetcher)
+  const pages = data ?? []
+  const seen = new Set()
+  const items = []
+  for (const page of pages) {
+    for (const raw of page?.items ?? []) {
+      if (seen.has(raw?.id)) continue
+      seen.add(raw?.id)
+      items.push(toActivityRow(raw))
+    }
+  }
+  return {
+    items,
+    error,
+    isLoading,
+    hasMore: Boolean(pages.at(-1)?.next_cursor || pages.at(-1)?.next_before),
+    loadingMore: size > 0 && pages.length > 0 && pages.length < size,
+    loadMore: () => setSize(size + 1),
+    mutate,
+  }
+}
+
+/** One month's impact (`YYYY-MM`); with no month, the current one in the agent's timezone. */
+export function useAgentImpact(id, month) {
+  const key = id ? `${queryKeys.agentImpact(id)}${month ? `?month=${encodeURIComponent(month)}` : ""}` : null
+  const { data, error, isLoading, mutate } = useSWR(key, fetcher)
+  return { impact: toImpact(data), error, isLoading, mutate }
+}
+
+/** Whether an SWR key is one of this agent's impact months. */
+export const isAgentImpactKey = (id) => (key) =>
+  typeof key === "string" && key.startsWith(queryKeys.agentImpact(id))
+
+/**
+ * Undoes an action Birdy ran on its own. 410 once the 24-hour window has closed, 409 when it is
+ * no longer Birdy's live apply. @returns {Promise<{ok: boolean, outcome: string}>}
+ */
+export function undoAutoRun(id, suggestionId) {
+  return send(`${queryKeys.agent(id)}/suggestions/${encodeURIComponent(suggestionId)}/undo-auto`, "POST")
 }

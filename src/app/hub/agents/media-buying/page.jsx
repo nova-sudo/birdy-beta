@@ -3,19 +3,30 @@
 import { Suspense, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { ArrowRight, History, Settings2 } from "lucide-react"
+import { useSWRConfig } from "swr"
+import { ArrowRight, Settings2 } from "lucide-react"
 
 import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
-import { Badge, Button, EmptyState, ErrorState, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
+import { Badge, Button, EmptyState, ErrorState, Frame, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
+import { ActivityTable } from "@/components/agents/ActivityTable"
 import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/AgentTraining"
 import { LearningOffers } from "@/components/agents/GraduationOffer"
+import { ImpactTabs } from "@/components/agents/ImpactTabs"
 import { LearnedList } from "@/components/agents/LearnedList"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
 import { ProposalList } from "@/components/agents/ProposalDiff"
 import { TrustTable } from "@/components/agents/TrustTable"
 import { WorkList } from "@/components/agents/WorkList"
-import { useAgent, useAgents, useAgentWork } from "@/lib/agents-api"
+import {
+  isAgentImpactKey,
+  revalidateAgentLearning,
+  useAgent,
+  useAgentActivity,
+  useAgentConfidence,
+  useAgents,
+  useAgentWork,
+} from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { useClientGroups } from "@/lib/useClientGroups"
 
@@ -36,11 +47,66 @@ function clockTime(hhmm) {
   return d.toLocaleTimeString("en-GB", { hour: "numeric", minute: "2-digit", hour12: true }).toUpperCase()
 }
 
-/** The line under the title: what it watches and when it runs. */
-function summary(agent) {
+/**
+ * "confidence 91%, up from 82% at launch"; the score alone when there is no launch figure or it
+ * has not moved.
+ */
+function confidenceLine(score, atActivation) {
+  if (!Number.isFinite(score)) return null
+  const now = Math.round(score)
+  if (!Number.isFinite(atActivation)) return `confidence ${now}%`
+  const then = Math.round(atActivation)
+  if (now === then) return `confidence ${now}%`
+  return `confidence ${now}%, ${now > then ? "up" : "down"} from ${then}% at launch`
+}
+
+/** The line under the title: what it watches, when it runs and how confident it is. */
+function summary(agent, score) {
   const n = agent.scope?.client_group_ids?.length ?? 0
   const at = clockTime(agent.scope?.schedule?.time ?? "07:00")
-  return [`Watching ${n} ${n === 1 ? "client" : "clients"}`, at && `daily at ${at}`].filter(Boolean).join(" · ")
+  return [
+    `Watching ${n} ${n === 1 ? "client" : "clients"}`,
+    at && `daily at ${at}`,
+    confidenceLine(score, agent.confidence?.at_activation),
+  ]
+    .filter(Boolean)
+    .join(" · ")
+}
+
+/** Impact for a month over every decision, newest first, 50 at a time. */
+function ActivityTab({ agentId }) {
+  const { mutate } = useSWRConfig()
+  const { items, error, isLoading, hasMore, loadingMore, loadMore, mutate: mutateActivity } = useAgentActivity(agentId)
+
+  // An undo changes the log, the month's figures and (through the brake) the rules and work list.
+  const onChanged = useCallback(() => {
+    mutateActivity()
+    mutate(isAgentImpactKey(agentId))
+    revalidateAgentLearning(mutate, agentId)
+  }, [mutate, mutateActivity, agentId])
+
+  return (
+    <div className="flex min-w-0 flex-col gap-6">
+      <ImpactTabs agentId={agentId} />
+      <Frame
+        title="Activity"
+        description="Every action, who decided, and what happened next"
+        footer={
+          hasMore ? (
+            <Button size="sm" variant="outline" loading={loadingMore} onClick={loadMore}>
+              Load more
+            </Button>
+          ) : undefined
+        }
+      >
+        {error && items.length === 0 ? (
+          <ErrorState title="Couldn't load the activity" description={error.message} onRetry={() => mutateActivity()} />
+        ) : (
+          <ActivityTable agentId={agentId} items={items} loading={isLoading} onChanged={onChanged} />
+        )}
+      </Frame>
+    </div>
+  )
 }
 
 function NotReady({ agent }) {
@@ -82,6 +148,8 @@ function AgentHome() {
   const active = agent?.status === "active"
 
   const { work } = useAgentWork(active ? agent.id : null)
+  const { confidence } = useAgentConfidence(active ? agent.id : null)
+  const score = confidence?.score ?? agent?.confidence?.score
   const openCount = work.open?.length ?? 0
 
   const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
@@ -143,14 +211,7 @@ function AgentHome() {
             </div>
           )}
           {tab === "train" && <AgentTraining agent={agent} clients={clients} />}
-          {tab === "activity" && (
-            <EmptyState
-              variant="surface"
-              icon={History}
-              title="Activity arrives soon"
-              description="Everything the agent did and what came of it will show here."
-            />
-          )}
+          {tab === "activity" && <ActivityTab agentId={agent.id} />}
         </div>
       </>
     )
@@ -168,7 +229,7 @@ function AgentHome() {
             </Badge>
           ) : undefined
         }
-        description={active ? summary(agent) : undefined}
+        description={active ? summary(agent, score) : undefined}
       />
       {body}
     </div>
