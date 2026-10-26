@@ -98,7 +98,7 @@ export default function RegisterPage() {
               id="email"
               value={formData.email}
               onChange={handleChange}
-              className="h-control-lg text-base"
+              size="lg"
               placeholder="Enter your email"
               required
             />

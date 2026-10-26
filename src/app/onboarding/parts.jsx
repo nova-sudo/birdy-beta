@@ -76,7 +76,7 @@ export function StepHeading({ eyebrow, description, children, className }) {
 
 /** Large (44px) ds Input for the wizard's text steps. */
 export function StepInput({ className, ...props }) {
-  return <Input className={cn("h-control-lg text-base", className)} {...props} />
+  return <Input size="lg" className={className} {...props} />
 }
 
 /** Text input with a leading search icon. */

@@ -179,7 +179,8 @@ export default function Home() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@agency.com"
                   aria-label="Email address"
-                  className="h-control-lg px-5 text-base sm:w-72"
+                  size="lg"
+                  className="px-5 sm:w-72"
                 />
                 <Button type="submit" variant="primary" size="lg" disabled={status === "loading"}>
                   {status === "loading" ? "Joining..." : "Join the Waitlist"}

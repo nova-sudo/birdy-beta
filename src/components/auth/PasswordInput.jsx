@@ -5,14 +5,15 @@ import { Eye, EyeOff } from "lucide-react"
 import { Input } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
-/** ds Input at 48px with a show/hide toggle. Other props go to the input. */
+/** ds Input at its lg size (48) with a show/hide toggle. Other props go to the input. */
 export default function PasswordInput({ className, ...props }) {
   const [shown, setShown] = useState(false)
   return (
     <div className="relative">
       <Input
         type={shown ? "text" : "password"}
-        className={cn("h-control-lg pr-11 text-base", className)}
+        size="lg"
+        className={cn("pr-11", className)}
         {...props}
       />
       <button

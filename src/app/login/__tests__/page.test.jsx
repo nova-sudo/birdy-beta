@@ -49,6 +49,15 @@ describe("login page", () => {
     expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute("href", "/billing/privacy-policy")
   })
 
+  it("sets both fields at the Input's lg size, not a height override", async () => {
+    render(<LoginPage />)
+    for (const field of [await screen.findByLabelText(/email address/i), screen.getByLabelText(/^password/i)]) {
+      expect(field).toHaveAttribute("data-size", "lg")
+      expect(field).toHaveClass("rounded-control-lg")
+      expect(field.className).not.toContain("h-control-lg")
+    }
+  })
+
   it("marks the submit busy while the request is pending", async () => {
     publicRequest.mockReturnValue(new Promise(() => {}))
     render(<LoginPage />)
