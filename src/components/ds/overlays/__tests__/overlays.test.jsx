@@ -181,6 +181,56 @@ describe("Dialog", () => {
     expect(document.querySelector("[data-slot=dialog-body]")).toBeNull()
     expect(screen.getByTestId("f").parentElement.getAttribute("data-slot")).toBe("dialog-frame")
   })
+
+  it("leaves a form that is the frame's only child alone, its own strips and body inside it", () => {
+    // NewDashboardDialog's shape: the form wraps the strips so Enter submits from any field.
+    render(
+      <Dialog open>
+        <DialogContent>
+          <form data-testid="f">
+            <DialogHeader>
+              <DialogTitle>T</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <input aria-label="Name" />
+            </DialogBody>
+            <DialogFooter>
+              <button type="submit">Create</button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    )
+    const form = screen.getByTestId("f")
+    // A child without a data-slot is the frame's flex column, so the strips inside it lay out as if on the frame.
+    expect(form.parentElement.getAttribute("data-slot")).toBe("dialog-frame")
+    expect(Array.from(form.children).map((c) => c.getAttribute("data-slot"))).toEqual([
+      "dialog-header",
+      "dialog-body",
+      "dialog-footer",
+    ])
+    expect(document.querySelectorAll("[data-slot=dialog-body]")).toHaveLength(1)
+  })
+
+  it("treats an element that names a strip's data-slot as that strip", () => {
+    render(
+      <Dialog open>
+        <DialogContent>
+          <DialogTitle className="sr-only">T</DialogTitle>
+          <p>loose</p>
+          <div data-slot="dialog-footer">
+            <button>Go</button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    )
+    const body = document.querySelector("[data-slot=dialog-body]")
+    expect(body).not.toBeNull()
+    expect(body.textContent).toContain("loose")
+    expect(screen.getByRole("button", { name: "Go" }).closest("[data-slot=dialog-footer]").parentElement.getAttribute("data-slot")).toBe(
+      "dialog-frame"
+    )
+  })
 })
 
 describe("Sheet", () => {

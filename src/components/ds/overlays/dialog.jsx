@@ -119,15 +119,23 @@ function flatten(children, prefix = "") {
   })
 }
 
+const slotOf = (c) => (React.isValidElement(c) ? c.props?.["data-slot"] : undefined)
+
 /**
  * Birdy addition, so callers written before the frame keep rendering: when a dialog or sheet has
  * a header or footer strip and no body of its own, the loose children between the strips are
  * gathered into the body. A child that names its own `data-slot` is left on the frame as it is.
+ *
+ * Strips are found on the frame's direct children (fragments opened), before anything renders:
+ * by element type (`Header`/`Footer`/`Body`) or by a `data-slot` prop ending `-header`,
+ * `-footer` or `-body`. A component that renders a strip inside itself can't be seen from here,
+ * so it is loose content; give it a `data-slot` prop, or set the body explicitly.
  */
 function gatherBody(children, { Header, Footer, Body }) {
   const items = flatten(children)
-  const isStrip = (c) => React.isValidElement(c) && (c.type === Header || c.type === Footer)
-  const isBody = (c) => React.isValidElement(c) && c.type === Body
+  const isStrip = (c) =>
+    React.isValidElement(c) && (c.type === Header || c.type === Footer || /-(header|footer)$/.test(slotOf(c) ?? ""))
+  const isBody = (c) => React.isValidElement(c) && (c.type === Body || /-body$/.test(slotOf(c) ?? ""))
   if (!items.some(isStrip) || items.some(isBody)) return children
 
   const out = []
@@ -137,7 +145,7 @@ function gatherBody(children, { Header, Footer, Body }) {
     run = []
   }
   for (const c of items) {
-    if (isStrip(c) || (React.isValidElement(c) && c.props?.["data-slot"] != null)) {
+    if (isStrip(c) || slotOf(c) != null) {
       flush()
       out.push(c)
     } else {

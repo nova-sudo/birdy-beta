@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect, useCallback, useMemo } from "react"
 import { Globe, MessageSquarePlus, MessagesSquare, Trash2, Loader2, UserRound } from "lucide-react"
-import { Badge, Button, PageHeader, SegmentedTabs, Sheet, SheetContent, SheetDescription, SheetTitle, Skeleton, Surface } from "@/components/ds"
+import { Badge, Button, PageHeader, SegmentedTabs, Sheet, SheetBody, SheetContent, SheetDescription, SheetHeader, SheetTitle, Skeleton, Surface } from "@/components/ds"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
@@ -338,10 +338,13 @@ export default function AskBirdyPage() {
 
         {/* Below md the list lives in a sheet so the chat keeps the screen. */}
         <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-          <SheetContent side="left" className="w-4/5 gap-0 p-0 md:hidden">
-            <SheetTitle className="border-b border-border p-4 pr-14 text-base">Chats</SheetTitle>
-            <SheetDescription className="sr-only">Your conversations with Birdy</SheetDescription>
-            <div className="flex min-h-0 flex-1 flex-col">{renderHistory(() => setHistoryOpen(false))}</div>
+          <SheetContent side="left" className="w-4/5 md:hidden">
+            <SheetHeader>
+              <SheetTitle>Chats</SheetTitle>
+              <SheetDescription className="sr-only">Your conversations with Birdy</SheetDescription>
+            </SheetHeader>
+            {/* The list brings its own padding and scrolls itself, under its pinned New Chat row. */}
+            <SheetBody className="gap-0 overflow-hidden p-0">{renderHistory(() => setHistoryOpen(false))}</SheetBody>
           </SheetContent>
         </Sheet>
 

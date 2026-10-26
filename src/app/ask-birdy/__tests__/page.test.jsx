@@ -104,6 +104,9 @@ describe("Chats sheet below md", () => {
     expect(within(sheet).getByRole("tab", { name: "Clients" })).toBeInTheDocument()
     expect(within(sheet).getByRole("button", { name: /new chat/i })).toBeInTheDocument()
     expect(within(sheet).getByRole("button", { name: /delete conversation: earlier chat/i })).toBeInTheDocument()
+    // The sheet's own strips: the title in the header, the list in the white body.
+    expect(within(sheet).getByText("Chats", { selector: "h2" }).closest("[data-slot=sheet-header]")).not.toBeNull()
+    expect(within(sheet).getByRole("button", { name: /new chat/i }).closest("[data-slot=sheet-body]")).not.toBeNull()
 
     await user.click(within(sheet).getByText("Earlier chat"))
     await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
