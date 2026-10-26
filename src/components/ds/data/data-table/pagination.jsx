@@ -25,7 +25,10 @@ function DataTablePagination({ table, pageSizeOptions: options, className, ...pr
   return (
     <div
       data-ds="data-table-pagination"
-      className={cn("flex w-full flex-col-reverse items-center justify-between gap-4 p-1 sm:flex-row", className)}
+      className={cn(
+        "flex min-h-13 w-full shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2 text-sm text-foreground",
+        className
+      )}
       {...props}
     >
       {/* A single size is no choice; leave the select out. */}
@@ -33,7 +36,7 @@ function DataTablePagination({ table, pageSizeOptions: options, className, ...pr
       <div className="flex items-center gap-2">
         <p className="whitespace-nowrap text-sm text-muted-foreground">Rows per page</p>
         <Select value={`${pageSize}`} onValueChange={(v) => table.setPageSize(Number(v))}>
-          <SelectTrigger aria-label="Rows per page" className="w-[4.5rem]">
+          <SelectTrigger aria-label="Rows per page" size="sm" className="w-20">
             <SelectValue placeholder={pageSize} />
           </SelectTrigger>
           <SelectContent side="top">

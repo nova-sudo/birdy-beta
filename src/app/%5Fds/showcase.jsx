@@ -451,9 +451,11 @@ export default function Showcase() {
             ]}
           />
         </div>
-        <Surface padded={false} className="overflow-hidden">
-          <DataTable columns={COLUMNS} data={CLIENTS} getRowId={(r) => r.id} pageSize={10} />
-        </Surface>
+        {/* The table draws its own frame. */}
+        <DataTable columns={COLUMNS} data={CLIENTS} getRowId={(r) => r.id} pageSize={10} />
+        <Frame title="Lifecycle changes" description="The same table set inside a Frame draws no frame of its own.">
+          <DataTable columns={COLUMNS} data={CLIENTS.slice(0, 3)} getRowId={(r) => r.id} pageSize={10} />
+        </Frame>
       </Section>
 
       <Section id="birdy-read" title="Birdy's read">

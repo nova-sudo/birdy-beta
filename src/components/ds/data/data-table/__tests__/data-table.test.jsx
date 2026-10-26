@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent, within } from "@testing-library/react"
-import { DataTable, MoneyCell, StatusCell, TwoLineCell } from "@/components/ds"
+import { DataTable, Frame, MoneyCell, StatusCell, TwoLineCell } from "@/components/ds"
 
 const data = [
   { id: "1", name: "Alpha", status: "live", spend: 1234.5 },
@@ -43,7 +43,9 @@ describe("DataTable", () => {
     expect(cards).toHaveLength(3)
     expect(within(cards[0]).getByText("Alpha")).toBeInTheDocument()
     expect(within(cards[0]).getByText("Spend")).toBeInTheDocument()
-    expect(table().closest("[data-slot='data-table-scroll']").className).toContain("max-md:hidden")
+    // The fold follows the table's own width (a container query at 576), not the viewport.
+    expect(table().closest("[data-slot='data-table-scroll']").className).toContain("@max-xl/table:hidden")
+    expect(cards[0].closest("ul").className).toContain("@max-xl/table:flex")
   })
 
   it("loading shows skeleton rows instead of data", () => {
@@ -59,7 +61,7 @@ describe("DataTable", () => {
 
   it("a faceted filter narrows rows", () => {
     render(<DataTable columns={columns} data={data} />)
-    fireEvent.click(screen.getByRole("button", { name: /Status/ }))
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }))
     fireEvent.click(screen.getByRole("checkbox", { name: /Paused/ }))
     const t = within(table())
     expect(t.getByText("Bravo")).toBeInTheDocument()
@@ -235,10 +237,123 @@ describe("wide tables", () => {
   })
 })
 
+describe("Bytes shell and toolbar", () => {
+  const twoFacets = [
+    ...columns,
+    {
+      accessorKey: "tier",
+      header: "Tier",
+      meta: { label: "Tier", variant: "select", options: [{ value: "gold", label: "Gold" }, { value: "free", label: "Free" }] },
+    },
+  ]
+  const tiered = data.map((r, i) => ({ ...r, tier: i === 0 ? "gold" : "free" }))
+
+  it("standalone, it draws its own frame with the toolbar inside it", () => {
+    const { container } = render(<DataTable columns={columns} data={data} />)
+    const root = container.querySelector("[data-ds='data-table']")
+    expect(root.tagName).toBe("SECTION")
+    expect(root).not.toHaveAttribute("data-bare")
+    for (const c of ["@container/table", "rounded-frame", "bg-frame", "shadow-frame"]) expect(root.className).toContain(c)
+    const toolbar = within(root).getByRole("toolbar")
+    for (const c of ["min-h-14", "px-3", "py-2"]) expect(toolbar.className).toContain(c)
+  })
+
+  it("inside a Frame, or with `bare`, it draws no frame of its own", () => {
+    const { container, rerender } = render(
+      <Frame title="Lifecycle changes">
+        <DataTable columns={columns} data={data} />
+      </Frame>
+    )
+    const root = () => container.querySelector("[data-ds='data-table']")
+    expect(root()).toHaveAttribute("data-bare")
+    expect(root().className).not.toContain("bg-frame")
+    expect(table().querySelector("tbody").className).toContain("[&>tr>*]:border-divider")
+    rerender(<DataTable columns={columns} data={data} bare />)
+    expect(root()).toHaveAttribute("data-bare")
+    expect(root().className).not.toContain("shadow-frame")
+  })
+
+  it("uses the Bytes head and body cell classes: 14/500 heads, 60 rows, 52 dense", () => {
+    const { rerender } = render(<DataTable columns={columns} data={data} />)
+    const head = within(table()).getAllByRole("columnheader")[0]
+    for (const c of ["h-9", "px-3", "first:pl-4", "last:pr-4", "text-sm", "font-medium", "text-muted-foreground"]) {
+      expect(head.className).toContain(c)
+    }
+    expect(head.className).not.toContain("text-xs")
+    const cell = within(table()).getByText("Alpha").closest("td")
+    for (const c of ["px-3", "py-2.5", "h-15", "group-hover/row:bg-row-hover"]) expect(cell.className).toContain(c)
+    expect(cell.closest("tr").className).toContain("group/row")
+    // Not inside a frame: rows sit on a surface with hairlines between them.
+    expect(table().querySelector("tbody").className).toContain("[&>tr:not(:first-child)>*]:border-t")
+    rerender(<DataTable columns={columns} data={data} dense />)
+    expect(within(table()).getByText("Alpha").closest("td").className).toContain("h-13")
+  })
+
+  it("searches through a SearchInput: icon on the right, meta.placeholder, a clear button once typed", () => {
+    const placeheld = [{ ...columns[0], meta: { ...columns[0].meta, placeholder: "Search locations or brands…" } }, ...columns.slice(1)]
+    const { container } = render(<DataTable columns={placeheld} data={data} />)
+    const box = screen.getByRole("searchbox")
+    expect(box).toHaveAttribute("placeholder", "Search locations or brands…")
+    expect(box.className).toContain("pr-10")
+    expect(box.closest("[data-ds='search-input']").parentElement.className).toContain("w-72")
+    expect(container.querySelector("[data-slot='search-icon']").getAttribute("class")).toContain("right-3.5")
+    fireEvent.change(box, { target: { value: "bra" } })
+    expect(within(table()).queryByText("Alpha")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }))
+    expect(within(table()).getByText("Alpha")).toBeInTheDocument()
+    expect(screen.getByRole("searchbox")).toHaveValue("")
+  })
+
+  it("falls back to a placeholder built from the column label", () => {
+    render(<DataTable columns={columns} data={data} />)
+    expect(screen.getByRole("searchbox")).toHaveAttribute("placeholder", "Search name…")
+  })
+
+  it("has one Filter button in place of a button per facet, with the active count", () => {
+    render(<DataTable columns={twoFacets} data={tiered} />)
+    const toolbar = screen.getByRole("toolbar")
+    expect(within(toolbar).queryByRole("button", { name: /Status/ })).toBeNull()
+    expect(within(toolbar).queryByRole("button", { name: /Tier/ })).toBeNull()
+    fireEvent.click(within(toolbar).getByRole("button", { name: "Filter" }))
+    // Several facets: pick the field first, then its values.
+    fireEvent.click(screen.getByRole("menuitem", { name: /Tier/ }))
+    fireEvent.click(screen.getByRole("radio", { name: /Gold/ }))
+    expect(within(table()).getByText("Alpha")).toBeInTheDocument()
+    expect(within(table()).queryByText("Bravo")).toBeNull()
+    const button = within(toolbar).getByRole("button", { name: "Filter, 1 on" })
+    expect(button).toHaveAttribute("data-active")
+  })
+
+  it("the Filter popover can go back from a field to the field list", () => {
+    render(<DataTable columns={twoFacets} data={tiered} />)
+    fireEvent.click(screen.getByRole("button", { name: "Filter" }))
+    fireEvent.click(screen.getByRole("menuitem", { name: /Status/ }))
+    expect(screen.getByRole("checkbox", { name: /Live/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole("button", { name: /Back to filters/ }))
+    expect(screen.getByRole("menuitem", { name: /Tier/ })).toBeInTheDocument()
+  })
+
+  it("the footer is the Bytes strip, with a small 80-wide rows-per-page select", () => {
+    const { container } = render(<DataTable columns={columns} data={data} />)
+    const footer = container.querySelector("[data-ds='data-table-pagination']")
+    for (const c of ["min-h-13", "px-4", "py-2", "text-sm"]) expect(footer.className).toContain(c)
+    const trigger = screen.getByRole("combobox", { name: "Rows per page" })
+    expect(trigger).toHaveAttribute("data-size", "sm")
+    expect(trigger.className).toContain("w-20")
+  })
+
+  it("keeps the column heads while loading, with skeleton rows in the body", () => {
+    render(<DataTable columns={columns} data={[]} loading />)
+    expect(within(table()).getByRole("columnheader", { name: /Name/ })).toBeInTheDocument()
+    expect(table().querySelector("tbody")).toHaveAttribute("aria-busy", "true")
+  })
+})
+
 describe("cells", () => {
-  it("MoneyCell renders GBP with num class", () => {
+  it("MoneyCell renders GBP with num class, at medium weight", () => {
     render(<MoneyCell value={1234.5} />)
     expect(screen.getByText("£1,234.50")).toHaveClass("num")
+    expect(screen.getByText("£1,234.50")).toHaveClass("font-medium")
   })
   it("MoneyCell honours currency", () => {
     render(<MoneyCell value={10} currency="USD" />)

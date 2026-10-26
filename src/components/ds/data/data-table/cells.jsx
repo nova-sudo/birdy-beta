@@ -22,7 +22,7 @@ function MoneyCell({ value, currency = "GBP", sub, className }) {
       data-slot="money-cell"
       className={cn("flex flex-col items-end gap-1 text-right", className)}
     >
-      <span className={cn("num text-sm leading-5", value > 0 ? "text-foreground" : "text-muted-foreground")}>
+      <span className={cn("num text-sm leading-5 font-medium", value > 0 ? "text-foreground" : "text-muted-foreground")}>
         {formatted}
       </span>
       {hasContent(sub) && <span className="num whitespace-nowrap text-xs leading-4 text-muted-foreground">{sub}</span>}

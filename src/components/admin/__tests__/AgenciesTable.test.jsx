@@ -181,8 +181,9 @@ describe("plan filter", () => {
     )
     expect(table().getByText("Free Person")).toBeInTheDocument()
 
-    // fireEvent, as the ds DataTable tests do: the facet popover opens on click, not pointerdown.
-    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: /plan/i }))
+    // fireEvent, as the ds DataTable tests do: the Filter popover opens on click, not pointerdown.
+    // Plan is the table's only facet, so Filter opens straight onto its values.
+    fireEvent.click(within(screen.getByRole("toolbar")).getByRole("button", { name: "Filter" }))
     fireEvent.click(screen.getByRole("radio", { name: /free/i }))
 
     expect(table().getByText("Free Person")).toBeInTheDocument()

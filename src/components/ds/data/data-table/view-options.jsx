@@ -21,7 +21,7 @@ function DataTableViewOptions({ table }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button data-ds="view-options" aria-label="Toggle columns" variant="outline" size="sm" className="ml-auto max-md:hidden">
+        <Button data-ds="view-options" aria-label="Toggle columns" variant="outline" className="@max-xl/table:hidden">
           <Settings2Icon aria-hidden />
           View
         </Button>

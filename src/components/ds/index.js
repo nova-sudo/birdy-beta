@@ -3,6 +3,7 @@ export { Button, buttonVariants } from "./primitives/button"
 export { Input } from "./primitives/input"
 export { fieldVariants, triggerVariants, FIELD_SIZES } from "./primitives/field-variants"
 export { Textarea } from "./primitives/textarea"
+export { SearchInput } from "./forms/search-input"
 export {
   Select,
   SelectContent,
@@ -118,6 +119,7 @@ export { Toaster, toast } from "./overlays/toaster"
 export { DataTable } from "./data/data-table/data-table"
 export { DataTableToolbar } from "./data/data-table/toolbar"
 export { DataTableFacetedFilter } from "./data/data-table/faceted-filter"
+export { DataTableFilterButton, DataTableFilterPopover } from "./data/data-table/filters"
 export { DataTablePagination } from "./data/data-table/pagination"
 export { DataTableColumnHeader } from "./data/data-table/column-header"
 export { DataTableViewOptions } from "./data/data-table/view-options"

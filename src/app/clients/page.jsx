@@ -180,9 +180,9 @@ export default function ClientsPage() {
   }, [])
 
   // The per-user column layout: a flat ordered list of ids, read here and
-  // written only when the Columns menu saves ("Save to existing") or the
-  // toolbar's "Save columns" is pressed.
-  const { savedColumns, saveView, viewsLoaded } = useColumnViews("clients")
+  // written when the Columns menu saves ("Save to existing"), the toolbar's
+  // "Save columns" is pressed, or a header is dragged (debounced auto-save).
+  const { savedColumns, saveView, saveViewDebounced, viewsLoaded } = useColumnViews("clients")
   const savedView = useMemo(() => (viewsLoaded ? readSavedView(savedColumns) : null), [viewsLoaded, savedColumns])
   // The columns on screen, in order. Name leads and cannot be removed; choices
   // sit on top of the saved view or the default until they are saved.
@@ -367,6 +367,20 @@ export default function ClientsPage() {
     await saveView(nameFirst(ids))
     return true
   }, [saveView, visibleIds])
+
+  // Dragging a header onto another moves it there. The order is the visible
+  // list, so it auto-saves the way the pre-migration table saved a reorder
+  // (debounced, so a flurry of drags is one request).
+  const reorderColumn = useCallback((fromId, toId) => {
+    const from = visibleIds.indexOf(fromId)
+    const to = visibleIds.indexOf(toId)
+    if (from < 0 || to < 0 || LOCKED_COLUMNS.includes(fromId) || LOCKED_COLUMNS.includes(toId)) return
+    const moved = visibleIds.filter((id) => id !== fromId)
+    moved.splice(moved.indexOf(toId) + (from < to ? 1 : 0), 0, fromId)
+    const next = nameFirst(moved)
+    setVisibleIds(next)
+    saveViewDebounced(next)
+  }, [visibleIds, setVisibleIds, saveViewDebounced])
 
   const applyColumnView = useCallback((s) => {
     if (Array.isArray(s.visibleColumns)) setVisibleIds(s.visibleColumns)
@@ -1141,6 +1155,8 @@ export default function ClientsPage() {
             columns={orderedColumns}
             data={rows}
             stickyFirstColumn
+            onColumnReorder={reorderColumn}
+            lockedColumnIds={LOCKED_COLUMNS}
             state={{ columnVisibility }}
             toolbar={
               <>

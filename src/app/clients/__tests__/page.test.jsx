@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, within, waitFor, act } from "@testing-library/react"
+import { render, screen, within, waitFor, act, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Client Hub ──────────────────────────────────────────────────────────────
@@ -14,7 +14,7 @@ vi.mock("@/components/page-header", () => ({ usePageHeader: vi.fn() }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn(), API_BASE_URL: "http://api.test" }))
 vi.mock("@/lib/cache", () => ({ getCachedData: vi.fn(), clearCache: vi.fn() }))
 vi.mock("@/lib/useClientGroups", () => ({ useClientGroups: vi.fn() }))
-const views = vi.hoisted(() => ({ savedColumns: null, saveView: vi.fn(), viewsLoaded: true }))
+const views = vi.hoisted(() => ({ savedColumns: null, saveView: vi.fn(), saveViewDebounced: vi.fn(), viewsLoaded: true }))
 vi.mock("@/lib/useColumnViews", () => ({ useColumnViews: () => views }))
 // The named-views hook has its own tests; here it is the seam the page hands its
 // column-applying callback through.
@@ -316,6 +316,31 @@ describe("/clients", () => {
       act(() => pageViews.opts.onApply({ visibleColumns: ["meta_campaigns", "spend"] }))
       const headers = within(table()).getAllByRole("columnheader").map((h) => h.textContent)
       expect(headers).toEqual(["Client", "Campaigns", "Ad spend"])
+    })
+
+    it("dragging a header onto another moves the column there and saves the order", () => {
+      withExtras()
+      render(<ClientsPage />)
+      const heads = () => within(table()).getAllByRole("columnheader")
+      const byText = (text) => heads().find((h) => h.textContent === text)
+      // Client leads and stays put.
+      expect(byText("Client")).toHaveAttribute("draggable", "false")
+      expect(byText("Leads")).toHaveAttribute("draggable", "true")
+      const dataTransfer = { setData: vi.fn(), getData: () => "leads", effectAllowed: "" }
+      fireEvent.dragStart(byText("Leads"), { dataTransfer })
+      fireEvent.dragOver(byText("Status"), { dataTransfer })
+      fireEvent.drop(byText("Status"), { dataTransfer })
+      expect(heads().map((h) => h.textContent)).toEqual(["Client", "Leads", "Status", "Health", "Cost per lead", "Ad spend"])
+      // Saved the way the pre-migration table did: debounced, the whole visible order.
+      expect(views.saveViewDebounced).toHaveBeenCalledWith(["name", "leads", "status", "health", "cpl", "spend"])
+    })
+
+    it("a column cannot be dropped onto the locked Client column", () => {
+      withExtras()
+      render(<ClientsPage />)
+      const client = within(table()).getAllByRole("columnheader")[0]
+      fireEvent.drop(client, { dataTransfer: { setData: vi.fn(), getData: () => "leads", effectAllowed: "" } })
+      expect(views.saveViewDebounced).not.toHaveBeenCalled()
     })
 
     it("waits for the saved layout before applying one", () => {

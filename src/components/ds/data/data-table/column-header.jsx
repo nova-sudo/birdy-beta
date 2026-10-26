@@ -1,12 +1,13 @@
 "use client"
 
 import * as React from "react"
-import { ChevronDownIcon, ChevronUpIcon, ChevronsUpDownIcon } from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
 /**
- * Header label; a sortable column renders it as a button that cycles none, asc, desc.
+ * A column head: 14/500 muted. A sortable head is a button that cycles ascending, descending and
+ * off; the sorted column turns ink with an arrow.
  *
  * @param {object} props
  * @param {import("@tanstack/react-table").Column} props.column
@@ -15,14 +16,13 @@ import { cn } from "@/lib/utils"
 function DataTableColumnHeader({ column, title, className }) {
   if (!column.getCanSort()) {
     return (
-      <span data-ds="column-header" className={className}>
+      <div data-ds="column-header" className={cn("flex items-center", className)}>
         {title}
-      </span>
+      </div>
     )
   }
 
   const sorted = column.getIsSorted()
-  const Icon = sorted === "desc" ? ChevronDownIcon : sorted === "asc" ? ChevronUpIcon : ChevronsUpDownIcon
 
   // none -> asc -> desc -> none
   const toggle = () => {
@@ -32,18 +32,18 @@ function DataTableColumnHeader({ column, title, className }) {
   }
 
   return (
-    <button
-      type="button"
-      data-ds="column-header"
-      onClick={toggle}
-      className={cn(
-        "-ml-2 inline-flex h-control-sm items-center gap-1.5 rounded-control px-2 outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus",
-        className
-      )}
-    >
-      {title}
-      <Icon aria-hidden className={cn("size-3.5 shrink-0", sorted ? "text-foreground" : "text-muted-foreground")} />
-    </button>
+    <div data-ds="column-header" className={cn("flex items-center", className)}>
+      <button
+        type="button"
+        onClick={toggle}
+        data-sorted={sorted || undefined}
+        className="-mx-1.5 inline-flex h-7 cursor-pointer items-center gap-1 rounded-[8px] px-1.5 font-medium outline-none transition-colors hover:text-foreground focus-visible:shadow-focus data-[sorted]:text-foreground"
+      >
+        {title}
+        {sorted === "asc" && <ArrowUpIcon aria-hidden className="size-3.5" />}
+        {sorted === "desc" && <ArrowDownIcon aria-hidden className="size-3.5" />}
+      </button>
+    </div>
   )
 }
 
