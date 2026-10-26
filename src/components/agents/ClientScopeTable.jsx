@@ -22,7 +22,7 @@ function parseField(raw) {
   return Number.isFinite(n) && n >= 0 ? { ok: true, value: n } : { ok: false }
 }
 
-function TargetField({ client, enabled, agentId, ensureScope }) {
+function TargetField({ client, watched, agentId }) {
   const [draft, setDraft] = React.useState(fmt(client.cpl))
   const saved = React.useRef(client.cpl ?? null)
   const [state, setState] = React.useState(null) // null | "saving" | "error"
@@ -41,8 +41,7 @@ function TargetField({ client, enabled, agentId, ensureScope }) {
     if (parsed.value === saved.current) return
     setState("saving")
     try {
-      // A target can only be set on a client the agent watches, so the scope goes first.
-      await ensureScope?.(client.id)
+      // The target belongs to the client, so this saves whether or not it is watched.
       await setClientTarget(agentId, client.id, parsed.value)
       saved.current = parsed.value
       setState(null)
@@ -51,7 +50,8 @@ function TargetField({ client, enabled, agentId, ensureScope }) {
     }
   }
 
-  const missing = enabled && draft.trim() === ""
+  // Only a watched client needs one: activation wants a target on every watched client.
+  const missing = watched && draft.trim() === ""
   return (
     <div className="flex w-24 flex-col items-end gap-0.5">
       <div className="relative w-full">
@@ -67,8 +67,7 @@ function TargetField({ client, enabled, agentId, ensureScope }) {
           placeholder="Set"
           aria-label={`CPL target for ${client.name}`}
           aria-busy={state === "saving" || undefined}
-          data-warning={missing || undefined}
-          disabled={!enabled}
+          warning={missing}
           value={draft}
           onChange={(e) => {
             setDraft(e.target.value)
@@ -78,10 +77,7 @@ function TargetField({ client, enabled, agentId, ensureScope }) {
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur()
           }}
-          className={cn(
-            "pl-7 text-right font-mono",
-            missing && "shadow-[0_0_0_1.5px_var(--color-warning)] hover:shadow-[0_0_0_1.5px_var(--color-warning)]"
-          )}
+          className="pl-7 text-right font-mono"
         />
       </div>
       {state === "error" && <span className="text-xs text-danger-ink">Not saved</span>}
@@ -128,8 +124,8 @@ function CapField({ client, enabled, cap, globalCap, onCapChange }) {
 /**
  * Which clients the agent watches, with each one's CPL target and pause cap inline.
  *
- * Selection and caps are the page's (saved on Next and on blur); a target saves itself on blur
- * through `setClientTarget`, after `ensureScope` has put the client in the agent's saved scope.
+ * Selection and caps are the page's (saved on Next and on blur). A target saves itself on blur
+ * through `setClientTarget`; it belongs to the client, so it never changes what is watched.
  *
  * @param {object} props
  * @param {string} props.agentId
@@ -140,7 +136,6 @@ function CapField({ client, enabled, cap, globalCap, onCapChange }) {
  * @param {Record<string, number>} [props.caps] Per-client max pauses per day
  * @param {(gid: string, cap: number|null) => void} props.onCapChange `null` falls back to the global cap
  * @param {number} [props.globalCap=3]
- * @param {(gid: string) => Promise<void>} [props.ensureScope]
  */
 export function ClientScopeTable({
   agentId,
@@ -150,7 +145,6 @@ export function ClientScopeTable({
   caps = {},
   onCapChange,
   globalCap = 3,
-  ensureScope,
   className,
 }) {
   const [query, setQuery] = React.useState("")
@@ -238,7 +232,7 @@ export function ClientScopeTable({
                 </div>
                 {connected ? (
                   <div className="ml-auto flex items-start gap-3">
-                    <TargetField client={client} enabled={on} agentId={agentId} ensureScope={ensureScope} />
+                    <TargetField client={client} watched={on} agentId={agentId} />
                     <CapField
                       client={client}
                       enabled={on}

@@ -72,4 +72,25 @@ describe("DryRunSummary", () => {
     expect(polls).toBe(2)
     expect(vi.mocked(apiRequest).mock.calls.filter(([p]) => p.endsWith("/dry-run"))).toHaveLength(1)
   })
+
+  it("starts a new run when runKey changes and survives a dropped poll", async () => {
+    const { rerender } = render(<DryRunSummary agentId="ag1" currency="£" runKey={0} />)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await screen.findByText("£690")).toBeInTheDocument()
+
+    let calls = 0
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path.endsWith("/dry-run") && init.method === "POST") return Promise.resolve(res({ job_id: "j2" }))
+      if (path === "/api/agents/ag1/jobs/j2") {
+        calls += 1
+        if (calls === 1) return Promise.reject(new Error("network"))
+        return Promise.resolve(res({ status: "done", result: { ...RESULT, spend_saved: 120 } }))
+      }
+      return Promise.resolve(res({}, 404))
+    })
+    rerender(<DryRunSummary agentId="ag1" currency="£" runKey={1} />)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await screen.findByText("£120")).toBeInTheDocument()
+    expect(screen.queryByText("The dry run didn't finish")).not.toBeInTheDocument()
+  })
 })

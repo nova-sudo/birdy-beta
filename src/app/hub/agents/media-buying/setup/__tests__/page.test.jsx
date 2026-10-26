@@ -124,6 +124,31 @@ describe("Media Buying Agent setup", () => {
     expect(push).not.toHaveBeenCalled()
   })
 
+  it("a 409 on create whose refetch still finds no agent shows an error with Retry", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path === "/api/agents" && init.method === "POST") return Promise.resolve(res({ detail: "exists" }, 409))
+      if (path === "/api/agents") return Promise.resolve(res([]))
+      return mockApi(path, init)
+    })
+    renderPage()
+    expect(await screen.findByText("Your agent exists but couldn't be loaded.")).toBeInTheDocument()
+    // Retry tries again, and this time the list has it.
+    agents = [AGENT]
+    vi.mocked(apiRequest).mockImplementation(mockApi)
+    await userEvent.click(screen.getByRole("button", { name: /Try again/ }))
+    expect(await screen.findByText("Tylaesthetics")).toBeInTheDocument()
+  })
+
+  it("a failing agent list is an error, not a reason to create", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents" ? Promise.resolve(res({ detail: "boom" }, 500)) : mockApi(path, init)
+    )
+    renderPage()
+    expect(await screen.findByText("Couldn't load your agent")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument()
+    expect(posts("/api/agents")).toBe(0)
+  })
+
   it("lists what is missing on a 409", async () => {
     agents = [AGENT]
     search = "step=3"

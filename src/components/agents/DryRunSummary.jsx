@@ -8,6 +8,7 @@ import { prettyLabel } from "@/lib/chat-viz"
 import { BirdyRead, DataTable, ErrorState, MetricTabsChart, Spinner, Surface } from "@/components/ds"
 
 export const POLL_MS = 2000
+const MAX_POLL_MISSES = 3
 
 const money = (n, symbol) => `${symbol}${Math.round(Number(n) || 0).toLocaleString("en-GB")}`
 
@@ -105,10 +106,12 @@ export function DryRunSummary({ agentId, currency = "$", runKey = 0, onResult, c
       if (!cancelled) setState({ phase: "failed", error })
     }
 
+    let misses = 0
     const poll = async (jobId) => {
       try {
         const job = await pollJob(agentId, jobId)
         if (cancelled) return
+        misses = 0
         if (job?.status === "done") {
           setState({ phase: "done", result: job.result })
           onResultRef.current?.(job.result)
@@ -118,7 +121,11 @@ export function DryRunSummary({ agentId, currency = "$", runKey = 0, onResult, c
           timer = setTimeout(() => poll(jobId), POLL_MS)
         }
       } catch (e) {
-        fail(e?.message)
+        // A network blip is not a failed run: give up only after a few misses in a row.
+        misses += 1
+        if (cancelled) return
+        if (misses < MAX_POLL_MISSES) timer = setTimeout(() => poll(jobId), POLL_MS)
+        else fail(e?.message)
       }
     }
 

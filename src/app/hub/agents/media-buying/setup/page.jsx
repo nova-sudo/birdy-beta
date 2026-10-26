@@ -4,6 +4,9 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, BookOpen, Lock, Zap } from "lucide-react"
 
+import { usePageHeader } from "@/components/page-header"
+import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
+
 import {
   Button,
   ErrorState,
@@ -116,16 +119,23 @@ function activationMessage(err) {
   return "Couldn't turn it on. Try again in a moment."
 }
 
-/** Finds this user's agent, creating it once when there is none. */
+const pickAgent = (list) => (list ?? []).find((a) => a.type === "media_buying") ?? list?.[0] ?? null
+
+/**
+ * Finds this user's agent, creating it once when there is none. Every way this can fail ends in
+ * an error with a retry, never an endless skeleton.
+ */
 function useEnsuredAgent() {
-  const { agents, isLoading, mutate } = useAgents()
-  const existing = agents.find((a) => a.type === "media_buying") ?? agents[0] ?? null
+  const { agents, error: listError, isLoading, mutate } = useAgents()
+  const existing = pickAgent(agents)
   const [created, setCreated] = useState(null)
   const [error, setError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
   const creating = useRef(false)
 
   useEffect(() => {
-    if (isLoading || existing || creating.current) return
+    // A broken list is not an empty one: never create on the strength of an error.
+    if (isLoading || listError || existing || creating.current) return
     // A ref survives strict mode's second effect run, so this posts once.
     creating.current = true
     createAgent()
@@ -133,14 +143,32 @@ function useEnsuredAgent() {
         setCreated(agent)
         mutate()
       })
-      .catch((err) => {
-        // 409: it exists after all (another tab); the refetch finds it.
-        if (err?.status === 409) mutate()
-        else setError(err?.message || "Couldn't create the agent")
+      .catch(async (err) => {
+        if (err?.status !== 409) {
+          setError(err?.message || "Couldn't create the agent")
+          return
+        }
+        // 409: it exists after all (another tab). The refetch has to find it.
+        try {
+          if (!pickAgent(await mutate())) setError("Your agent exists but couldn't be loaded.")
+        } catch (e) {
+          setError(e?.message || "Couldn't load your agent")
+        }
       })
-  }, [isLoading, existing, mutate])
+  }, [isLoading, listError, existing, mutate, attempt])
 
-  return { agentId: existing?.id ?? created?.id ?? null, error }
+  const retry = useCallback(() => {
+    creating.current = false
+    setError(null)
+    setAttempt((n) => n + 1)
+    mutate()
+  }, [mutate])
+
+  return {
+    agentId: existing?.id ?? created?.id ?? null,
+    error: error ?? (listError ? listError.message || "Couldn't load your agent" : null),
+    retry,
+  }
 }
 
 function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCancel }) {
@@ -165,22 +193,6 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
     seeded.current = true
     setSelected(clients.filter((c) => c.account).map((c) => c.id))
   }, [clients, clientsLoading])
-
-  const selectedRef = useRef(selected)
-  selectedRef.current = selected
-  const savedScope = useRef(stored)
-  savedScope.current = stored
-
-  // A target can only be set on a client in the saved scope: save the current ticks first.
-  const ensureScope = useCallback(
-    async (gid) => {
-      if (savedScope.current.includes(gid)) return
-      const ids = Array.from(new Set([...selectedRef.current, gid]))
-      const updated = await patchAgent(agent.id, { scope: { client_group_ids: ids } })
-      mutateAgent(updated, { revalidate: false })
-    },
-    [agent.id, mutateAgent]
-  )
 
   const onCapChange = async (gid, cap) => {
     const next = { ...caps }
@@ -238,7 +250,6 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
               caps={caps}
               onCapChange={onCapChange}
               globalCap={guardrails.max_pauses_per_client_day ?? 3}
-              ensureScope={ensureScope}
             />
           )}
         </section>
@@ -256,7 +267,7 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
                 size="md"
                 value={schedule.time}
                 onChange={(e) => e.target.value && setSchedule((s) => ({ ...s, time: e.target.value }))}
-                className="w-32 font-mono"
+                className="w-44 font-mono"
               />
             </div>
             <div className="flex min-w-0 flex-1 basis-52 flex-col gap-1.5">
@@ -356,8 +367,8 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
     try {
       const saved = await patchRule(agent.id, rule.id, patch)
       mutateRules((list = []) => list.map((r) => (r.id === rule.id ? saved : r)), { revalidate: false })
-      // Thresholds and on/off change what would have fired; the mode does not.
-      if (patch.params || "enabled" in patch) setRunKey((k) => k + 1)
+      // Any saved edit gets a fresh run: the server only rejoins a job for identical rules.
+      setRunKey((k) => k + 1)
     } catch (err) {
       setRuleError(`Couldn't save that change: ${err.message}`)
       mutateRules()
@@ -435,11 +446,17 @@ function SetupWizard() {
   const step = stepOf(searchParams?.get("step"))
   const go = useCallback((n) => router.push(`${SETUP_PATH}?step=${n}`), [router])
 
-  const { agentId, error: createError } = useEnsuredAgent()
+  const { agentId, error: createError, retry: retryCreate } = useEnsuredAgent()
   const { agent, error: agentError, mutate: mutateAgent } = useAgent(agentId)
   const { clientGroups, loading: clientsLoading } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const clients = useMemo(() => clientGroups.map(toClient), [clientGroups])
   const { mutate: mutateAgents } = useAgents()
+
+  const topBar = useMemo(
+    () => ({ title: <SalesHubHeaderTitle title="Media Buying Agent" subtitle="Set up" /> }),
+    []
+  )
+  usePageHeader(topBar)
 
   const heading = HEADINGS[step]
   const failed = createError || agentError
@@ -457,7 +474,7 @@ function SetupWizard() {
         <ErrorState
           title="Couldn't load your agent"
           description={createError || agentError?.message || "The request failed."}
-          onRetry={() => (createError ? window.location.reload() : mutateAgent())}
+          onRetry={() => (createError ? retryCreate() : mutateAgent())}
         />
       ) : !agent ? (
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr]">

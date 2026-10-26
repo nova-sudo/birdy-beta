@@ -6,4 +6,8 @@ describe("PROTECTED_ROUTES", () => {
     expect(PROTECTED_ROUTES).toContain("/hub")
     expect(PROTECTED_ROUTES).toContain("/hub/dashboards")
   })
+
+  it("guards the agent setup wizard (its ?step= is not part of the pathname)", () => {
+    expect(PROTECTED_ROUTES).toContain("/hub/agents/media-buying/setup")
+  })
 })

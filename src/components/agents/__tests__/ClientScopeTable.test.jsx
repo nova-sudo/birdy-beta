@@ -15,7 +15,7 @@ const CLIENTS = [
   { id: "c", name: "Thee Vision Studio", account: null, currency: null, cpl: null },
 ]
 
-function Harness({ initial = [], caps = {}, onCapChange = vi.fn(), onSelectedChange, ensureScope }) {
+function Harness({ initial = [], caps = {}, onCapChange = vi.fn(), onSelectedChange }) {
   const [selected, setSelected] = useState(initial)
   return (
     <ClientScopeTable
@@ -28,7 +28,6 @@ function Harness({ initial = [], caps = {}, onCapChange = vi.fn(), onSelectedCha
       }}
       caps={caps}
       onCapChange={onCapChange}
-      ensureScope={ensureScope}
     />
   )
 }
@@ -65,8 +64,8 @@ describe("ClientScopeTable", () => {
   })
 
   it("empty target shows the warning ring and saves on blur", async () => {
-    const ensureScope = vi.fn().mockResolvedValue(undefined)
-    render(<Harness initial={["a", "b"]} ensureScope={ensureScope} />)
+    const onSelectedChange = vi.fn()
+    render(<Harness initial={["a", "b"]} onSelectedChange={onSelectedChange} />)
     const empty = screen.getByLabelText("CPL target for The Contour Co")
     expect(empty).toHaveAttribute("data-warning", "true")
     expect(screen.getByLabelText("CPL target for Tylaesthetics")).not.toHaveAttribute("data-warning")
@@ -78,7 +77,19 @@ describe("ClientScopeTable", () => {
     expect(empty).not.toHaveAttribute("data-warning")
     fireEvent.blur(empty)
     await waitFor(() => expect(setClientTarget).toHaveBeenCalledWith("ag1", "b", 25))
-    expect(ensureScope).toHaveBeenCalledWith("b")
+    // Saving a target never changes what is watched.
+    expect(onSelectedChange).not.toHaveBeenCalled()
+  })
+
+  it("an unwatched client's target is editable but carries no warning", async () => {
+    render(<Harness initial={[]} />)
+    const target = screen.getByLabelText("CPL target for The Contour Co")
+    expect(target).toBeEnabled()
+    expect(target).not.toHaveAttribute("data-warning")
+    expect(screen.getByLabelText("Max pauses per day for The Contour Co")).toBeDisabled()
+    await userEvent.type(target, "30")
+    fireEvent.blur(target)
+    await waitFor(() => expect(setClientTarget).toHaveBeenCalledWith("ag1", "b", 30))
   })
 
   it("blank cap sends null", async () => {

@@ -9,23 +9,25 @@ import { queryKeys } from "@/lib/query-keys"
 export const AGENTS_KEY = queryKeys.agents()
 
 /**
- * The agents this agency has set up. `/api/agents` lands with the backend work,
- * so a 404 (or any network error) reads as "none yet" rather than an error.
+ * The agents this agency has set up. Only a 404 (the route not deployed yet)
+ * reads as "none yet"; any other failure surfaces as `error`, so a page never
+ * mistakes a broken list for an empty one.
  */
 async function agentsFetcher(endpoint) {
   try {
     const data = await fetcher(endpoint)
     if (Array.isArray(data)) return data
     return Array.isArray(data?.items) ? data.items : []
-  } catch {
-    return []
+  } catch (err) {
+    if (err?.status === 404) return []
+    throw err
   }
 }
 
-/** @returns {{ agents: object[], isLoading: boolean, mutate: Function }} */
+/** @returns {{ agents: object[], error: Error|undefined, isLoading: boolean, mutate: Function }} */
 export function useAgents() {
-  const { data, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher)
-  return { agents: data ?? [], isLoading, mutate }
+  const { data, error, isLoading, mutate } = useSWR(AGENTS_KEY, agentsFetcher)
+  return { agents: data ?? [], error, isLoading, mutate }
 }
 
 /** Number of open agent work items, for the nav badge. `null` until agents ship. */
@@ -105,12 +107,12 @@ export function patchAgent(id, patch) {
 
 /** `{params?, client_overrides?, mode?, enabled?}`; mode "auto" is refused (400). */
 export function patchRule(id, ruleId, patch) {
-  return send(`${queryKeys.agentRules(id)}/${ruleId}`, "PATCH", patch)
+  return send(`${queryKeys.agentRules(id)}/${encodeURIComponent(ruleId)}`, "PATCH", patch)
 }
 
-/** Sets (number) or clears (null) one client's CPL target. The client must be in the agent's scope. */
+/** Sets (number) or clears (null) one client's CPL target. Any owned client; it does not change the scope. */
 export function setClientTarget(id, gid, cpl) {
-  return send(`${queryKeys.agent(id)}/client-targets/${gid}`, "PUT", { cpl })
+  return send(`${queryKeys.agent(id)}/client-targets/${encodeURIComponent(gid)}`, "PUT", { cpl })
 }
 
 /** Starts (or rejoins) the 30-day dry run. @returns {Promise<{job_id: string}>} */
