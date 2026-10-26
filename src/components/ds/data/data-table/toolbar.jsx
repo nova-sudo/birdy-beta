@@ -9,6 +9,23 @@ import { SearchInput } from "../../forms/search-input"
 import { DataTableFilterPopover, facetColumnsOf } from "./filters"
 import { DataTableViewOptions } from "./view-options"
 
+// Pull a caller's SearchInput (also inside fragments) out of its controls so it sits at the left edge.
+function splitSearch(children) {
+  const searches = []
+  const rest = []
+  const walk = (nodes) =>
+    React.Children.forEach(nodes, (child) => {
+      if (React.isValidElement(child) && child.type === React.Fragment) walk(child.props.children)
+      else if (React.isValidElement(child) && child.type === SearchInput) searches.push(child)
+      else rest.push(child)
+    })
+  walk(children)
+  return [searches, rest]
+}
+
+const SEARCH_SLOT =
+  "w-72 max-w-full shrink-0 @max-xl/table:w-auto @max-xl/table:min-w-0 @max-xl/table:flex-1 @max-xl/table:basis-full"
+
 /**
  * The 56 strip at the top of a table: the search first at the left edge, then one Filter button
  * for every `select` / `multiSelect` column, then the caller's controls and view options on the
@@ -17,7 +34,7 @@ import { DataTableViewOptions } from "./view-options"
  *
  * @param {object} props
  * @param {import("@tanstack/react-table").Table} props.table
- * @param {React.ReactNode} [props.children] Extra controls at the right end
+ * @param {React.ReactNode} [props.children] Extra controls at the right end; a SearchInput among them moves to the left edge
  */
 function DataTableToolbar({ table, children, className, ...props }) {
   const columns = table.getAllColumns().filter((c) => c.getCanFilter())
@@ -25,6 +42,7 @@ function DataTableToolbar({ table, children, className, ...props }) {
   const hasFilters = facetColumnsOf(table).length > 0
   const isFiltered = table.getState().columnFilters.length > 0
   const label = search && (search.columnDef.meta?.label ?? search.id)
+  const [searches, controls] = splitSearch(children)
 
   return (
     <div
@@ -35,7 +53,7 @@ function DataTableToolbar({ table, children, className, ...props }) {
       {...props}
     >
       {search && (
-        <div className="w-72 max-w-full shrink-0 @max-xl/table:w-auto @max-xl/table:min-w-0 @max-xl/table:flex-1 @max-xl/table:basis-full">
+        <div className={SEARCH_SLOT}>
           <SearchInput
             // The table filters in the browser, so the rows move with the keystroke.
             debounceMs={0}
@@ -45,6 +63,11 @@ function DataTableToolbar({ table, children, className, ...props }) {
           />
         </div>
       )}
+      {searches.map((node, i) => (
+        <div key={node.key ?? i} className={SEARCH_SLOT}>
+          {node}
+        </div>
+      ))}
       {hasFilters && <DataTableFilterPopover table={table} />}
       {isFiltered && (
         <Button variant="ghost" aria-label="Reset filters" onClick={() => table.resetColumnFilters()}>
@@ -53,7 +76,7 @@ function DataTableToolbar({ table, children, className, ...props }) {
         </Button>
       )}
       <div data-slot="data-table-toolbar-end" className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
-        {children}
+        {controls}
         <DataTableViewOptions table={table} />
       </div>
     </div>
