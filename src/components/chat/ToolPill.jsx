@@ -12,7 +12,7 @@ export default function ToolPill({ name, count }) {
   const Icon = meta.icon
 
   return (
-    <Badge tone="neutral" title={count ? `${name} (${count}×)` : name}>
+    <Badge tone="neutral" size="sm" title={count ? `${name} (${count}×)` : name}>
       <span className={`size-1.5 rounded-full ${color.dot}`} aria-hidden="true" />
       <Icon aria-hidden="true" />
       {meta.label}

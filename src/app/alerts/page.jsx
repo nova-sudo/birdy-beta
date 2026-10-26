@@ -333,12 +333,12 @@ function AlertsPageContent() {
     {
       value: "triggered",
       label: "Triggered",
-      count: counts.triggered ? <Badge tone="danger">{counts.triggered}</Badge> : undefined,
+      count: counts.triggered ? <Badge tone="danger" size="sm">{counts.triggered}</Badge> : undefined,
     },
     {
       value: "paused",
       label: "Snoozed / Paused",
-      count: counts.paused ? <Badge tone="warning">{counts.paused}</Badge> : undefined,
+      count: counts.paused ? <Badge tone="warning" size="sm">{counts.paused}</Badge> : undefined,
     },
   ]
 

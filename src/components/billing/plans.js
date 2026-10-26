@@ -1,3 +1,5 @@
+import { AlertDiscIcon, CheckDiscIcon, ClockDiscIcon, CrossDiscIcon, MinusDiscIcon } from "@/components/ds";
+
 import { Zap, TrendingUp, Building2 } from "lucide-react";
 
 // The three subscription tiers, in one place: /billing sells them and the
@@ -46,14 +48,23 @@ export const PLANS = [
 // downgrade.
 export const PLAN_ORDER = ["starter", "growth", "scale"];
 
-// Badge tone per subscription status.
+// Badge tone and leading icon per subscription status.
 export const STATUS_TONES = {
   active: "success",
   trialing: "info",
   past_due: "warning",
   canceling: "warning",
   canceled: "danger",
-  inactive: "neutral",
+  inactive: "muted",
+};
+
+export const STATUS_ICONS = {
+  active: CheckDiscIcon,
+  trialing: ClockDiscIcon,
+  past_due: AlertDiscIcon,
+  canceling: ClockDiscIcon,
+  canceled: CrossDiscIcon,
+  inactive: MinusDiscIcon,
 };
 
 export const STATUS_LABELS = {

@@ -2,10 +2,11 @@ import {
   Badge,
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
   Switch,
+  CheckDiscIcon,
 } from "@/components/ds"
 import { GeneralSettings } from "@/components/settings/GeneralSettings"
 import { SettingBlock, SettingRow, SettingsFrame } from "@/components/settings/SettingsFrame"
-import { Loader2, CheckCircle2, Sparkles } from "lucide-react"
+import { Loader2, Sparkles } from "lucide-react"
 import { STRICTNESS_OPTIONS } from "./constants"
 
 // Settings → General: the GeneralSettings Frames plus the Agent Capabilities
@@ -49,8 +50,8 @@ export function GeneralSection({
             <span className="flex items-center gap-2">
               Media Buying Analyst
               {analystOn && (
-                <Badge tone="success">
-                  <CheckCircle2 aria-hidden />Enabled
+                <Badge tone="success" icon={CheckDiscIcon}>
+                  Enabled
                 </Badge>
               )}
             </span>

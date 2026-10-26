@@ -42,7 +42,7 @@ describe("admin promo codes page", () => {
     const table = within(screen.getByRole("table"))
     expect(table.getByText("LAUNCH30").className).toMatch(/font-mono/)
     expect(table.getByText("active").closest('[data-ds="badge"]').className).toMatch(/success/)
-    expect(table.getByText("expired").closest('[data-ds="badge"]').className).toMatch(/neutral/)
+    expect(table.getByText("expired").closest('[data-ds="badge"]').className).toMatch(/subdued/)
     expect(table.getByText("Growth").closest('[data-ds="badge"]')).not.toBeNull()
   })
 

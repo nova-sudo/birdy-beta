@@ -25,6 +25,7 @@ import {
   SelectValue,
   Switch,
   fromPortfolioTabs,
+  StateBadge,
 } from "@/components/ds"
 import { evaluateFormula, setCustomMetricsCache } from "@/lib/metrics"
 import { apiRequest } from "@/lib/api"
@@ -110,7 +111,7 @@ export const DEFAULT_VISIBLE_COLUMNS = {
   leads: ["full_name", "email", "phone_number", "ad_name", "campaign_name", "lead_source", "created_time", "group_name", "ghl_matched", "ghl_opportunity_status"],
 }
 
-const OPPORTUNITY_TONE = { won: "success", lost: "danger", open: "info", abandoned: "neutral" }
+const OPPORTUNITY_STATE = { won: "won", lost: "lost", open: "in_progress", abandoned: "skipped" }
 
 // ── Main component ────────────────────────────────────────────────────────────
 export function MarketingContent({
@@ -893,7 +894,7 @@ export function MarketingContent({
       return value ? <><CheckIcon aria-hidden className="size-4 text-success-ink" /><span className="sr-only">Yes</span></> : "–"
     if (col === "ghl_opportunity_status") {
       if (!value) return "–"
-      return <Badge tone={OPPORTUNITY_TONE[value] || "neutral"} className="capitalize">{value}</Badge>
+      return <StateBadge state={OPPORTUNITY_STATE[value] ?? "unknown"} className="capitalize">{value}</StateBadge>
     }
     if (col === "lead_source") {
       const label = { instant_form: "Meta form", ghl_attribution: "GHL attribution" }[value]

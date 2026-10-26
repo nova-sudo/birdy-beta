@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Clock, Zap } from "lucide-react"
 import { useCurrency } from "@/hooks/useCurrency"
 import { Badge } from "@/components/ds/primitives/badge"
+import { AlertDiscIcon, CheckDiscIcon, MinusDiscIcon, PauseDiscIcon } from "@/components/ds/primitives/badge-icons"
 import { ProgressBar } from "@/components/ds/data/progress-bar"
 import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 
@@ -137,12 +138,12 @@ export function RelativeTime({ value }) {
 }
 
 export function statusBadge(status, snoozedUntil) {
-  if (status === "active") return <Badge variant="dot" tone="success">Active</Badge>
-  if (status === "triggered") return <Badge variant="dot" tone="danger">Triggered</Badge>
+  if (status === "active") return <Badge tone="success" icon={CheckDiscIcon}>Active</Badge>
+  if (status === "triggered") return <Badge tone="danger" icon={AlertDiscIcon}>Triggered</Badge>
   if (status === "paused") {
     return (
       <div className="flex flex-col items-start gap-1">
-        <Badge variant="dot" tone="warning">Snoozed</Badge>
+        <Badge tone="warning" icon={PauseDiscIcon}>Snoozed</Badge>
         {snoozedUntil && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
@@ -152,7 +153,7 @@ export function statusBadge(status, snoozedUntil) {
       </div>
     )
   }
-  return <Badge variant="dot" className="capitalize">{status}</Badge>
+  return <Badge tone="muted" icon={MinusDiscIcon} className="capitalize">{status}</Badge>
 }
 
 /**

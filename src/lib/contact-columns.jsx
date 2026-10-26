@@ -1,5 +1,5 @@
 import { TagIcon } from "lucide-react"
-import { Badge, Tooltip, TooltipContent, TooltipTrigger, DataTableColumnHeader } from "@/components/ds"
+import { Badge, Tooltip, TooltipContent, TooltipTrigger, DataTableColumnHeader, StateBadge } from "@/components/ds"
 import { ghlIcon as ghl, metaIcon as meta, hpIcon as hp, labIcon as lab } from "@/lib/icons"
 import Image from "next/image"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -15,7 +15,8 @@ function toTitleCase(str) {
 
 // Opportunity stage to status tone: colour means status, and "abandoned" reads
 // as needing attention.
-const OPPORTUNITY_TONE = { open: "info", won: "success", lost: "danger", abandoned: "warning" }
+// Opportunity statuses and the shared states that draw them.
+const OPPORTUNITY_STATE = { open: "in_progress", won: "won", lost: "lost", abandoned: "skipped" }
 
 const getCurrency = () =>
   typeof window !== "undefined"
@@ -198,12 +199,11 @@ export const buildContactColumns = () => [
       const mainOpp = opportunities[0]
       const hasMoreOpps = opportunities.length > 1
       const oppStatus = mainOpp.status || "unknown"
-      const tone = OPPORTUNITY_TONE[oppStatus] || "neutral"
       return (
         <div className="flex items-center gap-2">
-          <Badge variant="dot" tone={tone} className="capitalize">
+          <StateBadge state={OPPORTUNITY_STATE[oppStatus] ?? "unknown"} className="capitalize">
             {oppStatus}
-          </Badge>
+          </StateBadge>
           {hasMoreOpps && (
             <Tooltip>
               <TooltipTrigger asChild>

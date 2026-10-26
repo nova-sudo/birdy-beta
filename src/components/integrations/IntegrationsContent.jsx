@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { Badge, Button, ProgressBar, Spinner, Surface } from "@/components/ds"
+import { Badge, Button, ProgressBar, Spinner, Surface, StateBadge } from "@/components/ds"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
@@ -68,9 +68,9 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
           <Image src={icon} alt={name} width={32} height={32} className="rounded-control" />
           <h3 className="text-lg font-semibold leading-tight text-foreground">{name}</h3>
         </div>
-        <Badge tone={connected ? "success" : "neutral"}>
+        <StateBadge state={connected ? "active" : "inactive"}>
           {connected ? "Connected" : "Not Connected"}
-        </Badge>
+        </StateBadge>
       </div>
       <div className="space-y-3">
         {connected ? (

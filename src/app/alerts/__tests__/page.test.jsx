@@ -332,13 +332,13 @@ describe("/alerts", () => {
     expect(JSON.parse(calls("POST")[2][1].body)).toEqual({ client_id: "c2" })
   })
 
-  it("renders the ds shell: a PageHeader, a DataTable, dot badges and progress bars", async () => {
+  it("renders the ds shell: a PageHeader, a DataTable, icon badges and progress bars", async () => {
     renderPage()
     await loaded("Spend cap")
     expect(document.querySelector('[data-ds="page-header"] h1')).toHaveTextContent("Alerts")
     expect(usePageHeader).toHaveBeenCalledWith(expect.objectContaining({ title: "Alerts" }))
     expect(document.querySelector('[data-ds="data-table"]')).not.toBeNull()
-    expect(within(rowOf("Spend cap")).getByText("Active").closest('[data-ds="badge"]').querySelector("[data-badge-dot]")).not.toBeNull()
+    expect(within(rowOf("Spend cap")).getByText("Active").closest('[data-ds="badge"]').querySelector("svg")).not.toBeNull()
     expect(within(rowOf("Spend cap")).getByRole("progressbar", { name: "Progress to trigger" })).toHaveAttribute("aria-valuenow", "40")
   })
 

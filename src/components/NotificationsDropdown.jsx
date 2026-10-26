@@ -153,7 +153,7 @@ export default function NotificationsDropdown() {
           {totalCount > 0 && (
             <Badge
               tone="danger"
-              className="num absolute -top-1.5 -right-1.5 min-w-4 justify-center rounded-full px-1 py-0 leading-4 shadow-surface"
+              className="num absolute -top-1.5 -right-1.5 h-4 min-w-4 justify-center rounded-full px-1 py-0 leading-4 shadow-surface"
             >
               {totalCount > 99 ? "99+" : totalCount}
             </Badge>
@@ -171,7 +171,7 @@ export default function NotificationsDropdown() {
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-foreground">Notifications</span>
             {totalCount > 0 && (
-              <Badge tone="danger" className="num rounded-full">
+              <Badge tone="danger" size="sm" className="num rounded-full px-2">
                 {totalCount}
               </Badge>
             )}

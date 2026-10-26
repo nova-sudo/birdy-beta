@@ -18,7 +18,20 @@ export {
 export { Checkbox } from "./primitives/checkbox"
 export { Switch } from "./primitives/switch"
 export { Label } from "./primitives/label"
-export { Badge, badgeVariants } from "./primitives/badge"
+export { Badge, badgeVariants, BADGE_TONES, BADGE_TONE_CLASSES, BADGE_TONE_TEXT } from "./primitives/badge"
+export { BADGE_STATES, BADGE_STATE_KEYS, badgeStateOf, isBadgeStateKey } from "./primitives/badge-states"
+export { StateBadge } from "./primitives/state-badge"
+export {
+  AlertDiscIcon,
+  BanDiscIcon,
+  CheckDiscIcon,
+  ClockDiscIcon,
+  CrossDiscIcon,
+  HelpDiscIcon,
+  InfoDiscIcon,
+  MinusDiscIcon,
+  PauseDiscIcon,
+} from "./primitives/badge-icons"
 export { Tabs, TabsList, TabsTrigger, TabsContent } from "./primitives/tabs"
 export { SegmentedTabs } from "./primitives/segmented-tabs"
 export { Kbd, KbdGroup, KbdShortcut, KbdThen, keyLabel, useIsMac } from "./primitives/kbd"

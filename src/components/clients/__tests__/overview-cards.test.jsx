@@ -130,9 +130,9 @@ describe("HealthPill", () => {
     expect(screen.getByText("Healthy")).toHaveClass("text-success-ink")
   })
 
-  it("without a dot it is a soft chip", () => {
-    render(<HealthPill health="Healthy" withDot={false} />)
+  it("is a soft chip that leads with an icon", () => {
+    render(<HealthPill health="Healthy" />)
     expect(screen.getByText("Healthy")).toHaveClass("bg-success-soft")
-    expect(document.querySelector("[data-badge-dot]")).toBeNull()
+    expect(screen.getByText("Healthy").querySelector("svg")).not.toBeNull()
   })
 })

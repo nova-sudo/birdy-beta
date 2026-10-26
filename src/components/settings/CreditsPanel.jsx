@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import {
   Badge, Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Skeleton,
+  AlertDiscIcon,
 } from "@/components/ds";
 import { CountUp, EASE_OUT } from "@/components/motion";
 import { apiRequest } from "@/lib/api";
@@ -217,9 +218,9 @@ export function CreditBalanceCard({ className }) {
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs font-medium text-muted-foreground">AI credits</span>
         {isOut ? (
-          <Badge tone="danger">Out of credits</Badge>
+          <Badge tone="danger" icon={AlertDiscIcon}>Out of credits</Badge>
         ) : low ? (
-          <Badge tone="warning">Running low</Badge>
+          <Badge tone="warning" icon={AlertDiscIcon}>Running low</Badge>
         ) : null}
       </div>
       <div className="mt-3 flex items-center gap-4">

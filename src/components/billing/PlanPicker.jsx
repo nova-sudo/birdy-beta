@@ -5,7 +5,7 @@ import { ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { Badge, Button, Surface, SystemBanner } from "@/components/ds";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { PlanCard } from "./PlanCard";
-import { PLANS, STATUS_TONES, STATUS_LABELS } from "./plans";
+import { PLANS, STATUS_ICONS, STATUS_TONES, STATUS_LABELS } from "./plans";
 
 const dateLabel = (iso) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
@@ -38,7 +38,7 @@ export function PlanPicker({
           Your plan
         </h2>
         {subscribed && status && (
-          <Badge tone={STATUS_TONES[status] ?? STATUS_TONES.inactive}>
+          <Badge tone={STATUS_TONES[status] ?? STATUS_TONES.inactive} icon={STATUS_ICONS[status] ?? STATUS_ICONS.inactive}>
             {STATUS_LABELS[status] ?? status}
           </Badge>
         )}

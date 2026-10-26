@@ -71,14 +71,14 @@ function DataTableFacetedFilter({ column, title, options, multiple, value, onVal
           {selected.size > 0 && (
             <>
               <span aria-hidden className="mx-0.5 h-4 w-px bg-border" />
-              <Badge className="px-1 font-normal lg:hidden">{selected.size}</Badge>
+              <Badge size="sm" className="px-1.5 font-normal lg:hidden">{selected.size}</Badge>
               <span className="hidden items-center gap-1 lg:flex">
                 {selected.size > 2 ? (
-                  <Badge className="px-1 font-normal">{selected.size} selected</Badge>
+                  <Badge size="sm" className="px-1.5 font-normal">{selected.size} selected</Badge>
                 ) : (
                   // A value the rows no longer offer still gets a badge, else the count has no name.
                   Array.from(selected, (v) => (
-                    <Badge key={String(v)} tone="primary" className="px-1 font-normal">
+                    <Badge key={String(v)} tone="primary" size="sm" className="px-1.5 font-normal">
                       {labelOf(v)}
                     </Badge>
                   ))

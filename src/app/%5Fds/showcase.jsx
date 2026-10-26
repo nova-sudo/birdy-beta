@@ -56,6 +56,7 @@ import {
   SheetTrigger,
   Skeleton,
   Spinner,
+  StateBadge,
   StatusCell,
   Surface,
   Switch,
@@ -244,11 +245,17 @@ export default function Showcase() {
           <Button size="icon" aria-label="More"><MoreHorizontalIcon /></Button>
         </Row>
         <Row label="Badge">
-          {["neutral", "primary", "success", "warning", "danger", "info"].map((t) => (
+          {["neutral", "primary", "success", "warning", "danger", "info", "purple", "muted"].map((t) => (
             <Badge key={t} tone={t}>{t}</Badge>
           ))}
           {["success", "warning", "danger"].map((t) => (
             <Badge key={t} tone={t} variant="dot">{t}</Badge>
+          ))}
+          <Badge size="sm" tone="info">small</Badge>
+        </Row>
+        <Row label="StateBadge">
+          {["live", "paused", "pending", "failed", "draft", "churned", "demo", "onboarding"].map((s) => (
+            <StateBadge key={s} state={s} />
           ))}
         </Row>
         <Row label="Fields">

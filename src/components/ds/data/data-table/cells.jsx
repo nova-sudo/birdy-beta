@@ -2,6 +2,7 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "../../primitives/badge"
+import { CheckDiscIcon, ClockDiscIcon, CrossDiscIcon, InfoDiscIcon, MinusDiscIcon } from "../../primitives/badge-icons"
 
 const hasContent = (node) => node !== undefined && node !== null && node !== ""
 
@@ -29,16 +30,34 @@ function MoneyCell({ value, currency = "GBP", sub, className }) {
   )
 }
 
+// Each status leads with a mark, so the meaning never rides on colour alone.
+const TONE_ICON = {
+  success: CheckDiscIcon,
+  warning: ClockDiscIcon,
+  danger: CrossDiscIcon,
+  info: InfoDiscIcon,
+  neutral: MinusDiscIcon,
+  muted: MinusDiscIcon,
+}
+
 /**
- * Status dot beside a label. Colour never carries the meaning alone.
+ * Status badge with a leading icon. The icon follows the tone unless one is passed.
  *
  * @param {object} props
- * @param {"neutral"|"primary"|"success"|"warning"|"danger"|"info"} [props.tone="neutral"]
+ * @param {"neutral"|"muted"|"primary"|"purple"|"success"|"warning"|"danger"|"info"} [props.tone="neutral"]
  * @param {React.ReactNode} props.label
+ * @param {React.ElementType|null} [props.icon]  overrides the tone's icon; null for none
  */
-function StatusCell({ tone = "neutral", label, className }) {
+function StatusCell({ tone = "neutral", label, icon, className }) {
   return (
-    <Badge data-ds="cells" data-slot="status-cell" variant="dot" tone={tone} className={className}>
+    <Badge
+      data-ds="cells"
+      data-slot="status-cell"
+      size="sm"
+      tone={tone}
+      icon={icon === undefined ? TONE_ICON[tone] : icon ?? undefined}
+      className={className}
+    >
       {label}
     </Badge>
   )

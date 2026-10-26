@@ -23,17 +23,14 @@ import {
   Surface,
   Switch,
   confirm,
+  StateBadge,
+  badgeStateOf,
 } from "@/components/ds";
 import AdminHeader from "@/components/admin/AdminHeader";
 import { usePromoCodes, createPromoCode, deletePromoCode } from "@/lib/admin-api";
 
-// Active reads as live, scheduled as pending, and everything that can no longer
-// be redeemed (expired, inactive, archived) as plain neutral.
-const STATUS_TONE = {
-  active: "success",
-  scheduled: "primary",
-};
-
+// Each status is drawn by the shared badge state of the same name (active, scheduled,
+// expired, inactive, archived).
 const STATUS_OPTIONS = ["active", "scheduled", "expired", "inactive", "archived"].map((value) => ({
   value,
   label: value[0].toUpperCase() + value.slice(1),
@@ -296,9 +293,9 @@ function PromoCodesTable({ codes, loading, onDelete }) {
         header: "Status",
         meta: { label: "Status", variant: "select", options: STATUS_OPTIONS },
         cell: ({ row }) => (
-          <Badge tone={STATUS_TONE[row.original.status] || "neutral"} className="capitalize">
-            {row.original.status}
-          </Badge>
+          <StateBadge state={badgeStateOf(row.original.status)}>
+            <span className="capitalize">{row.original.status}</span>
+          </StateBadge>
         ),
       },
       {

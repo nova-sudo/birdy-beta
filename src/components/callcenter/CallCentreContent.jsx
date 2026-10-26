@@ -33,6 +33,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  StateBadge,
 } from "@/components/ds"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
@@ -91,7 +92,7 @@ const OVERVIEW_COLUMNS = [
 ]
 
 const STATUS_CELL = (_v, row) => (
-  <Badge tone={row.status === "Inactive" ? "danger" : "success"}>{row.status || "Active"}</Badge>
+  <StateBadge state={row.status === "Inactive" ? "inactive" : "active"}>{row.status || "Active"}</StateBadge>
 )
 
 const CALLS_CELL = (_v, row) =>

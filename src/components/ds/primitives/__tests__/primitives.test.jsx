@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { Button, Badge, SegmentedTabs, Tabs, TabsList, TabsTrigger, Input, Kbd, KbdShortcut, Select, SelectTrigger, SelectValue, fieldVariants } from "@/components/ds"
+import { Button, Badge, StateBadge, CheckDiscIcon, badgeStateOf, SegmentedTabs, Tabs, TabsList, TabsTrigger, Input, Kbd, KbdShortcut, Select, SelectTrigger, SelectValue, fieldVariants } from "@/components/ds"
 
 describe("Button", () => {
   it("defaults to the outline variant at control height", () => {
@@ -81,6 +81,37 @@ describe("Badge", () => {
     const el = screen.getByText("Late")
     expect(el.className).toContain("bg-danger-soft")
     expect(el.className).toContain("text-danger-ink")
+  })
+
+  it("md is 28px with Bytes radius and padding, sm is 24px", () => {
+    const { rerender } = render(<Badge>Tag</Badge>)
+    for (const c of ["h-7", "rounded-badge", "pr-2.5", "pl-[5px]", "text-sm"]) {
+      expect(screen.getByText("Tag").className).toContain(c)
+    }
+    rerender(<Badge size="sm">Tag</Badge>)
+    for (const c of ["h-6", "rounded-[6px]", "pr-2", "pl-1", "text-xs"]) {
+      expect(screen.getByText("Tag").className).toContain(c)
+    }
+  })
+
+  it("covers the purple and muted tones", () => {
+    const { rerender } = render(<Badge tone="purple">A</Badge>)
+    expect(screen.getByText("A").className).toContain("bg-purple-soft")
+    rerender(<Badge tone="muted">A</Badge>)
+    expect(screen.getByText("A").className).toContain("bg-subdued-soft")
+    rerender(<Badge tone="primary">A</Badge>)
+    expect(screen.getByText("A").className).toContain("text-primary-ink")
+  })
+
+  it("leads with the icon, drawn as a solid disc with a white glyph", () => {
+    render(<Badge tone="success" icon={CheckDiscIcon}>Live</Badge>)
+    const el = screen.getByText("Live")
+    const svg = el.firstElementChild
+    expect(svg.tagName.toLowerCase()).toBe("svg")
+    expect(svg.getAttribute("fill")).toBe("currentColor")
+    expect(svg.getAttribute("stroke")).toBe("var(--color-background)")
+    expect(svg.getAttribute("class")).toContain("[&>circle]:stroke-current")
+    expect(el.className).toContain("[&>svg]:text-success")
   })
 
   it("dot variant renders a status dot", () => {
@@ -215,5 +246,21 @@ describe("Input / Kbd", () => {
   it("Kbd renders children", () => {
     render(<Kbd>⌘K</Kbd>)
     expect(screen.getByText("⌘K").tagName).toBe("KBD")
+  })
+})
+
+describe("StateBadge", () => {
+  it("takes tone, icon and label from the state", () => {
+    render(<StateBadge state="paused" />)
+    const el = screen.getByText("Paused")
+    expect(el.className).toContain("bg-warning-soft")
+    expect(el.querySelector("svg")).not.toBeNull()
+  })
+
+  it("lets children override the label and falls back to unknown", () => {
+    render(<StateBadge state="nonsense">Odd</StateBadge>)
+    expect(screen.getByText("Odd").className).toContain("bg-subdued-soft")
+    expect(badgeStateOf("In Stock")).toBe("in_stock")
+    expect(badgeStateOf("whatever")).toBe("unknown")
   })
 })

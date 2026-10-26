@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Check, Search } from "lucide-react"
-import { Badge, Button, Input, Skeleton } from "@/components/ds"
+import { Button, Input, Skeleton, StateBadge, badgeStateOf } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 
 const STATUS_LABELS = { ACTIVE: "Active", PAUSED: "Paused", ARCHIVED: "Archived", DELETED: "Deleted" }
@@ -17,8 +17,8 @@ function statusLabel(status) {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-const statusTone = (status) =>
-  status === "ACTIVE" ? "success" : status === "PAUSED" ? "warning" : "neutral"
+// Meta's DELETED reads as the shared "removed" state; anything unlisted is "unknown".
+const statusState = (status) => (status === "DELETED" ? "removed" : badgeStateOf(status))
 
 function Tick({ checked }) {
   return (
@@ -180,7 +180,7 @@ export function MetaCampaignPicker({
                 onClick={() => toggle(c.id)}
                 title={c.name || "Unnamed campaign"}
                 subtitle={mine ? `ID: ${c.id}` : `Used by ${c.claimed_by.name}`}
-                badge={<Badge tone={statusTone(c.effective_status)}>{statusLabel(c.effective_status)}</Badge>}
+                badge={<StateBadge state={statusState(c.effective_status)}>{statusLabel(c.effective_status)}</StateBadge>}
               />
             )
           })}

@@ -12,6 +12,7 @@ import {
   EmptyState,
   Skeleton,
   Switch,
+  StateBadge,
 } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -133,7 +134,7 @@ function VideoPreviewDialog({ row, columns, onStatusToggle, toggling, onClose })
           {/* Status and the headline numbers beside the player; below it on a phone. */}
           <div className="flex min-w-0 flex-col gap-3">
             <div className="flex items-center justify-between gap-2">
-              <Badge tone={isActive ? "success" : "neutral"}>{isActive ? "Active" : "Paused"}</Badge>
+              <StateBadge state={isActive ? "active" : "paused"} />
               <Switch
                 checked={isActive}
                 disabled={toggling}

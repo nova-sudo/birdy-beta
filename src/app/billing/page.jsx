@@ -31,7 +31,7 @@ const EXTRA_CLIENT_PRICE = 10;
 
 // Tiers, order and palette are shared with the Settings Billing tab, which
 // shows the same three plans.
-import { PLANS, PLAN_ORDER, STATUS_LABELS, STATUS_TONES } from "@/components/billing/plans";
+import { PLANS, PLAN_ORDER, STATUS_ICONS, STATUS_LABELS, STATUS_TONES } from "@/components/billing/plans";
 import { PlanCard } from "@/components/billing/PlanCard";
 
 // Best-effort read of the signed-in user's email so we can prefill the Whop
@@ -100,7 +100,7 @@ function CheckoutModal({ plan, email, onClose, onComplete }) {
 
 function StatusBadge({ status }) {
   return (
-    <Badge tone={STATUS_TONES[status] ?? STATUS_TONES.inactive}>
+    <Badge tone={STATUS_TONES[status] ?? STATUS_TONES.inactive} icon={STATUS_ICONS[status] ?? STATUS_ICONS.inactive}>
       {STATUS_LABELS[status] ?? status}
     </Badge>
   );

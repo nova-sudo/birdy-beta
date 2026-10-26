@@ -244,10 +244,10 @@ describe("cells", () => {
     render(<MoneyCell value={10} currency="USD" />)
     expect(screen.getByText(/\$10\.00/)).toBeInTheDocument()
   })
-  it("StatusCell renders a dot badge with the label", () => {
+  it("StatusCell renders a badge with the label and a leading tone icon", () => {
     const { container } = render(<StatusCell tone="success" label="Live" />)
     expect(screen.getByText("Live")).toBeInTheDocument()
-    expect(container.querySelector("[data-badge-dot]")).not.toBeNull()
+    expect(container.querySelector("svg")).not.toBeNull()
   })
   it("TwoLineCell renders both lines and skips an empty secondary", () => {
     const { rerender } = render(<TwoLineCell primary="Acme" secondary="Retail" />)

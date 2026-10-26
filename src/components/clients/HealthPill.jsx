@@ -7,7 +7,7 @@
 // client — so this renders a stored choice and nothing more. A client with no
 // choice recorded reads as Healthy, matching the backend default.
 
-import { Badge } from "@/components/ds"
+import { AlertDiscIcon, Badge, CheckDiscIcon, CrossDiscIcon } from "@/components/ds"
 
 export const CLIENT_HEALTH = ["Healthy", "Warning", "Critical"]
 export const DEFAULT_CLIENT_HEALTH = "Healthy"
@@ -15,16 +15,16 @@ export const DEFAULT_CLIENT_HEALTH = "Healthy"
 /** Health reads in the same status tones the rest of the app uses. */
 export const HEALTH_TONE = { Healthy: "success", Warning: "warning", Critical: "danger" }
 
+const HEALTH_ICON = { Healthy: CheckDiscIcon, Warning: AlertDiscIcon, Critical: CrossDiscIcon }
+
 /**
  * @param {string}  health   one of CLIENT_HEALTH; anything else falls back to the default
- * @param {boolean} withDot  a status dot before the label (the Client Detail header);
- *                           without it the badge is a soft tinted chip
  */
-export function HealthPill({ health, withDot = true, className }) {
+export function HealthPill({ health, className }) {
   const value = CLIENT_HEALTH.includes(health) ? health : DEFAULT_CLIENT_HEALTH
 
   return (
-    <Badge tone={HEALTH_TONE[value]} variant={withDot ? "dot" : "soft"} className={className}>
+    <Badge tone={HEALTH_TONE[value]} icon={HEALTH_ICON[value]} className={className}>
       {value}
     </Badge>
   )

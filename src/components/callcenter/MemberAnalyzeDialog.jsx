@@ -18,6 +18,7 @@ import {
   Label,
   Skeleton,
   Spinner,
+  CrossDiscIcon,
 } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
 import { BirdyRow, ProgressBar, StatTile } from "./CallCentreParts"
@@ -152,7 +153,7 @@ function ResultsStep({ run, analyzed, outcomes }) {
             {o.replace(/_/g, " ")}: {n}
           </Badge>
         ))}
-        {run.failed > 0 && <Badge tone="danger">{run.failed} failed to transcribe</Badge>}
+        {run.failed > 0 && <Badge tone="danger" icon={CrossDiscIcon}>{run.failed} failed to transcribe</Badge>}
       </BirdyRow>
 
       <ul className="flex flex-col gap-2">

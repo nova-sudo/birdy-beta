@@ -13,15 +13,15 @@
 // badge and buttons on the right. Rows stack below md.
 
 import { ExternalLink } from "lucide-react"
-import { Badge, Button } from "@/components/ds"
+import { AlertDiscIcon, Badge, Button, CheckDiscIcon, ClockDiscIcon, MinusDiscIcon } from "@/components/ds"
 import { cn } from "@/lib/utils"
 
 /** The badge on the right of a row. Keyed by the row's `status`. */
 const STATUS_BADGES = {
-  connected: { label: "Connected", tone: "success" },
-  expired: { label: "Expired", tone: "danger" },
-  checking: { label: "Checking…", tone: "neutral" },
-  disconnected: { label: "Not connected", tone: "neutral" },
+  connected: { label: "Connected", tone: "success", icon: CheckDiscIcon },
+  expired: { label: "Expired", tone: "danger", icon: AlertDiscIcon },
+  checking: { label: "Checking…", tone: "neutral", icon: ClockDiscIcon },
+  disconnected: { label: "Not connected", tone: "muted", icon: MinusDiscIcon },
 }
 
 /**
@@ -69,7 +69,7 @@ export function IntegrationTile({
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 md:justify-end">
-          <Badge tone={badge.tone} variant="dot">{badge.label}</Badge>
+          <Badge tone={badge.tone} icon={badge.icon}>{badge.label}</Badge>
           {actions}
         </div>
       </div>
