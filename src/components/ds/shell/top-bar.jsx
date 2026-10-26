@@ -1,68 +1,78 @@
 "use client"
 
 import * as React from "react"
-import { Menu, Search, Sparkles } from "lucide-react"
+import { Menu, PanelLeft, Search, Sparkles } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { openBirdyChat } from "@/lib/ask-birdy"
 import NotificationsDropdown from "@/components/NotificationsDropdown"
 import { PageHeaderControls, PageHeaderTitle } from "@/components/page-header"
 import { Button } from "../primitives/button"
-import { Kbd } from "../primitives/kbd"
-import { useModKey } from "./use-mod-key"
+import { KbdShortcut } from "../primitives/kbd"
 
 /**
- * Global header: menu button (below md), the page's title, Ask Birdy, the
- * notifications bell, and the page's own controls.
+ * The 52 top bar on the canvas, over the page card only: the sidebar toggle and a hairline (the
+ * menu button below md), the page's title, then the page's controls, Ask Birdy and the bell.
+ * Borderless and unfilled; the white page card starts below it.
  *
- * Pages publish their title and controls through the page-header context; the `title` and `actions` props override those when given.
+ * Pages publish their title and controls through the page-header context; the `title` and
+ * `actions` props override those when given.
  *
- * Fits at 390px: the title truncates, the search pill collapses to an icon
- * button and Ask Birdy to an icon below md.
+ * Fits at 390px: the title truncates, search and Ask Birdy collapse to icon buttons below md.
  *
  * @param {object} props
- * @param {React.ReactNode} [props.title] Breadcrumb; defaults to the title the current page published.
+ * @param {React.ReactNode} [props.title] Defaults to the title the current page published.
  * @param {React.ReactNode} [props.actions] Rendered before the bell, in addition to published page controls.
  * @param {() => void} [props.onMenuClick] Opens MobileNavSheet; the menu button shows below md.
+ * @param {() => void} [props.onToggleSidebar] Moves the desktop sidebar between panel and rail.
  * @param {() => void} [props.onSearch] Called by the search icon button (below md).
  */
-function TopBar({ title, actions, onMenuClick, onSearch, className }) {
-  const modKey = useModKey()
+function TopBar({ title, actions, onMenuClick, onToggleSidebar, onSearch, className }) {
   return (
     <header
       data-ds="top-bar"
       className={cn(
-        "flex h-14 w-full min-w-0 shrink-0 items-center gap-2 border-b border-border bg-background px-3 font-sans md:px-6",
+        "sticky top-0 flex h-[52px] w-full min-w-0 shrink-0 items-center gap-2 px-1.5 font-sans md:pr-2.5",
         className
       )}
     >
       <Button
         variant="ghost"
         size="icon"
-        className="md:hidden"
+        className="text-ink-secondary md:hidden"
         aria-label="Open navigation"
         onClick={onMenuClick}
       >
         <Menu />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="hidden text-ink-secondary md:inline-flex"
+        aria-label="Toggle sidebar"
+        onClick={onToggleSidebar}
+      >
+        <PanelLeft />
+      </Button>
+      <span aria-hidden className="hidden h-4 w-px shrink-0 bg-hairline md:block" />
 
       <div className="min-w-0 flex-1 truncate text-base font-semibold">
         {title ?? <PageHeaderTitle />}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1 md:gap-2">
         <PageHeaderControls />
         {actions}
         <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={onSearch}>
           <Search />
         </Button>
-        <Button variant="outline" size="icon" className="md:hidden" aria-label="Ask Birdy" onClick={openBirdyChat}>
+        <Button variant="ghost" size="icon" className="md:hidden" aria-label="Ask Birdy" onClick={openBirdyChat}>
           <Sparkles className="text-primary" />
         </Button>
-        <Button variant="outline" className="hidden md:inline-flex" onClick={openBirdyChat}>
+        <Button variant="outline" size="sm" className="hidden pr-1.5 md:inline-flex" onClick={openBirdyChat}>
           <Sparkles className="text-primary" />
           Ask Birdy
-          <Kbd>{modKey}J</Kbd>
+          <KbdShortcut keys={["mod", "j"]} />
         </Button>
         <NotificationsDropdown />
       </div>

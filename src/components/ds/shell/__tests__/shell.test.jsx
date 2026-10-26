@@ -90,6 +90,35 @@ describe("AppSidebar", () => {
     const { container } = render(<AppSidebar />)
     expect(container.querySelector('[data-ds="app-sidebar"]')).toBeTruthy()
   })
+
+  it("marks the current row with data-active and leaves its icon untinted", () => {
+    pathnameMock.value = "/clients/abc"
+    render(<AppSidebar />)
+    const row = screen.getByRole("link", { name: "Clients" })
+    expect(row.getAttribute("data-active")).toBe("true")
+    expect(row).toHaveClass("h-10", "md:h-8", "rounded-control-sm", "data-[active=true]:bg-raised")
+    expect(row.querySelector("svg").getAttribute("class")).not.toContain("text-primary")
+  })
+
+  it("is 256 wide and draws the account trigger as a brand tile over a label", () => {
+    const { container } = render(<AppSidebar agencyName="Northwind" />)
+    expect(container.querySelector('[data-ds="app-sidebar"]')).toHaveClass("w-64")
+    const trigger = screen.getByRole("button", { name: "Account menu" })
+    const tile = trigger.querySelector('[data-slot="brand-tile"]')
+    expect(tile.textContent).toBe("N")
+    expect(tile).toHaveClass("size-8", "rounded-[9px]")
+    expect(trigger.textContent).toContain("Northwind")
+  })
+
+  it("collapses to the 56 rail: icons only, names kept for assistive tech", () => {
+    const { container } = render(<AppSidebar collapsed />)
+    const aside = container.querySelector('[data-ds="app-sidebar"]')
+    expect(aside.getAttribute("data-state")).toBe("collapsed")
+    expect(aside).toHaveClass("w-14")
+    expect(screen.queryByRole("tab", { name: "Ask Birdy" })).toBeNull()
+    expect(screen.getByRole("link", { name: "Clients" })).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Search" })).toBeTruthy()
+  })
 })
 
 describe("TopBar", () => {
@@ -111,6 +140,27 @@ describe("TopBar", () => {
     expect(screen.getByText("A very long page title").closest("[class*='truncate']")).toBeTruthy()
     // Search is an icon button below md; the pill text is not rendered.
     expect(screen.getByRole("button", { name: "Search" }).className).toContain("md:hidden")
+  })
+
+  it("sits on the canvas: 52 tall, no border, no fill", () => {
+    const { container } = render(<TopBar title="Clients" />)
+    const bar = container.querySelector('[data-ds="top-bar"]')
+    expect(bar).toHaveClass("h-[52px]")
+    expect(bar.className).not.toMatch(/border-b|bg-background/)
+  })
+
+  it("toggles the sidebar from its trigger", () => {
+    const onToggle = vi.fn()
+    render(<TopBar title="Clients" onToggleSidebar={onToggle} />)
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }))
+    expect(onToggle).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows Ask Birdy as a small secondary button with two key caps", () => {
+    render(<TopBar title="Clients" />)
+    const ask = screen.getAllByRole("button", { name: /Ask Birdy/ }).find((b) => b.textContent.includes("Ask Birdy"))
+    expect(ask).toHaveClass("h-8", "pr-1.5")
+    expect(ask.querySelectorAll('[data-slot="kbd"]')).toHaveLength(2)
   })
 })
 
@@ -192,6 +242,34 @@ describe("PageHeader", () => {
     // flex-wrap with a width cap, not shrink-0: a fixed-width row overflowed 390px by 110px.
     expect(row).toHaveClass("flex-wrap", "max-w-full")
     expect(row).not.toHaveClass("shrink-0")
+  })
+
+  it("titles at 26 on a phone and 32 from md, with tracking", () => {
+    render(<PageHeader title="Clients" description="All accounts" />)
+    const h1 = screen.getByRole("heading", { level: 1 })
+    expect(h1).toHaveClass("text-[26px]", "md:text-[32px]", "md:leading-9", "tracking-[-0.02em]")
+    expect(screen.getByText("All accounts")).toHaveClass("text-sm", "md:text-base")
+  })
+
+  it("renders titleExtra, leading and a back link", () => {
+    render(
+      <PageHeader
+        title="Acme"
+        titleExtra={<span>Active</span>}
+        leading={<span>Logo</span>}
+        backButton={{ label: "Clients", href: "/clients" }}
+      />
+    )
+    expect(screen.getByText("Active")).toBeTruthy()
+    expect(screen.getByText("Logo")).toBeTruthy()
+    expect(screen.getByRole("link", { name: "Clients" }).getAttribute("href")).toBe("/clients")
+  })
+
+  it("puts the period first in the actions row, which fills the width on a phone", () => {
+    render(<PageHeader title="Clients" period={<span>Period</span>} actions={<button>New</button>} />)
+    const row = document.querySelector('[data-slot="page-header-actions"]')
+    expect(row.firstChild.textContent).toBe("Period")
+    expect(row).toHaveClass("max-md:w-full", "md:ml-auto")
   })
 })
 

@@ -56,6 +56,25 @@ describe("RootLayout shell", () => {
     expect(main).toHaveTextContent("page body")
   })
 
+  it("puts the top bar on the canvas above the page card, and the page in the 1360 column", () => {
+    renderLayout()
+    const surface = document.querySelector('[data-slot="page-surface"]')
+    expect(surface).toHaveClass("md:mr-2", "md:mb-2", "md:rounded-frame", "shadow-surface")
+    expect(surface.querySelector('[data-ds="top-bar"]')).toBeNull()
+    const column = screen.getByText("page body").parentElement
+    expect(column).toHaveClass("max-w-[1360px]", "mx-auto", "px-4", "pt-6", "md:px-10", "md:pt-9", "md:pb-10")
+  })
+
+  it("collapses the sidebar to its rail from the top-bar trigger", () => {
+    renderLayout()
+    const rail = document.querySelector('[data-ds="app-sidebar"]')
+    expect(rail.getAttribute("data-state")).toBe("expanded")
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }))
+    expect(rail.getAttribute("data-state")).toBe("collapsed")
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }))
+    expect(rail.getAttribute("data-state")).toBe("expanded")
+  })
+
   it("renders no navigation on shell-less routes", () => {
     pathnameMock.value = "/login"
     renderLayout()

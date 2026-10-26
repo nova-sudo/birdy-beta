@@ -144,12 +144,12 @@ export default function NotificationsDropdown() {
       {/* Outer bell button with total count badge */}
       <PopoverTrigger asChild>
         <Button
-          variant="outline"
-          size="icon"
-          className="relative"
+          variant="ghost"
+          size="icon-sm"
+          className="relative text-ink-secondary"
           aria-label="Notifications"
         >
-          <Bell className="size-5" />
+          <Bell />
           {totalCount > 0 && (
             <Badge
               tone="danger"

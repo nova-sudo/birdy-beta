@@ -594,10 +594,11 @@ function WorkspaceLayout({ board, chat, mode, railed = false, tabPanel = false }
   }
 
   return (
-    // Bleeds off the layout's padding like SalesHubShell, but the height is
-    // bounded here so the dashboard (or the editor's palette, canvas and
-    // property panel) and the chat each scroll on their own.
-    <div className="-m-4 flex h-full min-h-0 flex-1 flex-col overflow-y-auto md:-m-6 lg:relative lg:flex-row lg:overflow-hidden">
+    // data-main-bleed drops the layout's gutters and 1360 cap, so the board
+    // takes the whole page card; the height is bounded here so the dashboard
+    // (or the editor's palette, canvas and property panel) and the chat each
+    // scroll on their own.
+    <div data-main-bleed className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto lg:relative lg:flex-row lg:overflow-hidden">
       {/* Stacked below lg: the page scrolls and the board takes its natural
           height, rather than flex-shrinking to nothing above the chat. */}
       <section

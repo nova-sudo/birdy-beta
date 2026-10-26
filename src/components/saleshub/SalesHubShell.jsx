@@ -1,7 +1,6 @@
 // ─── Sales Hub shell ────────────────────────────────────────────────────────
 // The page-level frame the Sales Hub composes into: the sans typeface
-// scoped to this subtree, the canvas, and one scroll region at the
-// design's 22/24 padding.
+// scoped to this subtree. Gutters and scrolling are the layout's main column.
 //
 // The handoff draws a full 1600×1040 app frame — a 68px icon rail and a 64px
 // header bar carrying the title, an Ask Birdy field, the date picker, a
@@ -12,16 +11,10 @@
 // What the design *does* get right is where the title and the filters belong:
 // in that header bar, not on the page. So they are published into the global
 // one instead — see the page, and components/page-header.jsx. This shell is
-// what is left: the canvas and the scroll region.
+// what is left: the typeface.
 
 export function SalesHubShell({ children }) {
-  return (
-    // The layout's own p-4/md:p-6 is bled off so this screen controls its own
-    // padding, the way the design specs it — one region, 22px 24px.
-    <div className="-m-4 flex min-h-0 flex-1 flex-col overflow-hidden font-sans md:-m-6">
-      <div className="min-w-0 flex-1 overflow-y-auto px-6 py-6">{children}</div>
-    </div>
-  );
+  return <div className="flex min-w-0 flex-1 flex-col font-sans">{children}</div>;
 }
 
 /**

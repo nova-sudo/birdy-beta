@@ -68,7 +68,7 @@ export function StepHeading({ eyebrow, description, children, className }) {
   return (
     <div className={cn("mb-8 flex flex-col gap-2", className)}>
       {eyebrow && <div className="text-xs font-medium text-primary">{eyebrow}</div>}
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{children}</h1>
+      <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance text-foreground md:text-title">{children}</h1>
       {description && <p className="text-base text-muted-foreground">{description}</p>}
     </div>
   )

@@ -72,7 +72,7 @@ export default function ChangelogPage() {
           <Sparkles aria-hidden="true" />
           Currently on {APP_VERSION}
         </Badge>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance text-foreground md:text-title">
           What&apos;s new in Birdy
         </h1>
         <p className="mt-1.5 text-sm text-muted-foreground">

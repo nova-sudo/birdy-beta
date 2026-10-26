@@ -39,6 +39,8 @@ import { CreditsProvider } from "@/hooks/useCredits";
 import { DashboardControlsProvider } from "@/components/dashboard-controls";
 import { PageHeaderProvider, useHasPageHeader } from "@/components/page-header";
 
+const SIDEBAR_COLLAPSED_KEY = "birdy.sidebarCollapsed";
+
 /**
  * The wordmark and version badge, which stand down whenever a page has put its
  * own title in the bar. It reads that from context, so it has to be a child of
@@ -62,13 +64,14 @@ function BirdyWordmark() {
 }
 
 /** TopBar, with the wordmark as its title on pages that publish none. */
-function ShellTopBar({ onMenuClick, onSearch }) {
+function ShellTopBar({ onMenuClick, onToggleSidebar, onSearch }) {
   const hasPageHeader = useHasPageHeader();
 
   return (
     <TopBar
       title={hasPageHeader ? undefined : <BirdyWordmark />}
       onMenuClick={onMenuClick}
+      onToggleSidebar={onToggleSidebar}
       onSearch={onSearch}
     />
   );
@@ -97,6 +100,28 @@ export default function RootLayout({ children }) {
   const [chatInitialMsg, setChatInitialMsg] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [navOpen, setNavOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // The rail choice survives reloads. Read after mount so the server render
+  // (always expanded) and the first client render agree.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setSidebarCollapsed(true);
+    } catch {
+      // Storage blocked: start expanded.
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarCollapsed((v) => {
+      try {
+        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, v ? "0" : "1");
+      } catch {
+        // Storage blocked: the toggle still works for this visit.
+      }
+      return !v;
+    });
+  };
 
   // Pages open the assistant by announcing a question rather than by reaching
   // into this component's state — see lib/ask-birdy.js for why.
@@ -162,16 +187,30 @@ export default function RootLayout({ children }) {
               <div className="flex h-screen w-full flex-col overflow-hidden bg-frame font-sans">
                 {/* Impersonation banner (shows only while an admin is impersonating) */}
                 <ImpersonationBar />
-                <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[236px_minmax(0,1fr)]">
+                <div className="flex min-h-0 flex-1">
                   <AppSidebar
                     onSearch={openSearch}
-                    className="hidden w-full border-r-0 bg-transparent md:flex"
+                    collapsed={sidebarCollapsed}
+                    className="hidden md:flex"
                   />
-                  <div className="min-h-0 min-w-0 md:py-2 md:pr-2">
-                    <div className="flex h-full min-w-0 flex-col overflow-hidden bg-background md:rounded-frame md:shadow-surface">
-                      <ShellTopBar onMenuClick={() => setNavOpen(true)} onSearch={openSearch} />
-                      <main className="flex min-w-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto p-4 md:p-6">
-                        {children}
+                  {/* The top bar sits on the canvas; the page is the white card
+                      below it, with an 8px gutter right and bottom on desktop. */}
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+                    <ShellTopBar
+                      onMenuClick={() => setNavOpen(true)}
+                      onToggleSidebar={toggleSidebar}
+                      onSearch={openSearch}
+                    />
+                    <div
+                      data-slot="page-surface"
+                      className="relative mx-1.5 flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[24px] bg-background shadow-surface md:mx-0 md:mr-2 md:mb-2 md:rounded-frame"
+                    >
+                      <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto">
+                        {/* A page that marks its root data-main-bleed (a workspace
+                            with its own panes) takes the whole card instead. */}
+                        <div className="mx-auto flex w-full max-w-[1360px] flex-1 flex-col gap-4 px-4 pt-6 pb-[calc(2.5rem+env(safe-area-inset-bottom))] md:px-10 md:pt-9 md:pb-10 has-[[data-main-bleed]]:max-w-none has-[[data-main-bleed]]:p-0">
+                          {children}
+                        </div>
                       </main>
                     </div>
                   </div>

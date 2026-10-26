@@ -92,7 +92,7 @@ export default function TermsOfService() {
           {/* Hero */}
           <div className="mb-14 pb-12 border-b border-border">
             <p className="text-xs font-medium tracking-widest uppercase text-primary mb-4">Legal Agreement</p>
-            <h1 className="text-2xl font-semibold text-foreground leading-tight tracking-tight mb-5">Terms of Service</h1>
+            <h1 className="mb-5 text-title-sm font-semibold tracking-[-0.02em] text-balance text-foreground md:text-title">Terms of Service</h1>
             <div className="flex gap-6 flex-wrap text-sm text-muted-foreground">
               {["Effective: January 1, 2025", "Last updated: January 1, 2025", "Birdy AI Ltd."].map((t) => (
                 <span key={t} className="before:content-['—'] before:mr-2 before:text-border">{t}</span>

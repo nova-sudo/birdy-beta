@@ -332,7 +332,7 @@ export default function BillingPage() {
   const handleUpgrade = (plan) => (billingStatus?.subscribed ? handlePortal() : handleCheckout(plan));
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 pb-10">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <PageHeader title="Billing" description="Your plan, client slots and AI credits" />
       <SuccessBanner message={successMsg} onDismiss={() => setSuccessMsg(null)} />
       <SuccessBanner message={credits.successMsg} onDismiss={() => credits.setSuccessMsg(null)} />

@@ -19,7 +19,7 @@ export const ADMIN_NAV = [
   { key: "stats", label: "Stats", href: "/admin/stats", icon: BarChart3 },
 ];
 
-const SIDEBAR_PROPS = { items: ADMIN_NAV, agencyName: "Admin", homeHref: "/admin/agencies", minimal: true };
+const SIDEBAR_PROPS = { items: ADMIN_NAV, agencyName: "Admin", minimal: true };
 
 function AdminTopbar({ onMenuClick }) {
   return (
@@ -48,8 +48,8 @@ export default function AdminShell({ children }) {
   const [navOpen, setNavOpen] = useState(false);
 
   return (
-    <div className="grid h-[100dvh] w-full grid-cols-1 overflow-hidden bg-frame font-sans md:grid-cols-[236px_minmax(0,1fr)]">
-      <AppSidebar {...SIDEBAR_PROPS} className="hidden w-full border-r-0 bg-transparent md:flex" />
+    <div className="grid h-[100dvh] w-full grid-cols-1 overflow-hidden bg-frame font-sans md:grid-cols-[auto_minmax(0,1fr)]">
+      <AppSidebar {...SIDEBAR_PROPS} className="hidden md:flex" />
       <div className="min-h-0 min-w-0 md:py-2 md:pr-2">
         <div className="flex h-full min-w-0 flex-col overflow-hidden bg-background md:rounded-frame md:shadow-surface">
           <AdminTopbar onMenuClick={() => setNavOpen(true)} />

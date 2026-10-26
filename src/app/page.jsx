@@ -144,7 +144,7 @@ export default function Home() {
       <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-24 pt-8 md:px-10 lg:grid-cols-[1fr_1.05fr] lg:pt-14">
         <div>
           <Reveal>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance md:text-title">
               The AI Brain That Runs &amp; <span className="text-primary">Scales</span> Your Agency
             </h1>
           </Reveal>

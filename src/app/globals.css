@@ -283,6 +283,11 @@
   --text-2xl--line-height: 2rem;
   --text-figure: 28px;
   --text-figure--line-height: 34px;
+  /* PageHeader's title (26/32 on a phone, 32/36 from md), for titles outside it. */
+  --text-title-sm: 26px;
+  --text-title-sm--line-height: 2rem;
+  --text-title: 32px;
+  --text-title--line-height: 2.25rem;
 
   --spacing-control-sm: 32px;
   --spacing-control: 40px;
