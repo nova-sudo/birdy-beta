@@ -10,6 +10,7 @@ import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
 import { Badge, Button, EmptyState, ErrorState, Frame, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
 import { ActivityTable } from "@/components/agents/ActivityTable"
+import { StartOverButton } from "@/components/agents/StartOverButton"
 import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/AgentTraining"
 import { LearningOffers } from "@/components/agents/GraduationOffer"
 import { ImpactTabs } from "@/components/agents/ImpactTabs"
@@ -129,12 +130,15 @@ function NotReady({ agent }) {
           : "Choose what it watches, teach it how you buy, then turn it on."
       }
       action={
-        <Button asChild variant="primary">
-          <Link href={SETUP_PATH}>
-            {agent ? "Continue setup" : "Set up agent"}
-            <ArrowRight aria-hidden />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button asChild variant="primary">
+            <Link href={SETUP_PATH}>
+              {agent ? "Continue setup" : "Set up agent"}
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
+          {agent && <StartOverButton agent={agent} variant="outline" />}
+        </div>
       }
     />
   )

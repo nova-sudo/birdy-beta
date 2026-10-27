@@ -7,6 +7,7 @@ import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
 import { Badge, Button, Frame, Surface } from "@/components/ds"
 import { DashboardList } from "@/components/dashboards/DashboardList"
+import { StartOverButton } from "@/components/agents/StartOverButton"
 import { useAgents } from "@/lib/agents-api"
 
 // ─── BirdyHub ───────────────────────────────────────────────────────────────
@@ -23,6 +24,7 @@ const MEDIA_BUYING_POINTS = [
 
 function MediaBuyingAgentCard({ agent }) {
   const hasAgent = Boolean(agent)
+  const isDraft = hasAgent && agent.status !== "active"
   return (
     <Frame
       title="Media Buying Agent"
@@ -41,12 +43,24 @@ function MediaBuyingAgentCard({ agent }) {
           </li>
         ))}
       </ul>
-      <Button asChild variant="primary" size="lg">
-        <Link href={hasAgent ? AGENT_HREF : SETUP_HREF}>
-          {hasAgent ? "Open agent" : "Set up agent"}
-          <ArrowRight aria-hidden />
-        </Link>
-      </Button>
+      {isDraft ? (
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="primary" size="lg" className="flex-1">
+            <Link href={SETUP_HREF}>
+              Continue setup
+              <ArrowRight aria-hidden />
+            </Link>
+          </Button>
+          <StartOverButton agent={agent} variant="outline" size="lg" />
+        </div>
+      ) : (
+        <Button asChild variant="primary" size="lg">
+          <Link href={hasAgent ? AGENT_HREF : SETUP_HREF}>
+            {hasAgent ? "Open agent" : "Set up agent"}
+            <ArrowRight aria-hidden />
+          </Link>
+        </Button>
+      )}
     </Frame>
   )
 }

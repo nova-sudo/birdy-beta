@@ -175,6 +175,11 @@ export function createAgent() {
   return send(queryKeys.agents(), "POST")
 }
 
+/** Deletes a draft agent and everything it learned, so setup starts over. 409 once it is switched on. */
+export function deleteAgent(id) {
+  return send(queryKeys.agent(id), "DELETE")
+}
+
 /** `{scope?, permissions?, guardrails?, client_caps?}`; scope and schedule are merged server-side. */
 export function patchAgent(id, patch) {
   return send(queryKeys.agent(id), "PATCH", patch)

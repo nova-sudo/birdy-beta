@@ -26,6 +26,7 @@ import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/Agen
 import { DryRunSummary } from "@/components/agents/DryRunSummary"
 import { GuardrailsForm } from "@/components/agents/GuardrailsForm"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
+import { StartOverButton } from "@/components/agents/StartOverButton"
 import { WizardSteps } from "@/components/agents/WizardSteps"
 import {
   activateAgent,
@@ -374,6 +375,7 @@ function SetupWizard() {
         backButton={{ label: "BirdyHub", href: "/hub" }}
         title={heading.title}
         description={heading.description}
+        actions={agent && agent.status !== "active" ? <StartOverButton agent={agent} /> : undefined}
       />
       <WizardSteps current={step} />
 
