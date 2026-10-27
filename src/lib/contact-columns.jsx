@@ -2,6 +2,7 @@ import { TagIcon } from "lucide-react"
 import { Badge, Tooltip, TooltipContent, TooltipTrigger, DataTableColumnHeader, StateBadge } from "@/components/ds"
 import { ghlIcon as ghl, metaIcon as meta, hpIcon as hp, labIcon as lab } from "@/lib/icons"
 import Image from "next/image"
+import { SourceIcon } from "@/components/source-icon"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { STORAGE_KEYS } from "@/lib/constants"
 
@@ -425,10 +426,7 @@ export function toTableColumns(columns) {
     id: col.id,
     accessorFn: (row) => row?.[col.id],
     header: ({ column }) => (
-      <span className="inline-flex items-center gap-1.5">
-        {col.icons && <Image src={col.icons} alt="" width={14} height={14} className="shrink-0" />}
-        <DataTableColumnHeader column={column} title={col.header} />
-      </span>
+      <DataTableColumnHeader column={column} title={col.header} icon={col.icons ? <SourceIcon src={col.icons} /> : null} />
     ),
     enableSorting: Boolean(col.sortable),
     enableHiding: false,

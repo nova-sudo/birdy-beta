@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useMemo, useCallback } from "react"
-import Image from "next/image"
+import { SourceIcon } from "@/components/source-icon"
 import { CheckIcon, FileBarChart, Grid3X3, Info, LayoutGrid, Users } from "lucide-react"
 import { toast } from "sonner"
 import getSymbolFromCurrency from "currency-symbol-map"
@@ -1039,8 +1039,7 @@ export function MarketingContent({
                 className="mr-1.5"
               />
             )}
-            {spec.icons && <Image src={spec.icons} alt="" width={14} height={14} className="shrink-0" />}
-            <DataTableColumnHeader column={column} title={spec.header} />
+            <DataTableColumnHeader column={column} title={spec.header} icon={spec.icons ? <SourceIcon src={spec.icons} /> : null} />
           </span>
         ),
         enableSorting: true,

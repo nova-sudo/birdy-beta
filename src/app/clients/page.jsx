@@ -42,6 +42,7 @@ import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { COLUMN_MENU_SOURCES } from "@/lib/enhanced-columns-config"
+import { SOURCE_ICONS, SourceIcon } from "@/components/source-icon"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { getCachedData, clearCache } from "@/lib/cache"
 import { apiRequest } from "@/lib/api"
@@ -85,10 +86,12 @@ const choiceClass = (selected) =>
     selected ? "border-primary bg-primary-soft" : "border-transparent bg-background hover:border-border"
   )
 
-const numericHeader = (title) =>
-  function NumericHeader({ column }) {
-    return <DataTableColumnHeader column={column} title={title} align="right" />
+// A head led by its source's logo; a number column's runs to the right edge.
+const sourceHeader = (title, src, align) =>
+  function SourceHeader({ column }) {
+    return <DataTableColumnHeader column={column} title={title} align={align} icon={src ? <SourceIcon src={src} /> : null} />
   }
+const numericHeader = (title, src) => sourceHeader(title, src, "right")
 
 const dash = <span className="num block text-right text-sm text-muted-foreground">—</span>
 
@@ -279,7 +282,7 @@ export default function ClientsPage() {
       {
         id: "leads",
         accessorFn: (row) => row.leads ?? undefined,
-        header: numericHeader("Leads"),
+        header: numericHeader("Leads", SOURCE_ICONS.meta),
         meta: { label: "Leads" },
         cell: ({ row }) =>
           row.original.leads == null ? dash : (
@@ -291,7 +294,7 @@ export default function ClientsPage() {
       {
         id: "cpl",
         accessorFn: (row) => row.cpl ?? undefined,
-        header: numericHeader("Cost per lead"),
+        header: numericHeader("Cost per lead", SOURCE_ICONS.meta),
         meta: { label: "Cost per lead" },
         cell: ({ row }) => {
           const { cpl, cplDelta, currency } = row.original
@@ -308,7 +311,7 @@ export default function ClientsPage() {
       {
         id: "spend",
         accessorFn: (row) => row.spend ?? undefined,
-        header: numericHeader("Ad spend"),
+        header: numericHeader("Ad spend", SOURCE_ICONS.meta),
         meta: { label: "Ad spend" },
         cell: ({ row }) =>
           row.original.spend == null ? dash : (
@@ -320,7 +323,7 @@ export default function ClientsPage() {
         return {
           id: col.id,
           accessorFn: (row) => row.values?.[col.id] ?? undefined,
-          header: numeric ? numericHeader(col.label) : col.label,
+          header: sourceHeader(col.label, SOURCE_ICONS[col.source], numeric ? "right" : undefined),
           meta: { label: col.label },
           enableSorting: col.sortable,
           cell: ({ row }) => {

@@ -237,6 +237,21 @@ describe("/clients", () => {
       expect(within(table()).getByText("7")).toBeInTheDocument()
     })
 
+    it("leads each column head with its source's logo; Birdy's own columns have none", async () => {
+      withExtras()
+      const user = userEvent.setup()
+      render(<ClientsPage />)
+      const icon = (name) => header(name).querySelector("[data-slot='column-header-icon'] img")
+      for (const h of ["Leads", "Cost per lead", "Ad spend"]) expect(icon(h)?.getAttribute("src")).toMatch(/meta/)
+      for (const h of ["Client", "Status", "Health"]) expect(icon(h)).toBeNull()
+
+      await openView(user)
+      await user.click(within(screen.getByRole("dialog")).getByText("GHL Leads"))
+      await user.click(within(screen.getByRole("dialog")).getByText("Campaigns"))
+      expect(icon("GHL Leads")?.getAttribute("src")).toMatch(/ghl/)
+      expect(icon("Campaigns")?.getAttribute("src")).toMatch(/meta/)
+    })
+
     it("offers a column per GHL tag, with the tag's count", async () => {
       withExtras()
       const user = userEvent.setup()
