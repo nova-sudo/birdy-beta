@@ -154,6 +154,7 @@ describe("lead detail page", () => {
     const user = userEvent.setup()
     render(<LeadDetailPage />)
 
+    expect(await screen.findByText("Couldn\u2019t load this lead")).toBeInTheDocument()
     await user.click(await screen.findByRole("button", { name: /try again/i }))
     expect(apiRequest).toHaveBeenCalledTimes(2)
   })

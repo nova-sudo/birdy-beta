@@ -90,7 +90,7 @@ export default function LeadDetailPage() {
     <div className={cn(pdFontClass, "w-full p-4 md:p-6")}>
       {state === "loading" && <LoadingPulse statements={LOADING} className="h-[240px]" />}
 
-      {state === "error" && <LoadError error={error} onRetry={load} />}
+      {state === "error" && <LoadError title={"Couldn\u2019t load this lead"} error={error} onRetry={load} />}
 
       {state === "not-found" && (
         <PdCard className="mx-auto max-w-md text-center">

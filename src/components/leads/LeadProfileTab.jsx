@@ -63,7 +63,7 @@ export function LeadProfileTab({ detail }) {
         <InfoRow icon={Mail} label="Email">{contact.email || "—"}</InfoRow>
         <InfoRow icon={Megaphone} label="Came from">{cameFrom(detail)}</InfoRow>
         <InfoRow icon={Calendar} label="Created">{formatCreated(contact.date_added)}</InfoRow>
-        <InfoRow icon={GitBranch} label="Pipeline stage" valueClassName="text-pd-amber">
+        <InfoRow icon={GitBranch} label="Pipeline stage" valueClassName={stage ? "text-pd-amber" : undefined}>
           {stage || "—"}
         </InfoRow>
       </div>

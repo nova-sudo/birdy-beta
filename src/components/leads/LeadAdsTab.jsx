@@ -22,7 +22,9 @@ function formatSubmitted(iso) {
 
 function platformLabel(attribution) {
   const raw = attribution.platform || ""
-  const name = /^(facebook|meta|instagram)$/i.test(raw) ? "Meta" : raw.charAt(0).toUpperCase() + raw.slice(1)
+  const code = raw.toLowerCase()
+  const name = code === "fb" ? "Meta · Facebook" : code === "ig" ? "Meta · Instagram"
+    : /^(facebook|meta|instagram)$/i.test(raw) ? "Meta" : raw.charAt(0).toUpperCase() + raw.slice(1)
   return attribution.is_organic ? `${name || "Unknown"} · organic` : name || "—"
 }
 
