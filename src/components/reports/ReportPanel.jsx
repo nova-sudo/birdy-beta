@@ -91,7 +91,8 @@ export function bodyFor(form, { isDefault = false, channels = [] } = {}) {
   const channel = channels.find((c) => c.id === form.channelId)
   body.channel_id = form.channelId === BIRDY_CHANNEL ? "" : form.channelId
   body.channel_name = channel?.name ?? null
-  if (form.template) body.template = { frequency: window, blocks: form.template.blocks }
+  // Without content of its own the server keeps the report's (or the standard brief's) blocks.
+  body.template = form.template ? { frequency: window, blocks: form.template.blocks } : { frequency: window }
   return { body }
 }
 

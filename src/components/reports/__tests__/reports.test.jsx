@@ -100,6 +100,7 @@ describe("report form body", () => {
       name: "Leadership",
       trigger: { type: "schedule", frequency: "weekly", day: "Friday", time: "16:45", timezone: "Asia/Dubai" },
       channel_id: "C0OPS", channel_name: "ops",
+      template: { frequency: "weekly" },
     })
   })
 
