@@ -44,14 +44,14 @@ function MediaBuyingAgentCard({ agent }) {
         ))}
       </ul>
       {isDraft ? (
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="primary" size="lg" className="flex-1">
+        <div className="flex flex-col gap-2">
+          <Button asChild variant="primary" size="lg">
             <Link href={SETUP_HREF}>
               Continue setup
               <ArrowRight aria-hidden />
             </Link>
           </Button>
-          <StartOverButton agent={agent} variant="outline" size="lg" />
+          <StartOverButton agent={agent} variant="outline" size="lg" className="w-full" />
         </div>
       ) : (
         <Button asChild variant="primary" size="lg">
