@@ -158,7 +158,7 @@ export const buildContactColumns = () => [
                   +{tags.length - 1}
                 </span>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="p-2 max-h-48 overflow-y-auto">
                 {tags.slice(1).map((tag, tagIndex) => (
                   <div key={`${tag}-${tagIndex}`} className="flex items-center gap-1 text-sm py-0.5">
                     <TiTag className="w-3 h-3" />{tag}
@@ -230,7 +230,7 @@ export const buildContactColumns = () => [
                   +{opportunities.length - 1}
                 </span>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="p-2 max-h-48 overflow-y-auto">
                 {opportunities.slice(1).map((opp, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm py-1">
                     <span className={`rounded-[6px] px-2 py-0.5 text-xs font-semibold capitalize ${statusColors[opp.status] || "bg-pd-divider text-pd-subtle"}`}>
@@ -274,14 +274,14 @@ export const buildContactColumns = () => [
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="text-xs">+{opportunities.length - 1}</Badge>
               </TooltipTrigger>
-              <TooltipContent className="bg-white ring-1 ring-gray-200 shadow-md p-2 max-h-48 overflow-y-auto">
+              <TooltipContent className="p-2 max-h-48 overflow-y-auto">
                 {opportunities.slice(1).map((opp, idx) => (
                   <div key={idx} className="flex items-center gap-2 text-sm py-1">
                     {opp.monetaryValue > 0 && (
-                      <span className="text-sm text-foreground">{sym}{opp.monetaryValue.toLocaleString()}</span>
+                      <span className="text-sm">{sym}{opp.monetaryValue.toLocaleString()}</span>
                     )}
                     {opp.monetaryValue === 0 && (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <span className="text-xs text-white/60">—</span>
                     )}
                   </div>
                 ))}
