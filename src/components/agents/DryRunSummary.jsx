@@ -211,6 +211,11 @@ export function DryRunSummary({ agentId, currency = "$", runKey = 0, onResult, c
             </div>
           }
         />
+        {result && result.clients_used < result.clients_total && (
+          <p className="text-sm text-muted-foreground">
+            Based on {result.clients_used} of {result.clients_total} clients
+          </p>
+        )}
         {loading && (
           <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground">
             <Spinner size={14} />

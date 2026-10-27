@@ -6,10 +6,11 @@ import { ArrowLeft, ArrowRight, RefreshCw, Target } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { Button, ErrorState, Frame, FrameAction, Notice, Skeleton } from "@/components/ds"
 import { ConfidenceMeter } from "@/components/agents/ConfidenceMeter"
+import { HistoryProgress } from "@/components/agents/HistoryProgress"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
 import { PracticeCase, followUpMessage } from "@/components/agents/PracticeCase"
 import { TrainingChat } from "@/components/agents/TrainingChat"
-import { fetchPractice, useAgentConfidence, useAgentRules } from "@/lib/agents-api"
+import { fetchPractice, useAgentConfidence, useAgentHistory, useAgentRules } from "@/lib/agents-api"
 import { currencySymbol } from "@/lib/chat-viz"
 
 export const READY_SCORE = 80
@@ -111,7 +112,22 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
   const { confidence, mutate: mutateConfidence } = useAgentConfidence(agent.id)
   const { mutate: mutateRules } = useAgentRules(agent.id)
   const practice = usePracticeCases(agent.id)
+  const { history } = useAgentHistory(agent.id)
   const chatRef = useRef(null)
+
+  // Another client finished reading its history: fetch the cases it unlocked.
+  const readyBefore = useRef(null)
+  const moreRef = useRef(practice.more)
+  moreRef.current = practice.more
+  const readyNow = history?.ready
+  useEffect(() => {
+    if (readyNow == null) return
+    const before = readyBefore.current
+    readyBefore.current = readyNow
+    if (before != null && readyNow > before) moreRef.current()
+  }, [readyNow])
+  const waitingOnHistory = history ? history.ready === 0 && history.total > 0 : false
+  const historyDone = !history || history.ready >= history.total
 
   const refreshConfidence = useCallback(() => mutateConfidence(), [mutateConfidence])
   // A training tool changed the playbook, a target or a topic: re-read both.
@@ -171,6 +187,7 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
           )
         }
       >
+        <HistoryProgress history={history} />
         {practice.error && practice.cases.length > 0 && (
           <Notice
             tone="danger"
@@ -187,7 +204,7 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
         {practice.error && practice.cases.length === 0 ? (
           <ErrorState className="p-4" title="Couldn't load practice cases" onRetry={practice.retry} />
         ) : practice.cases.length === 0 ? (
-          practice.loading ? (
+          practice.loading || waitingOnHistory || !historyDone ? (
             <div className="flex flex-col gap-3 p-4">
               {Array.from({ length: PRACTICE_BATCH }, (_, i) => (
                 <Skeleton key={i} className="h-14 w-full rounded-control" />

@@ -47,6 +47,25 @@ afterEach(() => {
 })
 
 describe("DryRunSummary", () => {
+  it("says Based on 18 of 45 clients when the history was partial", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (init.method === "POST") return Promise.resolve(res({ job_id: "j1" }))
+      return Promise.resolve(res({ status: "done", result: { ...RESULT, clients_used: 18, clients_total: 45 } }))
+    })
+    render(<DryRunSummary agentId="ag1" currency="£" />)
+    expect(await screen.findByText("Based on 18 of 45 clients")).toBeInTheDocument()
+  })
+
+  it("says nothing about clients when every one was used", async () => {
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (init.method === "POST") return Promise.resolve(res({ job_id: "j1" }))
+      return Promise.resolve(res({ status: "done", result: { ...RESULT, clients_used: 45, clients_total: 45 } }))
+    })
+    render(<DryRunSummary agentId="ag1" currency="£" />)
+    expect(await screen.findByText("£690")).toBeInTheDocument()
+    expect(screen.queryByText(/Based on/)).not.toBeInTheDocument()
+  })
+
   it("polls until done and renders totals", async () => {
     const onResult = vi.fn()
     render(<DryRunSummary agentId="ag1" currency="£" onResult={onResult} />)

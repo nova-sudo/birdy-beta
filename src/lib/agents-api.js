@@ -102,6 +102,20 @@ export function useAgentConfidence(id) {
   return { confidence: data ?? null, isLoading, mutate }
 }
 
+const HISTORY_POLL_MS = 10_000
+
+/**
+ * How much of the Meta ad history is in, per client. Polls every 10 seconds
+ * until every client is ready, then stops.
+ * @returns {{ history: {total: number, ready: number, clients: object[]}|undefined, error: Error|undefined, isLoading: boolean, mutate: Function }}
+ */
+export function useAgentHistory(id) {
+  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentHistory(id) : null, fetcher, {
+    refreshInterval: (latest) => (latest && latest.ready >= latest.total ? 0 : HISTORY_POLL_MS),
+  })
+  return { history: data, error, isLoading, mutate }
+}
+
 /** Remembered facts the agent learnt from notes. */
 export function useAgentMemory(id) {
   const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentMemory(id) : null, fetcher)
