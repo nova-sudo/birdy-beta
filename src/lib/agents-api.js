@@ -105,13 +105,23 @@ export function useAgentConfidence(id) {
 const HISTORY_POLL_MS = 10_000
 
 /**
+ * Whether no client is still being read. A client in "error" counts as settled:
+ * the server only retries it after hours, so polling for it would never end.
+ */
+export function historySettled(history) {
+  if (!history) return false
+  const errored = (history.clients ?? []).filter((c) => c.status === "error").length
+  return history.ready + errored >= history.total
+}
+
+/**
  * How much of the Meta ad history is in, per client. Polls every 10 seconds
  * until every client is ready, then stops.
  * @returns {{ history: {total: number, ready: number, clients: object[]}|undefined, error: Error|undefined, isLoading: boolean, mutate: Function }}
  */
 export function useAgentHistory(id) {
   const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.agentHistory(id) : null, fetcher, {
-    refreshInterval: (latest) => (latest && latest.ready >= latest.total ? 0 : HISTORY_POLL_MS),
+    refreshInterval: (latest) => (historySettled(latest) ? 0 : HISTORY_POLL_MS),
   })
   return { history: data, error, isLoading, mutate }
 }

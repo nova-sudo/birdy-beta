@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useId, useState } from "react"
 
+import { historySettled } from "@/lib/agents-api"
 import { Button, Notice, ProgressBar } from "@/components/ds"
 
 const plural = (n) => (n === 1 ? "1 client" : `${n} clients`)
@@ -15,13 +16,14 @@ const plural = (n) => (n === 1 ? "1 client" : `${n} clients`)
  */
 export function HistoryProgress({ history }) {
   const [open, setOpen] = useState(false)
+  const listId = useId()
   if (!history) return null
 
   const { total, ready } = history
   const errored = (history.clients ?? []).filter((c) => c.status === "error")
   const noToken = errored.filter((c) => c.error === "no_token")
   const noAccess = errored.filter((c) => c.error !== "no_token")
-  const syncing = ready < total - errored.length
+  const syncing = !historySettled(history)
 
   if (!syncing && errored.length === 0) return null
 
@@ -54,12 +56,13 @@ export function HistoryProgress({ history }) {
             variant="ghost"
             size="sm"
             aria-expanded={open}
+            aria-controls={listId}
             onClick={() => setOpen((v) => !v)}
           >
-            See which
+            {open ? "Hide" : "See which"}
           </Button>
           {open && (
-            <ul className="mt-1 list-disc pl-5">
+            <ul id={listId} className="mt-1 list-disc pl-5">
               {errored.map((c) => (
                 <li key={c.client_group_id}>{c.name}</li>
               ))}

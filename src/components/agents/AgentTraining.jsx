@@ -10,7 +10,7 @@ import { HistoryProgress } from "@/components/agents/HistoryProgress"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
 import { PracticeCase, followUpMessage } from "@/components/agents/PracticeCase"
 import { TrainingChat } from "@/components/agents/TrainingChat"
-import { fetchPractice, useAgentConfidence, useAgentHistory, useAgentRules } from "@/lib/agents-api"
+import { fetchPractice, useAgentConfidence, historySettled, useAgentHistory, useAgentRules } from "@/lib/agents-api"
 import { currencySymbol } from "@/lib/chat-viz"
 
 export const READY_SCORE = 80
@@ -126,8 +126,7 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
     readyBefore.current = readyNow
     if (before != null && readyNow > before) moreRef.current()
   }, [readyNow])
-  const waitingOnHistory = history ? history.ready === 0 && history.total > 0 : false
-  const historyDone = !history || history.ready >= history.total
+  const waitingOnHistory = history ? !historySettled(history) : false
 
   const refreshConfidence = useCallback(() => mutateConfidence(), [mutateConfidence])
   // A training tool changed the playbook, a target or a topic: re-read both.
@@ -204,7 +203,7 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
         {practice.error && practice.cases.length === 0 ? (
           <ErrorState className="p-4" title="Couldn't load practice cases" onRetry={practice.retry} />
         ) : practice.cases.length === 0 ? (
-          practice.loading || waitingOnHistory || !historyDone ? (
+          practice.loading || waitingOnHistory ? (
             <div className="flex flex-col gap-3 p-4">
               {Array.from({ length: PRACTICE_BATCH }, (_, i) => (
                 <Skeleton key={i} className="h-14 w-full rounded-control" />

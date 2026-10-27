@@ -104,3 +104,22 @@ describe("Practice round with ad history", () => {
     expect(practiceGets).toHaveLength(2)
   })
 })
+
+describe("Practice round when every client errored", () => {
+  it("shows the can't-read line and the empty text, no skeletons", async () => {
+    history = {
+      total: 2,
+      ready: 0,
+      clients: [0, 1].map((i) => ({ client_group_id: `g${i}`, name: `Client ${i}`, status: "error", error: "no_access" })),
+    }
+    apiRequest.mockImplementation((path) => {
+      if (path === "/api/agents/ag1/history") return Promise.resolve(res(history))
+      if (path.startsWith("/api/agents/ag1/practice")) return Promise.resolve(res([]))
+      return Promise.resolve(res({}, 404))
+    })
+    const { container } = render(view())
+    expect(await screen.findByText(/No past cases to practise on/)).toBeInTheDocument()
+    expect(screen.getByText(/2 clients can't be read/)).toBeInTheDocument()
+    expect(container.querySelectorAll('[data-ds="skeleton"].h-14')).toHaveLength(0)
+  })
+})
