@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -185,6 +186,7 @@ export function LeadsContent({
     })),
     [contactColumns]
   )
+  useRememberViewCatalogue("contacts", { label: "Leads Hub", path: "/contacts", columns: columnCatalogue })
 
   const defaultColumnIds = useMemo(
     () => baseContactColumns.filter(c => c.defaultVisible).map(c => c.id),

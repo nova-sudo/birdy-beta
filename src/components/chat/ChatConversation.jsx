@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import Link from "next/link"
 import { apiRequest } from "@/lib/api"
 import { useChat, sendChatMessage, seedSessionId, markUISubmitted } from "@/lib/chat-store"
+import { announceViewOps, readViewCatalogues } from "@/lib/view-catalogues"
 import { useAiCredentials } from "@/hooks/useAiCredentials"
 import { useCredits } from "@/hooks/useCredits"
 import AiCredentialsEmptyState from "@/components/chat/AiCredentialsEmptyState"
@@ -194,8 +195,9 @@ export default function ChatConversation({
         sessionKey,
         {
           text, page,
-          clientGroupId: showScopePicker ? scope.id : null,
-          clientName: showScopePicker && scope.id ? scope.name : null,
+          // Without the picker the surface's own client (if any) still goes.
+          clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
+          clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
           dashboardId,
           getSummary: () => getDashboardSummaryRef.current?.(),
         },
@@ -228,7 +230,11 @@ export default function ChatConversation({
     try {
       const res = await apiRequest("/api/chat", {
         method: "POST",
-        body: JSON.stringify({ message: text, session_id: sessionId, page, client_group_id: scope.id, client_name: scope.id ? scope.name : null }),
+        body: JSON.stringify({
+          message: text, session_id: sessionId, page,
+          client_group_id: scope.id, client_name: scope.id ? scope.name : null,
+          view_catalogues: readViewCatalogues(),
+        }),
       })
       if (res.status === 412) {
         // Credentials were removed (e.g. in another tab) since this component last checked.
@@ -258,7 +264,11 @@ export default function ChatConversation({
         onSessionIdRef.current?.(data.session_id)
       }
       const toolsUsed = data.tools_used || []
-      setLocalMessages(prev => [...prev, { role: "assistant", content: data.reply, tools_used: toolsUsed }])
+      announceViewOps(data.page_view_ops)
+      setLocalMessages(prev => [...prev, {
+        role: "assistant", content: data.reply, tools_used: toolsUsed,
+        ...(data.page_view_ops?.length ? { page_view_ops: data.page_view_ops } : {}),
+      }])
       toolsUsed.forEach(t => onToolUsedRef.current?.(t))
       // Refresh the credit balance so the indicator reflects this question's spend.
       refreshCredits?.()

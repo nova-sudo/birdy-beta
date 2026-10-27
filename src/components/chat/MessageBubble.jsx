@@ -3,12 +3,14 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { useState } from "react"
 import { motion } from "framer-motion"
-import { AlertTriangle, Check, Copy, LayoutDashboard, Undo2 } from "lucide-react"
+import Link from "next/link"
+import { AlertTriangle, Check, Columns3, Copy, LayoutDashboard, Undo2 } from "lucide-react"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import { EASE_SPRING } from "@/components/motion"
 import { parseChatUI } from "@/lib/chat-ui-parser"
 import { mdComponents } from "@/lib/chat-markdown"
 import { delatex } from "@/lib/chat-math"
+import { removeBirdyView } from "@/lib/view-catalogues"
 import ChatUIBlock from "@/components/chat/ChatUIBlock"
 import ToolPill from "@/components/chat/ToolPill"
 import MetricCard from "@/components/chat/blocks/MetricCard"
@@ -118,6 +120,12 @@ export default function MessageBubble({
         </div>
       )}
 
+      {message.page_view_ops?.map((op) => (
+        <div key={op.view.id} className="pl-[34px]">
+          <SavedViewReceipt op={op} />
+        </div>
+      ))}
+
       <div className="pl-[34px]">
         <CopyButton text={message.content} />
       </div>
@@ -180,6 +188,60 @@ function DashboardChanges({ message, onUndo }) {
       {!applied && message.dashboard_error && (
         <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">{message.dashboard_error}</p>
       )}
+    </div>
+  )
+}
+
+/**
+ * A table view Birdy saved: where it lives, a link there when that isn't the
+ * table on screen, and Undo, which deletes the view again (the table keeps its
+ * current columns). Same quiet receipt style as DashboardChanges.
+ */
+function SavedViewReceipt({ op }) {
+  const [state, setState] = useState(null) // null | "busy" | "done" | "failed"
+  // Set by the table that applied it (usePageViews), if one was open.
+  const onPage = Boolean(op.applied)
+  const count = op.view.state?.visibleColumns?.length ?? 0
+  const title = `Saved "${op.view.name}" on ${op.page_label}`
+
+  const undo = async () => {
+    setState("busy")
+    setState((await removeBirdyView(op).catch(() => false)) ? "done" : "failed")
+  }
+
+  return (
+    <div role="status" aria-label={title} className="rounded-2xl border border-pd-border bg-pd-surface px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-pd-body">
+        <Columns3 className="size-3 text-pd-primary" aria-hidden="true" />
+        <span className="min-w-0 truncate">{title}</span>
+        {state === "done" ? (
+          <span className="ml-auto text-[11.5px] font-medium text-pd-faint">Undone</span>
+        ) : (
+          <button
+            type="button"
+            disabled={state === "busy"}
+            onClick={undo}
+            className="ml-auto inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-full px-2 py-0.5 text-[11.5px] font-semibold text-pd-muted transition-colors hover:bg-pd-divider hover:text-pd-ink disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          >
+            <Undo2 className="size-3" aria-hidden="true" />
+            Undo
+          </button>
+        )}
+      </div>
+      <p className="mt-1 text-[12.5px] leading-snug text-pd-muted">
+        {state === "done"
+          ? "View deleted."
+          : state === "failed"
+            ? "Couldn't delete it. Remove it from the Views menu instead."
+            : `${count} column${count === 1 ? "" : "s"}${op.made_default ? " · opens by default" : ""}. `}
+        {state === null && (onPage
+          ? "Applied to the table."
+          : op.path && (
+            <Link href={op.path} className="font-semibold text-pd-primary hover:underline">
+              Open {op.page_label.split(" · ")[0]}
+            </Link>
+          ))}
+      </p>
     </div>
   )
 }

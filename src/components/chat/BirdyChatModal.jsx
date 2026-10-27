@@ -8,6 +8,8 @@ import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import ChatConversation from "@/components/chat/ChatConversation"
 import { resetChat } from "@/lib/chat-store"
 import { pageLabel } from "@/lib/chat-starters"
+import { useClientGroups } from "@/lib/useClientGroups"
+import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { EASE_OUT } from "@/components/motion"
 
 // ─── The Birdy side panel ───────────────────────────────────────────────────
@@ -23,8 +25,18 @@ import { EASE_OUT } from "@/components/motion"
 // The file keeps its old name because the root layout imports it lazily by
 // that name; the component is the panel.
 
+const GLOBAL_SESSION_KEY = "birdy_chat_modal_session"
+
+// The client a /clients/<id> page (or one of its sub-pages) is about.
+function clientIdFromPath(pathname) {
+  const m = pathname?.match(/^\/clients\/([^/]+)/)
+  return m ? decodeURIComponent(m[1]) : null
+}
+
 function getPageSlug(pathname) {
   if (!pathname) return null
+  // First: a client id or sub-page can contain "lead", "metric" and the like.
+  if (clientIdFromPath(pathname)) return "client_detail"
   const p = pathname.toLowerCase()
   if (p.includes("alert")) return "alerts"
   if (p.includes("sales-hub")) return "call_center"
@@ -33,13 +45,19 @@ function getPageSlug(pathname) {
   if (p.includes("opportunit") || p.includes("pipeline")) return "opportunities"
   if (p.includes("metric")) return "custom_metrics"
   if (p.includes("dashboard") || p.includes("main-hub")) return "dashboard"
-  if (p.match(/\/clients\/[^/]+/)) return "client_detail"
   return null
 }
 
 export default function BirdyChatModal({ open, onOpenChange, initialMessage = null, pathname = null }) {
   const page = getPageSlug(pathname)
-  const context = pageLabel(page)
+  // On a client's own pages the chat is about that client only: it is sent
+  // with every message, the client picker is hidden, and the conversation is
+  // kept per client so another page's thread (and its prompt) can't leak in.
+  const clientId = clientIdFromPath(pathname)
+  const { clientGroups } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
+  const clientName = clientId ? clientGroups.find((g) => g.id === clientId)?.name ?? null : null
+  const context = clientId ? clientName : pageLabel(page)
+  const sessionKey = clientId ? `birdy_chat_client_panel_${clientId}` : GLOBAL_SESSION_KEY
   // A fresh key remounts the conversation for "New".
   const [resetKey, setResetKey] = useState(0)
   // The question the header search seeded, held here so "New" can drop it:
@@ -50,11 +68,11 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
 
   const handleNewChat = () => {
     if (typeof window !== "undefined") {
-      sessionStorage.removeItem("birdy_chat_modal_session")
+      sessionStorage.removeItem(sessionKey)
     }
     // Transcript lives in chat-store (it survives close/reopen), so "New"
     // must clear it there too — the remount alone no longer empties it.
-    resetChat("birdy_chat_modal_session")
+    resetChat(sessionKey)
     setSeed(null)
     setResetKey(k => k + 1)
   }
@@ -124,10 +142,13 @@ export default function BirdyChatModal({ open, onOpenChange, initialMessage = nu
 
           <div className="min-h-0 flex-1">
             <ChatConversation
-              key={resetKey}
+              key={`${sessionKey}:${resetKey}`}
               initialMessage={seed}
-              sessionKey="birdy_chat_modal_session"
+              sessionKey={sessionKey}
               page={page}
+              clientGroupId={clientId}
+              clientName={clientName}
+              showScopePicker={!clientId}
               bubbleWidthClass="max-w-[92%]"
               composerCompact
               composerAutoFocus

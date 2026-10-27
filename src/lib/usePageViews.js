@@ -29,6 +29,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
+import { VIEW_CREATED_EVENT, VIEW_REMOVED_EVENT } from "@/lib/view-catalogues"
 
 const BASE = "/api/user/page-views"
 
@@ -127,6 +128,37 @@ export function usePageViews(page, { state, onApply, ready = true } = {}) {
     onApplyRef.current?.(view.state || {})
     setActiveViewId(view.id)
   }, [loaded, ready, defaultViewId, views])
+
+  // ── views Birdy saved from chat (lib/view-catalogues) ───────────────────
+  // The server already holds the view; mirror it and switch the table to it.
+  useEffect(() => {
+    const onCreated = (e) => {
+      const op = e.detail
+      if (op?.page !== page || !op.view) return
+      const { view } = op
+      setViews(prev => (prev.some(v => v.id === view.id) ? prev : [...prev, view]))
+      setDefaultViewId(prev => (op.made_default ? view.id : prev ?? view.id))
+      onApplyRef.current?.(view.state || {})
+      setActiveViewId(view.id)
+      // A load still in flight must not switch the table to the old default.
+      appliedDefault.current = true
+      op.applied = true
+    }
+    const onRemoved = (e) => {
+      const op = e.detail
+      if (op?.page !== page || !op.view) return
+      const remaining = viewsRef.current.filter(v => v.id !== op.view.id)
+      setViews(remaining)
+      setDefaultViewId(prev => (prev === op.view.id ? remaining[0]?.id ?? null : prev))
+      setActiveViewId(prev => (prev === op.view.id ? null : prev))
+    }
+    window.addEventListener(VIEW_CREATED_EVENT, onCreated)
+    window.addEventListener(VIEW_REMOVED_EVENT, onRemoved)
+    return () => {
+      window.removeEventListener(VIEW_CREATED_EVENT, onCreated)
+      window.removeEventListener(VIEW_REMOVED_EVENT, onRemoved)
+    }
+  }, [page])
 
   const activeView = useMemo(
     () => views.find(v => v.id === activeViewId) || null,

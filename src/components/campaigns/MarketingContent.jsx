@@ -21,6 +21,7 @@ import { getMetricDisplayName, getCustomMetricById } from "@/lib/metrics"
 import StyledTable from "@/components/ui/table-container"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import getSymbolFromCurrency from "currency-symbol-map"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { toast } from "sonner"
@@ -585,7 +586,12 @@ export function MarketingContent({
 
   const applyColumnView = useCallback((s) => {
     if (!Array.isArray(s.visibleColumns)) return
-    setVisibleColumns(prev => ({ ...prev, [activeTab]: s.visibleColumns }))
+    // Same rule as setTabColumns: "name" stays outside the Leads tab, so a
+    // view Birdy saved without it can't hide the row labels.
+    const ids = activeTab === "leads" || s.visibleColumns.includes("name")
+      ? s.visibleColumns
+      : ["name", ...s.visibleColumns]
+    setVisibleColumns(prev => ({ ...prev, [activeTab]: ids }))
   }, [activeTab])
 
   const pageViews = usePageViews(tabViewKey, {
@@ -874,6 +880,12 @@ export function MarketingContent({
     label: c.label,
     source: c.type,
   }))
+
+  useRememberViewCatalogue(tabViewKey, {
+    label: `Marketing Hub · ${SECTION_TABS.find(t => t.key === activeTab)?.label ?? activeTab}`,
+    path: "/campaigns",
+    columns: columnCatalogue,
+  })
 
   // "name" is not user-toggleable outside the Leads tab, so it survives every
   // write — matching what clearAll has always done.

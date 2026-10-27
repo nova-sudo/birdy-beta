@@ -15,6 +15,7 @@ import StyledTable from "@/components/ui/table-container"
 import { PageTabPanel, PageTabs } from "@/components/portfolio"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { usePageViews } from "@/lib/usePageViews"
+import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import { apiRequest } from "@/lib/api"
 import { STORAGE_KEYS } from "@/lib/constants"
 import { presetToDateRange } from "@/lib/date-utils"
@@ -1592,6 +1593,12 @@ export function CallCentreContent({
     })),
     [activeColumns],
   )
+
+  useRememberViewCatalogue(`cc_${activeTab}`, {
+    label: `Sales Hub · ${SECTION_TABS.find((t) => t.key === activeTab)?.label ?? activeTab}`,
+    path: "/Sales-Hub",
+    columns: columnCatalogue,
+  })
 
   const columnSources = useMemo(
     () => (columnCatalogue.some((c) => c.source === "hotprospector")

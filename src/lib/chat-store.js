@@ -18,6 +18,7 @@
 
 import { useSyncExternalStore } from "react"
 import { toast } from "sonner"
+import { announceViewOps, readViewCatalogues } from "@/lib/view-catalogues"
 import { apiRequest } from "@/lib/api"
 import { startJob, finishJob } from "@/lib/jobs-store"
 import { openBirdyChat } from "@/lib/ask-birdy"
@@ -130,6 +131,7 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         // undefined drops out of the JSON, so other pages' bodies are unchanged.
         dashboard_id: dashboardId ?? undefined,
         summary: dashboardId ? getSummary?.() : undefined,
+        view_catalogues: readViewCatalogues(),
       }),
     })
 
@@ -169,6 +171,11 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
       assistant.dashboard_diff = result?.diff ?? []
       assistant.dashboard_applied = result?.applied ?? false
       assistant.dashboard_error = result?.error
+    }
+    // Saved views Birdy made: the open table applies them, the bubble shows a receipt.
+    if (data.page_view_ops?.length) {
+      announceViewOps(data.page_view_ops)
+      assistant.page_view_ops = data.page_view_ops
     }
     // The agent training tools echo what they changed; kept for the "rule updated" chips.
     if (data.agent_changes?.length) assistant.agent_changes = data.agent_changes
