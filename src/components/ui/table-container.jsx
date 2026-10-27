@@ -929,6 +929,17 @@ const StyledTable = ({
                     key={`${row.id ?? 'row'}-${idx}`}
                     data-state={isSelected ? "selected" : undefined}
                     onClick={() => !(row._isCreating || row._isPending) && onRowClick?.(row.original || row)}
+                    // A clickable row has to open from the keyboard too, or
+                    // keyboard users can't reach what it links to. Enter and
+                    // Space on the row itself only — a key pressed inside a
+                    // link, button or input belongs to that control.
+                    tabIndex={onRowClick && !(row._isCreating || row._isPending) ? 0 : undefined}
+                    onKeyDown={onRowClick && !(row._isCreating || row._isPending) ? (e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key !== "Enter" && e.key !== " ") return;
+                      e.preventDefault();
+                      onRowClick(row.original || row);
+                    } : undefined}
                     className={`border-b border-pd-row-border transition-colors ${
                       (row._isCreating || row._isPending)
                         // Not clickable yet — the document isn't there to open.
@@ -936,7 +947,7 @@ const StyledTable = ({
                         // shimmer: dimming on top of that read as "disabled",
                         // which is the wrong idea. It is working, not inert.
                         ? "w-fit cursor-wait"
-                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60"
+                        : "row-hoverable group w-fit cursor-pointer hover:bg-pd-divider/60 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-pd-primary"
                     } ${rowBg} ${isSelected ? "!bg-pd-primary-tint" : ""}`}
                   >
                     {/* Checkbox cell */}
