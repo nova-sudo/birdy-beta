@@ -1,6 +1,7 @@
 "use client"
 import { ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState, useEffect, useMemo, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { useColumnViews } from "@/lib/useColumnViews"
 import { usePageViews } from "@/lib/usePageViews"
 import { useRememberViewCatalogue } from "@/lib/view-catalogues"
@@ -57,6 +58,7 @@ export function LeadsContent({
   selectedClientGroup: controlledClientGroup,
   onSelectClientGroup,
 }) {
+  const router = useRouter()
   const [contacts, setContacts] = useState([])
   const [metaData, setMetaData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -461,6 +463,7 @@ export function LeadsContent({
               searchQuery=""
               clickableFirstColumn={false}
               isLoading={loading}
+              onRowClick={(row) => row.contactId && router.push(`/contacts/${encodeURIComponent(row.contactId)}`)}
               initialColumnOrder={visibleColumns}
               onColumnOrderChange={(newOrder) => {
                 setVisibleColumns(newOrder)

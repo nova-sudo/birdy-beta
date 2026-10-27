@@ -1,0 +1,69 @@
+"use client"
+
+import { useState } from "react"
+import { UnderlineTabs, toneClass } from "@/components/portfolio"
+import { leadTitle, statusPill } from "@/lib/lead-detail"
+import { cn } from "@/lib/utils"
+import { LeadProfileTab } from "./LeadProfileTab"
+import { LeadAdsTab } from "./LeadAdsTab"
+import { LeadCallsTab } from "./LeadCallsTab"
+
+// ─── Lead detail: left column ───────────────────────────────────────────────
+// The lead's name, status pill and client group, then the Profile · Ads ·
+// Calls tabs (mock variant 2a). Phase 1 has no Journey tab and no AI summary.
+
+const TABS = [
+  { key: "profile", label: "Profile" },
+  { key: "ads", label: "Ads" },
+  { key: "calls", label: "Calls" },
+]
+
+// statusPill's tones, said in the kit's tone words.
+const PILL_TONE = { won: "success", lost: "danger", open: "amber", neutral: "neutral" }
+
+const PANEL_ID = "lead-profile-panel"
+
+export function LeadProfilePanel({ detail }) {
+  const [tab, setTab] = useState("profile")
+  const pill = statusPill(detail.opportunities)
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-pd-border bg-pd-surface shadow-sm">
+      <header className="px-5 pt-5">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-pd-display text-[18px] font-bold leading-tight text-pd-ink">
+            {leadTitle(detail.contact)}
+          </h1>
+          {pill?.label && (
+            <span
+              className={cn(
+                "rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide",
+                toneClass(PILL_TONE[pill.tone])
+              )}
+            >
+              {pill.label}
+            </span>
+          )}
+        </div>
+        {detail.contact?.group_name && (
+          <p className="mt-1 text-[12.5px] text-pd-subtle">{detail.contact.group_name}</p>
+        )}
+      </header>
+
+      <UnderlineTabs
+        tabs={TABS}
+        value={tab}
+        onChange={setTab}
+        label="Lead details"
+        panelId={PANEL_ID}
+        className="px-5"
+      />
+
+      <div id={PANEL_ID} role="tabpanel" className="px-5 py-5">
+        {tab === "profile" && <LeadProfileTab detail={detail} />}
+        {tab === "ads" && <LeadAdsTab attribution={detail.attribution} />}
+        {tab === "calls" && <LeadCallsTab calls={detail.calls} />}
+      </div>
+    </section>
+  )
+}

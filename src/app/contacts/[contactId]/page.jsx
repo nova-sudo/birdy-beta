@@ -1,0 +1,124 @@
+"use client"
+
+import { useCallback, useEffect, useMemo, useState } from "react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { ArrowLeft, ChevronRight, UserX } from "lucide-react"
+import { apiRequest } from "@/lib/api"
+import { pdFontClass } from "@/lib/pd-fonts"
+import { leadTitle, threadDays } from "@/lib/lead-detail"
+import { usePageHeader } from "@/components/page-header"
+import { LoadError, LoadingPulse, PdCard } from "@/components/portfolio"
+import { LeadProfilePanel } from "@/components/leads/LeadProfilePanel"
+import { LeadThread } from "@/components/leads/LeadThread"
+import { cn } from "@/lib/utils"
+
+// ─── Lead detail ────────────────────────────────────────────────────────────
+// One lead, opened from a row in the Leads hub (/contacts). Mock variant 2a:
+// the tabbed profile panel on the left (~380px), the thread on the right; on
+// a phone the two stack with the thread underneath.
+//
+// Everything comes from GET /api/leads/contact/{contactId}, which answers 404
+// when the lead is no longer in Birdy — that gets its own message rather than
+// the generic failure card, since retrying will not bring it back.
+
+const LOADING = [
+  "Finding this lead…",
+  "Matching the ad they came from…",
+  "Gathering their calls…",
+]
+
+export default function LeadDetailPage() {
+  const params = useParams()
+  const contactId = decodeURIComponent(params?.contactId || "")
+
+  const [detail, setDetail] = useState(null)
+  // "loading" | "ready" | "not-found" | "error"
+  const [state, setState] = useState("loading")
+  const [error, setError] = useState(null)
+
+  const load = useCallback(async () => {
+    setState("loading")
+    setError(null)
+    try {
+      const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}`)
+      if (res.status === 404) {
+        setState("not-found")
+        return
+      }
+      if (!res.ok) throw new Error(`The lead request failed (${res.status}).`)
+      setDetail(await res.json())
+      setState("ready")
+    } catch (err) {
+      if (err?.status === 404) {
+        setState("not-found")
+        return
+      }
+      setError(err?.message || "The request failed.")
+      setState("error")
+    }
+  }, [contactId])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  const name = detail ? leadTitle(detail.contact) : null
+  const header = useMemo(
+    () => ({
+      title: (
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-[13px]">
+          <Link href="/contacts" className="font-medium text-pd-primary hover:underline">
+            Leads
+          </Link>
+          {name && (
+            <>
+              <ChevronRight className="size-3.5 shrink-0 text-pd-faint" aria-hidden="true" />
+              <span className="truncate font-semibold text-pd-ink">{name}</span>
+            </>
+          )}
+        </nav>
+      ),
+    }),
+    [name]
+  )
+  usePageHeader(header)
+
+  const days = useMemo(() => threadDays(detail?.calls), [detail])
+
+  return (
+    <div className={cn(pdFontClass, "w-full p-4 md:p-6")}>
+      {state === "loading" && <LoadingPulse statements={LOADING} className="h-[240px]" />}
+
+      {state === "error" && <LoadError error={error} onRetry={load} />}
+
+      {state === "not-found" && (
+        <PdCard className="mx-auto max-w-md text-center">
+          <span className="mx-auto mb-3 flex size-10 items-center justify-center rounded-full bg-pd-neutral-badge text-pd-subtle">
+            <UserX className="size-5" aria-hidden="true" />
+          </span>
+          <h1 className="font-pd-display text-[16px] font-semibold text-pd-ink">
+            This lead isn&apos;t in Birdy anymore
+          </h1>
+          <p className="mt-1 text-[12.5px] text-pd-subtle">
+            It may have been deleted or merged in GoHighLevel.
+          </p>
+          <Link
+            href="/contacts"
+            className="mt-4 inline-flex items-center gap-1.5 text-[13px] font-semibold text-pd-primary hover:underline"
+          >
+            <ArrowLeft className="size-3.5" aria-hidden="true" />
+            Back to Leads
+          </Link>
+        </PdCard>
+      )}
+
+      {state === "ready" && detail && (
+        <div className="grid items-start gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-6">
+          <LeadProfilePanel detail={detail} />
+          <LeadThread days={days} />
+        </div>
+      )}
+    </div>
+  )
+}
