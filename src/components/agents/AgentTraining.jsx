@@ -112,7 +112,7 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
   const { confidence, mutate: mutateConfidence } = useAgentConfidence(agent.id)
   const { mutate: mutateRules } = useAgentRules(agent.id)
   const practice = usePracticeCases(agent.id)
-  const { history } = useAgentHistory(agent.id)
+  const { history, error: historyError } = useAgentHistory(agent.id)
   const chatRef = useRef(null)
 
   // Another client finished reading its history: fetch the cases it unlocked.
@@ -126,7 +126,9 @@ export function AgentTraining({ agent, clients, onBack, onNext }) {
     readyBefore.current = readyNow
     if (before != null && readyNow > before) moreRef.current()
   }, [readyNow])
-  const waitingOnHistory = history ? !historySettled(history) : false
+  // Still loading (no answer yet) counts as waiting, so the empty text never flashes;
+  // a history that can't be read doesn't hold the round back.
+  const waitingOnHistory = history ? !historySettled(history) : !historyError
 
   const refreshConfidence = useCallback(() => mutateConfidence(), [mutateConfidence])
   // A training tool changed the playbook, a target or a topic: re-read both.

@@ -29,8 +29,9 @@ describe("HistoryProgress", () => {
     expect(screen.getByText("18 of 45 clients ready. Cases appear as each one finishes.")).toBeInTheDocument()
     expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "40")
     expect(
-      screen.getByText("2 clients can't be read: Meta hasn't given access to their ad accounts.")
+      screen.getByText("1 client can't be read: Meta hasn't given access to their ad accounts.")
     ).toBeInTheDocument()
+    expect(screen.getByText("1 client couldn't be read just now. Birdy will try again.")).toBeInTheDocument()
     expect(screen.queryByText("Client 900")).not.toBeInTheDocument()
 
     await user.click(screen.getByRole("button", { name: "See which" }))
@@ -51,11 +52,22 @@ describe("HistoryProgress", () => {
     expect(screen.queryByText(/Meta hasn't given access/)).not.toBeInTheDocument()
   })
 
-  it("shows both lines when both kinds of error exist", () => {
-    const errors = [client(900, "error", "no_token"), client(901, "error", "failed")]
+  it("shows one line per kind of error", () => {
+    const errors = [client(900, "error", "no_token"), client(901, "error", "no_access"), client(902, "error", "failed")]
+    render(<HistoryProgress history={history({ ready: 1, total: 5, errors })} />)
+    expect(screen.getByText("1 client can't be read: Reconnect Meta in Settings.")).toBeInTheDocument()
+    expect(
+      screen.getByText("1 client can't be read: Meta hasn't given access to their ad accounts.")
+    ).toBeInTheDocument()
+    expect(screen.getByText("1 client couldn't be read just now. Birdy will try again.")).toBeInTheDocument()
+  })
+
+  it("does not blame Meta access for a read that just failed", () => {
+    const errors = [client(900, "error", "failed"), client(901, "error", "failed")]
     render(<HistoryProgress history={history({ ready: 1, total: 4, errors })} />)
-    expect(screen.getByText(/Reconnect Meta in Settings/)).toBeInTheDocument()
-    expect(screen.getByText(/Meta hasn't given access/)).toBeInTheDocument()
+    expect(screen.getByText("2 clients couldn't be read just now. Birdy will try again.")).toBeInTheDocument()
+    expect(screen.queryByText(/Meta hasn't given access/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Reconnect Meta/)).not.toBeInTheDocument()
   })
 
   it("does not list a ready client whose later top-up failed", () => {
@@ -80,6 +92,6 @@ describe("HistoryProgress", () => {
     render(<HistoryProgress history={h} />)
     expect(screen.queryByText("Getting your ad history from Meta")).not.toBeInTheDocument()
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument()
-    expect(screen.getByText(/1 client can't be read/)).toBeInTheDocument()
+    expect(screen.getByText("1 client couldn't be read just now. Birdy will try again.")).toBeInTheDocument()
   })
 })

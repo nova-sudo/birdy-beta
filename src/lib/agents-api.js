@@ -116,7 +116,7 @@ export function historySettled(history) {
 
 /**
  * How much of the Meta ad history is in, per client. Polls every 10 seconds
- * until every client is ready, then stops.
+ * until every client is ready or errored (see historySettled), then stops.
  * @returns {{ history: {total: number, ready: number, clients: object[]}|undefined, error: Error|undefined, isLoading: boolean, mutate: Function }}
  */
 export function useAgentHistory(id) {

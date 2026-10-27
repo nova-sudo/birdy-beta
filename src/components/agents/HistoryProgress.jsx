@@ -22,7 +22,9 @@ export function HistoryProgress({ history }) {
   const { total, ready } = history
   const errored = (history.clients ?? []).filter((c) => c.status === "error")
   const noToken = errored.filter((c) => c.error === "no_token")
-  const noAccess = errored.filter((c) => c.error !== "no_token")
+  const noAccess = errored.filter((c) => c.error === "no_access")
+  // "failed" (or anything unexpected): a read that broke this time, retried later.
+  const failed = errored.filter((c) => c.error !== "no_token" && c.error !== "no_access")
   const syncing = !historySettled(history)
 
   if (!syncing && errored.length === 0) return null
@@ -50,6 +52,11 @@ export function HistoryProgress({ history }) {
           {noToken.length > 0 && (
             <p>
               {plural(noToken.length)} can&apos;t be read: Reconnect Meta in Settings.
+            </p>
+          )}
+          {failed.length > 0 && (
+            <p>
+              {plural(failed.length)} couldn&apos;t be read just now. Birdy will try again.
             </p>
           )}
           <Button

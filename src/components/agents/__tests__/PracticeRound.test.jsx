@@ -123,3 +123,36 @@ describe("Practice round when every client errored", () => {
     expect(container.querySelectorAll('[data-ds="skeleton"].h-14')).toHaveLength(0)
   })
 })
+
+describe("Practice round while the history is still loading", () => {
+  it("shows skeletons, not the empty text, before the history answers", async () => {
+    let practiceDone
+    const practiceSettled = new Promise((r) => (practiceDone = r))
+    apiRequest.mockImplementation((path) => {
+      if (path === "/api/agents/ag1/history") return new Promise(() => {}) // never answers
+      if (path.startsWith("/api/agents/ag1/practice")) {
+        practiceDone()
+        return Promise.resolve(res([]))
+      }
+      return Promise.resolve(res({}, 404))
+    })
+    const { container } = render(view())
+    await act(async () => {
+      await practiceSettled
+    })
+    // Practice has answered with no cases; the history hasn't, so nothing is known yet.
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument())
+    expect(screen.queryByText(/No past cases to practise on/)).not.toBeInTheDocument()
+    expect(container.querySelectorAll('[data-ds="skeleton"].h-14').length).toBeGreaterThan(0)
+  })
+
+  it("falls back to the empty text when the history can't be read", async () => {
+    apiRequest.mockImplementation((path) => {
+      if (path === "/api/agents/ag1/history") return Promise.resolve(res({ detail: "boom" }, 500))
+      if (path.startsWith("/api/agents/ag1/practice")) return Promise.resolve(res([]))
+      return Promise.resolve(res({}, 404))
+    })
+    render(view())
+    expect(await screen.findByText(/No past cases to practise on/)).toBeInTheDocument()
+  })
+})
