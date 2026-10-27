@@ -3,9 +3,10 @@
 //
 // A saved view is a named column set (see usePageViews), and each hub builds
 // its column list in the browser — GHL fields and tags included. So every hub
-// table remembers its list here as it renders, and each chat request carries
-// all of them (`view_catalogues`), letting Birdy make a Leads view while you
-// chat from Marketing. When Birdy saves one, the reply's `page_view_ops` are
+// table saves its list as it renders: to the account (so any page or device
+// can use it) and to this browser, whose copies each chat request also sends
+// as the freshest (`view_catalogues`). That lets Birdy make a Leads view while
+// you chat from Marketing. When Birdy saves one, the reply's `page_view_ops` are
 // announced as window events; the page showing that table picks the view up
 // and applies it.
 
@@ -13,6 +14,9 @@ import { useEffect } from "react"
 import { apiRequest } from "@/lib/api"
 
 const STORAGE_KEY = "birdy_view_catalogues"
+// page -> signature of the list last saved to the account, so a visit only
+// writes when the columns changed.
+const SYNCED_KEY = "birdy_view_catalogues_synced"
 // Generous for tag-heavy accounts, but bounded so one request stays small.
 const MAX_COLUMNS = 400
 
@@ -39,6 +43,29 @@ function writeViewCatalogue(page, entry) {
   }
 }
 
+function readSynced() {
+  try {
+    return JSON.parse(window.localStorage.getItem(SYNCED_KEY) || "{}") || {}
+  } catch {
+    return {}
+  }
+}
+
+async function syncViewCatalogue(page, entry, signature) {
+  const synced = readSynced()
+  if (synced[page] === signature) return
+  try {
+    const res = await apiRequest(`/api/user/view-catalogues/${encodeURIComponent(page)}`, {
+      method: "PUT",
+      body: JSON.stringify(entry),
+    })
+    if (!res.ok) return
+    window.localStorage.setItem(SYNCED_KEY, JSON.stringify({ ...readSynced(), [page]: signature }))
+  } catch {
+    // Offline or storage blocked: the next visit tries again.
+  }
+}
+
 /**
  * Remember a hub table's columns for Birdy.
  *
@@ -58,7 +85,9 @@ export function useRememberViewCatalogue(page, { label, path, columns }) {
   useEffect(() => {
     const cols = JSON.parse(signature)
     if (!page || !cols.length) return
-    writeViewCatalogue(page, { label, path, columns: cols })
+    const entry = { label, path, columns: cols }
+    writeViewCatalogue(page, entry)
+    syncViewCatalogue(page, entry, JSON.stringify(entry))
   }, [page, label, path, signature])
 }
 

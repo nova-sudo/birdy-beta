@@ -45,6 +45,24 @@ describe("useRememberViewCatalogue", () => {
     setItem.mockRestore()
   })
 
+  it("saves each list to the account once, until the columns change", async () => {
+    apiRequest.mockResolvedValue({ ok: true, status: 200 })
+    const entry = (cols) => ({ label: "Clients Hub", path: "/clients", columns: cols })
+    const { unmount } = renderHook(({ cols }) => useRememberViewCatalogue("clients", entry(cols)),
+      { initialProps: { cols: [{ id: "spend", label: "Spend" }] } })
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(1))
+    expect(apiRequest.mock.calls[0][0]).toBe("/api/user/view-catalogues/clients")
+    expect(JSON.parse(apiRequest.mock.calls[0][1].body)).toEqual(entry([{ id: "spend", label: "Spend" }]))
+    unmount()
+
+    // A later visit with the same columns writes nothing; a new column does.
+    renderHook(() => useRememberViewCatalogue("clients", entry([{ id: "spend", label: "Spend" }])))
+    await new Promise((r) => setTimeout(r, 0))
+    expect(apiRequest).toHaveBeenCalledTimes(1)
+    renderHook(() => useRememberViewCatalogue("clients", entry([{ id: "spend", label: "Spend" }, { id: "cpl", label: "CPL" }])))
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(2))
+  })
+
   it("survives storage that throws", () => {
     const getItem = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new Error("blocked") })
     expect(readViewCatalogues()).toEqual({})
