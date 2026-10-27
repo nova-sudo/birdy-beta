@@ -14,16 +14,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Braces, LayoutGrid, Plus } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
-  Button,
-  Input,
-  Label,
-  Popover, PopoverContent, PopoverTrigger,
   Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
-  Textarea,
-} from "@/components/ds"
+} from "@/components/ui/select"
 import { reportApi, scheduleLabel } from "@/lib/report-designer"
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { BLOCK_TEMPLATES, buildPlaceholder, insertAt, parseBlocks, toJson } from "@/lib/report-editor"
 import SlackMessagePreview from "./SlackMessagePreview"
 
@@ -48,7 +49,7 @@ const KINDS = [
 function Field({ label, children }) {
   return (
     <div>
-      <Label className="text-xs">{label}</Label>
+      <Label className="text-xs font-semibold">{label}</Label>
       <div className="mt-1.5">{children}</div>
     </div>
   )
@@ -57,7 +58,7 @@ function Field({ label, children }) {
 function Pick({ value, onChange, children, id }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger id={id} size="sm" className="w-full"><SelectValue /></SelectTrigger>
+      <SelectTrigger id={id} className="h-[34px] w-full text-[13px]"><SelectValue /></SelectTrigger>
       <SelectContent>{children}</SelectContent>
     </Select>
   )
@@ -124,11 +125,11 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" size="sm" variant="primary">
+        <Button type="button" size="sm" className="gap-1.5">
           <Plus className="size-3.5" /> Insert live number
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-[340px] space-y-3 p-4">
+      <PopoverContent align="end" className="w-[340px] space-y-3">
         <Field label="What">
           <Pick value={kind} onChange={setKind}>
             {KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
@@ -143,11 +144,11 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
         )}
         {kind === "breakdown" && (
           <Field label={`Metrics (up to 4) · ${metrics.length} chosen`}>
-            <div className="max-h-[150px] space-y-0.5 overflow-y-auto rounded-control border border-border p-1.5">
+            <div className="pd-scrolly max-h-[150px] space-y-0.5 overflow-y-auto rounded-xl border border-pd-border p-1.5">
               {catalog.map((m) => {
                 const on = metrics.includes(m.id)
                 return (
-                  <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-muted">
+                  <label key={m.id} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[12.5px] hover:bg-pd-divider">
                     <input
                       type="checkbox"
                       checked={on}
@@ -205,13 +206,12 @@ function InsertNumber({ catalog, clients, periods, onInsert }) {
         {kind === "birdy_take" && (
           <Field label="Focus (optional)">
             <Input value={focus} maxLength={140} onChange={(e) => setFocus(e.target.value)}
-              placeholder="e.g. which clients to push budget to" />
+              placeholder="e.g. which clients to push budget to" className="h-[34px] text-[13px]" />
           </Field>
         )}
-        <code className="block break-all rounded-lg bg-muted px-2.5 py-2 text-xs text-body">{text}</code>
+        <code className="block break-all rounded-lg bg-pd-divider px-2.5 py-2 text-[11.5px] text-pd-body">{text}</code>
         <Button
           type="button"
-          variant="primary"
           className="w-full"
           disabled={kind === "breakdown" && metrics.length === 0}
           onClick={() => { onInsert(text, multiline); setOpen(false) }}
@@ -319,20 +319,20 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button type="button" size="sm" variant="outline" disabled={!!parsed.error}>
+              <Button type="button" size="sm" variant="outline" className="gap-1.5" disabled={!!parsed.error}>
                 <LayoutGrid className="size-3.5" /> Add block
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="max-h-[420px] w-[290px] overflow-y-auto">
+            <DropdownMenuContent align="start" className="pd-scrolly max-h-[420px] w-[290px] overflow-y-auto">
               {BLOCK_TEMPLATES.map((group) => (
                 <div key={group.group}>
-                  <DropdownMenuLabel className="text-xs uppercase tracking-wide text-muted-foreground">{group.group}</DropdownMenuLabel>
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-pd-faint">{group.group}</DropdownMenuLabel>
                   {group.items.map((tpl) => {
                     const blocked = tpl.chart && charts >= 2
                     return (
                       <DropdownMenuItem key={tpl.id} disabled={blocked} onSelect={() => addBlock(tpl)} className="flex-col items-start gap-0 py-1.5">
-                        <span className="text-xs font-semibold">{tpl.label}</span>
-                        <span className="text-xs text-muted-foreground">{blocked ? "Slack allows 2 charts per message" : tpl.hint}</span>
+                        <span className="text-[13px] font-semibold">{tpl.label}</span>
+                        <span className="text-[11.5px] text-pd-faint">{blocked ? "Slack allows 2 charts per message" : tpl.hint}</span>
                       </DropdownMenuItem>
                     )
                   })}
@@ -342,52 +342,52 @@ export default function ReportEditor({ brief, onSave, onCancel, saving = false }
             </DropdownMenuContent>
           </DropdownMenu>
           <div className="flex items-center gap-2">
-            <Button type="button" size="sm" variant="ghost" disabled={!!parsed.error}
+            <Button type="button" size="sm" variant="ghost" className="gap-1.5" disabled={!!parsed.error}
               onClick={() => setJson(toJson(parsed.blocks))}>
               <Braces className="size-3.5" /> Tidy
             </Button>
             <InsertNumber catalog={catalog} clients={clients} periods={periods} onInsert={insertNumber} />
           </div>
         </div>
-        <Textarea
+        <textarea
           ref={area}
           value={json}
           onChange={(e) => setJson(e.target.value)}
           spellCheck={false}
           aria-label="Report blocks"
-          className="min-h-[300px] flex-1 resize-none rounded-frame px-4 py-3 font-mono text-xs leading-relaxed field-sizing-fixed"
+          className="pd-scrolly min-h-[300px] w-full flex-1 resize-none rounded-2xl border border-pd-border bg-pd-surface px-4 py-3 font-mono text-[12px] leading-relaxed text-pd-ink outline-none transition-[border-color,box-shadow] focus:border-pd-primary focus:ring-4 focus:ring-pd-primary/15"
         />
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-          Slack Block Kit, as Slack receives it. Live numbers go in <code className="text-body">{"{{ }}"}</code> placeholders,
-          or a <code className="text-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you.
+        <p className="mt-2 text-[11.5px] leading-relaxed text-pd-faint">
+          Slack Block Kit, as Slack receives it. Live numbers go in <code className="text-pd-body">{"{{ }}"}</code> placeholders,
+          or a <code className="text-pd-body">birdy_data</code> binding on charts, tables and carousels. Or ask Birdy to do it for you.
         </p>
       </div>
 
       {/* Preview */}
       <div className="flex min-h-0 flex-col">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <span className="text-xs font-bold tracking-[0.05em] text-muted-foreground">LIVE PREVIEW</span>
-          <span className="text-xs text-muted-foreground">{scheduleLabel(template)}</span>
+          <span className="text-[11px] font-bold tracking-[0.05em] text-pd-faint">LIVE PREVIEW</span>
+          <span className="text-[11.5px] text-pd-subtle">{scheduleLabel(template)}</span>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="pd-scrolly min-h-0 flex-1 overflow-y-auto">
           <SlackMessagePreview blocks={preview?.blocks} time={template.time} loading={previewLoading && !!preview} focus={focus} />
           {preview?.sample && (
-            <p className="mt-2 text-xs text-muted-foreground">Sample numbers until your clients have synced.</p>
+            <p className="mt-2 text-[11.5px] text-pd-faint">Sample numbers until your clients have synced.</p>
           )}
           {errors.length > 0 && (
-            <ul className="mt-2.5 list-disc space-y-0.5 pl-4 text-xs text-danger-ink" role="alert">
+            <ul className="mt-2.5 list-disc space-y-0.5 pl-4 text-[12px] text-pd-danger" role="alert">
               {errors.map((e) => <li key={e} className="break-words">{e}</li>)}
             </ul>
           )}
         </div>
         <div className="mt-4 flex flex-col gap-2">
-          <Button type="button" variant="primary" size="lg" onClick={() => onSave?.(template)} disabled={!canSave}>
+          <Button type="button" onClick={() => onSave?.(template)} disabled={!canSave} className="h-auto py-[13px] text-[14.5px] disabled:opacity-40">
             {saving ? "Saving…" : "Save report"}
           </Button>
           {onCancel && (
-            <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="text-muted-foreground">
+            <button type="button" onClick={onCancel} className="cursor-pointer p-1 text-center text-[12.5px] font-medium text-pd-subtle hover:text-pd-ink">
               Cancel
-            </Button>
+            </button>
           )}
         </div>
       </div>

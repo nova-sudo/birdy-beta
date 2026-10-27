@@ -23,7 +23,8 @@
  * decides for itself.
  *
  * ReviewStep is a fixed-width column (`max-w-[860px]`) that expects its parent
- * to centre it, exactly as the onboarding shell does. Both are this component's responsibility.
+ * to centre it and to supply pd-* fonts on an ancestor, exactly as the
+ * onboarding shell does. Both are this component's responsibility.
  *
  * Two things the wizard does that this deliberately doesn't: it never routes
  * through billing (an existing customer already has a plan, and the import
@@ -33,9 +34,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ds"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
+import { pdFontClass } from "@/lib/pd-fonts"
 import ReviewStep from "@/app/onboarding/ReviewStep"
 
 const POLL_MS = 2500
@@ -147,7 +149,9 @@ export default function BulkImportDialog({ open, onOpenChange, onImported }) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent size="xl">
+      <DialogContent
+        className={`${pdFontClass} max-h-[92vh] overflow-y-auto overflow-x-hidden border-pd-border bg-pd-surface p-5 sm:max-w-[920px] md:p-7`}
+      >
         {/* sr-only so Radix has its accessible label without printing a second
             heading above ReviewStep's own — which already says what this is,
             and says it in the right typeface. Same pattern as the Add Client

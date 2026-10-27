@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { Button, ErrorState } from "@/components/ds"
+import { Button } from "@/components/ui/button"
 
 // Catches a crash in any page, so the sidebar and header stay usable and the
 // person gets a way back, instead of Next's bare "Application error" screen.
@@ -13,21 +13,20 @@ export default function PageError({ error, reset }) {
   }, [error])
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4">
-      <ErrorState
-        className="max-w-md"
-        title="Something went wrong on this page"
-        description={
-          <>
-            Try again. If it keeps happening, tell us which page you were on
-            {error?.digest ? <> and quote this reference: <code className="font-mono text-xs">{error.digest}</code></> : null}.
-          </>
-        }
-        onRetry={reset}
-      />
-      <Button asChild variant="outline">
-        <Link href="/dashboard">Go to the dashboard</Link>
-      </Button>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
+      <h1 className="font-pd-display text-[22px] font-semibold text-pd-ink">Something went wrong on this page</h1>
+      <p className="max-w-[420px] text-[13.5px] leading-[1.5] text-pd-muted">
+        Try again. If it keeps happening, tell us which page you were on
+        {error?.digest ? <> and quote this reference: <code className="font-mono text-[12px]">{error.digest}</code></> : null}.
+      </p>
+      <div className="mt-2 flex items-center gap-2">
+        <Button type="button" onClick={() => reset()}>
+          Try again
+        </Button>
+        <Button variant="outline" asChild>
+          <Link href="/dashboard">Go to the dashboard</Link>
+        </Button>
+      </div>
     </div>
   )
 }

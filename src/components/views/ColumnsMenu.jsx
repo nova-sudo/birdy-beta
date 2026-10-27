@@ -26,7 +26,8 @@
 //                defaultColumns={...} views={views} />
 
 import { useState, useRef, useEffect, useMemo } from "react"
-import { Badge, Button, Popover, PopoverContent, PopoverTrigger, TriggerButton } from "@/components/ds"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export const DEFAULT_VIEW_ID = "__default__"
@@ -41,34 +42,34 @@ export const DEFAULT_SOURCES = [
   { id: "custom", label: "Custom" },
 ]
 
-// Badge tone per source (ds Badge tones). Birdy's own derived metrics share
-// the primary tone with Custom, since both are ours rather than a platform's,
-// and the label is what tells a built-in ratio apart from a formula the user
-// wrote.
+// Badge palette — solid semantic fills from the shared scale, one per source.
 const SOURCE_STYLE = {
-  meta:          { tone: "info", label: "Meta" },
-  ghl:           { tone: "success", label: "GHL" },
-  tags:          { tone: "success", label: "Tags" },
-  birdy:         { tone: "primary", label: "Birdy" },
-  custom:        { tone: "primary", label: "Custom" },
-  hotprospector: { tone: "warning", label: "HP" },
+  meta:          { className: "bg-pd-info-bg text-pd-info", label: "Meta" },
+  ghl:           { className: "bg-pd-success-bg text-pd-success", label: "GHL" },
+  tags:          { className: "bg-pd-success-bg text-pd-success", label: "Tags" },
+  // Birdy's own derived metrics. Shares the Metrics Hub's purple with Custom —
+  // both are ours rather than a platform's — and the label is what tells a
+  // built-in ratio apart from a formula the user wrote.
+  birdy:         { className: "bg-pd-primary-tint text-pd-primary", label: "Birdy" },
+  custom:        { className: "bg-pd-primary-tint text-pd-primary", label: "Custom" },
+  hotprospector: { className: "bg-pd-amber-bg text-pd-amber", label: "HP" },
 }
 
 // Anything outside the palette still gets a readable, neutral badge rather
 // than disappearing.
-const NEUTRAL_TONE = "neutral"
+const NEUTRAL_BADGE = { className: "bg-pd-divider text-pd-body" }
 
 function Tick({ on }) {
   return (
     <span
       className={cn(
-        "flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-sm",
-        on ? "bg-primary" : "bg-background shadow-control"
+        "flex h-[14px] w-[14px] shrink-0 items-center justify-center rounded-[4px]",
+        on ? "bg-pd-primary" : "border-2 border-pd-border-strong bg-transparent"
       )}
     >
       {on && (
         <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-             strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary-foreground">
+             strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
           <path d="M20 6L9 17l-5-5" />
         </svg>
       )}
@@ -78,12 +79,21 @@ function Tick({ on }) {
 
 function SourceBadge({ source, label }) {
   if (!source) return null
-  const s = SOURCE_STYLE[source] ?? { tone: NEUTRAL_TONE, label: label ?? source }
-  return <Badge tone={s.tone}>{s.label}</Badge>
+  const s = SOURCE_STYLE[source] ?? { ...NEUTRAL_BADGE, label: label ?? source }
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center gap-1 rounded-full px-[7px] py-[2px] text-[11px] font-bold",
+        s.className
+      )}
+    >
+      {s.label}
+    </span>
+  )
 }
 
 const RAIL_LABEL =
-  "text-xs font-medium uppercase tracking-wide text-muted-foreground"
+  "text-[10px] font-bold uppercase tracking-[.04em] text-pd-faint"
 
 // Rail rows (saved views and the source filter) share one treatment: the
 // selected row keeps its own highlight and never takes the grey hover.
@@ -91,13 +101,13 @@ const railRowClass = (on, hovered) =>
   cn(
     "border-l-[3px]",
     on
-      ? "border-l-primary bg-primary-soft"
+      ? "border-l-pd-primary bg-pd-primary-tint"
       : hovered
-        ? "border-l-transparent bg-muted"
+        ? "border-l-transparent bg-pd-divider"
         : "border-l-transparent bg-transparent"
   )
 const railTextClass = (on) =>
-  on ? "font-bold text-primary" : "font-medium text-foreground"
+  on ? "font-bold text-pd-primary" : "font-medium text-pd-ink"
 
 export default function ColumnsMenu({
   columns = [],              // [{ id, label, source }]
@@ -110,9 +120,6 @@ export default function ColumnsMenu({
   // existing" writes when no saved view is selected. Without it that button
   // has nothing to save to on Default.
   onSaveDefault,
-  // Ids the page keeps on whatever the user picks (the Name column). They show
-  // ticked and cannot be switched off, singly or by "select all".
-  lockedColumnIds = [],
   buttonClassName = "",
 }) {
   const [open, setOpen] = useState(false)
@@ -168,11 +175,9 @@ export default function ColumnsMenu({
     })
   }, [columns, source, search])
 
-  const toggleable = shown.filter(c => !lockedColumnIds.includes(c.id))
-  const allOn = toggleable.length > 0 && toggleable.every(c => visibleColumns.includes(c.id))
+  const allOn = shown.length > 0 && shown.every(c => visibleColumns.includes(c.id))
 
   const toggleColumn = (id) => {
-    if (lockedColumnIds.includes(id)) return
     onChange?.(
       visibleColumns.includes(id)
         ? visibleColumns.filter(c => c !== id)
@@ -182,7 +187,7 @@ export default function ColumnsMenu({
 
   // Acts on the filtered list only — "select all" means all of what you can see.
   const toggleAll = () => {
-    const ids = toggleable.map(c => c.id)
+    const ids = shown.map(c => c.id)
     onChange?.(
       allOn
         ? visibleColumns.filter(id => !ids.includes(id))
@@ -249,8 +254,12 @@ export default function ColumnsMenu({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        {/* It sits in table toolbars, whose controls are all md. */}
-        <TriggerButton aria-haspopup="dialog" className={buttonClassName}>
+        <Button
+          type="button"
+          variant="outline"
+          aria-haspopup="dialog"
+          className={cn("h-[38px] gap-2 px-[13px] text-[13px]", buttonClassName)}
+        >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" />
@@ -260,7 +269,11 @@ export default function ColumnsMenu({
             <line x1="17" y1="16" x2="23" y2="16" />
           </svg>
           Columns
-        </TriggerButton>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </Button>
       </PopoverTrigger>
 
       {/* Portalled, so a toolbar with overflow-x-auto (the Clients page has
@@ -270,11 +283,11 @@ export default function ColumnsMenu({
         align="end"
         sideOffset={6}
         aria-label="Columns and saved views"
-        className="flex h-[560px] w-[480px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-surface border-border bg-background p-0 shadow-floating"
+        className="flex h-[560px] w-[480px] overflow-hidden rounded-2xl border-pd-border bg-pd-surface p-0 shadow-pd-popover"
       >
           {/* ── Left rail ─────────────────────────────────────────────── */}
-          <div className="flex w-[160px] flex-col border-r border-border bg-muted">
-            <div className={`${RAIL_LABEL} border-b border-border px-[14px] pb-[10px] pt-[12px]`}>
+          <div className="flex w-[160px] flex-col border-r border-pd-border bg-pd-table-head">
+            <div className={`${RAIL_LABEL} border-b border-pd-border px-[14px] pb-[10px] pt-[12px]`}>
               Saved views
             </div>
 
@@ -298,10 +311,10 @@ export default function ColumnsMenu({
                         }}
                         autoFocus
                         aria-label="View name"
-                        className="h-[26px] min-w-0 flex-1 rounded-control bg-background px-[9px] text-xs text-foreground shadow-control outline-none focus-visible:shadow-control-focus"
+                        className="h-[26px] min-w-0 flex-1 rounded-full border border-primary bg-background px-[9px] text-[12px] text-pd-ink outline-none ring-4 ring-primary/15"
                       />
                       <Button
-                        size="icon-sm" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
+                        size="icon-xs" onClick={confirmRename} disabled={busy} aria-label="Confirm rename"
                         className="size-5 shrink-0"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -311,7 +324,7 @@ export default function ColumnsMenu({
                       </Button>
                       <button
                         type="button" onClick={() => setEditTarget(null)} aria-label="Cancel rename"
-                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-control text-body shadow-control hover:bg-muted"
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-pd-border text-pd-body hover:bg-pd-divider"
                       >
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -324,20 +337,20 @@ export default function ColumnsMenu({
 
                 if (deleteTarget?.id === view.id) {
                   return (
-                    <div key={view.id} className="flex flex-col gap-[6px] bg-danger-soft px-[14px] py-[8px]">
-                      <span className="text-xs font-semibold text-body">
+                    <div key={view.id} className="flex flex-col gap-[6px] bg-pd-danger-surface px-[14px] py-[8px]">
+                      <span className="text-[11.5px] font-semibold text-pd-body">
                         Delete &ldquo;{view.name}&rdquo;?
                       </span>
                       <div className="flex gap-[6px]">
                         <Button
-                          type="button" variant="destructive" size="sm"
+                          type="button" variant="destructive" size="xs"
                           onClick={confirmDelete} disabled={busy}
                           className="flex-1"
                         >
                           Delete
                         </Button>
                         <Button
-                          type="button" variant="outline" size="sm"
+                          type="button" variant="outline" size="xs"
                           onClick={() => setDeleteTarget(null)}
                           className="flex-1"
                         >
@@ -362,7 +375,7 @@ export default function ColumnsMenu({
                       type="button"
                       onClick={() => pickView(view)}
                       aria-current={on ? "true" : undefined}
-                      className={cn("min-w-0 flex-1 truncate text-left text-xs", railTextClass(on))}
+                      className={cn("min-w-0 flex-1 truncate text-left text-[12.5px]", railTextClass(on))}
                     >
                       {view.name}
                     </button>
@@ -377,7 +390,7 @@ export default function ColumnsMenu({
                           type="button"
                           onClick={() => { setEditTarget(view); setEditValue(view.name) }}
                           aria-label={`Rename ${view.name}`}
-                          className="shrink-0 text-muted-foreground hover:text-foreground animate-in fade-in duration-150"
+                          className="shrink-0 text-pd-faint hover:text-pd-body animate-in fade-in duration-150"
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -388,7 +401,7 @@ export default function ColumnsMenu({
                           type="button"
                           onClick={() => setDeleteTarget(view)}
                           aria-label={`Delete ${view.name}`}
-                          className="shrink-0 text-danger-ink animate-in fade-in duration-150"
+                          className="shrink-0 text-pd-danger animate-in fade-in duration-150"
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -417,7 +430,7 @@ export default function ColumnsMenu({
                   onMouseLeave={() => setHoverSource(null)}
                   aria-pressed={on}
                   className={cn(
-                    "px-[14px] py-[8px] text-left text-xs",
+                    "px-[14px] py-[8px] text-left text-[12.5px]",
                     railRowClass(on, hovered),
                     railTextClass(on)
                   )}
@@ -440,12 +453,12 @@ export default function ColumnsMenu({
                     placeholder="View name…"
                     autoFocus
                     aria-label="New view name"
-                    className="h-8 w-full rounded-control bg-background px-[12px] text-xs text-foreground shadow-control outline-none focus-visible:shadow-control-focus"
+                    className="h-8 w-full rounded-full border border-gray-300 bg-background px-[12px] text-[12px] text-pd-ink outline-none focus-visible:border-primary focus-visible:ring-4 focus-visible:ring-primary/15"
                   />
                   <div className="flex gap-[6px]">
                     <Button
                       type="button"
-                      size="sm"
+                      size="md"
                       onClick={confirmSave}
                       disabled={!newName.trim() || busy}
                       className="flex-1"
@@ -455,7 +468,7 @@ export default function ColumnsMenu({
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
+                      size="md"
                       onClick={() => { setComposing(false); setNewName("") }}
                       className="flex-1"
                     >
@@ -469,7 +482,7 @@ export default function ColumnsMenu({
                       you are already on, not starting another. */}
                   <Button
                     type="button"
-                    size="sm"
+                    size="md"
                     onClick={saveToExisting}
                     disabled={busy}
                     className="w-full"
@@ -498,7 +511,7 @@ export default function ColumnsMenu({
                   <Button
                     type="button"
                     variant="outline"
-                    size="sm"
+                    size="md"
                     onClick={() => { setComposing(true); setNewName("") }}
                     className="w-full"
                   >
@@ -506,7 +519,7 @@ export default function ColumnsMenu({
                   </Button>
 
                   {saveError && (
-                    <p className="text-xs text-danger-ink">{saveError}</p>
+                    <p className="text-[10.5px] text-pd-danger">{saveError}</p>
                   )}
                 </div>
               )}
@@ -518,7 +531,7 @@ export default function ColumnsMenu({
             <button
               type="button"
               onClick={toggleAll}
-              className="flex items-center gap-[10px] border-b border-border pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
+              className="flex items-center gap-[10px] border-b border-pd-border pb-[10px] pl-[14px] pr-[29px] pt-[12px] text-left"
             >
               <Tick on={allOn} />
               <span className={`${RAIL_LABEL} flex-1`}>Metric name</span>
@@ -527,35 +540,31 @@ export default function ColumnsMenu({
 
             <div className="flex-1 overflow-y-auto p-1">
               {shown.length === 0 ? (
-                <p className="px-[14px] py-6 text-xs text-muted-foreground">
+                <p className="px-[14px] py-6 text-[12px] text-pd-faint">
                   No metrics match that search.
                 </p>
               ) : (
-                shown.map(col => {
-                  const locked = lockedColumnIds.includes(col.id)
-                  return (
+                shown.map(col => (
                   <button
                     key={col.id}
                     type="button"
                     onClick={() => toggleColumn(col.id)}
-                    aria-pressed={locked || visibleColumns.includes(col.id)}
-                    disabled={locked}
-                    className="flex w-full items-center gap-[10px] rounded-control px-[10px] py-[8px] text-left hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+                    aria-pressed={visibleColumns.includes(col.id)}
+                    className="flex w-full items-center gap-[10px] rounded-xl px-[10px] py-[8px] text-left hover:bg-pd-divider"
                   >
-                    <Tick on={locked || visibleColumns.includes(col.id)} />
-                    <span className="flex-1 truncate text-xs font-semibold text-foreground">
+                    <Tick on={visibleColumns.includes(col.id)} />
+                    <span className="flex-1 truncate text-[12.5px] font-semibold text-pd-ink">
                       {col.label}
                     </span>
                     <SourceBadge source={col.source} />
                   </button>
-                  )
-                })
+                ))
               )}
             </div>
 
             {/* Search sits at the bottom of this pane by design, not the top. */}
-            <div className="border-t border-border px-[14px] py-[10px]">
-              <div className="flex h-8 items-center gap-[7px] rounded-control bg-background px-[12px] text-muted-foreground shadow-control transition-shadow duration-200 focus-within:shadow-control-focus">
+            <div className="border-t border-pd-border px-[14px] py-[10px]">
+              <div className="flex h-8 items-center gap-[7px] rounded-full border border-gray-300 bg-background px-[12px] text-pd-faint transition-[border-color,box-shadow] duration-200 focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/15">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="11" cy="11" r="8" />
@@ -566,7 +575,7 @@ export default function ColumnsMenu({
                   onChange={e => setSearch(e.target.value)}
                   placeholder={`Search in ${sources.find(s => s.id === source)?.label ?? "All"}…`}
                   aria-label="Search metrics"
-                  className="min-w-0 flex-1 border-none bg-transparent text-xs text-foreground outline-none placeholder:text-muted-foreground"
+                  className="min-w-0 flex-1 border-none bg-transparent text-[12px] text-pd-ink outline-none placeholder:text-pd-faint"
                 />
               </div>
             </div>

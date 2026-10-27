@@ -15,7 +15,7 @@ vi.mock("@/lib/api", () => ({ apiRequest: (...a) => apiRequest(...a) }))
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 // next/font hits the network at module load, which a unit test has no business
 // doing — the class names are all the page uses.
-vi.mock("@/lib/fonts", () => ({ fontVariables: "" }))
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 
 const chatProps = { current: null }
 vi.mock("@/components/chat/ChatConversation", () => ({
@@ -62,68 +62,6 @@ function seed(conversations = []) {
 beforeEach(() => {
   apiRequest.mockReset()
   chatProps.current = null
-})
-
-describe("page chrome", () => {
-  it("renders the PageHeader title and the ds scope tabs and surfaces", async () => {
-    seed([convo("s1", "A chat")])
-    const { container } = render(<AskBirdyPage />)
-    await screen.findByText("A chat")
-
-    const header = container.querySelector('[data-ds="page-header"]')
-    expect(header).toHaveTextContent("Ask Birdy")
-    expect(container.querySelector('[data-ds="segmented-tabs"]')).not.toBeNull()
-    // The chat itself sits in the page's main region, the list in its aside.
-    expect(within(screen.getByRole("main")).getByText("fire-session")).toBeInTheDocument()
-    expect(screen.getByRole("complementary")).toHaveTextContent("A chat")
-    expect(container.querySelector('[data-ds="button"]')).toHaveTextContent("New Chat")
-  })
-
-  it("asks the layout to hold it to main's height, so the panes scroll inside", async () => {
-    seed([convo("s1", "A chat")])
-    const { container } = render(<AskBirdyPage />)
-    await screen.findByText("A chat")
-    const root = container.firstElementChild
-    expect(root.hasAttribute("data-main-fill")).toBe(true)
-    expect(root).toHaveClass("flex-1", "min-h-0")
-    expect(root).not.toHaveClass("h-full")
-  })
-})
-
-describe("Chats sheet below md", () => {
-  it("opens the same list from the Chats button and closes when a row is picked", async () => {
-    seed([convo("s1", "Earlier chat")])
-    apiRequest.mockResolvedValueOnce(ok({ session_id: "s1", messages: [] }))
-    const user = userEvent.setup()
-    render(<AskBirdyPage />)
-    await screen.findByText("Earlier chat")
-
-    expect(screen.queryByRole("dialog")).toBeNull()
-    await user.click(screen.getByRole("button", { name: "Chats" }))
-    const sheet = await screen.findByRole("dialog")
-    expect(within(sheet).getByRole("tab", { name: "Clients" })).toBeInTheDocument()
-    expect(within(sheet).getByRole("button", { name: /new chat/i })).toBeInTheDocument()
-    expect(within(sheet).getByRole("button", { name: /delete conversation: earlier chat/i })).toBeInTheDocument()
-    // The sheet's own strips: the title in the header, the list in the white body.
-    expect(within(sheet).getByText("Chats", { selector: "h2" }).closest("[data-slot=sheet-header]")).not.toBeNull()
-    expect(within(sheet).getByRole("button", { name: /new chat/i }).closest("[data-slot=sheet-body]")).not.toBeNull()
-
-    await user.click(within(sheet).getByText("Earlier chat"))
-    await waitFor(() => expect(chatProps.current.sessionId).toBe("s1"))
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
-  })
-
-  it("closes when a new chat is started from the sheet", async () => {
-    seed([convo("s1", "Earlier chat")])
-    const user = userEvent.setup()
-    render(<AskBirdyPage />)
-    await screen.findByText("Earlier chat")
-
-    await user.click(screen.getByRole("button", { name: "Chats" }))
-    const sheet = await screen.findByRole("dialog")
-    await user.click(within(sheet).getByRole("button", { name: /new chat/i }))
-    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
-  })
 })
 
 describe("loading history", () => {
@@ -294,7 +232,7 @@ describe("conversation scope", () => {
     const user = userEvent.setup()
     render(<AskBirdyPage />)
 
-    await user.click(await screen.findByRole("tab", { name: "Clients" }))
+    await user.click(await screen.findByRole("radio", { name: "Clients" }))
 
     expect(screen.getByText("Aura's CPL")).toBeInTheDocument()
     expect(screen.queryByText("Whole account")).not.toBeInTheDocument()
@@ -305,7 +243,7 @@ describe("conversation scope", () => {
     const user = userEvent.setup()
     render(<AskBirdyPage />)
 
-    await user.click(await screen.findByRole("tab", { name: "Global" }))
+    await user.click(await screen.findByRole("radio", { name: "Global" }))
 
     expect(screen.getByText("Whole account")).toBeInTheDocument()
     expect(screen.queryByText("Aura's CPL")).not.toBeInTheDocument()
@@ -324,7 +262,7 @@ describe("conversation scope", () => {
     await user.click(await screen.findByText("Aura's CPL"))
     await waitFor(() => expect(chatProps.current.sessionId).toBe("s2"))
 
-    await user.click(screen.getByRole("tab", { name: "Global" }))
+    await user.click(screen.getByRole("radio", { name: "Global" }))
     expect(chatProps.current.sessionId).toBe("s2")
   })
 

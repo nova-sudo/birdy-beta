@@ -2,28 +2,23 @@
 
 import { useState } from "react";
 import { useAiQueries } from "@/lib/admin-api";
-import AdminHeader from "@/components/admin/AdminHeader";
 import AiQueriesPanel from "@/components/admin/AiQueriesPanel";
 import ConversationViewer from "@/components/admin/ConversationViewer";
 
 export default function AdminAiQueriesPage() {
-  const { data: aiData, error: aiError, isLoading: aiLoading, mutate: refetchAi } = useAiQueries(7);
+  const { data: aiData, isLoading: aiLoading } = useAiQueries(7);
   const [sessionId, setSessionId] = useState(null); // open conversation thread
 
   return (
     <div className="flex flex-col gap-5">
-      <AdminHeader
-        title="AI queries"
-        description="What owners ask Birdy about their data over the last 7 days."
-      />
+      <div>
+        <h2 className="font-pd-display text-xl font-bold text-pd-ink">AI queries</h2>
+        <p className="text-sm text-pd-subtle">
+          What owners ask Birdy about their data over the last 7 days.
+        </p>
+      </div>
 
-      <AiQueriesPanel
-        data={aiData}
-        loading={aiLoading}
-        error={aiError}
-        onRetry={() => refetchAi()}
-        onOpenConversation={setSessionId}
-      />
+      <AiQueriesPanel data={aiData} loading={aiLoading} onOpenConversation={setSessionId} />
       <ConversationViewer sessionId={sessionId} onClose={() => setSessionId(null)} />
     </div>
   );

@@ -1,25 +1,13 @@
 import { X, LayoutGrid, Grid3X3, FileBarChart, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
 
-// One chip per drilled level: the button jumps back to that level's tab, the
-// X clears the level and everything below it.
-const Pill = ({ tone, icon: Icon, label, level, onClick, onClear }) => (
-  <span className={cn("inline-flex items-center gap-1 rounded-sm py-0.5 pl-2 pr-1 text-xs font-medium", tone)}>
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-1 rounded-sm outline-none transition-opacity hover:opacity-80 focus-visible:shadow-control-focus"
-    >
-      <Icon className="size-3" aria-hidden="true" />
-      <span className="max-w-40 truncate">{label}</span>
+const Pill = ({ color, icon: Icon, label, onClick, onClear }) => (
+  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-bold text-white ${color}`}>
+    <button onClick={onClick} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+      <Icon className="h-3 w-3" />
+      <span className="max-w-[160px] truncate">{label}</span>
     </button>
-    <button
-      type="button"
-      aria-label={`Clear ${level} filter`}
-      onClick={onClear}
-      className="flex size-4 items-center justify-center rounded-sm outline-none transition-opacity hover:opacity-70 focus-visible:shadow-control-focus"
-    >
-      <X className="size-3" aria-hidden="true" />
+    <button onClick={onClear} className="ml-0.5 hover:opacity-60 transition-opacity">
+      <X className="h-3 w-3" />
     </button>
   </span>
 )
@@ -32,16 +20,12 @@ export function DrillDownBreadcrumb({
   if (!selectedCampaign) return null
 
   return (
-    <div
-      data-slot="drill-down-breadcrumb"
-      className="flex flex-wrap items-center gap-1.5 rounded-control bg-muted px-3 py-2"
-    >
-      <span className="mr-1 text-xs font-medium text-muted-foreground">Filtering by:</span>
+    <div className="flex items-center flex-wrap gap-1.5 mb-3 px-2 py-2 bg-pd-divider/60 rounded-xl border border-pd-border">
+      <span className="text-xs font-medium text-pd-subtle mr-1">Filtering by:</span>
 
       <Pill
-        tone="bg-primary-soft text-primary"
+        color="bg-pd-primary"
         icon={LayoutGrid}
-        level="campaign"
         label={selectedCampaign.name}
         onClick={() => onTabChange("campaigns")}
         onClear={onClearCampaign}
@@ -49,11 +33,10 @@ export function DrillDownBreadcrumb({
 
       {selectedAdSet && (
         <>
-          <ChevronRight className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <ChevronRight className="h-3 w-3 text-pd-chevron flex-shrink-0" />
           <Pill
-            tone="bg-info-soft text-info-ink"
+            color="bg-pd-info"
             icon={Grid3X3}
-            level="ad set"
             label={selectedAdSet.name}
             onClick={() => onTabChange("adsets")}
             onClear={onClearAdSet}
@@ -63,11 +46,10 @@ export function DrillDownBreadcrumb({
 
       {selectedAd && (
         <>
-          <ChevronRight className="size-3 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <ChevronRight className="h-3 w-3 text-pd-chevron flex-shrink-0" />
           <Pill
-            tone="bg-success-soft text-success-ink"
+            color="bg-pd-success"
             icon={FileBarChart}
-            level="ad"
             label={selectedAd.name}
             onClick={() => onTabChange("ads")}
             onClear={onClearAd}

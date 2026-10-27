@@ -1,305 +1,399 @@
-# Birdy Style Guide
+# Birdy — Design System / Style Guide
 
-How Birdy's frontend looks and how to build it. The system is the design system
-in `src/components/ds/`, ported from Bytes main (`d5bed4a4dd`) with Birdy's
-violet primary. Every value is defined once as a token in `src/app/globals.css`
-(`@theme`). If a value is not in this guide or in that file, it is not in the
-system: ask before inventing one.
+A single reference for styling any new Birdy screen so it matches the existing product. Written for another designer or AI to follow without seeing the original files.
 
-Live reference: the `/_ds` route (source in `src/app/%5Fds/`) renders every
-component. `src/components/ds/PORTED.md` records where each file came from,
-what was stripped and what changed.
+---
 
-## The rules
+## 1. What Birdy is
 
-1. **Tokens only.** Colours, radii, shadows, control heights and type sizes come
-   from the token utilities below. No raw hex, no `purple-*` / `gray-*`, no
-   `text-[13px]`, no arbitrary radii or shadows in a page or component.
-2. **Brand hex lives in one file.** Third-party marks (Slack, Meta), the Slack
-   preview replica, the shader colour for Silk and the mascot's artwork palette
-   are in `src/lib/brand-colors.js`. Nothing else may contain a hex colour
-   outside `globals.css`.
-3. **Light mode only.** There is no dark theme and no `dark:` classes.
-4. **Motion goes through `@/components/motion`** (`Reveal`, `Stagger`,
-   `StaggerItem`, `Pop`, `CountUp`). Reduced motion is respected: the root
-   layout wraps the app in `<MotionConfig reducedMotion="user">`, and CSS
-   animations use `motion-safe:` / `motion-reduce:`.
-5. **Every ds component's root carries `data-ds="<file-name>"`.** Tests and
-   crawls find components by that marker.
-6. **Hook and context modules start with `"use client"`.** A server route that
-   imports the barrel breaks otherwise; a hygiene test guards it.
-7. **Import from the barrel:** `import { Button, Frame } from "@/components/ds"`.
-8. **The mascot only appears via `BirdyAvatar`** (see below).
-9. **New UI gets HTML mocks first.** Build two or three HTML options, let the
-   owner pick one, then port the pick into ds components.
+Birdy is an **AI-powered support and operations system for service-based local lead-gen agencies**. It connects Meta Ads data, GoHighLevel (GHL) lead data, and sales CRM / dialler data, then acts as a central brain: surfacing recommendations the team can approve — or let Birdy execute automatically.
 
-## Tokens
+Two audiences:
+- **In-app (the tool)** — media buyers and agency owners. Dense, data-heavy, action-first.
+- **Public pages** (e.g. changelog) — same visual language, no left tool rail, marketing-style top nav instead.
 
-Utilities are named after the `@theme` variable: `--color-primary` gives
-`bg-primary`, `text-primary`, `border-primary`.
+**Product voice:** direct and operational. Birdy tells you what to do and why, in one sentence, with the numbers in it. Never chirpy, never vague. "Pause 2 underperforming ads — £48 CPL vs £22 target, 0 leads in 5 days."
 
-### Colours
+---
 
-| Token | Value | Use |
+## 2. Foundations
+
+### Typography
+
+Two families, both Google Fonts:
+
+- **Poppins** (500 / 600 / 700) — headings, all numerals, control labels, tab labels. Everything that should feel like a *figure* or a *title*.
+- **Inter** (400 / 500 / 600 / 700) — body copy, table cells, meta, labels.
+
+```html
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+```
+
+Type scale in use (px / weight / family):
+
+| Size | Weight | Family | Use |
+|---|---|---|---|
+| 30 | 700 | Poppins | Page title when it sits in the body (`letter-spacing: -.02em`) |
+| 28 | 700 | Poppins | Big chart total |
+| 22 | 700 | Poppins | KPI value (roomy), funnel stage count |
+| 20 | 700 | Poppins | Metric value in a compact cell |
+| 19 | 700 | Poppins | Page title in the header bar |
+| 18 | 700 | Poppins | Section / release heading |
+| 17 | 700 | Poppins | KPI value in a compact tile |
+| 16–17 | 600 | Poppins | Card heading, entry title |
+| 15 | 600 | Poppins | Card title (standard) |
+| 14 | 600 | Inter | Primary table cell (names) |
+| 13.5 | 600 | Inter | Control labels, rail titles |
+| 13.5 | 400 | Inter | Table cells, body copy |
+| 13 | 600 | Poppins | Section tabs |
+| 12.5 | 600 | Poppins | Chart metric tabs |
+| 12.5 | 400 | Inter | Supporting body copy |
+| 12 | 400 | Inter | Labels, subtitles |
+| 11.5 | 700 | Inter | Table column headers (`letter-spacing: .03em`) |
+| 11 | 700 | Inter | Severity labels, small tags |
+| 11 | 400 | Inter | Tile labels, timestamps |
+| 10.5 | 700 | Inter | Delta pills, count badges |
+| 10.5 | 400 | Inter | Chart axis labels |
+
+Line height: 1 for large numerals, 1.35 for tight UI text, 1.45–1.5 for body copy. Use `text-wrap: pretty` on paragraphs.
+
+### Colour
+
+**Brand**
+
+| Token | Hex | Use |
 |---|---|---|
-| `background` | #FFFFFF | Surfaces, page card, inputs, popovers |
-| `foreground` | #0A0A0A | Headings, primary text |
-| `body` | #404040 | Running text |
-| `muted-foreground` | #737373 | Secondary text, icons |
-| `ink-secondary` | #3F3F46 | Quiet icons and inactive figures |
-| `border` | #E5E5E5 | Hairlines that must be a border |
-| `divider` | #F0F0F1 | Seams between cells and rows |
-| `primary` | #5B3FD6 | Brand violet: actions, links, focus |
-| `primary-hover` / `-held` / `-edge` | #6A50DC / #5338CC / #4A30BC | Primary button states and its 1px ring |
-| `primary-soft`, `primary-ink` | #EFECFB, #4A2FB5 | Tinted backgrounds and the text on them |
-| `primary-foreground` | #FFFFFF | Text on primary |
-| `danger` / `warning` / `success` / `info` | #EF4444 / #F59E0B / #16A34A / #3B82F6 | Status fills and icons |
-| `{status}-soft` | #FEF2F2 / #FFFBEB / #F0FDF4 / #EFF6FF | Status backgrounds |
-| `{status}-ink` | #991B1B / #92400E / #166534 / #1E40AF | Status text on a soft background |
-| `purple`, `muted` (`subdued`), `neutral` tones | `-soft` / `-ink` pairs | Badge tones beside the four statuses |
-| `delta-good` / `delta-bad` (`-ink`, `-soft`) | #16A34A / #DC2626 | A change coloured by whether it is good, not by its direction |
-| `destructive` (`-hover`, `-held`, `-edge`) | #DC2626 | Destructive buttons, a step stronger than danger |
-| `chart-1` .. `chart-8` | primary, #3B82F6, #14B8A6, #F59E0B, #A3A3A3, #2F6FD0, #CF4A3A, #8F5FC2 | Series colours, in order, never repeated |
-| `scrim` | #0A0A0A at 40% | Dialog and sheet backdrop |
+| Primary | `#6B4EE6` | Brand, active nav, primary buttons, chart line |
+| Primary deep | `#5A3FD6` | Link hover, insight-card border |
+| Primary gradient | `#7B5FE6 → #6B4EE6` | Avatar, small accents (135deg) |
+| Insight gradient | `#6B4EE6 → #8B6BF0` | Birdy AI card only (135deg) |
+| Primary tint | `#F1EEFC` | Active nav bg, chips, badges |
+| Primary light | `#A98BF5` | Secondary chart dots |
+| Primary pale | `#C9BEF3` | Tooltip subtext, muted bar fills |
+| Primary faint | `#E4DDF9` / `#E7E1FA` | Tinted card borders |
 
-### Greys: canvas, frame, muted
+**Neutrals**
 
-Three greys do three jobs. Don't swap them.
-
-| Token | Value | Use |
+| Token | Hex | Use |
 |---|---|---|
-| `frame` | #F7F7F8 | The app canvas (sidebar, top bar, the area round the page card) and every Frame shell: the grey around a white surface. Dashkit's `--dk-bg` and `--dk-table-head` map here too |
-| `muted` | #F4F4F5 | Menu-row highlight, neutral fills, drag-over |
-| `rail` / `rail-frame` | #F4F4F5 / #EBEBED | Tab tracks on a white surface / on the frame |
-| `raised` | #FFFFFF | Controls, fields and the active nav row |
-| `ghost-hover` / `ghost-held` | #F2F2F2 / #EAEAEA | Ghost buttons |
-| `row-hover` / `row-selected` / `row-child` | #FAFAFA / #F5F5F6 / muted at 40% | Table rows |
-| `skeleton` / `skeleton-shine` | #F0F0F1 / #F8F8F9 | Loading sweep |
+| Ink | `#1F1B33` | Headings, values, tooltip background |
+| Body | `#5A5A6E` | Body copy, table cells, control labels |
+| Muted | `#6B6480` | Inactive tabs, secondary copy |
+| Subtle | `#8A8A9A` | Labels |
+| Faint | `#9A9AAB` | Meta, inactive icons, axis labels, table headers |
+| Chevron | `#CFCFDA` | Decorative arrows, unchecked boxes |
+| Border input | `#DFDFE8` | Secondary button / checkbox borders |
+| Scrollbar | `#DEDCE8` | Custom scrollbar thumb |
+| Divider soft | `#F5F5F8` | Table row borders |
+| Divider | `#F1F1F5` | Internal dividers, segmented-control bg |
+| Field | `#F4F4F8` | Inputs, icon buttons |
+| Border | `#ECECF2` | Cards, controls — the default border |
+| Border strong | `#E3E3EC` | Frame border, image borders |
+| Table head | `#FAFAFC` | Table header row |
+| Row zebra | `#FCFCFD` | Alternate table row (optional) |
+| Surface | `#fff` | Cards, rails, rows |
+| Canvas | `#F7F7FB` | App background inside the frame |
+| Desk | `#EEEDF3` | Page behind the frame (canvas mode) |
 
-### Type
+**Semantic** — always as a *pair* (text colour + tint background):
 
-The root is the browser's 16px, so `1rem` is 16. Fonts: **Outfit**
-(`font-sans`, everything) and **Geist Mono** (`font-mono`, code and readouts),
-loaded in `src/lib/fonts.js` and set on `<html>`. Use `tabular-nums` (or the
-`num` utility) on any figure that must line up.
+| Meaning | Text | Background | Use |
+|---|---|---|---|
+| Success / positive | `#25A55F` | `#EDF8F1` | Rising good metrics, wins, approved, healthy |
+| Danger / negative | `#E5484D` | `#FEF1F1` | Falling metrics, high severity, alerts |
+| Danger surface | `#E5484D` | `#FEF6F6` + border `#F8DEDE` | Problem banner |
+| Warning | `#E0920A` | `#FDF6EC` | Medium severity, mid-funnel |
+| Amber | `#B4530A` | `#FDF1E7` | Cost metrics, spicy-lead tags |
+| Info | `#3B7DD6` | `#EAF1FD` | Neutral counts, platform chips |
+| Neutral | `#8A8A9A` | `#F1F1F5` / `#E7E7ED` | Inactive counts, version tags |
 
-| Utility | Size / line | Typical use |
-|---|---|---|
-| `text-xs` | 13 / 16 | Captions, deltas, table meta, badges |
-| `text-sm` | 14 | Small controls, labels, table cells, helper text |
-| `text-base` | 16 | Body, controls, Frame titles, inputs |
-| `text-lg` | 18 | Dialog and sheet titles |
-| `text-xl` | 20 | Admin section headings |
-| `text-2xl` | 24 / 32 | Metric and funnel values, auth headings |
-| `text-figure` | 28 / 34 | MetricTabsChart figures |
-| `text-title-sm` / `text-title` | 26 / 32, 32 / 36 | Page titles (PageHeader uses 26 on a phone, 32 from md); use these for a title outside PageHeader |
+Rules:
+- Max **one saturated purple surface per screen** — reserved for the Birdy AI card. Everything else is white on `#F7F7FB`.
+- Never invent new hues. If you need another accent, reuse Info or Amber.
+- **Inverted metrics matter.** Cost-style metrics (CPL, speed to lead, calls per close) are **green when falling, red when rising**. Volume metrics are the opposite. Colour by *meaning*, never by arrow direction.
+
+### Spacing
+
+Scale: **3 · 4 · 5 · 6 · 7 · 8 · 9 · 10 · 11 · 12 · 13 · 14 · 16 · 18 · 20 · 22 · 24 · 26 · 28 · 32**.
+
+Conventions:
+- Content area padding `22px 24px` (dense) or `28px 32px` (roomy).
+- Card padding `20px 22px`; compact cell `11px 13px`; table row `12px 22px`.
+- Gap between cards in a row **18px**; between tiles in a grid **10–14px**; inside a control **7–10px**.
+- Header bar padding `0 26px`.
+
+**Always use flex/grid with `gap`.** Never space siblings with margins or source whitespace.
 
 ### Radius
 
-| Utility | Value | Use |
-|---|---|---|
-| `rounded-badge` | 7px | Badges and count pills |
-| `rounded-control-sm` | 10px | `sm` controls, icon chips |
-| `rounded-control` | 12px | `md` buttons and inputs, menu rows |
-| `rounded-control-lg` | 14px | `lg` buttons and inputs |
-| `rounded-surface` | 12px | Toasts and small cards |
-| `rounded-frame` | 16px | Frames, surfaces, the page card |
-| `rounded-overlay` | 20px | Dialog frames and sheets |
-| `rounded-bezel` | 27px | The glass bezel round a dialog |
-
-`rounded-sm` .. `rounded-3xl` are offsets from `--radius` (10px). Avoid them in
-new code; the named steps say what the shape is for.
-
-### Shadows, heights, easing
-
-Frames, surfaces, tables and cards are flat (a 1px ring). Only controls lift and
-only overlays float.
-
-| Utility | Use |
+| Value | Use |
 |---|---|
-| `shadow-frame` | The hairline ring round a Frame |
-| `shadow-surface` | The ring round a white surface or the page card |
-| `shadow-control` (`-hover`, `-held`) | Resting, hovered and pressed outline buttons and fields |
-| `shadow-primary`, `shadow-destructive` | Filled buttons |
-| `shadow-focus` / `shadow-control-focus` | Focus rings (buttons / fields) |
-| `shadow-control-invalid`, `shadow-field-error` | Invalid field |
-| `shadow-floating` | Popovers, menus, the command palette |
-| `shadow-overlay-frame`, `shadow-bezel` | Dialog frame and its bezel |
-| `shadow-sheet` (`-left`, `-bottom`, `-top`) | A sheet on its edge |
-| `shadow-toast`, `shadow-tooltip` | Toasts, tooltips |
-| `h-control-sm` / `h-control` / `h-control-lg` | 32 / 40 / 48 control heights |
-| `ease-press` | Press and hover transitions |
-| `ease-edge` | Panels sliding from an edge |
-| `ease-thumb` | The tab thumb's slide |
+| 4–5px | Tiny badges, checkboxes |
+| 6px | Version pills, small tags |
+| 7px | Small buttons, delta pills |
+| 8px | Icon chips, segmented items, menu rows |
+| 9px | Rank badges, form fields, secondary buttons |
+| 10px | Controls, buttons, logo, small cards |
+| 11px | Popovers, chip groups |
+| 12px | Nav items, inner cells, tiles, banners |
+| 14px | KPI strip |
+| 16px | Cards, frame |
+| 999px / 50% | Pills, dots, avatars, toggles |
 
-## Components (`src/components/ds/`)
+### Elevation
 
-### Buttons and fields
-- **`Button`**: variants `primary` (filled violet), `outline` (default: white,
-  1px ring, lifts on hover), `secondary` (alias of `outline`, the Bytes name),
-  `ghost`, `destructive`, `dashed`, `link`. Sizes `sm` 32, `md` 40, `lg` 48,
-  `icon-sm`, `icon`, `icon-lg`. `loading` keeps the width; `asChild` for links.
-- **`Input`**, **`Textarea`**, **`Select`**: one field look from
-  `fieldVariants` with `size` sm / md / lg (32 / 40 / 48). Use `size="lg"` for
-  auth and onboarding fields, not a height override.
-- **`SearchInput`**: search icon on the right, swapped for a "Clear search"
-  button once there is a query; `debounceMs={0}` for a local filter. It is the
-  one way to clear a search: don't add a second Clear button beside it or in
-  the empty state.
-- **`Checkbox`**, **`Switch`**, **`Label`**.
+| Shadow | Use |
+|---|---|
+| `0 20px 50px -20px rgba(30,25,60,.25)` | The app frame on the desk |
+| `0 2px 8px -2px rgba(107,78,230,.35)` | Selected segmented-control item |
+| `0 14px 34px -12px rgba(30,25,60,.28)` | Dropdown / popover |
+| `0 6px 16px -6px rgba(30,25,60,.5)` | Dark tooltip |
+| `0 10px 26px -12px rgba(107,78,230,.6)` | Birdy AI card glow |
+| `0 0 0 4px rgba(107,78,230,.18)` | Focus ring / active chart point |
 
-### Tabs
-- **`Tabs`** (`TabsList`, `TabsTrigger`, `TabsContent`): `variant="framed"`
-  (default: a rail with a sliding white thumb), `underline`, or `chips`.
-  `surface` says what the rail sits on (`surface` / `frame`); `size`, `fill`;
-  triggers take a `count` pill and `attention`.
-- **`SegmentedTabs`**: the framed Tabs as data (`items`, `value`,
-  `onValueChange`), for filters and scope switches.
+Cards themselves are **flat** — 1px `#ECECF2` border, no shadow. Shadow signals *floating* or *selected*, never decoration.
 
-### Badge and StateBadge
-- **`Badge`**: `tone` success / warning / danger / info / purple / primary /
-  muted / neutral on its soft fill and ink, `size` md (28) or sm (24), `icon`.
-  Birdy's `variant="dot"` is a status dot and ink with no fill.
-- **`StateBadge state="paused"`**: tone, icon and label from `BADGE_STATES`
-  (Bytes' full table, plus `queued`, `refunded`, `selected`, `sending` in
-  info). `badgeStateOf("In Stock")` normalises a raw status word; unknown words
-  fall back to `unknown`.
+### Motion
 
-### Frame and MetricGroup
-- **`Frame`**: the panel everything is grouped in. A grey `frame` shell with a
-  header strip (`title`, `description`, `leading`, `action` / `actions`,
-  `href`), a white surface flush to its sides, and an optional `footer` strip.
-  `padded` for forms and prose; `toolbar` replaces the title with a 56 tool
-  row. A table or list inside a Frame draws only its rows.
-- **`Surface`**: a free-standing white card (`rounded-frame shadow-surface`)
-  for the rare thing that isn't in a Frame.
-- **`MetricGroup`**: a titled row of figures on the Frame. Each item has a
-  label (with an info tooltip), value, `Delta` and caption; columns follow the
-  container (1 to 4 across, 5 as 2/3/5, 6 as 2/3, 7-8 as 2/4).
-  `MetricCard` is one cell on its own.
-- **`MetricTabsChart`**: hub trend; metric tabs that rise into the chart panel.
-- **`Delta`**: `change`, `format` (percent / points / count), `goodWhen` (up /
-  down / neither) colours it by whether it is good. Zero, null or a change that
-  rounds to 0 reads "No change" in the neutral look.
+- Chart line draw: `stroke-dasharray: 2400` + `stroke-dashoffset: 2400 → 0`, **800ms `cubic-bezier(.4, 0, .2, 1)` forwards**.
+- Area fade: `opacity: 0 → 1`, **800ms ease-out**.
+- Tooltip / small state: **120ms**.
+- Chevron rotate on expand: **150ms**.
 
-### FunnelGroup
-A funnel shaped like a MetricGroup (mock A, "Stage cells"): one cell per stage
-with a 32 icon chip in the stage's tone, label, 24 value, `Delta` and a 13px
-caption, and a pill on the seam into each stage with the step conversion
-(hidden on narrow widths, and where a stage isn't a narrowing of the one
-before). The frame's footer takes the diagnosis `Notice`. Pass `empty` for a
-period with no data: the frame stays with a muted line and no diagnosis. Used
-on `/dashboard`.
+Re-animate a chart whenever its metric or timeframe changes.
 
-### DataTable
-- **`DataTable`**: owns its TanStack table. A Frame-like shell (`rounded-frame
-  bg-frame shadow-frame`) with the toolbar, heads on the grey, a white body and
-  a pagination footer strip; bare inside a Frame. Rows 60 (`dense` 52). Loading
-  keeps the heads with skeleton rows; empty shows under the heads. Below 576 of
-  table width it folds to a label/value list. `onColumnReorder` +
-  `lockedColumnIds` for drag-to-reorder, `stickyFirstColumn`, `getSubRows`.
-- **Toolbar pieces**: `DataTableToolbar`, `SearchInput`, one
-  `DataTableFilterButton` for every facet, `DataTableFacetedFilter` for a
-  standalone filter, `DataTableViewOptions`, `DataTablePagination`,
-  `DataTableColumnHeader`, `DataTableSkeleton`.
-- **Cells**: `MoneyCell`, `StatusCell` (a small soft Badge), `TwoLineCell`.
+### Iconography
 
-### Shell and PageHeader
-- **Canvas pattern**: the app sits on the `frame` canvas. `AppSidebar` (256, or
-  the 56 rail when collapsed) on the left; on the right a borderless, unfilled
-  52 **`TopBar`** on the canvas, then **`PageCard`**: the white page card with
-  an 8px gutter right and bottom (sheet-like on a phone) and `main` holding the
-  page in the 1360 column (16 side gutters on a phone, 40 from md, and 36 above
-  the content from md).
-  `data-main-fill` on a page root holds it to main's height (panes that scroll
-  themselves); `data-main-bleed` also drops the gutters.
-- **`TopBar`**: sidebar toggle, the title the page published, then the page's
-  controls, Ask Birdy (⌘J) and the bell. `minimal` (the admin console) keeps
-  only the menu button, title and `actions`.
-- **AdminShell** (`src/components/admin/AdminShell.jsx`) is the same pattern:
-  minimal AppSidebar, minimal TopBar ("Admin", Internal badge, Back to Birdy),
-  PageCard.
-- **`MobileNavSheet`**: the sidebar in a left sheet below md.
-- **`PageHeader`**: the page's h1 (26 / 32), description, optional eyebrow,
-  back button, `period` and `actions`. One per page, first in the card.
-- **`SystemBanner`**, **`SidebarCredits`**, **`SidebarJobs`**,
-  **`CommandSearch`** (⌘K).
+All icons are **inline SVG, 24 × 24 viewBox, `fill: none`, `stroke: currentColor`, round caps and joins**, in the Feather/Lucide vocabulary. Stroke widths: **2** standard, **2.2** on small emphasis icons, **3** on delta arrows.
 
-### Dialog and Sheet
-- **`Dialog`**: a glass bezel round a grey frame holding a header strip
-  (`DialogHeader`: title 18/600, description 14), a flush white `DialogBody`
-  that scrolls, and a `DialogFooter` strip with actions right-aligned. Sizes
-  sm 400 (confirm), md 520 (short form, default), lg 720, xl 880, 2xl 1120.
-- **`Sheet`**: the same strips (`SheetHeader`, `SheetBody`, `SheetFooter`) on a
-  panel attached to its edge; right sheets are 440 (`lg` 720) and become bottom
-  sheets below 768.
-- Loose children between the strips are gathered into the body. Strips are
-  recognised on direct children only, by component or by a `data-slot` prop
-  ending `-header` / `-footer` / `-body`. A `<form>` wrapping the strips (so
-  Enter submits) works as the frame's only child.
-- **`confirm({ title, description, tone })`** returns a promise; `<ConfirmHost/>`
-  renders it. Destructive deletes use `tone="danger"`.
+Rendered sizes: 20px (nav rail) · 19px (funnel chip) · 17px (KPI chip) · 15px (control leading) · 14px (compact chip, tab) · 13px (inline button) · 12px (chevron, delta arrow) · 10–11px (micro).
 
-### Menus and lists (`list-variants`)
-`Popover`, `DropdownMenu`, `Select` content and `Command` share one list
-recipe from `overlays/list-variants.js`: `LIST_SURFACE` (r14 white,
-`shadow-floating`, 6 padding), `LIST_MOTION` (200 in, 140 out, a 4px slide),
-`listItemVariants` rows sm 32 / md 40 / lg, `LIST_LABEL`, `LIST_SEPARATOR`
-(edge to edge), `LIST_SEARCH`, `LIST_EMPTY`. A menu's `size` reaches its rows
-through `ListSizeContext`. `Tooltip` is an ink pill; `Toaster` / `toast` are
-Sonner on tokens.
+**Emoji:** avoid, with one narrow exception — the ⚡ / ✓ glyphs used as activity-feed mode markers. Never in headings or body copy.
 
-### Other surfaces
-`Notice` (an inline callout in a status tone, optional icon), `EmptyState`
-(icon tile, title, description, action), `ErrorState` (with retry),
-`Skeleton` (a sweep under motion-safe), `Spinner`, `Breakdown`, `BarList`,
-`FunnelBar`, `Sparkline`, `ProgressBar`.
+**Never draw illustrations or logos in SVG.** Use the supplied mascot image; use placeholders for other imagery.
 
-### birdy/
-`BirdyRead`: Birdy's short list of findings on the Frame shell, up to five rows
-with an icon chip, detail, action and optional dismiss, plus an "Ask Birdy
-about this" footer link.
+---
 
-## birdy-read and BirdyAvatar
+## 3. Layout
 
-`BirdyRead` is the standard "what needs your attention" block. Hubs pair it with
-`MetricTabsChart` at the top of the page. Findings are data-backed: each row
-states a number or a fact from the account, never generic advice.
+### The app shell (in-tool screens)
 
-```jsx
-<BirdyRead
-  findings={[{ id: "cpl", tone: "warning", title: "CPL up 18%", detail: "Meta, last 7 days",
-               action: { label: "Review", href: "/campaigns" } }]}
-  prompt="Why did CPL rise this week?"
-/>
+```
+┌────┬──────────────────────────────────────────────┐
+│rail│ header bar (64px)                            │
+│68px├──────────────────────────────────┬───────────┤
+│    │ scrolling content                │ right rail│
+│    │ 22px 24px                        │ 340px     │
+└────┴──────────────────────────────────┴───────────┘
 ```
 
-The mascot is shown only through `BirdyAvatar` (`src/components/birdy/BirdyAvatar.jsx`):
-Birdy seated in a round frame, cropped by the circle. Never render a bare
-`<Birdy>`. `tone` is `tint` (primary-soft frame) or `white` (for surfaces that
-are already tinted); `size` is the frame diameter in px.
+- **Frame** — fixed 1600 × 1040 (or 1440 × 940 for narrower pages), background `#F7F7FB`, 1px `#E3E3EC`, radius 16px, `overflow: hidden`.
+- **Icon rail** — `flex: 0 0 68px`, `#fff`, right border 1px `#ECECF2`, vertical flex, `align-items: center`, padding `20px 0`, `gap: 8px`.
+  - Mascot logo 38 × 38, radius 10px, 1px `#E3E3EC` border, `object-fit: cover`, `margin-bottom: 14px`.
+  - Nav items 44 × 44, radius 12px, centred 20px icon. Active: `#F1EEFC` bg + `#6B4EE6` icon. Inactive: transparent + `#9A9AAB`.
+  - Footer (`margin-top: auto`): settings → optional support/logout icons separated by a 28 × 1px `#ECECF2` divider → `Beta 1.7` pill (Inter 600 10.5px `#8A8A9A` on `#F1F1F5`, padding `4px 7px`, radius 6px).
+- **Header bar** — 64px, `#fff`, bottom border 1px `#ECECF2`, padding `0 26px`, `gap: 16px`. Page title (Poppins 700 19px) with a 12px `#9A9AAB` sub-line on the left; optional centred Ask Birdy field; controls, notification bell and avatar right-aligned via `margin-left: auto`.
+- **Content** — `flex: 1`, `overflow-y: auto`, padding `22px 24px`, `min-width: 0`.
+- **Right rail** (optional) — `flex: 0 0 340px`, `#fff`, left border 1px `#ECECF2`, vertical flex, `min-height: 0`.
 
-## Building a page
+**One scroll region per column.** Never stack two scrollable panes in the same rail — use a toggle instead.
 
-1. Page title with `PageHeader`; content in `Frame`s (tables in `DataTable`,
-   figures in `MetricGroup`).
-2. Data from the API, formatted before it reaches ds components (they take
-   strings and numbers, not raw API shapes).
-3. Loading with `Skeleton` or the component's `loading`, failures with
-   `ErrorState`, empty with `EmptyState` (or the component's `empty`). Every
-   list and chart has all three. Missing data never reads as healthy.
-4. Entry motion with `Reveal` or `Stagger`; numbers with `CountUp` where the
-   figure is the point of the page.
-5. Verify in the browser at desktop and 375px, not just in tests.
+### Public pages
 
-## What was removed
+Same tokens, but: no left rail; a 66px top nav (mascot 34 × 34 + wordmark, nav links Inter 13.5px `#8A8A9A` with the active one `#1F1B33` 600, log-in text link and a filled `Book a demo` button right-aligned). Content is centred with a max width (620–780px for reading, wider for grids).
 
-The previous `pd-*` Portfolio Dashboard layer, the purple and gray scales, the
-shadcn alias variables and `components/portfolio` no longer exist. A test
-(`src/app/__tests__/tokens.test.js`) asserts the legacy variables stay absent.
-The shadcn `sidebar`, `sheet`, `separator`, `tooltip`, `button`, `dialog`,
-`input`, `label` and `textarea` wrappers, `use-mobile`, `@radix-ui/react-separator`
-and the root `SidebarProvider` are gone. Three shadcn-era files remain in
-`src/components/ui/` because callers still import them: `alert-dialog`
-(alerts), `skeleton` (dashboards, page skeleton) and `MetricPicker`. They are
-retokened and should not gain new users; use the ds equivalents.
+### Presenting options
+
+When exploring alternatives, put each in a `<section>` on a pan/zoom canvas: `<meta name="design_doc_mode" content="canvas">`, `display: flex; gap: 64px; padding: 72px`. Every option gets a stable `{turn}{letter}` id (`1a`, `1b`, `2a`…) on its wrapper plus a visible pill badge (Poppins 600 15px white on `#6B4EE6`, padding `5px 14px`, radius 999px) with a short name and one-line description. Newest turn goes at the top.
+
+---
+
+## 4. Components
+
+### Card
+`background: #fff; border: 1px solid #ECECF2; border-radius: 16px; padding: 20px 22px;`
+Title Poppins 600 15px `#1F1B33`; optional subtitle Inter 400 12px `#9A9AAB` (`margin-top: 2px`); header row `margin-bottom: 16–18px` with any action right-aligned.
+
+### KPI cell — three variants
+
+All three share: coloured icon chip, Poppins 700 value, Inter 400 label, semantic delta pill.
+
+1. **Unified strip** — one card, `display: flex`, four cells `flex: 1`, padding `16px 20px`, `border-right: 1px solid #F1F1F5` on all but the last. Icon chip 36 × 36 radius 10px, value 22px, label 12px, delta pill right-aligned.
+2. **Compact tile** (grid) — `#fff` card, radius 12px, padding `11px 12px`, single row: chip 28 × 28 radius 8px, value 17px, label 11px, delta pill `margin-left: auto`. Use in a `1fr 1fr` grid with `gap: 10px` to fit six in a narrow column.
+3. **Roomy card** — icon chip top-left, label above a 26–30px value, trend line beneath. For four-across hero rows.
+
+Delta pill: `gap: 3–5px`, Inter 700 10.5–12px, padding `3px 6px` → `5px 9px`, radius 6–8px, with a 10–12px arrow at stroke-width 3. Colour by *meaning* (see Colour rules).
+
+### Segmented control
+Container `#F1F1F5`, 1px `#ECECF2`, radius 10–12px, padding 4–5px, `gap: 5px`. Items padding `7px 13px` (or `9px` for full-width), radius 8px, Poppins 600 12.5–13.5px. Selected: `#1F1B33` on `#fff` + `0 2px 8px -2px rgba(107,78,230,.35)`. Unselected: `#6B6480` on transparent. Counts ride as badges inside the item (`#6B4EE6` on `#F1EEFC` when selected, `#8A8A9A` on `#E7E7ED` otherwise).
+
+### Dropdown
+Trigger: height 38px, `#fff`, 1px `#ECECF2`, radius 10px, padding `0 13px`, Inter 600 13px `#5A5A6E`, leading 14px icon `#6B4EE6`, trailing 12px chevron.
+Menu: `position: absolute; top: 44px`, width 160–250px, `#fff`, 1px `#ECECF2`, radius 12px, shadow `0 14px 34px -12px rgba(30,25,60,.28)`, padding 6px, `z-index: 20`. Rows padding `9px 11px`, radius 8px, Inter 500 13px; selected `#6B4EE6` on `#F1EEFC`.
+**Option clicks must `stopPropagation`** or they bubble to the trigger and reopen the menu. Close on outside click and Escape too.
+
+### Buttons
+- **Primary** — `#fff` on `#6B4EE6`, Inter 600 13px, padding `9px 16px`, radius 9px. With a leading 14px lightning bolt when it's a Birdy action ("Do it for me").
+- **Secondary** — `#5A5A6E` on `#fff`, 1px `#DFDFE8` or `#ECECF2`, same metrics.
+- **Tint** — `#6B4EE6` on `#F1EEFC`, no border.
+- **Icon-only** — 28–38px square, radius 7–10px, 1px `#ECECF2` or `#F4F4F8` fill, 13–17px icon `#9A9AAB` / `#5A5A6E`. Always give it a `title`.
+- **Destructive/dismiss** — icon-only trash; never a red filled button.
+
+### Input / search
+Height 38–40px, `#fff` or `#F4F4F8`, 1px `#ECECF2`, radius 10px, padding `0 13px`, `gap: 9px`, 15px magnifier `#9A9AAB`, placeholder Inter 13–13.5px `#9A9AAB`. Field labels sit above: Inter 400 11.5–12px `#9A9AAB`, `margin-bottom: 5px`.
+
+### Table
+Card wrapper radius 16px, `overflow: hidden`, inner region `overflow-x: auto` with an explicit `min-width`.
+- Header row: padding `13px 22px`, bottom border 1px `#ECECF2`, background `#FAFAFC`, Inter 700 11.5px `#9A9AAB`, `letter-spacing: .03em`, uppercase labels. Sticky (`position: sticky; top: 0; z-index: 1`) when the body scrolls.
+- Body rows: padding `12px 22px`, bottom border 1px `#F5F5F8`. Primary column Inter 600 14px `#1F1B33` with ellipsis; numeric cells Inter 400 13.5px `#5A5A6E`; emphasise the one or two key figures at Inter 500 `#1F1B33`.
+- Columns are `flex` weights, not fixed widths; give the name column `min-width`.
+- Status belongs in **its own column** as a pill — never crammed next to the name.
+
+### Status pill
+`display: inline-flex; gap: 5px;` Inter 600 11px, padding `3px 9px`, radius 6px, with a 6–7px dot in the same colour. Semantic pairing (Active green, Inactive amber, etc.).
+
+### Tag / chip
+Inter 400 11.5–12px `#5A5A6E` on `#F4F4F8`, 1px `#ECECF2`, padding `4px 9px` → `5px 10px`, radius 6–7px. Emphasised tags use a semantic pair. Overflow becomes a dashed `+7 more` chip in `#6B4EE6` with a `#C9BEF3` dashed border.
+
+### Line chart
+- Container `position: relative`, height 190px. SVG layer inset `0 0 22px 0`; axis labels pinned bottom as equal-width flex cells.
+- SVG `viewBox="0 0 1000 200"`, `preserveAspectRatio="none"`, absolutely positioned at 100% × 100%.
+- Area: `linearGradient` `#6B4EE6` 0.18 → 0. Line: `#6B4EE6`, `stroke-width: 3`, round caps, `vector-effect: non-scaling-stroke`.
+- Dots 10 × 10, radius 50%, 2px white border, `margin: -5px 0 0 -5px`. Latest point `#6B4EE6` with the focus glow; others `#A98BF5`.
+- **Geometry (so dots line up with labels):** with `n` points, `halfCol = 100 / (2n)`; point *i* at `x% = halfCol + i * (100 - 2·halfCol) / (n - 1)`. Normalise y between series min and max with 14 units of padding in the 200-unit viewBox. Close the area path at the **first and last data points**, not the frame edges.
+- Hover: store the hovered index in state (not CSS `:hover`) and render a dark tooltip 15px above the dot — `#1F1B33`, radius 8px, padding `6px 10px`, `pointer-events: none`, value Poppins 700 12.5px over period Inter 400 10.5px `#C9BEF3`.
+- Every metric/timeframe needs its **own shape** — monthly can trend upward, but weekly and daily must be choppy with real peaks and dips. Flat or identical series look fake.
+
+### Bar chart
+Columns `flex: 1` in a flex row with `gap`, each with an inner flex track (`flex: 1; align-items: flex-end`) so percentage heights resolve. Bars radius `5px 5px 0 0`, `#C9BEF3` with the latest in `#6B4EE6`. Label beneath, Inter 10.5–11px `#9A9AAB`.
+
+### Progress / funnel bar
+Track height 6–9px, `#F1F1F5`, radius 3–5px; fill a semantic or brand colour. Funnel stages step from `#6B4EE6` through `#8B6BF0`, `#A98BF5`, `#3B7DD6` to `#25A55F`.
+
+### Horizontal funnel stepper
+Steps `flex: 1`, centred: 42 × 42 radius 12px icon chip (`margin: 0 auto 9px`) → stage label Inter 12px `#9A9AAB` → count Poppins 700 22px → delta Inter 600 12px semantic. Between steps a 15px `#CFCFDA` chevron with `padding-top: 52px` so it aligns with the chips. No chevron after the last step.
+
+### Diagnostic banner
+`align-items: center; gap: 11px;` radius 12px, padding `14px 16px`, tinted surface + matching border. 30 × 30 radius 9px chip with a 15px icon. Title Poppins 600 13.5px in the state colour; body Inter 400 12px `#5A5A6E` `line-height: 1.45`.
+- Problem: `#FEF6F6` / border `#F8DEDE` / `#E5484D`, warning triangle, "Problem found: <stage>".
+- Healthy: `#F3FAF6` / border `#D5EEDF` / `#25A55F`, check, "All looking good".
+Always name the stage and quote the two numbers that prove it.
+
+### Birdy AI insight card
+The one saturated surface. `linear-gradient(135deg, #6B4EE6, #8B6BF0)`, 1px `#5A3FD6`, radius 16px, padding `16px 18px`, shadow `0 10px 26px -12px rgba(107,78,230,.6)`.
+Header: 26 × 26 radius 8px chip `rgba(255,255,255,.2)` with a white sparkle · `Birdy Insights` Poppins 600 13.5px `#fff` · `AI` badge `rgba(255,255,255,.22)`.
+Body Inter 400 12.5px `rgba(255,255,255,.88)`, `line-height: 1.5`, with figures and client names in `<strong style="color:#fff">`.
+Footer link `Ask Birdy about this` + chevron, Inter 600 12px `#fff`.
+Copy is **generated per period** — name the biggest movement, then the single most actionable anomaly.
+
+### Recommendation card
+1px `#ECECF2`, radius 10px, padding `11px 12px`.
+1. Meta row: 7px severity dot · severity label Inter 700 10.5px in the severity colour · client name Inter 400 11px `#9A9AAB` (ellipsis).
+2. Title Poppins 600 13px `#1F1B33`, `line-height: 1.3`.
+3. Bottom row, `align-items: flex-end`: reason Inter 400 11.5px `#6B6480` on the left (`flex: 1`); actions right — primary **Do it** (bolt icon) + icon-only dismiss.
+
+Severity: `HIGH` `#E5484D` · `OPPORTUNITY` `#25A55F` · `MEDIUM` `#E0920A`.
+Actions are exactly two: execute, or dismiss. No "done manually", no auto-approve checkbox.
+
+### Activity row
+`display: flex; gap: 11px;` 26 × 26 mode circle (⚡ auto-run `#6B4EE6`/`#F1EEFC`, ✓ approved `#25A55F`/`#EDF8F1`) · action Inter 600 12.5px `#1F1B33` · client Inter 400 11.5px `#8A8A9A` · mode tag + timestamp Inter 11px `#9A9AAB`. **Action, client, and mode each on their own line.**
+
+### Timeline (vertical)
+2px `#F1F1F5` spine with the content column offset from it. Nodes 14–18px circles, 2–3px white border; current node filled `#6B4EE6` with the focus glow, past nodes white with a `#CFCFDA` border. Dates hang to the left of the spine; cards sit right. Keep the card column optically centred in the frame.
+
+### Expandable entry
+Header row `display: flex; gap: 11px;` padding `13px 15px`, `cursor: pointer`: tag pill · title Inter 600 14px (`flex: 1`) · 15px chevron rotating 180° over 150ms. Body divided by a 1px `#F5F5F8` top border, padding `0 15px 15px`, with small caps labels (Inter 700 10.5px `#9A9AAB`, `letter-spacing: .04em`) over Inter 13px `#5A5A6E` paragraphs.
+
+### Message bubbles
+Outbound: `#6B4EE6` bg, white text, radius `14px 14px 4px 14px`, right-aligned with a 30px initials avatar. Inbound: `#fff`, 1px `#ECECF2`, `#1F1B33`, radius `14px 14px 14px 4px`, avatar left. Body Inter 13.5px `line-height: 1.5`; meta line beneath Inter 11px `#9A9AAB` naming channel · sender · time, with a green tick for delivered. System events are a centred pill on a hairline rule.
+
+### Toggle switch
+34 × 19 pill, radius 999px, padding 2px, with a 15px white knob. On `#6B4EE6` (knob right); off `#CFCFDA` (knob left).
+
+### Scrollbar
+```css
+.scrolly { overflow-y: auto; }
+.scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+.scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+```
+
+---
+
+## 5. Content rules
+
+- **Currency** — GBP, `£1,234.56`. Large figures abbreviate as `1.42M`, `£298k`.
+- **Deltas** — `▲ 8.4%` / `▼ 3.3%` or arrow icon + `8.4%`. Points not percent for rate changes: `▲ 1.8pts`. Add a qualifier when direction alone is ambiguous: `▼ 3.3% — improving`.
+- **Dates** — `1 – 31 Jul 2026`, `17 Jul 2026`, `Tuesday, 15 July`. Times `3:44 PM`. Relative for recency: `4 min ago`, `2 hrs ago`.
+- **Durations** — `4m 12s`, `3:42`, or `4,073` with a `(min)` label.
+- **Client names** — real ones, in their own casing (Tylaesthetics, The Contour Co, Palm Peach Body Sculpt, BBL Body Confidence, Beauty Hub Mcr, Thee Vision Studio). Never "Client A".
+- **Reasoning copy** — one sentence, threshold-shaped: *"£48 CPL vs £22 target · 0 leads in 5 days · £312 spent."*
+- **Empty / all-clear states** — say what's true, not "nothing here": *"All looking good"*, *"Birdy is watching 9 more signals."*
+- **No filler.** Every stat, icon and section must earn its place. An empty-feeling area is a layout problem, not a content gap.
+
+---
+
+## 6. Interaction principles
+
+1. **The tool tells you what to do.** Screens open on actions and alerts, not static dashboards.
+2. **Two actions per recommendation** — execute, or dismiss. Never more.
+3. **Auto-run vs approved** is always visible in the audit trail.
+4. **One scrollbar per region.** Toggle between panels instead of stacking scroll areas.
+5. **Filters live in the header**; view switches (tabs) live above the content they filter.
+6. **Dropdowns** close on selection, outside click, and Escape; option clicks stop propagation.
+7. **Charts re-animate** on metric or timeframe change.
+8. **Hover reveals figures** — never require a click to read a value.
+9. **Colour by meaning, not direction** — respect inverted metrics.
+10. **Status gets its own column.** Never overload the name cell.
+
+---
+
+## 7. Anti-patterns
+
+- Aggressive full-page gradients. One purple card, maximum.
+- Emoji in headings or body copy.
+- Inter or Roboto for headings — headings and numerals are Poppins.
+- Rounded containers with a left-border accent stripe.
+- Shadows on ordinary cards (they're flat and bordered).
+- New colours outside the palette.
+- Two scrollbars in one column.
+- Hand-drawn SVG illustrations or logos.
+- Bare "View all" links where a metric dropdown would be more useful.
+- Percentage bar heights inside a container with no resolved height (bars silently collapse).
+- Chart series that are flat, identical across timeframes, or don't align with their axis labels.
+
+---
+
+## 8. Starter snippet
+
+```html
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #EEEDF3; font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #6B4EE6; text-decoration: none; }
+  a:hover { color: #5A3FD6; }
+  .scrolly { overflow-y: auto; }
+  .scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+  .scrolly::-webkit-scrollbar-thumb { background: #DEDCE8; border-radius: 5px; }
+</style>
+```
+
+Frame: `width: 1600px; height: 1040px; background: #F7F7FB; border: 1px solid #E3E3EC; border-radius: 16px; overflow: hidden; display: flex; box-shadow: 0 20px 50px -20px rgba(30,25,60,.25);`
+
+Assets needed: the Birdy mascot PNG (rail logo, 38 × 38, radius 10px, 1px `#E3E3EC`), Poppins + Inter from Google Fonts, and an icon set in the Feather/Lucide style.
+
+---
+
+## 9. Screens already designed
+
+For consistency, match the closest existing screen:
+
+| Screen | Pattern |
+|---|---|
+| **Homepage** | Task feed — Birdy suggestions / Alerts / Client wins pill tabs, 75/25 split with a fixed activity feed |
+| **Client Hub** | Compact KPI strip + inline tabs + wide data table with a status column |
+| **Lead Detail** | Two columns — tabbed profile panel (Profile / Journey / Calls / Ads) with a pinned AI summary, plus the messaging thread |
+| **Portfolio Dashboard** | KPI strip, switchable line chart, top-clients leaderboard, horizontal funnel + diagnostic, six call-insight cells, suggestions/activity rail |
+| **Sales Hub** | Chart left (1.65) · Birdy insight card over six compact tiles right (0.85) · section tabs · client table |
+| **Marketing Hub** | Same as Sales Hub, campaign metrics and table |
+| **Admin** | Dark rail (`#1E1A2E`), agency-owner table with Impersonate, AI query analytics, affiliate tracking |
+| **Changelog** | Public page — centred hero, filter pills + live search, dated timeline, expandable entries |

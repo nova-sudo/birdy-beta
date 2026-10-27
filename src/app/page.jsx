@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { BellRing } from "lucide-react";
-import { Button, Input } from "@/components/ds";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import BirdyAvatar from "@/components/birdy/BirdyAvatar";
 import { CountUp, EASE_OUT, Pop, Reveal } from "@/components/motion";
 import { publicRequest } from "@/lib/api";
@@ -24,30 +25,30 @@ const TREND = "M0,100 C40,96 60,90 100,82 S170,70 210,60 S290,44 330,30 S380,18 
 function ProductPreview() {
   return (
     <figure className="relative" role="img" aria-label="Illustration of Birdy flagging a client's rising cost per lead and recommending a fix">
-      <Reveal delay={0.15} className="rounded-frame bg-background p-4 shadow-floating" aria-hidden="true">
+      <Reveal delay={0.15} className="rounded-3xl border border-pd-border bg-pd-surface p-4 shadow-[0_30px_60px_-30px_rgba(24,24,27,.35)]" aria-hidden="true">
         <div className="grid grid-cols-3 gap-2">
           {[
             ["Ad spend", "£18,903"],
             ["Leads", "1,284"],
             ["Cost per lead", "£14.72"],
           ].map(([label, value]) => (
-            <div key={label} className="rounded-surface px-3 py-2.5 shadow-surface">
-              <div className="text-xs text-muted-foreground">{label}</div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
+            <div key={label} className="rounded-2xl border border-pd-border px-3 py-2.5">
+              <div className="text-[11px] text-pd-subtle">{label}</div>
+              <div className="mt-1 font-pd-display text-[21px] font-extrabold text-pd-ink">
                 <CountUp value={value} />
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-2.5 rounded-surface p-2.5 shadow-surface">
-          <div className="text-xs text-muted-foreground">Leads · last 30 days</div>
+        <div className="mt-2.5 rounded-2xl border border-pd-border p-2.5">
+          <div className="text-[11px] text-pd-subtle">Leads · last 30 days</div>
           <svg viewBox="0 0 400 120" preserveAspectRatio="none" className="mt-1 h-[120px] w-full">
-            <path d={`${TREND} L400,120 L0,120Z`} fill="var(--color-primary)" opacity=".07" />
+            <path d={`${TREND} L400,120 L0,120Z`} fill="var(--pd-primary)" opacity=".07" />
             <motion.path
               d={TREND}
               fill="none"
-              stroke="var(--color-primary)"
+              stroke="var(--pd-primary)"
               strokeWidth="3"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}
@@ -57,32 +58,32 @@ function ProductPreview() {
           </svg>
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between rounded-surface px-3 py-2.5 text-xs shadow-surface">
-          <span className="text-body"><b className="text-foreground">Harbourside Dental</b> · £11.09 CPL</span>
-          <span className="font-semibold text-success-ink">−8.2%</span>
+        <div className="mt-2.5 flex items-center justify-between rounded-2xl border border-pd-border px-3 py-2.5 text-[12.5px]">
+          <span className="text-pd-body"><b className="text-pd-ink">Harbourside Dental</b> · £11.09 CPL</span>
+          <span className="font-bold text-pd-success">−8.2%</span>
         </div>
       </Reveal>
 
       <Pop
         delay={1.4}
         aria-hidden="true"
-        className="absolute -left-4 bottom-24 flex items-center gap-2.5 rounded-overlay bg-danger-soft px-3.5 py-2.5 text-xs text-danger-ink shadow-floating sm:-left-7"
+        className="absolute -left-4 bottom-24 flex items-center gap-2.5 rounded-2xl border border-pd-danger-border bg-pd-surface px-3.5 py-2.5 text-[12.5px] shadow-lg sm:-left-7"
       >
-        <span className="flex size-8 items-center justify-center rounded-control bg-danger text-primary-foreground">
+        <span className="flex size-8 items-center justify-center rounded-[12px] bg-pd-danger text-white">
           <BellRing className="size-4" />
         </span>
         <span>
-          <b className="block">CPL spike</b>
-          <span>Kestrel Roofing hit £27.43</span>
+          <b className="block text-pd-ink">CPL spike</b>
+          <span className="text-pd-subtle">Kestrel Roofing hit £27.43</span>
         </span>
       </Pop>
 
       <Pop
         delay={2.2}
         aria-hidden="true"
-        className="absolute -bottom-6 right-2 w-[272px] rounded-overlay bg-primary px-3.5 py-3 text-xs leading-snug text-primary-foreground shadow-floating sm:-right-5"
+        className="absolute -bottom-6 right-2 w-[272px] rounded-[20px] bg-pd-primary px-3.5 py-3 text-[12.5px] leading-snug text-white shadow-[0_18px_40px_-14px_rgba(91,63,214,.6)] sm:-right-5"
       >
-        <span className="mb-1 flex items-center gap-2 text-sm font-semibold">
+        <span className="mb-1 flex items-center gap-2 font-pd-display text-[14px] font-bold">
           <BirdyAvatar size={24} paused />
           Birdy recommends
         </span>
@@ -130,26 +131,26 @@ export default function Home() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-frame text-foreground">
+    <div className="flex min-h-screen w-full flex-col bg-pd-canvas text-pd-ink">
       {/* HEADER */}
       <header className="flex items-center justify-between px-6 py-5 md:px-10">
         <div className="flex items-center gap-2.5">
           <BirdyAvatar size={34} />
-          <span className="text-xl font-semibold tracking-tight">Birdy</span>
+          <span className="font-pd-display text-[20px] font-extrabold tracking-[-0.02em]">Birdy</span>
         </div>
-        <span className="rounded-full bg-foreground px-3.5 py-1.5 text-xs font-semibold text-background">Coming soon</span>
+        <span className="rounded-full bg-pd-ink px-3.5 py-1.5 text-xs font-bold text-white">Coming soon</span>
       </header>
 
       {/* HERO */}
       <main className="mx-auto grid w-full max-w-6xl flex-1 items-center gap-12 px-6 pb-24 pt-8 md:px-10 lg:grid-cols-[1fr_1.05fr] lg:pt-14">
         <div>
           <Reveal>
-            <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance md:text-title">
-              The AI Brain That Runs &amp; <span className="text-primary">Scales</span> Your Agency
+            <h1 className="font-pd-display text-[44px] font-extrabold leading-[1.02] tracking-[-0.035em] md:text-[58px]">
+              The AI Brain That Runs &amp; <span className="text-pd-primary">Scales</span> Your Agency
             </h1>
           </Reveal>
           <Reveal delay={0.08}>
-            <p className="mt-5 max-w-[46ch] text-base text-muted-foreground">
+            <p className="mt-5 max-w-[46ch] text-[17px] leading-relaxed text-pd-body">
               Birdy connects your ads, CRM, bookings, and revenue data across all clients,
               flags problems early, and guides what to fix or scale next.
             </p>
@@ -160,10 +161,10 @@ export default function Home() {
               <div className="flex items-center gap-3">
                 <BirdyAvatar size={48} state="celebrate" />
                 <div>
-                  <p className="text-lg font-semibold">
+                  <p className="font-pd-display text-[18px] font-bold">
                     {status === "joined" ? "Boom... You're on the List! 🎉" : "Hey... You're Already on the List! 😉"}
                   </p>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
+                  <p className="mt-0.5 text-sm text-pd-subtle">
                     {status === "joined"
                       ? "You're one step closer to running a stress-free agency"
                       : "We'll get you onboarded as quick as possible."}
@@ -179,10 +180,9 @@ export default function Home() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@agency.com"
                   aria-label="Email address"
-                  size="lg"
-                  className="px-5 sm:w-72"
+                  className="h-12 px-5 text-[15px] sm:w-72"
                 />
-                <Button type="submit" variant="primary" size="lg" disabled={status === "loading"}>
+                <Button type="submit" disabled={status === "loading"} className="h-12 px-6 text-[14.5px]">
                   {status === "loading" ? "Joining..." : "Join the Waitlist"}
                 </Button>
               </form>
@@ -194,12 +194,12 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer className="flex flex-col items-center justify-between gap-3 border-t border-border px-6 py-6 md:flex-row md:px-10">
+      <footer className="flex flex-col items-center justify-between gap-3 border-t border-pd-border px-6 py-6 md:flex-row md:px-10">
         <div className="flex items-center gap-2">
           <BirdyAvatar size={24} paused />
-          <span className="text-sm font-semibold">Birdy</span>
+          <span className="font-pd-display text-sm font-bold">Birdy</span>
         </div>
-        <p className="text-sm text-muted-foreground">Built by agency owners, for agency owners.</p>
+        <p className="text-sm text-pd-subtle">Built by agency owners, for agency owners.</p>
       </footer>
     </div>
   );

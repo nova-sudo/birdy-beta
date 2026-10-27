@@ -3,8 +3,9 @@
 import { formatDistanceToNow } from "date-fns"
 import { Slack, Globe, ChevronRight } from "lucide-react"
 import {
-  Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
-} from "@/components/ds"
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { useUserConversations } from "@/lib/admin-api"
 
@@ -18,10 +19,10 @@ function ListSkeleton() {
     <div className="space-y-1">
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
           <div className="flex-1 space-y-1.5">
             <Skeleton className="h-3 w-40" />
-            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-3.5 w-full" />
           </div>
         </div>
       ))}
@@ -40,19 +41,17 @@ export default function UserConversationsDialog({ agency, onOpenSession, onClose
 
   return (
     <Dialog open={!!agency} onOpenChange={(o) => !o && onClose?.()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogDescription className="sr-only">Archived Birdy AI conversations for this account.</DialogDescription>
-          <DialogTitle className="text-base">
-            Conversations · <span className="text-primary">{agency?.owner}</span>
+      <DialogContent className="bg-pd-surface max-w-lg p-0 gap-0 overflow-hidden rounded-xl">
+        <DialogHeader className="px-5 py-3.5 border-b border-pd-divider">
+          <DialogTitle className="font-pd-display text-base">
+            Conversations · <span className="text-pd-primary">{agency?.owner}</span>
           </DialogTitle>
         </DialogHeader>
 
-        {/* A list, so the body keeps only a list's 6 of padding. */}
-        <DialogBody className="gap-0 p-1.5">
+        <div className="max-h-[65vh] overflow-y-auto p-2">
           {isLoading && <ListSkeleton />}
           {!isLoading && sessions.length === 0 && (
-            <p className="py-12 text-center text-sm text-muted-foreground">
+            <p className="text-center text-sm text-pd-subtle py-12">
               No conversations recorded for this account yet.
             </p>
           )}
@@ -63,26 +62,26 @@ export default function UserConversationsDialog({ agency, onOpenSession, onClose
                 <StaggerItem key={s.session_id}>
                   <button
                     onClick={() => onOpenSession?.(s.session_id)}
-                    className="flex w-full items-center gap-3 rounded-control px-3 py-2.5 text-left outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus"
+                    className="w-full text-left flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-pd-table-head transition-colors focus:outline-none focus-visible:ring-4 focus-visible:ring-ring/25"
                   >
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary-soft">
-                      <SourceIcon aria-hidden className="size-4 text-primary" />
+                    <div className="h-8 w-8 shrink-0 rounded-full bg-pd-primary-tint flex items-center justify-center">
+                      <SourceIcon className="h-4 w-4 text-pd-primary" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-medium text-primary">{s.category_label}</span>
-                        <span className="text-xs text-muted-foreground">· {s.message_count} messages</span>
-                        <span className="ml-auto text-xs text-muted-foreground">{relative(s.last_at)}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-pd-primary">{s.category_label}</span>
+                        <span className="text-[10px] text-pd-subtle">· {s.message_count} messages</span>
+                        <span className="text-[10px] text-pd-subtle ml-auto">{relative(s.last_at)}</span>
                       </div>
-                      <p className="mt-0.5 truncate text-sm text-body">{s.preview || "—"}</p>
+                      <p className="text-sm text-pd-body truncate mt-0.5">{s.preview || "—"}</p>
                     </div>
-                    <ChevronRight aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                    <ChevronRight className="h-4 w-4 text-pd-chevron shrink-0" />
                   </button>
                 </StaggerItem>
               )
             })}
           </Stagger>
-        </DialogBody>
+        </div>
       </DialogContent>
     </Dialog>
   )

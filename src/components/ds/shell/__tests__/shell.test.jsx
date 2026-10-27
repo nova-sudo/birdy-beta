@@ -39,7 +39,6 @@ import {
   PageCard,
 } from "@/components/ds"
 import { isActive } from "@/components/ds/shell/nav-config"
-import AdminShell from "@/components/admin/AdminShell"
 
 beforeEach(() => {
   pathnameMock.value = "/dashboard"
@@ -230,24 +229,6 @@ describe("PageCard", () => {
   })
 })
 
-describe("AdminShell", () => {
-  it("sits on the canvas like the main shell: borderless top bar over the page card", () => {
-    render(<AdminShell><p>admin body</p></AdminShell>)
-    const bar = document.querySelector('[data-ds="top-bar"]')
-    expect(bar).toHaveClass("h-[52px]")
-    expect(bar.className).not.toMatch(/border-b|bg-background/)
-    expect(screen.getByRole("heading", { level: 1, name: "Admin" })).toBeTruthy()
-    expect(screen.getByText("Internal")).toBeTruthy()
-    expect(screen.getByRole("link", { name: /Back to Birdy/ })).toHaveAttribute("href", "/dashboard")
-    // The admin console is its own tool: no assistant, search or bell up there.
-    expect(screen.queryByRole("button", { name: /Ask Birdy/ })).toBeNull()
-
-    const card = document.querySelector('[data-ds="page-card"]')
-    expect(card.contains(bar)).toBe(false)
-    expect(card).toHaveTextContent("admin body")
-    expect(screen.getByRole("navigation", { name: "Main" })).toBeTruthy()
-  })
-})
 
 function Publisher({ content }) {
   usePageHeader(content)

@@ -14,8 +14,6 @@
 
 import Image from "next/image"
 
-import { cn } from "@/lib/utils"
-
 import { ghlIcon, metaIcon, hpIcon, flaskIcon } from "@/lib/icons"
 import { SOURCE_STYLES } from "@/lib/metric-sources"
 
@@ -37,8 +35,7 @@ export function SourceBadge({ source }) {
 
   return (
     <span
-      data-ds="source-badge"
-      className={cn("inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium", style.className)}
+      className={`inline-flex items-center gap-[6px] rounded-full px-[11px] py-[4px] text-[11.5px] font-bold ${style.className}`}
     >
       {logo ? (
         <Image src={logo} alt="" width={13} height={13} className="size-[13px] shrink-0 object-contain" />

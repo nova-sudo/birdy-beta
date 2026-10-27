@@ -7,7 +7,7 @@
 // here is exactly the payload that will be posted.
 //
 // Palette: the dataviz reference categorical hues, stepped for a dark surface
-// and validated against Slack's dark surface (all six checks pass). Assigned in
+// and validated against Slack's #1A1D21 (all six checks pass). Assigned in
 // fixed order; a legend appears from two series up, and the tooltip carries the
 // values, so identity never rests on colour alone.
 
@@ -16,11 +16,10 @@ import {
   ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts"
 
-import { SLACK_CHART_COLORS, SLACK_CHART_EXTRA, SLACK_PREVIEW } from "@/lib/brand-colors"
+export const CHART_COLORS = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+const EXTRA = "#8b8d91" // series 9-12: Slack allows 12; past the validated 8 they share a neutral
 
-export const CHART_COLORS = SLACK_CHART_COLORS
-
-const color = (i) => CHART_COLORS[i] ?? SLACK_CHART_EXTRA
+const color = (i) => CHART_COLORS[i] ?? EXTRA
 
 const compact = (v) => {
   const n = Number(v)
@@ -33,7 +32,7 @@ const compact = (v) => {
 
 const axis = { stroke: "rgba(255,255,255,0.18)", tick: { fill: "rgba(255,255,255,0.6)", fontSize: 11 } }
 const tooltipStyle = {
-  contentStyle: { background: SLACK_PREVIEW.raised, border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, fontSize: 12 },
+  contentStyle: { background: "#222529", border: "1px solid rgba(255,255,255,0.15)", borderRadius: 8, fontSize: 12 },
   labelStyle: { color: "rgba(255,255,255,0.85)", fontWeight: 600 },
   itemStyle: { color: "rgba(255,255,255,0.85)" },
 }
@@ -63,7 +62,7 @@ export default function SlackChart({ block }) {
     body = (
       <PieChart>
         <Pie data={segs} dataKey="value" nameKey="label" innerRadius="45%" outerRadius="80%" paddingAngle={1.5}
-          stroke={SLACK_PREVIEW.surface} strokeWidth={2} isAnimationActive={false}>
+          stroke="#1A1D21" strokeWidth={2} isAnimationActive={false}>
           {segs.map((s, i) => <Cell key={s.label} fill={color(i)} />)}
         </Pie>
         <Tooltip {...tooltipStyle} formatter={(v, n) => [`${compact(v)} (${((v / total) * 100).toFixed(0)}%)`, n]} />
@@ -108,7 +107,7 @@ export default function SlackChart({ block }) {
           {series.map((s, i) => (
             <Line key={s.name} type="monotone" dataKey={s.name} stroke={color(i)} strokeWidth={2}
               dot={rows.length <= 12 ? { r: 3, strokeWidth: 0, fill: color(i) } : false}
-              activeDot={{ r: 5, stroke: SLACK_PREVIEW.surface, strokeWidth: 2 }} isAnimationActive={false} />
+              activeDot={{ r: 5, stroke: "#1A1D21", strokeWidth: 2 }} isAnimationActive={false} />
           ))}
         </LineChart>
       )
@@ -117,13 +116,13 @@ export default function SlackChart({ block }) {
 
   return (
     <figure className="rounded-lg border border-white/10 bg-white/[0.03] px-3 pb-2 pt-2.5" aria-label={block.title}>
-      <figcaption className="mb-1.5 text-xs font-semibold text-white">{block.title}</figcaption>
+      <figcaption className="mb-1.5 text-[13px] font-semibold text-white">{block.title}</figcaption>
       {body ? (
         <div className="h-[220px] w-full">
           <ResponsiveContainer width="100%" height="100%">{body}</ResponsiveContainer>
         </div>
       ) : (
-        <p className="text-xs text-white/50">This chart has no data yet.</p>
+        <p className="text-[12px] text-white/50">This chart has no data yet.</p>
       )}
     </figure>
   )

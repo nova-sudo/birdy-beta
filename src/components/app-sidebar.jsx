@@ -1,0 +1,204 @@
+import { House, SquareUserRound, ChartNoAxesColumnIncreasing, Bell, Phone, List, Calculator, Settings, LogOut, Sparkles, LayoutGrid } from "lucide-react"
+import { useState } from "react"
+import { usePathname } from "next/navigation"
+import Link from "next/link"
+import { motion } from "framer-motion"
+import { useSidebar } from "@/components/ui/sidebar"
+import { apiRequest } from "@/lib/api"
+import { clearSession } from "@/lib/session"
+import { APP_VERSION } from "@/lib/changelog"
+import BirdyAvatar from "@/components/birdy/BirdyAvatar"
+import { useBirdy } from "@/components/birdy/use-birdy"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarFooter,
+  SidebarSeparator,
+} from "@/components/ui/sidebar"
+
+import SidebarCredits from "@/components/SidebarCredits"
+import SidebarJobs from "@/components/SidebarJobs"
+
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
+const items = [
+  {title: "Dashboard", url: "/dashboard", icon: House },
+  // Agents and dashboards live together in BirdyHub.
+  { title: "BirdyHub", url: "/hub", icon: LayoutGrid },
+  { title: "Clients", url: "/clients", icon: SquareUserRound },
+  { title: "Ask Birdy", url: "/ask-birdy", icon: Sparkles },
+  { title: "Marketing", url: "/campaigns", icon: ChartNoAxesColumnIncreasing },
+  { title: "Sales", url: "/Sales-Hub", icon: Phone },
+  { title: "Leads", url: "/contacts", icon: List },
+  { title: "Metrics", url: "/metrics", icon: Calculator },
+  { title: "Alerts", url: "/alerts", icon: Bell },
+  { title: "Settings", url: "/settings", icon: Settings },
+]
+
+export function AppSidebar() {
+  const pathname = usePathname()
+  // Admin now lives behind the profile avatar menu (UserMenu), not the sidebar.
+  const navItems = items
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const { state: birdyState } = useBirdy()
+  const {
+    open,
+    setOpen,
+    openMobile,
+    setOpenMobile,
+    isMobile,
+  } = useSidebar()
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+
+    try {
+      await apiRequest("/api/logout", { method: "POST" })
+    } catch {
+      // Logout even if API call fails
+    } finally {
+      localStorage.clear()
+      sessionStorage.clear()
+      // localStorage.clear() doesn't touch cookies, and a session hint left
+      // behind would have middleware routing the next visitor as though they
+      // were still signed in.
+      clearSession()
+      setIsLoggingOut(false)
+      window.location.href = "/"
+    }
+  }
+
+  return (
+    <>
+      <Sidebar
+        collapsible="icon"
+        variant="sidebar"
+        side="left"
+        open={isMobile ? openMobile : open}
+        onOpenChange={isMobile ? setOpenMobile : setOpen}
+      >
+        <SidebarContent className="pt-2">
+          <SidebarGroup>
+            <SidebarMenuButton size="lg" asChild className="rounded-none h-16 overflow-visible">
+              <Link href="/clients">
+                <BirdyAvatar state={birdyState} size={40} speedK={1.15} />
+              </Link>
+            </SidebarMenuButton>
+
+            <SidebarGroupLabel>Application</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-y-5 pt-4">
+                {navItems.map((item) => {
+                  const isActive = pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      {/* The active bar sits on the item rather than inside the
+                          button: the button clips to a pill, which would trim
+                          a bar on its edge to a sliver. One layoutId across
+                          every item, so it slides between them on navigation.
+                          Centred with a margin — framer owns the transform. */}
+                      {isActive && (
+                        <motion.span
+                          layoutId="sidebar-active"
+                          aria-hidden="true"
+                          className="pointer-events-none absolute -left-2 top-1/2 -mt-2.5 h-5 w-[3px] rounded-full bg-pd-primary"
+                          transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                        />
+                      )}
+                      <Tooltip>
+                        {/* asChild: without it the trigger renders its own <button>
+                            around the menu button — a button inside a button,
+                            which the browser re-nests, so hydration fails and
+                            React rebuilds the shell on the client. */}
+                        <TooltipTrigger asChild>
+                          <SidebarMenuButton
+                            asChild
+                            isActive={isActive}
+                            className="font-semibold text-[14px] text-pd-ink data-[active=true]:bg-pd-primary-tint data-[active=true]:text-pd-primary data-[active=true]:hover:bg-pd-primary-tint data-[active=true]:hover:text-pd-primary"
+                          >
+                            <Link href={item.url}>
+                              <item.icon />
+                              <span>{item.title}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                        </TooltipTrigger>
+                        <TooltipContent>{item.title}</TooltipContent>
+                      </Tooltip>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          {/* Background tasks (call analyses etc.) — hidden when idle */}
+          <SidebarJobs />
+          {/* Credits-left indicator (bottom-left) */}
+          <SidebarCredits />
+          <SidebarSeparator />
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <SidebarMenuButton
+                    onClick={() => setShowLogoutDialog(true)}
+                    className="font-semibold text-[14px] text-pd-danger hover:text-pd-danger hover:bg-pd-danger-bg"
+                  >
+                    <LogOut />
+                    <span>Logout</span>
+                  </SidebarMenuButton>
+                </TooltipTrigger>
+                <TooltipContent>Logout</TooltipContent>
+              </Tooltip>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent className="bg-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be logged out of your account and redirected to the landing page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isLoggingOut}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              variant="destructive"
+            >
+              {isLoggingOut ? "Logging out..." : "Logout"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}

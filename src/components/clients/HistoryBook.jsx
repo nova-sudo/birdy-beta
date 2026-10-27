@@ -10,11 +10,12 @@
 // for a refit.
 
 import { useState } from "react"
-import { Send, Loader2, Trash2, StickyNote } from "lucide-react"
+import { Book, Send, Loader2, Trash2, StickyNote } from "lucide-react"
 import { toast } from "sonner"
-import { Badge, Button, Frame, Input, Skeleton } from "@/components/ds"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ActivityItem } from "@/components/activity/ActivityItem"
-import { cn } from "@/lib/utils"
 
 function relativeTime(iso) {
   const then = new Date(iso)
@@ -32,37 +33,35 @@ function relativeTime(iso) {
 
 function NoteEntry({ note, onDelete, deleting }) {
   return (
-    <div className="group flex items-start gap-3 rounded-control bg-muted p-3">
-      <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+    <div className="group flex items-start gap-3 rounded-xl border border-pd-border p-[13px]">
+      <span className="flex size-[26px] shrink-0 items-center justify-center rounded-full bg-pd-primary-tint text-pd-primary">
         <StickyNote className="size-3.5" aria-hidden="true" />
       </span>
 
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <Badge tone="primary">Note</Badge>
-          <span className="truncate text-xs text-muted-foreground">
+          <span className="rounded-full bg-pd-primary px-[7px] py-[2px] text-[10px] font-bold text-white">
+            Note
+          </span>
+          <span className="truncate text-[10.5px] text-pd-subtle">
             {note.author} · {relativeTime(note.created_at)}
           </span>
         </div>
-        <p className="mt-1.5 whitespace-pre-wrap text-sm leading-snug text-foreground">
+        <p className="mt-1.5 text-xs leading-snug whitespace-pre-wrap text-pd-ink">
           {note.body}
         </p>
       </div>
 
-      <Button
-        variant="ghost"
-        size="icon-sm"
+      <button
         onClick={() => onDelete(note.id)}
         disabled={deleting}
         aria-label={`Delete note by ${note.author}`}
-        className={cn(
-          "shrink-0 text-danger-ink hover:bg-danger-soft",
-          // Revealed on hover or focus; always there for touch.
-          "sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-        )}
+        className="shrink-0 rounded-full p-1 text-pd-danger opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100 hover:bg-destructive/10 disabled:opacity-50"
       >
-        {deleting ? <Loader2 className="animate-spin" /> : <Trash2 />}
-      </Button>
+        {deleting
+          ? <Loader2 className="size-3 animate-spin" />
+          : <Trash2 className="size-3" />}
+      </button>
     </div>
   )
 }
@@ -74,7 +73,6 @@ export function HistoryBook({
   loading = false,
   onAddNote,
   onDeleteNote,
-  className,
 }) {
   const [draft, setDraft] = useState("")
   const [sending, setSending] = useState(false)
@@ -105,20 +103,27 @@ export function HistoryBook({
   const isEmpty = notes.length === 0 && activity.length === 0
 
   return (
-    <Frame title="History book" className={className} contentClassName="flex flex-col">
-      <div className="flex max-h-80 min-h-32 flex-1 flex-col gap-2.5 overflow-y-auto p-4">
+    <div className="flex flex-col overflow-hidden rounded-xl border border-pd-border bg-pd-surface">
+      <div className="flex items-center gap-2 border-b border-pd-border px-[22px] py-4">
+        <Book className="size-4 text-pd-primary" aria-hidden="true" />
+        <p className="font-pd-display text-[15px] font-semibold text-pd-ink">
+          History book
+        </p>
+      </div>
+
+      <div className="max-h-[330px] min-h-[120px] flex-1 space-y-2.5 overflow-y-auto px-[22px] py-4">
         {loading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-start gap-3">
-              <Skeleton className="size-7 shrink-0 rounded-full" />
-              <div className="flex flex-1 flex-col gap-1.5">
+              <Skeleton className="size-[26px] shrink-0 rounded-full" />
+              <div className="flex-1 space-y-1.5">
                 <Skeleton className="h-3 w-40" />
                 <Skeleton className="h-3 w-24" />
               </div>
             </div>
           ))
         ) : isEmpty ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
+          <p className="py-6 text-center text-xs text-pd-subtle">
             Nothing recorded for this client yet. Add the first note below.
           </p>
         ) : (
@@ -132,9 +137,11 @@ export function HistoryBook({
               />
             ))}
             {activity.length > 0 && (
-              <div className="flex flex-col gap-4 pt-1">
+              <div className="space-y-4 pt-1">
                 {notes.length > 0 && (
-                  <p className="text-xs font-medium text-muted-foreground">Activity</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-[.04em] text-pd-faint">
+                    Activity
+                  </p>
                 )}
                 {activity.map((a) => (
                   <ActivityItem key={a.id} {...a} />
@@ -145,7 +152,10 @@ export function HistoryBook({
         )}
       </div>
 
-      <form onSubmit={submit} className="flex items-center gap-2 border-t border-divider p-3">
+      <form
+        onSubmit={submit}
+        className="flex items-center gap-2 border-t border-pd-border px-[22px] py-3"
+      >
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -153,19 +163,20 @@ export function HistoryBook({
           aria-label="Add a note"
           maxLength={2000}
           disabled={sending}
-          className="flex-1"
+          className="h-[38px] flex-1 text-[13px]"
         />
         <Button
           type="submit"
-          variant="primary"
           size="icon"
           disabled={!draft.trim() || sending}
           aria-label="Save note"
-          className="shrink-0"
+          className="size-[38px] shrink-0"
         >
-          {sending ? <Loader2 className="animate-spin" /> : <Send />}
+          {sending
+            ? <Loader2 className="size-4 animate-spin" />
+            : <Send className="size-4" />}
         </Button>
       </form>
-    </Frame>
+    </div>
   )
 }

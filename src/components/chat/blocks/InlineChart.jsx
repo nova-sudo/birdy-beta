@@ -18,7 +18,7 @@ class ChartErrorBoundary extends Component {
   render() {
     if (this.state.error) {
       return (
-        <div className="not-prose my-3 rounded-control bg-warning-soft p-3 text-xs text-warning-ink">
+        <div className="not-prose my-3 rounded-2xl bg-pd-warning-bg p-3 text-xs text-pd-amber">
           <div className="mb-1 font-semibold">Chart failed to render</div>
           <div className="opacity-75">{String(this.state.error?.message || this.state.error)}</div>
         </div>
@@ -28,7 +28,7 @@ class ChartErrorBoundary extends Component {
   }
 }
 
-const AXIS_TICK = { fontSize: 10.5, fill: "var(--color-muted-foreground)" }
+const AXIS_TICK = { fontSize: 10.5, fill: "var(--pd-faint)" }
 
 // A handful of categories (clients, campaigns) each get their label, wrapped
 // to two lines in their own slot, instead of recharts dropping the ones that
@@ -44,8 +44,8 @@ function CategoryTick({ x, y, payload, width, visibleTicksCount }) {
 
 /**
  * An inline chart from a :::chart block — line, area, bar, combo or donut,
- * drawn in the hubs' chart language: chart tokens, a gradient under
- * lines, baseline-only grid, and a dark tooltip.
+ * drawn in the hubs' chart language: pd tokens, a violet gradient under
+ * lines, baseline-only grid, and the dark tooltip TrendPlot uses.
  *
  * Payload (render_ui, birdy-backend ai/tools/render_ui_tools.py):
  *   { type, title?, subtitle?, format?, currency?, data: [{label, value}] }
@@ -67,7 +67,7 @@ function InlineChartInner({ payload }) {
 
   if (!chart) {
     return (
-      <figure className="not-prose my-3 rounded-surface border border-dashed border-border bg-background p-4 text-center text-xs text-muted-foreground">
+      <figure className="not-prose my-3 rounded-2xl border border-dashed border-pd-border bg-pd-surface p-4 text-center text-xs text-pd-subtle">
         {payload?.title ? `${payload.title}: no data to chart.` : "No data to chart."}
       </figure>
     )
@@ -82,7 +82,7 @@ function InlineChartInner({ payload }) {
 
   return (
     <figure
-      className="not-prose my-3 overflow-hidden rounded-surface bg-background px-4 pb-3 pt-3.5 shadow-surface"
+      className="not-prose my-3 overflow-hidden rounded-2xl border border-pd-border bg-pd-surface px-4 pb-3 pt-3.5 shadow-sm"
       aria-label={chart.title || "Chart"}
     >
       <ChartHeader chart={chart} />
@@ -108,21 +108,21 @@ function ChartHeader({ chart }) {
     <figcaption className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1.5">
       <div className="min-w-0">
         {chart.title && (
-          <div className="text-sm font-semibold leading-snug text-foreground">{chart.title}</div>
+          <div className="font-pd-display text-[14px] font-bold leading-snug text-pd-ink">{chart.title}</div>
         )}
-        {chart.subtitle && <div className="mt-0.5 text-xs text-muted-foreground">{chart.subtitle}</div>}
+        {chart.subtitle && <div className="mt-0.5 text-[12px] text-pd-subtle">{chart.subtitle}</div>}
       </div>
       {showLegend && (
         <ul className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-0.5" aria-label="Legend">
           {chart.series.map((s) => (
-            <li key={s.key} className="flex items-center gap-1.5 text-xs font-medium text-body">
+            <li key={s.key} className="flex items-center gap-1.5 text-[11.5px] font-medium text-pd-body">
               <span
                 className={s.type === "bar" ? "size-2.5 rounded-[3px]" : "h-[3px] w-3 rounded-full"}
                 style={{ background: s.color }}
                 aria-hidden="true"
               />
               {s.name}
-              {s.axis === "right" && <span className="text-muted-foreground">(right)</span>}
+              {s.axis === "right" && <span className="text-pd-faint">(right)</span>}
             </li>
           ))}
         </ul>
@@ -131,21 +131,21 @@ function ChartHeader({ chart }) {
   )
 }
 
-/** A dark pill hung off the hovered point, one line per series. */
+/** The dark pill TrendPlot hangs off its dots, one line per series. */
 function DarkTooltip({ active, payload, label, series }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-control bg-foreground px-2.5 py-2 text-background shadow-floating">
-      <div className="mb-1 text-xs text-background/70">{label}</div>
+    <div className="rounded-xl bg-pd-ink px-2.5 py-2 text-white shadow-pd-tooltip">
+      <div className="mb-1 text-[10.5px] text-pd-primary-pale">{label}</div>
       {payload.map((p) => {
         const s = series.find((x) => x.key === p.dataKey) || series[0]
         return (
-          <div key={p.dataKey} className="flex items-center gap-2 text-xs leading-5">
+          <div key={p.dataKey} className="flex items-center gap-2 text-[12px] leading-5">
             {series.length > 1 && (
               <span className="size-2 rounded-full" style={{ background: s.color }} aria-hidden="true" />
             )}
-            {series.length > 1 && <span className="text-background/70">{s.name}</span>}
-            <span className="num ml-auto font-semibold">{formatValue(p.value, s.format, s.currency)}</span>
+            {series.length > 1 && <span className="text-white/70">{s.name}</span>}
+            <span className="ml-auto font-pd-display font-bold">{formatValue(p.value, s.format, s.currency)}</span>
           </div>
         )
       })}
@@ -168,12 +168,12 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
           </linearGradient>
         ))}
       </defs>
-      <CartesianGrid vertical={false} stroke="var(--color-border)" />
+      <CartesianGrid vertical={false} stroke="var(--pd-divider)" />
       <XAxis
         dataKey="label"
         tick={AXIS_TICK}
         tickLine={false}
-        axisLine={{ stroke: "var(--color-border)" }}
+        axisLine={{ stroke: "var(--pd-border)" }}
         {...(fewCategories
           ? { interval: 0, tick: <CategoryTick />, height: 38 }
           : { interval: "preserveStartEnd", minTickGap: 18 })}
@@ -199,7 +199,7 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
         />
       )}
       <Tooltip
-        cursor={{ stroke: "var(--color-border)", strokeDasharray: "3 3", fill: "var(--color-primary-soft)", fillOpacity: 0.5 }}
+        cursor={{ stroke: "var(--pd-border-strong)", strokeDasharray: "3 3", fill: "var(--pd-primary-tint)", fillOpacity: 0.5 }}
         content={<DarkTooltip series={chart.series} />}
       />
       {chart.series.map((s, i) => {
@@ -218,7 +218,7 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
                   dataKey={s.key}
                   position="top"
                   formatter={(v) => formatTick(v, s.format, s.currency)}
-                  style={{ fontSize: 10.5, fill: "var(--color-body)", fontWeight: 600 }}
+                  style={{ fontSize: 10.5, fill: "var(--pd-body)", fontWeight: 600 }}
                 />
               )}
             </Bar>
@@ -232,8 +232,8 @@ function Cartesian({ chart, animate, gradientId, ...rest }) {
           type: "monotone",
           stroke: s.color,
           strokeWidth: 2.5,
-          dot: manyPoints ? false : { r: 3, strokeWidth: 2, stroke: "var(--color-background)", fill: s.color },
-          activeDot: { r: 5, strokeWidth: 2, stroke: "var(--color-background)", fill: s.color },
+          dot: manyPoints ? false : { r: 3, strokeWidth: 2, stroke: "var(--pd-surface)", fill: s.color },
+          activeDot: { r: 5, strokeWidth: 2, stroke: "var(--pd-surface)", fill: s.color },
           connectNulls: true,
         }
         return filled
@@ -252,21 +252,21 @@ function HorizontalBars({ chart, animate, ...rest }) {
       <YAxis
         dataKey="label"
         type="category"
-        tick={{ fontSize: 11.5, fill: "var(--color-body)" }}
+        tick={{ fontSize: 11.5, fill: "var(--pd-body)" }}
         tickLine={false}
         axisLine={false}
         width={128}
         interval={0}
         tickFormatter={(v) => (v.length > 18 ? v.slice(0, 17) + "…" : v)}
       />
-      <Tooltip cursor={{ fill: "var(--color-primary-soft)", fillOpacity: 0.6 }} content={<DarkTooltip series={chart.series} />} />
+      <Tooltip cursor={{ fill: "var(--pd-primary-tint)", fillOpacity: 0.6 }} content={<DarkTooltip series={chart.series} />} />
       <Bar
         dataKey={s.key}
         name={s.name}
         fill={s.color}
         radius={[0, 6, 6, 0]}
         barSize={16}
-        background={{ fill: "var(--color-muted)", radius: 6 }}
+        background={{ fill: "var(--pd-divider)", radius: 6 }}
         isAnimationActive={animate}
         animationDuration={700}
       >
@@ -274,7 +274,7 @@ function HorizontalBars({ chart, animate, ...rest }) {
           dataKey={s.key}
           position="right"
           formatter={(v) => formatValue(v, s.format, s.currency)}
-          style={{ fontSize: 11, fill: "var(--color-foreground)", fontWeight: 600 }}
+          style={{ fontSize: 11, fill: "var(--pd-ink)", fontWeight: 600 }}
         />
       </Bar>
     </ComposedChart>
@@ -308,17 +308,17 @@ function Donut({ chart, height, animate }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="num text-lg font-semibold text-foreground">{formatTick(chart.total, s.format, s.currency)}</span>
-          <span className="text-xs text-muted-foreground">total</span>
+          <span className="font-pd-display text-[18px] font-bold text-pd-ink">{formatTick(chart.total, s.format, s.currency)}</span>
+          <span className="text-[10.5px] text-pd-faint">total</span>
         </div>
       </div>
       <ul className="w-full min-w-0 space-y-1.5">
         {chart.rows.map((r, i) => (
-          <li key={r.label + i} className="flex items-center gap-2 text-xs">
+          <li key={r.label + i} className="flex items-center gap-2 text-[12.5px]">
             <span className="size-2.5 shrink-0 rounded-[3px]" style={{ background: SERIES_COLORS[i % SERIES_COLORS.length] }} aria-hidden="true" />
-            <span className="min-w-0 truncate text-body">{r.label}</span>
-            <span className="num ml-auto font-semibold text-foreground">{formatValue(r[s.key], s.format, s.currency)}</span>
-            <span className="num w-10 text-right text-muted-foreground">
+            <span className="min-w-0 truncate text-pd-body">{r.label}</span>
+            <span className="ml-auto font-semibold tabular-nums text-pd-ink">{formatValue(r[s.key], s.format, s.currency)}</span>
+            <span className="w-10 text-right tabular-nums text-pd-faint">
               {chart.total ? `${Math.round((r[s.key] / chart.total) * 100)}%` : ""}
             </span>
           </li>
@@ -332,9 +332,9 @@ function DonutTooltip({ active, payload, series }) {
   if (!active || !payload?.length) return null
   const p = payload[0]
   return (
-    <div className="rounded-control bg-foreground px-2.5 py-1.5 text-background shadow-floating">
-      <div className="num text-xs font-semibold">{formatValue(p.value, series.format, series.currency)}</div>
-      <div className="mt-0.5 text-xs text-background/70">{p.name}</div>
+    <div className="rounded-xl bg-pd-ink px-2.5 py-1.5 text-white shadow-pd-tooltip">
+      <div className="font-pd-display text-[12.5px] font-bold">{formatValue(p.value, series.format, series.currency)}</div>
+      <div className="mt-0.5 text-[10.5px] text-pd-primary-pale">{p.name}</div>
     </div>
   )
 }

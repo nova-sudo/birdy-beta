@@ -1,36 +1,31 @@
 import { useState } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, renderHook, screen, waitFor, within } from "@testing-library/react";
-import { renderToString } from "react-dom/server";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import PortfolioDashboardPage from "../page";
-import { usePortfolioData } from "../usePortfolioData";
-import { DashboardControlsProvider } from "@/components/dashboard-controls";
-import { PageHeaderProvider, PageHeaderTitle } from "@/components/page-header";
+import {
+  DashboardControlsProvider,
+  DashboardHeaderControls,
+  DashboardHeaderTitle,
+} from "@/components/dashboard-controls";
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }));
+// The header controls only render on the dashboard route.
+vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("@/lib/useClientGroupsWithSeries", () => ({ useClientGroupsWithSeries: vi.fn() }));
 vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }) }));
-vi.mock("@/components/birdy/BirdyAvatar", () => ({
-  default: () => <span data-testid="birdy-avatar" />,
-}));
+// next/font hits the network at module load, which a unit test has no business
+// doing — the class names are all the page uses.
+vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }));
 
-import { format, startOfISOWeek, subDays } from "date-fns";
-
-// recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-};
-
-import { toast } from "sonner";
+import { format, subDays } from "date-fns";
 
 import { apiRequest } from "@/lib/api";
 import { useClientGroupsWithSeries } from "@/lib/useClientGroupsWithSeries";
 
 /** N days ago, in the two shapes this file needs. */
 const dayISO = (n) => format(subDays(new Date(), n), "yyyy-MM-dd");
+const dayLabel = (n) => format(subDays(new Date(), n), "d MMM yyyy");
 
 /** A client group in the shape GET /api/client-groups actually returns. */
 function group({ id, name, spend, results, won, revenue, contacts = 0, open = 0, calls = {}, funnel = null, dailySpend = [] }) {
@@ -180,126 +175,76 @@ function fakeUseClientGroups(groupsByPreset, { loading = false, error = null } =
 
 beforeEach(() => {
   vi.clearAllMocks();
-  localStorage.setItem("user", JSON.stringify({ name: "Abdelrahman Noa" }));
   useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({ last_7d: GROUPS }));
   mockEndpoints();
 });
 
 /**
- * Renders the page the way src/app/layout.jsx does: the date range lives in
- * DashboardControlsProvider, and the page publishes its top-bar title through
- * PageHeaderProvider (PageHeaderTitle stands in for the bar).
+ * Renders the page the way src/app/layout.jsx does — the date range and
+ * granularity chips live in the global top bar, above the page, sharing state
+ * through DashboardControlsProvider. Rendering the page alone would not
+ * exercise that wiring at all.
  */
 function renderDashboard() {
   return render(
-    <PageHeaderProvider>
-      <DashboardControlsProvider>
-        <div data-testid="top-bar">
-          <PageHeaderTitle />
-        </div>
-        <PortfolioDashboardPage />
-      </DashboardControlsProvider>
-    </PageHeaderProvider>
+    <DashboardControlsProvider>
+      <DashboardHeaderTitle />
+      <DashboardHeaderControls />
+      <PortfolioDashboardPage />
+    </DashboardControlsProvider>
   );
 }
 
 async function renderPage() {
   renderDashboard();
-  await waitFor(() => expect(screen.getByRole("tab", { name: /^Closes/ })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByText("Total ad spend")).toBeInTheDocument());
 }
 
-const tab = (name) => screen.getByRole("tab", { name });
-const dsAll = (name) => Array.from(document.querySelectorAll(`[data-ds="${name}"]`));
-const ds = (name) => dsAll(name)[0];
+function kpiCell(label) {
+  const strip = screen.getByRole("group", { name: "Portfolio KPIs" });
+  return within(strip).getByText(label).closest("div.flex-1");
+}
 
 describe("Portfolio Dashboard", () => {
-  it("opens with a greeting, a one-sentence summary and the period switch", async () => {
+  it("rolls the portfolio up from real client groups", async () => {
     await renderPage();
 
-    const header = ds("page-header");
-    expect(within(header).getByRole("heading", { level: 1 }).textContent).toMatch(
-      /^Good (morning|afternoon|evening), Abdelrahman$/
+    expect(within(kpiCell("Total ad spend")).getByText("£400")).toBeInTheDocument();
+    expect(within(kpiCell("Total leads")).getByText("200")).toBeInTheDocument();
+    // £400 over 200 leads.
+    expect(within(kpiCell("Average CPL")).getByText("£2.00")).toBeInTheDocument();
+    expect(within(kpiCell("Closed Leads")).getByText("16")).toBeInTheDocument();
+  });
+
+  it("publishes the active client count up to the top bar", async () => {
+    // The title block renders in the header, above this page in the tree, so
+    // the count has to travel up through the controls context.
+    await renderPage();
+    await waitFor(() =>
+      expect(screen.getByText(/2 clients · portfolio-level performance/)).toBeInTheDocument()
     );
-    // £400 over 200 leads, up against the week before (last_14d minus this week).
-    expect(header).toHaveTextContent("2 clients brought in 200 leads on £400 of ad spend, up");
-    expect(within(header).getByRole("tab", { name: "7 days" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("heading", { name: "Portfolio Dashboard" })).toBeInTheDocument();
   });
 
-  it("greets neutrally in server-rendered markup, so hydration has nothing to correct", () => {
-    const html = renderToString(
-      <DashboardControlsProvider>
-        <PortfolioDashboardPage />
-      </DashboardControlsProvider>
-    );
-    expect(html).toContain(">Hello<");
-    expect(html).not.toMatch(/Good (morning|afternoon|evening)/);
-  });
-
-  it("publishes its title to the top bar", async () => {
+  it("keeps the title out of the page body", async () => {
     await renderPage();
-    expect(screen.getByTestId("top-bar")).toHaveTextContent("Dashboard");
+    // Exactly one — the header's. The page no longer carries its own.
+    expect(screen.getAllByRole("heading", { name: "Portfolio Dashboard" })).toHaveLength(1);
   });
 
-  it("shows the five metrics as tabs, with cost per lead as the inverted one", async () => {
+  it("compares against the previous period on a preset that has one", async () => {
     await renderPage();
 
-    const chart = ds("metric-tabs-chart");
-    const tabs = within(chart).getAllByRole("tab");
-    expect(tabs.map((t) => t.querySelector("span").textContent)).toEqual([
-      "Leads",
-      "Closes",
-      "Calls",
-      "Cost per lead",
-      "Ad spend",
-    ]);
-    expect(tab(/^Leads/)).toHaveTextContent("200");
-    expect(tab(/^Closes/)).toHaveTextContent("16");
-    expect(tab(/Cost per lead/)).toHaveTextContent("£2.00");
-    expect(tab(/Ad spend/)).toHaveTextContent("£400");
-
-    // Leads are up on the week before: good, so green. Cost per lead is also
-    // up (£1.75 to £2.00) and for a cost that is bad, so red.
-    const leadsDelta = tab(/^Leads/).querySelector("[data-ds=delta]");
-    const cplDelta = tab(/Cost per lead/).querySelector("[data-ds=delta]");
-    expect(leadsDelta).toHaveTextContent(/^Up/);
-    expect(leadsDelta).toHaveAttribute("data-tone", "good");
-    expect(cplDelta).toHaveTextContent(/^Up/);
-    expect(cplDelta).toHaveAttribute("data-tone", "bad");
-    // The delta names what it is measured against.
-    expect(leadsDelta).toHaveTextContent("vs previous period");
+    // last_14d spend of £680 minus this week's £400 leaves £280 for the week
+    // before, so spend is up.
+    const spendPill = within(kpiCell("Total ad spend")).getByText(/%$/);
+    expect(spendPill.className).toContain("bg-pd-success");
   });
 
-  it("switches the selected metric", async () => {
+  it("refetches every figure when the date range changes", async () => {
     const user = userEvent.setup();
-    await renderPage();
-
-    expect(tab(/^Leads/)).toHaveAttribute("aria-selected", "true");
-    await user.click(tab(/Ad spend/));
-    expect(tab(/Ad spend/)).toHaveAttribute("aria-selected", "true");
-    expect(tab(/^Leads/)).toHaveAttribute("aria-selected", "false");
-  });
-
-  it("does not fetch call logs until the Calls tab is opened", async () => {
-    await renderPage();
-    expect(
-      apiRequest.mock.calls.some(([url]) => url.startsWith("/api/hotprospector/call-center"))
-    ).toBe(false);
-  });
-
-  it("breaks leads down by client with each one's share", async () => {
-    await renderPage();
-
-    const breakdown = ds("breakdown");
-    expect(within(breakdown).getByText("By client")).toBeInTheDocument();
-    const rows = within(breakdown).getAllByRole("listitem").map((li) => li.textContent);
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toContain("The Body Room");
-    expect(rows[0]).toContain("50%");
-    expect(rows[1]).toContain("Tylaesthetics");
-  });
-
-  it("refetches every figure when the period changes", async () => {
-    const user = userEvent.setup();
+    // A different window has to yield different numbers, or the assertion
+    // below would pass on stale data.
     useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({
         last_7d: GROUPS,
@@ -310,18 +255,22 @@ describe("Portfolio Dashboard", () => {
     );
 
     await renderPage();
-    expect(tab(/Ad spend/)).toHaveTextContent("£400");
+    expect(within(kpiCell("Total ad spend")).getByText("£400")).toBeInTheDocument();
 
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
 
-    await waitFor(() => expect(tab(/Ad spend/)).toHaveTextContent("£1,000"));
-    expect(tab(/^Leads/)).toHaveTextContent("500");
-    expect(tab(/^Closes/)).toHaveTextContent("40");
-    expect(ds("page-header")).toHaveTextContent("1 client brought in 500 leads");
-    expect(within(ds("breakdown")).getAllByRole("listitem")).toHaveLength(1);
+    // The client-group figures have to move with the window, not just the
+    // chart series this hook fetches for itself.
+    await waitFor(() =>
+      expect(within(kpiCell("Total ad spend")).getByText("£1,000")).toBeInTheDocument()
+    );
+    expect(within(kpiCell("Total leads")).getByText("500")).toBeInTheDocument();
+    expect(within(kpiCell("Closed Leads")).getByText("40")).toBeInTheDocument();
+    expect(screen.getByText(/1 client · portfolio-level performance/)).toBeInTheDocument();
   });
 
-  it("offers every other preset under More, and shows the active one on the button", async () => {
+  it("re-ranks the leaderboard off the new window's clients", async () => {
     const user = userEvent.setup();
     useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({
@@ -331,40 +280,19 @@ describe("Portfolio Dashboard", () => {
         ],
       })
     );
+
+    const leaderboard = () =>
+      screen.getByRole("heading", { name: "Top performing clients" }).closest("section");
+
     await renderPage();
+    expect(within(leaderboard()).getAllByRole("listitem")[0]).toHaveTextContent("The Body Room");
 
-    const header = ds("page-header");
-    await user.click(within(header).getByRole("button", { name: "More periods" }));
-    // The quick picks are not repeated in the menu.
-    expect(screen.queryByRole("menuitemradio", { name: "Today" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("menuitemradio", { name: "This Month" }));
-
-    await waitFor(() => expect(tab(/Ad spend/)).toHaveTextContent("£50"));
-    expect(within(header).getByRole("button", { name: "More periods: This Month" })).toHaveTextContent(
-      "This Month"
-    );
-    for (const t of within(header).getAllByRole("tab")) {
-      expect(t).toHaveAttribute("aria-selected", "false");
-    }
-  });
-
-  it("says a trend needs a longer period when the window has a single bucket", async () => {
-    const user = userEvent.setup();
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS, today: GROUPS })
-    );
-    mockEndpoints({ leadDays: [LEAD_DAYS[0]] });
-    await renderPage();
-
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "Today" }));
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "This Month" }));
 
     await waitFor(() =>
-      expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).toHaveTextContent(
-        "Pick 7 days or longer to see a trend."
-      )
+      expect(within(leaderboard()).getAllByRole("listitem")[0]).toHaveTextContent("Aura")
     );
-    // The figures still show.
-    expect(tab(/^Leads/)).toHaveTextContent("200");
   });
 
   it("never shows one window's figures under another window's label", async () => {
@@ -374,57 +302,234 @@ describe("Portfolio Dashboard", () => {
     );
 
     await renderPage();
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
 
+    // The empty 30-day window must not leave the 7-day totals on screen.
     await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
     expect(screen.queryByText("£400")).not.toBeInTheDocument();
   });
 
-  it("drops the deltas on a period with nothing to compare against", async () => {
+  it("drops the delta pills entirely on a preset with no comparable period", async () => {
     const user = userEvent.setup();
+    // Same clients either side — this is about the comparison, not the window.
     useClientGroupsWithSeries.mockImplementation(
       fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
     );
     await renderPage();
 
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
+    await user.click(screen.getByRole("button", { name: /Date range:/ }));
+    await user.click(screen.getByRole("option", { name: "Last 30 Days" }));
 
-    await waitFor(() => expect(ds("page-header")).not.toHaveTextContent("on the previous period"));
-    expect(ds("metric-tabs-chart").querySelector("[data-ds=delta]")).toBeNull();
+    await waitFor(() => {
+      const strip = screen.getByRole("group", { name: "Portfolio KPIs" });
+      expect(within(strip).queryByText(/%$/)).not.toBeInTheDocument();
+    });
   });
-});
 
-describe("Birdy's read on the dashboard", () => {
-  it("lists suggestions as findings with a tone and a Do it action", async () => {
+  it("builds the trend series from dated lead rows", async () => {
+    await renderPage();
+
+    // 1 Jul has two leads, 2 and 3 Jul one each.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1 Jul 2026: 2" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "3 Jul 2026: 1" })).toBeInTheDocument();
+  });
+
+  it("offers all four chart tabs", async () => {
+    await renderPage();
+
+    const tabs = screen.getAllByRole("radio").map((r) => r.textContent);
+    expect(tabs).toEqual(["Leads", "Ad spend", "Calls", "Closes"]);
+  });
+
+  it("plots each day's measured spend, summed across clients", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Ad spend" }));
+
+    // £20 + £80, then £55 + £145, then £25 + £75. Straight from Meta's rows.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: `${dayLabel(3)}: £100` })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: `${dayLabel(2)}: £200` })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: `${dayLabel(1)}: £100` })).toBeInTheDocument();
+  });
+
+  it("no longer borrows the lead shape for spend", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Ad spend" }));
+
+    // The fixture's spend is deliberately not proportional to its leads: the
+    // heaviest spend day is the middle one, while lead volume peaks on the
+    // first. A derived curve could not produce this ordering.
+    expect(screen.getByRole("button", { name: `${dayLabel(2)}: £200` })).toBeInTheDocument();
+    expect(screen.queryByText(/spread across days by lead share/)).not.toBeInTheDocument();
+  });
+
+  it("does not fetch call logs until the Calls tab is opened", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    const calledCallCentre = () =>
+      apiRequest.mock.calls.some(([url]) => url.startsWith("/api/hotprospector/call-center"));
+
+    // A second heavyweight request most visits never need.
+    expect(calledCallCentre()).toBe(false);
+
+    await user.click(screen.getByRole("radio", { name: "Calls" }));
+    await waitFor(() => expect(calledCallCentre()).toBe(true));
+  });
+
+  it("builds the calls series from nested call logs", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Calls" }));
+
+    // Three calls on 1 Jul, one on 2 Jul.
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "1 Jul 2026: 3" })).toBeInTheDocument()
+    );
+    expect(screen.getByRole("button", { name: "2 Jul 2026: 1" })).toBeInTheDocument();
+  });
+
+  it("plots only won leads on the closes series", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("radio", { name: "Closes" }));
+    // Two won leads, one on 1 Jul and one on 2 Jul.
+    expect(screen.getByRole("button", { name: "1 Jul 2026: 1" })).toBeInTheDocument();
+  });
+
+  it("re-buckets the same window when granularity changes", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    await user.click(screen.getByRole("button", { name: /Chart granularity:/ }));
+    await user.click(screen.getByRole("option", { name: "Monthly" }));
+
+    // All four leads fall in one month.
+    expect(screen.getByRole("button", { name: "July 2026: 4" })).toBeInTheDocument();
+  });
+
+  it("ranks clients by the chosen metric", async () => {
+    const user = userEvent.setup();
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Top performing clients" }).closest("section");
+    // Avg CPL is the default and ranks ascending — £1 beats £3.
+    expect(within(card).getAllByRole("listitem")[0]).toHaveTextContent("The Body Room");
+
+    await user.click(within(card).getByRole("button", { name: /Rank clients by/ }));
+    await user.click(screen.getByRole("option", { name: "Revenue" }));
+
+    expect(within(card).getAllByRole("listitem")[0]).toHaveTextContent("Tylaesthetics");
+  });
+
+  it("counts the four funnel stages off the cohort cache", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    const stages = within(card).getAllByRole("listitem").map((li) => li.textContent);
+
+    expect(stages).toHaveLength(4);
+    // Summed cohorts: 300+100 leads, 120+60 in CRM, 200+70 called, 30+20 won.
+    expect(stages[0]).toContain("Leads");
+    expect(stages[0]).toContain("400");
+    expect(stages[1]).toContain("In CRM");
+    expect(stages[1]).toContain("180");
+    expect(stages[2]).toContain("Called");
+    expect(stages[2]).toContain("270");
+    expect(stages[3]).toContain("Closes");
+    expect(stages[3]).toContain("50");
+  });
+
+  it("shows the close rate on the Closes stage", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    const stages = within(card).getAllByRole("listitem").map((li) => li.textContent);
+
+    // 50 of the cohort's 400 leads closed. This is the number the card exists
+    // to show, so it is asserted rather than left to the count alone.
+    expect(stages[3]).toContain("12.5% of leads");
+    expect(stages[0]).not.toContain("of leads");
+  });
+
+  it("keeps the funnel independent of the portfolio's other GHL totals", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+
+    // 9,000 lifetime contacts and 100 open opps across the portfolio — the
+    // funnel counts one windowed cohort and must show neither.
+    expect(card.textContent).not.toContain("9,000");
+  });
+
+  it("has no Shows stage — GHL opportunity stats carry no attendance", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Performance funnel" }).closest("section");
+    expect(card.textContent).not.toContain("Shows");
+  });
+
+  it("computes the call insights from HotProspector stats", async () => {
+    await renderPage();
+
+    const card = screen.getByRole("heading", { name: "Call insights" }).closest("section");
+    expect(within(card).getByText("200")).toBeInTheDocument(); // 120 + 80 calls
+    expect(within(card).getByText("55.0%")).toBeInTheDocument(); // 110 answered of 200
+  });
+
+  it("shows suggestions from the dashboard summary", async () => {
+    await renderPage();
+    await waitFor(() =>
+      expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument()
+    );
+  });
+
+  it("separates what Birdy did on its own from what the user approved", async () => {
+    const user = userEvent.setup();
     await renderPage();
     await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    const read = ds("birdy-read");
-    expect(within(read).getByText("Raise daily budget")).toBeInTheDocument();
-    expect(within(read).getAllByRole("button", { name: "Do it" })).toHaveLength(2);
-    // HIGH reads as danger.
-    const high = within(read).getByText("Pause 2 underperforming ads").closest("li");
-    expect(high.querySelector("span[class*=danger]")).not.toBeNull();
+    await user.click(screen.getByRole("tab", { name: /Activity/ }));
+
+    expect(screen.getByText("Paused 2 ads").closest("li")).toHaveTextContent("Auto-run");
+    expect(screen.getByText("Raised budget").closest("li")).toHaveTextContent("Approved");
+    // suggestion_created entries are noise in this feed.
+    expect(screen.queryByText("noise")).not.toBeInTheDocument();
+    // So are read-only analysis passes — typed, or recognised by their title.
+    expect(screen.queryByText(/^Analyzed /)).not.toBeInTheDocument();
+    // The badge counts what the feed actually shows.
+    expect(screen.getByRole("tab", { name: /Activity/ })).toHaveTextContent("2");
   });
 
-  it("moves an applied suggestion out of the list and confirms it", async () => {
+  it("moves an applied suggestion into the feed", async () => {
     const user = userEvent.setup();
-    apiRequest.mockImplementation((url) => {
+    apiRequest.mockImplementation((url, opts) => {
       if (url.includes("/apply")) return Promise.resolve({ ok: true, json: async () => ({ succeeded: ["ad1"] }) });
       if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
-      if (url.startsWith("/api/facebook-leads/series")) return Promise.resolve({ ok: true, json: async () => ({ series: LEAD_DAYS }) });
+      if (url.startsWith("/api/facebook-leads/filtered")) return Promise.resolve({ ok: true, json: async () => ({ leads: LEADS }) });
       return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
     });
+
     await renderPage();
     await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    const row = screen.getByText("Pause 2 underperforming ads").closest("li");
-    await user.click(within(row).getByRole("button", { name: "Do it" }));
-
+    await user.click(screen.getByRole("button", { name: /Do it for me: Pause 2 underperforming ads/ }));
     await waitFor(() =>
       expect(screen.queryByText("Pause 2 underperforming ads")).not.toBeInTheDocument()
     );
-    expect(toast.success).toHaveBeenCalledWith("Applied to 1 ad", expect.anything());
+
+    await user.click(screen.getByRole("tab", { name: /Activity/ }));
+    expect(screen.getByText("just now")).toBeInTheDocument();
   });
 
   it("puts a suggestion back when applying fails", async () => {
@@ -432,458 +537,51 @@ describe("Birdy's read on the dashboard", () => {
     apiRequest.mockImplementation((url) => {
       if (url.includes("/apply")) return Promise.resolve({ ok: false, status: 500 });
       if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
-      if (url.startsWith("/api/facebook-leads/series")) return Promise.resolve({ ok: true, json: async () => ({ series: LEAD_DAYS }) });
+      if (url.startsWith("/api/facebook-leads/filtered")) return Promise.resolve({ ok: true, json: async () => ({ leads: LEADS }) });
       return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
     });
+
     await renderPage();
     await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
 
-    const row = screen.getByText("Raise daily budget").closest("li");
-    await user.click(within(row).getByRole("button", { name: "Do it" }));
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(screen.getByText("Raise daily budget")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Do it for me: Raise daily budget/ }));
+    await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
   });
 
-  it("dismisses a suggestion through the existing endpoint", async () => {
-    const user = userEvent.setup();
+  it("shows two rail tabs, and no Wins tab even when the API returns wins", async () => {
     await renderPage();
     await waitFor(() => expect(screen.getByText("Pause 2 underperforming ads")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: "Dismiss Pause 2 underperforming ads" }));
-
-    await waitFor(() =>
-      expect(screen.queryByText("Pause 2 underperforming ads")).not.toBeInTheDocument()
-    );
-    expect(apiRequest).toHaveBeenCalledWith("/api/dashboard/suggestions/s1", { method: "DELETE" });
-    expect(toast).toHaveBeenCalledWith("Suggestion dismissed", expect.anything());
+    // The summary response still carries a win; the rail deliberately ignores it.
+    const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+    expect(tabs).toHaveLength(2);
+    expect(tabs.join(" ")).not.toContain("Wins");
+    expect(screen.queryByText("CPL down 22% this week")).not.toBeInTheDocument();
   });
 
-  it("puts a suggestion back when dismissing fails", async () => {
-    const user = userEvent.setup();
-    apiRequest.mockImplementation((url, opts) => {
-      if (opts?.method === "DELETE") return Promise.resolve({ ok: false, status: 500 });
-      if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
-      if (url.startsWith("/api/facebook-leads/series")) return Promise.resolve({ ok: true, json: async () => ({ series: LEAD_DAYS }) });
-      return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
-    });
+  it("leaves the two remaining tab labels unabbreviated", async () => {
     await renderPage();
-    await waitFor(() => expect(screen.getByText("Raise daily budget")).toBeInTheDocument());
 
-    await user.click(screen.getByRole("button", { name: "Dismiss Raise daily budget" }));
-
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    expect(screen.getByText("Raise daily budget")).toBeInTheDocument();
+    // Three tabs squeezed "Suggestions" into "Sugges…"; two do not.
+    const tabs = screen.getAllByRole("tab").map((t) => t.textContent);
+    expect(tabs[0]).toContain("Suggestions");
+    expect(tabs[1]).toContain("Activity");
   });
 
-  it("says nothing needs you when there are no suggestions", async () => {
-    mockEndpoints({ summary: { suggestions: [], wins: [], activity: [] } });
-    await renderPage();
-    await waitFor(() =>
-      expect(within(ds("birdy-read")).getByText("Nothing needs you right now.")).toBeInTheDocument()
-    );
-  });
-});
-
-describe("Dashboard states", () => {
-  it("shows skeletons while the portfolio loads, with the header already in place", async () => {
-    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { loading: true }));
-    renderDashboard();
-
-    expect(ds("page-header")).toBeInTheDocument();
-    expect(ds("metric-tabs-chart").querySelector("[role=tablist]")).toBeNull();
-    expect(dsAll("skeleton").length).toBeGreaterThan(0);
-    expect(screen.queryByText("No active clients yet")).not.toBeInTheDocument();
-    expect(screen.queryByText("Couldn't load your portfolio")).not.toBeInTheDocument();
-  });
-
-  it("explains an empty portfolio instead of showing zeroes, and keeps the period switch", async () => {
+  it("says so when there are no active clients rather than showing zeroes", async () => {
     useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}));
     renderDashboard();
 
     await waitFor(() => expect(screen.getByText("No active clients yet")).toBeInTheDocument());
-    expect(ds("empty-state")).toBeInTheDocument();
-    expect(ds("metric-tabs-chart")).toBeUndefined();
-    expect(within(ds("page-header")).getByRole("tab", { name: "30 days" })).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Portfolio KPIs" })).not.toBeInTheDocument();
   });
 
-  it("distinguishes a failed load from an empty portfolio, with a retry", async () => {
-    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503." }));
+  it("distinguishes a failed load from an empty portfolio", async () => {
+    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { error: "HTTP 503" }));
     renderDashboard();
 
-    await waitFor(() => expect(screen.getByText("Couldn't load your portfolio")).toBeInTheDocument());
-    expect(ds("error-state")).toHaveTextContent("HTTP 503. Nothing here");
-    expect(ds("error-state")).not.toHaveTextContent("..");
-    expect(within(ds("error-state")).getByRole("button", { name: /try again/i })).toBeInTheDocument();
-    expect(screen.queryByText("No active clients yet")).not.toBeInTheDocument();
-  });
-
-  it("shows a skeleton plot, not the empty message, while the series is still counting", async () => {
-    let release;
-    apiRequest.mockImplementation((url) => {
-      if (url.startsWith("/api/facebook-leads/series")) {
-        return new Promise((resolve) => {
-          release = () => resolve({ ok: true, json: async () => ({ series: LEAD_DAYS }) });
-        });
-      }
-      if (url.startsWith("/api/dashboard/summary")) return Promise.resolve({ ok: true, json: async () => SUMMARY });
-      return Promise.resolve({ ok: true, json: async () => ({ client_groups: [] }) });
-    });
-    await renderPage();
-
-    const panel = ds("metric-tabs-chart").querySelector("[role=tabpanel]");
-    expect(panel.querySelector('[data-ds="skeleton"]')).not.toBeNull();
-    expect(panel).not.toHaveTextContent("No dated");
-    release();
-  });
-
-  it("says why the plot is empty once the series has arrived with no dated rows", async () => {
-    mockEndpoints({ leadDays: [] });
-    await renderPage();
     await waitFor(() =>
-      expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).toHaveTextContent(
-        "No dated leads in this window yet."
-      )
+      expect(screen.getByText("Couldn't load your portfolio")).toBeInTheDocument()
     );
-  });
-});
-
-const callFetches = () =>
-  apiRequest.mock.calls.filter(([url]) => url.startsWith("/api/hotprospector/call-center"));
-
-describe("Calls tab", () => {
-  it("shows the group's total calls on the tab", async () => {
-    await renderPage();
-    // 120 + 80 from the two groups' call_stats.
-    expect(tab(/^Calls/)).toHaveTextContent("200");
-  });
-
-  it("fetches call logs once per preset, lazily, and plots them", async () => {
-    const user = userEvent.setup();
-    await renderPage();
-    expect(callFetches()).toHaveLength(0);
-
-    await user.click(tab(/^Calls/));
-    await waitFor(() => expect(callFetches()).toHaveLength(1));
-    expect(callFetches()[0][0]).toContain("limit=2000");
-    expect(tab(/^Calls/)).toHaveAttribute("aria-selected", "true");
-
-    // Away and back: the rows for this preset are held, not refetched.
-    await user.click(tab(/^Leads/));
-    await user.click(tab(/^Calls/));
-    await waitFor(() => expect(ds("metric-tabs-chart")).toBeInTheDocument());
-    expect(callFetches()).toHaveLength(1);
-    expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).not.toHaveTextContent(
-      "No dated calls"
-    );
-  });
-
-  it("refetches for a new preset", async () => {
-    const user = userEvent.setup();
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
-    );
-    await renderPage();
-    await user.click(tab(/^Calls/));
-    await waitFor(() => expect(callFetches()).toHaveLength(1));
-
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
-    await waitFor(() => expect(callFetches()).toHaveLength(2));
-  });
-
-  it("says so when the window has no dated calls", async () => {
-    const user = userEvent.setup();
-    mockEndpoints({ callRows: [] });
-    await renderPage();
-    await user.click(tab(/^Calls/));
-    await waitFor(() =>
-      expect(ds("metric-tabs-chart").querySelector("[role=tabpanel]")).toHaveTextContent(
-        "No dated calls in this window yet."
-      )
-    );
-  });
-
-  it("keeps the tab, explains itself and fetches nothing when no client has a call centre", async () => {
-    const user = userEvent.setup();
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
-    );
-    await renderPage();
-    expect(tab(/^Calls/)).toHaveTextContent("—");
-
-    await user.click(tab(/^Calls/));
-    const panel = ds("metric-tabs-chart").querySelector("[role=tabpanel]");
-    expect(panel).toHaveTextContent("No call data across your clients");
-    expect(panel).toHaveTextContent("so there's no call volume to plot");
-    expect(callFetches()).toHaveLength(0);
-  });
-});
-
-describe("Calls fetch recovery", () => {
-  it("fetches again and leaves loading after the tab was left mid-fetch", async () => {
-    const user = userEvent.setup();
-    let calls = 0;
-    const base = apiRequest.getMockImplementation();
-    apiRequest.mockImplementation((url, opts) => {
-      if (url.startsWith("/api/hotprospector/call-center")) {
-        calls += 1;
-        if (calls === 1) {
-          // Never resolves on its own: it ends only when the page aborts it.
-          return new Promise((_, reject) => {
-            opts.signal.addEventListener("abort", () =>
-              reject(Object.assign(new Error("aborted"), { name: "AbortError" }))
-            );
-          });
-        }
-      }
-      return base(url, opts);
-    });
-    await renderPage();
-
-    await user.click(tab(/^Calls/));
-    await waitFor(() => expect(callFetches()).toHaveLength(1));
-    await user.click(tab(/^Leads/));
-    await user.click(tab(/^Calls/));
-
-    await waitFor(() => expect(callFetches()).toHaveLength(2));
-    await waitFor(() =>
-      expect(
-        ds("metric-tabs-chart").querySelector('[role=tabpanel] [data-ds="skeleton"]')
-      ).toBeNull()
-    );
-  });
-});
-
-describe("Call insights", () => {
-  const group_ = () => within(document.querySelector('[data-ds="metric-group"]'));
-
-  it("renders all six cells under the group heading", async () => {
-    await renderPage();
-    const insights = document.querySelector('[data-ds="metric-group"]');
-    expect(insights).toHaveTextContent("Call insights");
-    expect(insights).toHaveTextContent("Across all client call centres");
-    const cards = insights.querySelectorAll('[data-slot="metric-group-cell"]');
-    expect(Array.from(cards).map((c) => c.firstChild.textContent)).toEqual([
-      "Total calls",
-      "Talk time (min)",
-      "Answer rate",
-      "Calls per lead",
-      "Calls per close",
-      "Conversion rate",
-    ]);
-    expect(group_().getByText("Total calls").closest('[data-slot="metric-group-cell"]')).toHaveTextContent("200");
-    expect(screen.queryByText(/None of your clients use a call centre/)).not.toBeInTheDocument();
-  });
-
-  it("keeps every cell but greys the call-centre ones, with a notice, when nobody dials", async () => {
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
-    );
-    await renderPage();
-
-    // The funnel's diagnosis is a notice too; this is the one above the insights.
-    const notice = dsAll("notice").find((n) => n.textContent.includes("None of your clients use a call centre"));
-    expect(notice).toHaveTextContent(
-      "None of your clients use a call centre, so these figures have no source. Conversion rate is unaffected — it comes from your CRM."
-    );
-    const insights = document.querySelector('[data-ds="metric-group"]');
-    const cards = insights.querySelectorAll('[data-slot="metric-group-cell"]');
-    expect(cards).toHaveLength(6);
-    // Five placeholders; conversion (closes / leads) stays a real number: 16 / 200.
-    expect(insights.querySelectorAll("[title^='Not available']")).toHaveLength(5);
-    expect(cards[5]).toHaveTextContent("8.0%");
-  });
-
-  it("shows a skeleton in its place while the portfolio loads", () => {
-    useClientGroupsWithSeries.mockImplementation(fakeUseClientGroups({}, { loading: true }));
-    renderDashboard();
-    expect(document.querySelector('[data-ds="metric-group"]')).toBeNull();
-    // LoadingBody's placeholders, including the full-width ones for the funnel
-    // and the insights.
-    expect(document.querySelectorAll('[data-ds="skeleton"].lg\\:col-span-2')).toHaveLength(2);
-  });
-});
-
-describe("Performance funnel", () => {
-  const funnel = () => ds("funnel-group");
-  const cells = () => Array.from(funnel().querySelectorAll('[data-slot="funnel-group-cell"]'));
-
-  it("shows the four stages, summed across clients, between By client and Call insights", async () => {
-    await renderPage();
-    expect(funnel()).toHaveTextContent("Performance funnel");
-    expect(funnel()).toHaveTextContent("From lead to close, across all clients");
-    expect(cells().map((c) => c.querySelector('[data-slot="metric-value"]').textContent)).toEqual([
-      "400",
-      "180",
-      "270",
-      "50",
-    ]);
-    expect(cells().map((c) => c.querySelector('[data-slot="funnel-group-label"]').textContent)).toEqual([
-      "Leads",
-      "Engaged",
-      "Called",
-      "Closes",
-    ]);
-    // 50 of 400 leads closed.
-    expect(cells()[3]).toHaveTextContent("12.5% of leads");
-
-    const order = (a, b) => a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING;
-    expect(order(ds("breakdown"), funnel())).toBeTruthy();
-    expect(order(funnel(), ds("metric-group"))).toBeTruthy();
-  });
-
-  it("puts the step conversion between stages, skipping one above 100%", async () => {
-    await renderPage();
-    // 180/400 = 45%; Called (270) is not a subset of In CRM (180), so no pill;
-    // 50/270 = 18.5%.
-    const pills = Array.from(funnel().querySelectorAll('[data-slot="funnel-step"]')).map((p) => p.textContent);
-    expect(pills).toEqual(["Leads to Engaged: 45%", "Called to Closes: 19%"]);
-  });
-
-  it("shows Called as unavailable when no client dials", async () => {
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, call_log_provider: "none" })) })
-    );
-    await renderPage();
-    const called = cells()[2];
-    expect(called.querySelector("[title^='Not available']")).not.toBeNull();
-    expect(called.querySelector("[data-ds=delta]")).toBeNull();
-    // Neither pill touching it can be worked out.
-    expect(funnel().querySelectorAll('[data-slot="funnel-step"]')).toHaveLength(1);
-  });
-
-  it("sets the diagnosis in the frame footer", async () => {
-    await renderPage();
-    const notice = funnel().querySelector('[data-slot="frame-footer"] [data-ds="notice"]');
-    expect(notice).not.toBeNull();
-    expect(notice).toHaveTextContent(/Problem found|All looking good/);
-  });
-
-  it("keeps the frame and says the data isn't ready when no client has the period cached", async () => {
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS.map((g) => ({ ...g, gohighlevel: { metrics: { ...g.gohighlevel.metrics, funnel: null } } })) })
-    );
-    await renderPage();
-    expect(funnel()).toHaveTextContent("Performance funnel");
-    expect(funnel()).toHaveTextContent("Funnel data for this period isn't ready yet.");
-    expect(cells()).toHaveLength(0);
-    // No figures, so no verdict on their health.
-    expect(funnel().querySelector('[data-slot="frame-footer"]')).toBeNull();
-    expect(funnel()).not.toHaveTextContent(/All looking good|Problem found/);
-  });
-
-  it("asks for a comparable period when the window has none", async () => {
-    const user = userEvent.setup();
-    useClientGroupsWithSeries.mockImplementation(
-      fakeUseClientGroups({ last_7d: GROUPS, last_30d: GROUPS })
-    );
-    await renderPage();
-    await user.click(within(ds("page-header")).getByRole("tab", { name: "30 days" }));
-
-    await waitFor(() =>
-      expect(funnel().querySelector('[data-slot="frame-footer"]')).toHaveTextContent(
-        "Pick Today, Last 7 Days, This Month, This Quarter or This Year to compare against the period before it."
-      )
-    );
-    expect(funnel().querySelector("[data-ds=delta]")).toBeNull();
-  });
-});
-
-describe("Granularity", () => {
-  // Eight days across two ISO weeks: Mon 6 Jul to Mon 13 Jul 2026.
-  const DAYS = Array.from({ length: 8 }, (_, i) => ({
-    date: `2026-07-${String(6 + i).padStart(2, "0")}`,
-    leads: 1,
-    closes: 1,
-  }));
-
-  beforeEach(() => {
-    // Radix Select leans on pointer-capture and scroll APIs jsdom lacks.
-    Element.prototype.hasPointerCapture ??= () => false;
-    Element.prototype.releasePointerCapture ??= () => {};
-    Element.prototype.scrollIntoView ??= () => {};
-  });
-
-  it("offers Daily, Weekly and Monthly, starting from the window's own", async () => {
-    const user = userEvent.setup();
-    await renderPage();
-    const trigger = screen.getByRole("combobox", { name: "Chart granularity" });
-    expect(trigger).toHaveTextContent("Daily");
-    await user.click(trigger);
-    expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-      "Daily",
-      "Weekly",
-      "Monthly",
-    ]);
-  });
-
-  it("follows the reader's pick in the control", async () => {
-    const user = userEvent.setup();
-    await renderPage();
-    await user.click(screen.getByRole("combobox", { name: "Chart granularity" }));
-    await user.click(screen.getByRole("option", { name: "Weekly" }));
-    expect(screen.getByRole("combobox", { name: "Chart granularity" })).toHaveTextContent("Weekly");
-  });
-
-  it("re-buckets every series in the hook when granularity changes", async () => {
-    mockEndpoints({ leadDays: DAYS });
-    const { result, rerender } = renderHook(
-      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity }),
-      { initialProps: { granularity: "Daily" } }
-    );
-    await waitFor(() => expect(result.current.chartMetrics.leads.values.length).toBe(8));
-    expect(result.current.chartMetrics.closes.values.length).toBe(8);
-    // Spend is dated relative to today (100, 200, 100 on the last three days).
-    expect(result.current.chartMetrics.spend.values).toEqual([100, 200, 100]);
-    const weeksOfSpend = new Set(
-      [3, 2, 1].map((n) => format(startOfISOWeek(subDays(new Date(), n)), "yyyy-MM-dd"))
-    ).size;
-
-    rerender({ granularity: "Weekly" });
-    const weekly = result.current.chartMetrics.leads.values;
-    expect(weekly.length).toBe(2);
-    expect(weekly.reduce((a, b) => a + b, 0)).toBe(8);
-    expect(result.current.chartMetrics.closes.values.length).toBe(2);
-    const weeklySpend = result.current.chartMetrics.spend.values;
-    expect(weeklySpend).toHaveLength(weeksOfSpend);
-    expect(weeklySpend.reduce((a, b) => a + b, 0)).toBe(400);
-  });
-
-  it("re-buckets the calls series too", async () => {
-    mockEndpoints({
-      callRows: [
-        {
-          id: "l1",
-          call_logs: DAYS.map((d) => ({ call_time_iso: `${d.date}T10:00:00Z` })),
-        },
-      ],
-    });
-    const { result, rerender } = renderHook(
-      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity, chartMetric: "calls" }),
-      { initialProps: { granularity: "Daily" } }
-    );
-    await waitFor(() => expect(result.current.chartMetrics.calls.values.length).toBe(8));
-    rerender({ granularity: "Weekly" });
-    // Mon 6 to Sun 12 Jul is seven calls, Mon 13 Jul is one. Uncapped, so unscaled.
-    expect(result.current.chartMetrics.calls.values).toEqual([7, 1]);
-  });
-
-  it("scales a capped calls sample onto the real total, per bucket", async () => {
-    // 2000 leads (the fetch cap) with one call each: 1000 on the first day and
-    // 1000 on the last. The groups report 200 calls in all.
-    const callRows = Array.from({ length: 2000 }, (_, i) => ({
-      id: `l${i}`,
-      call_logs: [{ call_time_iso: `${DAYS[i < 1000 ? 0 : 7].date}T10:00:00Z` }],
-    }));
-    mockEndpoints({ callRows });
-    const { result, rerender } = renderHook(
-      ({ granularity }) => usePortfolioData({ preset: "last_7d", granularity, chartMetric: "calls" }),
-      { initialProps: { granularity: "Weekly" } }
-    );
-    await waitFor(() => expect(result.current.chartMetrics.calls.values.length).toBe(2));
-    expect(result.current.chartMetrics.calls.values).toEqual([100, 100]);
-    expect(result.current.chartMetrics.calls.estimated).toBe(true);
-    rerender({ granularity: "Daily" });
-    expect(result.current.chartMetrics.calls.values.reduce((a, b) => a + b, 0)).toBeCloseTo(200);
   });
 });

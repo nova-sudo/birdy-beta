@@ -15,14 +15,6 @@ import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-// recharts' ResponsiveContainer needs ResizeObserver, which jsdom lacks.
-globalThis.ResizeObserver ??= class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-const { ChartTooltip } = await import("@/components/ds/data/metric-tabs-chart")
 const { ClientTrendChart } = await import("@/components/clients/ClientTrendChart")
 
 /** A run of days, as `meta_daily_spend` stores them. */
@@ -63,7 +55,7 @@ const TRUNCATED = group({
 /** Render and switch to one of the four metric tabs. */
 async function showing(metricLabel, groupData = TRUNCATED) {
   render(<ClientTrendChart group={groupData} datePreset="maximum" currencySymbol="£" />)
-  await userEvent.click(screen.getByRole("tab", { name: new RegExp(`^${metricLabel}`) }))
+  await userEvent.click(screen.getByRole("radio", { name: metricLabel }))
 }
 
 describe("ClientTrendChart headlines", () => {
@@ -117,58 +109,10 @@ describe("ClientTrendChart headlines", () => {
     expect(screen.queryByText("£2.00")).not.toBeInTheDocument()
   })
 
-  it("takes the Leads headline from the same Meta results CPL divides by", async () => {
-    // 100 days x 5 = 500 GHL rows against 1,000 Meta results. CPL (£2,500 / 1,000)
-    // and the goals strip both use the 1,000, so the Leads tab does too.
+  it("leaves the lead series alone — it measures GHL, not Meta results", async () => {
+    // 100 days x 5 = 500 GHL leads, against 1,000 Meta results. They count
+    // different things, so the headline stays the sum of its own line.
     await showing("Leads")
-    expect(screen.getByText("1,000")).toBeInTheDocument()
-    expect(screen.queryByText("500")).not.toBeInTheDocument()
-  })
-
-  it("with no daily rows at all, the tabs still show the window's totals", async () => {
-    // A client whose daily series is empty: spend and leads from the account
-    // insight, closes from the cohort funnel. The plot says it has no daily
-    // breakdown, rather than zeroing the figures above it.
-    const noDaily = {
-      id: "g1",
-      facebook: { metrics: { insights: { spend: 177, results: 22 } }, daily_spend: [] },
-      gohighlevel: { metrics: { funnel: { leads: 4, closes: 2 } }, daily_leads: [] },
-    }
-    render(<ClientTrendChart group={noDaily} datePreset="last_7d" currencySymbol="£" />)
-    const tab = (name) => screen.getByRole("tab", { name: new RegExp(`^${name}`) })
-    expect(tab("Leads")).toHaveTextContent("22")
-    expect(tab("Spend")).toHaveTextContent("£177")
-    expect(tab("CPL")).toHaveTextContent("£8.05")
-    expect(tab("Closes")).toHaveTextContent("2")
-    expect(screen.getByText("No daily breakdown for this client in this window yet.")).toBeInTheDocument()
-  })
-
-  it("a bucket with no reading shows a dash in its tooltip, not the carried value", () => {
-    render(<ChartTooltip active payload={[{ payload: { current: 12, display: "—", tooltipLabel: "3 Jan" } }]} formatValue={(n) => `£${n}`} metric={{}} />)
-    expect(screen.getByText("—")).toBeInTheDocument()
-    expect(screen.queryByText("£12")).not.toBeInTheDocument()
-  })
-
-  it("a window of one bucket is a figure, not a trend", async () => {
-    // Today is a single day: the figures still show, the plot says why it is empty.
-    render(
-      <ClientTrendChart
-        group={group({
-          insights: { spend: 50, results: 5 },
-          spend: spendDays("2026-04-10", "2026-04-10", 50),
-          leads: leadDays("2026-04-10", "2026-04-10", 5),
-        })}
-        datePreset="maximum"
-        currencySymbol="£"
-      />
-    )
-    expect(screen.getByText("£50")).toBeInTheDocument()
-    expect(screen.getByText("Pick 7 days or longer to see a trend.")).toBeInTheDocument()
-  })
-
-  it("loading shows the chart's skeleton tabs", () => {
-    render(<ClientTrendChart group={null} datePreset="maximum" loading />)
-    expect(screen.queryByRole("tablist")).toBeNull()
-    expect(document.querySelector('[data-ds="metric-tabs-chart"] [data-ds="skeleton"]')).not.toBeNull()
+    expect(screen.getByText("500")).toBeInTheDocument()
   })
 })

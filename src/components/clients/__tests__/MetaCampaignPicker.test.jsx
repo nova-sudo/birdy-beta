@@ -41,16 +41,6 @@ describe("MetaCampaignPicker", () => {
     expect(screen.getByRole("checkbox", { name: /spring sale/i })).toHaveAttribute("aria-checked", "false")
   })
 
-  it("tones the status badge: ACTIVE success, PAUSED warning", async () => {
-    setup()
-    const active = (await screen.findByRole("checkbox", { name: /spring sale/i })).querySelector('[data-ds="badge"]')
-    const paused = screen.getByRole("checkbox", { name: /brand awareness/i }).querySelector('[data-ds="badge"]')
-    expect(active).toHaveTextContent("Active")
-    expect(active.className).toMatch(/bg-success-soft/)
-    expect(paused).toHaveTextContent("Paused")
-    expect(paused.className).toMatch(/bg-warning-soft/)
-  })
-
   it("hides All campaigns and starts empty when required", async () => {
     setup({ required: true })
     await screen.findByText("Spring Sale")

@@ -1,6 +1,5 @@
 import { Sparkles, Wand2, Wrench } from "lucide-react";
 import { RELEASES, APP_VERSION } from "@/lib/changelog";
-import { Badge, Surface } from "@/components/ds";
 import { Stagger, StaggerItem } from "@/components/motion";
 
 // Deterministic date formatting so server and client render identically
@@ -20,37 +19,39 @@ const CATEGORIES = [
     key: "added",
     label: "New",
     Icon: Sparkles,
-    dot: "bg-primary",
-    tone: "primary",
+    dot: "bg-pd-primary",
+    chip: "bg-pd-primary-tint text-pd-primary",
   },
   {
     key: "improved",
     label: "Improved",
     Icon: Wand2,
-    dot: "bg-info",
-    tone: "info",
+    dot: "bg-pd-info",
+    chip: "bg-pd-info-bg text-pd-info",
   },
   {
     key: "fixed",
     label: "Fixed",
     Icon: Wrench,
-    dot: "bg-warning",
-    tone: "warning",
+    dot: "bg-pd-amber",
+    chip: "bg-pd-amber-bg text-pd-amber",
   },
 ];
 
 function CategoryBlock({ category, items }) {
   if (!items || items.length === 0) return null;
-  const { label, Icon, dot, tone } = category;
+  const { label, Icon, dot, chip } = category;
   return (
     <div className="mt-4 first:mt-0">
-      <Badge tone={tone}>
-        <Icon aria-hidden="true" />
+      <span
+        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${chip}`}
+      >
+        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
         {label}
-      </Badge>
+      </span>
       <ul className="mt-2.5 space-y-2">
         {items.map((item, i) => (
-          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-body">
+          <li key={i} className="flex gap-2.5 text-sm leading-relaxed text-pd-body">
             <span
               className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`}
               aria-hidden="true"
@@ -68,14 +69,14 @@ export default function ChangelogPage() {
     <div className="mx-auto w-full max-w-3xl">
       {/* Page header */}
       <header className="mb-10">
-        <Badge tone="primary" className="mb-2">
-          <Sparkles aria-hidden="true" />
+        <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-pd-primary px-3 py-1 text-[11px] font-bold text-white">
+          <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
           Currently on {APP_VERSION}
-        </Badge>
-        <h1 className="text-title-sm font-semibold tracking-[-0.02em] text-balance text-foreground md:text-title">
+        </div>
+        <h1 className="font-pd-display text-2xl font-bold tracking-tight text-pd-ink sm:text-3xl">
           What&apos;s new in Birdy
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">
+        <p className="mt-1.5 text-sm text-pd-subtle">
           Every notable change, grouped by release. Newest first.
         </p>
       </header>
@@ -84,7 +85,7 @@ export default function ChangelogPage() {
       <div className="relative">
         {/* vertical rail (hidden on small screens for a cleaner stack) */}
         <div
-          className="absolute left-[7px] top-2 bottom-2 hidden w-px bg-border sm:block"
+          className="absolute left-[7px] top-2 bottom-2 hidden w-px bg-pd-border sm:block"
           aria-hidden="true"
         />
 
@@ -93,19 +94,19 @@ export default function ChangelogPage() {
             <StaggerItem as="li" key={release.version} className="relative sm:pl-10">
               {/* timeline node */}
               <span
-                className="absolute left-0 top-1.5 hidden h-[15px] w-[15px] rounded-full border-2 border-background bg-primary ring-1 ring-primary/35 sm:block"
+                className="absolute left-0 top-1.5 hidden h-[15px] w-[15px] rounded-full border-2 border-pd-surface bg-pd-primary ring-1 ring-pd-primary-pale sm:block"
                 aria-hidden="true"
               />
 
-              <Surface className="p-5 sm:p-6">
+              <div className="rounded-xl border border-pd-border bg-pd-surface p-5 shadow-sm sm:p-6">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h2 className="text-lg font-semibold text-foreground">{release.version}</h2>
-                  <time dateTime={release.date} className="text-sm text-muted-foreground">
+                  <h2 className="font-pd-display text-lg font-bold text-pd-ink">{release.version}</h2>
+                  <time dateTime={release.date} className="text-sm font-medium text-pd-faint">
                     {formatDate(release.date)}
                   </time>
                 </div>
                 {release.summary && (
-                  <p className="mt-1.5 text-sm leading-relaxed text-body">
+                  <p className="mt-1.5 text-sm leading-relaxed text-pd-body">
                     {release.summary}
                   </p>
                 )}
@@ -119,7 +120,7 @@ export default function ChangelogPage() {
                     />
                   ))}
                 </div>
-              </Surface>
+              </div>
             </StaggerItem>
           ))}
         </Stagger>

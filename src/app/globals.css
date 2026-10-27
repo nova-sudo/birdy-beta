@@ -5,48 +5,47 @@
 @custom-variant shared (&:is(.shared *));
 
 /* ── dashkit theme ──────────────────────────────────────────────
-   Maps every dashkit variable (DK_VARS) onto a design-system token. Same
-   mapping as src/lib/dashkit/theme.js (the tested source of truth): a
-   stylesheet cannot import a JS string, so it is written out here. Keep them
-   in step.
+   Maps every dashkit variable (DK_VARS) onto a Birdy token. Same mapping as
+   src/lib/dashkit/theme.js (the tested source of truth): a stylesheet cannot
+   import a JS string, so it is written out here. Keep them in step.
    Unlayered and after dashkit's import on purpose: dashkit's defaults sit on
    :where(.dk-root), which this rule beats; inside @layer it would lose.
    Nothing else in this file restyles dashkit: its compiled, dk:-prefixed
    stylesheet is themed only through these variables. */
 .dk-root {
-  --dk-bg: var(--color-frame);
-  --dk-card: var(--color-background);
-  --dk-fg: var(--color-foreground);
-  --dk-body: var(--color-body);
-  --dk-muted: var(--color-muted-foreground);
-  --dk-subtle: var(--color-muted-foreground);
-  --dk-border: var(--color-border);
-  --dk-border-strong: color-mix(in srgb, var(--color-border), black 8%);
-  --dk-table-head: var(--color-frame);
-  --dk-accent: var(--color-primary);
-  --dk-accent-tint: var(--color-primary-soft);
-  --dk-accent-pale: color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --dk-accent-fg: var(--color-primary-foreground);
-  --dk-success: var(--color-success);
-  --dk-success-bg: var(--color-success-soft);
-  --dk-danger: var(--color-danger);
-  --dk-danger-bg: var(--color-danger-soft);
-  --dk-warning: var(--color-warning);
-  --dk-warning-bg: var(--color-warning-soft);
-  --dk-info: var(--color-info);
-  --dk-chart-1: var(--color-chart-1);
-  --dk-chart-2: var(--color-chart-2);
-  --dk-chart-3: var(--color-chart-3);
-  --dk-chart-4: var(--color-chart-4);
-  --dk-chart-5: var(--color-chart-5);
-  --dk-chart-6: var(--color-chart-6);
-  --dk-chart-7: var(--color-chart-7);
-  --dk-chart-8: var(--color-chart-8);
-  --dk-radius: var(--radius-frame);
-  --dk-shadow: var(--shadow-surface);
-  --dk-shadow-pop: var(--shadow-floating);
-  --dk-font: var(--font-outfit);
-  --dk-font-display: var(--font-outfit);
+  --dk-bg: var(--pd-canvas);
+  --dk-card: var(--pd-surface);
+  --dk-fg: var(--pd-ink);
+  --dk-body: var(--pd-body);
+  --dk-muted: var(--pd-muted);
+  --dk-subtle: var(--pd-subtle);
+  --dk-border: var(--pd-border);
+  --dk-border-strong: var(--pd-border-strong);
+  --dk-table-head: var(--pd-table-head);
+  --dk-accent: var(--pd-primary);
+  --dk-accent-tint: var(--pd-primary-tint);
+  --dk-accent-pale: var(--pd-primary-pale);
+  --dk-accent-fg: var(--primary-foreground);
+  --dk-success: var(--pd-success);
+  --dk-success-bg: var(--pd-success-bg);
+  --dk-danger: var(--pd-danger);
+  --dk-danger-bg: var(--pd-danger-bg);
+  --dk-warning: var(--pd-warning);
+  --dk-warning-bg: var(--pd-warning-bg);
+  --dk-info: var(--pd-info);
+  --dk-chart-1: var(--pd-primary);
+  --dk-chart-2: #2E9E8F;
+  --dk-chart-3: var(--pd-warning);
+  --dk-chart-4: var(--pd-faint);
+  --dk-chart-5: var(--pd-amber);
+  --dk-chart-6: #2F6FD0;
+  --dk-chart-7: #CF4A3A;
+  --dk-chart-8: #8F5FC2;
+  --dk-radius: calc(var(--radius) + 8px);
+  --dk-shadow: var(--shadow-sm);
+  --dk-shadow-pop: var(--pd-shadow-popover);
+  --dk-font: var(--font-inter);
+  --dk-font-display: var(--font-bricolage);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -56,7 +55,7 @@
 /* ── Custom Scrollbar (global) ──────────────────────────────── */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
+  scrollbar-color: var(--gray-300) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -69,13 +68,13 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--gray-300);
   border-radius: 9999px;
   transition: background 0.2s;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--color-muted-foreground);
+  background: var(--gray-400);
 }
 
 *::-webkit-scrollbar-corner {
@@ -84,13 +83,61 @@
 
 @layer base {
   :root {
-    /* Bytes' base: the radius-sm..3xl steps in @theme inline are offsets from
-       it (sm 6, md 8, lg 10, xl 12, 2xl 16, 3xl 24). Controls and surfaces use
-       the named radii in @theme. */
-    --radius: 10px;
+    /* ── Core Semantic Tokens ─────────────────────────────────
+       Palette "Ink & violet": warm off-white canvas, near-black ink, one
+       deep violet used sparingly. The pd-* scale below carries the same
+       values, so stock shadcn components and the handoff screens agree. */
+    --background: #ffffff;
+    --foreground: #18181B;
 
-    /* Shadows: tinted with the ink, never pure black. These override
-       Tailwind's shadow-xs..2xl defaults (base layer beats the theme layer). */
+    --card: #ffffff;
+    --card-foreground: #18181B;
+
+    --popover: #ffffff;
+    --popover-foreground: #18181B;
+
+    --primary: #5B3FD6;
+    --primary-foreground: #ffffff;
+    --primary-glow: #7A61E0;
+    /* lighter companion for gradient washes (btn-gradient, headings) */
+
+    --secondary: #F4F4F2;
+    --secondary-foreground: #27272A;
+
+    --muted: #F4F4F2;
+    --muted-foreground: #6B6B72;
+
+    --accent: #EFEEEB;
+    --accent-foreground: #18181B;
+
+    --destructive: #E5484D;
+    --destructive-foreground: #ffffff;
+
+    --success: #16794C;
+    --success-foreground: #ffffff;
+
+    --border: #E7E6E3;
+    --input: #E7E6E3;
+    --ring: #5B3FD6;
+
+    /* Round corners: cards land at 22px (rounded-xl), controls go pill. */
+    --radius: 18px;
+
+    /* ── Sidebar Tokens ──────────────────────────────────────── */
+    /* Painted with the header's own surface rather than a shade off it, so the
+       rail and the bar above it read as one frame around the canvas instead of
+       two nearly-matching greys. Tracks --background by reference: change that
+       and the two stay together. */
+    --sidebar: var(--background);
+    --sidebar-foreground: #18181B;
+    --sidebar-primary: #5B3FD6;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #F4F4F2;
+    --sidebar-accent-foreground: #27272A;
+    --sidebar-border: #E7E6E3;
+    --sidebar-ring: #5B3FD6;
+
+    /* ── Shadows — tinted with the ink, never pure black ─────── */
     --shadow-2xs: 0 1px 2px rgba(24, 24, 27, 0.04);
     --shadow-xs: 0 1px 2px rgba(24, 24, 27, 0.05);
     --shadow-sm: 0 1px 2px rgba(24, 24, 27, 0.05), 0 4px 12px -6px rgba(24, 24, 27, 0.10);
@@ -99,260 +146,91 @@
     --shadow-lg: 0 2px 4px rgba(24, 24, 27, 0.05), 0 16px 36px -16px rgba(24, 24, 27, 0.22);
     --shadow-xl: 0 2px 6px rgba(24, 24, 27, 0.06), 0 24px 48px -20px rgba(24, 24, 27, 0.28);
     --shadow-2xl: 0 32px 64px -24px rgba(24, 24, 27, 0.35);
+
+    /* ── Violet scale ────────────────────────────────────────────
+       Backs Tailwind's purple-*, violet-* and indigo-* utilities (see
+       @theme), so every legacy purple in the app lands on one hue. 600 is
+       the brand. */
+    --purple-50: #F4F2FD;
+    --purple-100: #EFECFB;
+    --purple-200: #DDD6F8;
+    --purple-300: #C3B7F2;
+    --purple-400: #9F8BEA;
+    --purple-500: #7A61E0;
+    --purple-600: #5B3FD6;
+    --purple-700: #4C33BE;
+    --purple-800: #3E2A9A;
+    --purple-900: #33247A;
+    --purple-950: #1F1650;
+
+    /* ── Neutral scale ───────────────────────────────────────────
+       Backs Tailwind's gray-* utilities: warm surfaces, zinc-leaning text,
+       matching the ink above instead of Tailwind's blue-grey. */
+    --gray-50: #F7F7F5;
+    --gray-100: #F0EFEC;
+    --gray-200: #E7E6E3;
+    --gray-300: #D6D5D1;
+    --gray-400: #A1A1A0;
+    --gray-500: #74747A;
+    --gray-600: #57575E;
+    --gray-700: #3F3F46;
+    --gray-800: #27272A;
+    --gray-900: #18181B;
+    --gray-950: #0C0C0E;
+
+    /* ── Portfolio Dashboard palette ─────────────────────────────
+       Handoff "Birdy — Portfolio Dashboard (variant 3e)". These are
+       literal hex from the design tokens table and deliberately sit
+       outside the semantic scale above: the screen is specced at high
+       fidelity, so its greys and tints are exact rather than derived.
+       Registered under @theme below as the pd-* colour scale.       */
+    --pd-primary: #5B3FD6;
+    --pd-primary-tint: #EFECFB;
+    --pd-primary-light: #9F8BEA;
+    --pd-primary-pale: #C3B7F2;
+    --pd-ink: #18181B;
+    --pd-body: #52525B;
+    --pd-muted: #63636B;
+    --pd-subtle: #85858C;
+    --pd-faint: #98989E;
+    --pd-divider: #EFEEEB;
+    --pd-border: #E7E6E3;
+    --pd-border-strong: #DCDBD7;
+    --pd-chevron: #CFCECA;
+    --pd-surface: #ffffff;
+    --pd-canvas: #F6F6F4;
+    --pd-scroll: #DAD9D5;
+    /* Table head and the alternate row. Both sit a hair off white on purpose:
+       the stripe is meant to help the eye track a wide row across, not to
+       divide the table into bands. */
+    --pd-table-head: #FAFAF8;
+    --pd-row-zebra: #FCFCFB;
+    --pd-row-border: #F2F1EE;
+    --pd-success: #16794C;
+    --pd-success-bg: #E8F4EE;
+    --pd-danger: #E5484D;
+    --pd-danger-bg: #FEF1F1;
+    --pd-danger-surface: #FEF6F6;
+    --pd-danger-border: #F8DEDE;
+    --pd-danger-tint: #F1F8F4;
+    --pd-warning: #E0920A;
+    --pd-warning-bg: #FDF6EC;
+    --pd-amber: #B4530A;
+    --pd-amber-bg: #FDF1E7;
+    --pd-info: #3B7DD6;
+    --pd-info-bg: #EAF1FD;
+    --pd-healthy-surface: #F1F8F4;
+    --pd-healthy-border: #D3E9DC;
+    --pd-neutral-badge: #E7E6E3;
+
+    /* Shadows — one per role in the design's shadow table. */
+    --pd-shadow-segment: 0 2px 8px -2px rgba(91, 63, 214, 0.40);
+    --pd-shadow-popover: 0 14px 34px -12px rgba(24, 24, 27, 0.26);
+    --pd-shadow-tooltip: 0 6px 16px -6px rgba(24, 24, 27, 0.45);
+    --pd-shadow-glow: 0 0 0 4px rgba(91, 63, 214, 0.18);
   }
-}
 
-/* ═══════════════════════════════════════════════════════════════
-   Design tokens — source of truth
-   Paper's values with Birdy's violet primary. `static` so every variable is
-   emitted even when no utility uses it: DK_THEME_VARS
-   (src/lib/dashkit/theme.js) and inline chart styles read them by name at
-   runtime.
-   ═══════════════════════════════════════════════════════════════ */
 
-@theme static {
-  --color-background: #FFFFFF;
-  --color-foreground: #0A0A0A;
-  --color-card: #FFFFFF;
-  --color-card-foreground: #0A0A0A;
-  --color-popover: #FFFFFF;
-  --color-popover-foreground: #0A0A0A;
-  --color-body: #404040;
-  --color-muted: #f4f4f5;
-  --color-muted-foreground: #737373;
-  --color-secondary: #f4f4f5;
-  --color-secondary-foreground: #0A0A0A;
-  --color-accent: #f4f4f5;
-  --color-accent-foreground: #0A0A0A;
-  --color-border: #E5E5E5;
-  --color-input: #E5E5E5;
-  --color-ring: var(--color-primary);
-
-  /* Primary family: Bytes' orange set with Birdy's violet. hover is lighter,
-     held darker, edge is the 1px ring, ink reads on primary-soft, soft-fg is
-     link text. */
-  --color-primary: #5B3FD6;
-  --color-primary-hover: #6A50DC;
-  --color-primary-held: #5338CC;
-  --color-primary-edge: #4A30BC;
-  --color-primary-soft: #EFECFB;
-  --color-primary-ink: #4A2FB5;
-  --color-primary-foreground: #FFFFFF;
-  --color-soft-fg: #4F35C9;
-
-  /* Destructive buttons are a step stronger than the danger status colour. */
-  --color-destructive: #dc2626;
-  --color-destructive-foreground: #ffffff;
-  --color-destructive-edge: #b91c1c;
-  --color-destructive-hover: #e53535;
-  --color-destructive-held: #c21f1f;
-  --color-menu-destructive: #dc2626;
-  --color-destructive-icon: #dc2626;
-
-  /* Greys. Frame is the app canvas and every Frame shell; muted is the menu
-     highlight and neutral fill; rail/rail-frame are tab tracks on a white
-     surface / on the frame; raised is controls, fields and the active nav row. */
-  --color-frame: #f7f7f8;
-  --color-rail: #f4f4f5;
-  --color-rail-frame: #ebebed;
-  --color-tab-thumb: #ffffff;
-  --color-tab-count: #0000000f;
-  --color-raised: #ffffff;
-  --color-raised-held: #f7f7f7;
-  --color-raised-hover: #ffffff;
-  --color-field-disabled: #fafafa;
-  --color-field-disabled-foreground: #a3a3a3;
-  --color-field-error: #b91c1c;
-  --color-ghost-hover: #f2f2f2;
-  --color-ghost-held: #eaeaea;
-  --color-choice-hover: #ffffff8c;
-  --color-dashed-edge: #00000038;
-  --color-dashed-edge-hover: #00000066;
-  --color-dashed-edge-held: #0000008c;
-  --color-dashed-foreground: #404040;
-  --color-hairline: #18181b14;
-  --color-surface-ring: #18181b12;
-  --color-divider: #f0f0f1;
-  --color-faint: #a3a3a3;
-  --color-ink-secondary: #3f3f46;
-  --color-metric-label: #525252;
-  --color-row-hover: #fafafa;
-  --color-row-selected: #f5f5f6;
-  /* A child row under an expanded table row: the muted tint, opaque so a pinned cell stays solid. */
-  --color-row-child: color-mix(in srgb, var(--color-muted) 40%, var(--color-background));
-  /* A focused table row's inset outline (Bytes --focus-inset, in Birdy purple). */
-  --color-focus-inset: color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --color-void-ink: #a3a3a3;
-  --color-skeleton: #f0f0f1;
-  --color-skeleton-shine: #f8f8f9;
-  --color-progress-track: #e4e4e7;
-  --color-kbd-edge: #e4e4e7;
-  --color-kbd-foreground: #52525b;
-  --color-kbd-on-primary: #ffffff33;
-  --color-day-outside: #d4d4d8;
-  --color-empty-frame: #fafafb;
-  --color-bezel: #ffffff47;
-  /* Switch: the off track and the off thumb. */
-  --color-switch-off: #e5e5e5;
-  --color-switch-thumb-off: #ffffff;
-
-  /* Tooltip: an ink pill; keycaps sit on it as a white wash. */
-  --color-tooltip: #0a0a0a;
-  --color-tooltip-foreground: #fafafa;
-  --color-tooltip-muted: #a1a1aa;
-  --color-tooltip-key: #ffffff24;
-
-  --color-sidebar: #f7f7f8;
-  --color-sidebar-foreground: #3f3f46;
-  --color-sidebar-accent: #ffffff;
-  --color-sidebar-accent-foreground: #0a0a0a;
-  --color-sidebar-border: #18181b14;
-  --color-sidebar-ring: var(--color-primary);
-
-  --color-danger: #EF4444;
-  --color-warning: #F59E0B;
-  --color-success: #16A34A;
-  --color-info: #3B82F6;
-  --color-danger-soft: #FEF2F2;
-  --color-warning-soft: #FFFBEB;
-  --color-success-soft: #F0FDF4;
-  --color-info-soft: #EFF6FF;
-  --color-danger-ink: #991B1B;
-  --color-warning-ink: #92400E;
-  --color-success-ink: #166534;
-  --color-info-ink: #1E40AF;
-  --color-purple: #8b5cf6;
-  --color-purple-soft: #f5f3ff;
-  --color-purple-ink: #5b21b6;
-  --color-subdued: #a1a1aa;
-  --color-subdued-soft: #f4f4f5;
-  --color-subdued-ink: #52525b;
-  --color-neutral: #52525b;
-  --color-neutral-soft: #f4f4f5;
-  --color-neutral-ink: #27272a;
-  --color-alert-info: #eff6ff;
-  --color-alert-success: #f0fdf4;
-  --color-alert-warning: #fffbeb;
-  --color-alert-danger: #fef2f2;
-  --color-alert-neutral: #f4f4f5;
-  --color-alert-neutral-ink: #52525b;
-  --color-alert-neutral-icon: #71717a;
-
-  /* A delta is coloured by whether the change is good, not by its direction.
-     The arrow is the plain tone, the figure the darker ink. */
-  --color-delta-good: #16a34a;
-  --color-delta-good-ink: #15803d;
-  --color-delta-good-soft: #dcfce7;
-  --color-delta-bad: #dc2626;
-  --color-delta-bad-ink: #b91c1c;
-  --color-delta-bad-soft: #fee2e2;
-
-  /* Chart series: Paper's Data series with the orange swapped for primary.
-     6-8 are the extra hues a trend split by client needs (dashkit draws up to
-     eight lines and no colour may repeat). */
-  --color-chart-1: var(--color-primary);
-  --color-chart-2: #3B82F6;
-  --color-chart-3: #14B8A6;
-  --color-chart-4: #F59E0B;
-  --color-chart-5: #A3A3A3;
-  --color-chart-6: #2F6FD0;
-  --color-chart-7: #CF4A3A;
-  --color-chart-8: #8F5FC2;
-  /* Everything around the series: comparison line, grid, baseline, axis,
-     crosshair, tooltip, track, band and the row lift. */
-  --color-chart-comparison: #a1a1aa;
-  --color-chart-grid: #f0f0f1;
-  --color-chart-baseline: #e5e5e5;
-  --color-chart-axis: #a3a3a3;
-  --color-chart-crosshair: #0a0a0a33;
-  --color-chart-tooltip: #ffffff;
-  --color-chart-tooltip-edge: #0000001a;
-  --color-chart-track: #f4f4f5;
-  --color-chart-band: #0a0a0a0a;
-  --color-chart-row-hover: #f7f7f8;
-
-  --color-scrim: #0a0a0a66;
-
-  --font-sans: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-
-  --text-xs: 13px;
-  --text-xs--line-height: 1rem;
-  --text-sm: 14px;
-  --text-base: 16px;
-  --text-lg: 18px;
-  --text-xl: 20px;
-  --text-2xl: 24px;
-  --text-2xl--line-height: 2rem;
-  --text-figure: 28px;
-  --text-figure--line-height: 34px;
-  /* PageHeader's title (26/32 on a phone, 32/36 from md), for titles outside it. */
-  --text-title-sm: 26px;
-  --text-title-sm--line-height: 2rem;
-  --text-title: 32px;
-  --text-title--line-height: 2.25rem;
-
-  --spacing-control-sm: 32px;
-  --spacing-control: 40px;
-  --spacing-control-lg: 48px;
-
-  --radius-control-sm: 10px;
-  --radius-control: 12px;
-  --radius-control-lg: 14px;
-  --radius-surface: 12px;
-  --radius-frame: 16px;
-  --radius-overlay: 20px;
-  --radius-badge: 7px;
-  --radius-bezel: 27px;
-
-  /* Frames, surfaces, tables and cards are flat; only controls lift and only
-     overlays float. A bordered control is a 1px shadow ring, so hover and press
-     change ring and lift together without the box moving. Bytes' orange is the
-     violet primary here. */
-  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
-  --shadow-control-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
-  --shadow-control-held: 0 2px 5px #0000001a inset, 0 1px 1px #00000014 inset, 0 0 0 1px #00000021;
-  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent), 0 1px 2px #0000000F;
-  --shadow-focus-field: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
-  --shadow-focus: 0 0 0 3px var(--color-background), 0 0 0 5px color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --shadow-focus-inset: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
-  --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
-  /* Needs attention but is not wrong (an empty field that should be filled): the warning amber. */
-  --shadow-field-warning: 0 0 0 1.5px var(--color-warning), 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent), 0 1px 2px #0000000f;
-  --shadow-field-disabled: 0 0 0 1px #0000000f;
-  /* A checkbox is smaller than a field, so its ring is firmer to hold the same weight. On is the
-     primary edge plus a glow (Bytes' orange swapped for Birdy purple). */
-  --shadow-check: 0 0 0 1px #00000024, 0 1px 2px #00000014, 0 2px 4px -2px #0000000f;
-  --shadow-check-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000001a, 0 3px 6px -3px #0000001a;
-  --shadow-check-on: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 4px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --shadow-switch-thumb: 0 1px 3px #00000033, 0 0 0 0.5px #0000000f;
-  --shadow-primary: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
-  --shadow-primary-held: 0 2px 5px #00000047 inset, 0 0 0 1px var(--color-primary-edge);
-  --shadow-destructive: 0 1px 0 #ffffff2e inset, 0 0 0 1px #b91c1c, 0 1px 2px #0000001f, 0 2px 6px -2px #dc262659;
-  --shadow-destructive-held: 0 2px 5px #0000004d inset, 0 1px 1px #00000033 inset, 0 0 0 1px #a51a1a;
-  --shadow-rise: 0 0 0 1px #00000021, 0 1px 2px #0000000f, 0 4px 12px -4px #00000024;
-  --shadow-bubble: 0 0 0 1px var(--color-hairline), 0 1px 2px #0000000d;
-  --shadow-composer: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 6px 16px -6px #0000000f;
-  --shadow-frame: 0 0 0 1px var(--color-hairline);
-  --shadow-surface: 0 0 0 1px var(--color-surface-ring);
-  --shadow-empty-surface: 0 0 0 1px #18181b0f;
-  --shadow-kbd: inset 0 -1px 0 var(--color-kbd-edge);
-  --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
-  --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
-  --shadow-bezel: 0 0 0 1px #ffffff66 inset, 0 24px 48px -16px #0000001f;
-  --shadow-overlay-frame: 0 0 0 1px #18181b14, 0 1px 2px #00000014;
-  --shadow-sheet: 0 0 0 1px #18181b14, -16px 0 40px -16px #0000001f;
-  --shadow-sheet-left: 0 0 0 1px #18181b14, 16px 0 40px -16px #0000001f;
-  --shadow-sheet-bottom: 0 0 0 1px #18181b14, 0 -8px 24px -8px #0000001f;
-  --shadow-sheet-top: 0 0 0 1px #18181b14, 0 8px 24px -8px #0000001f;
-  --shadow-toast: 0 0 0 1px #0000000f, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001f;
-  --shadow-tooltip: 0 4px 12px -2px #0000002e;
-  --shadow-tooltip-card: 0 0 0 1px #00000014, 0 8px 24px -6px #00000024;
-
-  --ease-press: cubic-bezier(.2, 0, 0, 1);
-  --ease-edge: cubic-bezier(.32, .72, 0, 1);
-  --ease-thumb: cubic-bezier(.3, 1.2, .5, 1);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -360,12 +238,137 @@
    ═══════════════════════════════════════════════════════════════ */
 
 @theme inline {
-  /* Offsets from --radius (Bytes' ramp), for the rounded-sm..3xl utilities. */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Extended purple palette */
+  --color-purple-50: var(--purple-50);
+  --color-purple-100: var(--purple-100);
+  --color-purple-200: var(--purple-200);
+  --color-purple-300: var(--purple-300);
+  --color-purple-400: var(--purple-400);
+  --color-purple-500: var(--purple-500);
+  --color-purple-600: var(--purple-600);
+  --color-purple-700: var(--purple-700);
+  --color-purple-800: var(--purple-800);
+  --color-purple-900: var(--purple-900);
+  --color-purple-950: var(--purple-950);
+
+  /* violet/indigo collapse onto the one violet; gray onto the warm neutrals */
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-50: var(--gray-50);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+  --color-gray-950: var(--gray-950);
+  --color-indigo-100: var(--purple-100);
+  --color-indigo-200: var(--purple-200);
+  --color-indigo-300: var(--purple-300);
+  --color-indigo-400: var(--purple-400);
+  --color-indigo-500: var(--purple-500);
+  --color-indigo-50: var(--purple-50);
+  --color-indigo-600: var(--purple-600);
+  --color-indigo-700: var(--purple-700);
+  --color-indigo-800: var(--purple-800);
+  --color-indigo-900: var(--purple-900);
+  --color-indigo-950: var(--purple-950);
+  --color-violet-100: var(--purple-100);
+  --color-violet-200: var(--purple-200);
+  --color-violet-300: var(--purple-300);
+  --color-violet-400: var(--purple-400);
+  --color-violet-500: var(--purple-500);
+  --color-violet-50: var(--purple-50);
+  --color-violet-600: var(--purple-600);
+  --color-violet-700: var(--purple-700);
+  --color-violet-800: var(--purple-800);
+  --color-violet-900: var(--purple-900);
+  --color-violet-950: var(--purple-950);
+
+  /* Portfolio Dashboard palette */
+  --color-pd-primary: var(--pd-primary);
+  --color-pd-primary-tint: var(--pd-primary-tint);
+  --color-pd-primary-light: var(--pd-primary-light);
+  --color-pd-primary-pale: var(--pd-primary-pale);
+  --color-pd-ink: var(--pd-ink);
+  --color-pd-body: var(--pd-body);
+  --color-pd-muted: var(--pd-muted);
+  --color-pd-subtle: var(--pd-subtle);
+  --color-pd-faint: var(--pd-faint);
+  --color-pd-divider: var(--pd-divider);
+  --color-pd-border: var(--pd-border);
+  --color-pd-border-strong: var(--pd-border-strong);
+  --color-pd-chevron: var(--pd-chevron);
+  --color-pd-surface: var(--pd-surface);
+  --color-pd-canvas: var(--pd-canvas);
+  --color-pd-table-head: var(--pd-table-head);
+  --color-pd-row-zebra: var(--pd-row-zebra);
+  --color-pd-row-border: var(--pd-row-border);
+  --color-pd-success: var(--pd-success);
+  --color-pd-success-bg: var(--pd-success-bg);
+  --color-pd-danger: var(--pd-danger);
+  --color-pd-danger-bg: var(--pd-danger-bg);
+  --color-pd-danger-surface: var(--pd-danger-surface);
+  --color-pd-danger-border: var(--pd-danger-border);
+  --color-pd-warning: var(--pd-warning);
+  --color-pd-warning-bg: var(--pd-warning-bg);
+  --color-pd-amber: var(--pd-amber);
+  --color-pd-amber-bg: var(--pd-amber-bg);
+  --color-pd-info: var(--pd-info);
+  --color-pd-info-bg: var(--pd-info-bg);
+  --color-pd-healthy-surface: var(--pd-healthy-surface);
+  --color-pd-healthy-border: var(--pd-healthy-border);
+  --color-pd-neutral-badge: var(--pd-neutral-badge);
+
+  --shadow-pd-segment: var(--pd-shadow-segment);
+  --shadow-pd-popover: var(--pd-shadow-popover);
+  --shadow-pd-tooltip: var(--pd-shadow-tooltip);
+  --shadow-pd-glow: var(--pd-shadow-glow);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-bricolage), ui-sans-serif, system-ui, sans-serif;
+  --font-pd-display: var(--font-bricolage);
+  --font-pd-body: var(--font-inter);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 2px);
-  --radius-2xl: calc(var(--radius) + 6px);
+  --radius-xl: calc(var(--radius) + 4px);
+  /* Tailwind's own 2xl/3xl are rem-based; on the round scale they sit above xl. */
+  --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 14px);
 
   /* Animations */
@@ -375,8 +378,6 @@
   --animate-fade-in: fadeIn 0.5s ease-out;
   --animate-fade-out: fadeOut 0.3s ease-out;
   --animate-slide-in: slide-in 0.35s ease-out;
-  --animate-tab-land: tab-land 340ms cubic-bezier(0.2, 0, 0, 1);
-  --animate-skeleton: skeleton-sweep 1.4s linear infinite;
 
   @keyframes accordion-down {
     from {
@@ -434,31 +435,6 @@
     }
   }
 
-  /* The tab thumb's one bump as it lands: squashed, overshoots a hair, settles. */
-  @keyframes tab-land {
-    0% {
-      scale: 1 0.9;
-    }
-
-    45% {
-      scale: 1.03 1.02;
-    }
-
-    100% {
-      scale: 1 1;
-    }
-  }
-
-  @keyframes skeleton-sweep {
-    from {
-      background-position: 100% 0;
-    }
-
-    to {
-      background-position: -100% 0;
-    }
-  }
-
   @keyframes slide-in {
     from {
       opacity: 0;
@@ -476,10 +452,17 @@
    Custom Utilities
    ═══════════════════════════════════════════════════════════════ */
 
-/* Tabular figures for numerals that must line up in columns. */
-@utility num {
-  font-feature-settings: "tnum";
-  font-variant-numeric: tabular-nums;
+@utility text-foreground {
+  color: var(--foreground);
+}
+
+@utility border-sidebar-border {
+  border-color: var(--sidebar-border);
+}
+
+@utility ring-sidebar-ring {
+  --tw-ring-color: var(--sidebar-ring);
+  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -488,24 +471,27 @@
 
 @layer base {
   * {
-    @apply ring-primary/50;
-    border-color: var(--color-border);
+    @apply border-sidebar-border ring-sidebar-ring/50;
+    border-color: var(--border);
+  }
+
+  html {
+    font-size: 15.5px;
   }
 
   body {
     @apply text-foreground;
-    /* The app sits on the frame canvas rather than flat white, so surfaces
-       read as raised. Surfaces themselves are painted with --color-background. */
-    background-color: var(--color-frame);
-    font-family: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
-    /* Every number in tabular figures so money, counts and times line up. */
-    font-variant-numeric: tabular-nums;
+    /* The app sits on the Portfolio Dashboard's canvas rather than flat white,
+       so cards and rails read as raised surfaces everywhere, not just there.
+       `--background` stays white — it is what those surfaces are painted with. */
+    background-color: var(--pd-canvas);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     transition: background-color 0.5s ease, color 0.5s ease;
   }
 
   ::selection {
-    color: var(--color-primary-foreground);
-    background-color: var(--color-primary);
+    color: var(--primary-foreground);
+    background-color: var(--primary);
   }
 
   /* Tailwind v4's preflight gives buttons `cursor: default`, so every control
@@ -540,6 +526,88 @@
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
 
+/* ═══════════════════════════════════════════════════════════════
+   Portfolio Dashboard chart motion
+   ═══════════════════════════════════════════════════════════════ */
+
+/* The line is revealed by wiping a cover off it left to right, and the
+   gradient area fades in behind it. Both replay whenever the metric or
+   timeframe changes — the chart element is keyed on that pair, so React
+   remounts it and the animations restart from the top.
+
+   The reveal deliberately contains no length. It used to draw the line by
+   laying a dash over the path and retracting it, which only works while the
+   dash is at least as long as the line, and that turned out to be
+   unmeasurable here — twice.
+
+   First it was a hardcoded 2400 viewBox units, which only covers a short,
+   smooth series; past that the pattern repeats — 2400 on, 2400 off — so the
+   line drew and then simply stopped with the area fill carrying on
+   underneath it. pathLength="1" was meant to end that by letting the browser
+   normalise the dash to the path's own length whatever it was.
+
+   It didn't, because of vector-effect: non-scaling-stroke. pathLength
+   normalises against the path's length in USER units, but non-scaling-stroke
+   makes the browser stroke — and therefore dash — the path after the CTM, in
+   screen pixels. The viewBox is 1000x200 with preserveAspectRatio="none", so
+   the two disagree by roughly the card's width over 1000, and the line is
+   drawn for exactly 1/that fraction of itself. Measured in Chrome against
+   the real geometry: a card 1400px wide draws a 7-day series to 75% and a
+   30-day one to 72%, and stops dead there — the fill-mode holds the dash, so
+   the tail never arrives. Under 1000px wide the ratio drops below 1 and
+   nothing is missing, which is why it looks fine on a laptop and broken on a
+   desktop, and why only the flatter series break: a jagged one is mostly
+   vertical, and vertically the viewBox squashes rather than stretches.
+
+   A wipe has no such second space to disagree with. It clips the line to a
+   box that grows across it, and clip geometry is resolved in the same user
+   space the path lives in, so nothing has to be measured against the stroke.
+   The horizontal inset is a percentage of the line's own bounding box, so it
+   is the same sweep for any series; the vertical insets must stay absolute,
+   because a flat series (every value equal) has a zero-height box and a
+   percentage of that is zero, which would clip the line away entirely. */
+@keyframes pd-chart-wipe {
+  from { clip-path: inset(-10px 100% -10px -10px); }
+  to   { clip-path: inset(-10px -2% -10px -10px); }
+}
+
+@keyframes pd-chart-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes pd-tooltip-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.pd-chart-line {
+  animation: pd-chart-wipe 800ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.pd-chart-area {
+  animation: pd-chart-fade 800ms ease-out forwards;
+}
+
+.pd-tooltip {
+  animation: pd-tooltip-in 120ms ease-out;
+}
+
+/* Redrawing the whole series on every switch is exactly the kind of motion
+   reduced-motion users are asking us to skip — show the finished line. */
+@media (prefers-reduced-motion: reduce) {
+  .pd-chart-line {
+    /* The clip only ever exists as part of the wipe, so dropping the
+       animation leaves the finished line with nothing covering it. */
+    animation: none;
+  }
+
+  .pd-chart-area,
+  .pd-tooltip {
+    animation: none;
+  }
+}
+
 /* Onboarding wizard confetti burst (sync_prompt step). Pieces fall and spin
    once; the wizard staggers per-piece delay/duration inline. */
 @keyframes ob-confetti {
@@ -550,6 +618,13 @@
 @media (prefers-reduced-motion: reduce) {
   [style*="ob-confetti"] { animation: none !important; opacity: 0; }
 }
+
+/* Portfolio Dashboard scroll areas — the design specs a wider, tinted
+   thumb than the 6px global one. */
+.pd-scrolly { overflow-y: auto; scrollbar-color: var(--pd-scroll) transparent; }
+.pd-scrolly::-webkit-scrollbar { width: 9px; height: 9px; }
+.pd-scrolly::-webkit-scrollbar-thumb { background: var(--pd-scroll); border-radius: 5px; }
+.pd-scrolly::-webkit-scrollbar-thumb:hover { background: var(--pd-scroll); }
 
 /* ═══════════════════════════════════════════════════════════════
    Magical Shimmer Input (AskBirdy search)
@@ -598,6 +673,21 @@
   /* font-medium */
 }
 
+.dashboard-card {
+  background-color: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-xs);
+  /* shadow-sm */
+  padding: 1.5rem;
+  /* p-6 */
+  transition: all 0.15s;
+}
+
+.dashboard-card:hover {
+  box-shadow: var(--shadow-md);
+  /* shadow-md */
+}
 /* ---------- Skeleton shimmer ----------
    A light band sweeping across warm grey. Reads as "loading" without the
    whole block blinking, and settles to a flat tone for reduced motion. */
@@ -607,7 +697,7 @@
 }
 
 .skeleton-shimmer {
-  background-color: var(--color-border);
+  background-color: var(--gray-100);
   background-image: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
   background-size: 50% 100%;
   background-repeat: no-repeat;
@@ -619,14 +709,14 @@
 }
 
 /* ---------- Chat "thinking" shimmer ----------
-   A primary-coloured highlight sweeping through muted text. */
+   A violet highlight sweeping through muted text. */
 @keyframes chat-shimmer {
   from { background-position: 100% 0; }
   to   { background-position: -150% 0; }
 }
 
 .chat-shimmer {
-  background-image: linear-gradient(90deg, var(--color-muted-foreground) 0%, var(--color-muted-foreground) 35%, var(--color-primary) 50%, var(--color-muted-foreground) 65%, var(--color-muted-foreground) 100%);
+  background-image: linear-gradient(90deg, var(--pd-subtle) 0%, var(--pd-subtle) 35%, var(--pd-primary) 50%, var(--pd-subtle) 65%, var(--pd-subtle) 100%);
   background-size: 250% 100%;
   -webkit-background-clip: text;
   background-clip: text;
@@ -635,7 +725,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chat-shimmer { animation: none; background: none; color: var(--color-muted-foreground); }
+  .chat-shimmer { animation: none; background: none; color: var(--pd-subtle); }
 }
 
 /* ---------- Birdy logo flap animation ---------- */
@@ -660,4 +750,424 @@
 
 @media (prefers-reduced-motion: reduce) {
   .birdy-flap:hover { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Linking Wizard — stepper, card, gradient button
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Stepper node states — applied to a w-10 h-10 rounded-full container */
+.stepper-pending {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  border: 2px solid var(--border);
+}
+
+.stepper-completed {
+  background-color: var(--success);
+  color: var(--success-foreground);
+  border: 2px solid var(--success);
+}
+
+.stepper-active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  border: 2px solid var(--primary);
+  box-shadow: var(--pd-shadow-glow);
+}
+
+/* Card panel housing the active step body */
+.card-gradient {
+  background-image: linear-gradient(135deg, var(--card) 0%, var(--gray-50) 100%);
+}
+
+.shadow-card {
+  box-shadow:
+    0 1px 3px 0 rgba(24, 24, 27, 0.06),
+    0 8px 24px -6px rgba(24, 24, 27, 0.10);
+}
+
+/* Gradient primary button — used for Test Connection, Next, Create */
+.btn-gradient {
+  background-image: linear-gradient(135deg, var(--primary) 0%, var(--primary-glow) 100%);
+  border: none;
+  color: var(--primary-foreground);
+  transition: filter 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.btn-gradient:hover:not(:disabled) {
+  filter: brightness(1.05);
+  box-shadow: 0 6px 18px -6px rgba(91, 63, 214, 0.45);
+}
+
+.btn-gradient:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn-gradient:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Design kit tokens (src/components/ds), kept for BirdyHub and the agent
+   pages. Only names the old theme doesn't define, so the old pages keep
+   their look.
+   ═══════════════════════════════════════════════════════════════ */
+@theme static {
+  --color-body: #404040;
+  --color-primary-hover: #6A50DC;
+  --color-primary-held: #5338CC;
+  --color-primary-edge: #4A30BC;
+  --color-primary-soft: #EFECFB;
+  --color-primary-ink: #4A2FB5;
+  --color-soft-fg: #4F35C9;
+  --color-destructive-edge: #b91c1c;
+  --color-destructive-hover: #e53535;
+  --color-destructive-held: #c21f1f;
+  --color-menu-destructive: #dc2626;
+  --color-destructive-icon: #dc2626;
+  --color-frame: #f7f7f8;
+  --color-rail: #f4f4f5;
+  --color-rail-frame: #ebebed;
+  --color-tab-thumb: #ffffff;
+  --color-tab-count: #0000000f;
+  --color-raised: #ffffff;
+  --color-raised-held: #f7f7f7;
+  --color-raised-hover: #ffffff;
+  --color-field-disabled: #fafafa;
+  --color-field-disabled-foreground: #a3a3a3;
+  --color-field-error: #b91c1c;
+  --color-ghost-hover: #f2f2f2;
+  --color-ghost-held: #eaeaea;
+  --color-choice-hover: #ffffff8c;
+  --color-dashed-edge: #00000038;
+  --color-dashed-edge-hover: #00000066;
+  --color-dashed-edge-held: #0000008c;
+  --color-dashed-foreground: #404040;
+  --color-hairline: #18181b14;
+  --color-surface-ring: #18181b12;
+  --color-divider: #f0f0f1;
+  --color-faint: #a3a3a3;
+  --color-ink-secondary: #3f3f46;
+  --color-metric-label: #525252;
+  --color-row-hover: #fafafa;
+  --color-row-selected: #f5f5f6;
+  --color-row-child: color-mix(in srgb, var(--color-muted) 40%, var(--color-background));
+  --color-focus-inset: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --color-void-ink: #a3a3a3;
+  --color-skeleton: #f0f0f1;
+  --color-skeleton-shine: #f8f8f9;
+  --color-progress-track: #e4e4e7;
+  --color-kbd-edge: #e4e4e7;
+  --color-kbd-foreground: #52525b;
+  --color-kbd-on-primary: #ffffff33;
+  --color-day-outside: #d4d4d8;
+  --color-empty-frame: #fafafb;
+  --color-bezel: #ffffff47;
+  --color-switch-off: #e5e5e5;
+  --color-switch-thumb-off: #ffffff;
+  --color-tooltip: #0a0a0a;
+  --color-tooltip-foreground: #fafafa;
+  --color-tooltip-muted: #a1a1aa;
+  --color-tooltip-key: #ffffff24;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+  --color-danger-soft: #FEF2F2;
+  --color-warning-soft: #FFFBEB;
+  --color-success-soft: #F0FDF4;
+  --color-info-soft: #EFF6FF;
+  --color-danger-ink: #991B1B;
+  --color-warning-ink: #92400E;
+  --color-success-ink: #166534;
+  --color-info-ink: #1E40AF;
+  --color-purple: #8b5cf6;
+  --color-purple-soft: #f5f3ff;
+  --color-purple-ink: #5b21b6;
+  --color-subdued: #a1a1aa;
+  --color-subdued-soft: #f4f4f5;
+  --color-subdued-ink: #52525b;
+  --color-neutral: #52525b;
+  --color-neutral-soft: #f4f4f5;
+  --color-neutral-ink: #27272a;
+  --color-alert-info: #eff6ff;
+  --color-alert-success: #f0fdf4;
+  --color-alert-warning: #fffbeb;
+  --color-alert-danger: #fef2f2;
+  --color-alert-neutral: #f4f4f5;
+  --color-alert-neutral-ink: #52525b;
+  --color-alert-neutral-icon: #71717a;
+  --color-delta-good: #16a34a;
+  --color-delta-good-ink: #15803d;
+  --color-delta-good-soft: #dcfce7;
+  --color-delta-bad: #dc2626;
+  --color-delta-bad-ink: #b91c1c;
+  --color-delta-bad-soft: #fee2e2;
+  --color-chart-1: var(--color-primary);
+  --color-chart-2: #3B82F6;
+  --color-chart-3: #14B8A6;
+  --color-chart-4: #F59E0B;
+  --color-chart-5: #A3A3A3;
+  --color-chart-6: #2F6FD0;
+  --color-chart-7: #CF4A3A;
+  --color-chart-8: #8F5FC2;
+  --color-chart-comparison: #a1a1aa;
+  --color-chart-grid: #f0f0f1;
+  --color-chart-baseline: #e5e5e5;
+  --color-chart-axis: #a3a3a3;
+  --color-chart-crosshair: #0a0a0a33;
+  --color-chart-tooltip: #ffffff;
+  --color-chart-tooltip-edge: #0000001a;
+  --color-chart-track: #f4f4f5;
+  --color-chart-band: #0a0a0a0a;
+  --color-chart-row-hover: #f7f7f8;
+  --color-scrim: #0a0a0a66;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --text-xs: 13px;
+  --text-xs--line-height: 1rem;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 2rem;
+  --text-figure: 28px;
+  --text-figure--line-height: 34px;
+  --text-title-sm: 26px;
+  --text-title-sm--line-height: 2rem;
+  --text-title: 32px;
+  --text-title--line-height: 2.25rem;
+  --spacing-control-sm: 32px;
+  --spacing-control: 40px;
+  --spacing-control-lg: 48px;
+  --radius-control-sm: 10px;
+  --radius-control: 12px;
+  --radius-control-lg: 14px;
+  --radius-surface: 12px;
+  --radius-frame: 16px;
+  --radius-overlay: 20px;
+  --radius-badge: 7px;
+  --radius-bezel: 27px;
+  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-held: 0 2px 5px #0000001a inset, 0 1px 1px #00000014 inset, 0 0 0 1px #00000021;
+  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent), 0 1px 2px #0000000F;
+  --shadow-focus-field: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --shadow-focus: 0 0 0 3px var(--color-background), 0 0 0 5px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-focus-inset: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
+  --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
+  --shadow-field-warning: 0 0 0 1.5px var(--color-warning), 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent), 0 1px 2px #0000000f;
+  --shadow-field-disabled: 0 0 0 1px #0000000f;
+  --shadow-check: 0 0 0 1px #00000024, 0 1px 2px #00000014, 0 2px 4px -2px #0000000f;
+  --shadow-check-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000001a, 0 3px 6px -3px #0000001a;
+  --shadow-check-on: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 4px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-switch-thumb: 0 1px 3px #00000033, 0 0 0 0.5px #0000000f;
+  --shadow-primary: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-primary-held: 0 2px 5px #00000047 inset, 0 0 0 1px var(--color-primary-edge);
+  --shadow-destructive: 0 1px 0 #ffffff2e inset, 0 0 0 1px #b91c1c, 0 1px 2px #0000001f, 0 2px 6px -2px #dc262659;
+  --shadow-destructive-held: 0 2px 5px #0000004d inset, 0 1px 1px #00000033 inset, 0 0 0 1px #a51a1a;
+  --shadow-rise: 0 0 0 1px #00000021, 0 1px 2px #0000000f, 0 4px 12px -4px #00000024;
+  --shadow-bubble: 0 0 0 1px var(--color-hairline), 0 1px 2px #0000000d;
+  --shadow-composer: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 6px 16px -6px #0000000f;
+  --shadow-frame: 0 0 0 1px var(--color-hairline);
+  --shadow-surface: 0 0 0 1px var(--color-surface-ring);
+  --shadow-empty-surface: 0 0 0 1px #18181b0f;
+  --shadow-kbd: inset 0 -1px 0 var(--color-kbd-edge);
+  --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
+  --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+  --shadow-bezel: 0 0 0 1px #ffffff66 inset, 0 24px 48px -16px #0000001f;
+  --shadow-overlay-frame: 0 0 0 1px #18181b14, 0 1px 2px #00000014;
+  --shadow-sheet: 0 0 0 1px #18181b14, -16px 0 40px -16px #0000001f;
+  --shadow-sheet-left: 0 0 0 1px #18181b14, 16px 0 40px -16px #0000001f;
+  --shadow-sheet-bottom: 0 0 0 1px #18181b14, 0 -8px 24px -8px #0000001f;
+  --shadow-sheet-top: 0 0 0 1px #18181b14, 0 8px 24px -8px #0000001f;
+  --shadow-toast: 0 0 0 1px #0000000f, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001f;
+  --shadow-tooltip: 0 4px 12px -2px #0000002e;
+  --shadow-tooltip-card: 0 0 0 1px #00000014, 0 8px 24px -6px #00000024;
+  --ease-press: cubic-bezier(.2, 0, 0, 1);
+  --ease-edge: cubic-bezier(.32, .72, 0, 1);
+  --ease-thumb: cubic-bezier(.3, 1.2, .5, 1);
+}
+@theme inline {
+  --color-body: #404040;
+  --color-primary-hover: #6A50DC;
+  --color-primary-held: #5338CC;
+  --color-primary-edge: #4A30BC;
+  --color-primary-soft: #EFECFB;
+  --color-primary-ink: #4A2FB5;
+  --color-soft-fg: #4F35C9;
+  --color-destructive-edge: #b91c1c;
+  --color-destructive-hover: #e53535;
+  --color-destructive-held: #c21f1f;
+  --color-menu-destructive: #dc2626;
+  --color-destructive-icon: #dc2626;
+  --color-frame: #f7f7f8;
+  --color-rail: #f4f4f5;
+  --color-rail-frame: #ebebed;
+  --color-tab-thumb: #ffffff;
+  --color-tab-count: #0000000f;
+  --color-raised: #ffffff;
+  --color-raised-held: #f7f7f7;
+  --color-raised-hover: #ffffff;
+  --color-field-disabled: #fafafa;
+  --color-field-disabled-foreground: #a3a3a3;
+  --color-field-error: #b91c1c;
+  --color-ghost-hover: #f2f2f2;
+  --color-ghost-held: #eaeaea;
+  --color-choice-hover: #ffffff8c;
+  --color-dashed-edge: #00000038;
+  --color-dashed-edge-hover: #00000066;
+  --color-dashed-edge-held: #0000008c;
+  --color-dashed-foreground: #404040;
+  --color-hairline: #18181b14;
+  --color-surface-ring: #18181b12;
+  --color-divider: #f0f0f1;
+  --color-faint: #a3a3a3;
+  --color-ink-secondary: #3f3f46;
+  --color-metric-label: #525252;
+  --color-row-hover: #fafafa;
+  --color-row-selected: #f5f5f6;
+  --color-row-child: color-mix(in srgb, var(--color-muted) 40%, var(--color-background));
+  --color-focus-inset: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --color-void-ink: #a3a3a3;
+  --color-skeleton: #f0f0f1;
+  --color-skeleton-shine: #f8f8f9;
+  --color-progress-track: #e4e4e7;
+  --color-kbd-edge: #e4e4e7;
+  --color-kbd-foreground: #52525b;
+  --color-kbd-on-primary: #ffffff33;
+  --color-day-outside: #d4d4d8;
+  --color-empty-frame: #fafafb;
+  --color-bezel: #ffffff47;
+  --color-switch-off: #e5e5e5;
+  --color-switch-thumb-off: #ffffff;
+  --color-tooltip: #0a0a0a;
+  --color-tooltip-foreground: #fafafa;
+  --color-tooltip-muted: #a1a1aa;
+  --color-tooltip-key: #ffffff24;
+  --color-danger: #EF4444;
+  --color-warning: #F59E0B;
+  --color-info: #3B82F6;
+  --color-danger-soft: #FEF2F2;
+  --color-warning-soft: #FFFBEB;
+  --color-success-soft: #F0FDF4;
+  --color-info-soft: #EFF6FF;
+  --color-danger-ink: #991B1B;
+  --color-warning-ink: #92400E;
+  --color-success-ink: #166534;
+  --color-info-ink: #1E40AF;
+  --color-purple: #8b5cf6;
+  --color-purple-soft: #f5f3ff;
+  --color-purple-ink: #5b21b6;
+  --color-subdued: #a1a1aa;
+  --color-subdued-soft: #f4f4f5;
+  --color-subdued-ink: #52525b;
+  --color-neutral: #52525b;
+  --color-neutral-soft: #f4f4f5;
+  --color-neutral-ink: #27272a;
+  --color-alert-info: #eff6ff;
+  --color-alert-success: #f0fdf4;
+  --color-alert-warning: #fffbeb;
+  --color-alert-danger: #fef2f2;
+  --color-alert-neutral: #f4f4f5;
+  --color-alert-neutral-ink: #52525b;
+  --color-alert-neutral-icon: #71717a;
+  --color-delta-good: #16a34a;
+  --color-delta-good-ink: #15803d;
+  --color-delta-good-soft: #dcfce7;
+  --color-delta-bad: #dc2626;
+  --color-delta-bad-ink: #b91c1c;
+  --color-delta-bad-soft: #fee2e2;
+  --color-chart-1: var(--color-primary);
+  --color-chart-2: #3B82F6;
+  --color-chart-3: #14B8A6;
+  --color-chart-4: #F59E0B;
+  --color-chart-5: #A3A3A3;
+  --color-chart-6: #2F6FD0;
+  --color-chart-7: #CF4A3A;
+  --color-chart-8: #8F5FC2;
+  --color-chart-comparison: #a1a1aa;
+  --color-chart-grid: #f0f0f1;
+  --color-chart-baseline: #e5e5e5;
+  --color-chart-axis: #a3a3a3;
+  --color-chart-crosshair: #0a0a0a33;
+  --color-chart-tooltip: #ffffff;
+  --color-chart-tooltip-edge: #0000001a;
+  --color-chart-track: #f4f4f5;
+  --color-chart-band: #0a0a0a0a;
+  --color-chart-row-hover: #f7f7f8;
+  --color-scrim: #0a0a0a66;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --text-xs: 13px;
+  --text-xs--line-height: 1rem;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-2xl--line-height: 2rem;
+  --text-figure: 28px;
+  --text-figure--line-height: 34px;
+  --text-title-sm: 26px;
+  --text-title-sm--line-height: 2rem;
+  --text-title: 32px;
+  --text-title--line-height: 2.25rem;
+  --spacing-control-sm: 32px;
+  --spacing-control: 40px;
+  --spacing-control-lg: 48px;
+  --radius-control-sm: 10px;
+  --radius-control: 12px;
+  --radius-control-lg: 14px;
+  --radius-surface: 12px;
+  --radius-frame: 16px;
+  --radius-overlay: 20px;
+  --radius-badge: 7px;
+  --radius-bezel: 27px;
+  --shadow-control: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000000f, 0 2px 4px -2px #0000000d;
+  --shadow-control-held: 0 2px 5px #0000001a inset, 0 1px 1px #00000014 inset, 0 0 0 1px #00000021;
+  --shadow-control-focus: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent), 0 1px 2px #0000000F;
+  --shadow-focus-field: 0 0 0 1px color-mix(in srgb, var(--color-primary) 55%, transparent), 0 0 0 4px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  --shadow-focus: 0 0 0 3px var(--color-background), 0 0 0 5px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-focus-inset: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-control-invalid: 0 0 0 1px var(--color-danger), 0 1px 2px #0000000F;
+  --shadow-field-error: 0 0 0 1px #dc26268c, 0 0 0 4px #dc26261a, 0 1px 2px #0000000f;
+  --shadow-field-warning: 0 0 0 1.5px var(--color-warning), 0 0 0 4px color-mix(in srgb, var(--color-warning) 18%, transparent), 0 1px 2px #0000000f;
+  --shadow-field-disabled: 0 0 0 1px #0000000f;
+  --shadow-check: 0 0 0 1px #00000024, 0 1px 2px #00000014, 0 2px 4px -2px #0000000f;
+  --shadow-check-hover: 0 0 0 1px #0000003d, 0 1px 2px #0000001a, 0 3px 6px -3px #0000001a;
+  --shadow-check-on: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 4px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-switch-thumb: 0 1px 3px #00000033, 0 0 0 0.5px #0000000f;
+  --shadow-primary: 0 1px 0 #ffffff33 inset, 0 0 0 1px var(--color-primary-edge), 0 1px 2px #0000001f, 0 2px 6px -2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+  --shadow-primary-held: 0 2px 5px #00000047 inset, 0 0 0 1px var(--color-primary-edge);
+  --shadow-destructive: 0 1px 0 #ffffff2e inset, 0 0 0 1px #b91c1c, 0 1px 2px #0000001f, 0 2px 6px -2px #dc262659;
+  --shadow-destructive-held: 0 2px 5px #0000004d inset, 0 1px 1px #00000033 inset, 0 0 0 1px #a51a1a;
+  --shadow-rise: 0 0 0 1px #00000021, 0 1px 2px #0000000f, 0 4px 12px -4px #00000024;
+  --shadow-bubble: 0 0 0 1px var(--color-hairline), 0 1px 2px #0000000d;
+  --shadow-composer: 0 0 0 1px #00000014, 0 1px 2px #0000000f, 0 6px 16px -6px #0000000f;
+  --shadow-frame: 0 0 0 1px var(--color-hairline);
+  --shadow-surface: 0 0 0 1px var(--color-surface-ring);
+  --shadow-empty-surface: 0 0 0 1px #18181b0f;
+  --shadow-kbd: inset 0 -1px 0 var(--color-kbd-edge);
+  --shadow-floating: 0 0 0 1px #0000000F, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001F;
+  --shadow-overlay: 0 0 0 1px #0000000F, 0 24px 64px -12px #0000003D;
+  --shadow-bezel: 0 0 0 1px #ffffff66 inset, 0 24px 48px -16px #0000001f;
+  --shadow-overlay-frame: 0 0 0 1px #18181b14, 0 1px 2px #00000014;
+  --shadow-sheet: 0 0 0 1px #18181b14, -16px 0 40px -16px #0000001f;
+  --shadow-sheet-left: 0 0 0 1px #18181b14, 16px 0 40px -16px #0000001f;
+  --shadow-sheet-bottom: 0 0 0 1px #18181b14, 0 -8px 24px -8px #0000001f;
+  --shadow-sheet-top: 0 0 0 1px #18181b14, 0 8px 24px -8px #0000001f;
+  --shadow-toast: 0 0 0 1px #0000000f, 0 4px 12px -2px #00000014, 0 12px 32px -8px #0000001f;
+  --shadow-tooltip: 0 4px 12px -2px #0000002e;
+  --shadow-tooltip-card: 0 0 0 1px #00000014, 0 8px 24px -6px #00000024;
+  --ease-press: cubic-bezier(.2, 0, 0, 1);
+  --ease-edge: cubic-bezier(.32, .72, 0, 1);
+  --ease-thumb: cubic-bezier(.3, 1.2, .5, 1);
+}
+
+/* Tabular figures for numerals that must line up in columns. */
+@utility num {
+  font-variant-numeric: tabular-nums;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react"
 import { Check, ChevronDown, Globe, UserRound } from "lucide-react"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
   Command,
   CommandEmpty,
@@ -9,10 +10,7 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ds"
+} from "@/components/ui/command"
 import { cn } from "@/lib/utils"
 
 // ─── Asking about ───────────────────────────────────────────────────────────
@@ -41,12 +39,12 @@ export default function ScopePicker({ value, clients = [], onChange, locked = fa
   )
 
   const trigger = (
-    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+    <span className="inline-flex items-center gap-1.5 text-[11.5px] text-pd-subtle">
       Asking about
       <span
         className={cn(
-          "inline-flex max-w-[180px] items-center gap-1 rounded-sm px-2 py-0.5 font-medium",
-          isAll ? "bg-neutral-soft text-neutral-ink" : "bg-primary-soft text-primary"
+          "inline-flex max-w-[180px] items-center gap-1 rounded-full px-2 py-[2px] font-semibold",
+          isAll ? "bg-pd-divider text-pd-ink" : "bg-pd-primary-tint text-pd-primary"
         )}
       >
         {isAll
@@ -69,7 +67,7 @@ export default function ScopePicker({ value, clients = [], onChange, locked = fa
           type="button"
           aria-label={`Asking about: ${value?.name ?? ALL_CLIENTS.name}`}
           className={cn(
-            "cursor-pointer rounded-sm outline-none focus-visible:shadow-control-focus",
+            "cursor-pointer rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary",
             className
           )}
         >
@@ -86,9 +84,9 @@ export default function ScopePicker({ value, clients = [], onChange, locked = fa
                 value="__all__"
                 onSelect={() => { onChange(ALL_CLIENTS); setOpen(false) }}
               >
-                <Globe className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                <Globe className="size-3.5 text-pd-subtle" aria-hidden="true" />
                 All clients
-                {isAll && <Check className="ml-auto size-3.5 text-primary" aria-hidden="true" />}
+                {isAll && <Check className="ml-auto size-3.5 text-pd-primary" aria-hidden="true" />}
               </CommandItem>
             </CommandGroup>
             {options.length > 0 && (
@@ -99,10 +97,10 @@ export default function ScopePicker({ value, clients = [], onChange, locked = fa
                     value={`${g.name} ${g.id}`}
                     onSelect={() => { onChange(g); setOpen(false) }}
                   >
-                    <UserRound className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <UserRound className="size-3.5 text-pd-subtle" aria-hidden="true" />
                     <span className="truncate">{g.name}</span>
                     {value?.id === g.id && (
-                      <Check className="ml-auto size-3.5 text-primary" aria-hidden="true" />
+                      <Check className="ml-auto size-3.5 text-pd-primary" aria-hidden="true" />
                     )}
                   </CommandItem>
                 ))}

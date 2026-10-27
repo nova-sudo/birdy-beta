@@ -54,7 +54,6 @@ async function open(props = {}) {
       views={views}
       onSaveDefault={onSaveDefault}
       {...(props.sources ? { sources: props.sources } : {})}
-      {...(props.lockedColumnIds ? { lockedColumnIds: props.lockedColumnIds } : {})}
     />
   )
   await user.click(screen.getByRole("button", { name: /columns/i }))
@@ -393,31 +392,5 @@ describe("nothing persists on toggle", () => {
     await user.click(screen.getByRole("button", { name: /metric name/i }))
     expect(onSaveDefault).not.toHaveBeenCalled()
     expect(views.updateView).not.toHaveBeenCalled()
-  })
-})
-
-describe("locked columns", () => {
-  it("shows a locked column ticked, with its checkbox disabled", async () => {
-    const { user, onChange } = await open({ visibleColumns: ["spend", "cpl"], lockedColumnIds: ["spend"] })
-    const locked = screen.getByRole("button", { name: /Spend/ })
-    expect(locked).toBeDisabled()
-    expect(locked).toHaveAttribute("aria-pressed", "true")
-    await user.click(locked)
-    expect(onChange).not.toHaveBeenCalled()
-  })
-
-  it("select-all never switches a locked column off", async () => {
-    const { user, onChange } = await open({
-      visibleColumns: ["spend", "cpl", "ghl_won", "tag_vip", "roi"],
-      lockedColumnIds: ["spend"],
-    })
-    await user.click(screen.getByRole("button", { name: /metric name/i }))
-    expect(onChange).toHaveBeenCalledWith(["spend"])
-  })
-
-  it("select-all still switches on every other column", async () => {
-    const { user, onChange } = await open({ visibleColumns: ["spend"], lockedColumnIds: ["spend"] })
-    await user.click(screen.getByRole("button", { name: /metric name/i }))
-    expect(onChange).toHaveBeenCalledWith(["spend", "cpl", "ghl_won", "tag_vip", "roi"])
   })
 })

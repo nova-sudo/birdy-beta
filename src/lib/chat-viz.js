@@ -10,15 +10,15 @@
 import { formatCompact, formatMetric } from "@/lib/format-metric"
 import { HIGHER_IS_BETTER, LOWER_IS_BETTER } from "@/lib/portfolio-metrics"
 
-// Primary first, then the chart ramp. Amber second: blue beside violet reads
-// as one colour when two lines cross.
+// Violet first, then the hues the hubs already use for their own series.
+// Amber second: blue beside violet reads as one colour when two lines cross.
 export const SERIES_COLORS = [
-  "var(--color-chart-1)",
-  "var(--color-chart-4)",
-  "var(--color-chart-2)",
-  "var(--color-chart-3)",
-  "var(--color-chart-7)",
-  "var(--color-chart-8)",
+  "var(--pd-primary)",
+  "var(--pd-amber)",
+  "var(--pd-info)",
+  "var(--pd-success)",
+  "var(--pd-danger)",
+  "var(--pd-primary-light)",
 ]
 
 // Tool results carry the ad account's ISO code ("GBP"); print the symbol.

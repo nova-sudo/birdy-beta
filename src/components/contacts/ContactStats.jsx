@@ -1,37 +1,75 @@
-import { MetricGroup } from "@/components/ds"
+import { Target, TrendingUp, UserPlus, Users } from "lucide-react"
+import { StatsCard } from "@/components/StatsCard"
 
 /**
  * Stats cards for the Leads page.
  *
- * Two kinds of figure, in one group:
- *   1. Lead vs Contact counts. A contact is a "Lead" iff its first-touch
- *      attribution is Facebook paid social — see services/contact_classifier.py
- *      on the backend.
- *   2. Opportunity stats, scoped to lead-classified contacts only (the
- *      underlying query drops opportunities whose parent contact is a plain
- *      "contact").
+ * Two rows:
+ *   1. Lead vs Contact counts (top). A contact is a "Lead" iff its first-
+ *      touch attribution is Facebook paid social — see
+ *      services/contact_classifier.py on the backend.
+ *   2. Opportunity stats (bottom), now scoped to lead-classified contacts
+ *      only. Same numbers and labels as before, but the underlying query
+ *      drops opportunities whose parent contact is a plain "contact".
  */
 export function ContactStats({ metaStats, loading }) {
-  const count = (n) => (n || 0).toLocaleString()
-  const opportunityCaption = "Across lead-classified contacts"
+  const leadCount = metaStats?.lead_count || 0
+  const contactCount = metaStats?.contact_count || 0
+
+  const totalOpportunities = metaStats?.total_opportunities || 0
+  const lostCount = metaStats?.lost || 0
+  const openCount = metaStats?.open || 0
+  const conversionRate = metaStats?.conversion_rate || 0
+
+  // ── Row 1 — contact classification counts ────────────────────────────────
+  const countStats = [
+    {
+      title: "Total Leads",
+      value: leadCount,
+      icon: UserPlus,
+      subtitle: "From Facebook paid social",
+    },
+    {
+      title: "Total Contacts",
+      value: contactCount,
+      icon: Users,
+      subtitle: "All other sources",
+    },
+  ]
+
+  // ── Row 2 — opportunity stats (lead-classified contacts only) ────────────
+  const opportunityStats = [
+    {
+      title: "Total Opportunities",
+      value: totalOpportunities,
+      icon: Target,
+      subtitle: "Across lead-classified contacts",
+    },
+    {
+      title: "Lost Leads",
+      value: lostCount,
+      icon: Target,
+      subtitle: "Across lead-classified contacts",
+    },
+    {
+      title: "Open Leads",
+      value: openCount,
+      icon: Target,
+      subtitle: "Across lead-classified contacts",
+    },
+    {
+      title: "Conversion Rate",
+      value: `${conversionRate}%`,
+      icon: TrendingUp,
+      subtitle: "Across lead-classified contacts",
+    },
+  ]
 
   return (
-    <MetricGroup
-      title="Leads and contacts"
-      loading={loading}
-      items={[
-        { key: "leads", label: "Total Leads", value: count(metaStats?.lead_count), caption: "From Facebook paid social" },
-        { key: "contacts", label: "Total Contacts", value: count(metaStats?.contact_count), caption: "All other sources" },
-        { key: "opportunities", label: "Total Opportunities", value: count(metaStats?.total_opportunities), caption: opportunityCaption },
-        { key: "lost", label: "Lost Leads", value: count(metaStats?.lost), caption: opportunityCaption },
-        { key: "open", label: "Open Leads", value: count(metaStats?.open), caption: opportunityCaption },
-        {
-          key: "conversion",
-          label: "Conversion Rate",
-          value: `${metaStats?.conversion_rate || 0}%`,
-          caption: opportunityCaption,
-        },
-      ]}
-    />
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      {[...countStats, ...opportunityStats].map((stat, index) => (
+        <StatsCard key={index} {...stat} loading={loading} />
+      ))}
+    </div>
   )
 }

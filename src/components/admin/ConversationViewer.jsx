@@ -2,8 +2,9 @@
 
 import { Slack, Globe } from "lucide-react"
 import {
-  Badge, Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle, Skeleton,
-} from "@/components/ds"
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Skeleton } from "@/components/ui/skeleton"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
 import MessageBubble from "@/components/chat/MessageBubble"
 import { useConversation } from "@/lib/admin-api"
@@ -19,10 +20,10 @@ const EMPTY = new Set()
 function ThreadSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><Skeleton className="h-10 w-3/5 rounded-surface" /></div>
-      <div className="flex justify-start"><Skeleton className="h-20 w-4/5 rounded-surface" /></div>
-      <div className="flex justify-end"><Skeleton className="h-8 w-2/5 rounded-surface" /></div>
-      <div className="flex justify-start"><Skeleton className="h-16 w-3/4 rounded-surface" /></div>
+      <div className="flex justify-end"><Skeleton className="h-10 w-3/5 rounded-xl" /></div>
+      <div className="flex justify-start"><Skeleton className="h-20 w-4/5 rounded-xl" /></div>
+      <div className="flex justify-end"><Skeleton className="h-8 w-2/5 rounded-xl" /></div>
+      <div className="flex justify-start"><Skeleton className="h-16 w-3/4 rounded-xl" /></div>
     </div>
   )
 }
@@ -36,26 +37,23 @@ export default function ConversationViewer({ sessionId, onClose }) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose?.()}>
-      <DialogContent size="lg">
-        {/* The header strip's pr-14 keeps the source badge clear of the dialog's close button. */}
-        <DialogHeader>
-          <DialogDescription className="sr-only">Read-only transcript of this conversation.</DialogDescription>
-          <DialogTitle className="flex items-center gap-2 text-base">
+      <DialogContent className="bg-pd-surface max-w-2xl p-0 gap-0 overflow-hidden rounded-xl">
+        <DialogHeader className="px-5 py-3.5 border-b border-pd-divider">
+          <DialogTitle className="font-pd-display flex items-center gap-2 text-base">
             <BirdyAvatar size={28} />
             <span className="flex flex-col">
               <span className="leading-tight">{data?.owner || "Conversation"}</span>
-              {data?.email && <span className="text-xs font-normal leading-tight text-muted-foreground">{data.email}</span>}
+              {data?.email && <span className="text-xs font-normal text-pd-subtle leading-tight">{data.email}</span>}
             </span>
             {source && (
-              <Badge className="ml-auto">
-                <SourceIcon aria-hidden /> {source === "slack" ? "Slack" : "Birdy web"}
-              </Badge>
+              <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-pd-divider px-2 py-0.5 text-[11px] font-bold text-pd-body">
+                <SourceIcon className="h-3 w-3" /> {source === "slack" ? "Slack" : "Birdy web"}
+              </span>
             )}
           </DialogTitle>
         </DialogHeader>
 
-        {/* Muted under the bubbles so a white assistant bubble still reads as one. */}
-        <DialogBody className="bg-muted">
+        <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-4 bg-pd-canvas">
           {isLoading && <ThreadSkeleton />}
           {!isLoading && (data?.messages || [])
             .filter((m) => m.role === "user" || m.role === "assistant")
@@ -69,9 +67,9 @@ export default function ConversationViewer({ sessionId, onClose }) {
               />
             ))}
           {!isLoading && (data?.messages || []).length === 0 && (
-            <p className="py-12 text-center text-sm text-muted-foreground">This conversation has no messages.</p>
+            <p className="text-center text-sm text-pd-subtle py-12">This conversation has no messages.</p>
           )}
-        </DialogBody>
+        </div>
       </DialogContent>
     </Dialog>
   )

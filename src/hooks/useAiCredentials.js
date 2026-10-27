@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useLayoutEffect, useCallback } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { apiRequest } from "@/lib/api"
 
 const CACHE_KEY = "aiCredentialsIntegration"
@@ -26,21 +26,8 @@ function readCache() {
  * an already-mounted BirdyChatModal instance in the same tab/document).
  */
 export function useAiCredentials() {
-  // The cache is read after mount, never during render: the server has no
-  // localStorage, so a lazy initial read made the first client render differ
-  // from the server's (React hydration error 418 on /ask-birdy). `hydrated` tells
-  // callers the cache has been consulted, so they can hold a neutral shell
-  // instead of flashing the "add your key" state at a returning user.
-  const [status, setStatus] = useState({ configured: false })
-  const [hydrated, setHydrated] = useState(false)
+  const [status, setStatus] = useState(() => readCache())
   const [loading, setLoading] = useState(true)
-
-  // Layout effect: runs before the first paint, so a returning user never sees
-  // the blank shell frame (it is a no-op on the server, with no SSR warning in React 19).
-  useLayoutEffect(() => {
-    setStatus(readCache())
-    setHydrated(true)
-  }, [])
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -84,7 +71,6 @@ export function useAiCredentials() {
 
   return {
     configured: !!status.configured,
-    hydrated,
     loading,
     provider: status.provider,
     model: status.model,

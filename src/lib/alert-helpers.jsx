@@ -1,11 +1,8 @@
-"use client"
-
 import { useState, useEffect } from "react"
+import { Badge } from "@/components/ui/badge"
 import { Clock, Zap } from "lucide-react"
-import { useCurrency } from "@/hooks/useCurrency"
-import { Badge } from "@/components/ds/primitives/badge"
-import { AlertDiscIcon, CheckDiscIcon, MinusDiscIcon, PauseDiscIcon } from "@/components/ds/primitives/badge-icons"
-import { ProgressBar } from "@/components/ds/data/progress-bar"
+import { motion } from "framer-motion"
+import { EASE_OUT } from "@/components/motion"
 import { ghlIcon, metaIcon, hpIcon } from "@/lib/icons"
 
 export const METRIC_OPTIONS = [
@@ -107,6 +104,16 @@ export function formatRelative(date) {
   }
 }
 
+// Relative time ("3h ago") rendered after mount, so the server's clock never
+// mismatches the browser's during hydration.
+export function RelativeTime({ value }) {
+  const [label, setLabel] = useState("—")
+  useEffect(() => {
+    setLabel(value ? formatRelative(new Date(value)) : "—")
+  }, [value])
+  return <span suppressHydrationWarning>{label}</span>
+}
+
 export function conditionSummary(alert) {
   const { condition } = alert
   if (!condition) return "—"
@@ -122,50 +129,30 @@ export function conditionSummary(alert) {
   return `${op} ${val}`
 }
 
-/**
- * Relative time ("2 hours ago"). Reads the clock in an effect, never during
- * render, so server and client markup agree.
- *
- * @param {object} props
- * @param {string|Date|null} props.value
- */
-export function RelativeTime({ value }) {
-  const [label, setLabel] = useState("—")
-  useEffect(() => {
-    setLabel(value ? formatRelative(new Date(value)) : "—")
-  }, [value])
-  return <span suppressHydrationWarning>{label}</span>
-}
-
 export function statusBadge(status, snoozedUntil) {
-  if (status === "active") return <Badge tone="success" icon={CheckDiscIcon}>Active</Badge>
-  if (status === "triggered") return <Badge tone="danger" icon={AlertDiscIcon}>Triggered</Badge>
+  if (status === "active")
+    return <Badge variant="success" className="text-xs">Active</Badge>
+  if (status === "triggered")
+    return <Badge variant="destructive" className="text-xs">Triggered</Badge>
   if (status === "paused") {
+    const snoozeLabel = snoozedUntil
+      ? `Until ${formatRelative(new Date(snoozedUntil))}`
+      : "Paused"
     return (
       <div className="flex flex-col items-start gap-1">
-        <Badge tone="warning" icon={PauseDiscIcon}>Snoozed</Badge>
+        <Badge variant="warning" className="text-xs">Snoozed</Badge>
         {snoozedUntil && (
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            Until <RelativeTime value={snoozedUntil} />
+          <span className="text-xs text-pd-subtle flex items-center gap-1">
+            <Clock className="h-3 w-3" />{snoozeLabel}
           </span>
         )}
       </div>
     )
   }
-  return <Badge tone="muted" icon={MinusDiscIcon} className="capitalize">{status}</Badge>
-}
-
-/**
- * A metric's label with its hard-coded "($)" shown in the user's own currency.
- * The shared METRIC_OPTIONS labels stay as they are (the dashboard reads them).
- */
-export function localiseMetricLabel(label, symbol) {
-  return typeof label === "string" ? label.replace("($)", `(${symbol})`) : label
+  return <Badge variant="secondary" className="text-xs capitalize">{status}</Badge>
 }
 
 export function ProgressToTrigger({ alert }) {
-  const { currencySymbol } = useCurrency("GBP")
   const pct = alert.progress_pct ?? 0
   const current = alert.current_value ?? null
   const threshold = alert.condition?.value
@@ -173,7 +160,7 @@ export function ProgressToTrigger({ alert }) {
   const triggered = alert.status === "triggered"
 
   if (current === null || current === undefined) {
-    return <span className="text-xs text-muted-foreground">Not evaluated yet</span>
+    return <span className="text-xs text-pd-faint">Not evaluated yet</span>
   }
 
   const isPctOperator = ["pct_drop", "pct_rise"].includes(operator)
@@ -182,7 +169,7 @@ export function ProgressToTrigger({ alert }) {
   const fmt = (v, forceType) => {
     // For pct operators: current_value is always a % change, threshold is always a %
     if (forceType === "pct" || isPct) return `${Number(v).toFixed(1)}%`
-    if (forceType === "currency" || isCurrency) return `${currencySymbol}${Number(v).toFixed(2)}`
+    if (forceType === "currency" || isCurrency) return `$${Number(v).toFixed(2)}`
     return Number(v).toLocaleString(undefined, { maximumFractionDigits: 1 })
   }
   // For pct operators the threshold is a percentage, but display it as %
@@ -191,15 +178,33 @@ export function ProgressToTrigger({ alert }) {
     return fmt(v)
   }
 
+  const barColor = triggered
+    ? "bg-pd-danger"
+    : pct >= 80
+      ? "bg-pd-warning"
+      : "bg-pd-primary"
+
   const opLabel = operator === "gt" ? ">" : operator === "lt" ? "<" : operator === "eq" ? "=" : operator === "neq" ? "≠" : operator === "pct_drop" ? "↓" : "↑"
 
   return (
-    <div className="flex min-w-[140px] max-w-[180px] flex-col gap-1">
-      <span className="num text-sm font-semibold">{fmt(current)}</span>
-      <ProgressBar value={pct} triggered={triggered} label="Progress to trigger" />
-      <div className="num text-xs text-muted-foreground">
-        {triggered ? <span className="font-semibold text-danger-ink">Triggered</span> : `${Math.max(0, pct).toFixed(0)}% to trigger`}
-        {" "}{opLabel} {fmtThreshold(threshold)}
+    <div className="space-y-1 min-w-[140px] max-w-[180px]">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-semibold tabular-nums text-pd-ink">{fmt(current)}</span>
+      </div>
+      <div className="h-2 w-full bg-pd-divider rounded-full overflow-hidden">
+        <motion.div
+          className={`h-full rounded-full ${barColor}`}
+          initial={{ width: 0 }}
+          animate={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+          transition={{ duration: 0.9, ease: EASE_OUT, delay: 0.15 }}
+        />
+      </div>
+      <div className="text-xs text-pd-subtle">
+        {triggered
+          ? <span className="text-pd-danger font-semibold">Triggered</span>
+          : `${Math.max(0, pct).toFixed(0)}% to trigger`
+        }
+        <span className="text-muted-foreground"> {opLabel} {fmtThreshold(threshold)}</span>
       </div>
     </div>
   )

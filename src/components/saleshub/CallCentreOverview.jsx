@@ -1,7 +1,7 @@
 "use client"
 
 // components/saleshub/CallCentreOverview.jsx
-// The hero above the call-centre table: the five figures as tabs over the
+// The hero above the call-centre table: the six figures as tabs over the
 // trend of whichever is selected, and Birdy's read of the window beside it.
 //
 // Extracted from the Sales Hub page so /clients/[id]'s Call Centre tab can
@@ -10,12 +10,11 @@
 // lives inside MarketingContent — looked finished.
 
 import { useMemo, useState } from "react"
-import { BirdyRead, ErrorState, MetricTabsChart } from "@/components/ds"
+import { BirdyBriefing, CALL_CHART_LOADING, LoadError, MetricTabsChart } from "@/components/portfolio"
 import { buildSalesFindings, buildSalesInsight, insightPrompt } from "@/lib/saleshub-insight"
 import { formatTotal, sumCallStats } from "@/lib/saleshub-totals"
 import { DATE_PRESETS } from "@/lib/constants"
 import { KPI_PRESENTATION } from "@/app/Sales-Hub/presentation"
-import { toLeadFindings, toTrendSeries } from "@/app/contacts/presentation"
 import { useSalesHubSeries } from "@/app/Sales-Hub/useSalesHubSeries"
 import { groupsWithoutCallCentre, scopeHasCallCentre } from "@/lib/call-centre-availability"
 import { CallCentreUnavailable, UnavailableValue } from "@/components/callcenter/CallCentreUnavailable"
@@ -25,15 +24,18 @@ const presetLabel = (preset) =>
 
 // Chart on the left, Birdy on the right, at a width that keeps three findings
 // readable without the plot giving up more than it must.
-const HERO_GRID = "grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]"
+const HERO_GRID = "mb-[18px] grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"
 
-// The figures with no numbers behind them. The row stays — the reader still
-// needs to know which figures Birdy would be showing them — but each value is
-// the placeholder and nothing is selectable, since there is no curve to open.
-const UNAVAILABLE_METRICS = KPI_PRESENTATION.map((tile) => ({
+// The six figures with no numbers behind them. The row stays — the reader
+// still needs to know which six figures Birdy would be showing them — but each
+// value is the placeholder and nothing is selectable, since there is no curve
+// to open. Blanking the card instead would answer a question nobody asked
+// ("what would I get?") with silence.
+const UNAVAILABLE_TABS = KPI_PRESENTATION.map((tile) => ({
   key: tile.key,
   label: tile.label,
   value: <UnavailableValue />,
+  tone: "neutral",
   plottable: false,
 }))
 
@@ -83,45 +85,37 @@ export function CallCentreOverview({
     granularity,
   })
 
-  // Every figure carries its own series, so switching tabs needs no refetch.
-  // The caption names the window; "Leads called" also says what its curve
-  // counts, because the only series the backend keeps for it is the
-  // first-contact cohort rather than the distinct-leads figure on the tab.
-  const metrics = useMemo(
+  const tabs = useMemo(
     () =>
-      KPI_PRESENTATION.map((tile) => {
-        const source = tile.chartKey ? chartMetrics[tile.chartKey] : null
-        const differs = tile.chartKey !== tile.key
-        return {
-          key: tile.key,
-          label: tile.label,
-          value: formatTotal(tile.key, totals[tile.key] ?? 0),
-          plottable: Boolean(tile.chartKey),
-          series: toTrendSeries(source),
-          caption: differs && source ? `Curve: first contacts, ${source.total}` : presetLabel(datePreset),
-        }
-      }),
-    [totals, chartMetrics, datePreset]
+      KPI_PRESENTATION.map((tile) => ({
+        key: tile.key,
+        label: tile.label,
+        value: formatTotal(tile.key, totals[tile.key] ?? 0),
+        tone: tile.tone,
+        plottable: Boolean(tile.chartKey),
+      })),
+    [totals]
   )
 
   const activeTile = KPI_PRESENTATION.find((tile) => tile.key === activeTab)
-  const activeSource = activeTile?.chartKey ? chartMetrics[activeTile.chartKey] : null
-  const readRows = useMemo(
-    () => toLeadFindings(insight, findings, { empty: !totals.calls }),
-    [insight, findings, totals.calls]
-  )
-  const insightText = insight.map((p) => p.text).join("")
+  const metric = activeTile?.chartKey ? chartMetrics[activeTile.chartKey] : null
+
+  // The design's subtitle reads "<Date range> · <metric sub>", so the chart
+  // always says which window it is drawing. The plotted note only appears when
+  // the curve's sum and the figure above it disagree — which they do for
+  // "Leads called", whose only series is the first-contact cohort rather than
+  // the distinct-leads count the tab shows. The plot header then says so
+  // rather than leaving the reader to add up the points and wonder.
+  const chart = metric && {
+    ...metric,
+    subtitle: `${presetLabel(datePreset)} · ${metric.subtitle}`,
+    plottedNote: activeTile.chartKey !== activeTile.key ? `Plotted: ${metric.total}` : undefined,
+  }
 
   // A failed fetch must not read as a quiet week: every figure below sums an
   // empty list to 0, and nothing else on the page says why.
   if (groupsError) {
-    return (
-      <ErrorState
-        title="Couldn't load your client data"
-        description={`${String(groupsError).replace(/\.+$/, "")}. The figures here are missing, not zero.`}
-        onRetry={onRetry}
-      />
-    )
+    return <LoadError className="mb-[18px]" error={groupsError} onRetry={onRetry} />
   }
 
   // The same two columns, so switching clients doesn't reflow the page — the
@@ -133,8 +127,10 @@ export function CallCentreOverview({
     return (
       <div className={HERO_GRID}>
         <MetricTabsChart
-          metrics={UNAVAILABLE_METRICS}
-          value={null}
+          tabs={UNAVAILABLE_TABS}
+          activeKey={null}
+          chart={null}
+          layoutId="sales-hub-hero"
           emptyMessage="No call centre is linked for this client, so there are no calls to plot."
         />
         <CallCentreUnavailable
@@ -149,21 +145,24 @@ export function CallCentreOverview({
   return (
     <div className={HERO_GRID}>
       <MetricTabsChart
-        metrics={metrics}
-        value={activeTab}
-        onValueChange={setActiveTab}
-        xLabel={`${activeSource?.title ?? activeTile?.label ?? "Metric"} · ${presetLabel(datePreset)}`}
+        tabs={tabs}
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        chart={chart}
         loading={groupsLoading}
-        plotLoading={seriesLoading || Boolean(activeSource?.pending)}
+        plotLoading={seriesLoading || Boolean(metric?.pending)}
+        loadingStatements={CALL_CHART_LOADING}
         emptyMessage={
-          activeSource?.values?.length === 1
-            ? "Pick 7 days or longer to see a trend."
-            : totals.calls > 0
-              ? "No dated calls in this window yet."
-              : "No calls logged in this window yet."
+          totals.calls > 0
+            ? "No dated calls in this window yet."
+            : "No calls logged in this window yet."
         }
+        // Keying on metric + window remounts the paths, which is what makes
+        // the draw and fade animations replay on every switch.
+        redrawKey={`${activeTab}-${datePreset}-${granularity}-${selectedClientGroup}`}
+        layoutId="sales-hub-hero"
       />
-      <BirdyRead findings={readRows} empty={insightText} prompt={insightPrompt(insight)} />
+      <BirdyBriefing parts={insight} findings={findings} prompt={insightPrompt(insight)} />
     </div>
   )
 }

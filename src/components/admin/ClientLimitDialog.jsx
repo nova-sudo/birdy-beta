@@ -1,11 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
-  Button, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, Input, Label,
-} from "@/components/ds"
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { setClientLimit } from "@/lib/admin-api"
 
 const MAX_LIMIT = 1000
@@ -54,18 +58,18 @@ export default function ClientLimitDialog({ agency, onClose, onSaved }) {
 
   return (
     <Dialog open={!!agency} onOpenChange={(o) => !o && !saving && onClose?.()}>
-      <DialogContent size="sm">
+      <DialogContent className="bg-pd-surface sm:max-w-[440px]">
         <DialogHeader>
-          <DialogTitle>Client limit for {agency.owner}</DialogTitle>
+          <DialogTitle className="font-pd-display">Client limit for {agency.owner}</DialogTitle>
           <DialogDescription>
-            Their plan allows <span className="font-semibold text-foreground">{agency.plan_client_limit}</span>{" "}
+            Their plan allows <span className="font-semibold text-pd-ink">{agency.plan_client_limit}</span>{" "}
             {agency.plan_client_limit === 1 ? "client" : "clients"}; they have{" "}
-            <span className="font-semibold text-foreground">{agency.sub_accounts}</span>. An override replaces
+            <span className="font-semibold text-pd-ink">{agency.sub_accounts}</span>. An override replaces
             the plan&apos;s limit and applies with or without a subscription.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 py-1">
           <div className="space-y-1.5">
             <Label htmlFor="client-limit">Clients allowed</Label>
             <Input
@@ -79,10 +83,10 @@ export default function ClientLimitDialog({ agency, onClose, onSaved }) {
               onChange={(e) => setLimit(e.target.value)}
             />
             {limit.trim() !== "" && !valid && (
-              <p className="text-xs text-danger-ink">Enter a whole number from 0 to {MAX_LIMIT}.</p>
+              <p className="text-xs text-pd-danger">Enter a whole number from 0 to {MAX_LIMIT}.</p>
             )}
             {belowCurrent && (
-              <p className="text-xs text-warning-ink">
+              <p className="text-xs text-pd-amber">
                 That&apos;s fewer than the {agency.sub_accounts} clients they already have. Nothing is
                 removed; they just can&apos;t add more.
               </p>
@@ -102,15 +106,16 @@ export default function ClientLimitDialog({ agency, onClose, onSaved }) {
 
         <DialogFooter className="gap-2 sm:justify-between">
           {hasOverride ? (
-            <Button type="button" onClick={() => save(null)} disabled={saving}>
+            <Button type="button" variant="outline" onClick={() => save(null)} disabled={saving}>
               Remove override
             </Button>
           ) : <span />}
           <div className="flex gap-2">
-            <Button type="button" onClick={onClose} disabled={saving}>
+            <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="button" variant="primary" onClick={() => save(parsed)} loading={saving} disabled={!valid}>
+            <Button type="button" onClick={() => save(parsed)} disabled={saving || !valid} className="gap-1.5">
+              {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
               Save limit
             </Button>
           </div>

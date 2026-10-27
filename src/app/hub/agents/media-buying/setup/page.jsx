@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, Lock, Zap } from "lucide-react"
 
 import { usePageHeader } from "@/components/page-header"
-import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
+import { SalesHubHeaderTitle } from "@/components/hub/HubShell"
 
 import {
   Button,

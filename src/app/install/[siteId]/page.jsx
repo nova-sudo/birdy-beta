@@ -19,10 +19,11 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import { Check, CircleDashed } from "lucide-react"
-import { ErrorState, Notice, Skeleton, Surface } from "@/components/ds"
+import { Skeleton } from "@/components/ui/skeleton"
 
 import CodeSnippet from "@/components/attribution/CodeSnippet"
 import { publicRequest } from "@/lib/api"
+import { pdFontClass } from "@/lib/pd-fonts"
 import { cn } from "@/lib/utils"
 
 export default function InstallPage() {
@@ -58,11 +59,10 @@ export default function InstallPage() {
   if (failed) {
     return (
       <Shell>
-        <ErrorState
-          title="We couldn't load these instructions"
-          description="Check the link, or ask whoever sent it to you for a fresh one."
-          onRetry={load}
-        />
+        <p className="text-[13px] text-pd-body">
+          We couldn&apos;t load these instructions. Check the link, or ask whoever
+          sent it to you for a fresh one.
+        </p>
       </Shell>
     )
   }
@@ -73,8 +73,8 @@ export default function InstallPage() {
         <div className="space-y-3" role="status" aria-label="Loading">
           <Skeleton className="h-6 w-2/3" />
           <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <Skeleton className="h-control-lg w-full" />
+          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
         </div>
       </Shell>
     )
@@ -83,13 +83,13 @@ export default function InstallPage() {
   return (
     <Shell>
       <div className="flex flex-col gap-1">
-        <span className="text-xs font-medium uppercase tracking-wide text-primary">
+        <span className="text-[11.5px] font-medium uppercase tracking-wide text-pd-primary">
           Tracking setup
         </span>
-        <h1 className="text-xl font-semibold">
+        <h1 className="font-pd-display text-[22px] font-semibold text-pd-ink">
           {details.client_name || "Add the tracking snippet"}
         </h1>
-        <p className="text-sm text-body">
+        <p className="text-[13px] leading-[1.55] text-pd-body">
           One line of code, on every page the ads point at. It measures which ad
           brought each enquiry in. Nothing is shown to visitors and it does not
           slow the page down.
@@ -97,16 +97,16 @@ export default function InstallPage() {
       </div>
 
       <section className="flex flex-col gap-2.5">
-        <h2 className="text-base font-semibold">
+        <h2 className="font-pd-display text-[14px] font-semibold text-pd-ink">
           1. Add this to the page
         </h2>
-        <p className="text-sm text-body">
+        <p className="text-[12.5px] leading-[1.5] text-pd-body">
           Paste it just before the closing{" "}
-          <code className="rounded-sm bg-muted px-1 font-mono text-xs">
+          <code className="rounded bg-pd-divider px-1 font-mono text-[11px]">
             &lt;/head&gt;
           </code>{" "}
           tag. On most site builders there is a field for this — in GoHighLevel it
-          is <span className="font-medium text-foreground">Settings → Tracking Code</span>;
+          is <span className="font-medium text-pd-ink">Settings → Tracking Code</span>;
           in WordPress, Webflow, Wix and Squarespace look for a custom-code or
           header-scripts setting. If the site uses Google Tag Manager, add it there
           as a Custom HTML tag firing on all pages.
@@ -115,54 +115,58 @@ export default function InstallPage() {
       </section>
 
       <section className="flex flex-col gap-2.5">
-        <h2 className="text-base font-semibold">
+        <h2 className="font-pd-display text-[14px] font-semibold text-pd-ink">
           2. Check it arrived
         </h2>
-        <Notice
-          tone={details.hit_received ? "success" : "neutral"}
-          className="px-3.5 py-3"
+        <div
+          className={cn(
+            "flex items-center gap-2.5 rounded-xl border px-3.5 py-3",
+            details.hit_received
+              ? "border-pd-healthy-border bg-pd-healthy-surface"
+              : "border-pd-border bg-pd-canvas",
+          )}
         >
-          <div className="flex items-start gap-2.5">
-            <span
-              className={cn(
-                "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
-                details.hit_received ? "bg-success text-primary-foreground" : "bg-background text-muted-foreground",
-              )}
-            >
-              {details.hit_received ? (
-                <Check className="size-3.5" aria-hidden="true" />
-              ) : (
-                <CircleDashed className="size-3.5" aria-hidden="true" />
-              )}
-            </span>
-            <p className="text-sm">
-              {details.hit_received ? (
-                <>
-                  <span className="font-medium">It&apos;s working.</span>{" "}
-                  We&apos;ve received page views from the site — nothing else is needed
-                  from you.
-                </>
-              ) : (
-                <>
-                  <span className="font-medium">Waiting for the first page view.</span>{" "}
-                  Once the snippet is live, open the page in a browser and this will
-                  turn green within a few seconds. You can leave this tab open.
-                </>
-              )}
-            </p>
-          </div>
-        </Notice>
+          <span
+            className={cn(
+              "flex size-6 shrink-0 items-center justify-center rounded-full",
+              details.hit_received
+                ? "bg-pd-success-bg text-pd-success"
+                : "bg-pd-divider text-pd-faint",
+            )}
+          >
+            {details.hit_received ? (
+              <Check className="size-[13px]" aria-hidden="true" />
+            ) : (
+              <CircleDashed className="size-[13px]" aria-hidden="true" />
+            )}
+          </span>
+          <p className="text-[12.5px] leading-[1.5] text-pd-body">
+            {details.hit_received ? (
+              <>
+                <span className="font-medium text-pd-ink">It&apos;s working.</span>{" "}
+                We&apos;ve received page views from the site — nothing else is needed
+                from you.
+              </>
+            ) : (
+              <>
+                <span className="font-medium text-pd-ink">Waiting for the first page view.</span>{" "}
+                Once the snippet is live, open the page in a browser and this will
+                turn green within a few seconds. You can leave this tab open.
+              </>
+            )}
+          </p>
+        </div>
       </section>
 
       {!details.known && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-[12px] leading-[1.5] text-pd-faint">
           Note: we can&apos;t confirm this link against an account. The snippet above
           is still safe to install, but check with whoever sent it that the link is
           current.
         </p>
       )}
 
-      <p className="border-t border-border pt-4 text-xs text-muted-foreground">
+      <p className="border-t border-pd-border pt-4 text-[11.5px] text-pd-faint">
         Sent to you by an agency using Birdy. Nothing here collects information
         about you.
       </p>
@@ -172,8 +176,10 @@ export default function InstallPage() {
 
 function Shell({ children }) {
   return (
-    <div className="flex min-h-svh items-start justify-center bg-frame px-4 py-10">
-      <Surface className="flex w-full max-w-[480px] flex-col gap-6 p-6">{children}</Surface>
+    <div className={cn(pdFontClass, "min-h-screen bg-pd-canvas")}>
+      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6 px-4 py-10">
+        {children}
+      </div>
     </div>
   )
 }

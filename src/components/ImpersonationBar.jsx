@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { UserRoundCog, LogOut } from "lucide-react"
+import { UserRoundCog, LogOut, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { Button, SystemBanner } from "@/components/ds"
+import { Button } from "@/components/ui/button"
 import { fetchMe, stopImpersonation } from "@/lib/admin-api"
 import { rewriteSessionRole } from "@/lib/session"
 
@@ -86,24 +86,26 @@ export default function ImpersonationBar() {
           animate={{ height: "auto", opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.22, ease: EASE }}
-          className="w-full overflow-hidden shrink-0"
+          className="w-full bg-pd-warning-bg text-pd-amber border-b border-pd-border overflow-hidden shrink-0"
         >
-          <SystemBanner
-            tone="warning"
-            action={
-              <Button variant="outline" size="sm" onClick={handleExit} loading={exiting}>
-                <LogOut />
-                Exit
-              </Button>
-            }
-          >
-            <span className="block min-w-0 truncate">
-              <UserRoundCog className="mr-2 inline size-4 align-text-bottom" />
+          <div className="flex items-center gap-3 px-4 py-2 text-sm">
+            <UserRoundCog className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">
               Impersonating <span className="font-semibold">{me.name || me.email}</span>
               <span className="hidden sm:inline"> ({me.email})</span>
               {me.act && <span className="opacity-80"> · as {me.act}</span>}
             </span>
-          </SystemBanner>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={handleExit}
+              disabled={exiting}
+              className="ml-auto"
+            >
+              {exiting ? <Loader2 className="animate-spin" /> : <LogOut />}
+              Exit
+            </Button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

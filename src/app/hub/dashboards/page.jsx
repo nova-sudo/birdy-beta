@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { Plus } from "lucide-react"
 import { usePageHeader } from "@/components/page-header"
-import { SalesHubHeaderTitle, SalesHubShell } from "@/components/saleshub/SalesHubShell"
+import { SalesHubHeaderTitle, SalesHubShell } from "@/components/hub/HubShell"
 import { Button } from "@/components/ds"
 import { DashboardList } from "@/components/dashboards/DashboardList"
 

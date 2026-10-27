@@ -25,13 +25,13 @@ describe("delta polarity", () => {
   });
 
   it("colours a falling CPL green and a rising one red", () => {
-    expect(deltaTone("down", LOWER_IS_BETTER).bg).toBe("bg-success-soft");
-    expect(deltaTone("up", LOWER_IS_BETTER).bg).toBe("bg-danger-soft");
+    expect(deltaTone("down", LOWER_IS_BETTER).bg).toBe("bg-pd-success-bg");
+    expect(deltaTone("up", LOWER_IS_BETTER).bg).toBe("bg-pd-danger-bg");
   });
 
   it("colours falling leads red", () => {
-    expect(deltaTone("down", HIGHER_IS_BETTER).bg).toBe("bg-danger-soft");
-    expect(deltaTone("down", HIGHER_IS_BETTER).text).toBe("text-danger-ink");
+    expect(deltaTone("down", HIGHER_IS_BETTER).bg).toBe("bg-pd-danger-bg");
+    expect(deltaTone("down", HIGHER_IS_BETTER).text).toBe("text-pd-danger");
   });
 });
 

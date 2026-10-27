@@ -14,7 +14,6 @@ import TypingIndicator from "@/components/chat/TypingIndicator"
 import ChatComposer from "@/components/chat/ChatComposer"
 import ScopePicker, { ALL_CLIENTS } from "@/components/chat/ScopePicker"
 import BirdyAvatar from "@/components/birdy/BirdyAvatar"
-import { Kbd, Notice } from "@/components/ds"
 import { Reveal, Stagger, StaggerItem } from "@/components/motion"
 import { useClientGroups } from "@/lib/useClientGroups"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
@@ -131,7 +130,7 @@ export default function ChatConversation({
   const [slowNotice, setSlowNotice] = useState(false)
   const scrollRef = useRef(null)
   const hasAutoSent = useRef(false)
-  const { configured, hydrated, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
+  const { configured, refresh: refreshCreds, markUnconfigured } = useAiCredentials()
   const { blocked: creditsBlocked, refresh: refreshCredits } = useCredits()
   const outOfCredits = creditsBlocked && !ignoreCreditsGate
 
@@ -307,16 +306,9 @@ export default function ChatConversation({
   const visibleMessages = messages.filter((m, i) => !isHidden(m, i))
   const isEmpty = visibleMessages.length === 0
 
-  // Until the cached credentials status has been read (after mount), show a
-  // neutral shell: the server cannot know it, and guessing either way would
-  // flash the wrong state at a returning user.
-  if (hydrated === false) {
-    return <div data-ds="chat-conversation" className="flex h-full min-h-0 flex-col bg-background" />
-  }
-
   if (!configured) {
     return (
-      <div data-ds="chat-conversation" className="flex h-full min-h-0 flex-col bg-background">
+      <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
         <AiCredentialsEmptyState />
       </div>
     )
@@ -324,18 +316,18 @@ export default function ChatConversation({
 
   if (outOfCredits && isEmpty) {
     return (
-      <div data-ds="chat-conversation" className="flex h-full min-h-0 flex-col bg-background">
+      <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
         <OutOfCreditsEmptyState />
       </div>
     )
   }
 
   return (
-    <div data-ds="chat-conversation" className="flex h-full min-h-0 flex-col bg-background">
+    <div className="flex flex-col h-full min-h-0 bg-pd-canvas">
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 min-h-0 overflow-y-auto">
         {isEmpty && !loading ? (
-          <Welcome
+          <EmptyState
             title={emptyStateTitle}
             subtitle={emptyStateSubtitle}
             // The composer's foot already says "/ commands" on the page; the
@@ -369,7 +361,7 @@ export default function ChatConversation({
             })}
             {loading && <TypingIndicator />}
             {loading && slowNotice && showSlowNotice && (
-              <p className="pl-9 text-xs text-muted-foreground">
+              <p className="pl-[34px] text-[12px] text-pd-faint">
                 This is taking a little longer — likely a call analysis. You can
                 close this window; you&apos;ll be notified when it&apos;s done.
               </p>
@@ -382,17 +374,12 @@ export default function ChatConversation({
       <div className={`shrink-0 pt-1 ${composerCompact ? "px-3 pb-3" : "px-4 pb-4"}`}>
         <div className="max-w-3xl mx-auto">
           {outOfCredits && (
-            <Notice
-              tone="warning"
-              className="mb-2"
-              action={
-                <Link href="/billing" className="font-semibold underline underline-offset-2 hover:no-underline">
-                  Buy credits
-                </Link>
-              }
-            >
-              You&apos;re out of Birdy Credits.
-            </Notice>
+            <div className="mb-2 flex items-center justify-between gap-2 rounded-full bg-pd-warning px-4 py-2 text-xs font-semibold text-white">
+              <span>You&apos;re out of Birdy Credits.</span>
+              <Link href="/billing" className="font-semibold underline underline-offset-2 hover:no-underline">
+                Buy credits
+              </Link>
+            </div>
           )}
           <ChatComposer
             value={input}
@@ -417,7 +404,7 @@ export default function ChatConversation({
   )
 }
 
-function Welcome({ title, subtitle, showHints, quickStarters, onQuickStarter }) {
+function EmptyState({ title, subtitle, showHints, quickStarters, onQuickStarter }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
       {/* The mascot watches the cursor while it waits for a question. */}
@@ -426,8 +413,8 @@ function Welcome({ title, subtitle, showHints, quickStarters, onQuickStarter }) 
       </Reveal>
 
       <Reveal delay={0.08}>
-        <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">{title}</h3>
-        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted-foreground">{subtitle}</p>
+        <h3 className="font-pd-display text-[22px] font-bold tracking-[-0.02em] text-pd-ink">{title}</h3>
+        <p className="mt-1.5 text-[14px] text-pd-subtle max-w-sm">{subtitle}</p>
       </Reveal>
 
       {/* Starters: questions this surface can answer, one per row in the
@@ -443,9 +430,9 @@ function Welcome({ title, subtitle, showHints, quickStarters, onQuickStarter }) 
               as="button"
               key={i}
               onClick={() => onQuickStarter?.(s.prompt)}
-              className="flex cursor-pointer items-center gap-2.5 rounded-control bg-background px-3.5 py-2.5 text-left text-sm font-medium text-foreground shadow-control outline-none transition-[background-color,box-shadow,transform] duration-150 ease-press hover:bg-muted focus-visible:shadow-control-focus active:scale-[.98] motion-reduce:transform-none"
+              className="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-2.5 text-left text-[13px] font-medium text-pd-ink shadow-xs transition-[border-color,background-color] hover:border-pd-primary hover:bg-pd-primary-tint/50 active:scale-[.98]"
             >
-              <Sparkles className="size-3.5 shrink-0 text-primary" aria-hidden="true" />
+              <Sparkles className="size-3.5 shrink-0 text-pd-primary" aria-hidden="true" />
               <span className="min-w-0">{s.label}</span>
             </StaggerItem>
           ))}
@@ -453,8 +440,8 @@ function Welcome({ title, subtitle, showHints, quickStarters, onQuickStarter }) 
       )}
 
       {showHints && (
-        <p className="mt-5 flex items-center gap-1 text-xs text-muted-foreground">
-          Type <Kbd>/</Kbd> for commands
+        <p className="mt-5 text-[12px] text-pd-faint">
+          Type <kbd className="px-1.5 py-0.5 rounded-md bg-pd-divider font-sans text-pd-body">/</kbd> for commands
         </p>
       )}
     </div>

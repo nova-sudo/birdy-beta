@@ -7,7 +7,7 @@ import { useSWRConfig } from "swr"
 import { ArrowRight, Settings2 } from "lucide-react"
 
 import { usePageHeader } from "@/components/page-header"
-import { SalesHubHeaderTitle } from "@/components/saleshub/SalesHubShell"
+import { SalesHubHeaderTitle } from "@/components/hub/HubShell"
 import { Badge, Button, EmptyState, ErrorState, Frame, PageHeader, SegmentedTabs, Skeleton } from "@/components/ds"
 import { ActivityTable } from "@/components/agents/ActivityTable"
 import { StartOverButton } from "@/components/agents/StartOverButton"

@@ -11,6 +11,7 @@ import {
   buildCallInsights,
   buildFunnel,
   buildKpis,
+  buildLeaderboards,
 } from "@/lib/portfolio-aggregate";
 import {
   PREVIOUS_PERIOD,
@@ -28,15 +29,15 @@ import { portfolioHasCallCentre } from "@/lib/call-centre-availability";
 // Everything on this screen is real, from endpoints that already exist:
 //
 //   /api/client-groups?date_preset=      per-client Meta / GHL / HotProspector
-//                                        caches → KPIs, per-client rows,
-//                                        funnel, call insights
+//                                        caches → KPIs, leaderboards, funnel,
+//                                        call insights
 //   /api/client-groups?date_preset=<prev> the preceding period, for deltas
 //   /api/facebook-leads/series           per-day lead and close counts across
 //                                        the whole range → the leads and
 //                                        closes trend series
-//   /api/hotprospector/call-center       leads with nested call logs → the
-//                                        calls series, fetched only when that
-//                                        tab is opened
+//   /api/hotprospector/call-center       leads with nested call logs →
+//                                        the calls series, fetched only when
+//                                        that tab is opened
 //   /api/dashboard/summary               Birdy suggestions and activity
 //
 // Two things the design asks for that no endpoint provides, and which are
@@ -93,21 +94,6 @@ export function usePortfolioData({
   const presetSyncing = datePreset !== preset;
 
   const { currencySymbol } = useCurrency("GBP");
-
-  // Does anybody in this portfolio actually dial? The call figures below are
-  // sums over `hotprospector.call_stats`, and a client whose
-  // `call_log_provider` is "none" contributes nothing to them — which sums to
-  // a clean 0 and reads as "a very quiet week" rather than "we have no source
-  // for this". Where no active client has a call centre, the screen shows the
-  // unavailable message instead of that 0, and the call logs are not fetched.
-  //
-  // A *mixed* portfolio keeps its real numbers: the sums are still true, just
-  // of fewer clients. The one ratio that needed telling which clients count is
-  // calls-per-close, whose denominator is a GHL figure rather than a
-  // HotProspector one — it divides by `callCentreCloses`, summed only over
-  // clients that could have contributed a call. See buildCallInsights. The
-  // funnel verdict also reads this: see comparableFunnel.
-  const hasCallCentre = useMemo(() => portfolioHasCallCentre(clientGroups), [clientGroups]);
 
   const [previousGroups, setPreviousGroups] = useState(null);
   // One row per day: { date, leads, closes }. Counted in Mongo, so this is the
@@ -206,7 +192,7 @@ export function usePortfolioData({
 
   // ── Call logs, for the calls series ─────────────────────────────────────
   useEffect(() => {
-    if (chartMetric !== "calls" || !hasCallCentre) return;
+    if (chartMetric !== "calls") return;
     if (groupsLoading || presetSyncing) return;
     if (callsFetchedFor.current === preset) return;
 
@@ -229,13 +215,7 @@ export function usePortfolioData({
         const data = await res.json();
         if (!cancelled) setCallRows(data.data ?? []);
       } catch (err) {
-        if (err.name === "AbortError") {
-          // Leaving the Calls tab mid-fetch aborts it. Forget that this window
-          // was fetched, or coming back would wait on rows that never arrive —
-          // unless a newer run has already claimed the ref for its own window.
-          if (callsFetchedFor.current === preset) callsFetchedFor.current = null;
-          return;
-        }
+        if (err.name === "AbortError") return;
         if (!cancelled) {
           setCallRows([]);
           // Let a later visit retry rather than caching the failure.
@@ -250,7 +230,7 @@ export function usePortfolioData({
       cancelled = true;
       controller.abort();
     };
-  }, [chartMetric, preset, hasCallCentre, groupsLoading, presetSyncing]);
+  }, [chartMetric, preset, groupsLoading, presetSyncing]);
 
   // A new window invalidates whatever calls we hold.
   useEffect(() => {
@@ -314,6 +294,20 @@ export function usePortfolioData({
   // ── Shaping ─────────────────────────────────────────────────────────────
 
   const current = useMemo(() => aggregatePortfolio(clientGroups), [clientGroups]);
+
+  // Does anybody in this portfolio actually dial? The call figures below are
+  // sums over `hotprospector.call_stats`, and a client whose
+  // `call_log_provider` is "none" contributes nothing to them — which sums to
+  // a clean 0 and reads as "a very quiet week" rather than "we have no source
+  // for this". Where no active client has a call centre, the screen renders
+  // the placeholder instead of that 0.
+  //
+  // A *mixed* portfolio keeps its real numbers: the sums are still true, just
+  // of fewer clients. The one ratio that needed telling which clients count is
+  // calls-per-close, whose denominator is a GHL figure rather than a
+  // HotProspector one — it now divides by `callCentreCloses`, summed only over
+  // clients that could have contributed a call. See buildCallInsights.
+  const hasCallCentre = useMemo(() => portfolioHasCallCentre(clientGroups), [clientGroups]);
 
   const previous = useMemo(() => {
     if (!previousGroups) return null;
@@ -420,12 +414,12 @@ export function usePortfolioData({
 
   return {
     clientCount: current.clientCount,
-    clientRows: current.rows ?? [],
     dateRangeLabel,
 
     kpis: buildKpis(current, previous, formatMoney),
     callInsights: buildCallInsights(current),
     funnel: buildFunnel(current, previous),
+    leaderboards: buildLeaderboards(current, formatMoney),
     chartMetrics,
 
     ...rail,

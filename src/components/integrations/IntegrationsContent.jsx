@@ -1,7 +1,11 @@
 "use client"
 import { useState, useEffect, useRef } from "react"
-import { Badge, Button, ProgressBar, Spinner, Surface, StateBadge } from "@/components/ds"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Spinner } from "@/components/ui/spinner"
 import { Stagger, StaggerItem } from "@/components/motion"
+import { Progress } from "@/components/ui/progress"
 import { RefreshCw, CheckCircle, XCircle, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { apiRequest } from "@/lib/api"
@@ -30,13 +34,13 @@ function RefreshProgress({ progress }) {
 
   return (
     <div className="space-y-2 mt-2">
-      <ProgressBar tone="primary" label="Refresh progress" value={current_step === "leads" ? 85 : current_step === "lead_counts" ? 95 : pct} />
-      <p className="text-xs text-muted-foreground">{stepLabel}</p>
+      <Progress value={current_step === "leads" ? 85 : current_step === "lead_counts" ? 95 : pct} className="h-1.5" />
+      <p className="text-[11px] text-pd-subtle">{stepLabel}</p>
       {presets_failed > 0 && (
-        <p className="text-xs text-warning-ink">{presets_failed} preset(s) will retry</p>
+        <p className="text-[11px] text-pd-amber">{presets_failed} preset(s) will retry</p>
       )}
       {progress.status === "partial" && next_retry_at && (
-        <p className="text-xs text-info-ink">
+        <p className="text-[11px] text-pd-info">
           Retrying automatically (attempt {attempt}/{max_attempts})
         </p>
       )}
@@ -50,7 +54,7 @@ function InlineAction({ children, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className="font-semibold text-primary hover:underline focus-visible:underline focus-visible:outline-none"
+      className="font-semibold text-pd-primary hover:underline focus-visible:underline focus-visible:outline-none"
     >
       {children}
     </button>
@@ -62,31 +66,33 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
   const isRefreshing = refreshStatus === "running"
 
   return (
-    <Surface className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Image src={icon} alt={name} width={32} height={32} className="rounded-control" />
-          <h3 className="text-lg font-semibold leading-tight text-foreground">{name}</h3>
+    <Card className="bg-pd-surface">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Image src={icon} alt={name} width={32} height={32} className="rounded-xl" />
+            <CardTitle className="font-pd-display text-lg">{name}</CardTitle>
+          </div>
+          <Badge variant={connected ? "success" : "secondary"} className="text-[11px] font-bold">
+            {connected ? "Connected" : "Not Connected"}
+          </Badge>
         </div>
-        <StateBadge state={connected ? "active" : "inactive"}>
-          {connected ? "Connected" : "Not Connected"}
-        </StateBadge>
-      </div>
-      <div className="space-y-3">
+      </CardHeader>
+      <CardContent className="space-y-3">
         {connected ? (
           <>
             <div className="space-y-1.5 text-sm">
               {details.map(({ label, value }) => (
                 <div key={label} className="flex justify-between">
-                  <span className="text-muted-foreground">{label}</span>
+                  <span className="text-pd-subtle">{label}</span>
                   <span className="font-medium text-right max-w-[60%] truncate">{value}</span>
                 </div>
               ))}
               {extra}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Last Refresh</span>
+                <span className="text-pd-subtle">Last Refresh</span>
                 <span className="font-medium flex items-center gap-1">
-                  {isRefreshing ? <Spinner size={12} /> : <Clock className="h-3 w-3" />}
+                  {isRefreshing ? <Spinner className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
                   {isRefreshing ? "Refreshing…" : formatDate(lastRefresh)}
                 </span>
               </div>
@@ -101,12 +107,12 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
             >
               {isRefreshing ? (
                 <>
-                  <Spinner />
+                  <Spinner className="h-4 w-4 mr-2" />
                   Refreshing...
                 </>
               ) : (
                 <>
-                  <RefreshCw />
+                  <RefreshCw className="h-4 w-4 mr-2" />
                   Invalidate & Refresh
                 </>
               )}
@@ -117,17 +123,17 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
             )}
 
             {refreshStatus === "complete" && (
-              <p className="text-xs text-success-ink flex items-center gap-1 justify-center">
+              <p className="text-xs text-pd-success flex items-center gap-1 justify-center">
                 <CheckCircle className="h-3 w-3" /> Refresh completed
               </p>
             )}
             {refreshStatus === "error" && (
               <div className="text-center">
-                <p className="text-xs text-danger-ink flex items-center gap-1 justify-center">
+                <p className="text-xs text-pd-danger flex items-center gap-1 justify-center">
                   <XCircle className="h-3 w-3" /> Refresh failed
                 </p>
                 {refreshError && (
-                  <p className="text-xs text-muted-foreground mt-1 truncate max-w-full" title={refreshError}>
+                  <p className="text-[10px] text-pd-subtle mt-1 truncate max-w-full" title={refreshError}>
                     {refreshError}
                   </p>
                 )}
@@ -135,12 +141,12 @@ function IntegrationCard({ name, icon, connected, details, extra, lastRefresh, r
             )}
           </>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-pd-subtle">
             This integration is not connected for this client group.
           </p>
         )}
-      </div>
-    </Surface>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -292,7 +298,7 @@ export default function IntegrationsContent({ group, onRefreshComplete, onCampai
           ]}
           extra={
             unassigned && (
-              <p className="rounded-control bg-warning-soft px-2.5 py-1.5 text-xs text-warning-ink">
+              <p className="rounded-lg bg-pd-warning-bg px-2.5 py-1.5 text-xs text-pd-amber">
                 {unassigned} · <InlineAction onClick={openCampaigns}>Assign</InlineAction>
               </p>
             )

@@ -5,12 +5,13 @@
 // an empty list never saves from here.
 
 import { useEffect, useRef, useState } from "react"
+import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  Button, Spinner,
-} from "@/components/ds"
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
 import { MetaCampaignPicker } from "@/components/clients/MetaCampaignPicker"
 import { apiRequest } from "@/lib/api"
 
@@ -67,9 +68,9 @@ export function MetaCampaignsDialog({ open, onOpenChange, group, onSaved }) {
 
   return (
     <Dialog open={!!open} onOpenChange={(o) => !saving && onOpenChange?.(o)}>
-      <DialogContent size="lg">
+      <DialogContent className="bg-pd-surface grid-cols-[minmax(0,1fr)] sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>Meta campaigns for {group.name}</DialogTitle>
+          <DialogTitle className="font-pd-display">Meta campaigns for {group.name}</DialogTitle>
           <DialogDescription>
             {shared
               ? "This ad account is shared with another client. Pick the campaigns that belong to this one."
@@ -90,9 +91,9 @@ export function MetaCampaignsDialog({ open, onOpenChange, group, onSaved }) {
           />
         )}
 
-        {empty && <p className="text-xs text-warning-ink">Pick at least one campaign to save.</p>}
+        {empty && <p className="text-xs text-pd-amber">Pick at least one campaign to save.</p>}
         {error && (
-          <p role="alert" className="rounded-surface bg-danger-soft p-3 text-sm text-danger-ink">
+          <p role="alert" className="rounded-xl border border-pd-danger-border bg-pd-danger-bg p-3 text-sm text-pd-danger">
             {error}
           </p>
         )}
@@ -102,7 +103,7 @@ export function MetaCampaignsDialog({ open, onOpenChange, group, onSaved }) {
             Cancel
           </Button>
           <Button type="button" onClick={save} disabled={saving || empty} className="gap-1.5">
-            {saving && <Spinner size={14} />}
+            {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             Save campaigns
           </Button>
         </DialogFooter>

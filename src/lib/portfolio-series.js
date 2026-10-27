@@ -163,10 +163,11 @@ export function callTimestamps(leadRows) {
 /**
  * Put a sampled series onto the same axis as its real total.
  *
- * The call endpoint caps what it returns, so a series built straight from it
- * undercounts — and sits directly beneath a headline figure that does not.
- * Scaling every bucket by the same factor keeps the shape the sample actually
- * showed while making the magnitude agree with the total above it.
+ * Both series on this chart come from row endpoints that cap what they return,
+ * so a series built straight from them undercounts — and sits directly beneath
+ * a headline figure that does not. Scaling every bucket by the same factor
+ * keeps the shape the sample actually showed while making the magnitude agree
+ * with the total above it.
  *
  * @param {{values: number[]}} series
  * @param {number} total the real, uncapped figure for the window

@@ -1,8 +1,7 @@
 "use client"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { Send, BarChart3, Bell, Users, TrendingUp } from "lucide-react"
-import { Button, Kbd, Textarea } from "@/components/ds"
-import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 const SLASH_COMMANDS = [
   { cmd: "/summary",   label: "Account summary",    icon: BarChart3, prompt: "Give me a summary of my account performance this week." },
@@ -103,11 +102,11 @@ export default function ChatComposer({
   const canSend = value.trim() && !disabled
 
   return (
-    <div data-ds="chat-composer" className="relative">
+    <div className="relative">
       {/* Slash command palette */}
       {slashMenuOpen && (
-        <div className="absolute bottom-full left-0 right-0 z-20 mb-2 overflow-hidden rounded-surface bg-background p-1 shadow-floating animate-in fade-in-0 slide-in-from-bottom-2 duration-200 motion-reduce:animate-none">
-          <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+        <div className="absolute bottom-full left-0 right-0 mb-2 rounded-2xl border border-pd-border bg-pd-surface p-1 shadow-pd-popover overflow-hidden z-20 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+          <div className="px-3 py-1.5 text-[11px] uppercase tracking-[.04em] text-pd-faint font-bold">
             Commands
           </div>
           {filteredCommands.map((c) => {
@@ -115,30 +114,23 @@ export default function ChatComposer({
             return (
               <button
                 key={c.cmd}
-                type="button"
                 onClick={() => applySlash(c)}
-                className="flex w-full items-center gap-2.5 rounded-control px-3 py-2 text-left text-sm outline-none transition-colors hover:bg-muted focus-visible:shadow-control-focus"
+                className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2 text-left text-sm hover:bg-pd-primary-tint transition-colors"
               >
-                <Icon className="size-4 text-primary" aria-hidden="true" />
-                <span className="w-20 font-mono text-xs text-muted-foreground">{c.cmd}</span>
-                <span className="text-foreground">{c.label}</span>
+                <Icon className="h-4 w-4 text-pd-primary" />
+                <span className="font-mono text-xs text-muted-foreground w-20">{c.cmd}</span>
+                <span className="text-foreground/80">{c.label}</span>
               </button>
             )
           })}
         </div>
       )}
 
-      {/* One pill: field and send on a single centre line. It takes the
-          focus ring while you type in it. `rounded-overlay` replaces the legacy
-          22/26px radii and stays rounded as the field grows (Paper p-6-0
-          Composer v2 is a 52px full pill). */}
-      <div
-        className={cn(
-          "flex items-end gap-2 rounded-overlay bg-background shadow-floating transition-shadow duration-150 focus-within:shadow-control-focus",
-          compact ? "p-1.5 pl-2" : "p-2 pl-3"
-        )}
-      >
-        <Textarea
+      {/* Input row */}
+      {/* A raised card that lights up violet while you type in it. */}
+      <div className={`flex items-end gap-2 border border-pd-border bg-pd-surface shadow-lg transition-[border-color,box-shadow] duration-200 focus-within:border-pd-primary focus-within:shadow-[0_0_0_4px_rgba(91,63,214,.12),var(--shadow-lg)]
+        ${compact ? "rounded-[22px] p-1.5 pl-2" : "rounded-[26px] p-2 pl-3"}`}>
+        <textarea
           ref={textareaRef}
           value={value}
           onChange={handleChange}
@@ -146,32 +138,31 @@ export default function ChatComposer({
           placeholder={placeholder}
           disabled={disabled}
           rows={1}
-          className={cn(
-            "max-h-40 min-h-7 flex-1 resize-none rounded-none bg-transparent hover:bg-transparent focus-visible:bg-transparent leading-relaxed shadow-none! hover:shadow-none! field-sizing-fixed focus-visible:shadow-none!",
-            compact ? "px-2 py-1.5" : "px-2 py-2"
-          )}
+          className={`flex-1 resize-none bg-transparent border-0 outline-none text-[14px] text-pd-ink placeholder:text-pd-faint ${compact ? "px-2 py-1.5" : "px-2 py-2"} min-h-[28px] max-h-[160px] leading-relaxed`}
         />
         <Button
           onClick={onSend}
           disabled={!canSend}
-          variant={canSend ? "primary" : "ghost"}
-          size={compact ? "icon-sm" : "icon"}
-          className="shrink-0 rounded-full"
+          size="icon"
+          className={`shrink-0 rounded-full ${
+            canSend ? "" : "bg-pd-divider text-pd-faint shadow-none"
+          } ${compact ? "size-8" : "size-10"}`}
           aria-label="Send message"
         >
-          <Send aria-hidden="true" />
+          <Send className={compact ? "h-3 w-3" : "h-4 w-4"} />
         </Button>
       </div>
 
       {/* Foot: what the question is about on the left, the two keys worth
-          knowing on the right. */}
+          knowing on the right. The old row listed every shortcut; nobody
+          reads a legend under every message. */}
       {(foot || !compact) && (
-        <div className="mt-2 flex items-center justify-between gap-3 px-3 text-xs text-muted-foreground">
+        <div className="mt-2 flex items-center justify-between gap-3 px-3 text-[11px] text-pd-faint">
           <span className="min-w-0">{foot}</span>
           {!compact && (
-            <span className="hidden shrink-0 items-center gap-1 sm:flex">
-              <Kbd>↵</Kbd> send ·
-              <Kbd className="ml-1">/</Kbd> commands
+            <span className="shrink-0">
+              <kbd className="rounded-md bg-pd-divider px-1 py-0.5 font-sans text-pd-body">↵</kbd> send ·
+              <kbd className="ml-1.5 rounded-md bg-pd-divider px-1 py-0.5 font-sans text-pd-body">/</kbd> commands
             </span>
           )}
         </div>
