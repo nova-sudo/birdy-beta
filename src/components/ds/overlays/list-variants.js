@@ -48,7 +48,9 @@ export const listItemVariants = cva(
   [
     "relative flex w-full cursor-pointer items-center text-left text-foreground outline-hidden select-none",
     "data-highlighted:bg-muted data-[selected=true]:bg-muted",
-    "aria-disabled:pointer-events-none aria-disabled:cursor-default aria-disabled:text-muted-foreground disabled:pointer-events-none disabled:text-muted-foreground data-[disabled]:pointer-events-none data-[disabled]:text-muted-foreground",
+    // Radix marks a disabled row `data-disabled=""`; cmdk writes `data-disabled` on every row,
+    // "true" or "false", so "false" must not read as disabled.
+    "aria-disabled:pointer-events-none aria-disabled:cursor-default aria-disabled:text-muted-foreground disabled:pointer-events-none disabled:text-muted-foreground not-data-[disabled=false]:data-[disabled]:pointer-events-none not-data-[disabled=false]:data-[disabled]:text-muted-foreground",
     "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='text-'])]:text-muted-foreground",
     "data-[variant=destructive]:text-menu-destructive data-[variant=destructive]:[&_svg]:text-menu-destructive",
   ],
