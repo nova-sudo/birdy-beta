@@ -28,6 +28,11 @@ export const queryKeys = {
 
   alerts: () => "/api/alerts",
 
+  // Hub → Reports: the account's Slack reports, and what the report form needs.
+  slackReports: () => "/api/slack-reports",
+  slackStatus: () => "/api/integrations/slack/status",
+  slackChannels: () => "/api/integrations/slack/channels",
+
   dashboardSummary: () => "/api/dashboard/summary",
 
   creditsStatus: () => "/api/credits/status",

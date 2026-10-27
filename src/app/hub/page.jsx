@@ -7,11 +7,13 @@ import { usePageHeader } from "@/components/page-header"
 import { SalesHubHeaderTitle, SalesHubShell } from "@/components/hub/HubShell"
 import { Badge, Button, Frame, Surface } from "@/components/ds"
 import { DashboardList } from "@/components/dashboards/DashboardList"
+import { ReportsSection } from "@/components/reports/ReportsSection"
 import { StartOverButton } from "@/components/agents/StartOverButton"
 import { useAgents } from "@/lib/agents-api"
 
 // ─── BirdyHub ───────────────────────────────────────────────────────────────
-// Agents (Birdy teammates you train on your strategy) and dashboards, together.
+// Agents (Birdy teammates you train on your strategy) and dashboards, together,
+// with the Slack reports under Dashboards.
 
 const SETUP_HREF = "/hub/agents/media-buying/setup"
 const AGENT_HREF = "/hub/agents/media-buying"
@@ -93,7 +95,7 @@ export default function HubPage() {
       title: (
         <SalesHubHeaderTitle
           title="BirdyHub"
-          subtitle="Agents that work your ad accounts for you, and dashboards that show what you care about"
+          subtitle="Agents that work your ad accounts for you, and dashboards and reports that show what you care about"
         />
       ),
     }),
@@ -126,6 +128,9 @@ export default function HubPage() {
             </Button>
           </div>
           <DashboardList creating={creating} onCreatingChange={setCreating} />
+          <div className="mt-4 border-t border-border pt-6">
+            <ReportsSection />
+          </div>
         </section>
       </div>
     </SalesHubShell>
