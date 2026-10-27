@@ -394,6 +394,32 @@ describe("Bytes shell and toolbar", () => {
     expect(within(spend).getByRole("button", { name: "Spend" })).toBeInTheDocument()
   })
 
+  it("leads a column head with its icon, inside the sort button and inside a right-aligned head", () => {
+    const withIcons = [
+      {
+        accessorKey: "name",
+        header: ({ column }) => <DataTableColumnHeader column={column} title="Name" icon={<i data-testid="name-icon" />} />,
+        enableSorting: false,
+      },
+      {
+        id: "leads",
+        accessorFn: () => 3,
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title="Leads" align="right" icon={<i data-testid="leads-icon" />} />
+        ),
+      },
+    ]
+    render(<DataTable columns={withIcons} data={data} />)
+    const [name, leads] = within(table()).getAllByRole("columnheader")
+    const nameHead = name.querySelector("[data-ds='column-header']")
+    expect(within(nameHead).getByTestId("name-icon")).toBeInTheDocument()
+    expect(nameHead.firstElementChild).toHaveAttribute("data-slot", "column-header-icon")
+    const sortButton = within(leads).getByRole("button", { name: "Leads" })
+    expect(within(sortButton).getByTestId("leads-icon")).toBeInTheDocument()
+    expect(sortButton.firstElementChild).toHaveAttribute("data-slot", "column-header-icon")
+    expect(leads.querySelector("[data-ds='column-header']").className).toContain("justify-end")
+  })
+
   it("keeps the column heads while loading, with skeleton rows in the body", () => {
     render(<DataTable columns={columns} data={[]} loading />)
     expect(within(table()).getByRole("columnheader", { name: /Name/ })).toBeInTheDocument()
