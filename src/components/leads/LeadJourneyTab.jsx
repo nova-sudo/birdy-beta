@@ -36,7 +36,8 @@ function detailLine(event) {
         ? formatLocalClock(event.starts_at)
         : formatJourneyTime(event.starts_at)
   const at = formatJourneyTime(event.at)
-  const when = event.kind === "appointment" && event.title === "Appointment booked" && at ? `booked ${at}` : at
+  const when =
+    event.kind === "appointment" && at ? `${event.appointment_status === "booked" ? "booked" : "updated"} ${at}` : at
   return [event.detail, start && `for ${start}`, when].filter(Boolean).join(" · ")
 }
 

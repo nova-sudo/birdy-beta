@@ -248,6 +248,15 @@ describe("formatLocalClock", () => {
     expect(formatLocalClock("2026-07-20T12:00:00")).toBe("20 Jul, 12:00 PM")
     expect(formatLocalClock("2026-12-03T23:45")).toBe("3 Dec, 11:45 PM")
   })
+  it("abbreviates months the same way as formatJourneyTime", () => {
+    const viaClock = formatLocalClock("2026-09-03T09:05:00").split(",")[0]
+    const viaInstant = formatJourneyTime(new Date(2026, 8, 3, 9, 5).toISOString()).split(",")[0]
+    expect(viaClock).toBe(viaInstant)
+  })
+  it("rejects impossible days", () => {
+    expect(formatLocalClock("2026-07-00T10:00:00")).toBe("")
+    expect(formatLocalClock("2026-07-32T10:00:00")).toBe("")
+  })
   it("is empty for malformed input", () => {
     expect(formatLocalClock(null)).toBe("")
     expect(formatLocalClock("tomorrow")).toBe("")

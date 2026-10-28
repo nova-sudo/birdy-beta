@@ -33,22 +33,32 @@ describe("LeadJourneyTab", () => {
   })
 
   it("shows appointment start as 'for ...'", () => {
-    const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult", starts_at: new Date(2026, 6, 20, 9, 30).toISOString() })]
+    const events = [ev({ kind: "appointment", title: "Appointment booked", appointment_status: "booked", detail: "Consult", starts_at: new Date(2026, 6, 20, 9, 30).toISOString() })]
     render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
     expect(screen.getByText("APPOINTMENT")).toBeInTheDocument()
     expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
   })
 
   it("reads a zone-less starts_at as location clock time", () => {
-    const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult", starts_at: "2026-07-20T09:30:00", starts_at_local: true })]
+    const events = [ev({ kind: "appointment", title: "Appointment booked", appointment_status: "booked", detail: "Consult", starts_at: "2026-07-20T09:30:00", starts_at_local: true })]
     render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
     expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
   })
 
   it("omits 'for' when starts_at is missing", () => {
-    const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult" })]
+    const events = [ev({ kind: "appointment", title: "Appointment booked", appointment_status: "booked", detail: "Consult" })]
     render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
     expect(screen.getByText("Consult · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
+  })
+
+  it("labels cancelled and no-show times 'updated', branching on appointment_status not title", () => {
+    const events = [
+      ev({ id: "a", kind: "appointment", title: "Appointment cancelled", appointment_status: "cancelled", detail: "Consult" }),
+      ev({ id: "b", kind: "appointment", title: "Appointment booked", appointment_status: "noshow", detail: "Survey" }),
+    ]
+    render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
+    expect(screen.getByText("Consult · updated 17 Jul, 4:59 PM")).toBeInTheDocument()
+    expect(screen.getByText("Survey · updated 17 Jul, 4:59 PM")).toBeInTheDocument()
   })
 
   it("loading, empty and error states", () => {

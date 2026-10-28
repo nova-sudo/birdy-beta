@@ -103,36 +103,42 @@ export function journeyChip(kind) {
   return JOURNEY_CHIPS[kind] || { label: kind ? String(kind).toUpperCase() : "EVENT", tone: "neutral" }
 }
 
-const journeyTimeFormat = new Intl.DateTimeFormat("en-GB", {
+const timeOptions = {
   day: "numeric",
   month: "short",
   hour: "numeric",
   minute: "2-digit",
   hourCycle: "h12",
-})
+}
+const journeyTimeFormat = new Intl.DateTimeFormat("en-GB", timeOptions)
+const utcTimeFormat = new Intl.DateTimeFormat("en-GB", { ...timeOptions, timeZone: "UTC" })
+
+function renderTime(format, date) {
+  const p = Object.fromEntries(format.formatToParts(date).map((x) => [x.type, x.value]))
+  return `${p.day} ${p.month}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`.trim()
+}
 
 /** "17 Jul, 4:59 PM", or "" when there is no usable time. */
 export function formatJourneyTime(iso) {
   if (!iso) return ""
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return ""
-  const p = Object.fromEntries(journeyTimeFormat.formatToParts(date).map((x) => [x.type, x.value]))
-  return `${p.day} ${p.month}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`.trim()
+  return renderTime(journeyTimeFormat, date)
 }
-
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 /**
  * "20 Jul, 9:30 AM" from a zone-less "YYYY-MM-DDTHH:MM[:SS]" string, read as
  * written (the location's clock) with no timezone conversion. "" if malformed.
+ * Formatted as a UTC date with the same formatter as formatJourneyTime so month
+ * abbreviations match.
  */
 export function formatLocalClock(str) {
   const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(str || "")
   if (!m) return ""
   const month = Number(m[2])
+  const day = Number(m[3])
   const hour = Number(m[4])
   const minute = Number(m[5])
-  if (month < 1 || month > 12 || hour > 23 || minute > 59) return ""
-  const h12 = hour % 12 === 0 ? 12 : hour % 12
-  return `${Number(m[3])} ${MONTHS[month - 1]}, ${h12}:${m[5]} ${hour < 12 ? "AM" : "PM"}`
+  if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return ""
+  return renderTime(utcTimeFormat, new Date(Date.UTC(Number(m[1]), month - 1, day, hour, minute)))
 }
