@@ -12,6 +12,7 @@ import {
   cameFrom,
   journeyChip,
   formatJourneyTime,
+  formatLocalClock,
   threadDays,
   initials,
 } from "@/lib/lead-detail"
@@ -237,5 +238,19 @@ describe("formatJourneyTime", () => {
   it("is empty for missing or bad input", () => {
     expect(formatJourneyTime(null)).toBe("")
     expect(formatJourneyTime("nope")).toBe("")
+  })
+})
+
+describe("formatLocalClock", () => {
+  it("reads the clock as written, with no timezone shift", () => {
+    expect(formatLocalClock("2026-07-20T09:30:00")).toBe("20 Jul, 9:30 AM")
+    expect(formatLocalClock("2026-07-20T00:05:00")).toBe("20 Jul, 12:05 AM")
+    expect(formatLocalClock("2026-07-20T12:00:00")).toBe("20 Jul, 12:00 PM")
+    expect(formatLocalClock("2026-12-03T23:45")).toBe("3 Dec, 11:45 PM")
+  })
+  it("is empty for malformed input", () => {
+    expect(formatLocalClock(null)).toBe("")
+    expect(formatLocalClock("tomorrow")).toBe("")
+    expect(formatLocalClock("2026-13-01T10:00:00")).toBe("")
   })
 })

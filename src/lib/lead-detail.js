@@ -119,3 +119,20 @@ export function formatJourneyTime(iso) {
   const p = Object.fromEntries(journeyTimeFormat.formatToParts(date).map((x) => [x.type, x.value]))
   return `${p.day} ${p.month}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`.trim()
 }
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
+/**
+ * "20 Jul, 9:30 AM" from a zone-less "YYYY-MM-DDTHH:MM[:SS]" string, read as
+ * written (the location's clock) with no timezone conversion. "" if malformed.
+ */
+export function formatLocalClock(str) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(str || "")
+  if (!m) return ""
+  const month = Number(m[2])
+  const hour = Number(m[4])
+  const minute = Number(m[5])
+  if (month < 1 || month > 12 || hour > 23 || minute > 59) return ""
+  const h12 = hour % 12 === 0 ? 12 : hour % 12
+  return `${Number(m[3])} ${MONTHS[month - 1]}, ${h12}:${m[5]} ${hour < 12 ? "AM" : "PM"}`
+}

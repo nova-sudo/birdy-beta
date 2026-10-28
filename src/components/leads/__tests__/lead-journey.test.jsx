@@ -39,6 +39,18 @@ describe("LeadJourneyTab", () => {
     expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
   })
 
+  it("reads a zone-less starts_at as location clock time", () => {
+    const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult", starts_at: "2026-07-20T09:30:00", starts_at_local: true })]
+    render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
+    expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
+  })
+
+  it("omits 'for' when starts_at is missing", () => {
+    const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult" })]
+    render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
+    expect(screen.getByText("Consult · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
+  })
+
   it("loading, empty and error states", () => {
     const onRetry = vi.fn()
     const { rerender } = render(<LeadJourneyTab status="loading" />)

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { BarChart3, Check, Eye, Phone, User } from "lucide-react"
 import { toneClass } from "@/components/portfolio"
-import { formatJourneyTime, journeyChip } from "@/lib/lead-detail"
+import { formatJourneyTime, formatLocalClock, journeyChip } from "@/lib/lead-detail"
 import { cn } from "@/lib/utils"
 
 // ─── Lead detail: Journey tab ───────────────────────────────────────────────
@@ -29,7 +29,12 @@ const GLYPH_TEXT = {
 }
 
 function detailLine(event) {
-  const start = event.kind === "appointment" ? formatJourneyTime(event.starts_at) : ""
+  const start =
+    event.kind !== "appointment"
+      ? ""
+      : event.starts_at_local
+        ? formatLocalClock(event.starts_at)
+        : formatJourneyTime(event.starts_at)
   const at = formatJourneyTime(event.at)
   const when = event.kind === "appointment" && event.title === "Appointment booked" && at ? `booked ${at}` : at
   return [event.detail, start && `for ${start}`, when].filter(Boolean).join(" · ")
