@@ -105,3 +105,23 @@ describe("GHL call transcript", () => {
     expect(await screen.findByText("No transcript for this call.")).toBeInTheDocument()
   })
 })
+
+describe("one call seen by both dialers", () => {
+  const ghl = { ...ghlCall, started_at: "2026-10-25T13:00:00Z", duration_seconds: 300 }
+
+  it("drops a GHL call that matches a logged call", () => {
+    const detail = { calls: [{ id: "hp1", direction: "outbound", started_at: "2026-10-25T13:00:30Z", recording_url: "https://x/r" }], engagement: { touchpoints: 1 } }
+    const out = withGhlCalls(detail, [ghl], "c1")
+    expect(out).toBe(detail)
+  })
+
+  it("matches a webhook row stamped on arrival after the call", () => {
+    const detail = { calls: [{ id: "w1", direction: "outbound", started_at: "2026-10-25T13:06:00Z", started_at_estimated: true }] }
+    expect(withGhlCalls(detail, [ghl], "c1")).toBe(detail)
+  })
+
+  it("keeps a GHL call with no logged twin", () => {
+    const detail = { calls: [{ id: "hp1", direction: "inbound", started_at: "2026-10-25T13:00:10Z" }], engagement: {} }
+    expect(withGhlCalls(detail, [ghl], "c1").calls.map((c) => c.id)).toEqual(["hp1", "ghl:m1"])
+  })
+})

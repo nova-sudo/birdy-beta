@@ -38,14 +38,33 @@ export function formatDuration(seconds) {
 }
 
 const ANSWERED = new Set(["completed", "answered"])
+// Mirrors services/ghl_messages.is_same_call in the backend.
+const SAME_CALL_SECONDS = 60
+const ESTIMATED_SLACK_SECONDS = 180
+
+/** Whether a GHL call message and a logged call (any dialer) are one call. */
+export function isSameCall(ghlCall, logged) {
+  const a = (ghlCall.direction || "").toLowerCase()
+  const b = (logged.direction || "").toLowerCase()
+  if (a && b && a !== b) return false
+  const ghlAt = new Date(ghlCall.started_at).getTime()
+  const loggedAt = new Date(logged.started_at).getTime()
+  if (Number.isNaN(ghlAt) || Number.isNaN(loggedAt)) return false
+  const gap = (loggedAt - ghlAt) / 1000
+  if (logged.started_at_estimated) return gap >= 0 && gap <= (ghlCall.duration_seconds || 0) + ESTIMATED_SLACK_SECONDS
+  return Math.abs(gap) <= SAME_CALL_SECONDS
+}
 
 /**
- * The lead detail with GHL calls (from the messages response) added to
+ * The lead detail with GHL calls (from the messages response, minus any
+ * already among its logged calls) added to
  * `calls`, each given the backend paths for its recording and transcript, and
  * counted in engagement the way the backend counts call_logs calls.
  */
 export function withGhlCalls(detail, ghlCalls, contactId) {
-  if (!ghlCalls?.length) return detail
+  // A call both dialers saw shows once, from the call log, which has its recording.
+  ghlCalls = (ghlCalls || []).filter((g) => !(detail.calls || []).some((c) => isSameCall(g, c)))
+  if (!ghlCalls.length) return detail
   const base = `/api/leads/contact/${encodeURIComponent(contactId)}/calls`
   const calls = ghlCalls.map((call) => {
     const id = encodeURIComponent(call.ghl_message_id)
