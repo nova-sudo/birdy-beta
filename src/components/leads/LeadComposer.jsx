@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react"
 import { SendHorizontal } from "lucide-react"
+import { COMPOSER_INPUT_ID } from "./LeadHeader"
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -100,56 +101,57 @@ export function LeadComposer({ contact, contactId, status, onSent, onUnconfirmed
         e.preventDefault()
         send()
       }}
-      className="rounded-2xl border border-pd-border bg-pd-surface p-3 shadow-sm"
+      className="rounded-[22px] border border-pd-border bg-pd-surface p-2.5 shadow-[0_14px_34px_-12px_rgba(24,24,27,0.18)] transition-shadow focus-within:shadow-[0_14px_34px_-12px_rgba(24,24,27,0.18),0_0_0_4px_rgba(91,63,214,0.12)]"
     >
-      <div className="mb-2 flex items-center gap-1.5" role="group" aria-label="Channel">
-        {CHANNELS.map((c) => (
-          <button
-            key={c}
-            type="button"
-            aria-pressed={channel === c}
-            onClick={() => setChannel(c)}
-            className={cn(
-              "rounded-full px-2.5 py-1 text-[11.5px] font-semibold",
-              channel === c ? "bg-pd-primary-tint text-pd-primary" : "text-pd-subtle hover:text-pd-ink"
-            )}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
       {isEmail && (
         <input
           aria-label="Subject"
           placeholder="Subject"
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
-          className="mb-2 w-full rounded-lg border border-pd-border bg-pd-surface px-3 py-2 text-[13px] text-pd-ink outline-none focus:border-pd-primary"
+          className="mb-1 w-full border-b border-pd-divider bg-transparent px-3 pb-2 pt-1 text-[13.5px] font-medium text-pd-ink outline-none placeholder:text-pd-faint"
         />
       )}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2.5">
+        <div className="flex shrink-0 rounded-full bg-pd-canvas p-[3px]" role="group" aria-label="Channel">
+          {CHANNELS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={channel === c}
+              onClick={() => setChannel(c)}
+              className={cn(
+                "rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors",
+                channel === c ? "bg-pd-ink text-white" : "text-pd-muted hover:text-pd-ink"
+              )}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
         <textarea
-          rows={2}
+          id={COMPOSER_INPUT_ID}
+          rows={isEmail ? 3 : 1}
           placeholder="Type a message…"
           aria-label="Message"
           value={body}
           maxLength={1600}
           onChange={(e) => setBody(e.target.value)}
           onKeyDown={onKeyDown}
-          className="min-h-[44px] flex-1 resize-none rounded-lg border border-pd-border bg-pd-surface px-3 py-2 text-[13px] text-pd-ink outline-none focus:border-pd-primary"
+          className="max-h-40 min-h-[38px] flex-1 resize-none bg-transparent py-2 text-[13.5px] leading-snug text-pd-ink outline-none placeholder:text-pd-faint [field-sizing:content]"
         />
         <button
           type="submit"
+          aria-label="Send"
           disabled={!canSend}
-          className="inline-flex h-10 items-center gap-1.5 rounded-lg bg-pd-primary px-4 text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex size-[38px] shrink-0 items-center justify-center rounded-full bg-pd-primary text-white shadow-[0_6px_14px_-6px_rgba(91,63,214,0.7)] transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none disabled:hover:scale-100"
         >
-          <SendHorizontal className="size-3.5" aria-hidden="true" />
-          Send
+          <SendHorizontal className="size-4" aria-hidden="true" />
         </button>
       </div>
-      {reason && <p className="mt-2 text-[11.5px] text-pd-subtle">{reason}</p>}
+      {reason && <p className="px-3 pb-1 pt-2 text-[11.5px] text-pd-subtle">{reason}</p>}
       {error && (
-        <p role="alert" className="mt-2 text-[11.5px] text-pd-danger">
+        <p role="alert" className="px-3 pb-1 pt-2 text-[11.5px] text-pd-danger">
           {error}
         </p>
       )}
