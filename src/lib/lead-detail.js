@@ -42,7 +42,13 @@ const ANSWERED = new Set(["completed", "answered"])
 const SAME_CALL_SECONDS = 60
 const ESTIMATED_SLACK_SECONDS = 180
 
-/** Whether a GHL call message and a logged call (any dialer) are one call. */
+/**
+ * Whether a GHL call message and a logged call (any dialer) are one call —
+ * mirrors services/ghl_messages.is_same_call. GHL stamps a call when it is
+ * logged, at or after its end; a dialer stamps the start (HotProspector only
+ * to the minute). So the GHL time may fall from a minute before the logged
+ * start to the logged call's end plus the slack.
+ */
 export function isSameCall(ghlCall, logged) {
   const a = (ghlCall.direction || "").toLowerCase()
   const b = (logged.direction || "").toLowerCase()
@@ -52,7 +58,7 @@ export function isSameCall(ghlCall, logged) {
   if (Number.isNaN(ghlAt) || Number.isNaN(loggedAt)) return false
   const gap = (loggedAt - ghlAt) / 1000
   if (logged.started_at_estimated) return gap >= 0 && gap <= (ghlCall.duration_seconds || 0) + ESTIMATED_SLACK_SECONDS
-  return Math.abs(gap) <= SAME_CALL_SECONDS
+  return gap <= SAME_CALL_SECONDS && -gap <= (logged.duration_seconds || 0) + ESTIMATED_SLACK_SECONDS
 }
 
 /**

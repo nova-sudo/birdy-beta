@@ -120,6 +120,15 @@ describe("one call seen by both dialers", () => {
     expect(withGhlCalls(detail, [ghl], "c1")).toBe(detail)
   })
 
+  it("matches GHL stamping the call at its end", () => {
+    // HotProspector: 13:30 (to the minute), 341s. GHL logged it at 13:36:18.
+    const detail = { calls: [{ id: "hp1", direction: "outbound", started_at: "2026-10-27T13:30:00Z", duration_seconds: 341 }] }
+    expect(withGhlCalls(detail, [{ ...ghl, started_at: "2026-10-27T13:36:18Z" }], "c1")).toBe(detail)
+    // Logged after that call ended, or before it started: another call.
+    expect(withGhlCalls(detail, [{ ...ghl, started_at: "2026-10-27T13:40:00Z" }], "c1").calls).toHaveLength(2)
+    expect(withGhlCalls(detail, [{ ...ghl, started_at: "2026-10-27T13:28:30Z" }], "c1").calls).toHaveLength(2)
+  })
+
   it("keeps a GHL call with no logged twin", () => {
     const detail = { calls: [{ id: "hp1", direction: "inbound", started_at: "2026-10-25T13:00:10Z" }], engagement: {} }
     expect(withGhlCalls(detail, [ghl], "c1").calls.map((c) => c.id)).toEqual(["hp1", "ghl:m1"])

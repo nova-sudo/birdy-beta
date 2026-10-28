@@ -80,9 +80,11 @@ describe("LeadThread messages", () => {
 })
 
 describe("LeadThread status notes", () => {
-  it("loading", () => {
-    renderThread([], { messagesStatus: "loading" })
-    expect(screen.getByText("Loading messages…")).toBeInTheDocument()
+  it("loading shows one loader and holds back the calls already known", () => {
+    const days = threadDays([{ id: "c", direction: "outbound", status: "completed", started_at: "2026-07-17T12:00:00+00:00" }], [])
+    render(<LeadThread days={days} messagesStatus="loading" />)
+    expect(screen.getByRole("status")).toHaveTextContent("Loading the conversation…")
+    expect(screen.queryByText("Outbound call · completed")).toBeNull()
   })
 
   it("reconnect links to settings", () => {

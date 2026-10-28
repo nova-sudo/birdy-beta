@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Lead detail page ───────────────────────────────────────────────────────
@@ -154,6 +154,8 @@ describe("lead detail page", () => {
 
     await user.click(await screen.findByRole("tab", { name: "Calls" }))
     expect(screen.getByText("Outbound · completed")).toBeInTheDocument()
+    const panel = container.querySelector("#lead-profile-panel")
+    await user.click(within(panel).getByRole("button", { name: "Play recording" }))
     expect(container.querySelector('audio[src="https://example.com/rec.mp3"]')).not.toBeNull()
     expect(screen.getAllByText("Transcript").length).toBeGreaterThan(0)
   })
@@ -189,6 +191,26 @@ describe("lead detail page", () => {
     expect(screen.getByText("Touchpoints").nextSibling).toHaveTextContent("2")
   })
 
+  it("holds the whole thread back until the messages and GHL calls arrive", async () => {
+    let resolveMessages
+    vi.mocked(apiRequest).mockImplementation(async (url) => {
+      const json = (data) => ({ ok: true, status: 200, json: async () => data })
+      if (String(url).endsWith("/messages")) return new Promise((resolve) => { resolveMessages = () => resolve(json(MESSAGES)) })
+      return json(DETAIL)
+    })
+    render(<LeadDetailPage />)
+
+    await screen.findByRole("heading", { name: "Rebecca Becirspahic" })
+    const thread = screen.getByRole("region", { name: "Conversation" })
+    expect(within(thread).getByText("Loading the conversation…")).toBeInTheDocument()
+    // The logged call is known already, but the thread waits for everything.
+    expect(within(thread).queryByText("Outbound call · completed")).toBeNull()
+
+    resolveMessages()
+    expect(await within(thread).findByText("Can you ring me tomorrow?")).toBeInTheDocument()
+    expect(within(thread).getByText("Outbound call · completed")).toBeInTheDocument()
+  })
+
   it("adds GHL calls to the thread and the counts, playable on demand", async () => {
     const ghlCall = {
       id: "ghl:m9", ghl_message_id: "m9", source: "ghl", direction: "outbound", status: "completed",
@@ -199,7 +221,8 @@ describe("lead detail page", () => {
 
     await screen.findByText("Can you ring me tomorrow?")
     expect(screen.getAllByText("Outbound call · completed")).toHaveLength(2)
-    expect(screen.getByRole("button", { name: "Play recording" })).toBeInTheDocument()
+    // The logged call and the GHL call get the same button.
+    expect(screen.getAllByRole("button", { name: "Play recording" })).toHaveLength(2)
     // 2 calls + 1 message
     expect(screen.getByText("Touchpoints").nextSibling).toHaveTextContent("3")
     expect(vi.mocked(apiRequest).mock.calls.some(([u]) => String(u).includes("/recording"))).toBe(false)
