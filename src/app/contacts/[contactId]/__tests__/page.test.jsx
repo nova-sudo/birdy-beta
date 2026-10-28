@@ -185,8 +185,24 @@ describe("lead detail page", () => {
 
     await screen.findByText("Can you ring me tomorrow?")
     expect(screen.getByText("Messages").nextSibling).toHaveTextContent("1")
-    // 1 call + 1 message
-    expect(screen.getByText("Total touchpoints").nextSibling).toHaveTextContent("2")
+    // 1 call + 1 message, in the header's figure strip
+    expect(screen.getByText("Touchpoints").nextSibling).toHaveTextContent("2")
+  })
+
+  it("adds GHL calls to the thread and the counts, playable on demand", async () => {
+    const ghlCall = {
+      id: "ghl:m9", ghl_message_id: "m9", source: "ghl", direction: "outbound", status: "completed",
+      duration_seconds: 30, started_at: MESSAGES.messages[0].date, recording_url: null,
+    }
+    respond(DETAIL, 200, { ...MESSAGES, calls: [ghlCall] })
+    render(<LeadDetailPage />)
+
+    await screen.findByText("Can you ring me tomorrow?")
+    expect(screen.getAllByText("Outbound call · completed")).toHaveLength(2)
+    expect(screen.getByRole("button", { name: "Play recording" })).toBeInTheDocument()
+    // 2 calls + 1 message
+    expect(screen.getByText("Touchpoints").nextSibling).toHaveTextContent("3")
+    expect(vi.mocked(apiRequest).mock.calls.some(([u]) => String(u).includes("/recording"))).toBe(false)
   })
 
   it("says to reconnect and disables the composer when GHL needs it, leaving the page intact", async () => {

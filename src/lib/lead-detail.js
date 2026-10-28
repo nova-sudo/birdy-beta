@@ -37,6 +37,33 @@ export function formatDuration(seconds) {
   return `${h}h ${m}m`
 }
 
+const ANSWERED = new Set(["completed", "answered"])
+
+/**
+ * The lead detail with GHL calls (from the messages response) added to
+ * `calls`, each given the backend paths for its recording and transcript, and
+ * counted in engagement the way the backend counts call_logs calls.
+ */
+export function withGhlCalls(detail, ghlCalls, contactId) {
+  if (!ghlCalls?.length) return detail
+  const base = `/api/leads/contact/${encodeURIComponent(contactId)}/calls`
+  const calls = ghlCalls.map((call) => {
+    const id = encodeURIComponent(call.ghl_message_id)
+    return { ...call, recording_path: `${base}/${id}/recording`, transcript_path: `${base}/${id}/transcript` }
+  })
+  const engagement = detail.engagement || {}
+  return {
+    ...detail,
+    calls: [...(detail.calls || []), ...calls],
+    engagement: {
+      ...engagement,
+      touchpoints: (engagement.touchpoints ?? 0) + calls.length,
+      dials: (engagement.dials ?? 0) + calls.filter((c) => c.direction === "outbound").length,
+      answered: (engagement.answered ?? 0) + calls.filter((c) => ANSWERED.has(c.status)).length,
+    },
+  }
+}
+
 export function cameFrom(detail) {
   const adName = detail?.attribution?.ad_name
   if (adName) return `Meta · ${adName}`

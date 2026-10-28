@@ -6,7 +6,7 @@ import { useParams } from "next/navigation"
 import { ArrowLeft, ChevronRight, UserX } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { pdFontClass } from "@/lib/pd-fonts"
-import { leadTitle, threadDays } from "@/lib/lead-detail"
+import { leadTitle, threadDays, withGhlCalls } from "@/lib/lead-detail"
 import { usePageHeader } from "@/components/page-header"
 import { LoadError, LoadingPulse, PdCard } from "@/components/portfolio"
 import { LeadProfilePanel } from "@/components/leads/LeadProfilePanel"
@@ -47,6 +47,8 @@ export default function LeadDetailPage() {
   const [error, setError] = useState(null)
 
   const [messages, setMessages] = useState([])
+  // Calls made in GoHighLevel, from the same response as the messages.
+  const [ghlCalls, setGhlCalls] = useState([])
   // "loading" | "ok" | "reconnect" | "unavailable"
   const [messagesStatus, setMessagesStatus] = useState("loading")
 
@@ -59,6 +61,7 @@ export default function LeadDetailPage() {
     const id = ++messagesReq.current
     setMessagesStatus("loading")
     setMessages([])
+    setGhlCalls([])
     setMessagesNote(null)
     try {
       const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}/messages`)
@@ -66,6 +69,7 @@ export default function LeadDetailPage() {
       const data = await res.json()
       if (id !== messagesReq.current) return
       setMessages(data.messages || [])
+      setGhlCalls(data.calls || [])
       setMessagesNote(
         data.partial
           ? "Some messages couldn't be loaded."
@@ -168,7 +172,9 @@ export default function LeadDetailPage() {
   )
   usePageHeader(header)
 
-  const days = useMemo(() => threadDays(detail?.calls, messages), [detail, messages])
+  // The lead with its GHL calls folded into calls and the engagement counts.
+  const lead = useMemo(() => (detail ? withGhlCalls(detail, ghlCalls, contactId) : null), [detail, ghlCalls, contactId])
+  const days = useMemo(() => threadDays(lead?.calls, messages), [lead, messages])
 
   return (
     <div
@@ -206,10 +212,10 @@ export default function LeadDetailPage() {
 
       {state === "ready" && detail && (
         <div className="flex min-h-0 flex-1 flex-col bg-pd-canvas">
-          <LeadHeader detail={detail} messageCount={messages.length} />
+          <LeadHeader detail={lead} messageCount={messages.length} />
           <div className="grid min-h-0 flex-1 lg:grid-cols-[380px_minmax(0,1fr)]">
             <LeadProfilePanel
-              detail={detail}
+              detail={lead}
               messageCount={messages.length}
               summary={summary}
               journey={journey}
