@@ -57,7 +57,7 @@ export function LeadHeader({ detail, messageCount = 0 }) {
   }
 
   return (
-    <header className="border-b border-pd-divider bg-pd-surface px-5 pt-5 md:px-7 md:pt-6">
+    <header className="shrink-0 border-b border-pd-divider bg-pd-surface px-5 pt-5 md:px-7 md:pt-6">
       <Reveal className="flex flex-wrap items-center gap-4">
         <span
           aria-hidden="true"

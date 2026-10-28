@@ -31,7 +31,7 @@ export function LeadProfilePanel({ detail, messageCount = 0, summary = null, jou
   return (
     <section
       aria-label="Lead details"
-      className="border-b border-pd-divider bg-pd-surface px-5 py-5 lg:border-b-0 lg:border-r md:px-6"
+      className="border-b border-pd-divider bg-pd-surface px-5 py-5 md:px-6 lg:min-h-0 lg:overflow-y-auto lg:border-b-0 lg:border-r"
     >
       <PdSegmented
         options={TABS}
