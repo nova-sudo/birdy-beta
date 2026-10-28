@@ -142,7 +142,7 @@ export default function LeadDetailPage() {
   }, [load])
 
   // Non-blocking: starts once the lead has loaded.
-  const summary = useLeadSummary(contactId, state === "ready")
+  const summary = useLeadSummary(contactId, state === "ready" && String(detail?.contact?.id) === contactId)
 
   const name = detail ? leadTitle(detail.contact) : null
   const header = useMemo(

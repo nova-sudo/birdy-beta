@@ -12,12 +12,26 @@ import { cn } from "@/lib/utils"
 // refresh button POSTs. Both answer 200 with {status, summary, generated_at,
 // stale}. The refresh button is also the in-flight guard.
 
+const POLL_MS = 2000
+const POLL_MAX = 5
+
+// Re-render every `ms` so relative times stay true while the page is open.
+function useNow(ms) {
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), ms)
+    return () => clearInterval(t)
+  }, [ms])
+  return now
+}
+
 export function useLeadSummary(contactId, enabled = true) {
   // null while the first fetch runs.
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(false)
   const req = useRef(0)
   const inFlight = useRef(false)
+  const timer = useRef(null)
   const endpoint = `/api/leads/contact/${encodeURIComponent(contactId)}/summary`
 
   const run = useCallback(async (method) => {
@@ -26,11 +40,23 @@ export function useLeadSummary(contactId, enabled = true) {
     const id = ++req.current
     setBusy(true)
     try {
-      const res = await apiRequest(endpoint, method === "POST" ? { method } : undefined)
-      if (!res.ok) throw new Error(`The summary request failed (${res.status}).`)
-      const next = await res.json()
-      if (id !== req.current) return
-      setData(next)
+      // "generating" means another request is writing the summary: ask again.
+      for (let attempt = 0; ; attempt++) {
+        const res = await apiRequest(endpoint, method === "POST" && attempt === 0 ? { method } : undefined)
+        if (!res.ok) throw new Error(`The summary request failed (${res.status}).`)
+        const next = await res.json()
+        if (id !== req.current) return
+        if (next.status !== "generating") {
+          setData(next)
+          return
+        }
+        if (attempt >= POLL_MAX) throw new Error("The summary took too long.")
+        setData(next)
+        await new Promise((resolve) => {
+          timer.current = setTimeout(resolve, POLL_MS)
+        })
+        if (id !== req.current) return
+      }
     } catch {
       if (id !== req.current) return
       setData((prev) => ({ ...(prev || {}), status: "failed" }))
@@ -45,12 +71,14 @@ export function useLeadSummary(contactId, enabled = true) {
   useEffect(() => {
     // A different lead starts over; any older request is dropped.
     req.current += 1
+    clearTimeout(timer.current)
     inFlight.current = false
     setData(null)
     setBusy(false)
     if (enabled) run("GET")
     return () => {
       req.current += 1
+      clearTimeout(timer.current)
     }
   }, [enabled, run])
 
@@ -60,23 +88,24 @@ export function useLeadSummary(contactId, enabled = true) {
 export function LeadSummaryCard({ data, busy = false, onRefresh }) {
   if (data?.status === "unavailable") return null
 
-  const loading = data === null
+  const now = useNow(60_000)
+  const loading = data === null || data.status === "generating"
   const status = data?.status
   const text = data?.summary
-  const when = timeAgo(data?.generated_at)
+  const when = timeAgo(data?.generated_at, now)
 
   return (
-    <section aria-label="AI summary" className="rounded-xl bg-pd-primary-tint p-4">
+    <section aria-label="AI summary" className="rounded-xl border border-pd-primary-pale/60 bg-pd-primary-tint p-4">
       <div className="mb-2 flex items-center gap-2">
         <Sparkles className="size-[14px] text-pd-primary" aria-hidden="true" />
-        <h3 className="text-[11px] font-semibold uppercase tracking-wide text-pd-primary">AI summary</h3>
+        <h3 className="text-[13px] font-semibold text-pd-primary">AI summary</h3>
         <span className="ml-auto flex items-center gap-1.5">
           {when && <span className="text-[11px] text-pd-subtle">{when}</span>}
-          {!loading && (
+          {(
             <button
               type="button"
               onClick={onRefresh}
-              disabled={busy}
+              disabled={busy || loading}
               aria-label="Regenerate summary"
               className="flex size-6 items-center justify-center rounded-md text-pd-primary hover:bg-pd-surface disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -97,13 +126,14 @@ export function LeadSummaryCard({ data, busy = false, onRefresh }) {
         )}
         {status === "blocked" && (
           <p className="mt-1.5 text-[12.5px] text-pd-body">
-            You&apos;re out of credits. Top up to generate AI summaries.{" "}
+            You&apos;re out of credits.{" "}
             <Link href="/credits" className="font-semibold text-pd-primary hover:underline">
               Top up
-            </Link>
+            </Link>{" "}
+            to generate AI summaries.
           </p>
         )}
-        {status === "failed" && (
+        {status === "failed" && !busy && (
           <p className="mt-1.5 text-[12.5px] text-pd-body">
             Couldn&apos;t write the summary.{" "}
             <button

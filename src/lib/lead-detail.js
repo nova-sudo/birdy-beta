@@ -143,7 +143,7 @@ export function formatLocalClock(str) {
   return renderTime(utcTimeFormat, new Date(Date.UTC(Number(m[1]), month - 1, day, hour, minute)))
 }
 
-/** "just now", "5 mins ago", "1 hour ago", "3 days ago". */
+/** "just now" (under a minute, or a future time from clock skew), "1 min ago", "5 mins ago", "1 hour ago", "3 days ago", "1 day ago". */
 export function timeAgo(iso, now = new Date()) {
   if (!iso) return ""
   const then = new Date(iso).getTime()

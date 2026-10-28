@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor, fireEvent } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent, renderHook, act } from "@testing-library/react"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 
@@ -32,6 +32,10 @@ describe("timeAgo", () => {
     expect(timeAgo(ago(60 * 60000), now)).toBe("1 hour ago")
     expect(timeAgo(ago(3 * 3600000), now)).toBe("3 hours ago")
     expect(timeAgo(ago(2 * 86400000), now)).toBe("2 days ago")
+    expect(timeAgo(ago(60000), now)).toBe("1 min ago")
+    expect(timeAgo(ago(86400000), now)).toBe("1 day ago")
+    expect(timeAgo(ago(-5 * 60000), now)).toBe("just now")
+    expect(timeAgo(null, now)).toBe("")
     expect(timeAgo("nonsense", now)).toBe("")
   })
 })
@@ -58,8 +62,9 @@ describe("LeadSummaryCard", () => {
     apiRequest.mockResolvedValue(ok(payload({ status: "blocked" })))
     render(<Harness />)
     expect(await screen.findByText("Rebecca came from a Meta ad.")).toBeInTheDocument()
-    expect(screen.getByText("You're out of credits. Top up to generate AI summaries.")).toBeInTheDocument()
-    expect(screen.getByRole("link", { name: /top up/i })).toHaveAttribute("href", "/credits")
+    expect(screen.getByText(/You.re out of credits\./)).toBeInTheDocument()
+    expect(screen.getAllByText(/top up/i)).toHaveLength(1)
+    expect(screen.getByRole("link", { name: "Top up" })).toHaveAttribute("href", "/credits")
   })
 
   it("is hidden when unavailable", async () => {
@@ -113,5 +118,67 @@ describe("LeadSummaryCard", () => {
     resolveFirst(ok(payload({ summary: "First lead." })))
     await new Promise((r) => setTimeout(r, 10))
     expect(screen.queryByText("First lead.")).not.toBeInTheDocument()
+  })
+})
+
+describe("useLeadSummary", () => {
+  it("guards a double refresh without relying on the disabled button", async () => {
+    apiRequest.mockResolvedValueOnce(ok(payload()))
+    const { result } = renderHook(() => useLeadSummary("c1", true))
+    await waitFor(() => expect(result.current.data?.status).toBe("ok"))
+    let resolve
+    apiRequest.mockReturnValueOnce(new Promise((r) => { resolve = r }))
+    act(() => {
+      result.current.onRefresh()
+      result.current.onRefresh()
+    })
+    expect(apiRequest).toHaveBeenCalledTimes(2)
+    await act(async () => resolve(ok(payload())))
+  })
+
+  it("does not fetch until enabled", async () => {
+    const { rerender } = renderHook(({ on }) => useLeadSummary("c1", on), { initialProps: { on: false } })
+    expect(apiRequest).not.toHaveBeenCalled()
+    apiRequest.mockResolvedValue(ok(payload()))
+    rerender({ on: true })
+    await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(1))
+  })
+
+  it("polls again while generating, then settles", async () => {
+    vi.useFakeTimers()
+    try {
+      apiRequest.mockResolvedValueOnce(ok({ status: "generating", summary: null, generated_at: null, stale: false }))
+      apiRequest.mockResolvedValueOnce(ok(payload({ summary: "Done." })))
+      const { result } = renderHook(() => useLeadSummary("c1", true))
+      await act(async () => { await vi.advanceTimersByTimeAsync(0) })
+      expect(result.current.data.status).toBe("generating")
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000) })
+      expect(result.current.data.summary).toBe("Done.")
+      expect(apiRequest).toHaveBeenCalledTimes(2)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("gives up after five re-checks and shows failed", async () => {
+    vi.useFakeTimers()
+    try {
+      apiRequest.mockResolvedValue(ok({ status: "generating", summary: null, generated_at: null, stale: false }))
+      const { result } = renderHook(() => useLeadSummary("c1", true))
+      await act(async () => { await vi.advanceTimersByTimeAsync(20000) })
+      expect(apiRequest).toHaveBeenCalledTimes(6)
+      expect(result.current.data.status).toBe("failed")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe("LeadSummaryCard states", () => {
+  it("disables refresh until loaded and hides the failed note during a retry", () => {
+    const { rerender } = render(<LeadSummaryCard data={null} busy onRefresh={() => {}} />)
+    expect(screen.getByRole("button", { name: "Regenerate summary" })).toBeDisabled()
+    rerender(<LeadSummaryCard data={{ status: "failed" }} busy onRefresh={() => {}} />)
+    expect(screen.queryByText(/Couldn.t write the summary/)).not.toBeInTheDocument()
   })
 })
