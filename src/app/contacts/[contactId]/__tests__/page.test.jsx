@@ -228,4 +228,14 @@ describe("lead detail page", () => {
     await user.click(await screen.findByRole("button", { name: /try again/i }))
     expect(apiRequest.mock.calls.filter(([u]) => u === "/api/leads/contact/c1")).toHaveLength(2)
   })
+
+  it("notes partial and truncated message lists", async () => {
+    respond(DETAIL, 200, { ...MESSAGES, partial: true })
+    const { unmount } = render(<LeadDetailPage />)
+    expect(await screen.findByText("Some messages couldn't be loaded.")).toBeInTheDocument()
+    unmount()
+    respond(DETAIL, 200, { ...MESSAGES, truncated: true })
+    render(<LeadDetailPage />)
+    expect(await screen.findByText("Showing the most recent messages.")).toBeInTheDocument()
+  })
 })

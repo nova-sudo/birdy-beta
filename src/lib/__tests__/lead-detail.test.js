@@ -195,3 +195,11 @@ describe("initials", () => {
     expect(initials("   ")).toBe("?")
   })
 })
+
+describe("threadDays unusable dates", () => {
+  it("drops messages with a missing or unparseable date", () => {
+    const m = (id, date) => ({ id, channel: "SMS", direction: "inbound", body: "x", date })
+    const days = threadDays([], [m("ok", "2026-07-17T12:00:00+00:00"), m("nul", null), m("bad", "nonsense")])
+    expect(days.flatMap((d) => d.items.map((i) => i.id))).toEqual(["ok"])
+  })
+})

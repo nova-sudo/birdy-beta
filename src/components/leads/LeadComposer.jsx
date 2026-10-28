@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { SendHorizontal } from "lucide-react"
 import { apiRequest } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -13,12 +13,21 @@ import { cn } from "@/lib/utils"
 
 const CHANNELS = ["SMS", "Email"]
 
-export function LeadComposer({ contact, status, onSent }) {
+// FastAPI sends `detail` as a string, or as a list of {msg} for a 422.
+function errorDetail(detail) {
+  if (typeof detail === "string" && detail) return detail
+  const first = Array.isArray(detail) ? detail[0]?.msg : null
+  return typeof first === "string" && first ? first : "Couldn't send the message."
+}
+
+export function LeadComposer({ contact, contactId, status, onSent }) {
   const [channel, setChannel] = useState("SMS")
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
+  // Set synchronously so a second submit can never start before the re-render.
+  const inFlight = useRef(false)
 
   const isEmail = channel === "Email"
   const hasBody = body.trim() !== "" && (!isEmail || subject.trim() !== "")
@@ -31,7 +40,9 @@ export function LeadComposer({ contact, status, onSent }) {
           : "Waiting for messages to load."
       : isEmail
         ? contact?.email
-          ? null
+          ? subject.trim() === "" && body.trim() !== ""
+            ? "Add a subject"
+            : null
           : "No email address"
         : contact?.phone
           ? null
@@ -39,19 +50,20 @@ export function LeadComposer({ contact, status, onSent }) {
   const canSend = !reason && hasBody && !sending
 
   const send = async () => {
-    if (!canSend) return
+    if (!canSend || inFlight.current) return
+    inFlight.current = true
     setSending(true)
     setError(null)
     try {
       const payload = { channel, message: body.trim() }
       if (isEmail) payload.subject = subject.trim()
-      const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contact.id)}/messages`, {
+      const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId ?? contact.id)}/messages`, {
         method: "POST",
         body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        setError(typeof data?.detail === "string" ? data.detail : `The message couldn't be sent (${res.status}).`)
+        setError(errorDetail(data?.detail))
         return
       }
       onSent?.(data.message)
@@ -60,11 +72,14 @@ export function LeadComposer({ contact, status, onSent }) {
     } catch (err) {
       setError(err?.message || "The message couldn't be sent.")
     } finally {
+      inFlight.current = false
       setSending(false)
     }
   }
 
   const onKeyDown = (e) => {
+    // Enter that confirms an IME candidate is not a send.
+    if (e.nativeEvent?.isComposing || e.keyCode === 229) return
     if (e.key === "Enter" && !e.shiftKey && !isEmail) {
       e.preventDefault()
       send()

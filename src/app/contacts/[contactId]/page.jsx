@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { ArrowLeft, ChevronRight, UserX } from "lucide-react"
@@ -46,15 +46,32 @@ export default function LeadDetailPage() {
   // "loading" | "ok" | "reconnect" | "unavailable"
   const [messagesStatus, setMessagesStatus] = useState("loading")
 
+  // "partial" / "truncated" flags from the endpoint, shown as a note.
+  const [messagesNote, setMessagesNote] = useState(null)
+  // Only the newest request may write; a slow earlier one is dropped.
+  const messagesReq = useRef(0)
+
   const loadMessages = useCallback(async () => {
+    const id = ++messagesReq.current
     setMessagesStatus("loading")
+    setMessages([])
+    setMessagesNote(null)
     try {
       const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}/messages`)
       if (!res.ok) throw new Error(`The messages request failed (${res.status}).`)
       const data = await res.json()
+      if (id !== messagesReq.current) return
       setMessages(data.messages || [])
+      setMessagesNote(
+        data.partial
+          ? "Some messages couldn't be loaded."
+          : data.truncated
+            ? "Showing the most recent messages."
+            : null
+      )
       setMessagesStatus(data.status || "unavailable")
     } catch {
+      if (id !== messagesReq.current) return
       setMessages([])
       setMessagesStatus("unavailable")
     }
@@ -144,10 +161,12 @@ export default function LeadDetailPage() {
             days={days}
             leadName={name}
             messagesStatus={messagesStatus}
+            messagesNote={messagesNote}
             onRetry={loadMessages}
             composer={
               <LeadComposer
                 contact={detail.contact}
+                contactId={contactId}
                 status={messagesStatus}
                 onSent={(message) => setMessages((prev) => [...prev, message])}
               />

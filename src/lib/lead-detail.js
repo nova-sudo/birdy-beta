@@ -70,7 +70,10 @@ export function initials(name) {
 export function threadDays(calls, messages = []) {
   const entries = [
     ...(calls || []).map((call) => ({ at: call.started_at, item: { kind: "call", ...call } })),
-    ...(messages || []).map((message) => ({ at: message.date, item: { kind: "message", ...message } })),
+    // A message without a usable date has no place in the timeline.
+    ...(messages || [])
+      .filter((message) => message.date && !Number.isNaN(new Date(message.date).getTime()))
+      .map((message) => ({ at: message.date, item: { kind: "message", ...message } })),
   ].sort((a, b) => new Date(a.at) - new Date(b.at))
   const days = []
   let current = null

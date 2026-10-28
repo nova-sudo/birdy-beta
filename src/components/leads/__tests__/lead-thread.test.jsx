@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
@@ -226,5 +226,62 @@ describe("LeadComposer", () => {
     expect(box).toHaveValue("Hi\nthere")
     await user.type(box, "{Enter}")
     await waitFor(() => expect(apiRequest).toHaveBeenCalledTimes(1))
+  })
+
+  it("ignores Enter while an IME is composing", () => {
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    const box = screen.getByPlaceholderText("Type a message…")
+    fireEvent.change(box, { target: { value: "こん" } })
+    fireEvent.keyDown(box, { key: "Enter", isComposing: true })
+    fireEvent.keyDown(box, { key: "Enter", keyCode: 229 })
+    expect(apiRequest).not.toHaveBeenCalled()
+  })
+
+  it("asks for a subject when an email has a body but no subject", async () => {
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    await user.click(screen.getByRole("button", { name: "Email" }))
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Hello")
+    expect(screen.getByText("Add a subject")).toBeInTheDocument()
+  })
+
+  it("posts to the route contactId", async () => {
+    vi.mocked(apiRequest).mockResolvedValue(okResponse(msg()))
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} contactId="route-id" status="ok" onSent={() => {}} />)
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.click(sendButton())
+    expect(apiRequest.mock.calls[0][0]).toBe("/api/leads/contact/route-id/messages")
+  })
+
+  it("shows the first msg of a pydantic detail list, or a fallback", async () => {
+    vi.mocked(apiRequest).mockResolvedValueOnce({
+      ok: false, status: 422, json: async () => ({ detail: [{ msg: "String should have at most 1600 characters" }] }),
+    })
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} />)
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.click(sendButton())
+    expect(await screen.findByRole("alert")).toHaveTextContent("String should have at most 1600 characters")
+    vi.mocked(apiRequest).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) })
+    await user.click(sendButton())
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Couldn't send the message."))
+  })
+})
+
+describe("LeadThread notes and keys", () => {
+  it("shows the partial note only when status is ok", () => {
+    const { rerender } = renderThread([msg()], { messagesNote: "Some messages couldn't be loaded." })
+    expect(screen.getByText("Some messages couldn't be loaded.")).toBeInTheDocument()
+    rerender(<LeadThread days={threadDays([], [msg()])} messagesStatus="unavailable" messagesNote="Some messages couldn't be loaded." />)
+    expect(screen.queryByText("Some messages couldn't be loaded.")).toBeNull()
+  })
+
+  it("tolerates duplicate attachment urls", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+    renderThread([msg({ attachments: ["https://x.test/a", "https://x.test/a"] })])
+    expect(screen.getAllByRole("link")).toHaveLength(2)
+    expect(spy).not.toHaveBeenCalled()
+    spy.mockRestore()
   })
 })

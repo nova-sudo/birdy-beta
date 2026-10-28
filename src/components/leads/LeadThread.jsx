@@ -65,7 +65,7 @@ function MessageBubble({ message, leadName }) {
           {attachments.length > 0 && (
             <p className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] underline">
               {attachments.map((url, i) => (
-                <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                <a key={`${i}-${url}`} href={url} target="_blank" rel="noopener noreferrer">
                   {`Attachment ${i + 1}`}
                 </a>
               ))}
@@ -109,13 +109,17 @@ function StatusNote({ status, hasItems, onRetry }) {
 /**
  * @param {{day: string, items: object[]}[]} days threadDays() output
  * @param {"loading"|"ok"|"reconnect"|"unavailable"} messagesStatus
+ * @param {string} [messagesNote] shown at the top when the message list is partial
  */
-export function LeadThread({ days, leadName, messagesStatus, onRetry, composer }) {
+export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRetry, composer }) {
   return (
     <section
       aria-label="Conversation"
       className="flex min-h-[320px] flex-col gap-5 rounded-2xl border border-pd-border bg-pd-canvas px-4 py-6 md:px-8"
     >
+      {messagesStatus === "ok" && messagesNote && (
+        <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
+      )}
       {days.map(({ day, items }) => (
         <div key={day} className="space-y-4">
           <p className="text-center text-[11px] text-pd-subtle">{day}</p>
