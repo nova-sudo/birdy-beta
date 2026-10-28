@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 
-vi.mock("next/navigation", () => ({ useParams: () => ({ contactId: "c1" }) }))
+const routeParams = vi.hoisted(() => ({ contactId: "c1" }))
+vi.mock("next/navigation", () => ({ useParams: () => routeParams }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
 vi.mock("@/lib/pd-fonts", () => ({ pdFontClass: "" }))
 vi.mock("@/components/page-header", () => ({ usePageHeader: () => {} }))
@@ -35,7 +36,7 @@ describe("LeadJourneyTab", () => {
     const events = [ev({ kind: "appointment", title: "Appointment booked", detail: "Consult", starts_at: new Date(2026, 6, 20, 9, 30).toISOString() })]
     render(<LeadJourneyTab journey={{ events, ghl: "ok" }} />)
     expect(screen.getByText("APPOINTMENT")).toBeInTheDocument()
-    expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · 17 Jul, 4:59 PM")).toBeInTheDocument()
+    expect(screen.getByText("Consult · for 20 Jul, 9:30 AM · booked 17 Jul, 4:59 PM")).toBeInTheDocument()
   })
 
   it("loading, empty and error states", () => {
@@ -102,6 +103,23 @@ describe("Journey fetch on the detail page", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Journey" }))
     expect(await screen.findByText("Lead created")).toBeInTheDocument()
     expect(journeyCalls).toBe(1)
+  })
+
+  it("drops a stale response from the previous lead", async () => {
+    let resolveSlow
+    journeyResponses = [new Promise((r) => { resolveSlow = r }), json({ events: [ev({ title: "Fresh" })], ghl: "ok" })]
+    const { rerender } = render(<LeadDetailPage />)
+    fireEvent.click(await screen.findByRole("tab", { name: "Journey" }))
+    await waitFor(() => expect(journeyCalls).toBe(1))
+    routeParams.contactId = "c2"
+    rerender(<LeadDetailPage />)
+    fireEvent.click(await screen.findByRole("tab", { name: "Journey" }))
+    expect(await screen.findByText("Fresh")).toBeInTheDocument()
+    resolveSlow(json({ events: [ev({ title: "Stale" })], ghl: "ok" }))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(screen.queryByText("Stale")).toBeNull()
+    expect(screen.getByText("Fresh")).toBeInTheDocument()
+    routeParams.contactId = "c1"
   })
 
   it("retries after a failure", async () => {

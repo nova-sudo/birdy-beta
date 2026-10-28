@@ -21,16 +21,26 @@ const KIND_ICON = {
   lead: User,
 }
 
+const GLYPH_TEXT = {
+  success: "text-pd-success",
+  primary: "text-pd-primary",
+  amber: "text-pd-amber",
+  neutral: "text-pd-subtle",
+}
+
 function detailLine(event) {
   const start = event.kind === "appointment" ? formatJourneyTime(event.starts_at) : ""
-  return [event.detail, start && `for ${start}`, formatJourneyTime(event.at)].filter(Boolean).join(" · ")
+  const at = formatJourneyTime(event.at)
+  const when = event.kind === "appointment" && event.title === "Appointment booked" && at ? `booked ${at}` : at
+  return [event.detail, start && `for ${start}`, when].filter(Boolean).join(" · ")
 }
 
 function GhlNote({ ghl }) {
   const cls = "mt-4 text-[12px] text-pd-subtle"
+  const live = { "aria-live": "polite" }
   if (ghl === "reconnect") {
     return (
-      <p className={cls}>
+      <p className={cls} {...live}>
         Reconnect GoHighLevel to include appointments and pipeline history.{" "}
         <Link href="/settings" className="font-semibold text-pd-primary hover:underline">
           Open Settings
@@ -38,7 +48,7 @@ function GhlNote({ ghl }) {
       </p>
     )
   }
-  if (ghl === "unavailable") return <p className={cls}>Appointments and pipeline history couldn&apos;t be loaded.</p>
+  if (ghl === "unavailable") return <p className={cls} {...live}>Appointments and pipeline history couldn&apos;t be loaded.</p>
   return null
 }
 
@@ -46,10 +56,10 @@ function GhlNote({ ghl }) {
 export function LeadJourneyTab({ journey, status = "ready", onRetry }) {
   const events = journey?.events || []
   const body = () => {
-    if (status === "loading") return <p className="text-[12.5px] text-pd-subtle">Loading journey…</p>
+    if (status === "loading") return <p aria-live="polite" className="text-[12.5px] text-pd-subtle">Loading journey…</p>
     if (status === "error") {
       return (
-        <p className="text-[12.5px] text-pd-subtle">
+        <p aria-live="polite" className="text-[12.5px] text-pd-subtle">
           Couldn&apos;t load the journey.{" "}
           <button type="button" onClick={onRetry} className="font-semibold text-pd-primary hover:underline">
             Try again
@@ -69,14 +79,14 @@ export function LeadJourneyTab({ journey, status = "ready", onRetry }) {
               const last = i === events.length - 1
               return (
                 <li key={event.id ?? i} className="relative flex gap-3 pb-4 last:pb-0">
-                  {!last && <span aria-hidden="true" className="absolute left-[13px] top-7 bottom-0 w-px bg-pd-divider" />}
+                  {!last && <span aria-hidden="true" className="absolute left-[7px] top-5 bottom-0 w-px bg-pd-divider" />}
                   <span
                     className={cn(
-                      "relative z-10 flex size-7 shrink-0 items-center justify-center rounded-full",
-                      toneClass(chip.tone)
+                      "relative z-10 mt-0.5 flex size-4 shrink-0 items-center justify-center bg-pd-surface",
+                      GLYPH_TEXT[chip.tone]
                     )}
                   >
-                    <Icon className="size-[13px]" aria-hidden="true" />
+                    <Icon className="size-3" aria-hidden="true" />
                   </span>
                   <div className="min-w-0 flex-1 pt-0.5">
                     <span
@@ -102,7 +112,7 @@ export function LeadJourneyTab({ journey, status = "ready", onRetry }) {
 
   return (
     <div>
-      <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-pd-subtle">Customer journey</h3>
+      <h2 className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-pd-subtle">Customer journey</h2>
       {body()}
     </div>
   )

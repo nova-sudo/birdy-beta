@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { UnderlineTabs, toneClass } from "@/components/portfolio"
 import { leadTitle, statusPill } from "@/lib/lead-detail"
 import { cn } from "@/lib/utils"
@@ -28,9 +28,10 @@ const PANEL_ID = "lead-profile-panel"
 
 export function LeadProfilePanel({ detail, messageCount = 0, journey = null, journeyStatus = "loading", onJourneyOpen, onJourneyRetry }) {
   const [tab, setTab] = useState("profile")
-  useEffect(() => {
-    if (tab === "journey") onJourneyOpen?.()
-  }, [tab, onJourneyOpen])
+  const changeTab = (key) => {
+    setTab(key)
+    if (key === "journey") onJourneyOpen?.()
+  }
   const pill = statusPill(detail.opportunities)
 
   return (
@@ -59,7 +60,7 @@ export function LeadProfilePanel({ detail, messageCount = 0, journey = null, jou
       <UnderlineTabs
         tabs={TABS}
         value={tab}
-        onChange={setTab}
+        onChange={changeTab}
         label="Lead details"
         panelId={PANEL_ID}
         className="px-5"

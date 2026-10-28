@@ -229,6 +229,11 @@ describe("formatJourneyTime", () => {
     expect(formatJourneyTime(new Date(2026, 6, 3, 9, 5).toISOString())).toBe("3 Jul, 9:05 AM")
   })
 
+  it("shows 12 rather than 0 just after midnight", () => {
+    expect(formatJourneyTime(new Date(2026, 6, 17, 0, 5).toISOString())).toBe("17 Jul, 12:05 AM")
+    expect(formatJourneyTime(new Date(2026, 6, 17, 12, 5).toISOString())).toBe("17 Jul, 12:05 PM")
+  })
+
   it("is empty for missing or bad input", () => {
     expect(formatJourneyTime(null)).toBe("")
     expect(formatJourneyTime("nope")).toBe("")

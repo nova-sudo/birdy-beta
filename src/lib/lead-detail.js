@@ -108,7 +108,7 @@ const journeyTimeFormat = new Intl.DateTimeFormat("en-GB", {
   month: "short",
   hour: "numeric",
   minute: "2-digit",
-  hour12: true,
+  hourCycle: "h12",
 })
 
 /** "17 Jul, 4:59 PM", or "" when there is no usable time. */
