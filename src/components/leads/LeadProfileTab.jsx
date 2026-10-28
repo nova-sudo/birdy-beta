@@ -5,7 +5,7 @@ import { cameFrom, formatDuration, statusPill } from "@/lib/lead-detail"
 
 // ─── Lead detail: Profile tab ───────────────────────────────────────────────
 // Contact rows (icon chip, small grey label, value), the first three tags with
-// the rest folded into "+N", and the phase-1 engagement figures.
+// the rest folded into "+N", and the engagement figures (touchpoints are calls plus messages).
 
 const TAGS_SHOWN = 3
 
@@ -43,7 +43,7 @@ function SectionHeading({ children }) {
   )
 }
 
-export function LeadProfileTab({ detail }) {
+export function LeadProfileTab({ detail, messageCount = 0 }) {
   const contact = detail.contact || {}
   const tags = contact.tags || []
   const stage = statusPill(detail.opportunities)?.label
@@ -51,7 +51,8 @@ export function LeadProfileTab({ detail }) {
 
   const figures = [
     ["Time to close", formatDuration(engagement.time_to_close_seconds)],
-    ["Total touchpoints", engagement.touchpoints ?? 0],
+    ["Total touchpoints", (engagement.touchpoints ?? 0) + messageCount],
+    ["Messages", messageCount],
     ["Dials", engagement.dials ?? 0],
     ["Calls answered", engagement.answered ?? 0],
   ]

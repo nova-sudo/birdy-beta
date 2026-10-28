@@ -11,6 +11,7 @@ import {
   formatDuration,
   cameFrom,
   threadDays,
+  initials,
 } from "@/lib/lead-detail"
 
 describe("leadTitle", () => {
@@ -159,5 +160,38 @@ describe("threadDays", () => {
       direction: "inbound",
       duration_seconds: 60,
     })
+  })
+})
+
+describe("threadDays with messages", () => {
+  const call = { id: "c1", direction: "outbound", started_at: "2026-07-17T12:30:00+00:00" }
+  const msg = (id, date) => ({ id, channel: "SMS", direction: "inbound", body: "hi", date })
+
+  it("merges calls and messages in time order, tagged by kind", () => {
+    const days = threadDays([call], [msg("m2", "2026-07-17T13:00:00+00:00"), msg("m1", "2026-07-17T12:00:00+00:00")])
+    expect(days).toHaveLength(1)
+    expect(days[0].items.map((i) => [i.kind, i.id])).toEqual([
+      ["message", "m1"],
+      ["call", "c1"],
+      ["message", "m2"],
+    ])
+  })
+
+  it("groups a message-only thread by day", () => {
+    const days = threadDays(undefined, [msg("a", "2026-07-17T12:00:00+00:00"), msg("b", "2026-07-18T12:00:00+00:00")])
+    expect(days.map((d) => d.day)).toEqual(["Friday, 17 July", "Saturday, 18 July"])
+  })
+})
+
+describe("initials", () => {
+  it("takes up to two letters", () => {
+    expect(initials("Rebecca Becirspahic")).toBe("RB")
+    expect(initials("amina")).toBe("A")
+    expect(initials("Mary Jane Watson")).toBe("MJ")
+  })
+  it("gives ? when empty", () => {
+    expect(initials("")).toBe("?")
+    expect(initials(null)).toBe("?")
+    expect(initials("   ")).toBe("?")
   })
 })

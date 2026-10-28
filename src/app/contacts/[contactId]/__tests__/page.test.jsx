@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event"
 
 // ─── Lead detail page ───────────────────────────────────────────────────────
 // One lead from the Leads hub: a tabbed profile panel on the left (Profile,
-// Ads, Calls) and the calls-only thread on the right.
+// Ads, Calls) and the thread (calls and GHL messages) with its composer on the right.
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ contactId: "c1" }),
@@ -79,11 +79,30 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-function respond(body, status = 200) {
-  vi.mocked(apiRequest).mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: async () => body,
+const MESSAGES = {
+  status: "ok",
+  messages: [
+    {
+      id: "m1",
+      channel: "SMS",
+      direction: "inbound",
+      body: "Can you ring me tomorrow?",
+      subject: null,
+      status: "delivered",
+      date: "2026-07-17T16:00:00+00:00",
+      attachments: [],
+      source: "app",
+    },
+  ],
+}
+
+// The detail and the messages are separate requests; answer each by URL.
+function respond(body, status = 200, messages = MESSAGES) {
+  vi.mocked(apiRequest).mockImplementation(async (url) => {
+    const isMessages = String(url).endsWith("/messages")
+    if (isMessages && messages instanceof Error) throw messages
+    const [data, code] = isMessages ? [messages, 200] : [body, status]
+    return { ok: code >= 200 && code < 300, status: code, json: async () => data }
   })
 }
 
@@ -124,14 +143,65 @@ describe("lead detail page", () => {
     expect(screen.getByText("Afternoon")).toBeInTheDocument()
   })
 
-  it("puts calls in the thread with the messaging note", async () => {
+  it("interleaves calls and messages in the thread", async () => {
     respond(DETAIL)
     render(<LeadDetailPage />)
 
     expect(await screen.findByText("Outbound call · completed")).toBeInTheDocument()
-    expect(
-      screen.getByText("Messages will appear here once GHL messaging is connected.")
-    ).toBeInTheDocument()
+    expect(await screen.findByText("Can you ring me tomorrow?")).toBeInTheDocument()
+    expect(apiRequest).toHaveBeenCalledWith("/api/leads/contact/c1/messages")
+    expect(screen.getByPlaceholderText("Type a message…")).toBeInTheDocument()
+  })
+
+  it("counts messages in the engagement block", async () => {
+    respond(DETAIL)
+    render(<LeadDetailPage />)
+
+    await screen.findByText("Can you ring me tomorrow?")
+    expect(screen.getByText("Messages").nextSibling).toHaveTextContent("1")
+    // 1 call + 1 message
+    expect(screen.getByText("Total touchpoints").nextSibling).toHaveTextContent("2")
+  })
+
+  it("says to reconnect and disables the composer when GHL needs it, leaving the page intact", async () => {
+    respond(DETAIL, 200, { status: "reconnect", messages: [] })
+    render(<LeadDetailPage />)
+
+    expect(await screen.findByText(/Reconnect GoHighLevel in Settings/)).toBeInTheDocument()
+    expect(screen.getByText("Outbound call · completed")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^send$/i })).toBeDisabled()
+  })
+
+  it("keeps the page when the messages request fails, and retries", async () => {
+    respond(DETAIL, 200, new Error("network"))
+    const user = userEvent.setup()
+    render(<LeadDetailPage />)
+
+    expect(await screen.findByText(/Messages couldn't be loaded/)).toBeInTheDocument()
+    expect(screen.getByText("Outbound call · completed")).toBeInTheDocument()
+    respond(DETAIL)
+    await user.click(screen.getByRole("button", { name: "Try again" }))
+    expect(await screen.findByText("Can you ring me tomorrow?")).toBeInTheDocument()
+  })
+
+  it("appends a sent message to the thread", async () => {
+    respond(DETAIL)
+    const sent = {
+      id: "m2", channel: "SMS", direction: "outbound", body: "Tomorrow at 10", subject: null,
+      status: "sent", date: "2026-07-17T17:00:00+00:00", attachments: [], source: "app",
+    }
+    const base = vi.mocked(apiRequest).getMockImplementation()
+    vi.mocked(apiRequest).mockImplementation(async (url, opts) =>
+      opts?.method === "POST" ? { ok: true, status: 201, json: async () => ({ message: sent }) } : base(url, opts)
+    )
+    const user = userEvent.setup()
+    render(<LeadDetailPage />)
+
+    await screen.findByText("Can you ring me tomorrow?")
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Tomorrow at 10")
+    await user.click(screen.getByRole("button", { name: /^send$/i }))
+    expect(await screen.findAllByText("Tomorrow at 10")).not.toHaveLength(0)
+    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("")
   })
 
   it("says the lead is gone when the API answers 404", async () => {
@@ -156,6 +226,6 @@ describe("lead detail page", () => {
 
     expect(await screen.findByText("Couldn\u2019t load this lead")).toBeInTheDocument()
     await user.click(await screen.findByRole("button", { name: /try again/i }))
-    expect(apiRequest).toHaveBeenCalledTimes(2)
+    expect(apiRequest.mock.calls.filter(([u]) => u === "/api/leads/contact/c1")).toHaveLength(2)
   })
 })

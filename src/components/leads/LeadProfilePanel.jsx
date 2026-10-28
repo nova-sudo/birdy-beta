@@ -23,7 +23,7 @@ const PILL_TONE = { won: "success", lost: "danger", open: "amber", neutral: "neu
 
 const PANEL_ID = "lead-profile-panel"
 
-export function LeadProfilePanel({ detail }) {
+export function LeadProfilePanel({ detail, messageCount = 0 }) {
   const [tab, setTab] = useState("profile")
   const pill = statusPill(detail.opportunities)
 
@@ -60,7 +60,7 @@ export function LeadProfilePanel({ detail }) {
       />
 
       <div id={PANEL_ID} role="tabpanel" className="px-5 py-5">
-        {tab === "profile" && <LeadProfileTab detail={detail} />}
+        {tab === "profile" && <LeadProfileTab detail={detail} messageCount={messageCount} />}
         {tab === "ads" && <LeadAdsTab attribution={detail.attribution} />}
         {tab === "calls" && <LeadCallsTab calls={detail.calls} />}
       </div>

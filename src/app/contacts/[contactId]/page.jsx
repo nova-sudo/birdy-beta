@@ -10,6 +10,7 @@ import { leadTitle, threadDays } from "@/lib/lead-detail"
 import { usePageHeader } from "@/components/page-header"
 import { LoadError, LoadingPulse, PdCard } from "@/components/portfolio"
 import { LeadProfilePanel } from "@/components/leads/LeadProfilePanel"
+import { LeadComposer } from "@/components/leads/LeadComposer"
 import { LeadThread } from "@/components/leads/LeadThread"
 import { cn } from "@/lib/utils"
 
@@ -18,9 +19,13 @@ import { cn } from "@/lib/utils"
 // the tabbed profile panel on the left (~380px), the thread on the right; on
 // a phone the two stack with the thread underneath.
 //
-// Everything comes from GET /api/leads/contact/{contactId}, which answers 404
+// The lead comes from GET /api/leads/contact/{contactId}, which answers 404
 // when the lead is no longer in Birdy — that gets its own message rather than
 // the generic failure card, since retrying will not bring it back.
+//
+// Messages are fetched live from GoHighLevel by GET .../messages once the lead
+// has loaded. That call is slow and can fail on its own (missing scope, no
+// token), so it has its own status and never blocks or breaks the page.
 
 const LOADING = [
   "Finding this lead…",
@@ -37,6 +42,24 @@ export default function LeadDetailPage() {
   const [state, setState] = useState("loading")
   const [error, setError] = useState(null)
 
+  const [messages, setMessages] = useState([])
+  // "loading" | "ok" | "reconnect" | "unavailable"
+  const [messagesStatus, setMessagesStatus] = useState("loading")
+
+  const loadMessages = useCallback(async () => {
+    setMessagesStatus("loading")
+    try {
+      const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}/messages`)
+      if (!res.ok) throw new Error(`The messages request failed (${res.status}).`)
+      const data = await res.json()
+      setMessages(data.messages || [])
+      setMessagesStatus(data.status || "unavailable")
+    } catch {
+      setMessages([])
+      setMessagesStatus("unavailable")
+    }
+  }, [contactId])
+
   const load = useCallback(async () => {
     setState("loading")
     setError(null)
@@ -49,6 +72,7 @@ export default function LeadDetailPage() {
       if (!res.ok) throw new Error(`The lead request failed (${res.status}).`)
       setDetail(await res.json())
       setState("ready")
+      loadMessages()
     } catch (err) {
       if (err?.status === 404) {
         setState("not-found")
@@ -57,7 +81,7 @@ export default function LeadDetailPage() {
       setError(err?.message || "The request failed.")
       setState("error")
     }
-  }, [contactId])
+  }, [contactId, loadMessages])
 
   useEffect(() => {
     load()
@@ -84,7 +108,7 @@ export default function LeadDetailPage() {
   )
   usePageHeader(header)
 
-  const days = useMemo(() => threadDays(detail?.calls), [detail])
+  const days = useMemo(() => threadDays(detail?.calls, messages), [detail, messages])
 
   return (
     <div className={cn(pdFontClass, "w-full p-4 md:p-6")}>
@@ -115,8 +139,20 @@ export default function LeadDetailPage() {
 
       {state === "ready" && detail && (
         <div className="grid items-start gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-6">
-          <LeadProfilePanel detail={detail} />
-          <LeadThread days={days} />
+          <LeadProfilePanel detail={detail} messageCount={messages.length} />
+          <LeadThread
+            days={days}
+            leadName={name}
+            messagesStatus={messagesStatus}
+            onRetry={loadMessages}
+            composer={
+              <LeadComposer
+                contact={detail.contact}
+                status={messagesStatus}
+                onSent={(message) => setMessages((prev) => [...prev, message])}
+              />
+            }
+          />
         </div>
       )}
     </div>

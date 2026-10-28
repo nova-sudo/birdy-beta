@@ -60,20 +60,28 @@ function localDayKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
 }
 
-export function threadDays(calls) {
-  const sorted = [...(calls || [])].sort(
-    (a, b) => new Date(a.started_at) - new Date(b.started_at),
-  )
+export function initials(name) {
+  const words = (name || "").trim().split(/\s+/).filter(Boolean)
+  if (words.length === 0) return "?"
+  return words.slice(0, 2).map((w) => Array.from(w)[0].toUpperCase()).join("")
+}
+
+/** Calls and messages merged oldest first, grouped by local day. */
+export function threadDays(calls, messages = []) {
+  const entries = [
+    ...(calls || []).map((call) => ({ at: call.started_at, item: { kind: "call", ...call } })),
+    ...(messages || []).map((message) => ({ at: message.date, item: { kind: "message", ...message } })),
+  ].sort((a, b) => new Date(a.at) - new Date(b.at))
   const days = []
   let current = null
-  for (const call of sorted) {
-    const date = new Date(call.started_at)
+  for (const { at, item } of entries) {
+    const date = new Date(at)
     const key = localDayKey(date)
     if (!current || current.key !== key) {
       current = { key, day: dayLabel(date), items: [] }
       days.push(current)
     }
-    current.items.push({ kind: "call", ...call })
+    current.items.push(item)
   }
   return days.map(({ day, items }) => ({ day, items }))
 }
