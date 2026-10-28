@@ -26,7 +26,7 @@ const PILL_TONE = { won: "success", lost: "danger", open: "amber", neutral: "neu
 
 const PANEL_ID = "lead-profile-panel"
 
-export function LeadProfilePanel({ detail, messageCount = 0, journey = null, journeyStatus = "loading", onJourneyOpen, onJourneyRetry }) {
+export function LeadProfilePanel({ detail, messageCount = 0, summary = null, journey = null, journeyStatus = "loading", onJourneyOpen, onJourneyRetry }) {
   const [tab, setTab] = useState("profile")
   const changeTab = (key) => {
     setTab(key)
@@ -67,7 +67,7 @@ export function LeadProfilePanel({ detail, messageCount = 0, journey = null, jou
       />
 
       <div id={PANEL_ID} role="tabpanel" className="px-5 py-5">
-        {tab === "profile" && <LeadProfileTab detail={detail} messageCount={messageCount} />}
+        {tab === "profile" && <LeadProfileTab detail={detail} messageCount={messageCount} summary={summary} />}
         {tab === "journey" && <LeadJourneyTab journey={journey} status={journeyStatus} onRetry={onJourneyRetry} />}
         {tab === "ads" && <LeadAdsTab attribution={detail.attribution} />}
         {tab === "calls" && <LeadCallsTab calls={detail.calls} />}

@@ -1,6 +1,7 @@
 "use client"
 
 import { Calendar, GitBranch, Mail, Megaphone, Phone } from "lucide-react"
+import { LeadSummaryCard } from "./LeadSummaryCard"
 import { cameFrom, formatDuration, statusPill } from "@/lib/lead-detail"
 
 // ─── Lead detail: Profile tab ───────────────────────────────────────────────
@@ -43,7 +44,7 @@ function SectionHeading({ children }) {
   )
 }
 
-export function LeadProfileTab({ detail, messageCount = 0 }) {
+export function LeadProfileTab({ detail, messageCount = 0, summary = null }) {
   const contact = detail.contact || {}
   const tags = contact.tags || []
   const stage = statusPill(detail.opportunities)?.label
@@ -59,6 +60,7 @@ export function LeadProfileTab({ detail, messageCount = 0 }) {
 
   return (
     <div className="space-y-6">
+      {summary && <LeadSummaryCard {...summary} />}
       <div className="space-y-3.5">
         <InfoRow icon={Phone} label="Phone">{contact.phone || "—"}</InfoRow>
         <InfoRow icon={Mail} label="Email">{contact.email || "—"}</InfoRow>

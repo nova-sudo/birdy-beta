@@ -142,3 +142,17 @@ export function formatLocalClock(str) {
   if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 23 || minute > 59) return ""
   return renderTime(utcTimeFormat, new Date(Date.UTC(Number(m[1]), month - 1, day, hour, minute)))
 }
+
+/** "just now", "5 mins ago", "1 hour ago", "3 days ago". */
+export function timeAgo(iso, now = new Date()) {
+  if (!iso) return ""
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return ""
+  const minutes = Math.floor((new Date(now).getTime() - then) / 60000)
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return minutes === 1 ? "1 min ago" : `${minutes} mins ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return hours === 1 ? "1 hour ago" : `${hours} hours ago`
+  const days = Math.floor(hours / 24)
+  return days === 1 ? "1 day ago" : `${days} days ago`
+}

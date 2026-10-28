@@ -10,6 +10,7 @@ import { leadTitle, threadDays } from "@/lib/lead-detail"
 import { usePageHeader } from "@/components/page-header"
 import { LoadError, LoadingPulse, PdCard } from "@/components/portfolio"
 import { LeadProfilePanel } from "@/components/leads/LeadProfilePanel"
+import { useLeadSummary } from "@/components/leads/LeadSummaryCard"
 import { LeadComposer } from "@/components/leads/LeadComposer"
 import { LeadThread } from "@/components/leads/LeadThread"
 import { cn } from "@/lib/utils"
@@ -140,6 +141,9 @@ export default function LeadDetailPage() {
     load()
   }, [load])
 
+  // Non-blocking: starts once the lead has loaded.
+  const summary = useLeadSummary(contactId, state === "ready")
+
   const name = detail ? leadTitle(detail.contact) : null
   const header = useMemo(
     () => ({
@@ -195,6 +199,7 @@ export default function LeadDetailPage() {
           <LeadProfilePanel
             detail={detail}
             messageCount={messages.length}
+            summary={summary}
             journey={journey}
             journeyStatus={journeyStatus === "idle" ? "loading" : journeyStatus}
             onJourneyOpen={openJourney}
