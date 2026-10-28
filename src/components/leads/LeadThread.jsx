@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { Phone } from "lucide-react"
 import { Reveal } from "@/components/motion"
@@ -113,12 +114,20 @@ function StatusNote({ status, hasItems, onRetry }) {
  * @param {string} [messagesNote] shown at the top when the message list is partial
  */
 export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRetry, composer }) {
+  // Like any chat, open on the newest message and follow new ones.
+  const scroller = useRef(null)
+  const count = days.reduce((n, d) => n + d.items.length, 0)
+  useEffect(() => {
+    const el = scroller.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [count, messagesStatus])
+
   return (
     <section
       aria-label="Conversation"
-      className="flex min-h-[420px] min-w-0 flex-col bg-pd-canvas bg-[radial-gradient(1200px_400px_at_70%_-10%,#F1EEFB_0%,transparent_60%)]"
+      className="flex h-[calc(100dvh-3.75rem)] min-w-0 flex-col bg-pd-canvas bg-[radial-gradient(1200px_400px_at_70%_-10%,#F1EEFB_0%,transparent_60%)] lg:h-auto lg:min-h-0"
     >
-      <div className="flex flex-1 flex-col gap-5 px-4 py-6 md:px-10">
+      <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-6 md:px-10">
         {messagesStatus === "ok" && messagesNote && (
           <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
         )}
@@ -140,7 +149,7 @@ export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRet
           <StatusNote status={messagesStatus} hasItems={days.length > 0} onRetry={onRetry} />
         </div>
       </div>
-      <div className="sticky bottom-0 px-3 pb-4 md:px-10 md:pb-6">{composer}</div>
+      <div className="shrink-0 px-3 pb-4 pt-2 md:px-10 md:pb-6">{composer}</div>
     </section>
   )
 }

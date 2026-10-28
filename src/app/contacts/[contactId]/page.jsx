@@ -18,9 +18,10 @@ import { cn } from "@/lib/utils"
 
 // ─── Lead detail ────────────────────────────────────────────────────────────
 // One lead, opened from a row in the Leads hub (/contacts). Redesign option A
-// ("Editorial"): one framed card with the identity header and figure strip on
-// top, the tabbed profile panel on the left (380px) and the thread on the
-// right; on a phone the two stack with the thread underneath.
+// ("Editorial"): edge to edge, the identity header and figure strip on top,
+// the tabbed profile panel on the left (380px) and the thread on the right.
+// On a large screen the page is one screen tall (dvh) and each column scrolls
+// on its own; on a phone they stack and the thread is a screen-tall pane.
 //
 // The lead comes from GET /api/leads/contact/{contactId}, which answers 404
 // when the lead is no longer in Birdy — that gets its own message rather than
@@ -170,7 +171,14 @@ export default function LeadDetailPage() {
   const days = useMemo(() => threadDays(detail?.calls, messages), [detail, messages])
 
   return (
-    <div className={cn(pdFontClass, "w-full p-4 md:p-6")}>
+    <div
+      className={cn(
+        pdFontClass,
+        // The ready page cancels the shell's padding and fills the screen
+        // under the 60px app header; the panels scroll inside it.
+        state === "ready" ? "-m-4 flex min-w-0 flex-col md:-m-6 lg:h-[calc(100dvh-3.75rem)] lg:overflow-hidden" : "w-full p-4 md:p-6"
+      )}
+    >
       {state === "loading" && <LoadingPulse statements={LOADING} className="h-[240px]" />}
 
       {state === "error" && <LoadError title={"Couldn\u2019t load this lead"} error={error} onRetry={load} />}
@@ -197,9 +205,9 @@ export default function LeadDetailPage() {
       )}
 
       {state === "ready" && detail && (
-        <div className="overflow-hidden rounded-[22px] border border-pd-border bg-pd-canvas shadow-[0_14px_34px_-12px_rgba(24,24,27,0.18)]">
+        <div className="flex min-h-0 flex-1 flex-col bg-pd-canvas">
           <LeadHeader detail={detail} messageCount={messages.length} />
-          <div className="grid lg:min-h-[640px] lg:grid-cols-[380px_minmax(0,1fr)]">
+          <div className="grid min-h-0 flex-1 lg:grid-cols-[380px_minmax(0,1fr)]">
             <LeadProfilePanel
               detail={detail}
               messageCount={messages.length}
