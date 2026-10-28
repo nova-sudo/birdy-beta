@@ -97,7 +97,7 @@ export function LeadSummaryCard({ data, busy = false, onRefresh }) {
   const when = timeAgo(data?.generated_at, now)
 
   return (
-    <section aria-label="AI summary" className="rounded-xl border border-pd-primary-pale/60 bg-pd-primary-tint p-4">
+    <section aria-label="AI summary" className="rounded-2xl border border-[#E4DEF8] bg-[linear-gradient(160deg,#F3F0FD,#FBF7F3)] px-4 py-3.5">
       <div className="mb-2 flex items-center gap-2">
         <Sparkles className="size-[14px] text-pd-primary" aria-hidden="true" />
         <h3 className="text-[13px] font-semibold text-pd-primary">AI summary</h3>
@@ -119,7 +119,7 @@ export function LeadSummaryCard({ data, busy = false, onRefresh }) {
         {(loading || (busy && !text)) && (
           <p className="text-[13px] leading-relaxed text-pd-subtle">Writing a summary…</p>
         )}
-        {text && <p className="text-[13px] leading-relaxed text-pd-ink">{text}</p>}
+        {text && <p className="text-[13px] leading-relaxed text-pd-body">{text}</p>}
         {status === "ok" && data.stale && (
           <p className="mt-1.5 text-[11.5px] text-pd-amber">New activity since this summary.</p>
         )}

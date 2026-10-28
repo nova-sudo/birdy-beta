@@ -10,15 +10,17 @@ import { leadTitle, threadDays } from "@/lib/lead-detail"
 import { usePageHeader } from "@/components/page-header"
 import { LoadError, LoadingPulse, PdCard } from "@/components/portfolio"
 import { LeadProfilePanel } from "@/components/leads/LeadProfilePanel"
+import { LeadHeader } from "@/components/leads/LeadHeader"
 import { useLeadSummary } from "@/components/leads/LeadSummaryCard"
 import { LeadComposer } from "@/components/leads/LeadComposer"
 import { LeadThread } from "@/components/leads/LeadThread"
 import { cn } from "@/lib/utils"
 
 // ─── Lead detail ────────────────────────────────────────────────────────────
-// One lead, opened from a row in the Leads hub (/contacts). Mock variant 2a:
-// the tabbed profile panel on the left (~380px), the thread on the right; on
-// a phone the two stack with the thread underneath.
+// One lead, opened from a row in the Leads hub (/contacts). Redesign option A
+// ("Editorial"): one framed card with the identity header and figure strip on
+// top, the tabbed profile panel on the left (380px) and the thread on the
+// right; on a phone the two stack with the thread underneath.
 //
 // The lead comes from GET /api/leads/contact/{contactId}, which answers 404
 // when the lead is no longer in Birdy — that gets its own message rather than
@@ -195,32 +197,35 @@ export default function LeadDetailPage() {
       )}
 
       {state === "ready" && detail && (
-        <div className="grid items-start gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-6">
-          <LeadProfilePanel
-            detail={detail}
-            messageCount={messages.length}
-            summary={summary}
-            journey={journey}
-            journeyStatus={journeyStatus === "idle" ? "loading" : journeyStatus}
-            onJourneyOpen={openJourney}
-            onJourneyRetry={fetchJourney}
-          />
-          <LeadThread
-            days={days}
-            leadName={name}
-            messagesStatus={messagesStatus}
-            messagesNote={messagesNote}
-            onRetry={loadMessages}
-            composer={
-              <LeadComposer
-                contact={detail.contact}
-                contactId={contactId}
-                status={messagesStatus}
-                onSent={(message) => setMessages((prev) => [...prev, message])}
-                onUnconfirmed={loadMessages}
-              />
-            }
-          />
+        <div className="overflow-hidden rounded-[22px] border border-pd-border bg-pd-canvas shadow-[0_14px_34px_-12px_rgba(24,24,27,0.18)]">
+          <LeadHeader detail={detail} messageCount={messages.length} />
+          <div className="grid lg:min-h-[640px] lg:grid-cols-[380px_minmax(0,1fr)]">
+            <LeadProfilePanel
+              detail={detail}
+              messageCount={messages.length}
+              summary={summary}
+              journey={journey}
+              journeyStatus={journeyStatus === "idle" ? "loading" : journeyStatus}
+              onJourneyOpen={openJourney}
+              onJourneyRetry={fetchJourney}
+            />
+            <LeadThread
+              days={days}
+              leadName={name}
+              messagesStatus={messagesStatus}
+              messagesNote={messagesNote}
+              onRetry={loadMessages}
+              composer={
+                <LeadComposer
+                  contact={detail.contact}
+                  contactId={contactId}
+                  status={messagesStatus}
+                  onSent={(message) => setMessages((prev) => [...prev, message])}
+                  onUnconfirmed={loadMessages}
+                />
+              }
+            />
+          </div>
         </div>
       )}
     </div>

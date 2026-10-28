@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { Phone } from "lucide-react"
+import { Reveal } from "@/components/motion"
 import { formatDuration, initials } from "@/lib/lead-detail"
 import { CallMedia, capitalise, formatCallTime } from "./LeadCallsTab"
 
@@ -18,11 +19,11 @@ function CallCard({ call }) {
 
   return (
     <div className={outbound ? "flex justify-end" : "flex justify-start"}>
-      <div className="w-full max-w-[420px]">
-        <div className="rounded-2xl border border-pd-border bg-pd-surface px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-pd-success-bg text-pd-success">
-              <Phone className="size-[13px]" aria-hidden="true" />
+      <div className="w-full max-w-[400px]">
+        <div className="rounded-2xl border border-pd-border bg-pd-surface px-3.5 py-3 shadow-[0_2px_8px_-3px_rgba(24,24,27,0.10)]">
+          <div className="flex items-center gap-3">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-pd-primary text-white shadow-[0_4px_10px_-3px_rgba(91,63,214,0.5)]">
+              <Phone className="size-[14px]" aria-hidden="true" />
             </span>
             <p className="min-w-0 flex-1 text-[13px] font-semibold text-pd-ink">{title}</p>
             <span className="text-[12px] tabular-nums text-pd-subtle">{formatDuration(call.duration_seconds)}</span>
@@ -43,25 +44,25 @@ function MessageBubble({ message, leadName }) {
   const attachments = message.attachments || []
 
   return (
-    <div data-direction={message.direction} className={outbound ? "flex justify-end" : "flex items-end justify-start gap-2"}>
+    <div data-direction={message.direction} className={outbound ? "flex justify-end" : "flex items-end justify-start gap-2.5"}>
       {!outbound && (
         <span
           aria-hidden="true"
-          className="mb-5 flex size-7 shrink-0 items-center justify-center rounded-full bg-pd-neutral-badge text-[10.5px] font-semibold text-pd-subtle"
+          className="mb-5 flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#F3E8DD] text-[11px] font-semibold text-[#8A5A2B]"
         >
           {initials(leadName)}
         </span>
       )}
-      <div className="max-w-[420px]">
+      <div className="max-w-[min(78%,520px)]">
         <div
           className={
             outbound
-              ? "rounded-2xl rounded-br-md bg-pd-primary px-4 py-2.5 text-white"
-              : "rounded-2xl rounded-bl-md border border-pd-border bg-pd-surface px-4 py-2.5 text-pd-ink shadow-sm"
+              ? "rounded-[20px] rounded-br-md bg-[linear-gradient(135deg,#6A4FE0,#5B3FD6)] px-4 py-2.5 text-white shadow-[0_8px_18px_-10px_rgba(91,63,214,0.7)]"
+              : "rounded-[20px] rounded-bl-md border border-pd-border bg-pd-surface px-4 py-2.5 text-pd-ink"
           }
         >
-          {message.subject && <p className="mb-1 text-[13px] font-semibold">{message.subject}</p>}
-          {message.body && <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed">{message.body}</p>}
+          {message.subject && <p className="mb-1 text-[13.5px] font-semibold">{message.subject}</p>}
+          {message.body && <p className="whitespace-pre-wrap break-words text-[13.5px] leading-relaxed">{message.body}</p>}
           {attachments.length > 0 && (
             <p className="mt-1.5 flex flex-wrap gap-x-3 text-[12px] underline">
               {attachments.map((url, i) => (
@@ -115,27 +116,31 @@ export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRet
   return (
     <section
       aria-label="Conversation"
-      className="flex min-h-[320px] flex-col gap-5 rounded-2xl border border-pd-border bg-pd-canvas px-4 py-6 md:px-8"
+      className="flex min-h-[420px] min-w-0 flex-col bg-pd-canvas bg-[radial-gradient(1200px_400px_at_70%_-10%,#F1EEFB_0%,transparent_60%)]"
     >
-      {messagesStatus === "ok" && messagesNote && (
-        <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
-      )}
-      {days.map(({ day, items }) => (
-        <div key={day} className="space-y-4">
-          <p className="text-center text-[11px] text-pd-subtle">{day}</p>
-          {items.map((item) =>
-            item.kind === "call" ? (
-              <CallCard key={`call-${item.id}`} call={item} />
-            ) : (
-              <MessageBubble key={`message-${item.id}`} message={item} leadName={leadName} />
-            )
-          )}
+      <div className="flex flex-1 flex-col gap-5 px-4 py-6 md:px-10">
+        {messagesStatus === "ok" && messagesNote && (
+          <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
+        )}
+        {days.map(({ day, items }) => (
+          <Reveal key={day} className="flex flex-col gap-3.5">
+            <p className="self-center rounded-full border border-pd-border bg-pd-surface px-3 py-1 text-[11.5px] text-pd-subtle">
+              {day}
+            </p>
+            {items.map((item) =>
+              item.kind === "call" ? (
+                <CallCard key={`call-${item.id}`} call={item} />
+              ) : (
+                <MessageBubble key={`message-${item.id}`} message={item} leadName={leadName} />
+              )
+            )}
+          </Reveal>
+        ))}
+        <div className="mt-auto">
+          <StatusNote status={messagesStatus} hasItems={days.length > 0} onRetry={onRetry} />
         </div>
-      ))}
-      <div className="mt-auto">
-        <StatusNote status={messagesStatus} hasItems={days.length > 0} onRetry={onRetry} />
       </div>
-      {composer}
+      <div className="sticky bottom-0 px-3 pb-4 md:px-10 md:pb-6">{composer}</div>
     </section>
   )
 }
