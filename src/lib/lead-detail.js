@@ -88,3 +88,34 @@ export function threadDays(calls, messages = []) {
   }
   return days.map(({ day, items }) => ({ day, items }))
 }
+
+const JOURNEY_CHIPS = {
+  conversion: { label: "CONVERSION", tone: "success" },
+  appointment: { label: "APPOINTMENT", tone: "success" },
+  call: { label: "CALL", tone: "primary" },
+  visit: { label: "PAGE VIEW", tone: "amber" },
+  stage: { label: "STAGE", tone: "neutral" },
+  lead: { label: "LEAD", tone: "neutral" },
+}
+
+/** The small coloured chip for a Journey event kind. */
+export function journeyChip(kind) {
+  return JOURNEY_CHIPS[kind] || { label: kind ? String(kind).toUpperCase() : "EVENT", tone: "neutral" }
+}
+
+const journeyTimeFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+})
+
+/** "17 Jul, 4:59 PM", or "" when there is no usable time. */
+export function formatJourneyTime(iso) {
+  if (!iso) return ""
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ""
+  const p = Object.fromEntries(journeyTimeFormat.formatToParts(date).map((x) => [x.type, x.value]))
+  return `${p.day} ${p.month}, ${p.hour}:${p.minute} ${(p.dayPeriod || "").toUpperCase()}`.trim()
+}

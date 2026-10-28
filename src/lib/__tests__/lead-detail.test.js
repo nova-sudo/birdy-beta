@@ -10,6 +10,8 @@ import {
   statusPill,
   formatDuration,
   cameFrom,
+  journeyChip,
+  formatJourneyTime,
   threadDays,
   initials,
 } from "@/lib/lead-detail"
@@ -201,5 +203,34 @@ describe("threadDays unusable dates", () => {
     const m = (id, date) => ({ id, channel: "SMS", direction: "inbound", body: "x", date })
     const days = threadDays([], [m("ok", "2026-07-17T12:00:00+00:00"), m("nul", null), m("bad", "nonsense")])
     expect(days.flatMap((d) => d.items.map((i) => i.id))).toEqual(["ok"])
+  })
+})
+
+describe("journeyChip", () => {
+  it("maps each kind to a label and tone", () => {
+    expect(journeyChip("conversion")).toMatchObject({ label: "CONVERSION", tone: "success" })
+    expect(journeyChip("appointment")).toMatchObject({ label: "APPOINTMENT", tone: "success" })
+    expect(journeyChip("call")).toMatchObject({ label: "CALL", tone: "primary" })
+    expect(journeyChip("visit")).toMatchObject({ label: "PAGE VIEW", tone: "amber" })
+    expect(journeyChip("stage")).toMatchObject({ label: "STAGE", tone: "neutral" })
+    expect(journeyChip("lead")).toMatchObject({ label: "LEAD", tone: "neutral" })
+  })
+
+  it("falls back to the upper-cased kind, neutral", () => {
+    expect(journeyChip("note")).toMatchObject({ label: "NOTE", tone: "neutral" })
+    expect(journeyChip(undefined)).toMatchObject({ label: "EVENT", tone: "neutral" })
+  })
+})
+
+describe("formatJourneyTime", () => {
+  it("formats as d MMM, h:mm A", () => {
+    const iso = new Date(2026, 6, 17, 16, 59).toISOString()
+    expect(formatJourneyTime(iso)).toBe("17 Jul, 4:59 PM")
+    expect(formatJourneyTime(new Date(2026, 6, 3, 9, 5).toISOString())).toBe("3 Jul, 9:05 AM")
+  })
+
+  it("is empty for missing or bad input", () => {
+    expect(formatJourneyTime(null)).toBe("")
+    expect(formatJourneyTime("nope")).toBe("")
   })
 })

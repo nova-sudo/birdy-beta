@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event"
 
 // ─── Lead detail page ───────────────────────────────────────────────────────
 // One lead from the Leads hub: a tabbed profile panel on the left (Profile,
-// Ads, Calls) and the thread (calls and GHL messages) with its composer on the right.
+// Journey, Calls, Ads) and the thread (calls and GHL messages) with its composer on the right.
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ contactId: "c1" }),
@@ -117,8 +117,7 @@ describe("lead detail page", () => {
     expect(screen.getByText("Meta · Celebrity Body Sculpt voucher")).toBeInTheDocument()
     // Three tags, then the rest folded into "+N".
     expect(screen.getByText("+2")).toBeInTheDocument()
-    // Phase 1: no Journey tab.
-    expect(screen.queryByRole("tab", { name: "Journey" })).toBeNull()
+    expect(screen.getByRole("tab", { name: "Journey" })).toBeInTheDocument()
   })
 
   it("lists calls on the Calls tab with a player and transcript", async () => {

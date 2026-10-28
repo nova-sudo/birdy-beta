@@ -77,6 +77,42 @@ export default function LeadDetailPage() {
     }
   }, [contactId])
 
+  // The Journey is fetched on the first open of its tab and kept for the page.
+  const [journey, setJourney] = useState(null)
+  // "idle" | "loading" | "ready" | "error"
+  const [journeyStatus, setJourneyStatus] = useState("idle")
+  const journeyReq = useRef(0)
+  const journeyStarted = useRef(false)
+
+  const fetchJourney = useCallback(async () => {
+    const id = ++journeyReq.current
+    journeyStarted.current = true
+    setJourneyStatus("loading")
+    try {
+      const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}/journey`)
+      if (!res.ok) throw new Error(`The journey request failed (${res.status}).`)
+      const data = await res.json()
+      if (id !== journeyReq.current) return
+      setJourney(data)
+      setJourneyStatus("ready")
+    } catch {
+      if (id !== journeyReq.current) return
+      setJourneyStatus("error")
+    }
+  }, [contactId])
+
+  const openJourney = useCallback(() => {
+    if (!journeyStarted.current) fetchJourney()
+  }, [fetchJourney])
+
+  useEffect(() => {
+    // A different lead starts over.
+    journeyReq.current += 1
+    journeyStarted.current = false
+    setJourney(null)
+    setJourneyStatus("idle")
+  }, [contactId])
+
   const load = useCallback(async () => {
     setState("loading")
     setError(null)
@@ -156,7 +192,14 @@ export default function LeadDetailPage() {
 
       {state === "ready" && detail && (
         <div className="grid items-start gap-4 lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-6">
-          <LeadProfilePanel detail={detail} messageCount={messages.length} />
+          <LeadProfilePanel
+            detail={detail}
+            messageCount={messages.length}
+            journey={journey}
+            journeyStatus={journeyStatus === "idle" ? "loading" : journeyStatus}
+            onJourneyOpen={openJourney}
+            onJourneyRetry={fetchJourney}
+          />
           <LeadThread
             days={days}
             leadName={name}

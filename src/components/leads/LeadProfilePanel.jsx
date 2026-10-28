@@ -1,21 +1,24 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { UnderlineTabs, toneClass } from "@/components/portfolio"
 import { leadTitle, statusPill } from "@/lib/lead-detail"
 import { cn } from "@/lib/utils"
 import { LeadProfileTab } from "./LeadProfileTab"
 import { LeadAdsTab } from "./LeadAdsTab"
 import { LeadCallsTab } from "./LeadCallsTab"
+import { LeadJourneyTab } from "./LeadJourneyTab"
 
 // ─── Lead detail: left column ───────────────────────────────────────────────
-// The lead's name, status pill and client group, then the Profile · Ads ·
-// Calls tabs (mock variant 2a). Phase 1 has no Journey tab and no AI summary.
+// The lead's name, status pill and client group, then the Profile · Journey ·
+// Calls · Ads tabs (mock variant 2a). The page owns the Journey fetch; this
+// only says when the tab is opened.
 
 const TABS = [
   { key: "profile", label: "Profile" },
-  { key: "ads", label: "Ads" },
+  { key: "journey", label: "Journey" },
   { key: "calls", label: "Calls" },
+  { key: "ads", label: "Ads" },
 ]
 
 // statusPill's tones, said in the kit's tone words.
@@ -23,8 +26,11 @@ const PILL_TONE = { won: "success", lost: "danger", open: "amber", neutral: "neu
 
 const PANEL_ID = "lead-profile-panel"
 
-export function LeadProfilePanel({ detail, messageCount = 0 }) {
+export function LeadProfilePanel({ detail, messageCount = 0, journey = null, journeyStatus = "loading", onJourneyOpen, onJourneyRetry }) {
   const [tab, setTab] = useState("profile")
+  useEffect(() => {
+    if (tab === "journey") onJourneyOpen?.()
+  }, [tab, onJourneyOpen])
   const pill = statusPill(detail.opportunities)
 
   return (
@@ -61,6 +67,7 @@ export function LeadProfilePanel({ detail, messageCount = 0 }) {
 
       <div id={PANEL_ID} role="tabpanel" className="px-5 py-5">
         {tab === "profile" && <LeadProfileTab detail={detail} messageCount={messageCount} />}
+        {tab === "journey" && <LeadJourneyTab journey={journey} status={journeyStatus} onRetry={onJourneyRetry} />}
         {tab === "ads" && <LeadAdsTab attribution={detail.attribution} />}
         {tab === "calls" && <LeadCallsTab calls={detail.calls} />}
       </div>
