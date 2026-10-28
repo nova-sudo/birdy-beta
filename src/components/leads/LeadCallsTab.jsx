@@ -44,13 +44,17 @@ function transcriptText(transcript) {
   return transcript.text || ""
 }
 
-/** The native player and a Transcript disclosure, each only when there is one. */
+/**
+ * The native player and a Transcript disclosure, each only when there is one.
+ * A call the dialer sent without a recording says so, rather than showing
+ * nothing to play.
+ */
 export function CallMedia({ call }) {
   const transcript = transcriptText(call.transcript)
-  if (!call.recording_url && !transcript) return null
 
   return (
     <div className="mt-2.5 space-y-2">
+      {!call.recording_url && <p className="text-[11.5px] text-pd-subtle">No recording</p>}
       {call.recording_url && (
         <audio controls preload="none" src={call.recording_url} className="h-9 w-full">
           <a href={call.recording_url}>Download the recording</a>

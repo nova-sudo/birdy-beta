@@ -37,3 +37,20 @@ describe("LeadProfileTab pipeline stage", () => {
     expect(screen.getByText("Spicy Leads").className).toContain("text-pd-amber")
   })
 })
+
+describe("CallMedia without a recording", () => {
+  it("says there is no recording instead of showing nothing", async () => {
+    const { CallMedia } = await import("../LeadCallsTab")
+    const { container } = render(<CallMedia call={{ id: "c1", transcript: "Hi" }} />)
+    expect(screen.getByText("No recording")).toBeInTheDocument()
+    expect(container.querySelector("audio")).toBeNull()
+    expect(screen.getByText("Transcript")).toBeInTheDocument()
+  })
+
+  it("shows the player and no label when there is one", async () => {
+    const { CallMedia } = await import("../LeadCallsTab")
+    const { container } = render(<CallMedia call={{ id: "c2", recording_url: "https://x.test/r" }} />)
+    expect(container.querySelector("audio")).toHaveAttribute("src", "https://x.test/r")
+    expect(screen.queryByText("No recording")).toBeNull()
+  })
+})
