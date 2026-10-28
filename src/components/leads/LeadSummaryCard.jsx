@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils"
 // stale}. The refresh button is also the in-flight guard.
 
 const POLL_MS = 2000
-const POLL_MAX = 5
+// Matches the backend's 30s generation lease (12 x 2s = 24s of re-checks).
+const POLL_MAX = 12
 
 // Re-render every `ms` so relative times stay true while the page is open.
 function useNow(ms) {
@@ -86,9 +87,10 @@ export function useLeadSummary(contactId, enabled = true) {
 }
 
 export function LeadSummaryCard({ data, busy = false, onRefresh }) {
+  // Hooks first: an early return above them breaks when the status changes.
+  const now = useNow(60_000)
   if (data?.status === "unavailable") return null
 
-  const now = useNow(60_000)
   const loading = data === null || data.status === "generating"
   const status = data?.status
   const text = data?.summary
@@ -101,23 +103,20 @@ export function LeadSummaryCard({ data, busy = false, onRefresh }) {
         <h3 className="text-[13px] font-semibold text-pd-primary">AI summary</h3>
         <span className="ml-auto flex items-center gap-1.5">
           {when && <span className="text-[11px] text-pd-subtle">{when}</span>}
-          {(
-            <button
-              type="button"
-              onClick={onRefresh}
-              disabled={busy || loading}
-              aria-label="Regenerate summary"
-              className="flex size-6 items-center justify-center rounded-md text-pd-primary hover:bg-pd-surface disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw className={cn("size-3.5", busy && "animate-spin")} aria-hidden="true" />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={busy || loading}
+            aria-label="Regenerate summary"
+            className="flex size-6 items-center justify-center rounded-md text-pd-primary hover:bg-pd-surface disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={cn("size-3.5", busy && "animate-spin")} aria-hidden="true" />
+          </button>
         </span>
       </div>
 
       <div aria-live="polite">
-        {loading && <p className="text-[13px] leading-relaxed text-pd-subtle">Writing a summary…</p>}
-        {!loading && busy && !text && (
+        {(loading || (busy && !text)) && (
           <p className="text-[13px] leading-relaxed text-pd-subtle">Writing a summary…</p>
         )}
         {text && <p className="text-[13px] leading-relaxed text-pd-ink">{text}</p>}

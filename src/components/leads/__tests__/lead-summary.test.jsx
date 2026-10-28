@@ -160,13 +160,13 @@ describe("useLeadSummary", () => {
     }
   })
 
-  it("gives up after five re-checks and shows failed", async () => {
+  it("gives up after twelve re-checks and shows failed", async () => {
     vi.useFakeTimers()
     try {
       apiRequest.mockResolvedValue(ok({ status: "generating", summary: null, generated_at: null, stale: false }))
       const { result } = renderHook(() => useLeadSummary("c1", true))
-      await act(async () => { await vi.advanceTimersByTimeAsync(20000) })
-      expect(apiRequest).toHaveBeenCalledTimes(6)
+      await act(async () => { await vi.advanceTimersByTimeAsync(30000) })
+      expect(apiRequest).toHaveBeenCalledTimes(13)
       expect(result.current.data.status).toBe("failed")
     } finally {
       vi.useRealTimers()
@@ -175,6 +175,15 @@ describe("useLeadSummary", () => {
 })
 
 describe("LeadSummaryCard states", () => {
+  it("survives unavailable turning back into a visible state", () => {
+    const { rerender, container } = render(<LeadSummaryCard data={{ status: "unavailable" }} />)
+    expect(container).toBeEmptyDOMElement()
+    rerender(<LeadSummaryCard data={null} />)
+    expect(screen.getByText("Writing a summary…")).toBeInTheDocument()
+    rerender(<LeadSummaryCard data={{ status: "unavailable" }} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
   it("disables refresh until loaded and hides the failed note during a retry", () => {
     const { rerender } = render(<LeadSummaryCard data={null} busy onRefresh={() => {}} />)
     expect(screen.getByRole("button", { name: "Regenerate summary" })).toBeDisabled()

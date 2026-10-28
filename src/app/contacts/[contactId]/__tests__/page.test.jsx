@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 // ─── Lead detail page ───────────────────────────────────────────────────────
 // One lead from the Leads hub: a tabbed profile panel on the left (Profile,
 // Journey, Calls, Ads) and the thread (calls and GHL messages) with its composer on the right.
 
+let routeParams = { contactId: "c1" }
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ contactId: "c1" }),
+  useParams: () => routeParams,
   useRouter: () => ({ push: vi.fn() }),
 }))
 vi.mock("@/lib/api", () => ({ apiRequest: vi.fn() }))
@@ -77,6 +78,7 @@ const DETAIL = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  routeParams = { contactId: "c1" }
 })
 
 const MESSAGES = {
@@ -107,6 +109,31 @@ function respond(body, status = 200, messages = MESSAGES) {
 }
 
 describe("lead detail page", () => {
+  it("fetches one summary per lead, and not for a new lead until its detail resolves", async () => {
+    const summaryCalls = () => vi.mocked(apiRequest).mock.calls.map(([u]) => String(u)).filter((u) => u.endsWith("/summary"))
+    let resolveC2
+    vi.mocked(apiRequest).mockImplementation(async (url) => {
+      const u = String(url)
+      const json = (data) => ({ ok: true, status: 200, json: async () => data })
+      if (u.endsWith("/summary")) return json({ status: "ok", summary: "S", generated_at: null, stale: false })
+      if (u.endsWith("/messages")) return json(MESSAGES)
+      if (u.endsWith("/c2")) return new Promise((resolve) => { resolveC2 = () => resolve(json({ ...DETAIL, contact: { ...DETAIL.contact, id: "c2" } })) })
+      return json(DETAIL)
+    })
+    const { rerender } = render(<LeadDetailPage />)
+    await screen.findByRole("heading", { name: "Rebecca Becirspahic" })
+    await waitFor(() => expect(summaryCalls()).toEqual(["/api/leads/contact/c1/summary"]))
+
+    routeParams = { contactId: "c2" }
+    rerender(<LeadDetailPage />)
+    await waitFor(() => expect(vi.mocked(apiRequest).mock.calls.some(([u]) => String(u).endsWith("/c2"))).toBe(true))
+    expect(summaryCalls()).toEqual(["/api/leads/contact/c1/summary"])
+
+    resolveC2()
+    await waitFor(() => expect(summaryCalls()).toEqual([
+      "/api/leads/contact/c1/summary", "/api/leads/contact/c2/summary"]))
+  })
+
   it("shows the lead's name and the Profile tab's phone", async () => {
     respond(DETAIL)
     render(<LeadDetailPage />)
