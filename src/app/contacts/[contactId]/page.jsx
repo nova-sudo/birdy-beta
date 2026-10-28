@@ -169,6 +169,7 @@ export default function LeadDetailPage() {
                 contactId={contactId}
                 status={messagesStatus}
                 onSent={(message) => setMessages((prev) => [...prev, message])}
+                onUnconfirmed={loadMessages}
               />
             }
           />

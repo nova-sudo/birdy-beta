@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils"
 // Sends one SMS or email to the lead through POST /api/leads/contact/{id}/
 // messages. The button doubles as the in-flight guard: it is disabled from the
 // click until the answer, so a double click is one request. On any failure the
-// draft stays and the backend's `detail` is shown under the box.
+// draft stays and the backend's `detail` is shown under the box, except a 504
+// (send outcome unknown): the draft is cleared and onUnconfirmed reloads the thread.
 
 const CHANNELS = ["SMS", "Email"]
 
@@ -20,7 +21,7 @@ function errorDetail(detail) {
   return typeof first === "string" && first ? first : "Couldn't send the message."
 }
 
-export function LeadComposer({ contact, contactId, status, onSent }) {
+export function LeadComposer({ contact, contactId, status, onSent, onUnconfirmed }) {
   const [channel, setChannel] = useState("SMS")
   const [subject, setSubject] = useState("")
   const [body, setBody] = useState("")
@@ -64,6 +65,13 @@ export function LeadComposer({ contact, contactId, status, onSent }) {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         setError(errorDetail(data?.detail))
+        if (res.status === 504) {
+          // Outcome unknown: the message may have been delivered. Drop the draft
+          // so a second click can't double-send, and re-read the thread.
+          setBody("")
+          setSubject("")
+          onUnconfirmed?.()
+        }
         return
       }
       onSent?.(data.message)

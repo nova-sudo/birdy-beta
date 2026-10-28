@@ -245,6 +245,35 @@ describe("LeadComposer", () => {
     expect(screen.getByText("Add a subject")).toBeInTheDocument()
   })
 
+  it("on a 504 shows the detail, clears the draft and calls onUnconfirmed", async () => {
+    const detail = "We couldn't confirm the message was sent. Check the thread before sending again."
+    vi.mocked(apiRequest).mockResolvedValue({ ok: false, status: 504, json: async () => ({ detail }) })
+    const onSent = vi.fn()
+    const onUnconfirmed = vi.fn()
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={onSent} onUnconfirmed={onUnconfirmed} />)
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.click(sendButton())
+    expect(await screen.findByRole("alert")).toHaveTextContent(detail)
+    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("")
+    expect(onUnconfirmed).toHaveBeenCalledTimes(1)
+    expect(onSent).not.toHaveBeenCalled()
+  })
+
+  it("on a 502 keeps the draft and does not call onUnconfirmed", async () => {
+    vi.mocked(apiRequest).mockResolvedValue({
+      ok: false, status: 502, json: async () => ({ detail: "GoHighLevel rejected the message." }),
+    })
+    const onUnconfirmed = vi.fn()
+    const user = userEvent.setup()
+    render(<LeadComposer contact={contact} status="ok" onSent={() => {}} onUnconfirmed={onUnconfirmed} />)
+    await user.type(screen.getByPlaceholderText("Type a message…"), "Hi")
+    await user.click(sendButton())
+    expect(await screen.findByRole("alert")).toHaveTextContent("GoHighLevel rejected the message.")
+    expect(screen.getByPlaceholderText("Type a message…")).toHaveValue("Hi")
+    expect(onUnconfirmed).not.toHaveBeenCalled()
+  })
+
   it("posts to the route contactId", async () => {
     vi.mocked(apiRequest).mockResolvedValue(okResponse(msg()))
     const user = userEvent.setup()
