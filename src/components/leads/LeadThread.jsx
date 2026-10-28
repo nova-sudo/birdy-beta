@@ -4,13 +4,16 @@ import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { Phone } from "lucide-react"
 import { Reveal } from "@/components/motion"
+import { LoadingPulse } from "@/components/portfolio"
 import { formatDuration, initials } from "@/lib/lead-detail"
 import { CallMedia, capitalise, formatCallTime } from "./LeadCallsTab"
 
 // ─── Lead detail: right column ──────────────────────────────────────────────
 // The conversation with this lead, grouped by day: calls from Birdy's own call
 // log interleaved with the GHL messages fetched live, then a status note for
-// the message fetch and the composer. Message bodies are always text — email
+// the message fetch and the composer. Until the messages (and the GHL calls
+// that come with them) have arrived, the thread shows one loader rather than a
+// half-built conversation that reshuffles as they land. Message bodies are always text — email
 // arrives with its tags already stripped, and nothing here is set as HTML.
 
 function CallCard({ call }) {
@@ -84,7 +87,6 @@ function MessageBubble({ message, leadName }) {
 
 function StatusNote({ status, hasItems, onRetry }) {
   const cls = "text-center text-[12px] text-pd-subtle"
-  if (status === "loading") return <p className={cls}>Loading messages…</p>
   if (status === "reconnect") {
     return (
       <p className={cls}>
@@ -113,6 +115,8 @@ function StatusNote({ status, hasItems, onRetry }) {
  * @param {"loading"|"ok"|"reconnect"|"unavailable"} messagesStatus
  * @param {string} [messagesNote] shown at the top when the message list is partial
  */
+const THREAD_LOADING = ["Loading the conversation…", "Gathering calls and messages…"]
+
 export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRetry, composer }) {
   // Like any chat, open on the newest message and follow new ones.
   const scroller = useRef(null)
@@ -128,26 +132,32 @@ export function LeadThread({ days, leadName, messagesStatus, messagesNote, onRet
       className="flex h-[calc(100dvh-3.75rem)] min-w-0 flex-col bg-pd-canvas bg-[radial-gradient(1200px_400px_at_70%_-10%,#F1EEFB_0%,transparent_60%)] lg:h-auto lg:min-h-0"
     >
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 py-6 md:px-10">
-        {messagesStatus === "ok" && messagesNote && (
-          <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
-        )}
-        {days.map(({ day, items }) => (
-          <Reveal key={day} className="flex flex-col gap-3.5">
-            <p className="self-center rounded-full border border-pd-border bg-pd-surface px-3 py-1 text-[11.5px] text-pd-subtle">
-              {day}
-            </p>
-            {items.map((item) =>
-              item.kind === "call" ? (
-                <CallCard key={`call-${item.id}`} call={item} />
-              ) : (
-                <MessageBubble key={`message-${item.id}`} message={item} leadName={leadName} />
-              )
+        {messagesStatus === "loading" ? (
+          <LoadingPulse statements={THREAD_LOADING} className="m-auto h-[180px] w-full max-w-sm" />
+        ) : (
+          <>
+            {messagesStatus === "ok" && messagesNote && (
+              <p className="text-center text-[11.5px] text-pd-subtle">{messagesNote}</p>
             )}
-          </Reveal>
-        ))}
-        <div className="mt-auto">
-          <StatusNote status={messagesStatus} hasItems={days.length > 0} onRetry={onRetry} />
-        </div>
+            {days.map(({ day, items }) => (
+              <Reveal key={day} className="flex flex-col gap-3.5">
+                <p className="self-center rounded-full border border-pd-border bg-pd-surface px-3 py-1 text-[11.5px] text-pd-subtle">
+                  {day}
+                </p>
+                {items.map((item) =>
+                  item.kind === "call" ? (
+                    <CallCard key={`call-${item.id}`} call={item} />
+                  ) : (
+                    <MessageBubble key={`message-${item.id}`} message={item} leadName={leadName} />
+                  )
+                )}
+              </Reveal>
+            ))}
+            <div className="mt-auto">
+              <StatusNote status={messagesStatus} hasItems={days.length > 0} onRetry={onRetry} />
+            </div>
+          </>
+        )}
       </div>
       <div className="shrink-0 px-3 pb-4 pt-2 md:px-10 md:pb-6">{composer}</div>
     </section>

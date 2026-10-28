@@ -13,7 +13,7 @@ import { formatDuration } from "@/lib/lead-detail"
 //
 // Calls made in GoHighLevel carry `recording_path` / `transcript_path` instead
 // of a recording URL: GHL needs the agency's token, so the audio comes
-// through Birdy's backend, fetched only when someone presses play.
+// through Birdy's backend. Either way the card shows "Play recording" first.
 
 const whenFormat = new Intl.DateTimeFormat("en-GB", {
   day: "numeric",
@@ -52,31 +52,34 @@ function transcriptText(transcript) {
 }
 
 /**
- * The native player and a Transcript disclosure, each only when there is one.
- * A call the dialer sent without a recording says so, rather than showing
- * nothing to play.
+ * Every call's recording looks the same: a "Play recording" button that loads
+ * the audio, then the native player, already playing. A call the dialer sent
+ * without a recording says so, rather than showing nothing to play. GHL calls
+ * fetch their transcript on open; dialer transcripts arrive with the call.
  */
 export function CallMedia({ call }) {
-  if (call.recording_path) return <GhlCallMedia call={call} />
   const transcript = transcriptText(call.transcript)
 
   return (
     <div className="mt-2.5 space-y-2">
-      {!call.recording_url && <p className="text-[11.5px] text-pd-subtle">No recording</p>}
-      {call.recording_url && (
-        <audio controls preload="none" src={call.recording_url} className="h-9 w-full">
-          <a href={call.recording_url}>Download the recording</a>
-        </audio>
+      {call.recording_path || call.recording_url ? (
+        <CallRecording call={call} />
+      ) : (
+        <p className="text-[11.5px] text-pd-subtle">No recording</p>
       )}
-      {transcript && (
-        <details className="group rounded-lg border border-pd-border bg-pd-surface">
-          <summary className="cursor-pointer select-none px-3 py-1.5 text-[12px] font-semibold text-pd-primary">
-            Transcript
-          </summary>
-          <p className="max-h-60 overflow-y-auto whitespace-pre-line border-t border-pd-divider px-3 py-2 text-[12px] text-pd-body">
-            {transcript}
-          </p>
-        </details>
+      {call.transcript_path ? (
+        <GhlTranscript path={call.transcript_path} />
+      ) : (
+        transcript && (
+          <details className="group rounded-lg border border-pd-border bg-pd-surface">
+            <summary className="cursor-pointer select-none px-3 py-1.5 text-[12px] font-semibold text-pd-primary">
+              Transcript
+            </summary>
+            <p className="max-h-60 overflow-y-auto whitespace-pre-line border-t border-pd-divider px-3 py-2 text-[12px] text-pd-body">
+              {transcript}
+            </p>
+          </details>
+        )
       )}
     </div>
   )
@@ -95,16 +98,20 @@ function ReconnectNote() {
   )
 }
 
-/** A GHL call: "Play recording" loads the audio through the backend, then plays it. */
-function GhlCallMedia({ call }) {
+/**
+ * "Play recording", then the player. A dialer's recording_url plays as is; a
+ * GHL recording needs the agency's token, so it comes through Birdy's backend
+ * as a blob, fetched only when someone presses play.
+ */
+function CallRecording({ call }) {
   // "idle" | "loading" | "ready" | "none" | "reconnect" | "error"
   const [state, setState] = useState("idle")
   const [src, setSrc] = useState(null)
   const audio = useRef(null)
   const mounted = useRef(true)
 
-  // The object URL lives as long as the card.
-  useEffect(() => () => src && URL.revokeObjectURL(src), [src])
+  // A blob URL lives as long as the card.
+  useEffect(() => () => src?.startsWith("blob:") && URL.revokeObjectURL(src), [src])
   useEffect(() => {
     mounted.current = true
     return () => {
@@ -117,6 +124,10 @@ function GhlCallMedia({ call }) {
 
   const load = async () => {
     if (state === "loading") return
+    if (!call.recording_path) {
+      setSrc(call.recording_url)
+      return setState("ready")
+    }
     setState("loading")
     try {
       const res = await apiRequest(call.recording_path)
@@ -134,29 +145,27 @@ function GhlCallMedia({ call }) {
     }
   }
 
+  if (state === "ready" && src) {
+    return (
+      <audio ref={audio} controls src={src} className="h-9 w-full">
+        <a href={src}>Download the recording</a>
+      </audio>
+    )
+  }
+  if (state === "none") return <p className="text-[11.5px] text-pd-subtle">No recording</p>
+  if (state === RECONNECT) return <ReconnectNote />
   return (
-    <div className="mt-2.5 space-y-2">
-      {state === "ready" && src ? (
-        <audio ref={audio} controls src={src} className="h-9 w-full" />
-      ) : state === "none" ? (
-        <p className="text-[11.5px] text-pd-subtle">No recording</p>
-      ) : state === RECONNECT ? (
-        <ReconnectNote />
-      ) : (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={load}
-            disabled={state === "loading"}
-            className="inline-flex h-8 items-center gap-1.5 rounded-full bg-pd-primary-tint px-3 text-[12px] font-semibold text-pd-primary hover:bg-pd-primary-pale/60 disabled:cursor-wait disabled:opacity-70"
-          >
-            <Play className="size-3" aria-hidden="true" />
-            {state === "loading" ? "Loading recording…" : "Play recording"}
-          </button>
-          {state === "error" && <span className="text-[11.5px] text-pd-danger">Couldn&apos;t load the recording.</span>}
-        </div>
-      )}
-      <GhlTranscript path={call.transcript_path} />
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={load}
+        disabled={state === "loading"}
+        className="inline-flex h-8 items-center gap-1.5 rounded-full bg-pd-primary-tint px-3 text-[12px] font-semibold text-pd-primary hover:bg-pd-primary-pale/60 disabled:cursor-wait disabled:opacity-70"
+      >
+        <Play className="size-3" aria-hidden="true" />
+        {state === "loading" ? "Loading recording…" : "Play recording"}
+      </button>
+      {state === "error" && <span className="text-[11.5px] text-pd-danger">Couldn&apos;t load the recording.</span>}
     </div>
   )
 }

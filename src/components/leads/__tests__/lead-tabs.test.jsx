@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 
 import { LeadAdsTab } from "../LeadAdsTab"
 import { LeadProfileTab } from "../LeadProfileTab"
@@ -47,10 +47,12 @@ describe("CallMedia without a recording", () => {
     expect(screen.getByText("Transcript")).toBeInTheDocument()
   })
 
-  it("shows the player and no label when there is one", async () => {
+  it("shows Play recording, then the player, when the dialer sent one", async () => {
     const { CallMedia } = await import("../LeadCallsTab")
     const { container } = render(<CallMedia call={{ id: "c2", recording_url: "https://x.test/r" }} />)
-    expect(container.querySelector("audio")).toHaveAttribute("src", "https://x.test/r")
+    expect(container.querySelector("audio")).toBeNull()
     expect(screen.queryByText("No recording")).toBeNull()
+    fireEvent.click(screen.getByRole("button", { name: "Play recording" }))
+    expect(container.querySelector("audio")).toHaveAttribute("src", "https://x.test/r")
   })
 })
