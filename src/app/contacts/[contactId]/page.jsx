@@ -61,7 +61,7 @@ export default function LeadDetailPage() {
     const id = ++messagesReq.current
     setMessagesStatus("loading")
     setMessages([])
-    setGhlCalls([])
+    // GHL calls stay until the new answer lands, so a playing card isn't torn down.
     setMessagesNote(null)
     try {
       const res = await apiRequest(`/api/leads/contact/${encodeURIComponent(contactId)}/messages`)
@@ -117,6 +117,7 @@ export default function LeadDetailPage() {
     // A different lead starts over.
     journeyReq.current += 1
     journeyStarted.current = false
+    setGhlCalls([])
     setJourney(null)
     setJourneyStatus("idle")
   }, [contactId])

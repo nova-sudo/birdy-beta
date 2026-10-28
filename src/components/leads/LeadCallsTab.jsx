@@ -101,9 +101,16 @@ function GhlCallMedia({ call }) {
   const [state, setState] = useState("idle")
   const [src, setSrc] = useState(null)
   const audio = useRef(null)
+  const mounted = useRef(true)
 
   // The object URL lives as long as the card.
   useEffect(() => () => src && URL.revokeObjectURL(src), [src])
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   useEffect(() => {
     if (state === "ready") audio.current?.play?.()?.catch?.(() => {})
   }, [state])
@@ -113,13 +120,17 @@ function GhlCallMedia({ call }) {
     setState("loading")
     try {
       const res = await apiRequest(call.recording_path)
+      if (!mounted.current) return
       if (res.status === 404) return setState("none")
       if (res.status === 409) return setState(RECONNECT)
       if (!res.ok) throw new Error(`The recording request failed (${res.status}).`)
-      setSrc(URL.createObjectURL(await res.blob()))
+      const blob = await res.blob()
+      // A card that went away mid-download never makes a URL it can't revoke.
+      if (!mounted.current) return
+      setSrc(URL.createObjectURL(blob))
       setState("ready")
     } catch {
-      setState("error")
+      if (mounted.current) setState("error")
     }
   }
 
