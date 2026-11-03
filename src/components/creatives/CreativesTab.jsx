@@ -131,14 +131,16 @@ export function CreativesTab({ clientGroupId }) {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <SegmentedTabs size="sm" ariaLabel="Test status" value={chip} onValueChange={setChip} items={items} />
-        <div className="ml-auto flex flex-wrap items-center gap-2">
+        {/* Same 38px controls as the other Marketing Hub tabs. */}
+        <div className="flex w-full flex-wrap items-center gap-[10px] md:ml-auto md:w-auto">
           <SearchInput
             size="sm"
             value={query}
             onChange={setQuery}
             debounceMs={0}
             placeholder="Search creative tests…"
-            inputClassName="w-56"
+            className="w-full md:w-[220px]"
+            inputClassName="h-[38px] text-[13px]"
           />
           <ColumnsMenu
             columns={COLUMN_CATALOGUE}
@@ -147,13 +149,12 @@ export function CreativesTab({ clientGroupId }) {
             defaultColumns={ALL_COLUMNS}
             views={pageViews}
           />
-          <Button size="sm" variant="primary" onClick={() => router.push(WIZARD)}>
+          <Button size="sm" variant="primary" className="h-[38px] text-[13px]" onClick={() => router.push(WIZARD)}>
             <Plus aria-hidden />
             New creative test
           </Button>
         </div>
       </div>
-      <p className="text-xs text-muted-foreground">Tests use their own dates; the period picker doesn&apos;t apply.</p>
 
       {nothingYet ? (
         <EmptyState
@@ -178,6 +179,10 @@ export function CreativesTab({ clientGroupId }) {
           onOpen={setOpenId}
           onAccountAction={onAccountAction}
         />
+      )}
+
+      {!nothingYet && (
+        <p className="text-xs text-muted-foreground">Tests use their own dates; the period picker doesn&apos;t apply.</p>
       )}
 
       <CreativeDetailSheet
