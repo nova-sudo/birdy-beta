@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
-import useSWR from "swr"
-import { BirdyRead, MetricTabsChart } from "@/components/ds"
+import { useRouter } from "next/navigation"
+import useSWR, { mutate as globalMutate } from "swr"
+import { BirdyRead, MetricTabsChart, toast } from "@/components/ds"
+import { applyWorkItem } from "@/lib/agents-api"
 import { currencySymbol } from "@/lib/chat-viz"
 import { dailyTotals } from "@/lib/creative-days"
 import { useCreativeTests } from "@/lib/creatives-api"
@@ -62,13 +64,49 @@ const fmtDate = (iso) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
+const TONE = { HIGH: "danger", OPPORTUNITY: "success" }
+
+/** Birdy's open creative suggestions (rule ids starting `creative_`) as BirdyRead findings; apply may send you on to the wizard. */
+function useCreativeFindings() {
+  const router = useRouter()
+  const { data } = useSWR(queryKeys.dashboardSummary(), fetcher)
+  return React.useMemo(() => {
+    const apply = async (s) => {
+      try {
+        const r = await applyWorkItem(s.id)
+        if (r && r.ok === false) {
+          toast.warning("Not done", { description: r.blocked_reason?.message ?? s.title })
+          return
+        }
+        if (typeof r?.redirect === "string" && r.redirect) {
+          router.push(r.redirect)
+          return
+        }
+        toast.success("Done", { description: s.title })
+        globalMutate(queryKeys.dashboardSummary())
+      } catch (err) {
+        toast.error("Couldn't apply that", { description: err?.message ?? s.title })
+      }
+    }
+    return (data?.suggestions ?? [])
+      .filter((s) => String(s.rule_id ?? "").startsWith("creative_"))
+      .map((s) => ({
+        id: s.id,
+        tone: TONE[s.severity] ?? "warning",
+        title: s.title,
+        detail: s.description ?? s.why,
+        action: { label: "Do it", onClick: () => apply(s) },
+      }))
+  }, [data, router])
+}
+
 /**
  * The Creatives tab's hero: six figures as chart tabs, and Birdy's read of the tests.
  * @param {object} props
  * @param {object[]} [props.tests] Defaults to the owner's tests (optionally for `clientGroupId`)
- * @param {object[]} [props.findings] `creative_` findings for Birdy's read; empty until the dashboard feeds them
+ * @param {object[]} [props.findings] Findings for Birdy's read; defaults to the open `creative_` suggestions
  */
-export function CreativesHero({ tests: given, clientGroupId, findings = [] }) {
+export function CreativesHero({ tests: given, clientGroupId, findings: givenFindings }) {
   const own = useCreativeTests({ clientGroupId: clientGroupId && clientGroupId !== "all" ? clientGroupId : undefined })
   const tests = given ?? own.tests
   const loading = given ? false : own.isLoading
@@ -76,6 +114,8 @@ export function CreativesHero({ tests: given, clientGroupId, findings = [] }) {
   const [metric, setMetric] = React.useState("live")
   const f = heroFigures(tests)
   const series = useLiveSeries(tests, currency)
+  const fromDashboard = useCreativeFindings()
+  const findings = givenFindings ?? fromDashboard
 
   const sym = currencySymbol(currency)
   const money = (v) => (v == null ? "—" : `${sym}${Math.round(v).toLocaleString("en-US")}`)

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSWRConfig } from "swr";
 import {
@@ -129,6 +130,8 @@ export default function PortfolioDashboardPage() {
 
   const { mutate: mutateCache } = useSWRConfig();
 
+  const router = useRouter();
+
   const handleApply = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));
     const entry = {
@@ -155,11 +158,17 @@ export default function PortfolioDashboardPage() {
       return;
     }
 
+    // Some suggestions finish in another screen (scale a creative test opens the wizard).
+    if (typeof result.redirect === "string" && result.redirect) {
+      router.push(result.redirect);
+      return;
+    }
+
     const count = (result.succeeded ?? []).length;
     toast.success(count ? `Applied to ${count} ad${count === 1 ? "" : "s"}` : "Applied", {
       description: suggestion.title,
     });
-  }, [mutateCache]);
+  }, [mutateCache, router]);
 
   const handleDismiss = useCallback(async (suggestion) => {
     setRemoved((prev) => ({ ...prev, [suggestion.id]: true }));

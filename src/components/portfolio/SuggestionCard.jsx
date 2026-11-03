@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Trash2, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,16 @@ export function SuggestionCard({ suggestion, onApply, onDismiss, applyLabel = "D
       </div>
 
       <h3 className="mt-[5px] font-pd-display text-[13px] font-semibold leading-[1.3] text-pd-ink">
-        {suggestion.title}
+        {suggestion.creative_test_id ? (
+          <Link
+            href={`/campaigns?tab=creatives&creative=${encodeURIComponent(suggestion.creative_test_id)}`}
+            className="hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+          >
+            {suggestion.title}
+          </Link>
+        ) : (
+          suggestion.title
+        )}
       </h3>
 
       <div className="mt-[5px] flex items-end gap-2.5">

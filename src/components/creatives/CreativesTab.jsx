@@ -3,9 +3,9 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, Sparkles } from "lucide-react"
-import { Badge, Button, EmptyState, SearchInput, SegmentedTabs } from "@/components/ds"
+import { Badge, Button, EmptyState, SearchInput, SegmentedTabs, confirm, toast } from "@/components/ds"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
-import { useCreativeTests } from "@/lib/creatives-api"
+import { pauseCreativeAds, retryCreativeAd, useCreativeTests } from "@/lib/creatives-api"
 import { usePageViews } from "@/lib/usePageViews"
 import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import { CreativeDetailSheet } from "./CreativeDetailSheet"
@@ -90,8 +90,36 @@ export function CreativesTab({ clientGroupId }) {
   const loading = active.isLoading
   const nothingYet = !loading && active.tests.length === 0 && archived.tests.length === 0
 
-  // Pause and retry arrive with the Phase 2 post pipeline; the prop stays wired for them.
-  const onAccountAction = React.useCallback(() => {}, [])
+  // A row's Pause (after a confirm) pauses that account's ad in Meta; Retry re-queues the failed ad.
+  const onAccountAction = React.useCallback(async (test, ad, action) => {
+    if (action === "retry") {
+      try {
+        await retryCreativeAd(test.id, ad.id)
+        toast.success("Retrying", { description: `${test.code} in ${ad.ad_account_id}` })
+      } catch (err) {
+        toast.error("Couldn't retry", { description: err?.message })
+      }
+      return
+    }
+    if (action !== "pause") return
+    let ok = false
+    try {
+      ok = await confirm({
+        title: "Pause this account's ad?",
+        description: `${test.code} stops spending in ${ad.ad_account_id}. Other accounts keep running.`,
+        confirmLabel: "Pause here",
+      })
+    } catch {
+      ok = false
+    }
+    if (!ok) return
+    try {
+      await pauseCreativeAds(test.id, [ad.ad_account_id])
+      toast.success("Paused", { description: `${test.code} in ${ad.ad_account_id}` })
+    } catch (err) {
+      toast.error("Couldn't pause", { description: err?.message })
+    }
+  }, [])
 
   const items = CHIPS.map((c) => ({
     value: c.value,

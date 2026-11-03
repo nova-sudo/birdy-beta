@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useSWRConfig } from "swr"
 import { CircleAlert, Pause, RotateCcw, Sparkles, TrendingDown } from "lucide-react"
 
@@ -81,6 +83,7 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
   const [done, setDone] = useState(decided)
   const [doneLabel, setDoneLabel] = useState(null)
   const { mutate } = useSWRConfig()
+  const router = useRouter()
   const [busy, setBusy] = useState(null)
   const [denying, setDenying] = useState(false)
   const [applyFailed, setApplyFailed] = useState(null)
@@ -133,6 +136,12 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
         return
       }
       setBlockedNow(null)
+      // Some items finish in another screen (scale a creative test opens the wizard).
+      if (typeof r?.redirect === "string" && r.redirect) {
+        onDecided?.(item, kind)
+        router.push(r.redirect)
+        return
+      }
       if (r?.outcome === "already_in_meta" && kind === "approved") setDone("already")
       const failed = r?.failed?.length ?? 0
       if (kind === "handled") toast.success("Noted", { description: item.title })
@@ -216,7 +225,18 @@ export function WorkItem({ item, onDecided, decided = null, className }) {
             <Icon className="size-3.5" strokeWidth={2.5} />
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <p className={cn("text-base font-medium", done ? "text-muted-foreground" : "text-foreground")}>{item.title}</p>
+            <p className={cn("text-base font-medium", done ? "text-muted-foreground" : "text-foreground")}>
+              {item.creative_test_id ? (
+                <Link
+                  href={`/campaigns?tab=creatives&creative=${encodeURIComponent(item.creative_test_id)}`}
+                  className="hover:underline"
+                >
+                  {item.title}
+                </Link>
+              ) : (
+                item.title
+              )}
+            </p>
             {meta && <p className="text-sm text-muted-foreground">{meta}</p>}
             <Stats stats={item.stats} />
             {!done && blocked?.message && (

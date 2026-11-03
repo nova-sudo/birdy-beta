@@ -22,7 +22,7 @@ import {
   toast,
 } from "@/components/ds"
 import { currencySymbol } from "@/lib/chat-viz"
-import { archiveCreativeTest, refreshCreativeTest, useCreativeTest } from "@/lib/creatives-api"
+import { archiveCreativeTest, pauseCreativeAds, refreshCreativeTest, useCreativeTest } from "@/lib/creatives-api"
 import { formatCpl, floorProgress, scoreTone } from "@/lib/creative-verdict"
 import { AccountLinesChart } from "./AccountLinesChart"
 import { VerdictBadge } from "./VerdictBadge"
@@ -195,6 +195,29 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
     }
   }
 
+  const pauseEverywhere = async () => {
+    let ok = false
+    try {
+      ok = await confirm({
+        title: "Pause everywhere?",
+        description: "Every ad in this test is paused in Meta, in all accounts. You can set them live again in Meta.",
+        confirmLabel: "Pause everywhere",
+      })
+    } catch {
+      ok = false
+    }
+    if (!ok) return
+    setBusy("pause")
+    try {
+      await pauseCreativeAds(testId)
+      toast.success("Paused everywhere")
+    } catch (err) {
+      toast.error("Couldn't pause", { description: err?.message })
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const archive = async () => {
     let ok = false
     try {
@@ -276,8 +299,10 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
         <SheetFooter>
           <Button variant="ghost" size="sm" disabled={!test} onClick={addAccounts}>Add accounts</Button>
           <Button variant="ghost" size="sm" disabled={!test} onClick={editTargets}>Edit targets</Button>
-          {/* "Pause everywhere" arrives with the Phase 2 pause endpoint. */}
-          <Button variant="ghost" size="sm" className="ml-auto text-danger-ink" disabled={!test} loading={busy === "archive"} onClick={archive}>
+          <Button variant="ghost" size="sm" className="ml-auto" disabled={!test} loading={busy === "pause"} onClick={pauseEverywhere}>
+            Pause everywhere
+          </Button>
+          <Button variant="ghost" size="sm" className="text-danger-ink" disabled={!test} loading={busy === "archive"} onClick={archive}>
             Archive
           </Button>
         </SheetFooter>

@@ -118,6 +118,11 @@ export function retryCreativeAd(id, adRowId, patch) {
   return mutating(id, `${queryKeys.creative(id)}/ads/${adRowId}/retry`, "POST", patch ? { patch } : {})
 }
 
+/** Pauses the test's ads in Meta: in `adAccountIds` only, or everywhere when omitted. Status shows after the next re-read. */
+export function pauseCreativeAds(id, adAccountIds) {
+  return mutating(id, `${queryKeys.creative(id)}/pause`, "POST", adAccountIds?.length ? { ad_account_ids: adAccountIds } : {})
+}
+
 /** Attaches an existing Meta ad to the test. 409 when it cannot be adopted. */
 export function adoptCreativeAd(id, adId) {
   return mutating(id, `${queryKeys.creative(id)}/adopt`, "POST", { ad_id: adId })

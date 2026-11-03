@@ -113,13 +113,13 @@ describe("CreativeDetailSheet", () => {
     for (const l of ["CPL", "CTR", "Hook", "Leads"]) expect(screen.getByRole("tab", { name: l })).toBeInTheDocument()
   })
 
-  it("footer routes to the wizard steps and hides Pause everywhere", () => {
+  it("footer routes to the wizard steps and shows Pause everywhere", () => {
     setup()
     fireEvent.click(screen.getByRole("button", { name: "Add accounts" }))
     expect(push).toHaveBeenCalledWith("/campaigns/creatives/new?test=t1&step=accounts")
     fireEvent.click(screen.getByRole("button", { name: "Edit targets" }))
     expect(push).toHaveBeenCalledWith("/campaigns/creatives/new?test=t1&step=targets")
-    expect(screen.queryByRole("button", { name: /Pause everywhere/ })).toBeNull()
+    expect(screen.getByRole("button", { name: /Pause everywhere/ })).toBeInTheDocument()
   })
 
   it("Refresh calls the API", async () => {

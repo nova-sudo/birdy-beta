@@ -259,6 +259,8 @@ export function usePortfolioData({
             client: s.client ?? "",
             title: s.title ?? "",
             why: s.description ?? s.why ?? "",
+            creative_test_id: s.creative_test_id ?? null,
+            rule_id: s.rule_id ?? null,
           })),
           activity: changes.map((a) => ({
             id: a.id,

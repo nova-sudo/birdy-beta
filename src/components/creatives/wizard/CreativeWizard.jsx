@@ -6,7 +6,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 
 import { Button, ErrorState, Notice, PageHeader, Skeleton } from "@/components/ds"
 import { WizardSteps } from "@/components/agents/WizardSteps"
-import { useCreativeTest } from "@/lib/creatives-api"
+import { useCreativeAdAccounts, useCreativeTest } from "@/lib/creatives-api"
 import { AdPreview } from "./AdPreview"
 import { StepAccounts, accountsStepValid } from "./StepAccounts"
 import { StepCreative, creativeStepValid } from "./StepCreative"
@@ -37,13 +37,19 @@ function replaceUrl(pathname, params) {
 export function CreativeWizard({ testId }) {
   const search = useSearchParams()
   const router = useRouter()
-  const [stepKey, setStepKey] = useState(() => (STEP_KEYS.includes(search?.get("step")) ? search.get("step") : "creative"))
+  // ?scale=<id>: scale a test into more accounts. It opens that test in add-accounts mode on the Accounts step.
+  const scaleId = testId ? null : search?.get("scale") || null
+  const loadId = testId ?? scaleId
+  const [stepKey, setStepKey] = useState(() =>
+    scaleId ? "accounts" : STEP_KEYS.includes(search?.get("step")) ? search.get("step") : "creative"
+  )
   const [moving, setMoving] = useState(false)
   // Add-accounts mode: new selections stay here (the posted creative is read-only); step 4 posts them.
   const [addRows, setAddRows] = useState([])
   const [justPosted, setJustPosted] = useState(false)
 
-  const { test, isLoading, error: loadError } = useCreativeTest(testId)
+  const { test, isLoading, error: loadError } = useCreativeTest(loadId)
+  const { accounts: allAccounts } = useCreativeAdAccounts()
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -51,7 +57,7 @@ export function CreativeWizard({ testId }) {
       mounted.current = false
     }
   }, [])
-  const { draft, setField, setFields, save, getId, error } = useCreativeDraft(testId, {
+  const { draft, setField, setFields, save, getId, error } = useCreativeDraft(loadId, {
     onCreated: (created) => {
       // A create that lands after the user left (or moved on) must not rewrite the address.
       if (!mounted.current || window.location.pathname !== NEW_PATH) return
@@ -65,10 +71,26 @@ export function CreativeWizard({ testId }) {
   useEffect(() => {
     if (pathApplied.current) return
     pathApplied.current = true
-    if (!testId && search?.get("path") === "revive") setFields({ origin: "revive" }, { silent: true })
-  }, [testId, search, setFields])
+    if (!loadId && search?.get("path") === "revive") setFields({ origin: "revive" }, { silent: true })
+  }, [loadId, search, setFields])
 
   const step = STEP_KEYS.indexOf(stepKey) + 1
+
+  // Scale: pre-check every account the test does not run in yet, once the test and the accounts are in.
+  const scalePrefilled = useRef(false)
+  useEffect(() => {
+    if (!scaleId || scalePrefilled.current || !test || !allAccounts.length) return
+    scalePrefilled.current = true
+    const used = new Set((test.ads ?? []).map((a) => a.ad_account_id))
+    const c = test.creative ?? {}
+    // A revived video still lives on its source account until it is uploaded.
+    const blocked = (act) => test.origin === "revive" && c.media?.video_id && !c.media?.blob_url && act !== test.source?.ad_account_id
+    setAddRows(
+      allAccounts
+        .filter((a) => !used.has(a.ad_account_id) && !blocked(a.ad_account_id))
+        .map((a) => ({ ad_account_id: a.ad_account_id, client_group_id: null, adset_id: null, adset_name: null, page_id: null, lead_form_id: null }))
+    )
+  }, [scaleId, test, allAccounts])
 
   async function go(key) {
     setMoving(true)
@@ -118,7 +140,7 @@ export function CreativeWizard({ testId }) {
     router.push(`${LIST_PATH}&creative=${draft.code}`)
   }
 
-  if (testId && loadError) {
+  if (loadId && loadError) {
     return <ErrorState title="Couldn't load this draft" description={loadError.message} />
   }
 
@@ -131,7 +153,7 @@ export function CreativeWizard({ testId }) {
       />
       <WizardSteps current={step} steps={CREATIVE_STEPS} ariaLabel="Creative test steps" />
 
-      {testId && isLoading && !draft.id ? (
+      {loadId && isLoading && !draft.id ? (
         <Skeleton className="h-96 w-full rounded-frame" />
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
