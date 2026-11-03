@@ -95,7 +95,7 @@ describe("AdPreview", () => {
     expect(screen.getByTestId("preview-media").className).toMatch(/w-full/)
     await userEvent.click(screen.getByRole("tab", { name: "Stories" }))
     const cls = screen.getByTestId("preview-media").className
-    expect(cls).not.toMatch(/\bw-full\b/)
+    expect(cls).not.toMatch(/(^| )w-full( |$)/)
     expect(cls).toMatch(/h-\[420px\]/)
   })
 
