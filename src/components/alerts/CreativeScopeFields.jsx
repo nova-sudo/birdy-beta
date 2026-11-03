@@ -14,6 +14,9 @@ export const LIVE_TEST_STATUSES = ["posting", "testing", "winner", "loser", "inc
 export default function CreativeScopeFields({ value, onChange, tests }) {
   const live = (tests ?? []).filter((t) => LIVE_TEST_STATUSES.includes(t.status))
   const all = value.length === 0
+  const liveIds = new Set(live.map((t) => t.id))
+  // Saved ids that are no longer live stay listed (checked) so they can be dropped.
+  const stale = value.filter((id) => !liveIds.has(id))
 
   const toggle = (id) =>
     onChange(value.includes(id) ? value.filter((v) => v !== id) : [...value, id])
@@ -30,7 +33,7 @@ export default function CreativeScopeFields({ value, onChange, tests }) {
           disabled={all && live.length === 0}
         />
       </div>
-      {live.length === 0 ? (
+      {live.length === 0 && stale.length === 0 ? (
         <p className="text-sm text-muted-foreground">No live tests yet. The alert will cover tests as they go live.</p>
       ) : (
         <div className="max-h-[220px] overflow-y-auto rounded-2xl border border-pd-border divide-y divide-pd-divider">
@@ -45,6 +48,18 @@ export default function CreativeScopeFields({ value, onChange, tests }) {
               <span className="text-sm truncate">{t.name}</span>
             </label>
           ))}
+          {stale.map((id) => {
+            const t = (tests ?? []).find((x) => x.id === id)
+            const label = t ? `${t.code} ${t.name}` : id
+            return (
+              <label key={id} className="flex items-center gap-3 px-3 py-2.5 cursor-pointer hover:bg-pd-table-head transition-colors">
+                <Checkbox aria-label={`${label} (not live)`} checked onCheckedChange={() => toggle(id)} />
+                {t && <span className="text-xs font-mono text-muted-foreground">{t.code}</span>}
+                <span className="text-sm truncate">{t ? t.name : id}</span>
+                <span className="text-xs text-muted-foreground">(not live)</span>
+              </label>
+            )
+          })}
         </div>
       )}
     </div>

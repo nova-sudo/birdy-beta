@@ -149,6 +149,10 @@ export function conditionSummary(alert) {
   const op = condition.operator
   const val = condition.value
 
+  if (isCreativeMetric(condition.metric)) {
+    if (condition.metric === "creative_verdict") return "Winner or loser"
+    if (condition.metric === "creative_post_failed") return "Any failed post"
+  }
   if (op === "pct_drop") return `↓ ${val}%  vs ${condition.period || "week"}`
   if (op === "pct_rise") return `↑ ${val}%  vs ${condition.period || "week"}`
   if (op === "gt") return `> ${val}`

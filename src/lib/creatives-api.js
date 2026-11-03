@@ -19,9 +19,9 @@ async function testsFetcher(endpoint) {
   return Array.isArray(data?.items) ? data.items : []
 }
 
-/** Creative tests, each with its ads. @returns {{ tests: object[], error, isLoading, mutate }} */
+/** Creative tests, each with its ads. Pass `null` as the filters to skip the fetch. @returns {{ tests: object[], error, isLoading, mutate }} */
 export function useCreativeTests(filters) {
-  const { data, error, isLoading, mutate } = useSWR(listKey(filters), testsFetcher)
+  const { data, error, isLoading, mutate } = useSWR(filters === null ? null : listKey(filters), testsFetcher)
   return { tests: data ?? [], error, isLoading, mutate }
 }
 

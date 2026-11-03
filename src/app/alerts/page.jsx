@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react"
+import { useState, useEffect, useCallback, useMemo, Suspense, createContext, useContext } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -142,6 +142,33 @@ function ClientProgressBar({ pct }) {
 
 // ── Group triggered rows by parent alert ──────────────────────────────────────
 
+// Test id -> code, for the creative alerts' target column.
+const CreativeCodesContext = createContext({})
+
+function CreativeTargets({ alert }) {
+  const codes = useContext(CreativeCodesContext)
+  const ids = alert.creative_test_ids || []
+  return (
+    <div className="flex flex-col gap-0.5 max-w-[180px]">
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {alert.tracking_mode === "per_client" ? (
+          <Badge className="text-[10.5px] px-2 py-0 gap-1"><User className="h-2.5 w-2.5" /> Per account</Badge>
+        ) : (
+          <Badge variant="secondary" className="text-[10.5px] px-2 py-0 gap-1"><Layers className="h-2.5 w-2.5" /> Total</Badge>
+        )}
+      </div>
+      {ids.length === 0 ? (
+        <span className="text-sm">All live tests</span>
+      ) : (
+        <>
+          {ids.slice(0, 2).map((id) => <span key={id} className="text-sm truncate">{codes[id] || id}</span>)}
+          {ids.length > 2 && <span className="text-xs text-muted-foreground">+{ids.length - 2} more</span>}
+        </>
+      )}
+    </div>
+  )
+}
+
 function groupTriggeredRows(rows) {
   const map = new Map()
   for (const row of rows) {
@@ -161,6 +188,8 @@ function groupTriggeredRows(rows) {
           tracking_mode: row.tracking_mode,
           target_group_ids: row.target_group_ids,
           target_group_names: row.target_group_names,
+          scope: row.scope,
+          creative_test_ids: row.creative_test_ids,
           updated_at: row.updated_at,
           last_triggered_at: row.last_triggered_at,
           status: "triggered",
@@ -349,6 +378,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
 
       {/* Targets */}
       <td className="py-3 px-4 align-middle min-w-[140px]" onClick={e => e.stopPropagation()}>
+        {parentAlert.scope === "creative_tests" ? <CreativeTargets alert={{ ...parentAlert, tracking_mode: "per_client" }} /> : (
         <div className="flex flex-col gap-0.5 max-w-[180px]">
           <Badge className="text-[10.5px] px-2 py-0 gap-1 w-fit">
             <User className="h-2.5 w-2.5" /> Per Client
@@ -360,6 +390,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
             <span className="text-xs text-muted-foreground">+{parentAlert.target_group_ids.length - 2} more</span>
           )}
         </div>
+        )}
       </td>
 
       {/* Last updated */}
@@ -445,7 +476,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
       <td className="py-3 px-4 align-middle"><ProgressToTrigger alert={alert} /></td>
       <td className="py-3 px-4 align-middle min-w-[120px]">{statusBadge(alert.status, alert.snoozed_until)}</td>
       <td className="py-3 px-4 align-middle min-w-[140px]">
-        {alert.target_group_ids?.length ? (
+        {alert.scope === "creative_tests" ? <CreativeTargets alert={alert} /> : alert.target_group_ids?.length ? (
           <div className="flex flex-col gap-0.5 max-w-[180px]">
             <div className="flex items-center gap-1.5 mb-0.5">
               {alert.tracking_mode === "per_client" ? (
@@ -741,7 +772,10 @@ function AlertsPageContent() {
 
   // Build metric options for the MetricPicker (tabs + icons)
   const isCreative = form.scope === "creative_tests"
-  const { tests: creativeTests } = useCreativeTests({})
+  // Fetch tests only while they are needed: the editor is open, or a listed alert targets tests.
+  const hasCreativeAlerts = ["active", "triggered", "paused"].some(k => (alerts[k] || []).some(a => a.scope === "creative_tests"))
+  const { tests: creativeTests } = useCreativeTests(dialogOpen || hasCreativeAlerts ? {} : null)
+  const creativeCodes = useMemo(() => Object.fromEntries((creativeTests || []).map(t => [t.id, t.code])), [creativeTests])
   const noThreshold = isCreative ? CREATIVE_NO_THRESHOLD[form.metric] : null
 
   const changeScope = (scope) => setForm(f => {
@@ -753,7 +787,8 @@ function AlertsPageContent() {
   const changeCreativeMetric = (metric) => setForm(f => {
     const fixed = CREATIVE_NO_THRESHOLD[metric]
     const operator = fixed ? fixed.operator : (CREATIVE_OPERATOR_OPTIONS.some(o => o.value === f.operator) ? f.operator : "gt")
-    return { ...f, metric, operator }
+    const wasFixed = !!CREATIVE_NO_THRESHOLD[f.metric]
+    return { ...f, metric, operator, value: wasFixed && !fixed ? "" : f.value }
   })
 
   const alertMetricOptions = useMemo(() =>
@@ -1049,6 +1084,7 @@ function AlertsPageContent() {
   }
 
   return (
+    <CreativeCodesContext.Provider value={creativeCodes}>
     <main className={`${pdFontClass} w-full min-w-0`}>
       <div className=" mx-auto">
 
@@ -1596,6 +1632,7 @@ function AlertsPageContent() {
         </DialogContent>
       </Dialog>
     </main>
+    </CreativeCodesContext.Provider>
   )
 }
 
