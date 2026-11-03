@@ -214,7 +214,7 @@ re-run from the failed step.
 The backend runs on Vercel, whose request bodies cap at 4.5 MB, and videos are
 often 20–100 MB. So the browser uploads directly to **Vercel Blob** (client upload,
 token issued by a new Next.js route `src/app/api/creatives/upload/route.js`), and
-only the resulting URL goes to the backend. Meta pulls videos from that URL
+only the resulting URL goes to the backend. Because the auth cookie lives on the backend domain, the backend first issues a short-lived HMAC-signed upload grant (`POST /api/creatives/upload-grant`) that the Next route verifies before issuing the Blob token. Meta pulls videos from that URL
 (`file_url`). Limits: images ≤ 30 MB (jpg/png), videos ≤ 1 GB (mp4/mov), enforced
 client-side and by the token route. Blobs are deleted 30 days after the test is
 archived (handled by the cleanup cron).
@@ -260,7 +260,7 @@ via a suggestion, rather than silently tracking them.
   + "7/9 pass"), Spend, Leads, CPL vs target, CTR, Hook, Progress to verdict
   (`ProgressBar`), Verdict (`Badge`). Child columns: account name, act id,
   ad set, pass/fail/scoring badge, same metrics, progress to floor, row action
-  (Scale budget / Pause here / Retry).
+  (Pause here / Retry). There is no budget action: the user owns the ad set and its budget.
 - Client-group picker filters tests to those with ≥1 ad in that group's account;
   date picker does **not** apply (tests have their own window), and the tab
   says so in the toolbar.
