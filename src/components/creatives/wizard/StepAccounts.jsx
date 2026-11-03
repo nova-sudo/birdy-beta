@@ -62,7 +62,7 @@ function AccountPanel({ account, entry, draft, update, onAdsets, canApply, apply
 
   // A changed destination can leave a choice that no longer fits: clear it once the ad sets are known.
   useEffect(() => {
-    if (adsetsLoading || adsetError) return
+    if (adsetsLoading || adsetError || !destination) return
     const patch = {}
     if (entry.adset_id) {
       const chosen = adsets.find((a) => a.id === entry.adset_id)
