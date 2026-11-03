@@ -3,16 +3,16 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 
-const hooks = { accounts: [], adsets: {}, pages: {}, forms: {}, adsetErrors: {}, loading: {} }
+const hooks = { accounts: [], adsets: {}, pages: {}, forms: {}, adsetErrors: {}, loading: {}, metaDown: null }
 vi.mock("@/lib/creatives-api", () => ({
   useCreativeAdAccounts: () => ({ accounts: hooks.accounts, isLoading: false, error: null }),
   useCreativeAdsets: (act) => ({
     adsets: hooks.adsets[act] ?? [],
-    error: hooks.adsetErrors[act] ? new Error(hooks.adsetErrors[act]) : null,
+    error: hooks.adsetErrors[act] || hooks.metaDown ? new Error(hooks.adsetErrors[act] ?? hooks.metaDown) : null,
     isLoading: !!hooks.loading[act],
   }),
-  useCreativePages: (act) => ({ pages: hooks.pages[act] ?? [], isLoading: false, error: null }),
-  useCreativeLeadForms: (pid) => ({ forms: hooks.forms[pid] ?? [], isLoading: false, error: null }),
+  useCreativePages: (act) => ({ pages: hooks.pages[act] ?? [], isLoading: false, error: hooks.metaDown ? new Error(hooks.metaDown) : null }),
+  useCreativeLeadForms: (pid) => ({ forms: hooks.forms[pid] ?? [], isLoading: false, error: hooks.metaDown ? new Error(hooks.metaDown) : null }),
 }))
 
 import { StepAccounts, accountsStepValid } from "../StepAccounts"
@@ -43,6 +43,7 @@ beforeEach(() => {
   }
   hooks.forms = { p1: [{ id: "f1", name: "Form One" }], p9: [{ id: "f9", name: "Form Nine" }], p2: [{ id: "f2", name: "Form Two" }] }
   hooks.adsetErrors = {}
+  hooks.metaDown = null
   hooks.loading = {}
 })
 
@@ -186,6 +187,24 @@ describe("StepAccounts", () => {
     await user.click(screen.getByRole("checkbox", { name: "Select Birch" }))
     expect(screen.getByText(/Meta is down/)).toBeInTheDocument()
     expect(screen.getByRole("combobox", { name: "Ad set for Birch" })).toBeInTheDocument()
+  })
+})
+
+describe("StepAccounts Meta failure", () => {
+  it("shows one banner per account, not one per failing request", async () => {
+    hooks.adsetErrors.act_1 = "Meta is down"
+    const { user } = setup()
+    await user.click(screen.getByRole("checkbox", { name: "Select Harbour Finance" }))
+    await user.click(screen.getByRole("checkbox", { name: "Select Birch" }))
+    expect(screen.getAllByText(/Meta is down/)).toHaveLength(1)
+  })
+
+  it("collapses to one banner for the step when every account fails the same way", async () => {
+    hooks.metaDown = "Meta is not connected"
+    const { user } = setup()
+    await user.click(screen.getByRole("checkbox", { name: "Select Harbour Finance" }))
+    await user.click(screen.getByRole("checkbox", { name: "Select Birch" }))
+    expect(screen.getAllByText(/Meta is not connected/)).toHaveLength(1)
   })
 })
 

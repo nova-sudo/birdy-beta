@@ -27,6 +27,30 @@ describe("CreativeTestCard", () => {
     expect(screen.getByText(/Acme/)).toBeInTheDocument()
   })
 
+  it("lays out header, a definition table, accounts and warnings as a Notice", () => {
+    render(<CreativeTestCard data={{ ...data, winner_text: "At least 60% of scored accounts pass" }} onSend={vi.fn()} />)
+    const header = screen.getByText("CT-0048").parentElement
+    expect(header).toHaveTextContent("Spring promo")
+    const table = screen.getByRole("table")
+    const rows = Object.fromEntries(
+      [...table.querySelectorAll("tr")].map((tr) => [tr.querySelector("th").textContent, tr.querySelector("td").textContent])
+    )
+    expect(rows).toEqual({
+      Targets: "CPL under $25",
+      "Winner when": "At least 60% of scored accounts pass",
+      Destination: "Website: https://a.test",
+      "Posts as": "Paused, then live together once all 2 accept",
+    })
+    const warn = screen.getByText("No metric targets set").closest('[data-slot="notice"]')
+    expect(warn).toHaveClass("bg-warning-soft")
+  })
+
+  it("omits definition rows it has no data for", () => {
+    render(<CreativeTestCard data={{ ...data, targets_text: undefined, posts_as: undefined }} onSend={vi.fn()} />)
+    const heads = [...screen.getByRole("table").querySelectorAll("th")].map((th) => th.textContent)
+    expect(heads).toEqual(["Destination"])
+  })
+
   it("Post sends the exact text once and disables", async () => {
     const onSend = vi.fn()
     render(<CreativeTestCard data={data} onSend={onSend} />)

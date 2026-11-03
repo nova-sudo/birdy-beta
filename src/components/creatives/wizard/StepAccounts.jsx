@@ -48,7 +48,7 @@ function Field({ id, label, children }) {
   )
 }
 
-function AccountPanel({ account, entry, draft, update, onAdsets, canApply, applyBusy, onApply }) {
+function AccountPanel({ account, entry, draft, update, onAdsets, onError, hideError, canApply, applyBusy, onApply }) {
   const act = account.ad_account_id
   const destination = draft.creative.destination
   const { adsets, error: adsetError, isLoading: adsetsLoading } = useCreativeAdsets(act, destination)
@@ -79,15 +79,17 @@ function AccountPanel({ account, entry, draft, update, onAdsets, canApply, apply
     update(act, { page_id: pages.some((p) => p.id === source) ? source : pages[0].id })
   }, [act, entry.page_id, pages, draft.source?.page_id, update])
 
-  const errors = [adsetError, pageError, formError].filter(Boolean)
+  // The three requests usually fail together with the same message: one banner per account.
+  const errorMessage = [adsetError, pageError, formError].filter(Boolean).map((e) => e.message)[0] ?? null
+  useEffect(() => {
+    onError(act, errorMessage)
+  }, [act, errorMessage, onError])
 
   return (
     <div className="flex flex-col gap-3 border-t border-border/60 pt-3">
-      {errors.map((e, i) => (
-        <Notice key={i} tone="danger">
-          Couldn't load this account from Meta: {e.message}
-        </Notice>
-      ))}
+      {errorMessage && !hideError && (
+        <Notice tone="danger">Couldn't load this account from Meta: {errorMessage}</Notice>
+      )}
       <div className="flex flex-col gap-3 sm:flex-row">
         <Field id={`page-${act}`} label="Page">
           {pagesLoading ? (
@@ -205,6 +207,14 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
       setAdsetsByAccount((m) => (m[act]?.adsets === adsets && m[act]?.loading === loading ? m : { ...m, [act]: { adsets, loading } })),
     []
   )
+  const [errorsByAccount, setErrorsByAccount] = useState({})
+  const onError = useCallback(
+    (act, message) => setErrorsByAccount((m) => (m[act] === message ? m : { ...m, [act]: message })),
+    []
+  )
+  // Every chosen account failing with the same message: say it once for the step.
+  const messages = rows.map((r) => errorsByAccount[r.ad_account_id] ?? null)
+  const sharedError = rows.length > 1 && messages[0] && messages.every((m) => m === messages[0]) ? messages[0] : null
   const [missed, setMissed] = useState(null)
   const selectable = accounts.filter((a) => !locked.has(a.ad_account_id) && !videoBlocked(draft, a.ad_account_id))
   const chosen = new Set(rows.map((r) => r.ad_account_id))
@@ -251,6 +261,7 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
             <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(v === true)} aria-label="Select all accounts" />
             Select all
           </label>
+          {sharedError && <Notice tone="danger">Couldn't load these accounts from Meta: {sharedError}</Notice>}
           {rows.length > 1 && applyBusy && <p className="text-xs text-muted-foreground">Waiting for every ad set list to load before ad sets can be applied to all.</p>}
           {missed > 0 && (
             <p className="text-xs text-muted-foreground">
@@ -287,6 +298,8 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
                     draft={draft}
                     update={update}
                     onAdsets={onAdsets}
+                    onError={onError}
+                    hideError={!!sharedError}
                     canApply={rows.length > 1}
                     applyBusy={applyBusy}
                     onApply={applyToAll}

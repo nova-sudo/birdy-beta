@@ -8,7 +8,8 @@ import {
   BirdyRead,
   Button,
   Frame,
-  MetricGroup,
+  FrameSurface,
+  MetricGroupCell,
   SegmentedTabs,
   Sheet,
   SheetBody,
@@ -22,8 +23,15 @@ import {
   toast,
 } from "@/components/ds"
 import { currencySymbol } from "@/lib/chat-viz"
-import { archiveCreativeTest, pauseCreativeAds, refreshCreativeTest, useCreativeTest } from "@/lib/creatives-api"
-import { formatCpl, floorProgress, scoreTone } from "@/lib/creative-verdict"
+import {
+  archiveCreativeTest,
+  pauseCreativeAds,
+  refreshCreativeTest,
+  retryCreativeAd,
+  useCreativeAdAccounts,
+  useCreativeTest,
+} from "@/lib/creatives-api"
+import { adCurrency, formatCpl, floorProgress, scoreTone, testCurrency } from "@/lib/creative-verdict"
 import { AccountLinesChart } from "./AccountLinesChart"
 import { VerdictBadge } from "./VerdictBadge"
 
@@ -100,10 +108,20 @@ function Kpis({ test, currency }) {
       caption: targetCaption(t, "hook_rate", (v) => `${v}%`),
     })
   }
-  return <MetricGroup items={items} />
+  // Straight on the sheet: MetricGroup's frame would add an empty header band, and its
+  // container breakpoints keep a 720px sheet at two across. Four across from 1024px.
+  return (
+    <FrameSurface>
+      <div data-slot="metric-group" className="grid grid-cols-2 overflow-clip lg:grid-cols-4">
+        {items.map((item) => (
+          <MetricGroupCell key={item.key} item={item} />
+        ))}
+      </div>
+    </FrameSurface>
+  )
 }
 
-function AccountsTable({ test, currency }) {
+function AccountsTable({ test, currency, onAction }) {
   const ads = sortByCpl(test.ads ?? [])
   const isImage = test.creative?.format === "image"
   return (
@@ -126,11 +144,12 @@ function AccountsTable({ test, currency }) {
             <th className="px-2 py-2 text-right font-medium">CPL</th>
             <th className="px-2 py-2 text-right font-medium">{isImage ? "CTR" : "Hook"}</th>
             <th className="px-4 py-2 font-medium">Progress</th>
+            <th className="px-4 py-2" aria-label="Actions" />
           </tr>
         </thead>
         <tbody className="divide-y divide-divider">
           {ads.map((ad) => {
-            const cur = ad.currency ?? currency
+            const cur = adCurrency(ad, test, currency)
             const b = adBadge(ad)
             const fp = ad.score?.state === "scoring" ? floorProgress(ad.score, test.targets, cur) : null
             return (
@@ -149,6 +168,17 @@ function AccountsTable({ test, currency }) {
                   {isImage ? pct(ad.score?.ctr) : pct(ad.score?.hook_rate)}
                 </td>
                 <td className="px-4 py-2.5 text-xs text-muted-foreground">{fp ? fp.label : ""}</td>
+                <td className="px-4 py-2.5 text-right">
+                  {ad.post_state === "failed" ? (
+                    <Button variant="outline" size="sm" title={errorText(ad.post_error)} onClick={() => onAction(ad, "retry")}>
+                      Retry
+                    </Button>
+                  ) : ad.score?.state === "fail" && ad.post_state !== "removed" ? (
+                    <Button variant="outline" size="sm" className="text-danger-ink" onClick={() => onAction(ad, "pause")}>
+                      Pause here
+                    </Button>
+                  ) : null}
+                </td>
               </tr>
             )
           })}
@@ -157,6 +187,8 @@ function AccountsTable({ test, currency }) {
     </Frame>
   )
 }
+
+const errorText = (e) => (typeof e === "string" ? e : e?.message)
 
 const WIZARD = "/campaigns/creatives/new"
 
@@ -172,7 +204,15 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
 
   const isImage = test?.creative?.format === "image"
   const active = isImage && metric === "hook" ? "cpl" : metric
-  const currency = test?.summary?.currency ?? "GBP"
+  const currency = testCurrency(test, "GBP")
+  const { accounts: allAccounts } = useCreativeAdAccounts()
+  const posted = new Set((test?.ads ?? []).map((a) => a.ad_account_id))
+  const scaleCount = test?.status === "winner" ? allAccounts.filter((a) => !posted.has(a.ad_account_id)).length : 0
+  const summary = test?.summary
+  const verdictCount =
+    ["winner", "loser", "inconclusive"].includes(test?.status) && num(summary?.accounts_total) > 0
+      ? `${num(summary.accounts_pass) ?? 0} of ${summary.accounts_total}`
+      : undefined
 
   const tabs = [
     { value: "cpl", label: "CPL" },
@@ -192,6 +232,35 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
       toast.error("Couldn't refresh", { description: err?.message })
     } finally {
       setBusy(null)
+    }
+  }
+
+  const onAccountAction = async (ad, action) => {
+    if (action === "retry") {
+      try {
+        await retryCreativeAd(testId, ad.id)
+        toast.success("Retrying", { description: `${test.code} in ${ad.ad_account_id}` })
+      } catch (err) {
+        toast.error("Couldn't retry", { description: err?.message })
+      }
+      return
+    }
+    let ok = false
+    try {
+      ok = await confirm({
+        title: "Pause this account's ad?",
+        description: `${test.code} stops spending in ${ad.ad_account_id}. Other accounts keep running.`,
+        confirmLabel: "Pause here",
+      })
+    } catch {
+      ok = false
+    }
+    if (!ok) return
+    try {
+      await pauseCreativeAds(testId, [ad.ad_account_id])
+      toast.success("Paused", { description: `${test.code} in ${ad.ad_account_id}` })
+    } catch (err) {
+      toast.error("Couldn't pause", { description: err?.message })
     }
   }
 
@@ -264,10 +333,15 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
               : "Loading"}
           </SheetDescription>
           {test && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
-              <VerdictBadge status={test.status} />
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <VerdictBadge status={test.status} detail={verdictCount} />
               <Badge tone="neutral" size="sm">{isImage ? "Image" : "Video"}</Badge>
               {DEST[test.creative?.destination] && <Badge tone="neutral" size="sm">{DEST[test.creative.destination]}</Badge>}
+              {scaleCount > 0 && (
+                <Button variant="primary" size="sm" className="ml-auto" onClick={() => router.push(`${WIZARD}?scale=${testId}`)}>
+                  Scale to {scaleCount} more
+                </Button>
+              )}
             </div>
           )}
         </SheetHeader>
@@ -286,7 +360,7 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
               >
                 <AccountLinesChart days={test.days ?? {}} ads={test.ads ?? []} targets={test.targets} metric={active} currency={currency} />
               </Frame>
-              <AccountsTable test={test} currency={currency} />
+              <AccountsTable test={test} currency={currency} onAction={onAccountAction} />
               <BirdyRead
                 findings={[]}
                 prompt={`Tell me about creative test ${test.code}`}

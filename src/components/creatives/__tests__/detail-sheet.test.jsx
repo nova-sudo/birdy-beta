@@ -1,17 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { ConfirmHost } from "@/components/ds"
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react"
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
 
 const archiveCreativeTest = vi.fn(() => Promise.resolve({}))
 const refreshCreativeTest = vi.fn(() => Promise.resolve({}))
+const pauseCreativeAds = vi.fn(() => Promise.resolve({}))
+const retryCreativeAd = vi.fn(() => Promise.resolve({}))
 let current = null
+let allAccounts = ["act_1", "act_2", "act_3", "act_4", "act_5"]
 vi.mock("@/lib/creatives-api", () => ({
   useCreativeTest: () => ({ test: current, isLoading: !current }),
   archiveCreativeTest: (...a) => archiveCreativeTest(...a),
   refreshCreativeTest: (...a) => refreshCreativeTest(...a),
+  pauseCreativeAds: (...a) => pauseCreativeAds(...a),
+  retryCreativeAd: (...a) => retryCreativeAd(...a),
+  useCreativeAdAccounts: () => ({ accounts: allAccounts.map((id) => ({ ad_account_id: id })), isLoading: false }),
 }))
 
 globalThis.ResizeObserver ??= class {
@@ -53,6 +59,8 @@ const setup = (test = make()) => {
   push.mockClear()
   archiveCreativeTest.mockClear()
   refreshCreativeTest.mockClear()
+  pauseCreativeAds.mockClear()
+  retryCreativeAd.mockClear()
   const onOpenChange = vi.fn()
   render(
     <>
@@ -131,6 +139,58 @@ describe("CreativeDetailSheet", () => {
   it("removed account is labelled, not failed", () => {
     setup(make({ ads: [ad("9", "Gone Co", null, "removed", { post_state: "removed" })] }))
     expect(screen.getByText("Removed in Meta")).toBeInTheDocument()
+  })
+})
+
+describe("CreativeDetailSheet header and actions", () => {
+  beforeEach(() => {
+    current = null
+    allAccounts = ["act_1", "act_2", "act_3", "act_4", "act_5"]
+  })
+
+  it("KPI tiles sit directly on the sheet (no empty frame band) and go 4 across from lg", () => {
+    setup()
+    const cell = screen.getAllByText("Spend")[0].closest('[data-slot="metric-group-cell"]')
+    expect(cell.closest('[data-slot="frame"]')).toBeNull()
+    expect(cell.parentElement.className).toMatch(/lg:grid-cols-4/)
+    expect(cell.parentElement.className).toMatch(/grid-cols-2/)
+  })
+
+  it("shows the verdict with the pass count", () => {
+    setup()
+    expect(screen.getByText("Winner · 2 of 3")).toBeInTheDocument()
+  })
+
+  it("a winner offers Scale to N more, opening the wizard with ?scale=", () => {
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: "Scale to 2 more" }))
+    expect(push).toHaveBeenCalledWith("/campaigns/creatives/new?scale=t1")
+  })
+
+  it("no Scale button for a test that is not a winner or has nowhere to scale", () => {
+    setup(make({ status: "testing" }))
+    expect(screen.queryByRole("button", { name: /Scale to/ })).toBeNull()
+    cleanup()
+    allAccounts = ["act_1", "act_2", "act_3"]
+    setup()
+    expect(screen.queryByRole("button", { name: /Scale to/ })).toBeNull()
+  })
+
+  it("a failing account offers Pause here, after a confirm", async () => {
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: "Pause here" }))
+    expect(pauseCreativeAds).not.toHaveBeenCalled()
+    const confirmBtn = (await screen.findAllByRole("button", { name: "Pause here" })).pop()
+    fireEvent.click(confirmBtn)
+    await waitFor(() => expect(pauseCreativeAds).toHaveBeenCalledWith("t1", ["act_1"]))
+  })
+
+  it("a failed post offers Retry", async () => {
+    setup(make({ ads: [ad("5", "Fail Co", null, "scoring", { post_state: "failed", post_error: { message: "Page not allowed" } })] }))
+    const btn = screen.getByRole("button", { name: "Retry" })
+    expect(btn).toHaveAttribute("title", "Page not allowed")
+    fireEvent.click(btn)
+    await waitFor(() => expect(retryCreativeAd).toHaveBeenCalledWith("t1", "5"))
   })
 })
 

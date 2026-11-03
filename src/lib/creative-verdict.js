@@ -50,3 +50,22 @@ export function formatCpl(score, currency) {
   }
   return fin(score?.spend) > 0 ? "— · 0 leads" : "—"
 }
+
+/**
+ * The currency a test's totals are shown in: its summary's (the user's currency), else
+ * whatever its ads report, else `fallback` (callers pass a sibling test's currency, then a default).
+ */
+export function testCurrency(test, fallback) {
+  const ads = test?.ads ?? []
+  return (
+    test?.summary?.currency ??
+    ads.find((a) => a?.currency)?.currency ??
+    ads.find((a) => a?.score?.currency)?.score?.currency ??
+    fallback
+  )
+}
+
+/** One ad's currency: its own, else its test's (see testCurrency). */
+export function adCurrency(ad, test, fallback) {
+  return ad?.currency ?? ad?.score?.currency ?? testCurrency(test, fallback)
+}

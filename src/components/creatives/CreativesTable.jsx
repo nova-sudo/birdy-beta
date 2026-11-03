@@ -4,7 +4,7 @@ import * as React from "react"
 import { ChevronRight } from "lucide-react"
 import { Badge, Button, DataTable, ProgressBar } from "@/components/ds"
 import { currencySymbol } from "@/lib/chat-viz"
-import { floorProgress, formatCpl, scoreTone } from "@/lib/creative-verdict"
+import { adCurrency, floorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
 import { AccountDotStrip } from "./AccountDotStrip"
 import { VerdictBadge } from "./VerdictBadge"
 
@@ -34,7 +34,9 @@ function childAction(ad) {
   return null
 }
 
-const rowCurrency = (r) => r.currency ?? r.__test?.summary?.currency
+const DEFAULT_CURRENCY = "GBP"
+// Parent rows show their test's currency, children the ad's own; both fall back to a sibling test's.
+const rowCurrency = (r) => (r.__child ? adCurrency(r, r.__test, r.__cur) : testCurrency(r, r.__cur))
 
 function Progress({ value, label, tone }) {
   return (
@@ -47,10 +49,12 @@ function Progress({ value, label, tone }) {
 
 /** Rows: one parent per test, children from `test.ads` flagged `__child`. */
 function toRows(tests) {
+  const cur = tests.map((t) => testCurrency(t)).find(Boolean) ?? DEFAULT_CURRENCY
   return tests.map((t) => ({
     ...t,
+    __cur: cur,
     __rowId: t.id,
-    __children: (t.ads ?? []).map((ad) => ({ ...ad, __child: true, __test: t, __rowId: `${t.id}:${ad.id}` })),
+    __children: (t.ads ?? []).map((ad) => ({ ...ad, __child: true, __test: t, __cur: cur, __rowId: `${t.id}:${ad.id}` })),
   }))
 }
 
@@ -141,7 +145,7 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
         meta: { label: "Spend" },
         cell: ({ row }) => {
           const r = row.original
-          const cur = r.__child ? rowCurrency(r) : r.summary?.currency
+          const cur = rowCurrency(r)
           return <span className="tabular-nums">{money(r.__child ? r.score?.spend : r.summary?.spend, cur)}</span>
         },
       },
@@ -162,7 +166,7 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
         meta: { label: "CPL" },
         cell: ({ row }) => {
           const r = row.original
-          const cur = r.__child ? rowCurrency(r) : r.summary?.currency
+          const cur = rowCurrency(r)
           const score = r.__child ? r.score : r.summary
           const target = num((r.__child ? r.__test : r).targets?.metrics?.cpl?.value)
           return (
@@ -213,12 +217,12 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
           const ads = (r.ads ?? []).filter((a) => a.post_state !== "removed")
           const done = ads.filter((a) => a.score?.state === "pass" || a.score?.state === "fail").length
           const total = ads.length
-          const cur = r.summary?.currency
+          const cur = rowCurrency(r)
           if (r.status === "winner" || r.status === "loser" || r.status === "inconclusive") {
             return <Progress value={100} label="done" tone={r.status === "winner" ? "success" : r.status === "loser" ? "danger" : undefined} />
           }
           if (!total || done === 0) {
-            const best = ads.reduce((m, a) => Math.max(m, floorProgress(a.score, r.targets, a.currency ?? cur).pct), 0)
+            const best = ads.reduce((m, a) => Math.max(m, floorProgress(a.score, r.targets, adCurrency(a, r, cur)).pct), 0)
             return <Progress value={best * 100} label={best > 0 ? `${done}/${total} scored` : "not started"} />
           }
           return <Progress value={(done / total) * 100} label={`${done}/${total} scored`} />
@@ -235,9 +239,9 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
           if (r.post_state === "failed") {
             return (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                title={r.post_error}
+                title={r.post_error?.message ?? (typeof r.post_error === "string" ? r.post_error : undefined)}
                 onClick={(e) => {
                   e.stopPropagation()
                   onAccountAction?.(r.__test, stripChild(r), "retry")
@@ -250,8 +254,9 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
           if (r.score?.state === "fail" && r.post_state !== "removed") {
             return (
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
+                className="text-danger-ink"
                 onClick={(e) => {
                   e.stopPropagation()
                   onAccountAction?.(r.__test, stripChild(r), "pause")
@@ -293,6 +298,6 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
 }
 
 // Hand callers the original ad object, not the render wrapper.
-function stripChild({ __child, __test, __rowId, ...ad }) {
+function stripChild({ __child, __test, __cur, __rowId, ...ad }) {
   return ad
 }

@@ -55,7 +55,19 @@ function useLiveSeries(tests, currency) {
         lists.push(t.days?.[ad.meta?.ad_id])
       }
     }
-    return dailyTotals(lists)
+    // Tests live per day: tests with spend that date, whatever the ads' currency.
+    const liveByDate = new Map()
+    for (const t of data ?? []) {
+      const dates = new Set()
+      for (const rows of Object.values(t?.days ?? {}))
+        for (const d of rows ?? []) if (d?.date && Number(d.spend) > 0) dates.add(d.date)
+      for (const date of dates) liveByDate.set(date, (liveByDate.get(date) ?? 0) + 1)
+    }
+    const totals = new Map(dailyTotals(lists).map((p) => [p.date, p]))
+    for (const date of liveByDate.keys()) if (!totals.has(date)) totals.set(date, { date })
+    return [...totals.values()]
+      .sort((a, b) => (a.date < b.date ? -1 : 1))
+      .map((p) => ({ ...p, live: liveByDate.get(p.date) ?? 0 }))
   }, [data, currency])
 }
 
@@ -125,7 +137,7 @@ export function CreativesHero({ tests: given, clientGroupId, findings: givenFind
   }
 
   const metrics = [
-    { key: "live", label: "Tests live", value: f.live, plottable: false },
+    { key: "live", label: "Tests live", value: f.live, series: plot("live") },
     { key: "spend", label: "Test spend", value: money(f.spend), series: plot("spend") },
     { key: "leads", label: "Leads", value: f.leads, series: plot("leads") },
     { key: "cpl", label: "Blended CPL", value: f.cpl == null ? "—" : `${sym}${f.cpl.toFixed(2)}`, series: plot("cpl") },

@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { AlertTriangle } from "lucide-react"
-import { Button, Surface } from "@/components/ds"
+import { Button, Notice, Surface } from "@/components/ds"
 
 /**
  * Confirm card for a drafted creative test, from a :::creative block.
@@ -30,19 +30,39 @@ export default function CreativeTestCard({ data, onSend }) {
     onSend(text)
   }
 
+  const rows = [
+    ["Targets", data.targets_text],
+    ["Winner when", data.winner_text],
+    ["Destination", data.destination_text],
+    ["Posts as", data.posts_as],
+  ].filter(([, v]) => typeof v === "string" && v)
+
   return (
     <Surface className="my-3 space-y-3" data-testid="creative-card">
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         {data.thumbnail && !imgFailed && (
-          <img src={data.thumbnail} alt="" onError={() => setImgFailed(true)} className="size-16 shrink-0 rounded-control-sm object-cover" />
+          <img src={data.thumbnail} alt="" onError={() => setImgFailed(true)} className="size-12 shrink-0 rounded-control-sm object-cover" />
         )}
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium tabular-nums text-muted-foreground">{data.code}</div>
           {data.name && <div className="truncate text-sm font-semibold">{data.name}</div>}
-          {data.destination_text && <div className="text-xs text-muted-foreground">{data.destination_text}</div>}
-          {data.targets_text && <div className="text-xs text-muted-foreground">{data.targets_text}</div>}
         </div>
       </div>
+
+      {rows.length > 0 && (
+        <table className="w-full border-collapse text-sm">
+          <tbody className="divide-y divide-divider">
+            {rows.map(([label, value]) => (
+              <tr key={label} className="align-top">
+                <th scope="row" className="w-28 py-1.5 pr-3 text-left text-xs font-medium text-muted-foreground">
+                  {label}
+                </th>
+                <td className="py-1.5">{value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       {accounts.length > 0 && (
         <ul className="space-y-0.5 text-sm">
@@ -55,18 +75,11 @@ export default function CreativeTestCard({ data, onSend }) {
         </ul>
       )}
 
-      {warnings.length > 0 && (
-        <ul className="space-y-1">
-          {warnings.map((w, i) => (
-            <li key={i} className="flex items-start gap-2 text-xs">
-              <AlertTriangle aria-hidden className="mt-px size-3.5 shrink-0" />
-              <span>{w}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {data.posts_as && <div className="text-xs text-muted-foreground">{data.posts_as}</div>}
+      {warnings.map((w, i) => (
+        <Notice key={i} tone="warning" icon={AlertTriangle} className="text-xs">
+          {w}
+        </Notice>
+      ))}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button

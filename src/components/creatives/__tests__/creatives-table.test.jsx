@@ -147,4 +147,35 @@ describe("VerdictBadge", () => {
     render(<VerdictBadge status="winner" />)
     expect(within(document.body).getByText("Winner")).toBeInTheDocument()
   })
+
+  describe("currency and row actions", () => {
+    const posting = {
+      id: "t3", code: "CT-0003", name: "Posting test", status: "posting", targets,
+      summary: null, creative: { format: "video", media: {} },
+      ads: [{ id: "9", ad_account_id: "act_9", account_name: "Nine", adset_name: "S", post_state: "failed",
+              post_error: { message: "Page not allowed", code: 200 }, score: null }],
+    }
+    it("posting rows borrow the currency of the other tests instead of $", () => {
+      render(<CreativesTable tests={[tests[0], posting]} />)
+      const row = T().getByText("Posting test").closest("tr")
+      expect(within(row).getAllByText("£0").length).toBeGreaterThan(0)
+      expect(row.textContent).not.toContain("$")
+      expect(row.textContent).toContain("≤ £35")
+    })
+    it("a posting test with its own ad currency uses it", () => {
+      const t = { ...posting, targets, ads: [{ ...posting.ads[0], currency: "EUR" }] }
+      render(<CreativesTable tests={[t]} />)
+      expect(T().getByText("Posting test").closest("tr").textContent).toContain("€0")
+    })
+    it("Retry's tooltip is the error message, not an object", () => {
+      render(<CreativesTable tests={[posting]} />)
+      fireEvent.click(T().getByRole("button", { name: "Expand Posting test" }))
+      expect(T().getByRole("button", { name: "Retry" })).toHaveAttribute("title", "Page not allowed")
+    })
+    it("row actions are ds buttons", () => {
+      render(<CreativesTable tests={[posting]} />)
+      fireEvent.click(T().getByRole("button", { name: "Expand Posting test" }))
+      expect(T().getByRole("button", { name: "Retry" })).toHaveAttribute("data-slot", "button")
+    })
+  })
 })

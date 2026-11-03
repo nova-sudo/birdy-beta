@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
-const swrData = vi.hoisted(() => ({ summary: undefined }))
+const swrData = vi.hoisted(() => ({ summary: undefined, days: undefined }))
 const nav = vi.hoisted(() => ({ push: vi.fn() }))
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: nav.push }) }))
 vi.mock("@/lib/agents-api", () => ({ applyWorkItem: vi.fn(async () => ({ ok: true, redirect: "/campaigns/creatives/new?scale=t9" })) }))
 vi.mock("swr", () => ({
-  default: (key) => ({ data: key === "/api/dashboard/summary" ? swrData.summary : undefined }),
+  default: (key) => ({ data: key === "/api/dashboard/summary" ? swrData.summary : Array.isArray(key) ? swrData.days : undefined }),
   mutate: vi.fn(),
 }))
 vi.mock("@/lib/creatives-api", () => ({ useCreativeTests: () => ({ tests: [], isLoading: false }) }))
@@ -54,5 +54,17 @@ describe("CreativesHero", () => {
     await userEvent.click(screen.getByRole("button", { name: "Do it" }))
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/campaigns/creatives/new?scale=t9"))
     swrData.summary = undefined
+  })
+
+  it("opens on Tests live with a daily series instead of an empty plot", () => {
+    const row = (date, spend) => ({ date, spend: String(spend), impressions: "100", actions: [] })
+    swrData.days = [
+      { id: "a", ads: [{ currency: "GBP", meta: { ad_id: "m1" } }], days: { m1: [row("2026-10-01", 10), row("2026-10-02", 10), row("2026-10-03", 10)] } },
+      { id: "b", ads: [{ currency: "USD", meta: { ad_id: "m2" } }], days: { m2: [row("2026-10-02", 5), row("2026-10-03", 5)] } },
+    ]
+    render(<CreativesHero tests={[t("testing", { spend: 100, leads: 4 }), { ...t("testing", { spend: 5, leads: 1 }), id: "b" }]} />)
+    expect(screen.getByRole("tab", { name: /Tests live/, selected: true })).toBeInTheDocument()
+    expect(screen.queryByText(/No daily data yet/)).toBeNull()
+    swrData.days = undefined
   })
 })
