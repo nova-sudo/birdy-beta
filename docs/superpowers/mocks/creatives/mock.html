@@ -1,0 +1,692 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creatives Tracking mocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --primary:#5B3FD6;--primary-soft:#EFECFB;--primary-ink:#4A2FB5;--primary-fg:#fff;--primary-edge:#4A30BC;
+  --ink:#18181B;--body:#52525B;--muted:#6B6B72;--subtle:#85858C;--faint:#98989E;
+  --bg:#fff;--canvas:#F6F6F4;--frame:#f7f7f8;--hairline:#18181b14;--ring:#18181b12;--divider:#f0f0f1;--border:#E7E6E3;--thead:#FAFAF8;--zebra:#FCFCFB;--child:#f3f3f4;
+  --success:#16794C;--success-soft:#F0FDF4;--success-ink:#166534;
+  --warning:#F59E0B;--warning-soft:#FFFBEB;--warning-ink:#92400E;
+  --danger:#EF4444;--danger-soft:#FEF2F2;--danger-ink:#991B1B;
+  --info:#3B82F6;--info-soft:#EFF6FF;--info-ink:#1E40AF;
+  --neutral:#A1A1AA;--neutral-soft:#F4F4F5;--neutral-ink:#3F3F46;
+  --r-control:12px;--r-surface:12px;--r-frame:16px;--r-overlay:20px;--r-badge:7px;
+  --sh-control:0 0 0 1px #00000014,0 1px 2px #0000000f,0 2px 4px -2px #0000000d;
+  --sh-primary:0 1px 0 #ffffff33 inset,0 0 0 1px var(--primary-edge),0 1px 2px #0000001f,0 2px 6px -2px rgba(91,63,214,.35);
+  --sh-frame:0 0 0 1px var(--hairline);--sh-surface:0 0 0 1px var(--ring);
+  --sh-sheet:0 0 0 1px #18181b14,-16px 0 40px -16px #0000001f;
+  --sh-overlay:0 0 0 1px #0000000F,0 24px 64px -12px #0000003D;
+  --font-display:"Bricolage Grotesque",system-ui,sans-serif;--font-body:Inter,system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--canvas);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+h1,h2,h3,.display{font-family:var(--font-display);letter-spacing:-.01em}
+a{color:var(--primary);text-decoration:none}
+/* ---- mock chrome ---- */
+.mocknav{position:sticky;top:0;z-index:50;background:#18181B;color:#fff;padding:10px 24px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.mocknav b{font-family:var(--font-display);font-size:15px;margin-right:12px}
+.mocknav a{color:#d4d4d8;font-size:13px;padding:6px 10px;border-radius:8px}
+.mocknav a:hover{background:#27272a;color:#fff}
+.option{padding:40px 24px 24px;max-width:1280px;margin:0 auto}
+.optionhead{display:flex;align-items:baseline;gap:14px;margin-bottom:6px;flex-wrap:wrap}
+.optionhead h1{font-size:26px;font-weight:600}
+.optionhead .tag{font-size:12px;font-weight:600;color:var(--primary-ink);background:var(--primary-soft);padding:3px 9px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
+.optionhead .rec{background:var(--success-soft);color:var(--success-ink)}
+.optionnote{color:var(--muted);max-width:820px;margin-bottom:22px}
+.optionnote b{color:var(--ink)}
+/* ---- app shell ---- */
+.shell{display:grid;grid-template-columns:68px 1fr;background:var(--canvas);border-radius:20px;box-shadow:var(--sh-overlay);overflow:hidden;min-height:700px}
+.rail{background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:10px}
+.rail .av{width:40px;height:40px;border-radius:50%;border:1px solid #D7CFF6;background:#EFECFB;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.rail .av img{width:82%;display:block}
+.rail .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--faint)}
+.rail .ic.on{background:var(--primary-soft);color:var(--primary)}
+.rail svg{width:18px;height:18px}
+.page{padding:0 0 32px}
+.topbar{height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;background:var(--bg);border-bottom:1px solid var(--border)}
+.topbar h2{font-size:19px;font-weight:600}
+.topbar .sub{color:var(--muted);font-size:13px}
+.controls{display:flex;gap:8px;align-items:center}
+.ctl{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 12px;border-radius:var(--r-control);background:var(--bg);box-shadow:var(--sh-control);font-size:13px;font-weight:500;color:var(--ink)}
+.ctl svg{width:14px;height:14px;color:var(--subtle)}
+.btn{height:36px;display:inline-flex;align-items:center;gap:7px;padding:0 14px;border-radius:var(--r-control);font-size:13px;font-weight:500;cursor:pointer;border:0;font-family:inherit}
+.btn.primary{background:var(--primary);color:#fff;box-shadow:var(--sh-primary)}
+.btn.ghost{background:var(--bg);color:var(--ink);box-shadow:var(--sh-control)}
+.btn.sm{height:30px;padding:0 10px;font-size:12px;border-radius:10px}
+.btn.danger{background:var(--danger-soft);color:var(--danger-ink);box-shadow:0 0 0 1px #fecaca}
+.btn svg{width:14px;height:14px}
+.content{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+/* section tabs */
+.ptabs{display:flex;gap:4px;border-bottom:1px solid var(--border);padding:0 2px}
+.ptab{padding:10px 14px;font-size:14px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;display:flex;gap:8px;align-items:center}
+.ptab.on{color:var(--ink);border-color:var(--primary)}
+.ptab .cnt{font-size:11px;background:var(--neutral-soft);color:var(--neutral-ink);border-radius:999px;padding:1px 7px;font-weight:600}
+.ptab.on .cnt{background:var(--primary-soft);color:var(--primary-ink)}
+/* frame */
+.frame{background:var(--frame);border-radius:var(--r-frame);box-shadow:var(--sh-frame);display:flex;flex-direction:column;min-width:0}
+.frame>header{min-height:48px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 16px;flex-wrap:wrap}
+.frame>header h3{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.frame>header .desc{font-size:13px;color:var(--muted)}
+.frame>.surface{flex:1;background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden}
+.frame>footer{min-height:44px;display:flex;align-items:center;justify-content:space-between;padding:6px 16px;font-size:13px;color:var(--muted)}
+.frame>footer a{font-weight:500}
+.hdravatar{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);background:#fff;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}
+.hdravatar img{width:82%;display:block}
+.count{display:inline-flex;height:20px;min-width:20px;align-items:center;justify-content:center;border-radius:999px;background:var(--primary);color:#fff;font-size:12px;font-weight:500;padding:0 6px}
+/* badges */
+.badge{display:inline-flex;align-items:center;gap:5px;height:24px;padding:0 8px;border-radius:6px;font-size:12px;font-weight:500;white-space:nowrap}
+.badge.md{height:28px;padding:0 10px;font-size:13px;border-radius:var(--r-badge)}
+.b-success{background:var(--success-soft);color:var(--success-ink)}
+.b-warning{background:var(--warning-soft);color:var(--warning-ink)}
+.b-danger{background:var(--danger-soft);color:var(--danger-ink)}
+.b-info{background:var(--info-soft);color:var(--info-ink)}
+.b-primary{background:var(--primary-soft);color:var(--primary-ink)}
+.b-neutral{background:var(--neutral-soft);color:var(--neutral-ink)}
+.dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+.d-success{background:var(--success)}.d-warning{background:var(--warning)}.d-danger{background:var(--danger)}.d-info{background:var(--info)}.d-neutral{background:var(--neutral)}.d-primary{background:var(--primary)}
+/* metric group */
+.mgroup{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden}
+.mcell{padding:14px 18px;border-right:1px solid var(--divider)}
+.mcell:last-child{border-right:0}
+.mcell .lbl{font-size:12px;color:var(--muted);font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.mcell .val{font-family:var(--font-display);font-size:24px;font-weight:600;margin-top:4px;display:flex;align-items:baseline;gap:8px}
+.mcell .cap{font-size:12px;color:var(--subtle);margin-top:2px}
+.delta{font-size:12px;font-weight:600;font-family:var(--font-body)}
+.delta.up{color:var(--success-ink)}.delta.down{color:var(--danger-ink)}.delta.flat{color:var(--subtle)}
+/* table */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--thead);text-align:left;font-weight:500;color:var(--muted);font-size:12px;padding:10px 14px;border-bottom:1px solid var(--divider);white-space:nowrap}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--divider);vertical-align:middle}
+tbody tr.child td{background:var(--child);padding-top:8px;padding-bottom:8px;color:var(--body)}
+tbody tr.child td:first-child{padding-left:44px}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right}
+.name{display:flex;align-items:center;gap:10px;min-width:0}
+.thumb{width:40px;height:40px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#c7b9f5,#5B3FD6);position:relative;overflow:hidden}
+.thumb.v::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,#fff 0 7px,transparent 8px)}
+.thumb.t2{background:linear-gradient(135deg,#fde68a,#f59e0b)}
+.thumb.t3{background:linear-gradient(135deg,#a7f3d0,#16794C)}
+.thumb.t4{background:linear-gradient(135deg,#fecaca,#ef4444)}
+.thumb.t5{background:linear-gradient(135deg,#bfdbfe,#3b82f6)}
+.thumb.lg{width:64px;height:64px;border-radius:12px}
+.name .t{font-weight:500;color:var(--ink);line-height:1.25}
+.name .s{font-size:12px;color:var(--subtle);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.caret{width:14px;height:14px;color:var(--faint);flex-shrink:0}
+.vs{color:var(--subtle);font-size:11px;margin-left:4px;white-space:nowrap}
+td.num{white-space:nowrap}
+.accdots{white-space:nowrap}
+.good{color:var(--success-ink);font-weight:600}
+.bad{color:var(--danger-ink);font-weight:600}
+/* progress */
+.prog{display:flex;align-items:center;gap:8px;min-width:120px}
+.bar{flex:1;height:6px;border-radius:999px;background:var(--neutral-soft);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:999px;background:var(--primary)}
+.bar.s>i{background:var(--success)}.bar.w>i{background:var(--warning)}.bar.d>i{background:var(--danger)}
+.prog span{font-size:12px;color:var(--muted);white-space:nowrap}
+/* accounts dots */
+.accdots{display:flex;gap:3px;align-items:center}
+.accdots i{width:10px;height:10px;border-radius:3px;display:block}
+/* birdy read rows */
+.rows{list-style:none}
+.rows li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--divider)}
+.rows li:last-child{border-bottom:0}
+.chip{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;flex-shrink:0}
+.chip svg{width:15px;height:15px}
+.rows .ttl{font-weight:500;font-size:14px;line-height:1.3}
+.rows .det{font-size:13px;color:var(--muted);margin-top:2px}
+.rows .act{width:84px;flex-shrink:0}
+.rows .act .btn{width:100%;justify-content:center}
+.toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;flex-wrap:wrap}
+.search{height:36px;display:flex;align-items:center;gap:8px;padding:0 12px;border-radius:var(--r-control);background:var(--bg);box-shadow:var(--sh-control);color:var(--faint);font-size:13px;min-width:240px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chipf{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 10px;border-radius:10px;background:var(--bg);box-shadow:var(--sh-control);font-size:12px;font-weight:500;color:var(--body)}
+.chipf.on{background:var(--ink);color:#fff;box-shadow:none}
+/* board */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.col{background:var(--frame);border-radius:var(--r-frame);box-shadow:var(--sh-frame);padding:8px;display:flex;flex-direction:column;gap:8px;min-height:420px}
+.col>h4{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;padding:6px 8px 2px;color:var(--ink)}
+.col>h4 .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+.ccard{background:var(--bg);border-radius:var(--r-surface);box-shadow:var(--sh-surface);padding:10px;display:flex;flex-direction:column;gap:8px}
+.ccard .top{display:flex;gap:10px;align-items:center}
+.ccard .stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.ccard .st{font-size:11px;color:var(--subtle)}
+.ccard .st b{display:block;font-size:14px;color:var(--ink);font-weight:600;font-family:var(--font-display)}
+.ccard .foot{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted)}
+/* gallery */
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.gcard{background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden;display:flex;flex-direction:column}
+.gcard .media{height:150px;position:relative;display:flex;align-items:flex-end;padding:10px}
+.gcard .media .badge{position:absolute;top:10px;left:10px}
+.gcard .media .code{position:absolute;top:10px;right:10px;background:rgba(24,24,27,.6);color:#fff;font-size:11px;padding:3px 7px;border-radius:6px;font-family:ui-monospace,Menlo,monospace}
+.gcard .body{padding:12px;display:flex;flex-direction:column;gap:10px}
+.gcard .ttl{font-weight:600;font-size:14px}
+.gcard .kv{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.gcard .kv div{font-size:11px;color:var(--subtle)}
+.gcard .kv b{display:block;font-size:15px;color:var(--ink);font-family:var(--font-display)}
+.acclist{display:flex;flex-direction:column;gap:4px}
+.accrow{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--body)}
+.accrow .bar{height:5px}
+.accrow .nm{width:92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.accrow .v{width:46px;text-align:right}
+/* layout helpers */
+.hero{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.stack{display:flex;flex-direction:column;gap:16px;min-width:0}
+/* chart placeholder */
+.chartwrap{padding:16px 18px}
+.chartwrap svg{width:100%;height:170px;display:block}
+.mtabs{display:flex;border-bottom:1px solid var(--divider)}
+.mtab{flex:1;padding:12px 16px;border-right:1px solid var(--divider)}
+.mtab:last-child{border-right:0}
+.mtab .l{font-size:12px;color:var(--muted);font-weight:500}
+.mtab .v{font-family:var(--font-display);font-size:20px;font-weight:600;margin-top:2px;display:flex;gap:8px;align-items:baseline}
+.mtab.on{box-shadow:inset 0 -2px 0 var(--primary)}
+.mtab.on .l{color:var(--primary-ink)}
+/* ---- wizard / sheet ---- */
+.overlaywrap{position:relative;height:720px;background:rgba(24,24,27,.35);border-radius:20px;overflow:hidden;box-shadow:var(--sh-overlay)}
+.overlaywrap .backdrop{position:absolute;inset:0;background:var(--canvas);opacity:.9;filter:blur(1px)}
+.sheet{position:absolute;top:0;right:0;bottom:0;width:720px;background:var(--bg);box-shadow:var(--sh-sheet);display:flex;flex-direction:column}
+.sheet>header{padding:18px 24px 14px;border-bottom:1px solid var(--divider);display:flex;flex-direction:column;gap:12px}
+.sheet>header h3{font-size:18px;font-weight:600}
+.sheet>header .sub{font-size:13px;color:var(--muted)}
+.sheet .body{flex:1;min-height:0;overflow:auto;padding:20px 24px;display:flex;flex-direction:column;gap:18px}
+.sheet>footer{padding:14px 24px;border-top:1px solid var(--divider);display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--frame)}
+.steps{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.steps .ln{width:28px;height:1px;background:var(--border)}
+.step{display:flex;align-items:center;gap:6px}
+.step i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;background:var(--neutral-soft);color:var(--neutral-ink);font-style:normal;font-weight:600}
+.step.done i{background:var(--success-soft);color:var(--success-ink)}
+.step.on{color:var(--ink);font-weight:500}
+.step.on i{background:var(--primary);color:#fff}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:13px;font-weight:500}
+.field .hint{font-size:12px;color:var(--subtle)}
+.input{height:40px;border-radius:var(--r-control);box-shadow:var(--sh-control);padding:0 12px;display:flex;align-items:center;font-size:14px;color:var(--ink);background:var(--bg)}
+.input.ph{color:var(--faint)}
+.textarea{min-height:80px;border-radius:var(--r-control);box-shadow:var(--sh-control);padding:10px 12px;font-size:14px;color:var(--ink);background:var(--bg)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.seg{display:inline-flex;background:var(--neutral-soft);border-radius:var(--r-control);padding:3px;gap:2px}
+.seg span{padding:7px 12px;border-radius:9px;font-size:13px;font-weight:500;color:var(--muted)}
+.seg span.on{background:var(--bg);color:var(--ink);box-shadow:var(--sh-control)}
+.pathcards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pcard{border-radius:var(--r-frame);box-shadow:var(--sh-surface);padding:16px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.pcard.on{box-shadow:0 0 0 2px var(--primary)}
+.pcard h4{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.pcard p{font-size:13px;color:var(--muted)}
+.pcard .ico{width:32px;height:32px;border-radius:9px;background:var(--primary-soft);color:var(--primary);display:grid;place-items:center}
+.pcard .ico svg{width:16px;height:16px}
+.drop{border:1.5px dashed var(--border);border-radius:var(--r-frame);padding:22px;text-align:center;color:var(--muted);font-size:13px;background:var(--frame)}
+.drop b{color:var(--ink)}
+.acc-pick{border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden}
+.acc-pick .row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--divider);font-size:13px}
+.acc-pick .row:last-child{border-bottom:0}
+.cb{width:16px;height:16px;border-radius:5px;box-shadow:var(--sh-control);display:inline-grid;vertical-align:-3px;place-items:center;flex-shrink:0;background:#fff}
+.cb.on{background:var(--primary);box-shadow:0 0 0 1px var(--primary-edge)}
+.cb.on::after{content:"";width:8px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.acc-pick .nm{flex:1;font-weight:500}
+.acc-pick .meta{color:var(--subtle);font-size:12px}
+.acc-pick .sel{color:var(--body);font-size:12px;display:flex;align-items:center;gap:4px}
+.tgt{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.tcard{border-radius:var(--r-surface);box-shadow:var(--sh-surface);padding:12px;display:flex;flex-direction:column;gap:4px;background:var(--bg)}
+.tcard.on{box-shadow:0 0 0 2px var(--primary)}
+.tcard h5{font-size:13px;font-weight:600}
+.tcard p{font-size:12px;color:var(--muted)}
+.metricrow{display:grid;grid-template-columns:1.2fr 1fr 1fr auto;gap:10px;align-items:center;font-size:13px}
+.metricrow .input{height:36px}
+.review{border-radius:var(--r-frame);background:var(--frame);box-shadow:var(--sh-frame);padding:4px}
+.review .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;padding:12px 14px;font-size:13px;background:var(--bg);border-radius:12px;box-shadow:var(--sh-surface)}
+.review .kv dt{color:var(--muted)}
+.review .kv dd{color:var(--ink);font-weight:500}
+.code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;background:var(--neutral-soft);padding:2px 6px;border-radius:5px}
+/* full page wizard */
+.wizpage{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:20px;padding:20px 24px}
+.preview{background:var(--frame);border-radius:var(--r-frame);box-shadow:var(--sh-frame);padding:14px;display:flex;flex-direction:column;gap:10px;position:sticky;top:20px}
+.fbpost{background:var(--bg);border-radius:12px;box-shadow:var(--sh-surface);overflow:hidden;font-size:13px}
+.fbpost .ph{display:flex;gap:8px;align-items:center;padding:10px 12px}
+.fbpost .ph i{width:32px;height:32px;border-radius:50%;background:var(--primary-soft);display:block}
+.fbpost .ph b{font-size:13px;display:block}
+.fbpost .ph span{font-size:11px;color:var(--subtle)}
+.fbpost .txt{padding:0 12px 10px;color:var(--body)}
+.fbpost .img{height:200px;background:linear-gradient(135deg,#c7b9f5,#5B3FD6)}
+.fbpost .cta{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--frame)}
+.fbpost .cta b{font-size:13px}
+.fbpost .cta span{font-size:11px;color:var(--subtle);display:block}
+.fbpost .cta .btn{height:30px;font-size:12px}
+/* detail sheet */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi{border-radius:12px;box-shadow:var(--sh-surface);padding:10px 12px;background:var(--bg)}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:500}
+.kpi .v{font-family:var(--font-display);font-size:20px;font-weight:600;margin-top:2px}
+.kpi .c{font-size:11px;color:var(--subtle)}
+/* chat */
+.chat{background:var(--bg);border-radius:20px;box-shadow:var(--sh-overlay);padding:20px;display:flex;flex-direction:column;gap:14px;max-width:720px}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg.user{justify-content:flex-end}
+.msg .bub{background:var(--frame);border-radius:14px;padding:10px 14px;font-size:14px;max-width:540px;box-shadow:0 0 0 1px var(--hairline)}
+.msg.user .bub{background:var(--primary);color:#fff;box-shadow:none}
+.msg .bav{width:28px;height:28px;border-radius:50%;border:1px solid #D7CFF6;background:#EFECFB;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;flex-shrink:0}
+.msg .bav img{width:82%;display:block}
+.toolpill{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 8px;border-radius:6px;background:var(--neutral-soft);color:var(--neutral-ink);font-size:12px;font-family:ui-monospace,Menlo,monospace}
+.ccardchat{border-radius:var(--r-frame);box-shadow:var(--sh-surface);overflow:hidden;background:var(--bg);margin-top:8px}
+.ccardchat .h{display:flex;gap:10px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--divider)}
+.ccardchat .h .t{font-weight:600}
+.ccardchat .h .s{font-size:12px;color:var(--subtle)}
+.ccardchat .confirm{display:flex;gap:8px;padding:10px 12px;background:var(--frame);border-top:1px solid var(--divider)}
+.integ{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.alertform{display:flex;flex-direction:column;gap:12px;background:var(--bg);border-radius:var(--r-frame);box-shadow:var(--sh-surface);padding:16px}
+.note{font-size:12px;color:var(--muted);background:var(--frame);border-radius:10px;padding:8px 10px}
+footer.mockfoot{color:var(--subtle);font-size:12px;text-align:center;padding:30px}
+</style>
+</head>
+<body>
+
+<nav class="mocknav">
+  <b>Creatives Tracking · mocks</b>
+  <a href="#tab-a">Tab A · Table + rail</a>
+  <a href="#tab-b">Tab B · Board</a>
+  <a href="#tab-c">Tab C · Gallery</a>
+  <a href="#wiz-1">Wizard 1 · Sheet</a>
+  <a href="#wiz-2">Wizard 2 · Full page</a>
+  <a href="#detail">Detail sheet</a>
+  <a href="#integ">Suggestions · Alerts · Birdy</a>
+</nav>
+
+<!-- ============================================================ TAB A -->
+<section class="option" id="tab-a">
+  <div class="optionhead"><h1>Tab option A — Table with per-account children</h1><span class="tag rec">Recommended</span></div>
+  <p class="optionnote"><b>Creatives</b> becomes a fifth section tab in the Marketing Hub. The hero keeps the hub template: <b>MetricTabsChart</b> on the left (creative-test metrics), <b>Birdy's read</b> on the right. Below, a ds <b>DataTable</b> where each row is one creative test and expands into its per-account ad rows. Densest view, fits the existing campaigns/adsets/ads tables, and the expandable row answers "where is it winning?" without leaving the page.</p>
+
+  <div class="shell">
+    <aside class="rail">
+      <span class="av"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt=""></span>
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg></span>
+      <span class="ic on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l18-6-6 18-3-8-9-4z"/></svg></span>
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></span>
+    </aside>
+    <div class="page">
+      <div class="topbar">
+        <div><h2>Marketing Hub</h2><div class="sub">Meta performance across your clients</div></div>
+        <div class="controls">
+          <span class="ctl">Daily <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="ctl">Last 14 days <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+          <span class="ctl">All clients <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></span>
+        </div>
+      </div>
+      <div class="content">
+        <div class="hero">
+          <div class="frame">
+            <div class="surface">
+              <div class="mtabs">
+                <div class="mtab on"><div class="l">Tests live</div><div class="v">6</div></div>
+                <div class="mtab"><div class="l">Test spend</div><div class="v">£4,120 <span class="delta up">+12%</span></div></div>
+                <div class="mtab"><div class="l">Leads</div><div class="v">138 <span class="delta up">+21%</span></div></div>
+                <div class="mtab"><div class="l">Blended CPL</div><div class="v">£29.86 <span class="delta up">−8%</span></div></div>
+                <div class="mtab"><div class="l">Hook rate</div><div class="v">31% <span class="delta flat">—</span></div></div>
+                <div class="mtab"><div class="l">Win rate</div><div class="v">2 / 5</div></div>
+              </div>
+              <div class="chartwrap">
+                <svg viewBox="0 0 600 170" preserveAspectRatio="none">
+                  <defs><linearGradient id="g1" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5B3FD6" stop-opacity=".18"/><stop offset="1" stop-color="#5B3FD6" stop-opacity="0"/></linearGradient></defs>
+                  <g stroke="#f0f0f1"><line x1="0" y1="40" x2="600" y2="40"/><line x1="0" y1="80" x2="600" y2="80"/><line x1="0" y1="120" x2="600" y2="120"/><line x1="0" y1="160" x2="600" y2="160"/></g>
+                  <path d="M0 150 L45 142 L90 120 L135 126 L180 100 L225 96 L270 70 L315 78 L360 60 L405 52 L450 64 L495 40 L540 36 L600 30 V170 H0Z" fill="url(#g1)"/>
+                  <path d="M0 150 L45 142 L90 120 L135 126 L180 100 L225 96 L270 70 L315 78 L360 60 L405 52 L450 64 L495 40 L540 36 L600 30" fill="none" stroke="#5B3FD6" stroke-width="2.2"/>
+                  <path d="M0 130 L90 128 L180 118 L270 100 L360 96 L450 90 L540 84 L600 80" fill="none" stroke="#C3B7F2" stroke-width="1.5" stroke-dasharray="4 4"/>
+                </svg>
+                <div style="display:flex;gap:14px;font-size:12px;color:var(--muted);margin-top:6px"><span><i class="dot d-primary"></i> Tests live</span><span><i class="dot" style="background:#C3B7F2"></i> Account-wide ads (reference)</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="frame">
+            <header><h3><span class="hdravatar"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt=""></span> Birdy's read <span class="count">3</span></h3></header>
+            <div class="surface">
+              <ul class="rows">
+                <li><span class="chip b-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span><div style="flex:1;min-width:0"><div class="ttl">CT-0042 "Mortgage myth" is a winner</div><div class="det">Beat CPL target in 7 of 9 accounts after £1.4k. Scale it to the 4 accounts not yet posted?</div></div><div class="act"><button class="btn primary sm">Scale</button></div></li>
+                <li><span class="chip b-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg></span><div style="flex:1;min-width:0"><div class="ttl">CT-0045 failing in Harbour Finance</div><div class="det">CPL £71 vs £35 target, 0 leads in 3 days. Pause it there only.</div></div><div class="act"><button class="btn ghost sm">Pause</button></div></li>
+                <li><span class="chip b-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span><div style="flex:1;min-width:0"><div class="ttl">2 ads from CT-0047 failed to post</div><div class="det">Meta rejected the lead form mapping for Oakline and Birch. Retry with a website URL?</div></div><div class="act"><button class="btn ghost sm">Fix</button></div></li>
+              </ul>
+            </div>
+            <footer><a href="#">Ask Birdy about this →</a></footer>
+          </div>
+        </div>
+
+        <div class="ptabs">
+          <span class="ptab">Campaigns</span><span class="ptab">Ad sets</span><span class="ptab">Ads</span><span class="ptab">Leads</span><span class="ptab on">Creatives <span class="cnt">6</span></span>
+        </div>
+
+        <div class="frame">
+          <div class="toolbar">
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <span class="search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Search creative tests…</span>
+              <div class="chips"><span class="chipf on">All 6</span><span class="chipf"><i class="dot d-info"></i> Testing 3</span><span class="chipf"><i class="dot d-success"></i> Winners 2</span><span class="chipf"><i class="dot d-danger"></i> Losers 1</span><span class="chipf"><i class="dot d-neutral"></i> Archived</span></div>
+            </div>
+            <div style="display:flex;gap:8px"><span class="ctl">Columns</span><button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New creative test</button></div>
+          </div>
+          <div class="surface">
+            <table>
+              <thead><tr><th style="width:34%">Creative</th><th>Accounts</th><th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL <span class="vs">vs target</span></th><th class="num">CTR</th><th class="num">Hook</th><th>Progress to verdict</th><th>Verdict</th></tr></thead>
+              <tbody>
+                <tr><td><div class="name"><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg><span class="thumb v"></span><div><div class="t">Mortgage myth #3 — UGC hook</div><div class="s">CT-0042 · posted 9 Oct · new ad</div></div></div></td>
+                  <td><div class="accdots"><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-danger"></i><i class="d-warning"></i><span class="vs">7/9 pass</span></div></td>
+                  <td class="num">£1,412</td><td class="num">58</td><td class="num good">£24.34 <span class="vs">≤ £35</span></td><td class="num">1.9%</td><td class="num good">38%</td>
+                  <td><div class="prog"><div class="bar s"><i style="width:100%"></i></div><span>done</span></div></td><td><span class="badge b-success"><i class="dot d-success"></i> Winner</span></td></tr>
+                <tr class="child"><td><div class="name"><div><div class="t">Harbour Finance</div><div class="s">act_1029 · adset “Birdy tests”</div></div></div></td><td><span class="badge b-success">Pass</span></td><td class="num">£212</td><td class="num">11</td><td class="num good">£19.27</td><td class="num">2.3%</td><td class="num">41%</td><td><div class="prog"><div class="bar s"><i style="width:100%"></i></div><span>£212 / £150</span></div></td><td><button class="btn ghost sm">Scale budget</button></td></tr>
+                <tr class="child"><td><div class="name"><div><div class="t">Oakline Wealth</div><div class="s">act_2231 · adset “Birdy tests”</div></div></div></td><td><span class="badge b-danger">Fail</span></td><td class="num">£198</td><td class="num">3</td><td class="num bad">£66.00</td><td class="num">1.1%</td><td class="num">22%</td><td><div class="prog"><div class="bar d"><i style="width:100%"></i></div><span>£198 / £150</span></div></td><td><button class="btn ghost sm">Pause here</button></td></tr>
+                <tr class="child"><td><div class="name"><div><div class="t">Birch Mortgages</div><div class="s">act_4410 · adset “Birdy tests”</div></div></div></td><td><span class="badge b-warning">Scoring</span></td><td class="num">£96</td><td class="num">4</td><td class="num">£24.00</td><td class="num">1.8%</td><td class="num">35%</td><td><div class="prog"><div class="bar w"><i style="width:64%"></i></div><span>£96 / £150</span></div></td><td><span class="vs">needs £54 more</span></td></tr>
+                <tr><td><div class="name"><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span class="thumb t2"></span><div><div class="t">Rate-drop static — "£340 a month"</div><div class="s">CT-0045 · posted 21 Oct · revived from Harbour</div></div></div></td>
+                  <td><div class="accdots"><i class="d-success"></i><i class="d-warning"></i><i class="d-warning"></i><i class="d-danger"></i><i class="d-warning"></i><i class="d-warning"></i><span class="vs">1/6 scored</span></div></td>
+                  <td class="num">£640</td><td class="num">19</td><td class="num">£33.68 <span class="vs">≤ £35</span></td><td class="num">1.4%</td><td class="num">—</td>
+                  <td><div class="prog"><div class="bar"><i style="width:42%"></i></div><span>day 4 of 7</span></div></td><td><span class="badge b-info"><i class="dot d-info"></i> Testing</span></td></tr>
+                <tr><td><div class="name"><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span class="thumb t3 v"></span><div><div class="t">Founder talking head — objections</div><div class="s">CT-0046 · posted 24 Oct · new ad</div></div></div></td>
+                  <td><div class="accdots"><i class="d-warning"></i><i class="d-warning"></i><i class="d-warning"></i><i class="d-warning"></i><span class="vs">0/4 scored</span></div></td>
+                  <td class="num">£310</td><td class="num">9</td><td class="num">£34.44 <span class="vs">beat acct by 15%</span></td><td class="num">2.1%</td><td class="num good">44%</td>
+                  <td><div class="prog"><div class="bar"><i style="width:22%"></i></div><span>£310 / £1,400</span></div></td><td><span class="badge b-info"><i class="dot d-info"></i> Testing</span></td></tr>
+                <tr><td><div class="name"><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span class="thumb t5"></span><div><div class="t">Carousel — 5 reasons to remortgage</div><div class="s">CT-0047 · posting · new ad</div></div></div></td>
+                  <td><div class="accdots"><i class="d-neutral"></i><i class="d-neutral"></i><i class="d-danger"></i><i class="d-danger"></i><i class="d-neutral"></i><span class="vs">3 posted · 2 failed</span></div></td>
+                  <td class="num">£0</td><td class="num">0</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
+                  <td><div class="prog"><div class="bar"><i style="width:0"></i></div><span>not started</span></div></td><td><span class="badge b-warning"><i class="dot d-warning"></i> 2 failed</span></td></tr>
+                <tr><td><div class="name"><svg class="caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg><span class="thumb t4"></span><div><div class="t">Meme — "bank said no"</div><div class="s">CT-0041 · posted 2 Oct · new ad</div></div></div></td>
+                  <td><div class="accdots"><i class="d-danger"></i><i class="d-danger"></i><i class="d-danger"></i><i class="d-danger"></i><i class="d-success"></i><span class="vs">1/5 pass</span></div></td>
+                  <td class="num">£905</td><td class="num">12</td><td class="num bad">£75.42 <span class="vs">≤ £35</span></td><td class="num">0.8%</td><td class="num bad">14%</td>
+                  <td><div class="prog"><div class="bar d"><i style="width:100%"></i></div><span>done</span></div></td><td><span class="badge b-danger"><i class="dot d-danger"></i> Loser · paused</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <footer><span>6 creative tests · 31 ads across 12 ad accounts</span><span>Rows per page 15</span></footer>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ TAB B -->
+<section class="option" id="tab-b">
+  <div class="optionhead"><h1>Tab option B — Status board</h1><span class="tag">Alternative</span></div>
+  <p class="optionnote">Same hero. The list becomes four columns by lifecycle: <b>Posting → Testing → Winners → Losers</b>. Each card shows the creative, where it stands against target, and the per-account dot strip. Best when the team thinks in "what's in flight right now"; weaker for sorting/comparing numbers across many tests.</p>
+  <div class="shell" style="grid-template-columns:1fr;min-height:0">
+    <div class="page">
+      <div class="content">
+        <div class="ptabs">
+          <span class="ptab">Campaigns</span><span class="ptab">Ad sets</span><span class="ptab">Ads</span><span class="ptab">Leads</span><span class="ptab on">Creatives <span class="cnt">6</span></span>
+        </div>
+        <div class="toolbar" style="padding:0">
+          <span class="search"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg> Search creative tests…</span>
+          <div style="display:flex;gap:8px"><span class="ctl">Sort: newest</span><button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New creative test</button></div>
+        </div>
+        <div class="board">
+          <div class="col"><h4><i class="dot d-neutral"></i> Posting <span class="cnt">1</span></h4>
+            <div class="ccard"><div class="top"><span class="thumb t5"></span><div><div class="name"><div><div class="t">Carousel — 5 reasons</div><div class="s">CT-0047</div></div></div></div></div>
+              <div class="accdots"><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-danger"></i><i class="d-danger"></i><span class="vs">3 posted · 2 failed</span></div>
+              <div class="foot"><span class="badge b-warning">Lead form rejected ×2</span><a href="#">Fix</a></div></div>
+          </div>
+          <div class="col"><h4><i class="dot d-info"></i> Testing <span class="cnt">2</span></h4>
+            <div class="ccard"><div class="top"><span class="thumb t2"></span><div class="name"><div><div class="t">Rate-drop static</div><div class="s">CT-0045 · revived</div></div></div></div>
+              <div class="stats"><div class="st">CPL<b>£33.68</b></div><div class="st">Leads<b>19</b></div><div class="st">Spend<b>£640</b></div></div>
+              <div class="prog"><div class="bar"><i style="width:42%"></i></div><span>day 4/7</span></div>
+              <div class="accdots"><i class="d-success"></i><i class="d-warning"></i><i class="d-warning"></i><i class="d-danger"></i><i class="d-warning"></i><i class="d-warning"></i><span class="vs">1/6 scored</span></div></div>
+            <div class="ccard"><div class="top"><span class="thumb t3 v"></span><div class="name"><div><div class="t">Founder talking head</div><div class="s">CT-0046</div></div></div></div>
+              <div class="stats"><div class="st">CPL<b>£34.44</b></div><div class="st">Hook<b>44%</b></div><div class="st">Spend<b>£310</b></div></div>
+              <div class="prog"><div class="bar"><i style="width:22%"></i></div><span>£310/£1.4k</span></div>
+              <div class="accdots"><i class="d-warning"></i><i class="d-warning"></i><i class="d-warning"></i><i class="d-warning"></i><span class="vs">0/4 scored</span></div></div>
+          </div>
+          <div class="col" style="background:var(--success-soft)"><h4><i class="dot d-success"></i> Winners <span class="cnt">2</span></h4>
+            <div class="ccard"><div class="top"><span class="thumb v"></span><div class="name"><div><div class="t">Mortgage myth #3</div><div class="s">CT-0042</div></div></div></div>
+              <div class="stats"><div class="st">CPL<b class="good">£24.34</b></div><div class="st">Leads<b>58</b></div><div class="st">Hook<b>38%</b></div></div>
+              <div class="accdots"><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-danger"></i><i class="d-warning"></i><span class="vs">7/9</span></div>
+              <div class="foot"><span>4 accounts not posted</span><button class="btn primary sm">Scale</button></div></div>
+            <div class="ccard"><div class="top"><span class="thumb t3"></span><div class="name"><div><div class="t">"Your rate ends in…"</div><div class="s">CT-0039</div></div></div></div>
+              <div class="stats"><div class="st">CPL<b class="good">£27.10</b></div><div class="st">Leads<b>71</b></div><div class="st">CTR<b>2.4%</b></div></div>
+              <div class="accdots"><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><i class="d-success"></i><span class="vs">5/5</span></div>
+              <div class="foot"><span>Scaled 18 Oct</span><a href="#">Revive</a></div></div>
+          </div>
+          <div class="col" style="background:var(--danger-soft)"><h4><i class="dot d-danger"></i> Losers <span class="cnt">1</span></h4>
+            <div class="ccard"><div class="top"><span class="thumb t4"></span><div class="name"><div><div class="t">Meme — "bank said no"</div><div class="s">CT-0041</div></div></div></div>
+              <div class="stats"><div class="st">CPL<b class="bad">£75.42</b></div><div class="st">Leads<b>12</b></div><div class="st">Hook<b class="bad">14%</b></div></div>
+              <div class="accdots"><i class="d-danger"></i><i class="d-danger"></i><i class="d-danger"></i><i class="d-danger"></i><i class="d-success"></i><span class="vs">1/5</span></div>
+              <div class="foot"><span>Paused everywhere</span><a href="#">Archive</a></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ TAB C -->
+<section class="option" id="tab-c">
+  <div class="optionhead"><h1>Tab option C — Creative gallery</h1><span class="tag">Alternative</span></div>
+  <p class="optionnote">Same hero. Thumbnail-first cards like the existing Ads gallery view, each with a verdict badge, three headline numbers and a mini per-account bar list. Most "creative team" feeling, strongest for recognising ads at a glance, but numbers are harder to scan than a table.</p>
+  <div class="shell" style="grid-template-columns:1fr;min-height:0">
+    <div class="page">
+      <div class="content">
+        <div class="ptabs">
+          <span class="ptab">Campaigns</span><span class="ptab">Ad sets</span><span class="ptab">Ads</span><span class="ptab">Leads</span><span class="ptab on">Creatives <span class="cnt">6</span></span>
+        </div>
+        <div class="toolbar" style="padding:0">
+          <div class="chips"><span class="chipf on">All 6</span><span class="chipf"><i class="dot d-info"></i> Testing</span><span class="chipf"><i class="dot d-success"></i> Winners</span><span class="chipf"><i class="dot d-danger"></i> Losers</span></div>
+          <div style="display:flex;gap:8px"><span class="seg"><span class="on">Cards</span><span>Table</span></span><button class="btn primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg> New creative test</button></div>
+        </div>
+        <div class="gallery">
+          <div class="gcard"><div class="media" style="background:linear-gradient(135deg,#c7b9f5,#5B3FD6)"><span class="badge b-success"><i class="dot d-success"></i> Winner</span><span class="code">CT-0042</span></div>
+            <div class="body"><div class="ttl">Mortgage myth #3 — UGC hook</div>
+              <div class="kv"><div>CPL<b class="good">£24.34</b></div><div>Leads<b>58</b></div><div>Hook<b>38%</b></div></div>
+              <div class="acclist">
+                <div class="accrow"><span class="nm">Harbour</span><div class="bar s"><i style="width:100%"></i></div><span class="v good">£19</span></div>
+                <div class="accrow"><span class="nm">Oakline</span><div class="bar d"><i style="width:100%"></i></div><span class="v bad">£66</span></div>
+                <div class="accrow"><span class="nm">Birch</span><div class="bar w"><i style="width:64%"></i></div><span class="v">£24</span></div>
+                <div class="accrow"><span class="nm" style="color:var(--subtle)">+6 more</span><div class="bar"><i style="width:0"></i></div><span class="v"></span></div>
+              </div>
+              <button class="btn primary sm" style="align-self:flex-start">Scale to 4 more accounts</button></div></div>
+          <div class="gcard"><div class="media" style="background:linear-gradient(135deg,#fde68a,#f59e0b)"><span class="badge b-info"><i class="dot d-info"></i> Testing · day 4/7</span><span class="code">CT-0045</span></div>
+            <div class="body"><div class="ttl">Rate-drop static — "£340 a month"</div>
+              <div class="kv"><div>CPL<b>£33.68</b></div><div>Leads<b>19</b></div><div>CTR<b>1.4%</b></div></div>
+              <div class="acclist">
+                <div class="accrow"><span class="nm">Harbour</span><div class="bar s"><i style="width:100%"></i></div><span class="v good">£28</span></div>
+                <div class="accrow"><span class="nm">Oakline</span><div class="bar w"><i style="width:40%"></i></div><span class="v">£31</span></div>
+                <div class="accrow"><span class="nm">Birch</span><div class="bar w"><i style="width:30%"></i></div><span class="v">£39</span></div>
+                <div class="accrow"><span class="nm" style="color:var(--subtle)">+3 more</span><div class="bar"><i style="width:0"></i></div><span class="v"></span></div>
+              </div></div></div>
+          <div class="gcard"><div class="media" style="background:linear-gradient(135deg,#a7f3d0,#16794C)"><span class="badge b-info"><i class="dot d-info"></i> Testing · £310/£1.4k</span><span class="code">CT-0046</span></div>
+            <div class="body"><div class="ttl">Founder talking head — objections</div>
+              <div class="kv"><div>CPL<b>£34.44</b></div><div>Leads<b>9</b></div><div>Hook<b class="good">44%</b></div></div>
+              <div class="acclist">
+                <div class="accrow"><span class="nm">Harbour</span><div class="bar w"><i style="width:25%"></i></div><span class="v">£30</span></div>
+                <div class="accrow"><span class="nm">Oakline</span><div class="bar w"><i style="width:20%"></i></div><span class="v">£38</span></div>
+                <div class="accrow"><span class="nm">Birch</span><div class="bar w"><i style="width:22%"></i></div><span class="v">£35</span></div>
+                <div class="accrow"><span class="nm">Keystone</span><div class="bar w"><i style="width:18%"></i></div><span class="v">£33</span></div>
+              </div></div></div>
+          <div class="gcard"><div class="media" style="background:linear-gradient(135deg,#fecaca,#ef4444)"><span class="badge b-danger"><i class="dot d-danger"></i> Loser · paused</span><span class="code">CT-0041</span></div>
+            <div class="body"><div class="ttl">Meme — "bank said no"</div>
+              <div class="kv"><div>CPL<b class="bad">£75.42</b></div><div>Leads<b>12</b></div><div>Hook<b class="bad">14%</b></div></div>
+              <div class="acclist">
+                <div class="accrow"><span class="nm">Harbour</span><div class="bar d"><i style="width:100%"></i></div><span class="v bad">£81</span></div>
+                <div class="accrow"><span class="nm">Oakline</span><div class="bar d"><i style="width:100%"></i></div><span class="v bad">£92</span></div>
+                <div class="accrow"><span class="nm">Birch</span><div class="bar s"><i style="width:100%"></i></div><span class="v good">£31</span></div>
+                <div class="accrow"><span class="nm" style="color:var(--subtle)">+2 more</span><div class="bar"><i style="width:0"></i></div><span class="v"></span></div>
+              </div>
+              <button class="btn ghost sm" style="align-self:flex-start">Keep only in Birch</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ WIZARD 1 -->
+<section class="option" id="wiz-1">
+  <div class="optionhead"><h1>Wizard option 1 — Side sheet, 4 steps</h1><span class="tag rec">Recommended</span></div>
+  <p class="optionnote">"New creative test" opens the ds <b>Sheet</b> (lg, 720px) over the hub so the table stays in view. Step 0 picks the path; both paths then share <b>Accounts → Targets → Review & post</b>. Shown at step 3 (Targets) with the three target modes you asked for as a switch. Fast, keeps context, matches the Media Buying Agent setup pattern.</p>
+  <div class="overlaywrap">
+    <div class="backdrop"></div>
+    <div class="sheet">
+      <header>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h3>New creative test</h3><div class="sub">Mortgage myth #3 — UGC hook · <span class="code">CT-0048</span></div></div><span class="ctl" style="height:30px">✕</span></div>
+        <div class="steps">
+          <span class="step done"><i>✓</i> Creative</span><span class="ln"></span><span class="step done"><i>✓</i> Accounts <span class="vs">9</span></span><span class="ln"></span><span class="step on"><i>3</i> Targets</span><span class="ln"></span><span class="step"><i>4</i> Review & post</span>
+        </div>
+      </header>
+      <div class="body">
+        <div class="field"><label>How should Birdy judge a winner?</label>
+          <div class="tgt">
+            <div class="tcard on"><h5>Targets per metric</h5><p>Absolute thresholds, prefilled from each client's defaults.</p></div>
+            <div class="tcard"><h5>Beat the account</h5><p>Winner if it beats that account's own CPL / CTR by N%.</p></div>
+            <div class="tcard"><h5>CPL only</h5><p>One CPL number, nothing else.</p></div>
+          </div>
+        </div>
+        <div class="field"><label>Thresholds <span class="hint">· an account passes when every enabled metric is met</span></label>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="metricrow"><span><span class="cb on"></span>&nbsp; Cost per lead</span><span class="input">≤</span><span class="input">£ 35.00</span><span class="vs">client default £35</span></div>
+            <div class="metricrow"><span><span class="cb on"></span>&nbsp; CTR (link)</span><span class="input">≥</span><span class="input">1.5 %</span><span class="vs">agency default</span></div>
+            <div class="metricrow"><span><span class="cb on"></span>&nbsp; Hook rate (3s views ÷ impressions)</span><span class="input">≥</span><span class="input">30 %</span><span class="vs">video only</span></div>
+            <div class="metricrow"><span><span class="cb"></span>&nbsp; Cost per click</span><span class="input ph">≤</span><span class="input ph">£ —</span><span></span></div>
+          </div>
+          <div class="note">Oakline Wealth and Birch Mortgages have their own CPL targets (£42, £28). Birdy will use those for their rows. <a href="#">Edit per account</a></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Score each account after</label><div style="display:flex;gap:8px"><span class="input" style="flex:1">£ 150 spend</span><span class="input" style="flex:1">or 7 days</span></div><div class="hint">Whichever comes first. Below this, Birdy says "scoring", never pass/fail.</div></div>
+          <div class="field"><label>Call the test a winner when</label><span class="input">≥ 60% of scored accounts pass</span><div class="hint">Loser when ≥ 60% fail. Otherwise "inconclusive" and Birdy asks you.</div></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Daily budget per account</label><span class="input">£ 25.00</span><div class="hint">Set on the "Birdy tests" ad set Birdy creates in each account.</div></div>
+          <div class="field"><label>When a verdict lands</label><div style="display:flex;flex-direction:column;gap:6px;font-size:13px"><span><span class="cb on"></span>&nbsp; Notify in-app + Slack #creative-tests</span><span><span class="cb on"></span>&nbsp; Suggest pausing failing accounts</span><span><span class="cb"></span>&nbsp; Auto-pause losers (agent rule)</span></div></div>
+        </div>
+      </div>
+      <footer><button class="btn ghost">← Back</button><div style="display:flex;gap:8px"><span class="vs" style="align-self:center">Saved as draft</span><button class="btn primary">Continue to review →</button></div></footer>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ WIZARD 2 -->
+<section class="option" id="wiz-2">
+  <div class="optionhead"><h1>Wizard option 2 — Full page with live ad preview</h1><span class="tag">Alternative</span></div>
+  <p class="optionnote">A dedicated route (<span class="code">/campaigns/creatives/new</span>) with the form on the left and a sticky Meta-style ad preview on the right that updates as you type. Shown at step 1 (Creative). More room for the creative itself, better for the "create a new ad" path; costs a page change and loses the table context.</p>
+  <div class="shell" style="grid-template-columns:1fr;min-height:0">
+    <div class="page">
+      <div class="topbar"><div><h2>New creative test</h2><div class="sub">Marketing Hub › Creatives</div></div><div class="steps"><span class="step on"><i>1</i> Creative</span><span class="ln"></span><span class="step"><i>2</i> Accounts</span><span class="ln"></span><span class="step"><i>3</i> Targets</span><span class="ln"></span><span class="step"><i>4</i> Review & post</span></div></div>
+      <div class="wizpage">
+        <div class="stack">
+          <div class="pathcards">
+            <div class="pcard on"><h4><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span> Create a new ad</h4><p>Upload media, write the copy, and Birdy posts it to every account you pick.</p></div>
+            <div class="pcard"><h4><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></span> Test an ad you already have</h4><p>Pick any live or paused ad from any account; Birdy copies it to the others.</p></div>
+          </div>
+          <div class="frame"><header><h3>Creative</h3><span class="desc">Name is generated: <span class="code">CT-0048 · mortgage-myth-ugc</span></span></header>
+            <div class="surface" style="padding:18px;display:flex;flex-direction:column;gap:16px">
+              <div class="field"><label>Media</label><div class="drop"><b>mortgage-myth-v3.mp4</b> · 9:16 · 0:27 · 48 MB<br><span class="hint">Drop a replacement or <a href="#">add a 1:1 cut</a> for feed placements</span></div></div>
+              <div class="field"><label>Primary text</label><div class="textarea">Most people think you need a 20% deposit. You don't. Here's what the banks won't say out loud…</div></div>
+              <div class="grid2"><div class="field"><label>Headline</label><span class="input">Check your options in 60 seconds</span></div><div class="field"><label>Call to action</label><span class="input">Learn more ▾</span></div></div>
+              <div class="field"><label>Destination</label><div class="seg"><span class="on">Lead form</span><span>Website URL</span><span>WhatsApp</span></div><div class="hint">Lead forms belong to a Facebook Page, so each account maps to its own form in the next step. Website URLs post identically everywhere.</div></div>
+              <div class="field"><label>Internal name</label><span class="input">Mortgage myth #3 — UGC hook</span><div class="hint">Shown in Birdy. The Meta ad name is the convention above and is the same in every account.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="preview"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:13px">Preview</b><span class="seg"><span class="on">Feed</span><span>Reels</span><span>Stories</span></span></div>
+          <div class="fbpost"><div class="ph"><i></i><div><b>Harbour Finance</b><span>Sponsored · <span style="color:var(--primary)">switch account ▾</span></span></div></div><div class="txt">Most people think you need a 20% deposit. You don't. Here's what the banks won't say out loud…</div><div class="img"></div><div class="cta"><div><span>FORM ON FACEBOOK</span><b>Check your options in 60 seconds</b></div><button class="btn ghost sm">Learn more</button></div></div>
+          <div class="note">Birdy will post this as <b>paused</b> first, verify every account accepted it, then set them live together so the test starts on the same day.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ DETAIL -->
+<section class="option" id="detail">
+  <div class="optionhead"><h1>Creative test detail — side sheet</h1><span class="tag">Shared by every option</span></div>
+  <p class="optionnote">Clicking a creative anywhere (table row, board card, gallery card, Birdy's read, or a chat card) opens this. Verdict and targets on top, per-account table in the middle, Birdy's read for this test, and the actions Birdy can also take from chat: scale, pause in an account, add accounts, revive, archive.</p>
+  <div class="overlaywrap" style="height:900px">
+    <div class="backdrop"></div>
+    <div class="sheet">
+      <header>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+          <div class="name"><span class="thumb lg v"></span><div><h3 style="font-size:17px">Mortgage myth #3 — UGC hook</h3><div class="sub"><span class="code">CT-0042</span> · new ad · posted 9 Oct to 9 accounts · targets per metric</div><div style="display:flex;gap:6px;margin-top:8px"><span class="badge b-success"><i class="dot d-success"></i> Winner · 7 of 9</span><span class="badge b-neutral">Video 9:16</span><span class="badge b-neutral">Lead form</span></div></div></div>
+          <div style="display:flex;gap:6px"><button class="btn primary sm">Scale to 4 more</button><span class="ctl" style="height:30px">⋯</span><span class="ctl" style="height:30px">✕</span></div>
+        </div>
+      </header>
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi"><div class="l">Spend</div><div class="v">£1,412</div><div class="c">of £1,350 needed</div></div>
+          <div class="kpi"><div class="l">Leads</div><div class="v">58</div><div class="c">+21% vs account ads</div></div>
+          <div class="kpi"><div class="l">CPL</div><div class="v good">£24.34</div><div class="c">target ≤ £35</div></div>
+          <div class="kpi"><div class="l">Hook rate</div><div class="v good">38%</div><div class="c">target ≥ 30%</div></div>
+        </div>
+        <div class="frame"><div class="surface"><div class="chartwrap" style="padding:12px 14px"><div style="display:flex;gap:8px;margin-bottom:8px"><span class="seg"><span class="on">CPL</span><span>CTR</span><span>Hook</span><span>Leads</span></span><span class="vs" style="align-self:center">one line per account · dashed = target</span></div>
+          <svg viewBox="0 0 600 140" preserveAspectRatio="none" style="height:140px"><g stroke="#f0f0f1"><line x1="0" y1="35" x2="600" y2="35"/><line x1="0" y1="70" x2="600" y2="70"/><line x1="0" y1="105" x2="600" y2="105"/></g><line x1="0" y1="78" x2="600" y2="78" stroke="#98989E" stroke-dasharray="5 5"/><path d="M0 120 L100 110 L200 95 L300 92 L400 88 L500 90 L600 86" fill="none" stroke="#16794C" stroke-width="2"/><path d="M0 125 L100 118 L200 108 L300 100 L400 96 L500 94 L600 92" fill="none" stroke="#16794C" stroke-width="2" opacity=".6"/><path d="M0 60 L100 40 L200 30 L300 36 L400 28 L500 26 L600 24" fill="none" stroke="#EF4444" stroke-width="2"/><path d="M0 110 L100 100 L200 96 L300 90 L400 84" fill="none" stroke="#F59E0B" stroke-width="2"/></svg></div></div></div>
+        <div class="frame"><header><h3>Accounts <span class="count" style="background:var(--neutral-soft);color:var(--neutral-ink)">9</span></h3><span class="desc">Sorted by CPL</span></header>
+          <div class="surface"><table>
+            <thead><tr><th>Account</th><th>Status</th><th class="num">Spend</th><th class="num">Leads</th><th class="num">CPL</th><th class="num">Hook</th><th></th></tr></thead>
+            <tbody>
+              <tr><td><div class="name"><div><div class="t">Harbour Finance</div><div class="s">act_1029 · live</div></div></div></td><td><span class="badge b-success">Pass</span></td><td class="num">£212</td><td class="num">11</td><td class="num good">£19.27</td><td class="num">41%</td><td><button class="btn ghost sm">Scale budget</button></td></tr>
+              <tr><td><div class="name"><div><div class="t">Keystone Lending</div><div class="s">act_3301 · live</div></div></div></td><td><span class="badge b-success">Pass</span></td><td class="num">£160</td><td class="num">8</td><td class="num good">£20.00</td><td class="num">39%</td><td></td></tr>
+              <tr><td><div class="name"><div><div class="t">Birch Mortgages</div><div class="s">act_4410 · live</div></div></div></td><td><span class="badge b-warning">Scoring</span></td><td class="num">£96</td><td class="num">4</td><td class="num">£24.00</td><td class="num">35%</td><td><span class="vs">£54 to go</span></td></tr>
+              <tr><td><div class="name"><div><div class="t">Oakline Wealth</div><div class="s">act_2231 · live · own target £42</div></div></div></td><td><span class="badge b-danger">Fail</span></td><td class="num">£198</td><td class="num">3</td><td class="num bad">£66.00</td><td class="num">22%</td><td><button class="btn danger sm">Pause here</button></td></tr>
+              <tr><td colspan="7" style="color:var(--subtle);font-size:12px">+ 5 more accounts · all pass</td></tr>
+            </tbody></table></div>
+        </div>
+        <div class="frame"><header><h3><span class="hdravatar"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt=""></span> Birdy's read</h3></header>
+          <div class="surface"><ul class="rows">
+            <li><span class="chip b-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span><div style="flex:1"><div class="ttl">The hook carries it</div><div class="det">38% hook rate is 1.6× your agency median; CPL tracks hook rate across accounts (r = 0.8). Oakline's audience is 55+, where the UGC opener underperforms everywhere you've run it.</div></div></li>
+            <li><span class="chip b-info"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></svg></span><div style="flex:1"><div class="ttl">4 accounts haven't run it</div><div class="det">Summit, Fairway, Northgate, Pennine. Same lead-form setup as Harbour, so posting should just work.</div></div><div class="act"><button class="btn primary sm">Scale</button></div></li>
+          </ul></div>
+          <footer><a href="#">Ask Birdy about CT-0042 →</a></footer>
+        </div>
+      </div>
+      <footer><div style="display:flex;gap:8px"><button class="btn ghost sm">Add accounts</button><button class="btn ghost sm">Edit targets</button><button class="btn ghost sm">Revive later</button></div><button class="btn ghost sm" style="color:var(--danger-ink)">Pause everywhere</button></footer>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ INTEGRATIONS -->
+<section class="option" id="integ">
+  <div class="optionhead"><h1>Suggestions, alerts and Birdy AI</h1><span class="tag">Shared by every option</span></div>
+  <p class="optionnote">The creative test is a first-class object everywhere Birdy already speaks: the dashboard suggestions rail, the alerts editor, Slack, and chat. Chat can run the whole flow, posting included, with one confirm card before anything touches Meta.</p>
+  <div class="integ">
+    <div class="chat">
+      <div class="msg user"><div class="bub">Take the "mortgage myth" video that's winning in Harbour and test it in all my mortgage clients with a £35 CPL target</div></div>
+      <div class="msg"><span class="bav"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt=""></span><div style="flex:1"><div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap"><span class="toolpill">find_ads</span><span class="toolpill">list_ad_accounts</span><span class="toolpill">draft_creative_test</span></div>
+        <div class="bub" style="max-width:none">Found it: <b>Mortgage myth #3 — UGC hook</b> in Harbour Finance (CPL £19.27, 11 leads this month). 8 other mortgage clients can take it. Here's the test, ready to post:
+          <div class="ccardchat"><div class="h"><span class="thumb v"></span><div><div class="t">CT-0048 · Mortgage myth #3 — UGC hook</div><div class="s">Revived from Harbour → 8 accounts · £25/day each · scored after £150 or 7 days</div></div></div>
+            <table><tbody>
+              <tr><td>Targets</td><td>CPL ≤ £35 (Oakline £42, Birch £28 from their own targets) · CTR ≥ 1.5% · hook ≥ 30%</td></tr>
+              <tr><td>Winner when</td><td>≥ 60% of scored accounts pass</td></tr>
+              <tr><td>Destination</td><td>Lead form → mapped per Page · <span class="bad">Summit has no lead form</span>, I'll use its website URL</td></tr>
+              <tr><td>Posts as</td><td>Paused, then live together once all 8 accept</td></tr>
+            </tbody></table>
+            <div class="confirm"><button class="btn primary sm">Post to 8 accounts</button><button class="btn ghost sm">Open in wizard</button><button class="btn ghost sm">Change targets</button></div></div>
+        </div></div></div>
+      <div class="msg user"><div class="bub">How's it doing?</div></div>
+      <div class="msg"><span class="bav"><img src="../../../../public/birdy-mascot-VmH3J7Wq.png" alt=""></span><div style="flex:1"><div style="display:flex;gap:6px;margin-bottom:6px"><span class="toolpill">get_creative_test</span></div>
+        <div class="bub" style="max-width:none">Day 4. Scoring in 6 of 8, two already passed. Blended CPL £31.20, under target. Oakline is the drag at £58 with 2 leads; I'd give it until £150 before pausing.
+          <div class="ccardchat"><div class="h"><div class="t" style="font-size:13px">CPL by account vs £35 target</div></div><div style="padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+            <div class="accrow"><span class="nm">Harbour</span><div class="bar s"><i style="width:55%"></i></div><span class="v good">£19</span></div>
+            <div class="accrow"><span class="nm">Keystone</span><div class="bar s"><i style="width:60%"></i></div><span class="v good">£21</span></div>
+            <div class="accrow"><span class="nm">Birch</span><div class="bar w"><i style="width:70%"></i></div><span class="v">£24</span></div>
+            <div class="accrow"><span class="nm">Oakline</span><div class="bar d"><i style="width:100%"></i></div><span class="v bad">£58</span></div></div></div>
+        </div></div></div>
+    </div>
+    <div class="stack">
+      <div class="frame"><header><h3>Dashboard suggestions rail</h3><span class="desc">new rule kinds</span></header>
+        <div class="surface"><ul class="rows">
+          <li><span class="chip b-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg></span><div style="flex:1"><div class="ttl">Scale winner CT-0042 to 4 more accounts <span class="badge b-primary" style="height:20px;font-size:11px">creative_winner</span></div><div class="det">Harbour, Keystone +5 pass · 7/9. Posts the same ad to Summit, Fairway, Northgate, Pennine.</div></div><div class="act"><button class="btn primary sm">Do it</button></div></li>
+          <li><span class="chip b-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4m0 4h.01"/></svg></span><div style="flex:1"><div class="ttl">Pause CT-0045 in Oakline only <span class="badge b-primary" style="height:20px;font-size:11px">creative_account_fail</span></div><div class="det">£71 CPL vs £42 target after £180. Other 5 accounts keep running.</div></div><div class="act"><button class="btn ghost sm">Do it</button></div></li>
+          <li><span class="chip b-danger"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 6l12 12M18 6L6 18"/></svg></span><div style="flex:1"><div class="ttl">CT-0041 is a loser — pause everywhere <span class="badge b-primary" style="height:20px;font-size:11px">creative_loser</span></div><div class="det">4/5 fail · £905 spent. Birch passes; keep it there?</div></div><div class="act"><button class="btn ghost sm">Do it</button></div></li>
+          <li><span class="chip b-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></span><div style="flex:1"><div class="ttl">Retry 2 failed posts for CT-0047 <span class="badge b-primary" style="height:20px;font-size:11px">creative_post_failed</span></div><div class="det">Meta error 100: lead form not owned by Page. Retry with website URL.</div></div><div class="act"><button class="btn ghost sm">Retry</button></div></li>
+        </ul></div>
+      </div>
+      <div class="alertform">
+        <div style="display:flex;justify-content:space-between;align-items:center"><b>Alerts editor · new scope</b><span class="badge b-neutral">/alerts</span></div>
+        <div class="field"><label>Scope</label><div class="seg"><span>Clients</span><span class="on">Creative tests</span></div></div>
+        <div class="grid2"><div class="field"><label>Which tests</label><span class="input">All live tests ▾</span></div><div class="field"><label>Metric</label><span class="input">Verdict reached ▾</span></div></div>
+        <div class="grid2"><div class="field"><label>Also when</label><span class="input">Any account CPL &gt; target × 1.5</span></div><div class="field"><label>Channels</label><span class="input">In-app · Slack #creative-tests</span></div></div>
+        <div class="note">Every test gets a default <b>Verdict reached</b> alert on creation (chosen in the wizard). Metric list gains <span class="code">creative_cpl</span>, <span class="code">creative_hook_rate</span>, <span class="code">creative_ctr</span>, <span class="code">creative_verdict</span>, <span class="code">creative_post_failed</span>.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="mockfoot">Birdy · Creatives Tracking design mocks · 3 Nov 2026 · tokens from src/app/globals.css on origin/main</footer>
+</body>
+</html>
