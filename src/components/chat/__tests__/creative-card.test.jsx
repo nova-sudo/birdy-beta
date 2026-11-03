@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 const push = vi.fn()
@@ -69,6 +69,26 @@ describe("CreativeTestCard", () => {
     await userEvent.click(btn)
     expect(onSend).toHaveBeenCalledTimes(1)
     expect(onSend).toHaveBeenCalledWith("Change the targets for CT-0048.")
+  })
+
+  it("disables Post and Change targets without onSend, keeps the wizard enabled", () => {
+    render(<CreativeTestCard data={data} />)
+    expect(screen.getByRole("button", { name: /Post to/ })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Change targets" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Open in wizard" })).toBeEnabled()
+  })
+
+  it("uses singular wording for one account", async () => {
+    const onSend = vi.fn()
+    render(<CreativeTestCard data={{ ...data, n_accounts: 1, accounts: [data.accounts[0]] }} onSend={onSend} />)
+    await userEvent.click(screen.getByRole("button", { name: "Post to 1 account" }))
+    expect(onSend).toHaveBeenCalledWith("Yes, post CT-0048 to 1 account.")
+  })
+
+  it("hides the thumbnail when it fails to load", () => {
+    const { container } = render(<CreativeTestCard data={data} onSend={vi.fn()} />)
+    fireEvent.error(container.querySelector("img"))
+    expect(container.querySelector("img")).toBeNull()
   })
 
   it("renders nothing for a payload without a code or test_id", () => {

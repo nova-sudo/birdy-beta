@@ -14,13 +14,15 @@ import { Button, Surface } from "@/components/ds"
 export default function CreativeTestCard({ data, onSend }) {
   const router = useRouter()
   const [used, setUsed] = useState({})
+  const [imgFailed, setImgFailed] = useState(false)
   if (!data || typeof data !== "object" || !data.test_id || !data.code) return null
 
   const accounts = Array.isArray(data.accounts) ? data.accounts : []
   const warnings = Array.isArray(data.warnings) ? data.warnings.filter(w => typeof w === "string") : []
   const n = Number.isInteger(data.n_accounts) && data.n_accounts > 0 ? data.n_accounts : accounts.length
   const ready = data.ready !== false
-  const postLabel = `Post to ${n} accounts`
+  const noun = n === 1 ? "account" : "accounts"
+  const postLabel = `Post to ${n} ${noun}`
 
   const send = (key, text) => {
     if (used[key] || !onSend) return
@@ -31,8 +33,8 @@ export default function CreativeTestCard({ data, onSend }) {
   return (
     <Surface className="my-3 space-y-3" data-testid="creative-card">
       <div className="flex gap-3">
-        {data.thumbnail && (
-          <img src={data.thumbnail} alt="" className="size-16 shrink-0 rounded-control-sm object-cover" />
+        {data.thumbnail && !imgFailed && (
+          <img src={data.thumbnail} alt="" onError={() => setImgFailed(true)} className="size-16 shrink-0 rounded-control-sm object-cover" />
         )}
         <div className="min-w-0 flex-1">
           <div className="text-xs font-medium tabular-nums text-muted-foreground">{data.code}</div>
@@ -70,8 +72,8 @@ export default function CreativeTestCard({ data, onSend }) {
         <Button
           variant="primary"
           size="sm"
-          disabled={!ready || used.post}
-          onClick={() => send("post", `Yes, post ${data.code} to ${n} accounts.`)}
+          disabled={!onSend || !ready || used.post}
+          onClick={() => send("post", `Yes, post ${data.code} to ${n} ${noun}.`)}
         >
           {postLabel}
         </Button>
@@ -81,7 +83,7 @@ export default function CreativeTestCard({ data, onSend }) {
         <Button
           variant="ghost"
           size="sm"
-          disabled={used.targets}
+          disabled={!onSend || used.targets}
           onClick={() => send("targets", `Change the targets for ${data.code}.`)}
         >
           Change targets
