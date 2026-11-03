@@ -178,7 +178,7 @@ export default function ChatConversation({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" })
   }, [messages, loading])
 
-  const sendMessage = useCallback(async (text) => {
+  const sendMessage = useCallback(async (text, attachments) => {
     // Resolves false when the message was not sent (the surface's sendRef callers use it).
     if (!text?.trim() || loading || !configured) return false
     if (outOfCredits) {
@@ -199,6 +199,7 @@ export default function ChatConversation({
           clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
           clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
           dashboardId,
+          attachments,
           getSummary: () => getDashboardSummaryRef.current?.(),
         },
         {
@@ -225,7 +226,7 @@ export default function ChatConversation({
       return true
     }
 
-    setLocalMessages(prev => [...prev, { role: "user", content: text }])
+    setLocalMessages(prev => [...prev, { role: "user", content: text, ...(attachments?.length ? { attachments } : {}) }])
     setLocalLoading(true)
     try {
       const res = await apiRequest("/api/chat", {
@@ -234,6 +235,7 @@ export default function ChatConversation({
           message: text, session_id: sessionId, page,
           client_group_id: scope.id, client_name: scope.id ? scope.name : null,
           view_catalogues: readViewCatalogues(),
+          ...(attachments?.length ? { attachments } : {}),
         }),
       })
       if (res.status === 412) {
@@ -395,7 +397,7 @@ export default function ChatConversation({
           <ChatComposer
             value={input}
             onChange={setInput}
-            onSend={() => sendMessage(input)}
+            onSend={(attachments) => sendMessage(input, attachments)}
             disabled={loading || outOfCredits}
             compact={composerCompact}
             placeholder={composerPlaceholder}

@@ -104,9 +104,12 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
   if (chat().loading) return
   const generation = generations.get(sessionKey) ?? 0
   const stale = () => (generations.get(sessionKey) ?? 0) !== generation
-  const { text, page, clientGroupId, clientName, dashboardId, getSummary } = payload
+  const { text, page, clientGroupId, clientName, dashboardId, getSummary, attachments } = payload
 
-  chat().messages = [...chat().messages, { role: "user", content: text }]
+  chat().messages = [
+    ...chat().messages,
+    { role: "user", content: text, ...(attachments?.length ? { attachments } : {}) },
+  ]
   chat().loading = true
   emit(sessionKey)
 
@@ -132,6 +135,7 @@ export async function sendChatMessage(sessionKey, payload, handlers = {}) {
         dashboard_id: dashboardId ?? undefined,
         summary: dashboardId ? getSummary?.() : undefined,
         view_catalogues: readViewCatalogues(),
+        attachments: attachments?.length ? attachments : undefined,
       }),
     })
 

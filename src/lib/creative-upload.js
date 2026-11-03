@@ -5,6 +5,8 @@ import { apiRequest } from "@/lib/api"
 const MB = 1024 * 1024
 const IMAGE_TYPES = ["image/jpeg", "image/png"]
 const VIDEO_TYPES = ["video/mp4", "video/quicktime"]
+/** Value for an <input type="file" accept>. */
+export const CREATIVE_ACCEPT = [...IMAGE_TYPES, ...VIDEO_TYPES].join(",")
 const MAX_IMAGE = 30 * MB
 const MAX_VIDEO = 1024 * MB
 const MEASURE_TIMEOUT_MS = 10_000

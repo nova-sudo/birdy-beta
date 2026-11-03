@@ -47,6 +47,13 @@ export default function MessageBubble({
         transition={{ duration: 0.5, ease: EASE_SPRING }}
       >
         <div className={`${widthClass} rounded-[22px] bg-pd-divider px-4 py-2.5 text-pd-ink`}>
+          {message.attachments?.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-1.5">
+              {message.attachments.map((a, i) => (
+                <SentThumb key={`${a.blob_url}-${i}`} attachment={a} />
+              ))}
+            </div>
+          )}
           <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
         </div>
       </motion.div>
@@ -272,4 +279,14 @@ function CopyButton({ text }) {
       {copied ? "Copied" : "Copy"}
     </button>
   )
+}
+
+/** A sent attachment: the image itself, or a video's thumbnail / first frame. */
+function SentThumb({ attachment }) {
+  const isVideo = attachment.mime?.startsWith("video/")
+  const box = "size-16 rounded-xl bg-pd-surface object-cover"
+  if (isVideo && !attachment.thumbnail_url) {
+    return <video src={`${attachment.blob_url}#t=0.1`} preload="metadata" muted playsInline className={box} aria-label="Attached video" />
+  }
+  return <img src={isVideo ? attachment.thumbnail_url : attachment.blob_url} alt="Attached image" className={box} />
 }
