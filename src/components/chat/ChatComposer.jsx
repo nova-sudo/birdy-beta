@@ -38,6 +38,7 @@ const SLASH_COMMANDS = [
  *
  * onSend(attachments) receives the finished uploads (up to 4) as the chat
  * endpoint's attachment objects; it is called with [] when there are none.
+ * Returning false means the message was not sent, so the chips stay.
  * The composer owns the chips and clears them on send.
  *
  * Starter chips used to render above the input; they live in the empty
@@ -61,7 +62,13 @@ export default function ChatComposer({
   // Chips: { id, name, kind, preview, progress, attachment|null }
   const [chips, setChips] = useState([])
   const chipsRef = useRef(chips)
-  chipsRef.current = chips
+  useEffect(() => {
+    chipsRef.current = chips
+  }, [chips])
+  // Chips removed by hand, so a late upload error for one stays quiet.
+  const removedRef = useRef(new Set())
+  // Object URLs live as long as their chip: free what is left on unmount.
+  useEffect(() => () => chipsRef.current.forEach((c) => c.preview && URL.revokeObjectURL(c.preview)), [])
   const [dragging, setDragging] = useState(false)
   const uploading = chips.some((c) => !c.attachment)
 
@@ -74,16 +81,16 @@ export default function ChatComposer({
     }
     for (const file of files.slice(0, Math.max(room, 0))) {
       const id = ++idRef.current
-      const preview = URL.createObjectURL(file)
-      const chip = { id, name: file.name, kind: file.type.startsWith("video/") ? "video" : "image", preview, progress: 0, attachment: null }
-      chipsRef.current = [...chipsRef.current, chip]
-      setChips(chipsRef.current)
+      const kind = file.type.startsWith("video/") ? "video" : "image"
+      const preview = kind === "image" ? URL.createObjectURL(file) : null
+      const chip = { id, name: file.name, kind, preview, progress: 0, attachment: null }
+      setChips((prev) => [...prev, chip])
       const patch = (fn) => setChips((prev) => prev.map((c) => (c.id === id ? fn(c) : c)))
       uploadCreativeMedia(file, { onProgress: (p) => patch((c) => ({ ...c, progress: p })) })
         .then((res) => patch((c) => ({ ...c, progress: 100, attachment: toAttachment(res) })))
         .catch((err) => {
           // A chip removed mid-upload has nothing left to report on.
-          if (chipsRef.current.some((c) => c.id === id)) {
+          if (!removedRef.current.has(id)) {
             toast.error(err?.message || "Upload failed. Try again.")
           }
           removeChip(id)
@@ -92,19 +99,18 @@ export default function ChatComposer({
   }
 
   const removeChip = (id) => {
+    removedRef.current.add(id)
     const chip = chipsRef.current.find((c) => c.id === id)
-    if (chip) URL.revokeObjectURL(chip.preview)
-    chipsRef.current = chipsRef.current.filter((c) => c.id !== id)
-    setChips(chipsRef.current)
+    if (chip?.preview) URL.revokeObjectURL(chip.preview)
+    setChips((prev) => prev.filter((c) => c.id !== id))
   }
 
   const send = () => {
     if (uploading) return
-    const attachments = chipsRef.current.map((c) => c.attachment)
-    chipsRef.current.forEach((c) => URL.revokeObjectURL(c.preview))
-    chipsRef.current = []
+    // onSend returning false means nothing was sent: keep the chips.
+    if (onSend(chips.map((c) => c.attachment)) === false) return
+    chips.forEach((c) => c.preview && URL.revokeObjectURL(c.preview))
     setChips([])
-    onSend(attachments)
   }
 
   const onDrop = (e) => {
@@ -156,7 +162,7 @@ export default function ChatComposer({
   )
   const slashMenuOpen = showSlash && filteredCommands.length > 0
 
-  const canSend = Boolean(value.trim()) && !disabled && !uploading
+  const canSend = (Boolean(value.trim()) || chips.length > 0) && !disabled && !uploading
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && !e.shiftKey && !showSlash) {
@@ -177,12 +183,11 @@ export default function ChatComposer({
     setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
-  
   return (
     <div
       className="relative"
       onDragOver={(e) => {
-        if (e.dataTransfer?.types?.includes("Files")) {
+        if (!disabled && e.dataTransfer?.types?.includes("Files")) {
           e.preventDefault()
           setDragging(true)
         }

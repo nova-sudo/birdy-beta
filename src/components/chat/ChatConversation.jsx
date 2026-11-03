@@ -180,7 +180,7 @@ export default function ChatConversation({
 
   const sendMessage = useCallback(async (text, attachments) => {
     // Resolves false when the message was not sent (the surface's sendRef callers use it).
-    if (!text?.trim() || loading || !configured) return false
+    if ((!text?.trim() && !attachments?.length) || loading || !configured) return false
     if (outOfCredits) {
       toast.error("You're out of Birdy Credits", {
         description: "Top up to keep using Birdy AI.",
@@ -397,7 +397,12 @@ export default function ChatConversation({
           <ChatComposer
             value={input}
             onChange={setInput}
-            onSend={(attachments) => sendMessage(input, attachments)}
+            onSend={(attachments) => {
+              // Sync verdict for the composer: false keeps its chips.
+              if ((!input.trim() && !attachments.length) || loading || outOfCredits) return false
+              sendMessage(input, attachments)
+              return true
+            }}
             disabled={loading || outOfCredits}
             compact={composerCompact}
             placeholder={composerPlaceholder}

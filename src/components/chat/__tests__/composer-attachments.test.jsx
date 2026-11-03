@@ -125,6 +125,25 @@ describe("composer attachments", () => {
     expect(screen.queryByLabelText("Remove big.png")).toBeNull()
   })
 
+  it("sends attachments with no text once they finish, and not before", async () => {
+    let release
+    uploadCreativeMedia.mockImplementation(
+      () => new Promise((r) => { release = () => r({ blob_url: "https://a.public.blob.vercel-storage.com/x", mime: "image/png", bytes: 1 }) }),
+    )
+    const user = userEvent.setup()
+    const { container } = setup()
+    await act(async () => {
+      fireEvent.change(fileInput(container), { target: { files: [png("a.png")] } })
+    })
+    expect(screen.getByLabelText("Send message")).toBeDisabled()
+    await act(async () => release())
+    await waitFor(() => expect(screen.getByLabelText("Send message")).toBeEnabled())
+    await user.click(screen.getByLabelText("Send message"))
+    await waitFor(() => expect(apiRequest).toHaveBeenCalled())
+    expect(lastBody().message).toBe("")
+    expect(lastBody().attachments).toHaveLength(1)
+  })
+
   it("text-only sends carry no attachments key", async () => {
     const user = userEvent.setup()
     setup()

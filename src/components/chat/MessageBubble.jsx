@@ -54,7 +54,7 @@ export default function MessageBubble({
               ))}
             </div>
           )}
-          <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>
+          {message.content && <p className="whitespace-pre-wrap text-[14px] leading-relaxed">{message.content}</p>}
         </div>
       </motion.div>
     )
