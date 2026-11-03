@@ -15,6 +15,10 @@ vi.mock("@/lib/creatives-api", () => ({
   updateCreativeTest: (...a) => updateCreativeTest(...a),
   searchCreativeAds: (...a) => searchCreativeAds(...a),
   useCreativeTest: () => ({ test: null, isLoading: false }),
+  useCreativeAdAccounts: () => ({ accounts: [], isLoading: false, error: null }),
+  useCreativeAdsets: () => ({ adsets: [], isLoading: false, error: null }),
+  useCreativePages: () => ({ pages: [], isLoading: false, error: null }),
+  useCreativeLeadForms: () => ({ forms: [], isLoading: false, error: null }),
 }))
 
 const uploadCreativeMedia = vi.fn()
@@ -204,7 +208,7 @@ describe("CreativeWizard step 1", () => {
     // One save from the debounce, one flushed by Continue (no 800 ms wait).
     expect(updateCreativeTest).toHaveBeenCalledTimes(2)
     expect(updateCreativeTest.mock.calls[1][1].creative.primary_text).toBe("Text changed")
-    expect(within(screen.getByTestId("wizard-step")).getByText(/accounts/i)).toBeInTheDocument()
+    expect(within(screen.getByTestId("wizard-step")).getByRole("heading", { name: "Accounts" })).toBeInTheDocument()
   })
 
   it("patches source and origin when the pick comes after other edits", async () => {
@@ -254,7 +258,7 @@ describe("CreativeWizard step 1", () => {
     await act(async () => {
       fireEvent.click(cont())
     })
-    expect(screen.queryByText(/accounts step/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Accounts" })).not.toBeInTheDocument()
     expect(screen.getByText(/couldn't save/i)).toBeInTheDocument()
   })
 
@@ -298,12 +302,12 @@ describe("CreativeWizard step 1", () => {
     await act(async () => {
       fireEvent.click(cont())
     })
-    expect(screen.queryByText(/accounts step/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole("heading", { name: "Accounts" })).not.toBeInTheDocument()
     const calls = createCreativeTest.mock.calls.length
     await act(async () => {
       fireEvent.click(cont())
     })
     expect(createCreativeTest.mock.calls.length).toBe(calls + 1)
-    expect(screen.getByText(/accounts step/i)).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Accounts" })).toBeInTheDocument()
   })
 })

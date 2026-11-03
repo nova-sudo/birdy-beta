@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Button, ErrorState, Notice, PageHeader, Skeleton, Surface } from "@/components/ds"
 import { WizardSteps } from "@/components/agents/WizardSteps"
 import { useCreativeTest } from "@/lib/creatives-api"
+import { StepAccounts, accountsStepValid } from "./StepAccounts"
 import { StepCreative, creativeStepValid } from "./StepCreative"
 import { useCreativeDraft } from "./useCreativeDraft"
 
@@ -22,7 +23,7 @@ function replaceUrl(pathname, params) {
 }
 
 /**
- * The full-page "New creative test" wizard. Step 1 is built; the other steps are placeholders
+ * The full-page "New creative test" wizard. Steps 1 and 2 are built; the other steps are placeholders
  * until they land. The right-hand column is the slot for the live preview.
  *
  * @param {object} props
@@ -33,7 +34,7 @@ export function CreativeWizard({ testId }) {
   const [stepKey, setStepKey] = useState(() => (STEP_KEYS.includes(search?.get("step")) ? search.get("step") : "creative"))
   const [moving, setMoving] = useState(false)
 
-  const { isLoading, error: loadError } = useCreativeTest(testId)
+  const { test, isLoading, error: loadError } = useCreativeTest(testId)
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -78,8 +79,10 @@ export function CreativeWizard({ testId }) {
     replaceUrl(window.location.pathname, params)
   }
 
-  const valid = creativeStepValid(draft)
   const notDraft = draft.status && draft.status !== "draft"
+  // Add-accounts mode: accounts the test already runs in stay checked and locked.
+  const lockedAccountIds = notDraft ? [...new Set((test?.ads ?? []).map((a) => a.ad_account_id).filter(Boolean))] : []
+  const valid = stepKey === "accounts" ? accountsStepValid(draft) : creativeStepValid(draft)
 
   if (testId && loadError) {
     return <ErrorState title="Couldn't load this draft" description={loadError.message} />
@@ -103,6 +106,8 @@ export function CreativeWizard({ testId }) {
             {error && <Notice tone="danger">Couldn't save your changes. We'll retry on your next edit.</Notice>}
             {stepKey === "creative" ? (
               <StepCreative draft={draft} setField={setField} setFields={setFields} />
+            ) : stepKey === "accounts" ? (
+              <StepAccounts draft={draft} setField={setField} lockedAccountIds={lockedAccountIds} />
             ) : (
               <Surface className="text-sm text-muted-foreground">{CREATIVE_STEPS[step - 1]} step</Surface>
             )}

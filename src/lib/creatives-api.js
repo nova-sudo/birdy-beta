@@ -96,3 +96,28 @@ export function searchCreativeAds(q = "", { adAccountId, limit = 30 } = {}) {
   if (adAccountId) qs.set("ad_account_id", adAccountId)
   return send(`${queryKeys.creatives()}/ads/search?${qs}`, "GET")
 }
+
+/** Agency ad accounts, one row per account with every client name. @returns {{ accounts: object[], error, isLoading }} */
+export function useCreativeAdAccounts() {
+  const { data, error, isLoading } = useSWR(`${queryKeys.creatives()}/ad-accounts`, fetcher)
+  return { accounts: Array.isArray(data) ? data : [], error, isLoading }
+}
+
+/** One account's ad sets with `compatible`/`reason` for the destination. Keyed per account; null `act` skips. */
+export function useCreativeAdsets(act, destination) {
+  const key = act && destination ? `${queryKeys.creatives()}/ad-accounts/${act}/adsets?destination=${destination}` : null
+  const { data, error, isLoading } = useSWR(key, fetcher)
+  return { adsets: Array.isArray(data) ? data : [], error, isLoading }
+}
+
+/** One account's promote Pages. */
+export function useCreativePages(act) {
+  const { data, error, isLoading } = useSWR(act ? `${queryKeys.creatives()}/ad-accounts/${act}/pages` : null, fetcher)
+  return { pages: Array.isArray(data) ? data : [], error, isLoading }
+}
+
+/** A Page's lead forms. */
+export function useCreativeLeadForms(pageId) {
+  const { data, error, isLoading } = useSWR(pageId ? `${queryKeys.creatives()}/pages/${pageId}/lead-forms` : null, fetcher)
+  return { forms: Array.isArray(data) ? data : [], error, isLoading }
+}
