@@ -10,6 +10,7 @@ import { usePageViews } from "@/lib/usePageViews"
 import { useRememberViewCatalogue } from "@/lib/view-catalogues"
 import { CreativeDetailSheet } from "./CreativeDetailSheet"
 import { CREATIVE_COLUMNS, CreativesTable } from "./CreativesTable"
+import { reportPause } from "./pauseOutcome"
 
 const WIZARD = "/campaigns/creatives/new"
 const ALL_COLUMNS = CREATIVE_COLUMNS.map((c) => c.id)
@@ -114,8 +115,7 @@ export function CreativesTab({ clientGroupId }) {
     }
     if (!ok) return
     try {
-      await pauseCreativeAds(test.id, [ad.ad_account_id])
-      toast.success("Paused", { description: `${test.code} in ${ad.ad_account_id}` })
+      reportPause(await pauseCreativeAds(test.id, [ad.ad_account_id]), test, `in ${ad.account_name ?? ad.ad_account_id}`)
     } catch (err) {
       toast.error("Couldn't pause", { description: err?.message })
     }

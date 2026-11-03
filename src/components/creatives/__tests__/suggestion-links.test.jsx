@@ -14,6 +14,7 @@ const fns = vi.hoisted(() => ({
   retryCreativeAd: vi.fn(async () => ({})),
   applyWorkItem: vi.fn(),
   confirm: vi.fn(),
+  toast: { success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() },
 }))
 const ACCOUNTS = vi.hoisted(() => [
   { ad_account_id: "act_1", currency: "GBP", clients: [{ id: "g1", name: "Harbour" }] },
@@ -41,7 +42,7 @@ vi.mock("@/lib/creatives-api", () => ({
   useCreativeLeadForms: () => ({ forms: NONE, isLoading: false, error: null }),
 }))
 vi.mock("@/lib/agents-api", async (orig) => ({ ...(await orig()), applyWorkItem: (...a) => fns.applyWorkItem(...a) }))
-vi.mock("@/components/ds", async (orig) => ({ ...(await orig()), confirm: (...a) => fns.confirm(...a) }))
+vi.mock("@/components/ds", async (orig) => ({ ...(await orig()), confirm: (...a) => fns.confirm(...a), toast: fns.toast }))
 vi.mock("@/lib/view-catalogues", () => ({ useRememberViewCatalogue: () => {} }))
 vi.mock("@/lib/usePageViews", () => ({ usePageViews: () => ({ views: [] }) }))
 vi.mock("@/components/views/ColumnsMenu", () => ({ default: () => <button type="button">Columns</button> }))
@@ -104,6 +105,14 @@ describe("row actions", () => {
     await expandAndClick("Pause here")
     await waitFor(() => expect(fns.confirm).toHaveBeenCalled())
     expect(fns.pauseCreativeAds).not.toHaveBeenCalled()
+  })
+
+  it("Pause that Meta refuses toasts an error naming the account, never a success", async () => {
+    fns.pauseCreativeAds.mockResolvedValueOnce({ paused: 0, errors: [{ ad_account_id: "act_1", message: "Ad account disabled" }] })
+    await expandAndClick("Pause here")
+    await waitFor(() => expect(fns.toast.error).toHaveBeenCalled())
+    expect(fns.toast.error.mock.calls[0][1].description).toMatch(/act_1: Ad account disabled/)
+    expect(fns.toast.success).not.toHaveBeenCalled()
   })
 
   it("Retry re-queues that ad", async () => {

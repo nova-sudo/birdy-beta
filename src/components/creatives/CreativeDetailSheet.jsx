@@ -31,9 +31,10 @@ import {
   useCreativeAdAccounts,
   useCreativeTest,
 } from "@/lib/creatives-api"
-import { adCurrency, formatCpl, floorProgress, scoreTone, testCurrency } from "@/lib/creative-verdict"
+import { adCurrency, adFloorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
 import { AccountLinesChart } from "./AccountLinesChart"
 import { VerdictBadge } from "./VerdictBadge"
+import { reportPause } from "./pauseOutcome"
 
 const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null)
 const money = (v, cur) => `${currencySymbol(cur)}${Math.round(num(v) ?? 0).toLocaleString("en-US")}`
@@ -151,7 +152,7 @@ function AccountsTable({ test, currency, onAction }) {
           {ads.map((ad) => {
             const cur = adCurrency(ad, test, currency)
             const b = adBadge(ad)
-            const fp = ad.score?.state === "scoring" ? floorProgress(ad.score, test.targets, cur) : null
+            const fp = ad.score?.state === "scoring" ? adFloorProgress(ad, test, currency) : null
             return (
               <tr key={ad.id}>
                 <td className="px-4 py-2.5">
@@ -191,6 +192,7 @@ function AccountsTable({ test, currency, onAction }) {
 const errorText = (e) => (typeof e === "string" ? e : e?.message)
 
 const WIZARD = "/campaigns/creatives/new"
+const editPath = (id, step) => `/campaigns/creatives/${id}/edit?step=${step}`
 
 /**
  * The detail sheet for one creative test: header, KPIs vs targets, per-account lines,
@@ -221,8 +223,8 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
     { value: "leads", label: "Leads" },
   ]
 
-  const addAccounts = () => (onAddAccounts ? onAddAccounts(test) : router.push(`${WIZARD}?test=${testId}&step=accounts`))
-  const editTargets = () => (onEditTargets ? onEditTargets(test) : router.push(`${WIZARD}?test=${testId}&step=targets`))
+  const addAccounts = () => (onAddAccounts ? onAddAccounts(test) : router.push(editPath(testId, "accounts")))
+  const editTargets = () => (onEditTargets ? onEditTargets(test) : router.push(editPath(testId, "targets")))
 
   const refresh = async () => {
     setBusy("refresh")
@@ -257,8 +259,7 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
     }
     if (!ok) return
     try {
-      await pauseCreativeAds(testId, [ad.ad_account_id])
-      toast.success("Paused", { description: `${test.code} in ${ad.ad_account_id}` })
+      reportPause(await pauseCreativeAds(testId, [ad.ad_account_id]), test, `in ${ad.account_name ?? ad.ad_account_id}`)
     } catch (err) {
       toast.error("Couldn't pause", { description: err?.message })
     }
@@ -278,8 +279,7 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
     if (!ok) return
     setBusy("pause")
     try {
-      await pauseCreativeAds(testId)
-      toast.success("Paused everywhere")
+      reportPause(await pauseCreativeAds(testId), test, "everywhere")
     } catch (err) {
       toast.error("Couldn't pause", { description: err?.message })
     } finally {
@@ -292,7 +292,8 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
     try {
       ok = await confirm({
         title: "Archive this test?",
-        description: "It leaves the active list and tracking stops. Its ads stay in Meta.",
+        description:
+          "It leaves the active list and tracking stops. Its ads keep running and spending in Meta. To stop them, use Pause everywhere first.",
         confirmLabel: "Archive test",
       })
     } catch {
@@ -316,7 +317,7 @@ export function CreativeDetailSheet({ testId, open, onOpenChange, onAddAccounts,
       <SheetContent size="lg">
         <SheetHeader
           actions={
-            test && (
+            test && test.status !== "archived" && (
               <Button variant="ghost" size="sm" loading={busy === "refresh"} onClick={refresh}>
                 <RefreshCw aria-hidden />
                 Refresh

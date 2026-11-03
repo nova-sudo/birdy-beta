@@ -4,6 +4,8 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-li
 
 const push = vi.fn()
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }))
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn(), warning: vi.fn(), info: vi.fn() }))
+vi.mock("sonner", () => ({ toast, Toaster: () => null }))
 
 const archiveCreativeTest = vi.fn(() => Promise.resolve({}))
 const refreshCreativeTest = vi.fn(() => Promise.resolve({}))
@@ -61,6 +63,7 @@ const setup = (test = make()) => {
   refreshCreativeTest.mockClear()
   pauseCreativeAds.mockClear()
   retryCreativeAd.mockClear()
+  Object.values(toast).forEach((f) => f.mockClear())
   const onOpenChange = vi.fn()
   render(
     <>
@@ -124,9 +127,9 @@ describe("CreativeDetailSheet", () => {
   it("footer routes to the wizard steps and shows Pause everywhere", () => {
     setup()
     fireEvent.click(screen.getByRole("button", { name: "Add accounts" }))
-    expect(push).toHaveBeenCalledWith("/campaigns/creatives/new?test=t1&step=accounts")
+    expect(push).toHaveBeenCalledWith("/campaigns/creatives/t1/edit?step=accounts")
     fireEvent.click(screen.getByRole("button", { name: "Edit targets" }))
-    expect(push).toHaveBeenCalledWith("/campaigns/creatives/new?test=t1&step=targets")
+    expect(push).toHaveBeenCalledWith("/campaigns/creatives/t1/edit?step=targets")
     expect(screen.getByRole("button", { name: /Pause everywhere/ })).toBeInTheDocument()
   })
 
@@ -191,6 +194,73 @@ describe("CreativeDetailSheet header and actions", () => {
     expect(btn).toHaveAttribute("title", "Page not allowed")
     fireEvent.click(btn)
     await waitFor(() => expect(retryCreativeAd).toHaveBeenCalledWith("t1", "5"))
+  })
+})
+
+describe("CreativeDetailSheet final review fixes", () => {
+  beforeEach(() => {
+    current = null
+    allAccounts = ["act_1", "act_2", "act_3", "act_4", "act_5"]
+  })
+
+  it("hides Refresh on an archived test", () => {
+    setup(make({ status: "archived" }))
+    expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull()
+  })
+
+  it("archive confirm says the ads keep running and suggests pausing first", async () => {
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: "Archive" }))
+    expect(await screen.findByText(/keep running and spending in Meta/)).toBeInTheDocument()
+    expect(screen.getByText(/Pause everywhere first/)).toBeInTheDocument()
+  })
+
+  it("Pause everywhere with errors names the accounts that failed", async () => {
+    pauseCreativeAds.mockResolvedValueOnce({ paused: 1, errors: [{ ad_account_id: "act_2", message: "Token expired" }] })
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: /Pause everywhere/ }))
+    fireEvent.click((await screen.findAllByRole("button", { name: "Pause everywhere" })).pop())
+    await waitFor(() => expect(toast.warning).toHaveBeenCalled())
+    const [title, opts] = toast.warning.mock.calls[0]
+    expect(title).toBe("Paused 1, 1 couldn't be paused")
+    expect(opts.description).toMatch(/Beta Co: Token expired/)
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("Pause here that fails in Meta is an error, not a success", async () => {
+    pauseCreativeAds.mockResolvedValueOnce({ paused: 0, errors: [{ ad_account_id: "act_1", message: "No permission" }] })
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: "Pause here" }))
+    fireEvent.click((await screen.findAllByRole("button", { name: "Pause here" })).pop())
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    expect(toast.error.mock.calls[0][0]).toBe("Couldn't pause")
+    expect(toast.error.mock.calls[0][1].description).toMatch(/Zeta Co: No permission/)
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("a clean pause is a success", async () => {
+    pauseCreativeAds.mockResolvedValueOnce({ paused: 3, errors: [] })
+    setup()
+    fireEvent.click(screen.getByRole("button", { name: /Pause everywhere/ }))
+    fireEvent.click((await screen.findAllByRole("button", { name: "Pause everywhere" })).pop())
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Paused 3 ads", expect.anything()))
+  })
+
+  it("scoring progress shows the spend floor in the user's currency", () => {
+    // A JPY account scored in GBP: the row carries the converted spend and currency GBP.
+    setup(make({ ads: [ad("7", "Yen Co", null, "scoring", { currency: "GBP", account_currency: "JPY", fx_rate: 0.005, score: { state: "scoring", spend: 40, days_live: 1 } })] }))
+    expect(screen.getByText("£40 / £150")).toBeInTheDocument()
+  })
+
+  it("an unconverted row (no rate) never compares its spend with the floor", () => {
+    setup(make({ ads: [ad("8", "Odd Co", null, "scoring", { currency: "XYZ", score: { state: "scoring", spend: 90000, days_live: 2, rate_missing: true } })] }))
+    expect(screen.getByText("day 2 of 7")).toBeInTheDocument()
+  })
+
+  it("chart CPL lines convert each account's day rows with its fx rate", () => {
+    const days = { m1: [{ date: "2026-10-01", spend: "3000", actions: [{ action_type: "lead", value: "1" }] }] }
+    const { rows } = cumulativeRows(days, "cpl", { m1: 0.005 })
+    expect(rows[0].m1).toBeCloseTo(15)
   })
 })
 
