@@ -45,9 +45,11 @@ const add = (a, b) => ({
  * Cumulative-to-date points per ad, on a shared sorted date axis.
  * @param {Record<string, object[]>} days {meta_ad_id: day rows}
  * @param {string} metric cpl | ctr | hook | leads
+ * @param {Record<string, number>} [rates] {meta_ad_id: fx rate} Day rows are in the ad account's currency;
+ *   the rate (the ad row's `fx_rate`) converts their spend to the user's, like the scores
  * @returns {{rows: object[], adIds: string[]}} rows are `{date, [adId]: number|null}`
  */
-export function cumulativeRows(days, metric) {
+export function cumulativeRows(days, metric, rates = {}) {
   const adIds = Object.keys(days ?? {})
   const dates = [...new Set(adIds.flatMap((id) => (days[id] ?? []).map((d) => d.date)).filter(Boolean))].sort()
   const byAd = Object.fromEntries(
@@ -60,7 +62,8 @@ export function cumulativeRows(days, metric) {
     for (const id of adIds) {
       const day = byAd[id].get(date)
       if (day) {
-        running[id] = add(running[id], day)
+        const rate = Number.isFinite(Number(rates?.[id])) && rates?.[id] != null ? Number(rates[id]) : 1
+        running[id] = add(running[id], { ...day, spend: day.spend * rate })
         seen[id] = true
       }
       row[id] = seen[id] ? (metricsOf(running[id])[metric] ?? null) : null

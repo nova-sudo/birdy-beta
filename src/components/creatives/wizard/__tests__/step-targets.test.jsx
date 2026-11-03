@@ -35,6 +35,7 @@ const mk = (over = {}) => ({ id: "t1", creative: { format: "video", accounts: ro
 
 beforeEach(() => {
   hooks.prefill = { metrics: { cpl: { op: "lte", value: 35, source: "client" } }, per_account: { g2: { cpl: 42 } } }
+  localStorage.setItem("user_default_currency", "GBP")
 })
 
 describe("StepTargets", () => {
@@ -122,17 +123,34 @@ describe("StepTargets", () => {
     expect(calls.find(([p]) => p === "on_verdict")).toBeTruthy()
   })
 
-  it("drops the currency symbol for mixed currencies and says so", () => {
+  it("test-level amounts are in the user's currency, whatever the accounts use", () => {
     render(<Harness initial={mk()} />)
-    expect(screen.getByText(/in each account's currency/)).toBeInTheDocument()
-    expect(within(screen.getByTestId("metric-cpl")).queryByText("£")).toBeNull()
+    expect(within(screen.getByTestId("metric-cpl")).getByText("£")).toBeInTheDocument()
     expect(within(screen.getByTestId("metric-cpl")).queryByText("$")).toBeNull()
+    expect(screen.getByTestId("min-spend-symbol")).toHaveTextContent("£")
+    expect(screen.getByText(/converts each account's spend to GBP/)).toBeInTheDocument()
+    expect(screen.queryByText(/in each account's currency/)).toBeNull()
   })
 
-  it("keeps the symbol when every account shares a currency", () => {
+  it("uses the user's currency for a single foreign-currency account too", () => {
+    localStorage.setItem("user_default_currency", "EUR")
+    render(<Harness initial={mk({ creative: { accounts: [rows[1]] } })} />)
+    expect(within(screen.getByTestId("metric-cpl")).getByText("€")).toBeInTheDocument()
+    expect(screen.getByText(/converts each account's spend to EUR/)).toBeInTheDocument()
+  })
+
+  it("no conversion note when every account already uses the user's currency", () => {
     render(<Harness initial={mk({ creative: { accounts: [rows[0]] } })} />)
     expect(within(screen.getByTestId("metric-cpl")).getByText("£")).toBeInTheDocument()
-    expect(screen.queryByText(/in each account's currency/)).toBeNull()
+    expect(screen.queryByText(/converts each account's spend/)).toBeNull()
+  })
+
+  it("drawer: the test's CPL reads in the user's currency, a client's own in its account's", async () => {
+    localStorage.setItem("user_default_currency", "EUR")
+    render(<Harness initial={mk()} />)
+    await userEvent.click(screen.getByRole("button", { name: "Edit per account" }))
+    expect(screen.getByText(/Resolved CPL ≤ €35/)).toBeInTheDocument() // Harbour (GBP account): test default
+    expect(screen.getByText(/Resolved CPL ≤ \$42/)).toBeInTheDocument() // Keystone: its own client target
   })
 
   it("validates by mode", () => {

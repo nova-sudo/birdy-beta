@@ -4,7 +4,7 @@ import * as React from "react"
 import { ChevronRight } from "lucide-react"
 import { Badge, Button, DataTable, ProgressBar } from "@/components/ds"
 import { currencySymbol } from "@/lib/chat-viz"
-import { adCurrency, floorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
+import { adCurrency, adFloorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
 import { AccountDotStrip } from "./AccountDotStrip"
 import { VerdictBadge } from "./VerdictBadge"
 
@@ -211,7 +211,7 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
         cell: ({ row }) => {
           const r = row.original
           if (r.__child) {
-            const fp = floorProgress(r.score, r.__test.targets, rowCurrency(r))
+            const fp = adFloorProgress(r, r.__test, r.__cur)
             return <Progress value={fp.pct * 100} label={fp.label} tone={BAR_TONE[scoreTone(r.score?.state)]} />
           }
           const ads = (r.ads ?? []).filter((a) => a.post_state !== "removed")
@@ -222,7 +222,7 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
             return <Progress value={100} label="done" tone={r.status === "winner" ? "success" : r.status === "loser" ? "danger" : undefined} />
           }
           if (!total || done === 0) {
-            const best = ads.reduce((m, a) => Math.max(m, floorProgress(a.score, r.targets, adCurrency(a, r, cur)).pct), 0)
+            const best = ads.reduce((m, a) => Math.max(m, adFloorProgress(a, r, cur).pct), 0)
             return <Progress value={best * 100} label={best > 0 ? `${done}/${total} scored` : "not started"} />
           }
           return <Progress value={(done / total) * 100} label={`${done}/${total} scored`} />

@@ -46,8 +46,13 @@ export function targetFor(targets, metric) {
  * @param {string} props.currency Fallback for an ad with no currency of its own
  */
 export function AccountLinesChart({ days, ads = [], targets, metric = "cpl", currency }) {
-  const { rows, adIds } = React.useMemo(() => cumulativeRows(days, metric), [days, metric])
   const byMeta = React.useMemo(() => Object.fromEntries(ads.map((a) => [a.meta?.ad_id, a])), [ads])
+  // Converted the same way as the scores, so a line sits against the target in the user's currency.
+  const rates = React.useMemo(
+    () => Object.fromEntries(ads.filter((a) => a.meta?.ad_id && a.fx_rate != null).map((a) => [a.meta.ad_id, a.fx_rate])),
+    [ads]
+  )
+  const { rows, adIds } = React.useMemo(() => cumulativeRows(days, metric, rates), [days, metric, rates])
   const target = targetFor(targets, metric)
   const curOf = (id) => byMeta[id]?.currency ?? currency
 

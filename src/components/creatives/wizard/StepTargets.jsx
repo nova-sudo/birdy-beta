@@ -17,6 +17,7 @@ import {
   SheetTitle,
   Surface,
 } from "@/components/ds"
+import { useCurrency } from "@/hooks/useCurrency"
 import { currencySymbol } from "@/lib/chat-viz"
 import { useCreativeAdAccounts, useCreativeTargetsPrefill } from "@/lib/creatives-api"
 
@@ -73,6 +74,8 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
   const groupIds = rows.map((r) => r.client_group_id)
   const { prefill, isLoading: prefillLoading } = useCreativeTargetsPrefill(groupIds)
   const { accounts } = useCreativeAdAccounts()
+  // Test-level amounts are in the user's currency: Birdy converts each account's spend before scoring.
+  const { currency: userCurrency } = useCurrency("GBP")
   const isImage = draft.creative?.format === "image"
   const [drawer, setDrawer] = useState(false)
   const thresholdsRef = useRef(null) // thresholds the user had before switching mode
@@ -128,12 +131,18 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
   }
 
   const accountById = useMemo(() => Object.fromEntries(accounts.map((a) => [a.ad_account_id, a])), [accounts])
-  // Mixed currencies: a test-level amount has no single symbol, so each account reads it in its own currency.
-  const currencies = new Set(rows.map((r) => accountById[r.ad_account_id]?.currency).filter(Boolean))
-  const mixed = currencies.size > 1
-  const testSymbol = mixed ? "" : currencySymbol([...currencies][0])
+  const testSymbol = currencySymbol(userCurrency)
+  const foreign = rows.some((r) => {
+    const cur = accountById[r.ad_account_id]?.currency
+    return cur && cur !== userCurrency
+  })
   const testCpl = metrics.cpl?.value ?? prefillCpl?.value ?? null
-  const resolved = (row) => row.targets_override?.cpl ?? prefill?.per_account?.[row.client_group_id]?.cpl ?? testCpl
+  // An override or a client's own CPL target is in the account's currency; the test's is in the user's.
+  const resolved = (row, account) => {
+    const own = row.targets_override?.cpl ?? prefill?.per_account?.[row.client_group_id]?.cpl
+    if (own != null) return { value: own, symbol: currencySymbol(account?.currency) }
+    return testCpl != null ? { value: testCpl, symbol: testSymbol } : null
+  }
   const ownTargets = rows.filter((r) => prefill?.per_account?.[r.client_group_id]?.cpl != null).length
 
   const setOverride = (act, value) =>
@@ -147,7 +156,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
     )
 
   const ops = (key) => (key === "hook_rate" && isImage ? "video only" : SOURCE_LABELS[metrics[key]?.source] ?? "")
-  const currencyNote = mixed ? "in each account's currency" : null
+  const currencyNote = foreign ? `Amounts are in ${userCurrency}; Birdy converts each account's spend to ${userCurrency} before scoring.` : null
 
   return (
     <Frame title="Targets" description="How should Birdy judge a winner?" padded>
@@ -171,7 +180,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
         {targets.mode === "thresholds" && (
           <div className="flex flex-col gap-2">
             <p className="text-xs text-muted-foreground">
-              An account passes when every enabled metric is met.{currencyNote ? ` Amounts are ${currencyNote}.` : ""}
+              An account passes when every enabled metric is met.{currencyNote ? ` ${currencyNote}` : ""}
             </p>
             {METRIC_ROWS.map((m) => {
               const disabled = m.key === "hook_rate" && isImage
@@ -273,6 +282,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="min-spend">Score each account after</Label>
             <div className="flex items-center gap-2">
+              <span data-testid="min-spend-symbol" className="text-sm text-muted-foreground">{testSymbol}</span>
               <Input id="min-spend" size="sm" type="number" min="0" aria-label="Minimum spend" value={targets.min_spend ?? ""} onChange={(e) => write({ min_spend: numberOrNull(e.target.value) })} />
               <span className="text-sm text-muted-foreground">spend</span>
               <Input size="sm" type="number" min="0" aria-label="Minimum days" value={targets.min_days ?? ""} onChange={(e) => write({ min_days: numberOrNull(e.target.value) })} />
@@ -323,21 +333,20 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
         <SheetContent size="md">
           <SheetHeader>
             <SheetTitle>CPL target per account</SheetTitle>
-            <SheetDescription>Leave blank to use the client's own target, or the test's.</SheetDescription>
+            <SheetDescription>Leave blank to use the client's own target, or the test's. Overrides are in the account's own currency.</SheetDescription>
           </SheetHeader>
           <SheetBody>
             <div className="flex flex-col gap-3">
               {rows.map((row) => {
                 const account = accountById[row.ad_account_id]
                 const label = accountLabel(account, row)
-                const symbol = currencySymbol(account?.currency)
-                const value = resolved(row)
+                const value = resolved(row, account)
                 return (
                   <Surface key={row.ad_account_id} className="flex items-center gap-3 p-3">
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-sm font-medium">{label}</span>
                       <span className="text-xs text-muted-foreground">
-                        {value != null ? `Resolved CPL ≤ ${symbol}${value}` : "No CPL target"}
+                        {value != null ? `Resolved CPL ≤ ${value.symbol}${value.value}` : "No CPL target"}
                         {row.targets_override?.cpl != null ? " · override" : ""}
                       </span>
                     </div>
@@ -348,7 +357,7 @@ export function StepTargets({ draft, setField, allowOverrides = true }) {
                       step="any"
                       className="w-24"
                       aria-label={`CPL override for ${label}`}
-                      placeholder={value != null ? String(value) : "—"}
+                      placeholder={value != null ? String(value.value) : "—"}
                       value={row.targets_override?.cpl ?? ""}
                       onChange={(e) => setOverride(row.ad_account_id, numberOrNull(e.target.value))}
                     />

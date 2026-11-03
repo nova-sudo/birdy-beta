@@ -24,15 +24,17 @@ const money = (n, currency) => `${currencySymbol(currency)}${Math.round(n).toLoc
 /**
  * How far an ad is toward its scoring floor: whichever of spend/min_spend and
  * days_live/min_days is further along, capped at 1. The currency comes from
- * `currency` or `score.currency`.
+ * `currency` or `score.currency`; `spendComparable: false` (spend not in the floor's
+ * currency) counts days only.
  * @returns {{pct: number, label: string}}
  */
-export function floorProgress(score, targets, currency) {
+export function floorProgress(score, targets, currency, { spendComparable = true } = {}) {
   const minSpend = fin(targets?.min_spend)
   const minDays = fin(targets?.min_days)
   const spend = fin(score?.spend)
   const days = fin(score?.days_live)
-  const spendPct = minSpend > 0 ? spend / minSpend : 0
+  // min_spend is in the user's currency; spend in another currency can't be set against it.
+  const spendPct = spendComparable && minSpend > 0 ? spend / minSpend : 0
   const daysPct = minDays > 0 ? days / minDays : 0
   const pct = Math.min(1, Math.max(spendPct, daysPct))
   if (pct >= 1) return { pct: 1, label: "done" }
@@ -68,4 +70,14 @@ export function testCurrency(test, fallback) {
 /** One ad's currency: its own, else its test's (see testCurrency). */
 export function adCurrency(ad, test, fallback) {
   return ad?.currency ?? ad?.score?.currency ?? testCurrency(test, fallback)
+}
+
+/**
+ * floorProgress for one ad of a test. The floor (min_spend) is in the test's currency, the user's; an ad row
+ * scored in it is compared on spend, a row left in its account's currency (no rate) on days only.
+ */
+export function adFloorProgress(ad, test, fallback) {
+  const cur = testCurrency(test, fallback)
+  const comparable = adCurrency(ad, test, cur) === cur && !ad?.score?.rate_missing
+  return floorProgress(ad?.score, test?.targets, cur, { spendComparable: comparable })
 }

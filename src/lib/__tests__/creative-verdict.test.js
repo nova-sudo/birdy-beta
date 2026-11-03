@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { VERDICT_META, scoreTone, floorProgress, formatCpl } from "../creative-verdict"
+import { VERDICT_META, adFloorProgress, scoreTone, floorProgress, formatCpl } from "../creative-verdict"
 
 const targets = { min_spend: 150, min_days: 7 }
 
@@ -55,5 +55,16 @@ describe("formatCpl", () => {
   it("is a plain dash with no spend", () => {
     expect(formatCpl({ cpl: null, spend: 0 }, "GBP")).toBe("—")
     expect(formatCpl(null, "GBP")).toBe("—")
+  })
+})
+
+describe("adFloorProgress (final review I5)", () => {
+  const test = { summary: { currency: "GBP" }, targets: { min_spend: 150, min_days: 7 } }
+  it("compares a converted row's spend with the floor in the user's currency", () => {
+    expect(adFloorProgress({ currency: "GBP", score: { spend: 75, days_live: 1 } }, test, "GBP").label).toBe("£75 / £150")
+  })
+  it("counts days only for a row left in another currency", () => {
+    expect(adFloorProgress({ currency: "JPY", score: { spend: 20000, days_live: 3 } }, test, "GBP").label).toBe("day 3 of 7")
+    expect(adFloorProgress({ currency: "GBP", score: { spend: 999, days_live: 2, rate_missing: true } }, test, "GBP").label).toBe("day 2 of 7")
   })
 })
