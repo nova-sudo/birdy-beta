@@ -41,6 +41,8 @@ const patchOf = (d) => ({
   creative: d.creative,
   origin: d.origin,
   ...(d.source ? { source: d.source } : {}),
+  ...(d.targets ? { targets: d.targets } : {}),
+  ...(d.on_verdict ? { on_verdict: d.on_verdict } : {}),
 })
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -92,6 +94,8 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
       source: test.source ?? null,
       status: test.status,
       creative: { ...EMPTY_DRAFT.creative, ...(test.creative ?? {}) },
+      ...(test.targets && Object.keys(test.targets).length ? { targets: test.targets } : {}),
+      ...(test.on_verdict ? { on_verdict: test.on_verdict } : {}),
     }
     slugTouched.current = loaded.slug !== slugify(loaded.name)
     savedRef.current = patchOf(loaded)
@@ -107,6 +111,8 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
           origin: d.origin,
           creative: d.creative,
           ...(d.source ? { source: d.source } : {}),
+          ...(d.targets ? { targets: d.targets } : {}),
+          ...(d.on_verdict ? { on_verdict: d.on_verdict } : {}),
           ...(slugTouched.current && d.slug ? { slug: d.slug } : {}),
         })
         idRef.current = created.id

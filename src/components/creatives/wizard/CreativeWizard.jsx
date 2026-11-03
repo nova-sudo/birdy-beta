@@ -1,14 +1,16 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
-import { Button, ErrorState, Notice, PageHeader, Skeleton, Surface } from "@/components/ds"
+import { Button, ErrorState, Notice, PageHeader, Skeleton } from "@/components/ds"
 import { WizardSteps } from "@/components/agents/WizardSteps"
 import { useCreativeTest } from "@/lib/creatives-api"
 import { StepAccounts, accountsStepValid } from "./StepAccounts"
 import { StepCreative, creativeStepValid } from "./StepCreative"
+import { StepReview } from "./StepReview"
+import { StepTargets, targetsStepValid } from "./StepTargets"
 import { useCreativeDraft } from "./useCreativeDraft"
 
 export const CREATIVE_STEPS = ["Creative", "Accounts", "Targets", "Review & post"]
@@ -23,18 +25,21 @@ function replaceUrl(pathname, params) {
 }
 
 /**
- * The full-page "New creative test" wizard. Steps 1 and 2 are built; the other steps are placeholders
- * until they land. The right-hand column is the slot for the live preview.
+ * The full-page "New creative test" wizard. Steps: creative, accounts, targets, review & post.
+ * `?test=<id>&step=targets` on a posted test only edits its targets; a posted test's accounts step adds accounts.
+ * The right-hand column is the slot for the live preview.
  *
  * @param {object} props
  * @param {string|null} props.testId Draft to edit, or null for a new test
  */
 export function CreativeWizard({ testId }) {
   const search = useSearchParams()
+  const router = useRouter()
   const [stepKey, setStepKey] = useState(() => (STEP_KEYS.includes(search?.get("step")) ? search.get("step") : "creative"))
   const [moving, setMoving] = useState(false)
   // Add-accounts mode: new selections stay here (the posted creative is read-only); step 4 posts them.
   const [addRows, setAddRows] = useState([])
+  const [justPosted, setJustPosted] = useState(false)
 
   const { test, isLoading, error: loadError } = useCreativeTest(testId)
   const mounted = useRef(true)
@@ -84,10 +89,32 @@ export function CreativeWizard({ testId }) {
   const notDraft = draft.status && draft.status !== "draft"
   // Add-accounts mode: accounts the test already runs in stay checked and locked.
   const lockedAccountIds = notDraft ? [...new Set((test?.ads ?? []).map((a) => a.ad_account_id).filter(Boolean))] : []
-  const addMode = !!notDraft
-  const accountsDraft = addMode ? { ...draft, creative: { ...draft.creative, accounts: addRows } } : draft
-  const setAccountsField = addMode ? (_path, rows) => setAddRows(rows) : setField
-  const valid = stepKey === "accounts" ? accountsStepValid(accountsDraft, lockedAccountIds) : creativeStepValid(draft)
+  const addMode = !!notDraft && (stepKey === "accounts" || (stepKey === "review" && addRows.length > 0))
+  // A posted test reaches step 3 only to edit its targets (no posting), and skips it when adding accounts.
+  const editTargets = notDraft && stepKey === "targets"
+  const accountsDraft = notDraft ? { ...draft, creative: { ...draft.creative, accounts: addRows } } : draft
+  const setAccountsField = notDraft ? (_path, rows) => setAddRows(rows) : setField
+  const valid =
+    stepKey === "accounts"
+      ? accountsStepValid(accountsDraft, lockedAccountIds)
+      : stepKey === "targets"
+        ? targetsStepValid(draft)
+        : creativeStepValid(draft)
+  const prevKey = (k) => (addMode && k === "review" ? "accounts" : STEP_KEYS[STEP_KEYS.indexOf(k) - 1])
+  const nextKey = (k) => (addMode && k === "accounts" ? "review" : STEP_KEYS[STEP_KEYS.indexOf(k) + 1])
+  const hideNav = stepKey === "review" && (justPosted || notDraft)
+
+  async function saveTargets() {
+    setMoving(true)
+    try {
+      await save()
+    } catch {
+      return
+    } finally {
+      setMoving(false)
+    }
+    router.push(`${LIST_PATH}&creative=${draft.code}`)
+  }
 
   if (testId && loadError) {
     return <ErrorState title="Couldn't load this draft" description={loadError.message} />
@@ -107,31 +134,45 @@ export function CreativeWizard({ testId }) {
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           <div data-testid="wizard-step" className="flex min-w-0 flex-col gap-4">
-            {notDraft && <Notice tone="warning">This test has already been posted, so its creative can no longer be edited.</Notice>}
+            {notDraft && !editTargets && stepKey !== "review" && (
+              <Notice tone="warning">This test has already been posted, so its creative can no longer be edited.</Notice>
+            )}
             {error && <Notice tone="danger">Couldn't save your changes. We'll retry on your next edit.</Notice>}
             {stepKey === "creative" ? (
               <StepCreative draft={draft} setField={setField} setFields={setFields} />
             ) : stepKey === "accounts" ? (
               <StepAccounts draft={accountsDraft} setField={setAccountsField} lockedAccountIds={lockedAccountIds} />
+            ) : stepKey === "targets" ? (
+              <StepTargets draft={draft} setField={setField} allowOverrides={!notDraft} />
             ) : (
-              <Surface className="text-sm text-muted-foreground">{CREATIVE_STEPS[step - 1]} step</Surface>
+              <StepReview draft={draft} rows={addMode ? addRows : undefined} addMode={addMode} onPosted={() => setJustPosted(true)} />
             )}
-            <div className="flex items-center justify-between gap-3">
-              {step > 1 ? (
-                <Button variant="ghost" disabled={moving} onClick={() => go(STEP_KEYS[step - 2])}>
-                  <ArrowLeft />
-                  Back
-                </Button>
-              ) : (
-                <span />
-              )}
-              {step < STEP_KEYS.length && (
-                <Button disabled={!valid || moving || notDraft} onClick={() => go(STEP_KEYS[step])}>
-                  Continue
-                  <ArrowRight />
-                </Button>
-              )}
-            </div>
+            {!hideNav && (
+              <div className="flex items-center justify-between gap-3">
+                {editTargets ? (
+                  <span />
+                ) : step > 1 ? (
+                  <Button variant="ghost" disabled={moving} onClick={() => go(prevKey(stepKey))}>
+                    <ArrowLeft />
+                    Back
+                  </Button>
+                ) : (
+                  <span />
+                )}
+                {editTargets ? (
+                  <Button disabled={!valid || moving} onClick={saveTargets}>
+                    Save targets
+                  </Button>
+                ) : (
+                  step < STEP_KEYS.length && (
+                    <Button disabled={!valid || moving || (notDraft && !addMode)} onClick={() => go(nextKey(stepKey))}>
+                      Continue
+                      <ArrowRight />
+                    </Button>
+                  )
+                )}
+              </div>
+            )}
           </div>
           {/* Live preview slot, filled by the preview task. */}
           <aside data-slot="creative-preview" aria-label="Preview" className="min-w-0 lg:sticky lg:top-6 lg:self-start" />

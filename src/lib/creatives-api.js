@@ -25,9 +25,19 @@ export function useCreativeTests(filters) {
   return { tests: data ?? [], error, isLoading, mutate }
 }
 
-/** One test with its ads and `days` ({meta_ad_id: day rows}). @returns {{ test: object|null, error, isLoading, mutate }} */
-export function useCreativeTest(id) {
-  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.creative(id) : null, fetcher)
+/** While a test is `posting`, `useCreativeTest(id, { pollWhilePosting: true })` re-reads it this often (ms). */
+export const POSTING_POLL_MS = 3000
+
+/**
+ * One test with its ads and `days` ({meta_ad_id: day rows}).
+ * @param {string|null} id
+ * @param {{ pollWhilePosting?: boolean }} [opts] Poll every 3 s while `status === "posting"`, then stop
+ * @returns {{ test: object|null, error, isLoading, mutate }}
+ */
+export function useCreativeTest(id, { pollWhilePosting = false } = {}) {
+  const { data, error, isLoading, mutate } = useSWR(id ? queryKeys.creative(id) : null, fetcher, {
+    refreshInterval: pollWhilePosting ? (d) => (d?.status === "posting" ? POSTING_POLL_MS : 0) : 0,
+  })
   return { test: data ?? null, error, isLoading, mutate }
 }
 
@@ -85,6 +95,26 @@ export function refreshCreativeTest(id) {
   return mutating(id, `${queryKeys.creative(id)}/refresh`, "POST")
 }
 
+/** The Post click: queues paused ad creation for `accounts` (draft only; 409 otherwise). */
+export function postCreativeTest(id, accounts) {
+  return mutating(id, `${queryKeys.creative(id)}/post`, "POST", { accounts })
+}
+
+/** Adds accounts to a posted test. */
+export function addCreativeAccounts(id, accounts) {
+  return mutating(id, `${queryKeys.creative(id)}/accounts`, "POST", { accounts })
+}
+
+/** Sets the created (paused) ads live; `partialOk` goes ahead while other ads are still failed or waiting. */
+export function goLiveCreativeTest(id, { partialOk = false } = {}) {
+  return mutating(id, `${queryKeys.creative(id)}/go-live`, "POST", { partial_ok: partialOk })
+}
+
+/** Re-queues one failed ad, optionally changing a field first (destination, website_url, lead_form_id, page_id, adset_id, adset_name). */
+export function retryCreativeAd(id, adRowId, patch) {
+  return mutating(id, `${queryKeys.creative(id)}/ads/${adRowId}/retry`, "POST", patch ? { patch } : {})
+}
+
 /** Attaches an existing Meta ad to the test. 409 when it cannot be adopted. */
 export function adoptCreativeAd(id, adId) {
   return mutating(id, `${queryKeys.creative(id)}/adopt`, "POST", { ad_id: adId })
@@ -95,6 +125,14 @@ export function searchCreativeAds(q = "", { adAccountId, limit = 30 } = {}) {
   const qs = new URLSearchParams({ q, limit: String(limit) })
   if (adAccountId) qs.set("ad_account_id", adAccountId)
   return send(`${queryKeys.creatives()}/ads/search?${qs}`, "GET")
+}
+
+/** Prefilled targets for the chosen client groups: `{metrics:{cpl:{op,value,source}}, per_account:{group_id:{cpl}}}`. */
+export function useCreativeTargetsPrefill(groupIds) {
+  const ids = [...new Set((groupIds ?? []).filter(Boolean))].sort()
+  const key = ids.length ? `${queryKeys.creatives()}/targets/prefill?client_group_ids=${ids.join(",")}` : null
+  const { data, error, isLoading } = useSWR(key, fetcher)
+  return { prefill: data ?? null, error, isLoading }
 }
 
 // Stable empty list: a fresh [] per render would re-trigger effects that depend on it.
