@@ -108,16 +108,25 @@ describe("CreativesTable", () => {
   })
 })
 
-describe("CreativesTable mobile card list", () => {
-  it("keeps a child's metrics and action in the card list", () => {
+describe("CreativesTable child rows", () => {
+  it("keeps a child's metrics and action in its row, directly under its test", () => {
     setup()
     fireEvent.click(T().getByRole("button", { name: "Expand Mortgage myth" }))
-    const cards = [...document.querySelectorAll('[data-slot="data-table-card"][data-depth="1"]')]
-    const oak = cards.find((c) => c.textContent.includes("Oakline Wealth"))
-    expect(oak).toBeTruthy()
-    expect(within(oak).getByText("£198")).toBeInTheDocument()
-    expect(within(oak).getByText("— · 0 leads")).toBeInTheDocument()
-    expect(within(oak).getByRole("button", { name: "Pause here" })).toBeInTheDocument()
+    const rows = T().getAllByRole("row").map((r) => r.textContent)
+    const parent = rows.findIndex((t) => t.includes("Mortgage myth"))
+    const oak = rows.findIndex((t) => t.includes("Oakline Wealth"))
+    expect(oak).toBeGreaterThan(parent)
+    expect(rows.findIndex((t) => t.includes("Rate drop"))).toBeGreaterThan(oak)
+    const row = T().getAllByRole("row")[oak]
+    expect(within(row).getByText("£198")).toBeInTheDocument()
+    expect(within(row).getByRole("button", { name: "Pause here" })).toBeInTheDocument()
+  })
+
+  it("opens the parent test when a child row is clicked", () => {
+    const { onOpen } = setup()
+    fireEvent.click(T().getByRole("button", { name: "Expand Mortgage myth" }))
+    fireEvent.click(T().getByText("Oakline Wealth"))
+    expect(onOpen).toHaveBeenCalledWith("t1")
   })
 })
 

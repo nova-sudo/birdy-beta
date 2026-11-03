@@ -3,7 +3,8 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import useSWR, { mutate as globalMutate } from "swr"
-import { BirdyRead, MetricTabsChart, toast } from "@/components/ds"
+import { toast } from "@/components/ds"
+import { BirdyBriefing, MetricTabsChart } from "@/components/portfolio"
 import { applyWorkItem } from "@/lib/agents-api"
 import { currencySymbol } from "@/lib/chat-viz"
 import { dailyTotals } from "@/lib/creative-days"
@@ -78,7 +79,7 @@ const fmtDate = (iso) => {
 
 const TONE = { HIGH: "danger", OPPORTUNITY: "success" }
 
-/** Birdy's open creative suggestions (rule ids starting `creative_`) as BirdyRead findings; apply may send you on to the wizard. */
+/** Birdy's open creative suggestions (rule ids starting `creative_`) as findings; apply may send you on to the wizard. */
 function useCreativeFindings() {
   const router = useRouter()
   const { data } = useSWR(queryKeys.dashboardSummary(), fetcher)
@@ -136,30 +137,51 @@ export function CreativesHero({ tests: given, clientGroupId, findings: givenFind
     return points.length > 1 ? points : undefined
   }
 
-  const metrics = [
-    { key: "live", label: "Tests live", value: f.live, series: plot("live") },
-    { key: "spend", label: "Test spend", value: money(f.spend), series: plot("spend") },
-    { key: "leads", label: "Leads", value: f.leads, series: plot("leads") },
-    { key: "cpl", label: "Blended CPL", value: f.cpl == null ? "—" : `${sym}${f.cpl.toFixed(2)}`, series: plot("cpl") },
+  const tabs = [
+    { key: "live", label: "Tests live", value: f.live },
+    { key: "spend", label: "Test spend", value: money(f.spend) },
+    { key: "leads", label: "Leads", value: f.leads },
+    { key: "cpl", label: "Blended CPL", value: f.cpl == null ? "—" : `${sym}${f.cpl.toFixed(2)}` },
     { key: "hook", label: "Hook rate", value: f.hook == null ? "—" : `${f.hook.toFixed(1)}%`, plottable: false },
     { key: "win_rate", label: "Win rate", value: f.win_rate == null ? "—" : `${Math.round(f.win_rate * 100)}%`, plottable: false },
-  ].map((m) => ({ ...m, plottable: m.plottable ?? m.series != null }))
+  ]
 
-  const format = (n, m) => (m.key === "cpl" ? `${sym}${n.toFixed(2)}` : m.key === "spend" ? money(n) : n.toLocaleString("en-GB"))
+  const format = (n) => (metric === "cpl" ? `${sym}${n.toFixed(2)}` : metric === "spend" ? money(n) : n.toLocaleString("en-GB"))
+  const points = plot(metric)
+  const chart = points
+    ? {
+        title: tabs.find((t) => t.key === metric).label,
+        subtitle: "Creative tests over time",
+        values: points.map((p) => p.current),
+        labels: points.map((p, i) => (i % Math.max(1, Math.ceil(points.length / 8)) === 0 || i === points.length - 1 ? p.x : "")),
+        tooltipLabels: points.map((p) => p.x),
+        pointValues: points.map((p) => format(p.current)),
+      }
+    : null
+
+  const count = findings.length
+  const parts = count
+    ? [{ text: `${count} ${count === 1 ? "thing needs" : "things need"} you on your creative tests.` }]
+    : [{ text: "Nothing needs you right now." }]
+  const briefing = findings.map((x) => ({
+    tone: x.tone,
+    parts: [{ text: /[.!?]$/.test(x.title) ? x.title : `${x.title}.`, strong: true }, ...(x.detail ? [{ text: ` ${x.detail}` }] : [])],
+    action: x.action,
+  }))
 
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]">
       <MetricTabsChart
-        metrics={metrics}
-        value={metric}
-        onValueChange={setMetric}
-        formatValue={format}
+        tabs={tabs}
+        activeKey={metric}
+        onChange={setMetric}
+        chart={chart}
         loading={loading}
-        xLabel="Creative tests over time"
         emptyMessage="No daily data yet. Charts fill in after the first tracking run."
         redrawKey={metric}
+        layoutId="creatives-hero"
       />
-      <BirdyRead findings={findings} prompt="How are my creative tests doing?" empty="Nothing needs you right now." />
+      <BirdyBriefing parts={parts} findings={briefing} prompt="How are my creative tests doing?" />
     </div>
   )
 }

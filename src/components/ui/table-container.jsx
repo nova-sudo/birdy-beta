@@ -91,6 +91,8 @@ const StyledTable = ({
   onColumnOrderChange,
   emptyMessage,
   initialPageSize = 15,
+  // Off for tables whose rows belong together (a parent and its expanded children).
+  paginate = true,
 }) => {
   /* ---------- STATE ---------- */
   const [sortConfig, setSortConfig] = useState({ key: "spend", direction: "desc" });
@@ -402,10 +404,11 @@ const StyledTable = ({
   /* ---------- PAGINATION ---------- */
   const totalPages = Math.ceil(sortedData.length / pageSize);
   const paginatedData = useMemo(() => {
+    if (!paginate) return sortedData;
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return sortedData.slice(startIndex, endIndex);
-  }, [sortedData, currentPage, pageSize]);
+  }, [sortedData, currentPage, pageSize, paginate]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -740,7 +743,7 @@ const StyledTable = ({
                         ? "fixed-header"
                         : isEmptyState
                           ? ""
-                          : "min-w-[135px] whitespace-nowrap"
+                          : `${col.minWidthClass ?? "min-w-[135px]"} whitespace-nowrap`
                     } ${draggedColumn === col.id ? "bg-pd-primary-tint" : ""}`}
                     // Straight-edged dashed line on the live drop target, per
                     // the handoff. Reserved as transparent so hovering doesn't
@@ -1081,6 +1084,8 @@ const StyledTable = ({
                                 screenful of them breathing in unison looked
                                 like a stalled page rather than work in
                                 progress. A wheel only ever turns. */}
+                            {/* A control before the name (an expand toggle), kept out of its tooltip. */}
+                            {colIdx === 0 && col.lead?.(row)}
                             {colIdx === 0 && isClientMode && row._isSyncing && (
                               <Spinner
                                 // Heavier than the icon's default hairline: at
@@ -1156,7 +1161,7 @@ const StyledTable = ({
       </div>
 
       {/* Pagination Controls */}
-      {!isLoading && sortedData.length > 0 && totalPages > 1 && (
+      {paginate && !isLoading && sortedData.length > 0 && totalPages > 1 && (
         <div className="flex items-center justify-between">
           <Pagination>
             <PaginationContent>

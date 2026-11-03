@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { ChevronRight } from "lucide-react"
-import { Badge, Button, DataTable, ProgressBar } from "@/components/ds"
+import { Badge, Button, ProgressBar } from "@/components/ds"
+import StyledTable from "@/components/ui/table-container"
 import { currencySymbol } from "@/lib/chat-viz"
 import { adCurrency, adFloorProgress, formatCpl, scoreTone, testCurrency } from "@/lib/creative-verdict"
 import { AccountDotStrip } from "./AccountDotStrip"
@@ -34,28 +35,29 @@ function childAction(ad) {
   return null
 }
 
+// Short numeric columns, so all nine fit a laptop without sideways scrolling.
+const NARROW = "min-w-[96px]"
+
 const DEFAULT_CURRENCY = "GBP"
 // Parent rows show their test's currency, children the ad's own; both fall back to a sibling test's.
 const rowCurrency = (r) => (r.__child ? adCurrency(r, r.__test, r.__cur) : testCurrency(r, r.__cur))
 
 function Progress({ value, label, tone }) {
   return (
-    <div className="flex min-w-32 flex-col gap-1">
+    <div className="flex min-w-24 flex-col gap-1">
       <ProgressBar value={value} tone={tone} label="Progress to verdict" />
-      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="text-[11px] text-pd-faint">{label}</span>
     </div>
   )
 }
 
-/** Rows: one parent per test, children from `test.ads` flagged `__child`. */
-function toRows(tests) {
+/** Rows: one parent per test, followed by its ads (flagged `__child`) when expanded. */
+function toRows(tests, expanded) {
   const cur = tests.map((t) => testCurrency(t)).find(Boolean) ?? DEFAULT_CURRENCY
-  return tests.map((t) => ({
-    ...t,
-    __cur: cur,
-    __rowId: t.id,
-    __children: (t.ads ?? []).map((ad) => ({ ...ad, __child: true, __test: t, __cur: cur, __rowId: `${t.id}:${ad.id}` })),
-  }))
+  return tests.flatMap((t) => [
+    { ...t, __cur: cur },
+    ...(expanded.has(t.id) ? (t.ads ?? []).map((ad) => ({ ...ad, __child: true, __test: t, __cur: cur })) : []),
+  ])
 }
 
 /** The columns a viewer can switch on and off; Creative stays on. */
@@ -72,63 +74,52 @@ export const CREATIVE_COLUMNS = [
 ]
 
 export function CreativesTable({ tests = [], loading = false, visibleColumns, onOpen, onAccountAction }) {
-  const rows = React.useMemo(() => toRows(tests), [tests])
+  const [expanded, setExpanded] = React.useState(() => new Set())
+  const rows = React.useMemo(() => toRows(tests, expanded), [tests, expanded])
+  const toggle = React.useCallback((id) => {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  }, [])
 
   const columns = React.useMemo(
     () => [
       {
         id: "creative",
-        accessorFn: (r) => r.name ?? r.account_name ?? r.ad_account_id,
         header: "Creative",
-        meta: { label: "Creative", minWidth: 280 },
-        cell: ({ row }) => {
-          const r = row.original
-          if (r.__child) {
-            return (
-              <div className="min-w-0">
-                <div className="truncate font-medium">{r.account_name ?? r.ad_account_id}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {r.ad_account_id} · adset “{r.adset_name}”
-                </div>
-              </div>
-            )
-          }
+        // The name column's first line, second line and expand toggle (see StyledTable).
+        cell: (_, r) => (r.__child ? (r.account_name ?? r.ad_account_id) : r.name),
+        sub: (r) => {
+          if (r.__child) return r.adset_name
           const date = fmtDate(r.created_at)
+          return [r.code, date && `posted ${date}`].filter(Boolean).join(" · ")
+        },
+        lead: (r) => {
+          if (r.__child) return <span className="w-8 shrink-0" aria-hidden />
+          if (!r.ads?.length) return <span className="size-6 shrink-0" aria-hidden />
+          const open = expanded.has(r.id)
           return (
-            <div className="flex min-w-0 items-center gap-2">
-              {row.getCanExpand() ? (
-                <button
-                  type="button"
-                  aria-label={`${row.getIsExpanded() ? "Collapse" : "Expand"} ${r.name}`}
-                  aria-expanded={row.getIsExpanded()}
-                  className="grid size-6 shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-row-hover"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    row.toggleExpanded()
-                  }}
-                >
-                  <ChevronRight className={`size-4 transition-transform ${row.getIsExpanded() ? "rotate-90" : ""}`} />
-                </button>
-              ) : (
-                <span className="size-6 shrink-0" />
-              )}
-              <div className="min-w-0">
-                <div className="truncate font-medium">{r.name}</div>
-                <div className="truncate text-xs text-muted-foreground">
-                  {[r.code, date && `posted ${date}`, r.origin ?? r.created_via].filter(Boolean).join(" · ")}
-                </div>
-              </div>
-            </div>
+            <button
+              type="button"
+              aria-label={`${open ? "Collapse" : "Expand"} ${r.name}`}
+              aria-expanded={open}
+              className="grid size-6 shrink-0 cursor-pointer place-items-center rounded-md text-pd-subtle hover:bg-pd-divider"
+              onClick={(e) => {
+                e.stopPropagation()
+                toggle(r.id)
+              }}
+            >
+              <ChevronRight className={`size-4 transition-transform ${open ? "rotate-90" : ""}`} />
+            </button>
           )
         },
       },
       {
         id: "accounts",
-        accessorFn: (r) => (r.__child ? childBadge(r).label : r.status),
         header: "Accounts",
-        meta: { label: "Accounts" },
-        cell: ({ row }) => {
-          const r = row.original
+        cell: (_, r) => {
           if (!r.__child) return <AccountDotStrip ads={r.ads ?? []} status={r.status} />
           const b = childBadge(r)
           return (
@@ -140,76 +131,60 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
       },
       {
         id: "spend",
-        accessorFn: (r) => (r.__child ? (r.score?.spend ?? 0) : (r.summary?.spend ?? 0)),
         header: "Spend",
-        meta: { label: "Spend" },
-        cell: ({ row }) => {
-          const r = row.original
-          const cur = rowCurrency(r)
-          return <span className="tabular-nums">{money(r.__child ? r.score?.spend : r.summary?.spend, cur)}</span>
-        },
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => money(r.__child ? r.score?.spend : r.summary?.spend, rowCurrency(r)),
       },
       {
         id: "leads",
-        accessorFn: (r) => (r.__child ? (r.score?.leads ?? 0) : (r.summary?.leads ?? 0)),
         header: "Leads",
-        meta: { label: "Leads" },
-        cell: ({ row }) => {
-          const r = row.original
-          return <span className="tabular-nums">{num(r.__child ? r.score?.leads : r.summary?.leads) ?? 0}</span>
-        },
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => num(r.__child ? r.score?.leads : r.summary?.leads) ?? 0,
       },
       {
         id: "cpl",
-        accessorFn: (r) => (r.__child ? (r.score?.cpl ?? "none") : (r.summary?.cpl ?? "none")),
         header: "CPL vs target",
-        meta: { label: "CPL" },
-        cell: ({ row }) => {
-          const r = row.original
+        align: "right",
+        cell: (_, r) => {
           const cur = rowCurrency(r)
           const score = r.__child ? r.score : r.summary
           const target = num((r.__child ? r.__test : r).targets?.metrics?.cpl?.value)
           return (
-            <span className="tabular-nums">
+            <>
               {formatCpl(score, cur)}
               {!r.__child && target != null && (
-                <span className="ml-1 text-xs text-muted-foreground">
+                <span className="ml-1 text-[11px] text-pd-faint">
                   ≤ {currencySymbol(cur)}
                   {target}
                 </span>
               )}
-            </span>
+            </>
           )
         },
       },
       {
         id: "ctr",
-        accessorFn: (r) => (r.__child ? (r.score?.ctr ?? "none") : (r.summary?.ctr ?? "none")),
         header: "CTR",
-        meta: { label: "CTR" },
-        cell: ({ row }) => {
-          const r = row.original
-          return <span className="tabular-nums">{pct(r.__child ? r.score?.ctr : r.summary?.ctr)}</span>
-        },
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => pct(r.__child ? r.score?.ctr : r.summary?.ctr),
       },
       {
         id: "hook",
-        accessorFn: (r) => (r.__child ? (r.score?.hook_rate ?? "none") : (r.summary?.hook_rate ?? "none")),
         header: "Hook",
-        meta: { label: "Hook rate" },
-        cell: ({ row }) => {
-          const r = row.original
+        minWidthClass: NARROW,
+        align: "right",
+        cell: (_, r) => {
           const isImage = !r.__child && r.creative?.format === "image"
-          return <span className="tabular-nums">{isImage ? "—" : pct(r.__child ? r.score?.hook_rate : r.summary?.hook_rate)}</span>
+          return isImage ? "—" : pct(r.__child ? r.score?.hook_rate : r.summary?.hook_rate)
         },
       },
       {
         id: "progress",
-        accessorFn: (r) => (r.__child ? (r.score?.state ?? "scoring") : r.status),
         header: "Progress to verdict",
-        meta: { label: "Progress" },
-        cell: ({ row }) => {
-          const r = row.original
+        cell: (_, r) => {
           if (r.__child) {
             const fp = adFloorProgress(r, r.__test, r.__cur)
             return <Progress value={fp.pct * 100} label={fp.label} tone={BAR_TONE[scoreTone(r.score?.state)]} />
@@ -230,11 +205,8 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
       },
       {
         id: "verdict",
-        accessorFn: (r) => (r.__child ? childAction(r) : r.status),
         header: "Verdict",
-        meta: { label: "Verdict" },
-        cell: ({ row }) => {
-          const r = row.original
+        cell: (_, r) => {
           if (!r.__child) return <VerdictBadge status={r.status} />
           if (r.post_state === "failed") {
             return (
@@ -270,34 +242,31 @@ export function CreativesTable({ tests = [], loading = false, visibleColumns, on
         },
       },
     ],
-    [onAccountAction]
+    [expanded, toggle, onAccountAction]
+  )
+
+  const columnVisibility = React.useMemo(
+    () =>
+      Object.fromEntries(
+        CREATIVE_COLUMNS.map((c) => [c.id, !visibleColumns || c.id === "creative" || visibleColumns.includes(c.id)])
+      ),
+    [visibleColumns]
   )
 
   return (
-    <DataTable
+    <StyledTable
       columns={columns}
       data={rows}
-      loading={loading}
-      {...(visibleColumns
-        ? {
-            state: {
-              columnVisibility: Object.fromEntries(
-                CREATIVE_COLUMNS.map((c) => [c.id, c.id === "creative" || visibleColumns.includes(c.id)])
-              ),
-            },
-          }
-        : {})}
-      getSubRows={(r) => r.__children}
-      getRowId={(r) => r.__rowId}
-      onRowClick={(r) => {
-        if (!r.__child) onOpen?.(r.id)
-      }}
+      isLoading={loading}
+      columnVisibility={columnVisibility}
+      onRowClick={(r) => onOpen?.(r.__child ? r.__test.id : r.id)}
+      emptyMessage={{ title: "No creative tests here", subtitle: "Try another filter or search" }}
       paginate={false}
     />
   )
 }
 
 // Hand callers the original ad object, not the render wrapper.
-function stripChild({ __child, __test, __cur, __rowId, ...ad }) {
+function stripChild({ __child, __test, __cur, ...ad }) {
   return ad
 }

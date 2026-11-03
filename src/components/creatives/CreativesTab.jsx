@@ -3,7 +3,8 @@
 import * as React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, Sparkles } from "lucide-react"
-import { Badge, Button, EmptyState, SearchInput, SegmentedTabs, confirm, toast } from "@/components/ds"
+import { Badge, Button, EmptyState, SegmentedTabs, confirm, toast } from "@/components/ds"
+import { Input } from "@/components/ui/input"
 import ColumnsMenu from "@/components/views/ColumnsMenu"
 import { pauseCreativeAds, retryCreativeAd, useCreativeTests } from "@/lib/creatives-api"
 import { usePageViews } from "@/lib/usePageViews"
@@ -133,14 +134,12 @@ export function CreativesTab({ clientGroupId }) {
         <SegmentedTabs size="sm" ariaLabel="Test status" value={chip} onValueChange={setChip} items={items} />
         {/* Same 38px controls as the other Marketing Hub tabs. */}
         <div className="flex w-full flex-wrap items-center gap-[10px] md:ml-auto md:w-auto">
-          <SearchInput
-            size="sm"
-            value={query}
-            onChange={setQuery}
-            debounceMs={0}
+          <Input
+            type="search"
             placeholder="Search creative tests…"
-            className="w-full md:w-[220px]"
-            inputClassName="h-[38px] text-[13px]"
+            className="h-[38px] w-full text-[13px] md:w-[220px]"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
           <ColumnsMenu
             columns={COLUMN_CATALOGUE}

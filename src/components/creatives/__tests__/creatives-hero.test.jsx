@@ -49,7 +49,7 @@ describe("CreativesHero", () => {
       ],
     }
     render(<CreativesHero tests={[t("testing", { spend: 100, leads: 4 })]} />)
-    expect(screen.getByText("Scale CT-0009")).toBeInTheDocument()
+    expect(screen.getByText("Scale CT-0009.")).toBeInTheDocument()
     expect(screen.queryByText("Pause a campaign")).toBeNull()
     await userEvent.click(screen.getByRole("button", { name: "Do it" }))
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/campaigns/creatives/new?scale=t9"))

@@ -39,8 +39,9 @@ function Parts({ parts }) {
 
 /**
  * @param {{text: string, strong?: boolean}[]} parts the headline sentence
- * @param {{tone?: string, parts: {text, strong?}[]}[]} [findings] up to three
- *   bullets beneath it; omit or pass an empty list for the sentence alone
+ * @param {{tone?: string, parts: {text, strong?}[], action?: {label: string, onClick: () => void}}[]} [findings]
+ *   up to three bullets beneath it, each with an optional button; omit or pass
+ *   an empty list for the sentence alone
  * @param {string} [prompt] seeds the assistant from the footer link; omit to
  *   render no link
  * @param {string} [title] defaults to "Birdy's read"
@@ -83,9 +84,18 @@ export function BirdyBriefing({ parts, findings = [], prompt, title = "Birdy's r
                 )}
                 aria-hidden="true"
               />
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <Parts parts={finding.parts} />
               </span>
+              {finding.action && (
+                <button
+                  type="button"
+                  onClick={finding.action.onClick}
+                  className="shrink-0 cursor-pointer rounded-lg border border-pd-border bg-pd-surface px-2 py-[3px] text-[11.5px] font-semibold text-pd-ink transition-colors hover:bg-pd-divider/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pd-primary"
+                >
+                  {finding.action.label}
+                </button>
+              )}
             </li>
           ))}
         </ul>
