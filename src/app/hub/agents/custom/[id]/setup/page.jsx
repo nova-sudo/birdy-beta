@@ -105,6 +105,8 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [conflicts, setConflicts] = useState(null)
+  // The server takes only_flag as the whole list, so clients flagged earlier ride along.
+  const [flagOnly, setFlagOnly] = useState(() => agent.scope?.flag_only_client_group_ids ?? [])
 
   // A new agent with no saved scope starts on every connected client, once they arrive.
   const seeded = useRef(stored.length > 0 || clients.length > 0)
@@ -237,7 +239,11 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
             clients={clients}
             busy={saving}
             onMove={() => next({ move_claims: true })}
-            onOnlyFlag={(gid) => next({ only_flag: [gid] })}
+            onOnlyFlag={(gid) => {
+              const all = flagOnly.includes(gid) ? flagOnly : [...flagOnly, gid]
+              setFlagOnly(all)
+              next({ only_flag: all })
+            }}
           />
         )}
         <div className="flex items-center justify-end gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
@@ -259,17 +265,22 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
   const [result, setResult] = useState(null)
   const [activating, setActivating] = useState(false)
   const [activateError, setActivateError] = useState(null)
+  const [conflicts, setConflicts] = useState(null)
+  const [flagOnly, setFlagOnly] = useState(() => agent.scope?.flag_only_client_group_ids ?? [])
 
   const currency = scopeCurrency(clients, agent.scope?.client_group_ids ?? [])
 
-  const turnOn = async () => {
+  // `claims` is {move_claims} or {only_flag} when answering a conflict.
+  const turnOn = async (claims) => {
     setActivating(true)
     setActivateError(null)
+    setConflicts(null)
     try {
-      const activated = await activateAgent(agent.id)
+      const activated = await activateAgent(agent.id, claims)
       await onActivated(activated)
     } catch (err) {
-      setActivateError(activationMessage(err))
+      if (err?.status === 409 && err.conflicts?.length) setConflicts(err.conflicts)
+      else setActivateError(activationMessage(err))
       setActivating(false)
     }
   }
@@ -288,12 +299,25 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
       <div className="flex min-w-0 flex-col gap-6">
         <DryRunSummary agentId={agent.id} currency={currency} runKey={runKey} onResult={setResult} />
         {activateError && <Notice tone="warning">{activateError}</Notice>}
+        {conflicts && (
+          <ClaimConflicts
+            conflicts={conflicts}
+            clients={clients}
+            busy={activating}
+            onMove={() => turnOn({ move_claims: true })}
+            onOnlyFlag={(gid) => {
+              const all = flagOnly.includes(gid) ? flagOnly : [...flagOnly, gid]
+              setFlagOnly(all)
+              turnOn({ only_flag: all })
+            }}
+          />
+        )}
         <div className="flex items-center justify-end gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
           <Button variant="ghost" onClick={onBack}>
             <ArrowLeft aria-hidden />
             Back
           </Button>
-          <Button variant="primary" size="lg" loading={activating} onClick={turnOn}>
+          <Button variant="primary" size="lg" loading={activating} onClick={() => turnOn()}>
             <Zap aria-hidden />
             Turn on agent
           </Button>

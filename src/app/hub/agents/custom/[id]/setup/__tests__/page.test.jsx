@@ -172,6 +172,83 @@ describe("Custom agent setup", () => {
     expect(await screen.findByText("Tylaesthetics")).toBeInTheDocument()
   })
 
+  describe("turning on with a client another agent holds", () => {
+    const CONFLICT = { detail: "Client is claimed", conflicts: [{ client_group_id: "g1", holder_id: "ag7", holder_name: "Old rules" }] }
+    const activations = () =>
+      vi.mocked(apiRequest).mock.calls
+        .filter(([p]) => p === "/api/agents/ag1/activate")
+        .map(([, init]) => (init.body ? JSON.parse(init.body) : {}))
+
+    const refuseFirstActivation = () => {
+      let refused = false
+      vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+        if (path === "/api/agents/ag1/activate") {
+          if (!refused) {
+            refused = true
+            return Promise.resolve(res(CONFLICT, 409))
+          }
+          return Promise.resolve(res({ ...AGENT, status: "active" }))
+        }
+        return mockApi(path, init)
+      })
+    }
+
+    const turnOn = async () => {
+      agents = [AGENT]
+      search = "step=3"
+      renderPage()
+      await screen.findByText("Pause ads over target")
+      await userEvent.click(screen.getByRole("button", { name: /Turn on agent/ }))
+      expect(await screen.findByText(/is with Old rules/)).toBeInTheDocument()
+    }
+
+    it("Move it here resends the activation with move_claims", async () => {
+      refuseFirstActivation()
+      await turnOn()
+      expect(push).not.toHaveBeenCalled()
+      await userEvent.click(screen.getByRole("button", { name: "Move it here" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1"))
+      expect(activations()[1]).toEqual({ move_claims: true })
+    })
+
+    it("Only flag resends the activation with that client in only_flag", async () => {
+      refuseFirstActivation()
+      await turnOn()
+      await userEvent.click(screen.getByRole("button", { name: "Only flag" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1"))
+      expect(activations()[1]).toEqual({ only_flag: ["g1"] })
+    })
+  })
+
+  it("Only flag keeps the clients already flag-only, so two conflicts resolve one after the other", async () => {
+    const holder = (gid) => ({ client_group_id: gid, holder_id: "ag7", holder_name: "Old rules" })
+    const two = { ...AGENT, scope: { ...AGENT.scope, client_group_ids: ["g1", "g2"] } }
+    agents = [two]
+    let saves = 0
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+      if (path === "/api/agents/ag1" && init.method === "GET") return Promise.resolve(res(two))
+      if (path === "/api/agents/ag1" && init.method === "PATCH") {
+        saves += 1
+        if (saves === 1) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g1"), holder("g2")] }, 409))
+        if (saves === 2) return Promise.resolve(res({ detail: "claimed", conflicts: [holder("g2")] }, 409))
+        return Promise.resolve(res(two))
+      }
+      return mockApi(path, init)
+    })
+    renderPage()
+    await screen.findByText("Tylaesthetics")
+    await userEvent.click(screen.getByRole("button", { name: /Next: teach it your strategy/ }))
+    const flags = await screen.findAllByRole("button", { name: "Only flag" })
+    await userEvent.click(flags[0])
+    await userEvent.click(await screen.findByRole("button", { name: "Only flag" }))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=2"))
+    const bodies = vi.mocked(apiRequest).mock.calls
+      .filter(([p, init]) => p === "/api/agents/ag1" && init?.method === "PATCH")
+      .map(([, init]) => JSON.parse(init.body))
+    expect(bodies[1].only_flag).toEqual(["g1"])
+    expect(bodies[2].only_flag).toEqual(["g1", "g2"])
+  })
+
   describe("a client another agent holds", () => {
     const CONFLICT = { detail: "Client is claimed", conflicts: [{ client_group_id: "g1", holder_id: "ag7", holder_name: "Old rules" }] }
     const saves = () =>

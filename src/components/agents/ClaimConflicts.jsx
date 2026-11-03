@@ -4,8 +4,8 @@ import { Button, Notice } from "@/components/ds"
 
 /**
  * Clients another agent already watches, from a 409 on save or turn-on.
- * Each row can take the client over (Move it here) or keep watching it
- * without acting on it (Only flag).
+ * Move takes every one of them over in a single action; Only flag is per client
+ * and keeps watching it without acting on it.
  * `conflicts` is `[{client_group_id, holder_id, holder_name}]`.
  */
 export function ClaimConflicts({ conflicts, clients, busy = false, onMove, onOnlyFlag }) {
@@ -16,19 +16,18 @@ export function ClaimConflicts({ conflicts, clients, busy = false, onMove, onOnl
         {conflicts.map((c) => (
           <li key={c.client_group_id} className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm">
-              <span className="font-medium">{nameOf(c.client_group_id)}</span> is with {c.holder_name}
+              <span className="font-medium">{nameOf(c.client_group_id)}</span> is with{" "}
+              {c.holder_name || "another agent"}
             </span>
-            <span className="flex gap-2">
-              <Button size="sm" variant="outline" disabled={busy} onClick={onMove}>
-                Move it here
-              </Button>
-              <Button size="sm" variant="outline" disabled={busy} onClick={() => onOnlyFlag(c.client_group_id)}>
-                Only flag
-              </Button>
-            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => onOnlyFlag(c.client_group_id)}>
+              Only flag
+            </Button>
           </li>
         ))}
       </ul>
+      <Button size="sm" variant="outline" className="mt-3" disabled={busy} onClick={onMove}>
+        {conflicts.length === 1 ? "Move it here" : "Move all here"}
+      </Button>
     </Notice>
   )
 }
