@@ -11,9 +11,11 @@ import {
   Grid3X3,
   FileBarChart,
   Users,
+  Sparkles,
   X,
   Info,
 } from "lucide-react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { metaIcon as metaa, flaskIcon as Flask, ghlIcon as ghlIco } from "@/lib/icons"
@@ -42,6 +44,8 @@ import { usePageHeader } from "@/components/page-header"
 // root layout; pdFontClass only sets Inter as the base.
 import { pdFontClass } from "@/lib/pd-fonts"
 import { BirdyBriefing, CHART_LOADING, LoadError, MetricTabsChart, PageTabPanel, PageTabs } from "@/components/portfolio"
+import { CreativesHero } from "@/components/creatives/CreativesHero"
+import { CreativesTab } from "@/components/creatives/CreativesTab"
 import { useMarketingHubData } from "@/components/campaigns/useMarketingHubData"
 import { LandingFunnel } from "@/components/attribution/LandingFunnel"
 import { useLandingFunnel } from "@/lib/useLandingFunnel"
@@ -86,6 +90,7 @@ const SECTION_TABS = [
   { key: "adsets", label: "Ad Sets", icon: Grid3X3 },
   { key: "ads", label: "Ads", icon: FileBarChart },
   { key: "leads", label: "Leads", icon: Users },
+  { key: "creatives", label: "Creatives", icon: Sparkles },
 ]
 
 // Ties the tablist to the panel it swaps, for anyone navigating by role.
@@ -125,6 +130,11 @@ export function MarketingContent({
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState("campaigns")
+  // ?tab=creatives (or a ?creative= deep link) lands on the Creatives section.
+  const urlParams = useSearchParams()
+  useEffect(() => {
+    if (urlParams?.get("tab") === "creatives" || urlParams?.get("creative")) setActiveTab("creatives")
+  }, [urlParams])
   // Ads-tab-only layout switch: the same rows and column order drawn either as
   // the table or as a card grid of the ad creatives (handoff: Marketing Hub v2).
   const [adsView, setAdsView] = useState("table")
@@ -1295,7 +1305,10 @@ export function MarketingContent({
 
             A metric with no comparable previous period renders without a pill
             rather than with a zero: an unknown delta is not a flat one. */}
-        <StaggerItem className={`${pdFontClass} grid min-w-0 gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]`}>
+        <StaggerItem className={`${pdFontClass} min-w-0 ${activeTab === "creatives" ? "" : "grid gap-[14px] lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
+          {activeTab === "creatives" ? (
+            <CreativesHero clientGroupId={selectedClientGroup} />
+          ) : (<>
           <MetricTabsChart
             tabs={heroTabs}
             activeKey={activeChartMetric}
@@ -1322,6 +1335,7 @@ export function MarketingContent({
           ) : (
             <BirdyBriefing parts={BRIEFING_WAITING} />
           )}
+          </>)}
         </StaggerItem>
 
         {/* ── Landing page funnel ──────────────────────────────────────────
@@ -1362,6 +1376,7 @@ export function MarketingContent({
               {activeTab === "ads" && (
                 <AdsViewSwitch value={adsView} onChange={setAdsView} />
               )}
+              {activeTab !== "creatives" && (<>
               <Input
                 type="search"
                 placeholder={`Search ${activeTab}…`}
@@ -1377,12 +1392,14 @@ export function MarketingContent({
                 views={pageViews}
                 onSaveDefault={saveDefaultColumns}
               />
+              </>)}
             </div>
           </div>
 
           <PageTabPanel id={TABLE_PANEL_ID} label="Marketing Hub table" className="mt-4" key={activeTab}>
 
             {/* Drill-down breadcrumb */}
+            {activeTab !== "creatives" && (
             <DrillDownBreadcrumb
               selectedCampaign={selectedCampaign}
               selectedAdSet={selectedAdSet}
@@ -1392,9 +1409,10 @@ export function MarketingContent({
               onClearAd={clearAd}
               onTabChange={setActiveTab}
             />
+            )}
 
             {/* Advanced filter conditions */}
-            {filterConditions.length > 0 && (
+            {activeTab !== "creatives" && filterConditions.length > 0 && (
               <div className="border border-pd-border rounded-xl my-3 text-left">
                 <div className="flex items-center justify-between">
                   <h3 className="font-pd-display text-sm px-4 mt-2 font-semibold text-pd-ink">Active Filters</h3>
@@ -1450,7 +1468,7 @@ export function MarketingContent({
             )}
 
             <div className="flex justify-end items-center gap-3 flex-1">
-              {(filterConditions.length > 0 || searchTerm) && (
+              {activeTab !== "creatives" && (filterConditions.length > 0 || searchTerm) && (
                 <Button variant="outline" size="sm" onClick={handleClearFilters} className="gap-2">
                   <X className="h-4 w-4" /> Clear
                 </Button>
@@ -1458,7 +1476,9 @@ export function MarketingContent({
             </div>
 
             {/* Table */}
-            {error ? (
+            {activeTab === "creatives" ? (
+              <CreativesTab clientGroupId={selectedClientGroup} />
+            ) : error ? (
               <div className="flex flex-col items-center justify-center rounded-xl border border-pd-border bg-pd-surface p-16">
                 <div className="rounded-full bg-pd-danger-bg p-3 mb-4">
                   <X className="h-6 w-6 text-pd-danger" />

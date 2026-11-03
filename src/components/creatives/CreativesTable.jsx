@@ -54,7 +54,20 @@ function toRows(tests) {
   }))
 }
 
-export function CreativesTable({ tests = [], loading = false, onOpen, onAccountAction }) {
+/** The columns a viewer can switch on and off; Creative stays on. */
+export const CREATIVE_COLUMNS = [
+  { id: "creative", label: "Creative" },
+  { id: "accounts", label: "Accounts" },
+  { id: "spend", label: "Spend" },
+  { id: "leads", label: "Leads" },
+  { id: "cpl", label: "CPL vs target" },
+  { id: "ctr", label: "CTR" },
+  { id: "hook", label: "Hook rate" },
+  { id: "progress", label: "Progress to verdict" },
+  { id: "verdict", label: "Verdict" },
+]
+
+export function CreativesTable({ tests = [], loading = false, visibleColumns, onOpen, onAccountAction }) {
   const rows = React.useMemo(() => toRows(tests), [tests])
 
   const columns = React.useMemo(
@@ -260,6 +273,15 @@ export function CreativesTable({ tests = [], loading = false, onOpen, onAccountA
       columns={columns}
       data={rows}
       loading={loading}
+      {...(visibleColumns
+        ? {
+            state: {
+              columnVisibility: Object.fromEntries(
+                CREATIVE_COLUMNS.map((c) => [c.id, c.id === "creative" || visibleColumns.includes(c.id)])
+              ),
+            },
+          }
+        : {})}
       getSubRows={(r) => r.__children}
       getRowId={(r) => r.__rowId}
       onRowClick={(r) => {
