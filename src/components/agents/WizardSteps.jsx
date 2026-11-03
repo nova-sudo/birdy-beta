@@ -10,11 +10,13 @@ export const WIZARD_STEPS = ["Scope & safety", "Teach your strategy", "Check & t
  *
  * @param {object} props
  * @param {number} props.current 1-based
+ * @param {string[]} [props.steps] Step labels; the agent setup labels by default
+ * @param {string} [props.ariaLabel]
  */
-export function WizardSteps({ current, className }) {
+export function WizardSteps({ current, steps = WIZARD_STEPS, ariaLabel = "Setup steps", className }) {
   return (
-    <ol aria-label="Setup steps" className={cn("flex flex-wrap items-center gap-2 text-sm text-muted-foreground", className)}>
-      {WIZARD_STEPS.map((label, i) => {
+    <ol aria-label={ariaLabel} className={cn("flex flex-wrap items-center gap-2 text-sm text-muted-foreground", className)}>
+      {steps.map((label, i) => {
         const n = i + 1
         const done = n < current
         const on = n === current

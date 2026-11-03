@@ -89,3 +89,10 @@ export function refreshCreativeTest(id) {
 export function adoptCreativeAd(id, adId) {
   return mutating(id, `${queryKeys.creative(id)}/adopt`, "POST", { ad_id: adId })
 }
+
+/** Cached ads matching `q` across the agency's accounts (last 30 days, best spend first). */
+export function searchCreativeAds(q = "", { adAccountId, limit = 30 } = {}) {
+  const qs = new URLSearchParams({ q, limit: String(limit) })
+  if (adAccountId) qs.set("ad_account_id", adAccountId)
+  return send(`${queryKeys.creatives()}/ads/search?${qs}`, "GET")
+}
