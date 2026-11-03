@@ -63,6 +63,7 @@ export default function ChatConversation({
   sessionId: controlledSessionId,
   onSessionId,
   page = null,
+  agentId = null,
   clientGroupId = null,
   clientName = null,
   onMessagesChange,
@@ -194,7 +195,7 @@ export default function ChatConversation({
       await sendChatMessage(
         sessionKey,
         {
-          text, page,
+          text, page, agentId,
           // Without the picker the surface's own client (if any) still goes.
           clientGroupId: showScopePicker ? scope.id : clientGroupId ?? null,
           clientName: showScopePicker ? (scope.id ? scope.name : null) : clientName ?? null,
@@ -233,6 +234,7 @@ export default function ChatConversation({
         method: "POST",
         body: JSON.stringify({
           message: text, session_id: sessionId, page,
+          ...(agentId ? { agent_id: agentId } : {}),
           client_group_id: scope.id, client_name: scope.id ? scope.name : null,
           view_catalogues: readViewCatalogues(),
           ...(attachments?.length ? { attachments } : {}),
@@ -280,7 +282,7 @@ export default function ChatConversation({
       setLocalLoading(false)
     }
     return true
-  }, [loading, sessionId, sessionKey, isControlled, page, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
+  }, [loading, sessionId, sessionKey, isControlled, page, agentId, scope, showScopePicker, dashboardId, configured, markUnconfigured, refreshCreds, outOfCredits, refreshCredits])
 
   // Expose send to the surface (the agent training page posts practice follow-ups).
   useEffect(() => {

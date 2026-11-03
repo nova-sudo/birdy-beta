@@ -21,6 +21,9 @@ import { apiRequest } from "@/lib/api"
 import { fetcher } from "@/lib/fetcher"
 import AgentPage from "../page"
 
+// Next hands the page a promise; one already marked fulfilled lets `use` read it without suspending.
+const PARAMS = Object.assign(Promise.resolve({ id: "ag1" }), { status: "fulfilled", value: { id: "ag1" } })
+
 const res = (body, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => body })
 
 let agent
@@ -47,13 +50,13 @@ beforeEach(() => {
   replace.mockReset()
   agent = {
     id: "ag1",
-    type: "media_buying",
+    type: "custom",
+    name: "Lead rules",
     status: "active",
     scope: { client_group_ids: ["g1", "g2"], schedule: { time: "07:00", tz: "Europe/London" } },
   }
   vi.mocked(apiRequest).mockReset()
   vi.mocked(apiRequest).mockImplementation((path) => {
-    if (path === "/api/agents") return Promise.resolve(res([agent]))
     if (path === "/api/agents/ag1") return Promise.resolve(res(agent))
     if (path === "/api/agents/ag1/work") return Promise.resolve(res(WORK))
     if (path === "/api/agents/ag1/rules") return Promise.resolve(res([]))
@@ -64,18 +67,26 @@ beforeEach(() => {
 const renderPage = () =>
   render(
     <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
-      <AgentPage />
+      <AgentPage params={PARAMS} />
     </SWRConfig>
   )
 
-describe("Media Buying Agent page", () => {
+describe("Custom agent page", () => {
+  it("reads the agent by its id from the route, never from the list", async () => {
+    renderPage()
+    expect(await screen.findByRole("heading", { name: "Lead rules" })).toBeInTheDocument()
+    const paths = vi.mocked(apiRequest).mock.calls.map(([p]) => p)
+    expect(paths).toContain("/api/agents/ag1")
+    expect(paths).not.toContain("/api/agents")
+  })
+
   it("shows the work list by default and keeps the tab in ?tab=", async () => {
     renderPage()
     expect(await screen.findByText("Pause “Summer BBL – Video 3”")).toBeInTheDocument()
     expect(screen.getByText(/Watching 2 clients/)).toBeInTheDocument()
 
     await userEvent.click(screen.getByRole("tab", { name: /Playbook/ }))
-    expect(replace).toHaveBeenCalledWith("/hub/agents/media-buying?tab=playbook", { scroll: false })
+    expect(replace).toHaveBeenCalledWith("/hub/agents/custom/ag1?tab=playbook", { scroll: false })
   })
 
   it("shows impact and the activity log on ?tab=activity", async () => {
@@ -188,7 +199,7 @@ describe("Media Buying Agent page", () => {
     })
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher, shouldRetryOnError: false }}>
-        <AgentPage />
+        <AgentPage params={PARAMS} />
       </SWRConfig>
     )
     await userEvent.click(await screen.findByRole("button", { name: "Load more" }))
@@ -232,7 +243,7 @@ describe("Media Buying Agent page", () => {
     })
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher, shouldRetryOnError: false }}>
-        <AgentPage />
+        <AgentPage params={PARAMS} />
       </SWRConfig>
     )
     const title = await screen.findByText("Couldn't load the activity")
@@ -263,6 +274,6 @@ describe("Media Buying Agent page", () => {
     agent = { ...agent, status: "draft" }
     renderPage()
     const link = await screen.findByRole("link", { name: /Continue setup/ })
-    expect(link).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    expect(link).toHaveAttribute("href", "/hub/agents/custom/ag1/setup")
   })
 })

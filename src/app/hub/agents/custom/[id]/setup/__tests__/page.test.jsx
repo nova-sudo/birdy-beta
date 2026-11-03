@@ -25,6 +25,9 @@ import { fetcher } from "@/lib/fetcher"
 import SetupPage from "../page"
 import { useAgent, useAgents } from "@/lib/agents-api"
 
+// Next hands the page a promise; one already marked fulfilled lets `use` read it without suspending.
+const PARAMS = Object.assign(Promise.resolve({ id: "ag1" }), { status: "fulfilled", value: { id: "ag1" } })
+
 const res = (body, status = 200) => ({
   ok: status >= 200 && status < 300,
   status,
@@ -33,7 +36,8 @@ const res = (body, status = 200) => ({
 
 const AGENT = {
   id: "ag1",
-  type: "media_buying",
+  type: "custom",
+  name: "Lead rules",
   status: "draft",
   scope: { client_group_ids: ["g1"], schedule: { time: "07:00", tz: "Europe/London" } },
   permissions: { ads: true, adsets: true, campaigns: false, budgets: false },
@@ -102,7 +106,7 @@ const renderPage = () =>
   render(
     <StrictMode>
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
-        <SetupPage />
+        <SetupPage params={PARAMS} />
       </SWRConfig>
     </StrictMode>
   )
@@ -120,12 +124,14 @@ beforeEach(() => {
 const posts = (path) =>
   vi.mocked(apiRequest).mock.calls.filter(([p, init]) => p === path && init?.method === "POST").length
 
-describe("Media Buying Agent setup", () => {
-  it("creates the agent once when there is none, then shows step 1", async () => {
+describe("Custom agent setup", () => {
+  it("reads the agent by its id, titles step 1 with its name and never creates one", async () => {
     renderPage()
     expect(await screen.findByText("Tylaesthetics")).toBeInTheDocument()
-    expect(screen.getByRole("heading", { name: "Set up your Media Buying Agent" })).toBeInTheDocument()
-    expect(posts("/api/agents")).toBe(1)
+    expect(screen.getByRole("heading", { name: "Set up Lead rules" })).toBeInTheDocument()
+    const calls = vi.mocked(apiRequest).mock.calls
+    expect(calls.some(([p]) => p === "/api/agents/ag1")).toBe(true)
+    expect(posts("/api/agents")).toBe(0)
   })
 
   it("Next saves scope and safety in one PATCH and moves to step 2", async () => {
@@ -133,7 +139,7 @@ describe("Media Buying Agent setup", () => {
     renderPage()
     await screen.findByText("Tylaesthetics")
     await userEvent.click(screen.getByRole("button", { name: /Next: teach it your strategy/ }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying/setup?step=2"))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=2"))
     const patches = vi.mocked(apiRequest).mock.calls.filter(([p, init]) => p === "/api/agents/ag1" && init?.method === "PATCH")
     expect(patches).toHaveLength(1)
     const body = JSON.parse(patches[0][1].body)
@@ -154,29 +160,64 @@ describe("Media Buying Agent setup", () => {
     expect(push).not.toHaveBeenCalled()
   })
 
-  it("a 409 on create whose refetch still finds no agent shows an error with Retry", async () => {
-    vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
-      if (path === "/api/agents" && init.method === "POST") return Promise.resolve(res({ detail: "exists" }, 409))
-      if (path === "/api/agents") return Promise.resolve(res([]))
-      return mockApi(path, init)
-    })
+  it("a failing agent read is an error with Retry", async () => {
+    let fail = true
+    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
+      path === "/api/agents/ag1" && fail ? Promise.resolve(res({ detail: "boom" }, 500)) : mockApi(path, init)
+    )
     renderPage()
-    expect(await screen.findByText("Your agent exists but couldn't be loaded.")).toBeInTheDocument()
-    // Retry tries again, and this time the list has it.
-    agents = [AGENT]
-    vi.mocked(apiRequest).mockImplementation(mockApi)
+    expect(await screen.findByText("Couldn't load your agent")).toBeInTheDocument()
+    fail = false
     await userEvent.click(screen.getByRole("button", { name: /Try again/ }))
     expect(await screen.findByText("Tylaesthetics")).toBeInTheDocument()
   })
 
-  it("a failing agent list is an error, not a reason to create", async () => {
-    vi.mocked(apiRequest).mockImplementation((path, init = {}) =>
-      path === "/api/agents" ? Promise.resolve(res({ detail: "boom" }, 500)) : mockApi(path, init)
-    )
-    renderPage()
-    expect(await screen.findByText("Couldn't load your agent")).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: /Try again/ })).toBeInTheDocument()
-    expect(posts("/api/agents")).toBe(0)
+  describe("a client another agent holds", () => {
+    const CONFLICT = { detail: "Client is claimed", conflicts: [{ client_group_id: "g1", holder_id: "ag7", holder_name: "Old rules" }] }
+    const saves = () =>
+      vi.mocked(apiRequest).mock.calls
+        .filter(([p, init]) => p === "/api/agents/ag1" && init?.method === "PATCH")
+        .map(([, init]) => JSON.parse(init.body))
+
+    // The first save is refused; the resend is accepted.
+    const refuseFirstSave = () => {
+      let refused = false
+      vi.mocked(apiRequest).mockImplementation((path, init = {}) => {
+        if (path === "/api/agents/ag1" && init.method === "PATCH" && !refused) {
+          refused = true
+          return Promise.resolve(res(CONFLICT, 409))
+        }
+        return mockApi(path, init)
+      })
+    }
+
+    it("Move it here resends the save with move_claims", async () => {
+      refuseFirstSave()
+      renderPage()
+      await screen.findByText("Tylaesthetics")
+      await userEvent.click(screen.getByRole("button", { name: /Next: teach it your strategy/ }))
+      expect(await screen.findByText(/is with Old rules/)).toBeInTheDocument()
+      expect(push).not.toHaveBeenCalled()
+      await userEvent.click(screen.getByRole("button", { name: "Move it here" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=2"))
+      const [first, second] = saves()
+      expect(first.move_claims).toBeUndefined()
+      expect(second.move_claims).toBe(true)
+      expect(second.scope.client_group_ids).toEqual(["g1"])
+    })
+
+    it("Only flag resends with that client in only_flag, together with the scope", async () => {
+      refuseFirstSave()
+      renderPage()
+      await screen.findByText("Tylaesthetics")
+      await userEvent.click(screen.getByRole("button", { name: /Next: teach it your strategy/ }))
+      await userEvent.click(await screen.findByRole("button", { name: "Only flag" }))
+      await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=2"))
+      const second = saves()[1]
+      expect(second.only_flag).toEqual(["g1"])
+      expect(second.scope.client_group_ids).toEqual(["g1"])
+      expect(second.move_claims).toBeUndefined()
+    })
   })
 
   it("the agent page's caches read active right after activation, before any refetch", async () => {
@@ -189,7 +230,7 @@ describe("Media Buying Agent setup", () => {
       return <div data-testid="probe" data-agent={agent?.status} data-list={list[0]?.status} />
     }
     push.mockImplementation((url) => {
-      if (url === "/hub/agents/media-buying") {
+      if (url === "/hub/agents/custom/ag1") {
         const el = screen.getByTestId("probe")
         seen = [el.dataset.agent, el.dataset.list]
       }
@@ -203,7 +244,7 @@ describe("Media Buying Agent setup", () => {
     render(
       <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0, fetcher }}>
         <Probe />
-        <SetupPage />
+        <SetupPage params={PARAMS} />
       </SWRConfig>
     )
     await screen.findByText("Pause ads over target")
@@ -245,7 +286,7 @@ describe("Media Buying Agent setup", () => {
     expect(screen.getByText("Ready. More practice keeps raising it.")).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole("button", { name: /Next: check the dry run/ })).toBeEnabled())
     await userEvent.click(screen.getByRole("button", { name: /Next: check the dry run/ }))
-    expect(push).toHaveBeenCalledWith("/hub/agents/media-buying/setup?step=3")
+    expect(push).toHaveBeenCalledWith("/hub/agents/custom/ag1/setup?step=3")
   })
 
   it("lists what is missing on a 409 with a top-level missing list", async () => {

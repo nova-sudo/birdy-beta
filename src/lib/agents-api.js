@@ -189,14 +189,20 @@ async function send(endpoint, method, body) {
     if (data?.decided_by) err.decidedBy = data.decided_by
     // Activation's 409 carries `missing` beside `detail`, not inside it.
     if (Array.isArray(data?.missing)) err.missing = data.missing
+    // A claimed client (409): who holds it, so the caller can offer to move it.
+    if (Array.isArray(data?.conflicts)) err.conflicts = data.conflicts
     throw err
   }
   return data
 }
 
-/** Creates this user's media buying agent. 409 when one already exists. */
-export function createAgent() {
-  return send(queryKeys.agents(), "POST")
+/** Where one custom agent lives, and its setup wizard. */
+export const customAgentPath = (id) => `/hub/agents/custom/${encodeURIComponent(id)}`
+export const customSetupPath = (id) => `${customAgentPath(id)}/setup`
+
+/** Creates an agent. `type` is "custom"; a blank or over-60-character `name` is a 400. */
+export function createAgent({ type, name }) {
+  return send(queryKeys.agents(), "POST", { type, name })
 }
 
 /** Deletes a draft agent and everything it learned, so setup starts over. 409 once it is switched on. */
@@ -204,7 +210,11 @@ export function deleteAgent(id) {
   return send(queryKeys.agent(id), "DELETE")
 }
 
-/** `{scope?, permissions?, guardrails?, client_caps?}`; scope and schedule are merged server-side. */
+/**
+ * `{scope?, permissions?, guardrails?, client_caps?, move_claims?, only_flag?}`; scope and schedule
+ * are merged server-side. A scope that takes a client another agent holds is a 409 with
+ * `err.conflicts`; resend with `move_claims: true`, or `only_flag: [gids]` (honoured with `scope`).
+ */
 export function patchAgent(id, patch) {
   return send(queryKeys.agent(id), "PATCH", patch)
 }
@@ -250,9 +260,13 @@ export function resolvePractice(id, caseId, resolution) {
   return send(`${queryKeys.agentPractice(id)}/${encodeURIComponent(caseId)}/resolve`, "POST", { resolution })
 }
 
-/** Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not ready yet. */
-export function activateAgent(id) {
-  return send(`${queryKeys.agent(id)}/activate`, "POST")
+/**
+ * Turns the agent on. 409 `{detail, missing}` (missing on the error as `err.missing`) when it is not
+ * ready yet, or `{detail, conflicts}` (`err.conflicts`) when a client is held by another agent;
+ * `opts` is `{move_claims?, only_flag?}` for the resend.
+ */
+export function activateAgent(id, opts) {
+  return send(`${queryKeys.agent(id)}/activate`, "POST", opts)
 }
 
 // ─── Work list decisions ─────────────────────────────────────────────────────

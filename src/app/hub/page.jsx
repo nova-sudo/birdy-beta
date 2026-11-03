@@ -9,14 +9,13 @@ import { Badge, Button, Frame, Surface } from "@/components/ds"
 import { DashboardList } from "@/components/dashboards/DashboardList"
 import { ReportsSection } from "@/components/reports/ReportsSection"
 import { StartOverButton } from "@/components/agents/StartOverButton"
-import { useAgents } from "@/lib/agents-api"
+import { customAgentPath, customSetupPath, useAgents } from "@/lib/agents-api"
 
 // ─── BirdyHub ───────────────────────────────────────────────────────────────
 // Agents (Birdy teammates you train on your strategy) and dashboards, together,
 // with the Slack reports under Dashboards.
 
-const SETUP_HREF = "/hub/agents/media-buying/setup"
-const AGENT_HREF = "/hub/agents/media-buying"
+const NEW_HREF = "/hub/agents/custom/new"
 
 const MEDIA_BUYING_POINTS = [
   { icon: Pause, text: "Turns ads off when they miss your targets" },
@@ -48,7 +47,7 @@ function MediaBuyingAgentCard({ agent }) {
       {isDraft ? (
         <div className="flex flex-col gap-2">
           <Button asChild variant="primary" size="lg">
-            <Link href={SETUP_HREF}>
+            <Link href={customSetupPath(agent.id)}>
               Continue setup
               <ArrowRight aria-hidden />
             </Link>
@@ -57,7 +56,7 @@ function MediaBuyingAgentCard({ agent }) {
         </div>
       ) : (
         <Button asChild variant="primary" size="lg">
-          <Link href={hasAgent ? AGENT_HREF : SETUP_HREF}>
+          <Link href={hasAgent ? customAgentPath(agent.id) : NEW_HREF}>
             {hasAgent ? "Open agent" : "Set up agent"}
             <ArrowRight aria-hidden />
           </Link>
@@ -88,7 +87,7 @@ function ComingSoonCard() {
 export default function HubPage() {
   const { agents } = useAgents()
   const [creating, setCreating] = useState(false)
-  const mediaBuying = agents.find((a) => a.type === "media_buying") ?? agents[0] ?? null
+  const mediaBuying = agents.find((a) => a.type === "custom") ?? null
 
   const header = useMemo(
     () => ({

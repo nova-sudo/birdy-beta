@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useMemo } from "react"
+import { Suspense, use, useCallback, useMemo } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSWRConfig } from "swr"
@@ -22,23 +22,20 @@ import { WorkList } from "@/components/agents/WorkList"
 import {
   isAgentImpactKey,
   revalidateAgentLearning,
+  customAgentPath,
+  customSetupPath,
   useAgent,
   useAgentActivity,
   useAgentConfidence,
-  useAgents,
   useAgentWork,
 } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { useClientGroups } from "@/lib/useClientGroups"
 
-const AGENT_PATH = "/hub/agents/media-buying"
-const SETUP_PATH = "/hub/agents/media-buying/setup"
 const PANEL_ID = "agent-tab-panel"
 
 const TABS = ["work", "playbook", "train", "activity"]
 const tabOf = (raw) => (TABS.includes(raw) ? raw : "work")
-
-const pickAgent = (list) => (list ?? []).find((a) => a.type === "media_buying") ?? list?.[0] ?? null
 
 /** "7:00 AM" from "07:00". */
 function clockTime(hhmm) {
@@ -118,45 +115,40 @@ function ActivityTab({ agentId }) {
   )
 }
 
-function NotReady({ agent }) {
+function NotReady({ agent, setupPath }) {
   return (
     <EmptyState
       variant="surface"
       icon={Settings2}
-      title={agent ? "Finish setting up your agent" : "Set up your Media Buying Agent"}
-      description={
-        agent
-          ? "It isn't switched on yet. Teach it your strategy and check the dry run, then turn it on."
-          : "Choose what it watches, teach it how you buy, then turn it on."
-      }
+      title="Finish setting up your agent"
+      description="It isn't switched on yet. Teach it your strategy and check the dry run, then turn it on."
       action={
         <div className="flex flex-wrap justify-center gap-2">
           <Button asChild variant="primary">
-            <Link href={SETUP_PATH}>
-              {agent ? "Continue setup" : "Set up agent"}
+            <Link href={setupPath}>
+              Continue setup
               <ArrowRight aria-hidden />
             </Link>
           </Button>
-          {agent && <StartOverButton agent={agent} variant="outline" />}
+          <StartOverButton agent={agent} variant="outline" />
         </div>
       }
     />
   )
 }
 
-function AgentHome() {
+function AgentHome({ params }) {
+  const { id } = use(params)
+  const agentPath = customAgentPath(id)
   const router = useRouter()
   const searchParams = useSearchParams()
   const tab = tabOf(searchParams?.get("tab"))
   const setTab = useCallback(
-    (value) => router.replace(value === "work" ? AGENT_PATH : `${AGENT_PATH}?tab=${value}`, { scroll: false }),
-    [router]
+    (value) => router.replace(value === "work" ? agentPath : `${agentPath}?tab=${value}`, { scroll: false }),
+    [router, agentPath]
   )
 
-  const { agents, error: listError, isLoading, mutate: mutateAgents } = useAgents()
-  const listed = pickAgent(agents)
-  const { agent: fetched } = useAgent(listed?.id)
-  const agent = fetched ?? listed
+  const { agent, error: loadError, isLoading, mutate: mutateAgent } = useAgent(id)
   const active = agent?.status === "active"
 
   const { work } = useAgentWork(active ? agent.id : null)
@@ -168,7 +160,7 @@ function AgentHome() {
   const clients = useMemo(() => clientGroups.map(toClient), [clientGroups])
   const currency = agent ? scopeCurrency(clients, agent.scope?.client_group_ids ?? []) : undefined
 
-  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title="Media Buying Agent" subtitle="BirdyHub" /> }), [])
+  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title={agent?.name ?? "Agent"} subtitle="BirdyHub" /> }), [agent?.name])
   usePageHeader(topBar)
 
   const tabs = useMemo(
@@ -182,12 +174,12 @@ function AgentHome() {
   )
 
   let body
-  if (listError) {
-    body = <ErrorState title="Couldn't load your agent" description={listError.message} onRetry={() => mutateAgents()} />
-  } else if (isLoading) {
+  if (loadError) {
+    body = <ErrorState title="Couldn't load your agent" description={loadError.message} onRetry={() => mutateAgent()} />
+  } else if (isLoading || !agent) {
     body = <Skeleton className="h-96 w-full rounded-frame" />
   } else if (!active) {
-    body = <NotReady agent={agent} />
+    body = <NotReady agent={agent} setupPath={customSetupPath(id)} />
   } else {
     body = (
       <>
@@ -233,7 +225,7 @@ function AgentHome() {
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
       <PageHeader
         backButton={{ label: "BirdyHub", href: "/hub" }}
-        title="Media Buying Agent"
+        title={agent?.name ?? "Agent"}
         titleExtra={
           active ? (
             <Badge tone="success" variant="dot">
@@ -248,10 +240,10 @@ function AgentHome() {
   )
 }
 
-export default function MediaBuyingAgentPage() {
+export default function CustomAgentPage({ params }) {
   return (
     <Suspense fallback={null}>
-      <AgentHome />
+      <AgentHome params={params} />
     </Suspense>
   )
 }

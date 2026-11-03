@@ -11,6 +11,10 @@ describe("PROTECTED_ROUTES", () => {
     expect(PROTECTED_ROUTES).toContain("/hub/agents/media-buying/setup")
   })
 
+  it("guards the new custom agent page", () => {
+    expect(PROTECTED_ROUTES).toContain("/hub/agents/custom/new")
+  })
+
   it("guards the agent page itself (final review minor 10)", () => {
     expect(PROTECTED_ROUTES).toContain("/hub/agents/media-buying")
   })

@@ -151,6 +151,7 @@ export function TrainingChat({ agentId, currency = "$", onChanged, ref, classNam
       <ChatConversation
         sessionKey={sessionKey}
         page={TRAINING_PAGE}
+        agentId={agentId}
         showScopePicker={false}
         showSlowNotice={false}
         composerCompact

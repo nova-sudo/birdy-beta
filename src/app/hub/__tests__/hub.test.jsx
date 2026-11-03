@@ -60,7 +60,7 @@ describe("BirdyHub page", () => {
     renderPage()
     expect(screen.getByText("Media Buying Agent")).toBeInTheDocument()
     const link = await screen.findByRole("link", { name: /Set up agent/ })
-    expect(link).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    expect(link).toHaveAttribute("href", "/hub/agents/custom/new")
   })
 
   it("treats a missing /api/agents route as no agent", async () => {
@@ -82,20 +82,20 @@ describe("BirdyHub page", () => {
   })
 
   it("a draft agent offers Continue setup or Start over", async () => {
-    agents = [{ id: "a1", type: "media_buying", status: "draft" }]
+    agents = [{ id: "a1", type: "custom", status: "draft" }]
     renderPage()
     const cont = await screen.findByRole("link", { name: /Continue setup/ })
-    expect(cont).toHaveAttribute("href", "/hub/agents/media-buying/setup")
+    expect(cont).toHaveAttribute("href", "/hub/agents/custom/a1/setup")
 
     fireEvent.click(screen.getByRole("button", { name: /Start over/ }))
     const dialog = await screen.findByRole("alertdialog")
     fireEvent.click(within(dialog).getByRole("button", { name: "Start over" }))
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/media-buying/setup?step=1"))
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/hub/agents/custom/new"))
     expect(vi.mocked(apiRequest)).toHaveBeenCalledWith("/api/agents/a1", expect.objectContaining({ method: "DELETE" }))
   })
 
   it("an active agent only offers Open agent", async () => {
-    agents = [{ id: "a1", type: "media_buying", status: "active" }]
+    agents = [{ id: "a1", type: "custom", status: "active" }]
     renderPage()
     expect(await screen.findByRole("link", { name: /Open agent/ })).toBeInTheDocument()
     expect(screen.queryByRole("button", { name: /Start over/ })).not.toBeInTheDocument()

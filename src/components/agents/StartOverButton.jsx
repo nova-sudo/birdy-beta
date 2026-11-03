@@ -6,11 +6,11 @@ import { RotateCcw } from "lucide-react"
 import { Button, confirm, toast } from "@/components/ds"
 import { deleteAgent, useAgents } from "@/lib/agents-api"
 
-const SETUP_HREF = "/hub/agents/media-buying/setup"
+const NEW_HREF = "/hub/agents/custom/new"
 
 /**
  * Throws away a draft agent (its clients, training, practice answers and playbook edits)
- * and opens setup from step 1 with a fresh one.
+ * and opens the new-agent page so it can be started again.
  */
 export function StartOverButton({ agent, variant = "ghost", size, className }) {
   const router = useRouter()
@@ -31,7 +31,7 @@ export function StartOverButton({ agent, variant = "ghost", size, className }) {
       await mutateAgents((list) => (Array.isArray(list) ? list.filter((a) => a.id !== agent.id) : []), {
         revalidate: false,
       })
-      router.push(`${SETUP_HREF}?step=1`)
+      router.push(NEW_HREF)
     } catch (err) {
       toast.error("Couldn't start over", {
         description: err?.status === 409 ? "This agent is already switched on." : err?.message,

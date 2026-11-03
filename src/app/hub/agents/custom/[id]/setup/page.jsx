@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Suspense, use, useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight, Lock, Zap } from "lucide-react"
 
@@ -21,6 +21,7 @@ import {
   SelectValue,
   Skeleton,
 } from "@/components/ds"
+import { ClaimConflicts } from "@/components/agents/ClaimConflicts"
 import { ClientScopeTable } from "@/components/agents/ClientScopeTable"
 import { AgentTraining, scopeCurrency, toClient } from "@/components/agents/AgentTraining"
 import { DryRunSummary } from "@/components/agents/DryRunSummary"
@@ -28,18 +29,9 @@ import { GuardrailsForm } from "@/components/agents/GuardrailsForm"
 import { PlaybookDraft } from "@/components/agents/PlaybookDraft"
 import { StartOverButton } from "@/components/agents/StartOverButton"
 import { WizardSteps } from "@/components/agents/WizardSteps"
-import {
-  activateAgent,
-  createAgent,
-  patchAgent,
-  useAgent,
-  useAgents,
-} from "@/lib/agents-api"
+import { activateAgent, customAgentPath, customSetupPath, patchAgent, useAgent, useAgents } from "@/lib/agents-api"
 import { DEFAULT_DATE_PRESET } from "@/lib/constants"
 import { useClientGroups } from "@/lib/useClientGroups"
-
-const SETUP_PATH = "/hub/agents/media-buying/setup"
-const AGENT_PATH = "/hub/agents/media-buying"
 
 const COMMON_TIMEZONES = [
   "Europe/London",
@@ -63,9 +55,9 @@ const COMMON_TIMEZONES = [
   "UTC",
 ]
 
-const HEADINGS = {
+const headings = (name) => ({
   1: {
-    title: "Set up your Media Buying Agent",
+    title: `Set up ${name}`,
     description: "Choose what it watches and what it's allowed to touch. You can change all of this later.",
   },
   2: {
@@ -78,7 +70,7 @@ const HEADINGS = {
     description:
       "Birdy ran your playbook over the last 30 days of real data. Nothing was changed. Use this to tune the rules before you switch it on.",
   },
-}
+})
 
 const stepOf = (raw) => {
   const n = Number(raw)
@@ -98,58 +90,6 @@ function activationMessage(err) {
   return "Couldn't turn it on. Try again in a moment."
 }
 
-const pickAgent = (list) => (list ?? []).find((a) => a.type === "media_buying") ?? list?.[0] ?? null
-
-/**
- * Finds this user's agent, creating it once when there is none. Every way this can fail ends in
- * an error with a retry, never an endless skeleton.
- */
-function useEnsuredAgent() {
-  const { agents, error: listError, isLoading, mutate } = useAgents()
-  const existing = pickAgent(agents)
-  const [created, setCreated] = useState(null)
-  const [error, setError] = useState(null)
-  const [attempt, setAttempt] = useState(0)
-  const creating = useRef(false)
-
-  useEffect(() => {
-    // A broken list is not an empty one: never create on the strength of an error.
-    if (isLoading || listError || existing || creating.current) return
-    // A ref survives strict mode's second effect run, so this posts once.
-    creating.current = true
-    createAgent()
-      .then((agent) => {
-        setCreated(agent)
-        mutate()
-      })
-      .catch(async (err) => {
-        if (err?.status !== 409) {
-          setError(err?.message || "Couldn't create the agent")
-          return
-        }
-        // 409: it exists after all (another tab). The refetch has to find it.
-        try {
-          if (!pickAgent(await mutate())) setError("Your agent exists but couldn't be loaded.")
-        } catch (e) {
-          setError(e?.message || "Couldn't load your agent")
-        }
-      })
-  }, [isLoading, listError, existing, mutate, attempt])
-
-  const retry = useCallback(() => {
-    creating.current = false
-    setError(null)
-    setAttempt((n) => n + 1)
-    mutate()
-  }, [mutate])
-
-  return {
-    agentId: existing?.id ?? created?.id ?? null,
-    error: error ?? (listError ? listError.message || "Couldn't load your agent" : null),
-    retry,
-  }
-}
-
 function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCancel }) {
   const stored = useMemo(() => agent.scope?.client_group_ids ?? [], [agent.scope])
   const [selected, setSelected] = useState(() =>
@@ -164,6 +104,7 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
   const [caps, setCaps] = useState(() => agent.client_caps ?? {})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [conflicts, setConflicts] = useState(null)
 
   // A new agent with no saved scope starts on every connected client, once they arrive.
   const seeded = useRef(stored.length > 0 || clients.length > 0)
@@ -192,23 +133,28 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
     [schedule.tz]
   )
 
-  const next = async () => {
+  // `claims` is {move_claims} or {only_flag} when answering a conflict; `only_flag` is only
+  // honoured by the server together with `scope`, which every save here sends.
+  const next = async (claims = {}) => {
     if (selected.length === 0) {
       setError("Pick at least one client for it to watch.")
       return
     }
     setSaving(true)
     setError(null)
+    setConflicts(null)
     try {
       const updated = await patchAgent(agent.id, {
         scope: { client_group_ids: selected, schedule },
         permissions,
         guardrails,
+        ...claims,
       })
       mutateAgent(updated, { revalidate: false })
       onNext()
     } catch (err) {
-      setError(`Couldn't save: ${err.message}`)
+      if (err.status === 409 && err.conflicts?.length) setConflicts(err.conflicts)
+      else setError(`Couldn't save: ${err.message}`)
       setSaving(false)
     }
   }
@@ -285,11 +231,20 @@ function ScopeStep({ agent, mutateAgent, clients, clientsLoading, onNext, onCanc
           you approve it.
         </Notice>
         {error && <Notice tone="danger">{error}</Notice>}
+        {conflicts && (
+          <ClaimConflicts
+            conflicts={conflicts}
+            clients={clients}
+            busy={saving}
+            onMove={() => next({ move_claims: true })}
+            onOnlyFlag={(gid) => next({ only_flag: [gid] })}
+          />
+        )}
         <div className="flex items-center justify-end gap-2 max-sm:flex-col-reverse max-sm:items-stretch">
           <Button variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="primary" size="lg" loading={saving} onClick={next}>
+          <Button variant="primary" size="lg" loading={saving} onClick={() => next()}>
             Next: teach it your strategy
             <ArrowRight aria-hidden />
           </Button>
@@ -348,26 +303,24 @@ function CheckStep({ agent, clients, onBack, onActivated }) {
   )
 }
 
-function SetupWizard() {
+function SetupWizard({ params }) {
+  const { id } = use(params)
   const router = useRouter()
   const searchParams = useSearchParams()
   const step = stepOf(searchParams?.get("step"))
-  const go = useCallback((n) => router.push(`${SETUP_PATH}?step=${n}`), [router])
+  const go = useCallback((n) => router.push(`${customSetupPath(id)}?step=${n}`), [router, id])
 
-  const { agentId, error: createError, retry: retryCreate } = useEnsuredAgent()
-  const { agent, error: agentError, mutate: mutateAgent } = useAgent(agentId)
+  const { agent, error: agentError, mutate: mutateAgent } = useAgent(id)
   const { clientGroups, loading: clientsLoading } = useClientGroups(DEFAULT_DATE_PRESET, { includeDaily: false })
   const clients = useMemo(() => clientGroups.map(toClient), [clientGroups])
   const { mutate: mutateAgents } = useAgents()
 
-  const topBar = useMemo(
-    () => ({ title: <SalesHubHeaderTitle title="Media Buying Agent" subtitle="Set up" /> }),
-    []
-  )
+  const name = agent?.name ?? "your agent"
+  const topBar = useMemo(() => ({ title: <SalesHubHeaderTitle title={agent?.name ?? "Agent"} subtitle="Set up" /> }), [agent?.name])
   usePageHeader(topBar)
 
-  const heading = HEADINGS[step]
-  const failed = createError || agentError
+  const heading = headings(name)[step]
+  const failed = agentError
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-6 font-sans">
@@ -382,8 +335,8 @@ function SetupWizard() {
       {failed ? (
         <ErrorState
           title="Couldn't load your agent"
-          description={createError || agentError?.message || "The request failed."}
-          onRetry={() => (createError ? retryCreate() : mutateAgent())}
+          description={agentError?.message || "The request failed."}
+          onRetry={() => mutateAgent()}
         />
       ) : !agent ? (
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.4fr_1fr]">
@@ -423,7 +376,7 @@ function SetupWizard() {
                 { revalidate: false }
               ),
             ])
-            router.push(AGENT_PATH)
+            router.push(customAgentPath(id))
             mutateAgent()
             mutateAgents()
           }}
@@ -433,10 +386,10 @@ function SetupWizard() {
   )
 }
 
-export default function MediaBuyingSetupPage() {
+export default function CustomAgentSetupPage({ params }) {
   return (
     <Suspense fallback={null}>
-      <SetupWizard />
+      <SetupWizard params={params} />
     </Suspense>
   )
 }
