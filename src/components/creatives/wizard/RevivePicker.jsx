@@ -6,6 +6,14 @@ import { Notice, SearchInput, Skeleton } from "@/components/ds"
 import { searchCreativeAds } from "@/lib/creatives-api"
 
 const num = (n, digits = 0) => Number(n).toLocaleString("en", { maximumFractionDigits: digits, minimumFractionDigits: digits })
+function money(n, currency, digits = 0) {
+  if (!currency) return num(n, digits)
+  try {
+    return Number(n).toLocaleString("en", { style: "currency", currency, maximumFractionDigits: digits, minimumFractionDigits: digits })
+  } catch {
+    return num(n, digits)
+  }
+}
 
 /**
  * Searchable picker over the agency's cached ads (last 30 days).
@@ -65,9 +73,9 @@ export function RevivePicker({ onPick }) {
                   </span>
                 </span>
                 <span className="shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                  <span className="block">CPL {ad.metrics?.cpl == null ? "—" : num(ad.metrics.cpl, 2)}</span>
+                  <span className="block">CPL {ad.metrics?.cpl == null ? "—" : money(ad.metrics.cpl, ad.currency, 2)}</span>
                   <span className="block">
-                    {num(ad.metrics?.leads ?? 0)} leads · {num(ad.metrics?.spend ?? 0)} spent
+                    {num(ad.metrics?.leads ?? 0)} leads · {money(ad.metrics?.spend ?? 0, ad.currency)} spent
                   </span>
                 </span>
               </button>

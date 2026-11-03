@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
@@ -12,6 +12,7 @@ import { useCreativeDraft } from "./useCreativeDraft"
 
 export const CREATIVE_STEPS = ["Creative", "Accounts", "Targets", "Review & post"]
 const STEP_KEYS = ["creative", "accounts", "targets", "review"]
+const NEW_PATH = "/campaigns/creatives/new"
 const LIST_PATH = "/campaigns?tab=creatives"
 
 /** Rewrites the address bar without a navigation, so the page keeps its state. */
@@ -33,15 +34,27 @@ export function CreativeWizard({ testId }) {
   const [moving, setMoving] = useState(false)
 
   const { isLoading, error: loadError } = useCreativeTest(testId)
-  const { draft, setField, setFields, save, error } = useCreativeDraft(testId, {
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const { draft, setField, setFields, save, getId, error } = useCreativeDraft(testId, {
     onCreated: (created) => {
+      // A create that lands after the user left (or moved on) must not rewrite the address.
+      if (!mounted.current || window.location.pathname !== NEW_PATH) return
       const params = new URLSearchParams(window.location.search)
       replaceUrl(`/campaigns/creatives/${created.id}/edit`, params)
     },
   })
 
   // A `path=revive` link starts on the revive path (local only until something is filled in).
+  const pathApplied = useRef(false)
   useEffect(() => {
+    if (pathApplied.current) return
+    pathApplied.current = true
     if (!testId && search?.get("path") === "revive") setFields({ origin: "revive" }, { silent: true })
   }, [testId, search, setFields])
 
@@ -51,9 +64,13 @@ export function CreativeWizard({ testId }) {
     setMoving(true)
     try {
       await save()
+    } catch {
+      return // the error Notice shows; stay on this step
     } finally {
       setMoving(false)
     }
+    // Later steps work on the saved draft, so never leave without one.
+    if (!getId()) return
     setStepKey(key)
     const params = new URLSearchParams(window.location.search)
     if (key === "creative") params.delete("step")

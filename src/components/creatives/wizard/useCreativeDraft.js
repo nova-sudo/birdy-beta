@@ -8,7 +8,7 @@ import { slugify } from "@/lib/creative-naming"
 export const SAVE_DELAY_MS = 800
 
 /** Fields copied from a revived ad; editing one makes the test a variant. */
-export const COPIED_FIELDS = ["media", "format", "primary_text", "headline", "description", "cta_type", "destination", "website_url"]
+export const COPIED_FIELDS = ["media", "format", "primary_text", "headline"]
 
 export const EMPTY_DRAFT = {
   id: null,
@@ -34,8 +34,14 @@ function setIn(obj, path, value) {
   return { ...obj, [head]: rest.length ? setIn(obj[head] ?? {}, rest.join("."), value) : value }
 }
 
-/** What goes to the API. `source` and `origin` are fixed at creation. */
-const patchOf = (d) => ({ name: d.name || "Untitled", slug: d.slug || undefined, creative: d.creative })
+/** What goes to the API (PATCH takes `source` and `origin` while the test is a draft). */
+const patchOf = (d) => ({
+  name: d.name || "Untitled",
+  slug: d.slug || undefined,
+  creative: d.creative,
+  origin: d.origin,
+  ...(d.source ? { source: d.source } : {}),
+})
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 
 /**
@@ -45,7 +51,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
  * @param {string|null} testId Existing draft to load, or null for a new one.
  * @param {{ onCreated?: (test: object) => void }} [opts]
  * @returns {{ draft: object, setField: (path: string, value: any) => void,
- *   setFields: (changes: Record<string, any>, opts?: { silent?: boolean }) => void, save: () => Promise<object|null>,
+ *   setFields: (changes: Record<string, any>, opts?: { silent?: boolean }) => void, save: () => Promise<object|null>, getId: () => string|null,
  *   saving: boolean, error: Error|null }}
  */
 export function useCreativeDraft(testId, { onCreated } = {}) {
@@ -59,10 +65,11 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
   const savedRef = useRef(null) // last patch body known to be on the server
   const slugTouched = useRef(false)
   const timer = useRef(null)
-  const chain = useRef(Promise.resolve(null))
+  const chain = useRef(Promise.resolve({ ok: true, data: null }))
   const hydrated = useRef(false)
   const pending = useRef(0)
   const dirty = useRef(false)
+  const createFailed = useRef(false)
   const onCreatedRef = useRef(onCreated)
   onCreatedRef.current = onCreated
 
@@ -106,21 +113,23 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
         savedRef.current = patchOf(d)
         commit({ ...draftRef.current, id: created.id, code: created.code, slug: draftRef.current.slug || created.slug || "" })
         onCreatedRef.current?.(created)
+        createFailed.current = false
         setError(null)
-        return created
+        return { ok: true, data: created }
       }
       const body = patchOf(d)
       const prev = savedRef.current
       const changed = {}
       for (const k of Object.keys(body)) if (!prev || !same(body[k], prev[k])) changed[k] = body[k]
-      if (Object.keys(changed).length === 0) return null
+      if (Object.keys(changed).length === 0) return { ok: true, data: null }
       const updated = await updateCreativeTest(idRef.current, changed)
       savedRef.current = body
       setError(null)
-      return updated
+      return { ok: true, data: updated }
     } catch (e) {
+      if (!idRef.current) createFailed.current = true
       setError(e)
-      return null
+      return { ok: false, error: e }
     }
   }, [commit])
 
@@ -139,7 +148,7 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
 
   const schedule = useCallback(() => {
     clearTimeout(timer.current)
-    if (!idRef.current && pending.current === 0) {
+    if (!idRef.current && pending.current === 0 && !createFailed.current) {
       // First meaningful change: create now, later changes ride the debounce.
       timer.current = null
       dirty.current = false
@@ -182,15 +191,21 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
    */
   const setFields = useCallback((changes, { silent = false } = {}) => apply(changes, { markEdited: false, silent }), [apply])
 
-  /** Saves whatever is pending now and resolves once the server has it. */
+  /** Saves whatever is pending now; resolves once the server has it, rejects if the save failed. */
   const save = useCallback(async () => {
     if (timer.current) {
       clearTimeout(timer.current)
       timer.current = null
     }
-    if (!dirty.current) return chain.current
-    dirty.current = false
-    return enqueue()
+    let r
+    if (dirty.current) {
+      dirty.current = false
+      r = await enqueue()
+    } else {
+      r = await chain.current
+    }
+    if (r && r.ok === false) throw r.error
+    return r?.data ?? null
   }, [enqueue])
 
   // Leaving the page saves what is still waiting on the debounce.
@@ -204,5 +219,7 @@ export function useCreativeDraft(testId, { onCreated } = {}) {
     [enqueue]
   )
 
-  return { draft, setField, setFields, save, saving, error }
+  const getId = useCallback(() => idRef.current, [])
+
+  return { draft, setField, setFields, save, getId, saving, error }
 }

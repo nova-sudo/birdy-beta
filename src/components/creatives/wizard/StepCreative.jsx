@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { Plus, RotateCcw } from "lucide-react"
 
 import {
+  Button,
   Frame,
   Input,
   Label,
@@ -61,7 +63,7 @@ export function creativeStepValid(draft) {
 /** The creative fields a revived ad hands over. */
 export function reviveChanges(ad, draft) {
   const video = !!ad.video_id
-  const source = { ad_id: ad.ad_id, ad_account_id: ad.ad_account_id }
+  const source = { ad_id: ad.ad_id, ad_account_id: ad.ad_account_id, name: ad.name }
   if (ad.image) source.image_url = ad.image
   if (video) source.video_id = ad.video_id
   if (ad.thumbnail) source.thumbnail_url = ad.thumbnail
@@ -118,7 +120,7 @@ function Field({ id, label, hint, children }) {
 export function StepCreative({ draft, setField, setFields }) {
   const revive = draft.origin === "revive"
   const c = draft.creative
-  const locked = !!draft.id // origin and source are fixed once the draft exists
+  const [picking, setPicking] = useState(false)
   const source = draft.source
   const thumb = source?.thumbnail_url || source?.image_url || c.media?.thumbnail_url || c.media?.image_url
 
@@ -130,23 +132,22 @@ export function StepCreative({ draft, setField, setFields }) {
           title="Create a new ad"
           text="Upload media, write the copy and test it."
           selected={!revive}
-          disabled={locked && revive}
-          onClick={() => setFields({ origin: "new" }, { silent: true })}
+          disabled={!!draft.source}
+          onClick={() => setFields({ origin: "new" }, { silent: !draft.id })}
         />
         <PathCard
           icon={RotateCcw}
           title="Test an ad you already have"
           text="Pick a running ad and test it in other accounts."
           selected={revive}
-          disabled={locked && !revive}
-          onClick={() => setFields({ origin: "revive" }, { silent: true })}
+          onClick={() => setFields({ origin: "revive" }, { silent: !draft.id })}
         />
       </div>
 
       <Frame title="Creative" description="Name is generated from the code and the name slug." padded>
         <div className="flex flex-col gap-4">
           {revive ? (
-            source ? (
+            source && !picking ? (
               <div className="flex flex-col gap-2">
                 <Label>Source ad</Label>
                 <Surface className="flex items-center gap-3 p-3">
@@ -157,16 +158,24 @@ export function StepCreative({ draft, setField, setFields }) {
                     <span className="size-14 rounded-control bg-muted" />
                   )}
                   <div className="min-w-0 text-sm">
-                    <p className="truncate font-medium">{draft.name || source.ad_id}</p>
+                    <p className="truncate font-medium">{source.name || draft.name || source.ad_id}</p>
                     <p className="text-muted-foreground">{source.ad_account_id}</p>
                   </div>
+                  <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={() => setPicking(true)}>
+                    Change ad
+                  </Button>
                 </Surface>
                 {source.video_id && (
                   <Notice tone="info">To post this video to other ad accounts, upload the file.</Notice>
                 )}
               </div>
             ) : (
-              <RevivePicker onPick={(ad) => setFields(reviveChanges(ad, draft))} />
+              <RevivePicker
+                onPick={(ad) => {
+                  setFields(reviveChanges(ad, draft))
+                  setPicking(false)
+                }}
+              />
             )
           ) : (
             <MediaDrop

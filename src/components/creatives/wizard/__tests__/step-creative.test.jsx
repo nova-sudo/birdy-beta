@@ -30,6 +30,7 @@ const ADS = [
     ad_id: "a1",
     name: "Mortgage myth #3",
     ad_account_id: "act_1",
+    currency: "GBP",
     client_name: "Harbour Finance",
     status: "ACTIVE",
     thumbnail: "https://fbcdn/t.jpg",
@@ -204,5 +205,81 @@ describe("CreativeWizard step 1", () => {
     expect(updateCreativeTest).toHaveBeenCalledTimes(2)
     expect(updateCreativeTest.mock.calls[1][1].creative.primary_text).toBe("Text changed")
     expect(within(screen.getByTestId("wizard-step")).getByText(/accounts/i)).toBeInTheDocument()
+  })
+
+  it("patches source and origin when the pick comes after other edits", async () => {
+    render(<CreativeWizard testId={null} />)
+    type(/primary text/i, "Typed first")
+    await settle()
+    expect(createCreativeTest.mock.calls[0][0].origin).toBe("new")
+    fireEvent.click(screen.getByRole("button", { name: /test an ad you already have/i }))
+    await settle()
+    fireEvent.click(await screen.findByRole("button", { name: /Mortgage myth #3/ }))
+    await settle()
+    const sent = updateCreativeTest.mock.calls.map((c) => c[1])
+    const last = Object.assign({}, ...sent)
+    expect(last.origin).toBe("revive")
+    expect(last.source).toMatchObject({ ad_id: "a1", ad_account_id: "act_1", name: "Mortgage myth #3" })
+    expect(createCreativeTest).toHaveBeenCalledTimes(1)
+  })
+
+  it("lets you change the source ad after picking one", async () => {
+    render(<CreativeWizard testId={null} />)
+    await pickRevive()
+    fireEvent.click(screen.getByRole("button", { name: /change ad/i }))
+    await settle()
+    fireEvent.click(await screen.findByRole("button", { name: /Video ad/ }))
+    await settle()
+    const sent = Object.assign({}, ...updateCreativeTest.mock.calls.map((c) => c[1]))
+    expect(sent.source).toMatchObject({ ad_id: "a2", video_id: "v99" })
+    expect(sent.creative.media).toEqual({ video_id: "v99", thumbnail_url: "https://fbcdn/t2.jpg" })
+  })
+
+  it("shows picker money in the account currency", async () => {
+    render(<CreativeWizard testId={null} />)
+    fireEvent.click(screen.getByRole("button", { name: /test an ad you already have/i }))
+    await settle()
+    expect(await screen.findByText(/£212/)).toBeInTheDocument()
+  })
+
+  it("does not advance when the save failed", async () => {
+    uploadCreativeMedia.mockResolvedValue({ blob_url: "https://blob/x.png", mime: "image/png", bytes: 1, width: 1, height: 1, duration_s: null })
+    createCreativeTest.mockRejectedValue(new Error("down"))
+    render(<CreativeWizard testId={null} />)
+    type(/primary text/i, "Text")
+    await act(async () => {
+      fireEvent.change(screen.getByLabelText(/^media/i), { target: { files: [new File(["x"], "x.png", { type: "image/png" })] } })
+    })
+    await waitFor(() => expect(cont()).toBeEnabled())
+    await act(async () => {
+      fireEvent.click(cont())
+    })
+    expect(screen.queryByText(/accounts step/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/couldn't save/i)).toBeInTheDocument()
+  })
+
+  it("after a failed create, later edits wait for the debounce instead of creating per keystroke", async () => {
+    createCreativeTest.mockRejectedValueOnce(new Error("down")).mockResolvedValue({ id: "t1", code: "CT-0048", slug: "x" })
+    render(<CreativeWizard testId={null} />)
+    type(/primary text/i, "a")
+    await act(() => vi.advanceTimersByTimeAsync(50))
+    type(/primary text/i, "ab")
+    type(/primary text/i, "abc")
+    await act(() => vi.advanceTimersByTimeAsync(100))
+    expect(createCreativeTest).toHaveBeenCalledTimes(1)
+    await settle()
+    expect(createCreativeTest).toHaveBeenCalledTimes(2)
+    expect(createCreativeTest.mock.calls[1][0].creative.primary_text).toBe("abc")
+  })
+
+  it("does not touch the URL when a create finishes after leaving the page", async () => {
+    let resolve
+    createCreativeTest.mockReturnValue(new Promise((r) => (resolve = r)))
+    const { unmount } = render(<CreativeWizard testId={null} />)
+    type(/primary text/i, "a")
+    unmount()
+    window.history.replaceState(null, "", "/campaigns")
+    await act(async () => resolve({ id: "t1", code: "CT-0048", slug: "x" }))
+    expect(window.location.pathname).toBe("/campaigns")
   })
 })
