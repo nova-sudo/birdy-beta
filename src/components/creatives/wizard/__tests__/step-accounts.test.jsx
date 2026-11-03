@@ -3,13 +3,13 @@ import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { useState } from "react"
 
-const hooks = { accounts: [], adsets: {}, pages: {}, forms: {}, adsetErrors: {} }
+const hooks = { accounts: [], adsets: {}, pages: {}, forms: {}, adsetErrors: {}, loading: {} }
 vi.mock("@/lib/creatives-api", () => ({
   useCreativeAdAccounts: () => ({ accounts: hooks.accounts, isLoading: false, error: null }),
   useCreativeAdsets: (act) => ({
     adsets: hooks.adsets[act] ?? [],
     error: hooks.adsetErrors[act] ? new Error(hooks.adsetErrors[act]) : null,
-    isLoading: false,
+    isLoading: !!hooks.loading[act],
   }),
   useCreativePages: (act) => ({ pages: hooks.pages[act] ?? [], isLoading: false, error: null }),
   useCreativeLeadForms: (pid) => ({ forms: hooks.forms[pid] ?? [], isLoading: false, error: null }),
@@ -43,6 +43,7 @@ beforeEach(() => {
   }
   hooks.forms = { p1: [{ id: "f1", name: "Form One" }], p9: [{ id: "f9", name: "Form Nine" }], p2: [{ id: "f2", name: "Form Two" }] }
   hooks.adsetErrors = {}
+  hooks.loading = {}
 })
 
 const baseDraft = (over = {}) => ({ id: "t1", origin: "new", source: null, creative: { destination: "lead_form", media: { blob_url: "https://b/x" }, accounts: [], ...over.creative }, ...over.top })
@@ -104,6 +105,34 @@ describe("StepAccounts", () => {
     expect(by.act_2.adset_id).toBe("s3")
     expect(by.act_2.client_group_id).toBe("g3")
     expect(by.act_3.adset_id).toBeNull()
+    expect(screen.getByText("No matching ad set in 1 account")).toBeInTheDocument()
+  })
+
+  it("disables Apply to all while another selected account's ad sets load", async () => {
+    hooks.loading.act_3 = true
+    const { user } = setup()
+    for (const n of ["Harbour Finance", "Birch"]) await user.click(screen.getByRole("checkbox", { name: `Select ${n}` }))
+    await pick(user, "Ad set for Harbour Finance", "Birdy tests")
+    expect(screen.getByRole("button", { name: "Apply ad set to all" })).toBeDisabled()
+    expect(screen.getByText(/Waiting for every ad set list/)).toBeInTheDocument()
+  })
+
+  it("clears an ad set that is no longer compatible and a lead form when the destination is not lead_form", () => {
+    const rows = [{ ad_account_id: "act_1", client_group_id: "g1", adset_id: "s2", adset_name: "Traffic", page_id: "p1", lead_form_id: "f1" }]
+    const { last } = setup(baseDraft({ creative: { destination: "website", accounts: rows } }))
+    expect(last()).toEqual([{ ad_account_id: "act_1", client_group_id: null, adset_id: null, adset_name: null, page_id: "p1", lead_form_id: null }])
+  })
+
+  it("clears an ad set that no longer exists", () => {
+    const rows = [{ ad_account_id: "act_1", client_group_id: "g1", adset_id: "gone", adset_name: "Gone", page_id: "p1", lead_form_id: "f1" }]
+    const { last } = setup(baseDraft({ creative: { accounts: rows } }))
+    expect(last()[0]).toMatchObject({ adset_id: null, adset_name: null, client_group_id: null, lead_form_id: "f1" })
+  })
+
+  it("keeps locked accounts out of the editable panels", () => {
+    const rows = [{ ad_account_id: "act_3", client_group_id: null, adset_id: null, adset_name: null, page_id: null, lead_form_id: null }]
+    setup(baseDraft({ creative: { accounts: rows } }), { lockedAccountIds: ["act_3"] })
+    expect(screen.queryByRole("combobox", { name: "Ad set for Birch" })).not.toBeInTheDocument()
   })
 
   it("shows the lead form select only for the lead_form destination", async () => {
@@ -171,6 +200,11 @@ describe("accountsStepValid", () => {
   it("needs an ad set on every row", () => {
     expect(accountsStepValid(d([row(), row({ ad_account_id: "act_2", adset_id: null })]))).toBe(false)
     expect(accountsStepValid(d([row()]))).toBe(true)
+  })
+  it("ignores locked accounts and needs a new row in add-accounts mode", () => {
+    expect(accountsStepValid(d([row()]), ["act_1"])).toBe(false)
+    expect(accountsStepValid(d([row(), row({ ad_account_id: "act_2" })]), ["act_1"])).toBe(true)
+    expect(accountsStepValid(d([row(), row({ ad_account_id: "act_2", adset_id: null })]), ["act_1"])).toBe(false)
   })
   it("needs a lead form only for lead_form", () => {
     expect(accountsStepValid(d([row({ lead_form_id: null })]))).toBe(false)

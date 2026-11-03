@@ -33,6 +33,8 @@ export function CreativeWizard({ testId }) {
   const search = useSearchParams()
   const [stepKey, setStepKey] = useState(() => (STEP_KEYS.includes(search?.get("step")) ? search.get("step") : "creative"))
   const [moving, setMoving] = useState(false)
+  // Add-accounts mode: new selections stay here (the posted creative is read-only); step 4 posts them.
+  const [addRows, setAddRows] = useState([])
 
   const { test, isLoading, error: loadError } = useCreativeTest(testId)
   const mounted = useRef(true)
@@ -82,7 +84,10 @@ export function CreativeWizard({ testId }) {
   const notDraft = draft.status && draft.status !== "draft"
   // Add-accounts mode: accounts the test already runs in stay checked and locked.
   const lockedAccountIds = notDraft ? [...new Set((test?.ads ?? []).map((a) => a.ad_account_id).filter(Boolean))] : []
-  const valid = stepKey === "accounts" ? accountsStepValid(draft) : creativeStepValid(draft)
+  const addMode = !!notDraft
+  const accountsDraft = addMode ? { ...draft, creative: { ...draft.creative, accounts: addRows } } : draft
+  const setAccountsField = addMode ? (_path, rows) => setAddRows(rows) : setField
+  const valid = stepKey === "accounts" ? accountsStepValid(accountsDraft, lockedAccountIds) : creativeStepValid(draft)
 
   if (testId && loadError) {
     return <ErrorState title="Couldn't load this draft" description={loadError.message} />
@@ -107,7 +112,7 @@ export function CreativeWizard({ testId }) {
             {stepKey === "creative" ? (
               <StepCreative draft={draft} setField={setField} setFields={setFields} />
             ) : stepKey === "accounts" ? (
-              <StepAccounts draft={draft} setField={setField} lockedAccountIds={lockedAccountIds} />
+              <StepAccounts draft={accountsDraft} setField={setAccountsField} lockedAccountIds={lockedAccountIds} />
             ) : (
               <Surface className="text-sm text-muted-foreground">{CREATIVE_STEPS[step - 1]} step</Surface>
             )}

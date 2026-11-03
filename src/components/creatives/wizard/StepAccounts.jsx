@@ -24,8 +24,9 @@ const VIDEO_NOTICE = "Upload the video file to post here"
 const EMPTY_ENTRY = { client_group_id: null, adset_id: null, adset_name: null, page_id: null, lead_form_id: null }
 
 /** Whether "Continue" is allowed on step 2: every chosen account has a Page, an ad set and, for lead forms, a form. */
-export function accountsStepValid(draft) {
-  const rows = draft?.creative?.accounts ?? []
+export function accountsStepValid(draft, lockedAccountIds = []) {
+  const locked = new Set(lockedAccountIds)
+  const rows = (draft?.creative?.accounts ?? []).filter((r) => !locked.has(r.ad_account_id))
   if (rows.length === 0) return false
   const needsForm = draft.creative.destination === "lead_form"
   return rows.every((r) => r.adset_id && r.page_id && (!needsForm || r.lead_form_id))
@@ -47,7 +48,7 @@ function Field({ id, label, children }) {
   )
 }
 
-function AccountPanel({ account, entry, draft, update, onAdsets, canApply, onApply }) {
+function AccountPanel({ account, entry, draft, update, onAdsets, canApply, applyBusy, onApply }) {
   const act = account.ad_account_id
   const destination = draft.creative.destination
   const { adsets, error: adsetError, isLoading: adsetsLoading } = useCreativeAdsets(act, destination)
@@ -56,8 +57,20 @@ function AccountPanel({ account, entry, draft, update, onAdsets, canApply, onApp
   const name = accountLabel(account)
 
   useEffect(() => {
-    onAdsets(act, adsets)
-  }, [act, adsets, onAdsets])
+    onAdsets(act, adsets, adsetsLoading)
+  }, [act, adsets, adsetsLoading, onAdsets])
+
+  // A changed destination can leave a choice that no longer fits: clear it once the ad sets are known.
+  useEffect(() => {
+    if (adsetsLoading || adsetError) return
+    const patch = {}
+    if (entry.adset_id) {
+      const chosen = adsets.find((a) => a.id === entry.adset_id)
+      if (!chosen || !chosen.compatible) Object.assign(patch, { adset_id: null, adset_name: null, client_group_id: null })
+    }
+    if (destination !== "lead_form" && entry.lead_form_id) patch.lead_form_id = null
+    if (Object.keys(patch).length) update(act, patch)
+  }, [act, adsets, adsetsLoading, adsetError, destination, entry.adset_id, entry.lead_form_id, update])
 
   // Default Page: the revived ad's, else the first promote page.
   useEffect(() => {
@@ -121,7 +134,7 @@ function AccountPanel({ account, entry, draft, update, onAdsets, canApply, onApp
                 </SelectContent>
               </Select>
               {canApply && entry.adset_id && (
-                <Button type="button" variant="ghost" size="sm" onClick={() => onApply(act)}>
+                <Button type="button" variant="ghost" size="sm" disabled={applyBusy} onClick={() => onApply(act)}>
                   Apply ad set to all
                 </Button>
               )}
@@ -169,7 +182,8 @@ function accountLabel(account) {
  */
 export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
   const { accounts, error, isLoading } = useCreativeAdAccounts()
-  const rows = draft.creative.accounts ?? []
+  const locked = new Set(lockedAccountIds)
+  const rows = (draft.creative.accounts ?? []).filter((r) => !locked.has(r.ad_account_id))
   // Latest list, so several effects firing in one render don't overwrite each other.
   const rowsRef = useRef(rows)
   rowsRef.current = rows
@@ -186,9 +200,12 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
     (act, patch) => write(rowsRef.current.map((r) => (r.ad_account_id === act ? { ...r, ...patch } : r))),
     [write]
   )
-  const onAdsets = useCallback((act, adsets) => setAdsetsByAccount((m) => (m[act] === adsets ? m : { ...m, [act]: adsets })), [])
-
-  const locked = new Set(lockedAccountIds)
+  const onAdsets = useCallback(
+    (act, adsets, loading) =>
+      setAdsetsByAccount((m) => (m[act]?.adsets === adsets && m[act]?.loading === loading ? m : { ...m, [act]: { adsets, loading } })),
+    []
+  )
+  const [missed, setMissed] = useState(null)
   const selectable = accounts.filter((a) => !locked.has(a.ad_account_id) && !videoBlocked(draft, a.ad_account_id))
   const chosen = new Set(rows.map((r) => r.ad_account_id))
   const allSelected = selectable.length > 0 && selectable.every((a) => chosen.has(a.ad_account_id))
@@ -206,14 +223,19 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
   function applyToAll(fromAct) {
     const from = rowsRef.current.find((r) => r.ad_account_id === fromAct)
     if (!from?.adset_name) return
+    let misses = 0
     write(
       rowsRef.current.map((r) => {
         if (r.ad_account_id === fromAct) return r
-        const match = (adsetsByAccount[r.ad_account_id] ?? []).find((a) => a.name === from.adset_name && a.compatible)
+        const match = (adsetsByAccount[r.ad_account_id]?.adsets ?? []).find((a) => a.name === from.adset_name && a.compatible)
+        if (!match) misses += 1
         return match ? { ...r, adset_id: match.id, adset_name: match.name, client_group_id: match.owning_client_group_id ?? null } : r
       })
     )
+    setMissed(misses)
   }
+
+  const applyBusy = rows.some((r) => adsetsByAccount[r.ad_account_id]?.loading !== false)
 
   return (
     <Frame title="Accounts" description="Choose where this creative runs, then set the Page and ad set for each." padded>
@@ -229,6 +251,12 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
             <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(v === true)} aria-label="Select all accounts" />
             Select all
           </label>
+          {rows.length > 1 && applyBusy && <p className="text-xs text-muted-foreground">Waiting for every ad set list to load before ad sets can be applied to all.</p>}
+          {missed > 0 && (
+            <p className="text-xs text-muted-foreground">
+              No matching ad set in {missed} {missed === 1 ? "account" : "accounts"}
+            </p>
+          )}
           {accounts.map((a) => {
             const act = a.ad_account_id
             const isLocked = locked.has(act)
@@ -260,6 +288,7 @@ export function StepAccounts({ draft, setField, lockedAccountIds = [] }) {
                     update={update}
                     onAdsets={onAdsets}
                     canApply={rows.length > 1}
+                    applyBusy={applyBusy}
                     onApply={applyToAll}
                   />
                 )}
