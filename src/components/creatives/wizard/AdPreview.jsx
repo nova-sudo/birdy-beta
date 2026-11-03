@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import useSWR from "swr"
 
 import { Button, Frame, SegmentedTabs } from "@/components/ds"
 import { apiRequest } from "@/lib/api"
@@ -29,6 +30,14 @@ function domainOf(url) {
   } catch {
     return ""
   }
+}
+
+/** The first 125 characters (code points), backing off to the previous space when one is within 15. */
+function clipText(chars) {
+  const head = chars.slice(0, TEXT_LIMIT)
+  const space = head.lastIndexOf(" ")
+  const cut = space >= TEXT_LIMIT - 15 ? head.slice(0, space) : head
+  return cut.join("").trimEnd()
 }
 
 /** Resolves the Page name for one account row (fetches that account's Pages). */
@@ -61,28 +70,38 @@ function PageHeader({ row }) {
   )
 }
 
+/** Meta's own render of a posted ad: the backend returns a short-lived `preview_url`. */
+async function fetchAdPreview(adId) {
+  const res = await apiRequest(`/api/facebook/ad-preview/${adId}`)
+  const d = await res.json().catch(() => ({}))
+  if (!res.ok || !d.preview_url) throw new Error(d?.detail || "No preview available for this ad")
+  return d.preview_url
+}
+
 function ViewOnMeta({ ad }) {
-  const [state, setState] = useState("idle")
-  async function open() {
-    setState("loading")
-    try {
-      const res = await apiRequest(`/api/facebook/ad-preview/${ad.meta.ad_id}`)
-      const d = await res.json().catch(() => ({}))
-      if (!res.ok || !d.preview_url) throw new Error("no preview")
-      window.open(d.preview_url, "_blank", "noopener,noreferrer")
-      setState("idle")
-    } catch {
-      setState("error")
-    }
-  }
+  const adId = ad.meta?.ad_id
+  const { data: url, error } = useSWR(adId ? ["creative-ad-preview", adId] : null, () => fetchAdPreview(adId), {
+    revalidateOnFocus: false,
+  })
   const label = ad.account_name ?? ad.ad_account_id
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="truncate text-xs text-muted-foreground">{label}</span>
-      <Button size="sm" variant="outline" disabled={state === "loading"} onClick={open}>
-        {state === "error" ? "Preview unavailable, retry" : `View on Meta`}
-        <span className="sr-only"> for {label}</span>
-      </Button>
+      {url ? (
+        <Button size="sm" variant="outline" asChild>
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            View on Meta<span className="sr-only"> for {label}</span>
+          </a>
+        </Button>
+      ) : error ? (
+        <span role="status" aria-live="polite" className="text-xs text-danger-ink">
+          Couldn't load this preview
+        </span>
+      ) : (
+        <Button size="sm" variant="outline" disabled>
+          Preparing preview…
+        </Button>
+      )}
     </div>
   )
 }
@@ -95,7 +114,7 @@ function Media({ creative, source, placement }) {
   return (
     <div
       data-testid="preview-media"
-      className={cn("w-full overflow-hidden bg-muted", tall ? "mx-auto aspect-[9/16] max-h-[420px]" : "aspect-square")}
+      className={cn("overflow-hidden bg-muted", tall ? "mx-auto h-[420px] w-auto max-w-full aspect-[9/16]" : "w-full aspect-square")}
     >
       {video ? (
         <video src={media.blob_url} muted playsInline preload="metadata" className="size-full object-cover" />
@@ -126,13 +145,14 @@ export function AdPreview({ creative, accounts = [], source, postedAds = [] }) {
 
   const text = c.primary_text ?? ""
   const [expanded, setExpanded] = useState(false)
-  const clipped = !expanded && text.length > TEXT_LIMIT
-  const shown = clipped ? text.slice(0, TEXT_LIMIT).trimEnd() : text
+  const chars = Array.from(text)
+  const clipped = !expanded && chars.length > TEXT_LIMIT
+  const shown = clipped ? clipText(chars) : text
 
   const whatsapp = c.destination === "whatsapp"
   const cta = whatsapp ? "Send message" : (CTA_LABEL[c.cta_type] ?? "")
   const caption = c.destination === "website" ? domainOf(c.website_url) : ""
-  const live = postedAds.filter((a) => a.meta?.ad_id)
+  const live = postedAds
 
   return (
     <Frame

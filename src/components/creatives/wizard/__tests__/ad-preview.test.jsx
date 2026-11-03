@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, within, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { SWRConfig } from "swr"
 
 const hooks = { pages: {} }
 vi.mock("@/lib/creatives-api", () => ({
@@ -89,13 +90,55 @@ describe("AdPreview", () => {
     expect(screen.getByTestId("preview-media").className).toMatch(/9\/16/)
   })
 
-  it("after posting, 'View on Meta' fetches the preview and opens it", async () => {
-    apiRequest.mockResolvedValue({ ok: true, json: async () => ({ preview_url: "https://meta/p" }) })
-    const open = vi.spyOn(window, "open").mockImplementation(() => null)
-    render(<AdPreview creative={base} accounts={ACCOUNTS} postedAds={[{ id: "a", ad_account_id: "act_1", account_name: "Harbour", meta: { ad_id: "123" } }]} />)
-    await userEvent.click(screen.getByRole("button", { name: /View on Meta/ }))
-    await waitFor(() => expect(open).toHaveBeenCalledWith("https://meta/p", "_blank", "noopener,noreferrer"))
-    expect(apiRequest).toHaveBeenCalledWith("/api/facebook/ad-preview/123")
-    open.mockRestore()
+  it("sizes the 9:16 frame by height, not full width", async () => {
+    render(<AdPreview creative={base} accounts={ACCOUNTS} />)
+    expect(screen.getByTestId("preview-media").className).toMatch(/w-full/)
+    await userEvent.click(screen.getByRole("tab", { name: "Stories" }))
+    const cls = screen.getByTestId("preview-media").className
+    expect(cls).not.toMatch(/\bw-full\b/)
+    expect(cls).toMatch(/h-\[420px\]/)
+  })
+
+  it("cuts text by code points and backs off to a word", () => {
+    const emoji = "a".repeat(124) + "😀" + "b".repeat(50)
+    const { unmount } = render(<AdPreview creative={{ ...base, primary_text: emoji }} accounts={ACCOUNTS} />)
+    expect(screen.getByTestId("preview-text").textContent.startsWith("a".repeat(124) + "😀")).toBe(true)
+    expect(screen.getByTestId("preview-text").textContent).not.toMatch(/\uFFFD|b/)
+    unmount()
+    const words = "word ".repeat(30)
+    render(<AdPreview creative={{ ...base, primary_text: words }} accounts={ACCOUNTS} />)
+    expect(screen.getByTestId("preview-text").textContent).toMatch(/word …more$/)
+  })
+
+  describe("View on Meta", () => {
+    const ad = (meta) => ({ id: "a", ad_account_id: "act_1", account_name: "Harbour", meta })
+    const view = (ads) =>
+      render(
+        <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
+          <AdPreview creative={base} accounts={ACCOUNTS} postedAds={ads} />
+        </SWRConfig>,
+      )
+
+    it("renders a real link once the preview url loads", async () => {
+      apiRequest.mockResolvedValue({ ok: true, json: async () => ({ preview_url: "https://meta/p" }) })
+      view([ad({ ad_id: "123" })])
+      const link = await screen.findByRole("link", { name: /View on Meta/ })
+      expect(link).toHaveAttribute("href", "https://meta/p")
+      expect(link).toHaveAttribute("target", "_blank")
+      expect(link).toHaveAttribute("rel", "noopener noreferrer")
+      expect(apiRequest).toHaveBeenCalledWith("/api/facebook/ad-preview/123")
+    })
+
+    it("shows a disabled 'Preparing preview…' while loading or with no ad id yet", () => {
+      view([ad(undefined)])
+      expect(screen.getByRole("button", { name: "Preparing preview…" })).toBeDisabled()
+      expect(apiRequest).not.toHaveBeenCalled()
+    })
+
+    it("announces a failure", async () => {
+      apiRequest.mockResolvedValue({ ok: false, json: async () => ({ detail: "nope" }) })
+      view([ad({ ad_id: "9" })])
+      expect(await screen.findByRole("status")).toHaveTextContent("Couldn't load this preview")
+    })
   })
 })
