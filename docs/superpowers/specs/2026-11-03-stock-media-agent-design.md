@@ -108,7 +108,6 @@ items keep working.
 | `ai/tools/agent_tools.py`, training chat | Act on the agent id in the chat context, not "the user's agent" |
 | `ai/suggestions/creative_findings.py:359` | Use guardrails from the client's acting agent, else defaults |
 | `jobs/agent_jobs.py` | Dispatch on type |
-| `jobs/agent_history_jobs.py` | Count stock clients as watched, so history syncs |
 | `src/app/hub/page.jsx`, agent pages, `StartOverButton` | Read the agent id from the route, not `pickAgent` |
 | Copy, `ai/prompts/agent_training.py` | Custom agents stop calling themselves "Media Buying Agent" |
 
@@ -295,11 +294,13 @@ runs on Auto for that client.
  lines: [{id, kind: add|remove|revive, ad_name, source, record,
           mode, state, error, meta_ids, flags}],
  additional_changes, thought_process, next_steps,
- status: open|applied|partly_applied|dismissed|flagged,
+ status: open|applied|partly_applied|dismissed|flagged|superseded,
  original: {...}, slack: {channel_id, ts}, decided_by, decided_at}
 ```
 
-Line states: `proposed → applying → applied | failed | needs_file | blocked`, plus `undone`.
+Line states: `proposed → (queued) → applying → applied | failed | needs_file | blocked`, plus `flagged` and `undone`.
+
+A newer card for the same client marks any open card `superseded`, so an old card can't be applied.
 
 | Mode | Behaviour |
 |---|---|
@@ -336,11 +337,11 @@ ad videos (`routers/meta.py:403`).
 So for a video Add:
 
 1. Reuse a file already held for that creative.
-2. Try Meta's `source` URL and store the file if it comes back.
+2. Try Meta's `source` URL, handing it straight to the upload for that post.
 3. Otherwise the line is `needs_file`. The card shows **Upload video**, Slack links to the
    report, and Auto falls back to Ask me.
 
-Held files are keyed by creative, so each video is uploaded at most once per agency. Images
+Files a person uploads are kept and keyed by creative, so each is uploaded at most once per agency. Images
 don't have this problem, as the pipeline already re-uploads them.
 
 **Undo:** Remove and Bring back use the existing undo window. Undoing an Add pauses the new ad.
