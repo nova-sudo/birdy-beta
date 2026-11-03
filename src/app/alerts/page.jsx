@@ -14,6 +14,9 @@ import { useSearchParams } from "next/navigation"
 import { usePageHeader } from "@/components/page-header"
 import { pdFontClass } from "@/lib/pd-fonts"
 import { PageTabs } from "@/components/portfolio"
+import { SegmentedTabs } from "@/components/ds"
+import CreativeScopeFields from "@/components/alerts/CreativeScopeFields"
+import { useCreativeTests } from "@/lib/creatives-api"
 import {
   Dialog,
   DialogContent,
@@ -73,6 +76,7 @@ import { apiRequest } from "@/lib/api"
 import MetricPicker from "@/components/ui/MetricPicker"
 import { buildMetricPickerOptions } from "@/lib/metric-picker-options"
 import {
+  CREATIVE_METRIC_OPTIONS, CREATIVE_NO_THRESHOLD, CREATIVE_OPERATOR_OPTIONS, metricLabel,
   METRIC_OPTIONS, OPERATOR_OPTIONS, PERIOD_OPTIONS, SNOOZE_OPTIONS, EMPTY_FORM,
   TYPE_OPTIONS, FREQUENCY_OPTIONS,
   statusBadge, formatRelative, conditionSummary, ProgressToTrigger, metricIcon
@@ -82,7 +86,7 @@ import { activeGroups } from "@/lib/client-status"
 
 // ── Tracking mode toggle ──────────────────────────────────────────────────────
 
-function TrackingModeToggle({ value, onChange }) {
+function TrackingModeToggle({ value, onChange, scope = "clients" }) {
   return (
     <div className="flex items-center gap-1 p-1 rounded-full bg-muted w-fit">
       <button
@@ -107,7 +111,7 @@ function TrackingModeToggle({ value, onChange }) {
         }`}
       >
         <User className="h-3.5 w-3.5" />
-        Per Client
+        {scope === "creative_tests" ? "Per account" : "Per Client"}
       </button>
     </div>
   )
@@ -193,7 +197,7 @@ function SubAlertRow({ row, onSnooze, onDelete, evaluating, onEvaluate }) {
       <td className="py-3 px-4 align-middle whitespace-nowrap">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(row.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === row.condition?.metric)?.label || row.condition?.metric}</span>
+          <span>{metricLabel(row.condition?.metric)}</span>
         </div>
       </td>
 
@@ -316,7 +320,7 @@ function GroupHeaderRow({ group, isExpanded, onToggle, onEdit, onSnooze, onEvalu
       <td className="py-3 px-4 align-middle whitespace-nowrap" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(parentAlert.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === parentAlert.condition?.metric)?.label || parentAlert.condition?.metric}</span>
+          <span>{metricLabel(parentAlert.condition?.metric)}</span>
         </div>
       </td>
 
@@ -426,7 +430,7 @@ function AlertRow({ alert, evaluating, onEdit, onEvaluate, onTogglePause, onSnoo
       <td className="py-3 px-4 align-middle whitespace-nowrap">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">{metricIcon(alert.condition?.metric)}</span>
-          <span>{METRIC_OPTIONS.find(m => m.value === alert.condition?.metric)?.label || alert.condition?.metric}</span>
+          <span>{metricLabel(alert.condition?.metric)}</span>
         </div>
       </td>
       <td className="py-3 px-4 align-middle whitespace-nowrap">
@@ -688,6 +692,8 @@ function TriggeredTable({ rows, evaluating, onEdit, onEvaluate, onTogglePause, o
 const EXTENDED_EMPTY_FORM = {
   ...EMPTY_FORM,
   tracking_mode: "total",
+  scope: "clients",
+  creative_test_ids: [],
 }
 
 // useSearchParams opts a route out of static rendering unless what reads it
@@ -734,6 +740,22 @@ function AlertsPageContent() {
   }, [clientGroups])
 
   // Build metric options for the MetricPicker (tabs + icons)
+  const isCreative = form.scope === "creative_tests"
+  const { tests: creativeTests } = useCreativeTests({})
+  const noThreshold = isCreative ? CREATIVE_NO_THRESHOLD[form.metric] : null
+
+  const changeScope = (scope) => setForm(f => {
+    if (f.scope === scope) return f
+    return scope === "creative_tests"
+      ? { ...f, scope, metric: "creative_verdict", operator: "eq", value: "1" }
+      : { ...f, scope, metric: "spend", operator: "gt", value: "0" }
+  })
+  const changeCreativeMetric = (metric) => setForm(f => {
+    const fixed = CREATIVE_NO_THRESHOLD[metric]
+    const operator = fixed ? fixed.operator : (CREATIVE_OPERATOR_OPTIONS.some(o => o.value === f.operator) ? f.operator : "gt")
+    return { ...f, metric, operator }
+  })
+
   const alertMetricOptions = useMemo(() =>
     buildMetricPickerOptions({ availableTags, customMetrics }),
   [availableTags, customMetrics])
@@ -815,6 +837,8 @@ function AlertsPageContent() {
       notification_channels: realAlert.notification_channels || ["in_app"],
       frequency: realAlert.frequency || "daily",
       tracking_mode: realAlert.tracking_mode || "total",
+      scope: realAlert.scope || "clients",
+      creative_test_ids: realAlert.creative_test_ids || [],
     })
     setClientSearch("")
     setDialogMode("manual")
@@ -823,7 +847,8 @@ function AlertsPageContent() {
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Alert name is required"); return }
-    if (!form.value || isNaN(Number(form.value))) { toast.error("Please enter a valid threshold value"); return }
+    const noThreshold = form.scope === "creative_tests" ? CREATIVE_NO_THRESHOLD[form.metric] : null
+    if (!noThreshold && (!form.value || isNaN(Number(form.value)))) { toast.error("Please enter a valid threshold value"); return }
 
     setSaving(true)
     try {
@@ -833,11 +858,13 @@ function AlertsPageContent() {
         type: form.type,
         condition: {
           metric: form.metric,
-          operator: form.operator,
-          value: Number(form.value),
+          operator: noThreshold ? noThreshold.operator : form.operator,
+          value: noThreshold ? noThreshold.value : Number(form.value),
           period: form.period,
         },
-        target_group_ids: form.target_group_ids,
+        scope: form.scope,
+        creative_test_ids: form.scope === "creative_tests" ? form.creative_test_ids : [],
+        target_group_ids: form.scope === "creative_tests" ? [] : form.target_group_ids,
         notification_channels: form.notification_channels,
         frequency: form.frequency,
         tracking_mode: form.tracking_mode,
@@ -1216,6 +1243,18 @@ function AlertsPageContent() {
                     <div className="grid grid-cols-[2fr_1fr_110px_1fr] gap-4">
                       <div className="space-y-2">
                       <Label className="text-[12.5px] font-semibold text-pd-ink">Metric</Label>
+                      {isCreative ? (
+                        <Select value={form.metric} onValueChange={changeCreativeMetric}>
+                          <SelectTrigger className="h-10 w-full" aria-label="Metric">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CREATIVE_METRIC_OPTIONS.map(m => (
+                              <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
                       <MetricPicker
                         metrics={alertMetricOptions}
                         value={form.metric}
@@ -1223,7 +1262,15 @@ function AlertsPageContent() {
                         placeholder="Select metric..."
                         triggerClassName="w-full"
                       />
+                      )}
                       </div>
+                      {noThreshold ? (
+                        <div className="space-y-2 col-span-2">
+                          <Label className="text-[12.5px] font-semibold text-pd-ink">Triggers</Label>
+                          <p className="text-sm text-muted-foreground h-10 flex items-center">{noThreshold.hint}</p>
+                        </div>
+                      ) : (
+                      <>
                       <div className="space-y-2">
                       <Label className="text-[12.5px] font-semibold text-pd-ink">When it</Label>
                       <Select value={form.operator} onValueChange={v => setForm(f => ({ ...f, operator: v }))}>
@@ -1231,7 +1278,7 @@ function AlertsPageContent() {
                             <SelectValue />
                           </SelectTrigger>
                         <SelectContent>
-                            {OPERATOR_OPTIONS.map(o => (
+                            {(isCreative ? CREATIVE_OPERATOR_OPTIONS : OPERATOR_OPTIONS).map(o => (
                               <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
                             ))}
                         </SelectContent>
@@ -1248,6 +1295,8 @@ function AlertsPageContent() {
                           onChange={e => setForm(f => ({ ...f, value: e.target.value }))}
                         />
                       </div>
+                      </>
+                      )}
                       <div className="space-y-2">
                       <Label className="text-[12.5px] font-semibold text-pd-ink">Over</Label>
                       <Select value={form.period} onValueChange={v => setForm(f => ({ ...f, period: v }))}>
@@ -1266,17 +1315,38 @@ function AlertsPageContent() {
 
                   {/* Target Client Groups */}
                   <div className="rounded-xl border border-pd-border bg-pd-surface p-6 shadow-sm space-y-4">
+                    <SegmentedTabs
+                      ariaLabel="Alert scope"
+                      value={form.scope}
+                      onValueChange={changeScope}
+                      items={[
+                        { value: "clients", label: "Clients" },
+                        { value: "creative_tests", label: "Creative tests" },
+                      ]}
+                    />
                     <div className="flex items-center justify-between gap-4 flex-wrap">
-                      <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">Target Client Groups</h3>
+                      <h3 className="font-pd-display text-[16px] font-semibold text-pd-ink">{isCreative ? "Target Creative Tests" : "Target Client Groups"}</h3>
                       <div className="flex flex-col items-end gap-1">
-                        <TrackingModeToggle value={form.tracking_mode} onChange={v => setForm(f => ({ ...f, tracking_mode: v }))} />
+                        <TrackingModeToggle scope={form.scope} value={form.tracking_mode} onChange={v => setForm(f => ({ ...f, tracking_mode: v }))} />
                         <p className="text-xs text-muted-foreground max-w-[280px] text-right">
-                          {form.tracking_mode === "total"
+                          {isCreative
+                            ? (form.tracking_mode === "total"
+                              ? "Alert triggers when the combined value across the selected tests crosses the threshold."
+                              : "Alert triggers separately for each ad account that crosses the threshold on its own.")
+                            : form.tracking_mode === "total"
                             ? "Alert triggers when the combined value across all selected clients crosses the threshold."
                             : "Alert triggers separately for each client that crosses the threshold on their own."}
                         </p>
                       </div>
                     </div>
+                    {isCreative ? (
+                      <CreativeScopeFields
+                        value={form.creative_test_ids}
+                        onChange={ids => setForm(f => ({ ...f, creative_test_ids: ids }))}
+                        tests={creativeTests}
+                      />
+                    ) : (
+                    <>
                     <Input placeholder="Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)} />
                     <div className="max-h-[220px] overflow-y-auto rounded-2xl border border-pd-border divide-y divide-pd-divider">
                         {/* Select All */}
@@ -1302,6 +1372,8 @@ function AlertsPageContent() {
                           </label>
                         ))}
                     </div>
+                    </>
+                    )}
                   </div>
                 </div>
 
@@ -1331,7 +1403,7 @@ function AlertsPageContent() {
                             <Target className="h-4 w-4" />
                             <span>Scope</span>
                           </div>
-                          <Badge variant="secondary" className="capitalize">client</Badge>
+                          <Badge variant="secondary" className="capitalize">{isCreative ? "creative tests" : "client"}</Badge>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground">
@@ -1339,14 +1411,18 @@ function AlertsPageContent() {
                             <span>Tracking</span>
                           </div>
                           {form.tracking_mode === "per_client" ? (
-                            <Badge className="gap-1 text-xs"><User className="h-3 w-3" /> Per Client</Badge>
+                            <Badge className="gap-1 text-xs"><User className="h-3 w-3" /> {isCreative ? "Per account" : "Per Client"}</Badge>
                           ) : (
                             <Badge variant="secondary" className="gap-1 text-xs"><Layers className="h-3 w-3" /> Total</Badge>
                           )}
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /><span>Targets</span></div>
-                          <span className="font-medium">{form.target_group_ids.length ? `${form.target_group_ids.length} selected` : "None"}</span>
+                          <span className="font-medium">
+                            {isCreative
+                              ? (form.creative_test_ids.length ? `${form.creative_test_ids.length} selected` : "All live tests")
+                              : (form.target_group_ids.length ? `${form.target_group_ids.length} selected` : "None")}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-2 text-muted-foreground"><Clock className="h-4 w-4" /><span>Frequency</span></div>

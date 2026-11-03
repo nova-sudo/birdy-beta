@@ -46,6 +46,32 @@ export const METRIC_OPTIONS = [
   { value: "hp_agent_answer_rate", label: "Agent Answer Rate (%)", source: "hp",   icon: hpIcon },
 ]
 
+// ── Creative-test metrics (alert scope "creative_tests") ──
+export const CREATIVE_METRIC_OPTIONS = [
+  { value: "creative_verdict",     label: "Creative verdict" },
+  { value: "creative_cpl",         label: "Creative CPL" },
+  { value: "creative_ctr",         label: "Creative CTR" },
+  { value: "creative_hook_rate",   label: "Creative hook rate" },
+  { value: "creative_post_failed", label: "Creative post failed" },
+]
+
+/** Creative metrics that fire without a threshold: the verdict (winner or loser) and any failed post. */
+export const CREATIVE_NO_THRESHOLD = {
+  creative_verdict: { operator: "eq", value: 1, hint: "Fires when a test gets a winner or loser verdict." },
+  creative_post_failed: { operator: "gt", value: 0, hint: "Fires when any post failed." },
+}
+
+export const isCreativeMetric = (m) => typeof m === "string" && m.startsWith("creative_")
+
+/** Label for a metric id, client or creative. */
+export function metricLabel(value) {
+  return (
+    METRIC_OPTIONS.find((m) => m.value === value)?.label ||
+    CREATIVE_METRIC_OPTIONS.find((m) => m.value === value)?.label ||
+    value
+  )
+}
+
 export const TYPE_OPTIONS = [
   { value: "win", label: "Win" },
   { value: "warning", label: "Warning" },
@@ -59,6 +85,9 @@ export const OPERATOR_OPTIONS = [
   { value: "pct_rise", label: "Rises by (↑ %)" },
   { value: "pct_drop", label: "Drops by (↓ %)" },
 ]
+
+/** Creative metrics have no percent-change operators. */
+export const CREATIVE_OPERATOR_OPTIONS = OPERATOR_OPTIONS.filter((o) => !o.value.startsWith("pct_"))
 
 export const PERIOD_OPTIONS = [
   { value: "today", label: "Today" },
@@ -164,8 +193,8 @@ export function ProgressToTrigger({ alert }) {
   }
 
   const isPctOperator = ["pct_drop", "pct_rise"].includes(operator)
-  const isCurrency = !isPctOperator && ["spend", "cpc", "cpm", "cpl", "cost_per_result", "ghl_revenue"].includes(alert.condition?.metric)
-  const isPct = isPctOperator || ["ctr", "meta_conversion", "ghl_conversion", "hp_connect_rate", "hp_answer_rate", "hp_agent_answer_rate"].includes(alert.condition?.metric)
+  const isCurrency = !isPctOperator && ["spend", "cpc", "cpm", "cpl", "cost_per_result", "ghl_revenue", "creative_cpl"].includes(alert.condition?.metric)
+  const isPct = isPctOperator || ["ctr", "meta_conversion", "ghl_conversion", "hp_connect_rate", "hp_answer_rate", "hp_agent_answer_rate", "creative_ctr", "creative_hook_rate"].includes(alert.condition?.metric)
   const fmt = (v, forceType) => {
     // For pct operators: current_value is always a % change, threshold is always a %
     if (forceType === "pct" || isPct) return `${Number(v).toFixed(1)}%`
@@ -228,4 +257,6 @@ export const EMPTY_FORM = {
   notification_channels: ["in_app"],
   frequency: "daily",
   tracking_mode: "total",
+  scope: "clients",
+  creative_test_ids: [],
 }
