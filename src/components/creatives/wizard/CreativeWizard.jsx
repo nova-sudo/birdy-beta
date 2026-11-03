@@ -7,6 +7,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { Button, ErrorState, Notice, PageHeader, Skeleton } from "@/components/ds"
 import { WizardSteps } from "@/components/agents/WizardSteps"
 import { useCreativeTest } from "@/lib/creatives-api"
+import { AdPreview } from "./AdPreview"
 import { StepAccounts, accountsStepValid } from "./StepAccounts"
 import { StepCreative, creativeStepValid } from "./StepCreative"
 import { StepReview } from "./StepReview"
@@ -16,6 +17,7 @@ import { useCreativeDraft } from "./useCreativeDraft"
 export const CREATIVE_STEPS = ["Creative", "Accounts", "Targets", "Review & post"]
 const STEP_KEYS = ["creative", "accounts", "targets", "review"]
 const NEW_PATH = "/campaigns/creatives/new"
+const NO_ROWS = []
 const LIST_PATH = "/campaigns?tab=creatives"
 
 /** Rewrites the address bar without a navigation, so the page keeps its state. */
@@ -27,7 +29,7 @@ function replaceUrl(pathname, params) {
 /**
  * The full-page "New creative test" wizard. Steps: creative, accounts, targets, review & post.
  * `?test=<id>&step=targets` on a posted test only edits its targets; a posted test's accounts step adds accounts.
- * The right-hand column is the slot for the live preview.
+ * The right-hand column is the sticky live ad preview.
  *
  * @param {object} props
  * @param {string|null} props.testId Draft to edit, or null for a new test
@@ -174,8 +176,14 @@ export function CreativeWizard({ testId }) {
               </div>
             )}
           </div>
-          {/* Live preview slot, filled by the preview task. */}
-          <aside data-slot="creative-preview" aria-label="Preview" className="min-w-0 lg:sticky lg:top-6 lg:self-start" />
+          <aside data-slot="creative-preview" aria-label="Preview" className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+            <AdPreview
+              creative={draft.creative}
+              source={draft.source}
+              accounts={(notDraft ? addRows : draft.creative?.accounts) ?? NO_ROWS}
+              postedAds={notDraft || justPosted ? (test?.ads ?? NO_ROWS) : NO_ROWS}
+            />
+          </aside>
         </div>
       )}
     </div>
