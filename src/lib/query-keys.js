@@ -64,4 +64,8 @@ export const queryKeys = {
   agentOffers: (id) => `/api/agents/${id}/offers`,
   agentProposals: (id) => `/api/agents/${id}/proposals`,
   agentJob: (id, jobId) => `/api/agents/${id}/jobs/${jobId}`,
+
+  // Creative tests. Mutations through lib/creatives-api revalidate these.
+  creatives: () => "/api/creatives",
+  creative: (id) => `/api/creatives/${id}`,
 }
